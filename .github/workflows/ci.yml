@@ -44,6 +44,11 @@ jobs:
       - run: pnpm install --filter "@antelopejs/dms-saas..." --filter "{.}" --frozen-lockfile
       - run: pnpm --dir packages/dms-saas/frontend-vue install --frozen-lockfile
 
+      # The module's type-aware lint resolves the interface package through its
+      # built `dist`; without it every imported type degrades to `error` and
+      # the union-type rules fail.
+      - run: pnpm --filter @antelopejs/interface-dms-saas build
+
       - run: pnpm --filter @antelopejs/interface-dms-saas lint
       - run: pnpm --filter @antelopejs/dms-saas lint
       # tsconfig.json is the config the editors and oxlint's type-aware pass
