@@ -1,0 +1,1285 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "load_more": "Charger plus"
+  },
+  "saas": {
+    "admission": {
+      "title": "Les inscriptions sont fermées",
+      "description": "Les nouveaux comptes sont accessibles uniquement sur invitation. Si vous avez reçu une invitation, utilisez le lien dans votre e-mail.",
+      "login": "Se connecter",
+      "complimentary_reduction": "Accès offert (100 %)",
+      "total": "Total",
+      "plan_managed": "Votre offre est gérée par un administrateur pendant l’accès offert."
+    },
+    "menu": {
+      "overview": "Aperçu",
+      "customers": "Clients",
+      "catalog": "Catalogue",
+      "billing": "Facturation",
+      "support": "Support",
+      "configuration": "Configuration"
+    },
+    "errors": {
+      "registration_closed": "Les inscriptions sont fermées. Utilisez votre lien d’invitation ou connectez-vous.",
+      "plan": {
+        "complimentary_locked": "Votre offre est gérée par un administrateur pendant l’accès offert.",
+        "paid_recovery_required": "Choisissez une offre payante pour reprendre l’accès.",
+        "not_found": "Plan introuvable",
+        "source_not_found": "Plan source introuvable",
+        "target_not_found": "Plan cible introuvable",
+        "target_must_be_active": "Le plan cible doit être actif",
+        "creation_failed": "Échec de la création du plan",
+        "invalid": "Plan invalide",
+        "not_available": "Plan indisponible",
+        "not_available_for_customer_type": "Plan indisponible pour ce type de client",
+        "not_synced_with_stripe": "Plan non synchronisé avec Stripe",
+        "has_workspaces": "Ce plan a des workspaces actifs. Migrez-les avant suppression.",
+        "customer_type_unknown": "Les informations de facturation sont incomplètes : renseignez d'abord le type de client",
+        "downgrade_exceeds_seat_limit": "Ce plan autorise moins de membres que le workspace n'en compte actuellement",
+        "inheritance_cycle": "L'héritage de plans créerait un cycle",
+        "inheritance_parent_missing": "Plan parent introuvable",
+        "invalid_interval": "L'intervalle de facturation du plan doit être mensuel ou annuel",
+        "no_stripe_price": "Le plan n'a pas de tarif Stripe",
+        "seat_limit_reached": "La limite de membres du plan est atteinte",
+        "no_pending_change": "Aucun changement de plan programmé à annuler",
+        "unpaid_invoice_blocks_downgrade": "Une facture est impayée. Réglez-la avant de passer à un plan moins cher."
+      },
+      "workspace": {
+        "not_found": "Espace introuvable",
+        "no_stripe_customer": "L'espace n'a pas de client Stripe",
+        "no_active_subscription": "L'espace n'a pas d'abonnement actif",
+        "access_blocked": "L'accès à cet espace de travail est restreint par le statut de son abonnement",
+        "already_suspended": "Le workspace est déjà suspendu",
+        "not_suspended": "Le workspace n'est pas suspendu",
+        "free_limit_reached": "Cette carte a déjà atteint la limite de workspaces Free.",
+        "creation_in_progress": "Un autre workspace est déjà en cours de création avec cette carte. Patientez un instant puis réessayez.",
+        "name_required": "Le nom du workspace est obligatoire.",
+        "payment_method_required": "Une carte bancaire est requise.",
+        "is_cancelled": "Ce workspace est annulé."
+      },
+      "operator": {
+        "external_effect_failed": "Le résultat n'a pas pu être confirmé. Vérifiez l'état du workspace et de la facturation avant d'envoyer une autre opération.",
+        "invalid_operation_id": "L'identifiant de l'opération est invalide.",
+        "idempotency_mismatch": "Cet identifiant d'opération a déjà été utilisé avec des valeurs différentes.",
+        "operation_in_progress": "Cette opération est déjà en cours.",
+        "tenant_busy": "Une autre action opérateur est en cours pour ce workspace. Réessayez dans un instant.",
+        "stripe_subscription_required": "Un abonnement géré par Stripe est requis.",
+        "plan_already_applied": "Ce plan est déjà appliqué.",
+        "paid_plan_required": "Sélectionnez un plan payant synchronisé avec Stripe.",
+        "upgrade_only": "Seules les montées en gamme immédiates sont autorisées ici.",
+        "invalid_credit_amount": "Saisissez un montant de crédit positif en centimes.",
+        "invalid_credit_reason": "Saisissez un motif de 500 caractères maximum.",
+        "target_plan_required": "Sélectionnez un plan cible.",
+        "reconciliation_required": "Le résultat du crédit Stripe d’origine est incertain et ne peut plus être réessayé en toute sécurité. Effectuez un rapprochement dans Stripe avant toute autre action."
+      },
+      "lifecycle": {
+        "consumer_failed": "Un service requis du workspace n'a pas accepté le changement de cycle de vie.",
+        "delivery_in_progress": "Le changement de cycle de vie est déjà en cours de livraison."
+      },
+      "user": {
+        "not_found": "Utilisateur introuvable",
+        "email_in_use": "E-mail déjà utilisé",
+        "already_has_workspace": "Vous avez déjà un workspace. Actualisez la page puis réessayez."
+      },
+      "invoice": {
+        "not_found": "Facture introuvable",
+        "invalid_amount": "Montant invalide",
+        "no_paid_found": "Aucune facture payée trouvée"
+      },
+      "refund": {
+        "not_enabled": "Garantie satisfait ou remboursé non activée",
+        "window_expired": "Délai de remboursement dépassé",
+        "not_eligible": "Remboursement non disponible",
+        "already_processed": "Remboursement déjà traité"
+      },
+      "billing": {
+        "country_required": "Le pays de facturation est requis",
+        "info_not_found": "Informations de facturation introuvables",
+        "invalid_return_url": "URL de retour invalide"
+      },
+      "migration": {
+        "already_pending": "Une migration est déjà en attente pour ce plan"
+      },
+      "platform_owner": {
+        "already_owner": "L'utilisateur est déjà propriétaire de la plateforme",
+        "not_owner": "L'utilisateur n'est pas propriétaire de la plateforme",
+        "cannot_demote_self": "Impossible de se rétrograder soi-même",
+        "cannot_demote_last_owner": "Impossible de rétrograder le dernier propriétaire de la plateforme"
+      },
+      "webhook": {
+        "invalid_signature": "Signature webhook invalide"
+      },
+      "support": {
+        "priority_not_available": "Cette priorité n'est pas incluse dans votre plan",
+        "invalid_message": "Saisissez un message de 10 000 caractères maximum",
+        "too_many_attachments": "Un message peut contenir jusqu'à 5 pièces jointes",
+        "invalid_attachments": "Les pièces jointes sont invalides",
+        "invalid_attachment": "La pièce jointe est invalide",
+        "invalid_subject": "Saisissez un sujet de 200 caractères maximum",
+        "invalid_category": "Sélectionnez une catégorie valide",
+        "invalid_priority": "Sélectionnez une priorité valide",
+        "invalid_status": "Sélectionnez un statut valide",
+        "invalid_pagination": "Utilisez des nombres entiers positifs pour la page et sa taille",
+        "invalid_status_transition": "Cette transition de statut n'est pas autorisée",
+        "closed_ticket_reply": "Rouvrez le ticket fermé avant de répondre",
+        "invalid_assignee": "Assignez le ticket à un administrateur plateforme",
+        "platform_attachments_not_available": "Les réponses de la plateforme ne peuvent pas ajouter de pièces jointes",
+        "tenant_busy": "Une autre mise à jour du support est en cours. Réessayez.",
+        "invalid_request_id": "Un identifiant stable de demande de support est requis",
+        "request_reused": "Cet identifiant correspond à un autre contenu. Réessayez la demande initiale.",
+        "operation_pending": "Cette demande est en attente. Réessayez avec le même contenu.",
+        "operation_unknown": "Le résultat n'est pas encore confirmé. Réessayez avec le même contenu.",
+        "projection_pending": "L'historique du support est en cours de récupération. Réessayez bientôt.",
+        "attachment_pending": "L'admission de la pièce jointe est en attente. Réessayez la même demande.",
+        "attachment_already_admitted": "Ce fichier appartient déjà à une autre demande. Téléversez-le à nouveau.",
+        "storage_unavailable": "Le stockage des pièces jointes n'est pas configuré. Contactez l'administrateur de la plateforme.",
+        "invalid_cursor": "Curseur de récupération du support invalide",
+        "ticket_not_found": "Ticket de support introuvable",
+        "message_not_found": "Message de support introuvable",
+        "attachment_not_found": "Pièce jointe introuvable"
+      },
+      "platform_notes": {
+        "invalid_target": "Type de cible invalide",
+        "target_not_found": "Cible introuvable",
+        "invalid_content": "Note vide ou trop longue",
+        "not_found": "Note introuvable",
+        "forbidden": "Vous ne pouvez pas supprimer cette note",
+        "creation_failed": "Échec de la création de la note"
+      },
+      "segments": {
+        "not_found": "Segment introuvable",
+        "invalid_logical": "Opérateur logique invalide",
+        "invalid_conditions": "Conditions invalides",
+        "invalid_operator": "Opérateur incompatible avec ce champ",
+        "invalid_value": "Valeur invalide pour cet opérateur",
+        "unknown_field": "Champ inconnu",
+        "conditions_too_deep": "Imbrication de conditions trop profonde",
+        "invalid_role": "Rôle de membre invalide",
+        "invalid_quantifier": "Quantificateur invalide"
+      },
+      "stripe": {
+        "subscription_no_item": "L'abonnement Stripe n'a aucune ligne facturable"
+      },
+      "registration": {
+        "extras_invalid": "Les champs d'inscription supplémentaires ne sont pas dans un format accepté",
+        "extras_too_large": "Les champs d'inscription supplémentaires sont trop volumineux",
+        "extras_too_complex": "Les champs d'inscription supplémentaires comportent trop d'entrées"
+      }
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "description": "Indicateurs clés tous workspaces confondus : MRR, workspaces, abonnements actifs et revenus.",
+      "top_plans": "Top plans",
+      "chart_revenue": "Revenus (12 derniers mois)",
+      "subscriptions_title": "Abonnements",
+      "subscriptions_description": "Par statut",
+      "recent_activity": "Activité récente",
+      "activity": {
+        "workspace_created": "Workspace créé",
+        "invoice_paid": "Facture payée",
+        "empty": "Aucune activité récente"
+      },
+      "kpi": {
+        "workspaces": "Workspaces",
+        "mrr": "Revenu récurrent mensuel",
+        "active_subscriptions": "Abonnements actifs",
+        "invoices_open": "Factures ouvertes"
+      }
+    },
+    "auth": {
+      "login": {
+        "create_account": "Pas encore de compte ? Inscrivez-vous"
+      }
+    },
+    "register": {
+      "title": "Inscription",
+      "page_description": "Créer un compte, choisir un plan et provisionner votre premier workspace.",
+      "submit": "S'inscrire et payer",
+      "choose_plan": "Choisir un plan",
+      "field": {
+        "email": "Email",
+        "password": "Mot de passe",
+        "full_name": "Nom complet",
+        "workspace_name": "Nom du workspace",
+        "company_name": "Raison sociale",
+        "vat_number": "Numéro de TVA",
+        "country": "Pays",
+        "address_line1": "Adresse",
+        "postal_code": "Code postal",
+        "city": "Ville",
+        "card": "Carte bancaire"
+      },
+      "billing_address": "Adresse de facturation",
+      "customer_type": {
+        "label": "Type de client",
+        "individual": "Particulier",
+        "business": "Professionnel"
+      },
+      "error": {
+        "no_plan": "Veuillez sélectionner un plan",
+        "no_payment": "Méthode de paiement requise",
+        "no_country": "Veuillez sélectionner votre pays de facturation",
+        "legal_required": "Vous devez accepter les conditions générales et la politique de confidentialité",
+        "failed": "Échec de l'inscription",
+        "load": "Impossible de charger les options d'inscription"
+      },
+      "legal_acceptance": "J'accepte les {terms_and_conditions} et la {privacy_policy}",
+      "price": "{price}/{interval}",
+      "interval": {
+        "month": "mois",
+        "year": "an"
+      }
+    },
+    "no_workspace": {
+      "title": "Configurez votre premier workspace",
+      "subtitle": "Vous êtes connecté, mais vous n'appartenez encore à aucun workspace. Choisissez un plan et créez-en un pour commencer.",
+      "logout": "Se déconnecter",
+      "submit": "Créer le workspace et payer",
+      "submitting": "Création de votre workspace…",
+      "section": {
+        "details": "Détails du workspace",
+        "details_hint": "C'est le nom de l'espace de travail que verra votre équipe.",
+        "plan": "Choisir un plan",
+        "plan_hint": "Vous pourrez en changer plus tard depuis les paramètres de facturation.",
+        "payment": "Méthode de paiement",
+        "payment_hint": "Stockée en toute sécurité via Stripe."
+      },
+      "error": {
+        "missing_token": "Votre session de finalisation est manquante ou expirée",
+        "relogin": "Reconnectez-vous pour continuer."
+      }
+    },
+    "oauth_registration": {
+      "entry_note": "S'inscrire via un fournisseur demande quand même un plan et une carte à l'étape suivante.",
+      "identity": {
+        "provider": "Connecté avec {provider} en tant que {email}",
+        "password": "Connecté en tant que {email}",
+        "hint": "Ce compte sera propriétaire du workspace et de son abonnement."
+      },
+      "error": {
+        "entry_failed": "Impossible de confirmer le compte utilisé pour vous connecter",
+        "entry_action": "Aller à la connexion"
+      }
+    },
+    "legal": {
+      "terms_of_use": "Conditions d'utilisation",
+      "terms_of_use_page_description": "Conditions d'utilisation publiques affichées aux visiteurs et requises lors de l'inscription.",
+      "terms_and_conditions": "Conditions générales de vente",
+      "terms_and_conditions_page_description": "Conditions générales publiques affichées aux visiteurs et requises lors de l'inscription.",
+      "privacy_policy": "Politique de confidentialité",
+      "privacy_policy_page_description": "Politique de confidentialité publique affichée aux visiteurs et requise lors de l'inscription.",
+      "no_content_title": "Contenu indisponible",
+      "no_content_message": "Ce document n'a pas encore été publié."
+    },
+    "module": {
+      "title": "SaaS",
+      "description": "Plans, workspaces, facturation et cycle de vie client."
+    },
+    "plans": {
+      "title": "Plans",
+      "description": "Plans d'abonnement, tarifs, fonctionnalités et essais gratuits.",
+      "create": "Créer un plan",
+      "caption": "Plans d'abonnement, tarifs, fonctionnalités et essais gratuits.",
+      "column": {
+        "workspaces": "Workspaces"
+      },
+      "display": {
+        "cards": "Cartes"
+      },
+      "new_title": "Nouveau plan",
+      "new_description": "Créer un nouveau plan d'abonnement. Le produit et prix Stripe sont synchronisés après création.",
+      "edit_title": "Modifier le plan",
+      "edit_description": "Mettre à jour un plan existant. Les changements de tarif sont propagés à Stripe.",
+      "reorder_failed": "Échec du réordonnancement des plans.",
+      "choose": "Choisir ce plan",
+      "trial_days": "{days} jours d'essai gratuit",
+      "delete": {
+        "action_title": "Supprimer le plan",
+        "success": "Plan supprimé.",
+        "migration_title": "Migrer les espaces du plan {name} ?",
+        "migration_started": "Migration demandée. Le plan source est conservé.",
+        "migrate_intro": "{count} espaces utilisent actuellement ce plan. La migration couvre uniquement la liste capturée ; les arrivées ultérieures sont exclues. Le plan source est conservé, même après la migration. Son retrait exige une procédure distincte qui arrête tous les processus d'écriture.",
+        "target_label": "Migrer les espaces vers",
+        "target_placeholder": "Sélectionner un plan cible",
+        "notify_members": "Notifier les membres concernés",
+        "computing_diff": "Calcul de l'impact…",
+        "affected_count": "{count} workspaces seront affectés",
+        "permissions_removed": "Permissions qui seront retirées",
+        "confirm": "Lancer la migration du snapshot",
+        "failed": "Échec de la suppression du plan",
+        "no_target": "Veuillez sélectionner un plan cible",
+        "simple_title": "Supprimer le plan {name} ?",
+        "simple_warning": "Aucun workspace n'est concerné. Cette action est irréversible.",
+        "simple_confirm": "Supprimer"
+      },
+      "deactivate": {
+        "title": "Désactiver le plan {name} ?",
+        "warning": "{count} workspaces continueront sur ce plan jusqu'à leur migration manuelle.",
+        "public_removal": "Le plan disparaît du catalogue public et n'est plus souscriptible.",
+        "confirm": "Désactiver"
+      },
+      "action": {
+        "delete": "Supprimer",
+        "edit": "Modifier"
+      },
+      "migrations": {
+        "title": "Migrations de plan",
+        "description": "Migrations en cours et historiques.",
+        "caption": "Jobs de migration",
+        "column": {
+          "from": "Depuis",
+          "to": "Vers",
+          "status": "Statut",
+          "processed": "Traités",
+          "total": "Total",
+          "created_at": "Créé le",
+          "completed_at": "Terminé le"
+        }
+      },
+      "inheritance": {
+        "toggle": "Hériter des permissions et fonctionnalités d'un autre plan",
+        "select_plan": "Choisir le plan source",
+        "loading": "Chargement des permissions et fonctionnalités…",
+        "snapshot_hint": "Les permissions et fonctionnalités du plan parent sont copiées (instantané) au moment de l'enregistrement.",
+        "no_features": "Aucune fonctionnalité définie.",
+        "inherited": "Hérité",
+        "permissions_tooltip": "Permissions accordées par ce plan. L'héritage copie celles du plan parent comme point de départ.",
+        "features_tooltip": "Valeurs des fonctionnalités pour ce plan. Active/désactive ou définit la quantité par feature."
+      },
+      "field": {
+        "name": "Nom",
+        "description": "Description",
+        "audience": "Cible",
+        "price": "Prix (HT)",
+        "currency": "Devise",
+        "interval": "Intervalle",
+        "billing_mode": "Mode de facturation",
+        "trial_days": "Jours d'essai",
+        "permissions": "Permissions",
+        "features": "Fonctionnalités",
+        "border_color": "Couleur de bordure",
+        "border_label": "Label de bordure",
+        "order": "Ordre d'affichage",
+        "is_active": "Actif",
+        "inheritance": "Permissions et fonctionnalités",
+        "inheritance_description": "Définissez les permissions et fonctionnalités du plan, éventuellement héritées d'un plan parent.",
+        "max_members": "Membres maximum",
+        "max_members_description": "Mettre -1 pour un nombre illimité de membres.",
+        "is_public": "Public",
+        "is_public_description": "Visible sur la page d'inscription et de sélection de plan.",
+        "is_deleted": "Supprimé",
+        "order_description": "Plus petit = affiché en premier.",
+        "name_description": "Nom commercial du plan affiché aux clients.",
+        "description_description": "Argumentaire affiché sur les pages publiques et la card du plan.",
+        "audience_description": "Détermine à qui ce plan est proposé (tout public, particuliers, professionnels).",
+        "price_description": "Prix de base hors taxes pour la période de facturation choisie.",
+        "currency_description": "Devise utilisée pour le prix et la facturation.",
+        "interval_description": "Fréquence de facturation récurrente (mensuelle ou annuelle).",
+        "billing_mode_description": "Facturation forfaitaire ou par utilisateur (siège).",
+        "trial_days_description": "Nombre de jours d'essai gratuit avant le premier prélèvement (0 = aucun).",
+        "is_active_description": "Si désactivé, le plan reste visible côté admin mais n'est plus souscriptible.",
+        "border_color_description": "Couleur d'accentuation utilisée pour le badge et le ring de mise en avant sur la card.",
+        "border_label_description": "Texte du badge flottant affiché en haut de la card (ex. Populaire, Recommandé)."
+      },
+      "audience": {
+        "any": "Tout le monde",
+        "individual": "Particuliers uniquement",
+        "business": "Professionnels uniquement"
+      },
+      "billing_mode": {
+        "flat": "Forfait",
+        "seat": "Par utilisateur"
+      },
+      "interval": {
+        "month": "Mensuel",
+        "year": "Annuel"
+      },
+      "cycle": {
+        "month": "mois",
+        "year": "an"
+      },
+      "card": {
+        "members": "{count} membres max",
+        "members_unlimited": "Membres illimités",
+        "subscriptions": "{count} abonnements actifs"
+      }
+    },
+    "workspaces": {
+      "admin": {
+        "suspend": "Suspendre",
+        "unsuspend": "Réactiver",
+        "suspended": "Workspace suspendu",
+        "unsuspended": "Workspace réactivé",
+        "action_error": "Échec de l'action sur le workspace",
+        "confirm_suspend": {
+          "title": "Suspendre ce workspace",
+          "description_with_pause": "Le workspace sera bloqué pour ses utilisateurs et la facturation Stripe sera mise en pause. Confirmer ?",
+          "description_local": "Le workspace sera bloqué pour ses utilisateurs (pas de sub Stripe à mettre en pause). Confirmer ?"
+        },
+        "confirm_unsuspend": {
+          "title": "Réactiver ce workspace",
+          "description": "L'accès sera restauré et la facturation Stripe reprendra. Confirmer ?"
+        },
+        "comp": {
+          "title": "Accès gratuit",
+          "grant": "Donner accès gratuit",
+          "update": "Modifier accès gratuit",
+          "modal_title": "Donner un accès gratuit",
+          "modal_description": "Définit le workspace en accès gratuit sur le plan choisi. Toute subscription Stripe en cours sera annulée.",
+          "plan": "Plan",
+          "free_until": "Expire le (optionnel)",
+          "free_until_hint": "Laissez vide pour un accès illimité. À l'expiration, le workspace passera en past_due puis sera suspendu.",
+          "hint_members_preserved": "Les membres existants sont conservés même s'ils dépassent la limite du nouveau plan.",
+          "hint_will_unsuspend": "Le workspace est actuellement suspendu : cette action le réactivera aussi.",
+          "submit": "Appliquer",
+          "success": "Accès gratuit accordé",
+          "error": "Échec de l'attribution de l'accès gratuit"
+        },
+        "create": {
+          "button": "Créer un workspace",
+          "title": "Créer un workspace",
+          "description": "Provisionne un nouveau workspace et désigne son propriétaire.",
+          "success": "Workspace créé.",
+          "error": {
+            "name": "Le nom est obligatoire.",
+            "plan": "Le plan est obligatoire.",
+            "owner_email": "L'email du propriétaire est obligatoire.",
+            "free_until_past": "La date d'expiration doit être dans le futur."
+          },
+          "field": {
+            "name": "Nom du workspace",
+            "plan": "Plan",
+            "plan_description": "Plan d'abonnement initial du workspace.",
+            "owner_email": "Email du propriétaire",
+            "owner_email_description": "Si l'email correspond à un utilisateur existant, il est ajouté comme propriétaire. Sinon, une invitation lui est envoyée.",
+            "name_description": "Nom interne du workspace (peut être renommé plus tard).",
+            "free_workspace": "Workspace gratuit",
+            "free_workspace_description": "Pas de facturation Stripe. Décocher pour ouvrir une session Stripe Checkout que le propriétaire devra valider.",
+            "free_until": "Gratuit jusqu'au",
+            "free_until_description": "Optionnel. Date à laquelle l'offre gratuite expire. Laisser vide pour une durée indéfinie. Après cette date, le workspace passe en past_due et l'accès est bloqué jusqu'à la sélection d'un plan payant."
+          },
+          "placeholder": {
+            "name": "Acme Corp",
+            "plan": "Sélectionner un plan",
+            "owner_email": "proprietaire{'@'}example.com"
+          }
+        }
+      },
+      "operator": {
+        "title": "Opérations propriétaire",
+        "description": "Actions immédiates de facturation Stripe pour ce workspace.",
+        "upgrade": {
+          "button": "Montée en gamme immédiate",
+          "title": "Mettre l'abonnement à niveau maintenant",
+          "plan_label": "Plan cible éligible",
+          "confirm": "Passer de {current} à {target} au tarif {price}. Stripe appliquera immédiatement le prorata.",
+          "success": "Abonnement mis à niveau.",
+          "unavailable": "Aucune montée en gamme immédiate éligible n'est disponible pour ce workspace."
+        },
+        "credit": {
+          "button": "Accorder un crédit Stripe",
+          "title": "Accorder un crédit sur le solde client",
+          "amount_label": "Montant en centimes",
+          "reason_label": "Motif",
+          "confirm": "Accorder {amount} de crédit client Stripe pour : {reason}",
+          "available": "Crédit Stripe disponible : {amount}",
+          "success": "Crédit client accordé.",
+          "unavailable": "Ce workspace ne possède pas de solde client Stripe."
+        },
+        "confirm": {
+          "title": "Confirmer les valeurs saisies",
+          "submit": "Confirmer l'opération"
+        },
+        "error": {
+          "load": "Impossible de charger les opérations propriétaire.",
+          "action": "L'opération n'a pas pu aboutir."
+        }
+      },
+      "title": "Workspaces",
+      "description": "Tous les workspaces clients et leurs abonnements.",
+      "caption": "Tous les workspaces",
+      "detail": "Détail du workspace",
+      "detail_description": "Abonnement, infos de facturation et propriétaires d'un workspace.",
+      "switcher_title": "Changer de workspace",
+      "current_label": "Workspace",
+      "none": "Aucun workspace",
+      "select": "Sélectionnez un workspace",
+      "no_results": "Aucun workspace correspondant",
+      "switch_error": "Échec du changement de workspace",
+      "billing_section": "Facturation",
+      "column": {
+        "name": "Nom",
+        "status": "Statut",
+        "plan": "Plan",
+        "stripe_customer": "Client Stripe",
+        "created_at": "Créé le",
+        "company_name": "Raison sociale",
+        "customer_type": "Type de client",
+        "vat_number": "Numéro de TVA",
+        "owner": "Propriétaire"
+      },
+      "status": {
+        "active": "Actif",
+        "trialing": "Essai",
+        "past_due": "Impayé",
+        "suspended": "Suspendu",
+        "cancelled": "Annulé",
+        "pending_payment": "Paiement en attente"
+      },
+      "join": {
+        "button": "Me joindre comme membre",
+        "success": "Vous avez rejoint ce workspace.",
+        "error": "Impossible de rejoindre ce workspace.",
+        "already_member": "Vous êtes déjà membre de ce workspace."
+      },
+      "kpi": {
+        "workspaces": "Workspaces",
+        "active": "Actifs",
+        "free": "Gratuit / offert",
+        "past_due": "En retard"
+      },
+      "billing_state": {
+        "free": "Gratuit",
+        "active": "Actif",
+        "trialing": "Essai",
+        "past_due": "En retard",
+        "suspended": "Suspendu",
+        "cancelled": "Annulé",
+        "pending_payment": "Paiement en attente"
+      },
+      "summary": {
+        "title": "Résumé workspace",
+        "members": "{count} membre(s)",
+        "per_month": "/mois"
+      },
+      "tabs": {
+        "invoices": "Factures",
+        "credit_notes": "Notes de crédit",
+        "members": "Membres"
+      },
+      "create": {
+        "button": "Créer un workspace",
+        "title": "Créer un workspace",
+        "field": {
+          "name": "Nom du workspace",
+          "plan": "Plan"
+        },
+        "error": {
+          "name": "Le nom est obligatoire.",
+          "plan": "Le plan est obligatoire."
+        },
+        "placeholder": {
+          "name": "Acme Corp"
+        },
+        "self_serve": {
+          "description": "Un espace isolé avec ses projets, son équipe et sa facturation.",
+          "plan_hint": "(modifiable à tout moment)",
+          "price": "{price}/{interval}",
+          "interval": {
+            "month": "mois",
+            "year": "an"
+          },
+          "card": "Carte bancaire",
+          "submit": "Créer",
+          "free_taken": "Limite de workspaces Free par carte atteinte — déjà utilisée par « {workspace} ».",
+          "free_unavailable": "Limite de workspaces Free par carte atteinte.",
+          "error": {
+            "load": "Impossible de charger les options de création.",
+            "failed": "Impossible de créer le workspace.",
+            "card": "Impossible d'initialiser le paiement par carte."
+          }
+        }
+      }
+    },
+    "users": {
+      "title": "Utilisateurs",
+      "description": "Tous les utilisateurs de la plateforme et leurs appartenances aux workspaces.",
+      "caption": "Tous les utilisateurs",
+      "detail": "Détail utilisateur",
+      "detail_description": "Profil utilisateur, appartenances aux workspaces et invitations en attente.",
+      "platform_owner_badge": "Platform owner",
+      "workspace_owner_badge": "Owner",
+      "workspaces_section": "Workspaces",
+      "column": {
+        "email": "Email",
+        "name": "Nom",
+        "platform_owner": "Platform owner",
+        "created_at": "Créé le",
+        "segments": "Segments"
+      },
+      "summary": {
+        "title": "Profil utilisateur",
+        "workspaces": "{count} workspace(s) · {owned} propriétaire, {member} membre"
+      },
+      "tabs": {
+        "workspaces": "Workspaces",
+        "invoices": "Facturation"
+      },
+      "invoices_section": "Facturation de ses workspaces",
+      "info": {
+        "language": "Langue",
+        "last_active": "Dernière activité",
+        "two_factor": "2FA activée",
+        "email_verified": "Email vérifié",
+        "email_not_verified": "Email non vérifié",
+        "segments": "Segments"
+      }
+    },
+    "platform_owners": {
+      "actions": {
+        "promote": "Promouvoir propriétaire",
+        "demote": "Rétrograder"
+      },
+      "confirm_promote": {
+        "title": "Promouvoir en propriétaire plateforme",
+        "description": "Cet utilisateur aura un accès administrateur complet à tous les workspaces. Confirmer ?"
+      },
+      "confirm_demote": {
+        "title": "Rétrograder ce propriétaire",
+        "description": "Cet utilisateur perdra tous ses droits administrateurs plateforme. Confirmer ?"
+      },
+      "promoted": "Utilisateur promu propriétaire plateforme",
+      "demoted": "Propriétaire plateforme rétrogradé"
+    },
+    "invoices": {
+      "title": "Factures",
+      "description": "Factures émises via Stripe sur tous les workspaces.",
+      "caption": "Toutes les factures",
+      "column": {
+        "number": "Numéro",
+        "type": "Type",
+        "parent_invoice": "Facture associée",
+        "credit_note_reason": "Motif de l'avoir",
+        "credit_note_type": "Mode de l'avoir",
+        "memo": "Note",
+        "voided_at": "Annulé le",
+        "workspace": "Workspace",
+        "amount": "Montant",
+        "status": "Statut",
+        "issued_at": "Émise le",
+        "period": "Période",
+        "subtotal": "Total HT",
+        "tax": "TVA",
+        "total": "Total TTC",
+        "lines": "Lignes"
+      },
+      "actions": {
+        "download_pdf": "Télécharger PDF",
+        "open_on_stripe": "Ouvrir sur Stripe",
+        "issue_credit_note": "Émettre note de crédit"
+      },
+      "type": {
+        "invoice": "Facture",
+        "credit_note": "Avoir"
+      },
+      "lines": {
+        "empty": "Aucune ligne."
+      }
+    },
+    "credit_notes": {
+      "title": "Notes de crédit",
+      "description": "Avoirs et remboursements Stripe émis aux clients.",
+      "caption": "Toutes les notes de crédit",
+      "column": {
+        "number": "Numéro",
+        "workspace": "Workspace",
+        "amount": "Montant",
+        "type": "Type",
+        "status": "Statut",
+        "issued_at": "Émise le"
+      },
+      "modal": {
+        "title": "Émettre une note de crédit",
+        "description": "Facture {number} (montant max remboursable : {max}). Saisissez un montant en centimes, choisissez le mode et indiquez un motif.",
+        "amount": "Montant (centimes)",
+        "mode_label": "Mode",
+        "mode": {
+          "credit_to_balance": "Crédit sur solde",
+          "refund": "Remboursement"
+        },
+        "reason": "Motif",
+        "submit": "Émettre",
+        "success": "Note de crédit émise",
+        "error": "Échec de l'émission de la note de crédit"
+      }
+    },
+    "segments": {
+      "title": "Segments",
+      "description": "Segments d'utilisateurs définis par des conditions de règles.",
+      "caption": "Tous les segments",
+      "column": {
+        "name": "Nom",
+        "description": "Description",
+        "estimated_count": "Cibles",
+        "last_evaluated_at": "Dernière évaluation",
+        "name_description": "Nom du segment affiché dans les listes et les filtres.",
+        "description_description": "Description optionnelle de ce que ce segment représente."
+      },
+      "field": {
+        "conditions": "Conditions",
+        "conditions_description": "Règles qui déterminent quels utilisateurs appartiennent à ce segment."
+      },
+      "placeholder": {
+        "name": "Nom du segment"
+      },
+      "actions": {
+        "export_owners": "Exporter les utilisateurs (CSV)"
+      },
+      "conditions": {
+        "and": "ET",
+        "or": "OU",
+        "add": "Ajouter une condition",
+        "add_group": "Ajouter un groupe",
+        "logical_label": "Logique",
+        "add_workspace_ref": "Ajouter une condition workspace",
+        "workspace_ref_label": "Workspaces de l'utilisateur"
+      },
+      "operators": {
+        "eq": "Égal",
+        "neq": "Différent",
+        "gt": "Plus grand",
+        "gte": "Plus grand ou égal",
+        "lt": "Plus petit",
+        "lte": "Plus petit ou égal",
+        "contains": "Contient",
+        "in": "Dans",
+        "nin": "Pas dans"
+      },
+      "boolean": {
+        "true": "Oui",
+        "false": "Non"
+      },
+      "units": {
+        "days": "jours",
+        "count": "unités"
+      },
+      "fields": {
+        "name": {
+          "label": "Nom du workspace",
+          "description": "Nom affiché du workspace."
+        },
+        "created_at": {
+          "label": "Date de création",
+          "description": "Date à laquelle le workspace a été créé."
+        },
+        "age_in_days": {
+          "label": "Ancienneté (jours)",
+          "description": "Nombre de jours depuis la création du workspace."
+        },
+        "plan_id": {
+          "label": "Plan",
+          "description": "Plan auquel le workspace est abonné."
+        },
+        "mrr": {
+          "label": "MRR",
+          "description": "Revenu mensuel récurrent du workspace."
+        },
+        "is_paying": {
+          "label": "Payant",
+          "description": "Le workspace génère un MRR > 0."
+        },
+        "status": {
+          "label": "Statut d'abonnement",
+          "description": "Statut de l'abonnement du workspace."
+        },
+        "has_stripe_customer": {
+          "label": "Client Stripe",
+          "description": "Le workspace a un identifiant client Stripe."
+        },
+        "is_on_trial": {
+          "label": "En essai",
+          "description": "Le workspace est en période d'essai."
+        },
+        "customer_type": {
+          "label": "Type de client",
+          "description": "Particulier ou entreprise."
+        },
+        "members_count": {
+          "label": "Nombre de membres",
+          "description": "Nombre total de membres du workspace."
+        },
+        "total_revenue": {
+          "label": "Revenu total",
+          "description": "Somme des factures payées."
+        },
+        "days_since_last_invoice": {
+          "label": "Jours depuis la dernière facture",
+          "description": "Nombre de jours écoulés depuis la dernière facture émise."
+        },
+        "user_email": {
+          "label": "Email",
+          "description": "Adresse email de l'utilisateur."
+        },
+        "user_name": {
+          "label": "Nom",
+          "description": "Nom affiché de l'utilisateur."
+        },
+        "user_language": {
+          "label": "Langue",
+          "description": "Code de langue de l'utilisateur (ex. fr, en)."
+        },
+        "user_created_at": {
+          "label": "Date d'inscription",
+          "description": "Date à laquelle l'utilisateur s'est inscrit."
+        },
+        "user_age_in_days": {
+          "label": "Ancienneté (jours)",
+          "description": "Nombre de jours depuis l'inscription de l'utilisateur."
+        },
+        "user_is_validated": {
+          "label": "Email vérifié",
+          "description": "L'utilisateur a validé son adresse email."
+        },
+        "days_since_last_active": {
+          "label": "Jours depuis la dernière activité",
+          "description": "Nombre de jours depuis la dernière session active de l'utilisateur."
+        },
+        "workspaces_count": {
+          "label": "Nombre de workspaces",
+          "description": "Nombre de workspaces dont l'utilisateur est membre."
+        },
+        "is_owner_of_any_workspace": {
+          "label": "Owner d'un workspace",
+          "description": "L'utilisateur est propriétaire d'au moins un workspace."
+        }
+      },
+      "export": {
+        "title": "Export du segment",
+        "preparing": "Préparation du téléchargement…",
+        "done_message": "Le fichier CSV a été téléchargé.",
+        "success_title": "Export téléchargé",
+        "error_title": "L'export a échoué"
+      },
+      "role": {
+        "any": "Tout rôle dans",
+        "owner": "Propriétaire de"
+      },
+      "quantifier": {
+        "any": "Au moins un workspace",
+        "all": "Tous les workspaces"
+      }
+    },
+    "settings": {
+      "title": "Paramètres",
+      "description": "Règles de facturation, politique de remboursement et documents légaux.",
+      "tabs": {
+        "billing": "Facturation",
+        "refund": "Politique de remboursement",
+        "legal": "Documents légaux"
+      },
+      "billing": {
+        "auto_suspend_enabled": "Auto-suspendre les workspaces past-due",
+        "auto_suspend_enabled_desc": "Suspendre automatiquement les workspaces dont l'abonnement est past_due.",
+        "auto_suspend_delay_days": "Délai d'auto-suspension (jours)",
+        "auto_suspend_delay_days_desc": "Délai de grâce avant qu'un abonnement past_due ne soit suspendu.",
+        "data_retention_days": "Rétention des données (jours)",
+        "data_retention_days_desc": "Durée de conservation des données d'un workspace annulé avant suppression définitive.",
+        "stripe_tax_code": "Code de taxe Stripe (produit)",
+        "stripe_tax_code_desc": "Code de catégorie fiscale Stripe appliqué aux produits lors de la synchronisation (ex. txcd_10000000). Requis pour le calcul automatique de la TVA. À appliquer en re-synchronisant les plans.",
+        "max_free_workspaces_per_card": "Workspaces Free par carte",
+        "max_free_workspaces_per_card_desc": "Nombre de workspaces sur un plan gratuit qu'une même carte bancaire peut adosser."
+      },
+      "refund": {
+        "money_back_guarantee": "Garantie satisfait ou remboursé",
+        "money_back_guarantee_desc": "Permettre aux propriétaires de workspace de demander un remboursement en self-service pendant la fenêtre.",
+        "money_back_window_days": "Fenêtre de remboursement (jours)",
+        "money_back_window_days_desc": "Nombre de jours après la première facture payée pendant lesquels un remboursement peut être demandé.",
+        "money_back_mode": "Mode de remboursement (satisfait ou remboursé)",
+        "money_back_mode_desc": "S'applique uniquement aux demandes volontaires « satisfait ou remboursé » : intégral rembourse la totalité, prorata uniquement la portion non consommée.",
+        "mode": {
+          "full": "Intégral",
+          "prorated": "Prorata"
+        },
+        "auto_prorata_on_cancel": "Prorata auto à l'annulation mid-cycle",
+        "auto_prorata_on_cancel_desc": "Distinct de la garantie satisfait ou remboursé ci-dessus : lorsqu'un workspace annule en cours de cycle sans demande manuelle, rembourse automatiquement la portion non consommée (au prorata)."
+      },
+      "legal": {
+        "terms_of_use_desc": "Conditions d'utilisation publiques, servies à /terms-of-use. Texte enrichi.",
+        "terms_and_conditions_desc": "Conditions générales publiques, servies à /terms-and-conditions. Texte enrichi.",
+        "privacy_policy_desc": "Politique de confidentialité publique, servie à /privacy-policy. Texte enrichi."
+      }
+    },
+    "workspace": {
+      "settings": {
+        "title": "Paramètres du workspace"
+      },
+      "seats": {
+        "title": "Sièges",
+        "badge_unlimited": "{occupied} / illimité",
+        "description": "Les membres et les invitations en attente occupent chacun un siège : {members} membre(s), {invites} invitation(s) en attente.",
+        "limit_reached_owner": "La limite de sièges de votre plan est atteinte. Passez à un plan supérieur pour ajouter des membres.",
+        "limit_reached_member": "La limite de sièges de votre plan est atteinte. Demandez à un propriétaire du workspace de changer de plan.",
+        "upgrade": "Changer de plan",
+        "load_failed": "Impossible de charger l'utilisation des sièges"
+      },
+      "free_access": {
+        "banner_title": "Accès offert",
+        "banner_description": "Votre accès gratuit expire le {date}. Sélectionnez un plan payant avant cette date pour conserver l'accès.",
+        "expired_title": "Accès offert expiré",
+        "expired_description": "L'accès gratuit accordé à votre workspace a expiré. Sélectionnez un plan payant pour rétablir l'accès.",
+        "indefinite_title": "Accès offert",
+        "indefinite_description": "Votre workspace bénéficie d'un accès offert sans date d'expiration."
+      },
+      "billing": {
+        "title": "Facturation",
+        "description": "Gérez votre plan, votre abonnement, votre moyen de paiement et vos factures.",
+        "manage": "Gérer la facturation",
+        "invoices_caption": "Vos factures",
+        "info_title": "Informations de facturation",
+        "info_description": "Mettez à jour vos coordonnées de facturation et votre numéro de TVA.",
+        "info_save": "Enregistrer",
+        "info_saved": "Informations de facturation mises à jour",
+        "info_save_error": "Échec de la mise à jour des informations de facturation",
+        "refund": {
+          "title": "Garantie satisfait ou remboursé",
+          "description": "Vous êtes encore dans la fenêtre de remboursement. Demander le remboursement vous rendra {amount} et annulera votre abonnement.",
+          "button": "Demander le remboursement",
+          "confirm_title": "Confirmer le remboursement",
+          "confirm_message": "Vous serez remboursé de {amount} et votre abonnement sera immédiatement annulé. Cette action est irréversible.",
+          "confirm_action": "Confirmer le remboursement",
+          "success": "Remboursement effectué et abonnement annulé.",
+          "error": "Échec de la demande de remboursement"
+        },
+        "past_due": {
+          "title": "Action requise",
+          "badge": "paiement échoué",
+          "suspended_title": "Workspace suspendu",
+          "suspended_badge": "facture impayée",
+          "summary": "La facture {invoice} de {amount} est impayée.",
+          "summary_with_date": "La facture {invoice} de {amount} n'a pas pu être prélevée le {date}.",
+          "next_retry": "Nouvelle tentative automatique le {date}.",
+          "suspend_warning": "Sans régularisation, le workspace est suspendu le {date} — données et volumes préservés.",
+          "suspended_summary": "La facture {invoice} de {amount} reste impayée. Le règlement rétablit l'accès immédiatement.",
+          "settle": "Régler sur Stripe",
+          "load_failed": "Impossible de vérifier l'état de facturation de ce workspace."
+        },
+        "payment_method": {
+          "title": "Moyen de paiement",
+          "active": "actif",
+          "needs_update": "à mettre à jour",
+          "missing": "aucune carte",
+          "declined": "refusée",
+          "default": "par défaut",
+          "expires": "exp. {date}",
+          "none": "Aucune carte enregistrée.",
+          "portal_hint": "Changement de carte, reçus, historique : tout se passe dans le portail Stripe ; la carte n'est jamais stockée chez nous."
+        },
+        "billing_email": {
+          "label": "E-mail de facturation",
+          "hint": "Reçoit les factures et les relances, synchronisé sur le client Stripe."
+        },
+        "vat": {
+          "verified": "vérifiée (VIES)",
+          "pending": "vérification en cours",
+          "unverified": "non vérifiée"
+        }
+      },
+      "plan": {
+        "current": "Plan actuel",
+        "none": "Aucun plan",
+        "change": "Changer de plan",
+        "go_paid": "Passer en payant",
+        "blocked_hint": "Le changement de plan redevient possible une fois la facture réglée.",
+        "next_renewal": "Prochain renouvellement le {date}.",
+        "unlimited": "illimité",
+        "pending_downgrade": "Downgrade vers {plan} au prochain cycle",
+        "pending_downgrade_on": "Downgrade vers {plan} le {date}",
+        "cancel_downgrade": "Annuler le downgrade",
+        "downgrade_cancelled": "Downgrade programmé annulé.",
+        "change_applied": "Plan modifié.",
+        "change_scheduled": "Downgrade programmé pour la fin du cycle en cours.",
+        "change_error": "Échec du changement de plan",
+        "interval": {
+          "month": "mois",
+          "year": "an"
+        },
+        "comparison": {
+          "title": "Changer de plan",
+          "subtitle": "Actuellement en {plan}. Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
+          "subtitle_no_plan": "Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
+          "current": "actuel",
+          "scheduled": "programmé",
+          "choose": "Choisir",
+          "show_detail": "Voir tout le détail",
+          "hide_detail": "Masquer le détail",
+          "footer": "Le prix du plan est un crédit d'usage prépayé aux tarifs publics, déduit de votre consommation à la minute. Il n'est pas reportable. Au-delà, le même tarif s'applique : jamais de cliff."
+        }
+      },
+      "data_export": {
+        "title": "Export des données",
+        "description": "Télécharger une copie des données de votre workspace.",
+        "intro": "Demandez une copie complète des données associées à ce workspace. L'archive est construite en arrière-plan et un lien de téléchargement vous est envoyé par e-mail ; le lien et l'archive expirent à la date indiquée dans l'historique ci-dessous. Conforme à votre droit à la portabilité des données (RGPD article 20).",
+        "download": "Demander un export",
+        "error_title": "Échec de l'export",
+        "success_title": "Export prêt",
+        "success_message": "Vos données ont été exportées. Un lien de téléchargement vous a également été envoyé par e-mail.",
+        "history": {
+          "title": "Exports précédents",
+          "empty": "Vous n'avez encore demandé aucun export pour ce workspace.",
+          "scope": "Données du workspace",
+          "download": "Télécharger",
+          "expires_at": "Disponible jusqu'au {date}",
+          "expired": "Lien expiré",
+          "status_pending": "En cours",
+          "status_completed": "Prêt",
+          "status_partial": "Incomplet",
+          "status_failed": "Échec",
+          "error_load": "Les exports précédents n'ont pas pu être chargés.",
+          "error_download": "Cet export n'a pas pu être téléchargé.",
+          "error_expired": "Cet export n'est plus disponible — son lien de téléchargement a expiré. Demandez-en un nouveau.",
+          "previous": "Précédent",
+          "next": "Suivant",
+          "page": "Page {page}"
+        }
+      },
+      "general": {
+        "title": "Général",
+        "description": "Le nom du workspace et sa suppression.",
+        "identity_title": "Workspace",
+        "identity_intro": "L'identité de votre workspace.",
+        "name": "Nom du workspace",
+        "name_hint": "Visible par tous les membres.",
+        "reset": "Réinitialiser",
+        "save": "Enregistrer les modifications",
+        "renamed": "Workspace renommé.",
+        "danger_zone_title": "Zone de danger",
+        "delete_intro": "Supprime le workspace : projets, services et données sont détruits après une période de rétention de {days} jours. Un export des données reste possible avant.",
+        "delete_action": "Supprimer le workspace",
+        "delete_warning": "« {name} » — l'accès est révoqué immédiatement et les données sont détruites après {days} jours. Les factures restent archivées (obligation légale).",
+        "delete_confirm_label": "Tapez le nom du workspace pour confirmer",
+        "delete_submit": "Supprimer définitivement",
+        "cancel": "Annuler",
+        "error": {
+          "load": "Impossible de charger le workspace.",
+          "rename": "Impossible de renommer le workspace.",
+          "delete": "Impossible de supprimer le workspace."
+        }
+      }
+    },
+    "features": {
+      "title": "Fonctionnalités",
+      "description": "Feature flags exposés aux plans et consommés par les workspaces.",
+      "caption": "Toutes les fonctionnalités",
+      "column": {
+        "display_name": "Nom affiché",
+        "description": "Description",
+        "value_type": "Type de valeur",
+        "display_name_description": "Libellé affiché aux administrateurs et aux clients.",
+        "description_description": "Description détaillée de ce que la fonctionnalité fait.",
+        "value_type_description": "Type de valeur portée par la fonctionnalité (booléen, numérique, chaîne).",
+        "tooltip": "Info-bulle",
+        "tooltip_description": "Courte précision affichée à côté de la feature dans le tableau de comparaison des plans.",
+        "unit": "Unité",
+        "unit_description": "Suffixe ajouté aux valeurs numériques, par exemple Go ou h/mois.",
+        "is_detail_row": "Ligne de détail",
+        "is_detail_row_description": "Masquée derrière le bouton « Voir tout le détail » du tableau de comparaison.",
+        "order": "Ordre",
+        "order_description": "Position de la ligne dans le tableau de comparaison des plans."
+      },
+      "placeholder": {
+        "display_name": "Nom affiché",
+        "tooltip": "Déduit de votre consommation à la minute",
+        "unit": "Go"
+      }
+    },
+    "common": {
+      "yes": "Oui",
+      "no": "Non",
+      "load_failed": "Impossible de charger cette section.",
+      "retry": "Réessayer"
+    },
+    "notes": {
+      "title": "Notes internes",
+      "placeholder": "Écrire une note interne…",
+      "add": "Ajouter",
+      "delete": "Supprimer",
+      "delete_confirm": {
+        "title": "Supprimer la note ?",
+        "description": "Cette note sera supprimée définitivement.",
+        "confirm": "Supprimer"
+      },
+      "empty": "Aucune note pour le moment.",
+      "error": {
+        "load": "Impossible de charger les notes",
+        "create": "Impossible d'ajouter la note",
+        "delete": "Impossible de supprimer la note"
+      }
+    },
+    "support": {
+      "tenant": {
+        "title": "Support",
+        "description": "Ouvrez et suivez les demandes de support de ce workspace",
+        "new": "Nouveau ticket",
+        "create": "Ouvrir le ticket",
+        "created": "Ticket de support ouvert",
+        "empty": "Aucun ticket de support",
+        "select": "Sélectionnez un ticket pour lire la conversation"
+      },
+      "platform": {
+        "title": "Boîte de réception support",
+        "description": "Traitez les demandes de support de tous les workspaces",
+        "empty": "Aucun ticket ne correspond à ces filtres",
+        "select": "Sélectionnez un ticket dans la boîte de réception",
+        "assignee": "Assigné à",
+        "unassigned": "Non assigné"
+      },
+      "subject": "Sujet",
+      "message": "Message",
+      "attachments": "Pièces jointes",
+      "attachment": "Pièce jointe {number}",
+      "remove_attachment": "Retirer la pièce jointe",
+      "reply_placeholder": "Écrire une réponse…",
+      "send": "Envoyer la réponse",
+      "conversation": "Conversation",
+      "pagination": {
+        "latest_page": "Messages les plus récents",
+        "older_messages": "Choisissez une page suivante pour voir les anciens messages"
+      },
+      "history": {
+        "title": "Historique du ticket",
+        "empty": "Aucune modification du ticket",
+        "status_changed": "{actor} a changé le statut de {previous} à {next}",
+        "assignment_changed": "{actor} a changé l’assignation de {previous} à {next}"
+      },
+      "category": {
+        "label": "Catégorie",
+        "question": "Question",
+        "incident": "Incident",
+        "billing": "Facturation",
+        "feature_request": "Demande de fonctionnalité"
+      },
+      "priority": {
+        "label": "Priorité",
+        "low": "Basse",
+        "normal": "Normale",
+        "high": "Haute",
+        "urgent": "Urgente"
+      },
+      "status": {
+        "open": "Ouvert",
+        "in_progress": "En cours",
+        "waiting_customer": "En attente du client",
+        "resolved": "Résolu",
+        "closed": "Fermé"
+      },
+      "author": {
+        "tenant": "Workspace",
+        "platform": "Équipe support"
+      },
+      "filters": {
+        "status": "Statut",
+        "priority": "Priorité",
+        "all_statuses": "Tous les statuts",
+        "all_priorities": "Toutes les priorités",
+        "apply": "Appliquer les filtres"
+      },
+      "sla": {
+        "community": {
+          "title": "Support communautaire",
+          "description": "Assistance communautaire sans délai de réponse garanti."
+        },
+        "email": {
+          "title": "Support e-mail",
+          "description": "Objectif de première réponse sous 2 jours ouvrés."
+        },
+        "priority": {
+          "title": "Support prioritaire",
+          "description": "Objectif de première réponse sous 8 heures ouvrées."
+        },
+        "dedicated": {
+          "title": "Support dédié",
+          "description": "Objectif de première réponse sous 2 heures."
+        }
+      },
+      "error": {
+        "load": "Impossible de charger le support",
+        "create": "Impossible d'ouvrir le ticket",
+        "reply": "Impossible d'envoyer la réponse",
+        "update": "Impossible de mettre à jour le ticket",
+        "upload": "Impossible de téléverser la pièce jointe. Sélectionnez le fichier pour réessayer.",
+        "attachment": "Impossible d'ouvrir la pièce jointe"
+      }
+    },
+    "notifications": {
+      "subjects": {
+        "plan_migrated": "Plan migré",
+        "trial_ending_soon": "Période d'essai bientôt terminée",
+        "trial_ended_blocked": "Période d'essai terminée",
+        "payment_failed": "Échec de paiement",
+        "workspace_suspended": "Workspace suspendu",
+        "subscription_cancelled": "Abonnement annulé",
+        "credit_note_issued": "Note de crédit émise",
+        "refund_processed": "Remboursement traité",
+        "platform_owner_added": "Administrateur plateforme ajouté",
+        "platform_owner_removed": "Administrateur plateforme retiré",
+        "free_workspace_expired": "Accès gratuit expiré",
+        "free_workspace_ending_soon": "Accès gratuit bientôt expiré",
+        "workspace_reactivated": "Workspace réactivé",
+        "complimentary_access_granted": "Accès gratuit accordé",
+        "automation": "Automatisation",
+        "seat_overage": "Dépassement de sièges du plan",
+        "support_new_message": "Nouveau message de support",
+        "support_status_changed": "Statut du ticket de support modifié"
+      },
+      "payload": {
+        "workspace_suspended_admin": {
+          "title": "Workspace suspendu",
+          "description": "Votre workspace a été suspendu par l'équipe plateforme."
+        },
+        "workspace_reactivated": {
+          "title": "Workspace réactivé",
+          "description": "Votre workspace a été réactivé par l'équipe plateforme."
+        },
+        "complimentary_access_granted": {
+          "title": "Accès gratuit accordé",
+          "description": "Votre workspace bénéficie désormais d'un accès gratuit."
+        },
+        "seat_overage": {
+          "title": "Membres au-delà de la limite du plan",
+          "description": "Votre nouveau plan autorise moins de membres que votre workspace n'en compte. Les membres existants conservent leur accès, mais vous ne pouvez plus en ajouter tant que vous dépassez la limite, sauf à repasser sur un plan supérieur."
+        },
+        "workspace_deletion_requested": {
+          "title": "Suppression du workspace demandée",
+          "description": "L'accès est révoqué et les données seront détruites à la fin de la période de rétention."
+        },
+        "support_new_ticket": {
+          "title": "Nouveau ticket de support"
+        },
+        "support_tenant_reply": {
+          "title": "Nouvelle réponse client",
+          "description": "Un client a ajouté un message à un ticket de support."
+        },
+        "support_platform_reply": {
+          "title": "Le support a répondu à votre ticket",
+          "description": "L’équipe support a ajouté un message à votre ticket."
+        },
+        "support_status_changed": {
+          "title": "Le statut de votre ticket de support a changé"
+        }
+      },
+      "category": {
+        "label": "SaaS",
+        "description": "Notifications de facturation, d'abonnement et de workspace"
+      }
+    },
+    "workspace_suspended": {
+      "title": "Accès au workspace restreint",
+      "description": "L'abonnement de ce workspace bloque l'accès",
+      "status": {
+        "pending_payment": "Ce workspace attend son premier paiement. L'accès est restreint jusqu'à la finalisation du paiement.",
+        "suspended": "Ce workspace a été suspendu suite à un problème de facturation. L'accès est restreint jusqu'à la régularisation.",
+        "cancelled": "L'abonnement de ce workspace a été annulé. L'accès est restreint.",
+        "default": "L'abonnement de ce workspace bloque l'accès. L'accès est restreint jusqu'à la régularisation."
+      },
+      "unpaid_invoice": "La facture {invoice} de {amount} n'a pas pu être prélevée malgré plusieurs tentatives. Les apps sont en veille — données, volumes et configuration intégralement préservés. Le règlement rétablit l'accès immédiatement.",
+      "retention_note": "Sans régularisation, les données sont conservées selon la période de rétention puis supprimées — un export reste possible via le support.",
+      "contact_owner": "Contactez le propriétaire du workspace pour rétablir l'accès.",
+      "settle": "Régler la facture",
+      "open_billing": "Voir la facturation",
+      "recheck": "Vérifier à nouveau",
+      "logout": "Retour à la connexion",
+      "load_error": "Impossible de vérifier le statut du workspace. Veuillez réessayer."
+    }
+  }
+}

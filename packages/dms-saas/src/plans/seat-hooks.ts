@@ -1,0 +1,109 @@
+import { assert } from "@antelopejs/interface-api-util";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { Hook, RegisterHook } from "@antelopejs/interface-dms/hooks";
+import type { Plan } from "../db";
+import { PlanModel, TenantSubscriptionModel } from "../db";
+import { countOccupiedSeats, hasSeatCapacity } from "./seat-capacity";
+import { syncStripeSeatQuantity } from "./seat-sync";
+
+const HTTP_PAYMENT_REQUIRED = 402;
+
+interface ActivePlanContext {
+  plan: Plan;
+  stripeSubscriptionId: string | null;
+}
+
+async function getActivePlanForTenant(
+  tenantId: string,
+): Promise<ActivePlanContext | null> {
+  const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
+  const planModel = GetModel(PlanModel);
+  const subscription = await tenantSubscriptionModel.findOne();
+  if (!subscription?.planId) return null;
+  const plan = await planModel.get(subscription.planId);
+  if (!plan) return null;
+  return { plan, stripeSubscriptionId: subscription.stripeSubscriptionId };
+}
+
+async function enforceSeatCapacity(tenantId: string): Promise<void> {
+  const active = await getActivePlanForTenant(tenantId);
+  if (!active) return;
+  const occupied = await countOccupiedSeats(tenantId);
+  assert(
+    hasSeatCapacity(active.plan.maxMembers, occupied),
+    HTTP_PAYMENT_REQUIRED,
+    "saas.errors.plan.seat_limit_reached",
+  );
+}
+
+async function syncSeatsAfterChange(
+  tenantId: string,
+  idempotencyKey: string,
+): Promise<void> {
+  const active = await getActivePlanForTenant(tenantId);
+  if (!active) return;
+  await syncStripeSeatQuantity({
+    tenantId,
+    plan: active.plan,
+    stripeSubscriptionId: active.stripeSubscriptionId,
+    idempotencyKey,
+  });
+}
+
+async function syncSeatsAfterRemoval(
+  tenantId: string,
+  removedCount: number,
+  idempotencyKey: string,
+): Promise<void> {
+  const active = await getActivePlanForTenant(tenantId);
+  if (!active) return;
+  const currentOccupied = await countOccupiedSeats(tenantId);
+  const nextOccupied = Math.max(0, currentOccupied - removedCount);
+  await syncStripeSeatQuantity({
+    tenantId,
+    plan: active.plan,
+    stripeSubscriptionId: active.stripeSubscriptionId,
+    idempotencyKey,
+    quantityOverride: nextOccupied,
+  });
+}
+
+export function registerSeatHooks(): void {
+  RegisterHook(Hook.MEMBER_BEING_ADDED, async ({ tenantId }) => {
+    await enforceSeatCapacity(tenantId);
+    return undefined;
+  });
+  RegisterHook(Hook.INVITE_BEING_CREATED, async ({ tenantId }) => {
+    await enforceSeatCapacity(tenantId);
+    return undefined;
+  });
+  RegisterHook(Hook.MEMBER_ADDED, async ({ tenantId, userId }) => {
+    await syncSeatsAfterChange(
+      tenantId,
+      `seat-sync:member-added:${tenantId}:${userId}`,
+    );
+    return undefined;
+  });
+  RegisterHook(Hook.INVITE_CREATED, async ({ tenantId, inviteId }) => {
+    await syncSeatsAfterChange(
+      tenantId,
+      `seat-sync:invite-created:${tenantId}:${inviteId}`,
+    );
+    return undefined;
+  });
+  RegisterHook(Hook.INVITE_DELETED, async ({ tenantId, inviteId }) => {
+    await syncSeatsAfterChange(
+      tenantId,
+      `seat-sync:invite-deleted:${tenantId}:${inviteId}`,
+    );
+    return undefined;
+  });
+  RegisterHook(Hook.MEMBER_REMOVED, async ({ tenantId, userIds }) => {
+    await syncSeatsAfterRemoval(
+      tenantId,
+      userIds.length,
+      `seat-sync:member-removed:${tenantId}:${userIds.join(",")}`,
+    );
+    return undefined;
+  });
+}

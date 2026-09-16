@@ -1,0 +1,46 @@
+name: Release DMS SaaS module
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: npm distribution channel
+        required: true
+        default: latest
+        type: choice
+        options: [latest, next]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  validate:
+    name: Validate module release metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release source and package metadata
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          test "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH"
+          case "$CHANNEL" in latest|next) ;; *) exit 1 ;; esac
+          node <<'NODE'
+          const pkg = require('./packages/dms-saas/package.json')
+          if (pkg.name !== '@antelopejs/dms-saas' || pkg.repository.url !== 'git+https://github.com/AntelopeJS/dms-saas.git' || pkg.publishConfig.registry !== 'https://registry.npmjs.org/' || pkg.publishConfig.access !== 'public' || pkg.publishConfig.provenance !== true || pkg.dependencies['@antelopejs/interface-dms-saas'] !== 'workspace:*') process.exit(1)
+          NODE
+      # The module resolves its interface through workspace:*, which pnpm
+      # rewrites on publish: releasing it before the interface exists on npm
+      # would ship a dependency nobody can install.
+      - name: Verify the published interface
+        run: node packages/dms-saas/scripts/verify-interface-package.cjs
+  release:
+    needs: validate
+    uses: AntelopeJS/.github/.github/workflows/release-npm-public.yml@1df63ee37c5ecb869124cb58f199cef1e19dd138
+    with:
+      channel: ${{ inputs.channel }}
+      package-directory: packages/dms-saas
+    secrets:
+      RELEASE_GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}

@@ -1,0 +1,36 @@
+{
+  "name": "playground",
+  "version": "0.0.1",
+  "private": true,
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ajs project run -w",
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "frontend:dev": "acms dev"
+  },
+  "dependencies": {
+    "@antelopejs/dms": ">=0.0.1 <1.0.0",
+    "@antelopejs/interface-api": "^0.0.13",
+    "@antelopejs/interface-api-util": "^0.1.2",
+    "@antelopejs/interface-core": "^0.0.12",
+    "@antelopejs/interface-data-api": "^0.1.9",
+    "@antelopejs/interface-database": "^0.1.4",
+    "@antelopejs/interface-database-decorators": "^0.1.6"
+  },
+  "devDependencies": {
+    "@antelopejs-private/cms-nuxt": "^0.0.20",
+    "@types/node": "^22.14.1",
+    "dotenv": "^17.4.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3"
+  },
+  "antelopeJs": {
+    "baseUrl": "dist",
+    "paths": {
+      "@/*": [
+        "*"
+      ]
+    }
+  }
+}

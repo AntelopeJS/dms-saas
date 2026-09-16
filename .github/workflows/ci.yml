@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  # No branch filter: the lint wave stacks pull requests on top of each other,
+  # and filtering on `main` left every intermediate step ungated -- only the
+  # secret scanner ran there.
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Before setup-node: `cache: pnpm` needs a pnpm on PATH to locate the
+      # store. The version comes from the root `packageManager` field.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+
+      - uses: actions/setup-node@v4
+        with:
+          # .nvmrc is the version of record. oxlint needs at least 22.18 to
+          # read a TypeScript config, which every value there clears.
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            packages/dms-saas/frontend-vue/pnpm-lock.yaml
+
+      # `...` pulls in the workspace interface package the module depends on;
+      # `{.}` adds the root, which owns the shared lint, format and tsconfig
+      # tooling. The playground is the only project that still needs the
+      # private registry, and neither filter reaches it.
+      - run: pnpm install --filter "@antelopejs/dms-saas..." --filter "{.}" --frozen-lockfile
+      - run: pnpm --dir packages/dms-saas/frontend-vue install --frozen-lockfile
+
+      - run: pnpm --filter @antelopejs/interface-dms-saas lint
+      - run: pnpm --filter @antelopejs/dms-saas lint
+      # tsconfig.json is the config the editors and oxlint's type-aware pass
+      # read; tsconfig.build.json is the one the build uses. Without this the
+      # first is never exercised, and a resolution failure there degrades every
+      # type-aware rule to `any` without failing anything.
+      - run: pnpm --filter @antelopejs/interface-dms-saas typecheck
+      - run: pnpm --filter @antelopejs/dms-saas typecheck
+      # Unused dependencies only. `pnpm knip:all` also reports dead files and
+      # exports, which need a human to confirm, so they stay out of the gate.
+      - run: pnpm --filter @antelopejs/interface-dms-saas knip
+      - run: pnpm --filter @antelopejs/dms-saas knip
+      # Builds the interface package first, which the module's own build needs.
+      - run: pnpm --filter @antelopejs/dms-saas build
+      # Packs each tarball and type-checks every published subpath against
+      # exports/typesVersions -- the guard over the published contract.
+      - run: pnpm --filter @antelopejs/interface-dms-saas check:package-contract
+      - run: pnpm --filter @antelopejs/dms-saas check:package-contract
+      - run: pnpm --filter @antelopejs/dms-saas test:unit
+      # Compile the published DMS source together with this frontend module.
+      - run: pnpm --filter @antelopejs/dms-saas test:frontend
