@@ -32,6 +32,34 @@ workspace. From that directory run `pnpm install`,
 `pnpm test:frontend`. The frontend check generates a temporary workspace, then
 builds client, SSR, and email bundles and runs Vue typechecking.
 
+## Completing a registration that entered without a workspace
+
+An account can reach the product before it owns anything to log into: an OAuth
+sign-in for an unknown e-mail, or any entry point the core answers with
+`requires_tenant_assignment`. The `auth/no-workspace` page is where that
+account buys its way in — a workspace, a plan, a card — and
+`POST /api/saas/register/finalize` provisions it and answers with a token pair
+for the workspace it just created, so the visitor lands signed in instead of
+back on the login screen.
+
+The page never touches those tokens. It posts the call through the frontend
+loader's generic `POST /auth/establish` route, naming the endpoint to call and
+its payload; the loader calls `/api/saas/register/finalize` itself over its own
+server-to-server channel to the DMS API and writes its session cookie from what
+comes back. Because that route turns a backend endpoint into a login, it only
+calls endpoints the deployment named, so a project serving this page must
+declare the finalize endpoint in the frontend server's environment:
+
+```bash
+# .env of the frontend server
+DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize
+```
+
+Without it the loader answers `403` and a visitor who has paid stays signed
+out. A replacement completion screen keeps the same requirement, and can build
+its request with the auto-imported `buildSessionEstablishRequest()` helper
+rather than restating the endpoint and the payload shape.
+
 ## Tenant owner permissions
 
 The `dms-saas.plan-intersection` permissions resolver runs at order 100. For a
