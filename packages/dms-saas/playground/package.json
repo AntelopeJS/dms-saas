@@ -13,7 +13,7 @@
     "@antelopejs/dms": ">=0.0.1 <1.0.0",
     "@antelopejs/interface-api": "^0.0.13",
     "@antelopejs/interface-api-util": "^0.1.2",
-    "@antelopejs/interface-core": "^0.0.12",
+    "@antelopejs/interface-core": ">=0.0.13 <1.0.0",
     "@antelopejs/interface-data-api": "^0.1.9",
     "@antelopejs/interface-database": "^0.1.4",
     "@antelopejs/interface-database-decorators": "^0.1.6"
