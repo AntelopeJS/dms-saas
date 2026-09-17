@@ -729,6 +729,22 @@ describe("the OAuth-entry path carries the same capture", () => {
     return { ...shared, tenant_assignment_token: "tat_test", extras };
   }
 
+  it("answers the token pair the frontend server opens a session from", async () => {
+    // The completion screen posts this call through the loader's
+    // `/auth/establish`, which reads exactly these fields to write its session
+    // cookie. A finalize that stopped returning them would provision a
+    // workspace and leave the owner who just paid for it signed out.
+    const response = await buildController().finalize(buildFinalizeBody());
+
+    expect(response).toEqual({
+      token_type: "Bearer",
+      access_token: "access",
+      expires_in: 900,
+      refresh_token: "refresh",
+      user: OAUTH_USER,
+    });
+  });
+
   it("hands the listener the account that entered through OAuth", async () => {
     const seen: TenantBeingProvisionedPayload[] = [];
     listen((payload) => {

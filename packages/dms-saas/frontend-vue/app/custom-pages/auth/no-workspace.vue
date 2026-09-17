@@ -39,7 +39,6 @@ interface PendingRegistration {
 const PLANS_ENDPOINT = "/api/saas/plans/public";
 const SETUP_INTENT_ENDPOINT = "/api/saas/register/setup-intent";
 const PENDING_ENDPOINT = "/api/saas/register/pending";
-const FINALIZE_ENDPOINT = "/auth/finalize-workspace";
 const LOGIN_REDIRECT = "/auth/login";
 const PAYMENT_ELEMENT_ID = "dms-saas-finalize-payment-element";
 const HOME_REDIRECT = "/";
@@ -68,8 +67,9 @@ const stripePublishableKey = computed<string>(
   () => dmsSaasRuntime.value?.stripePublishableKey ?? "",
 );
 
-// Only `finalize` goes through the frontend server because it opens the session
-// cookie; all other public registration endpoints live on the DMS API.
+// Only `finalize` goes through the frontend server, and only because it opens
+// the session cookie on the workspace it provisions; every other public
+// registration endpoint is called on the DMS API directly.
 const apiFetch = $fetch.create({ baseURL: dmsRuntime.value.baseURL });
 
 const { countryItems } = useBillingCountries();
@@ -225,17 +225,15 @@ async function submit(): Promise<void> {
         nuxtApp.$i18n.t("saas.register.error.no_payment");
       return;
     }
-    await $fetch(FINALIZE_ENDPOINT, {
+    await $fetch(SESSION_ESTABLISH_ENDPOINT, {
       method: "POST",
-      body: {
-        tenant_assignment_token: tenantAssignmentToken.value,
+      body: buildSessionEstablishRequest({
+        tenantAssignmentToken: tenantAssignmentToken.value,
         workspaceName: workspaceName.value,
         planId: selectedPlanId.value,
         customerType: customerType.value,
-        companyName:
-          customerType.value === "business" ? companyName.value : undefined,
-        vatNumber:
-          customerType.value === "business" ? vatNumber.value : undefined,
+        companyName: companyName.value,
+        vatNumber: vatNumber.value,
         address: {
           country: country.value,
           line1: addressLine1.value || undefined,
@@ -243,7 +241,7 @@ async function submit(): Promise<void> {
           city: city.value || undefined,
         },
         paymentMethodId: confirm.paymentMethodId,
-      },
+      }),
     });
     if (typeof window !== "undefined") {
       window.location.href = HOME_REDIRECT;
