@@ -12,10 +12,12 @@
  * on its behalf, and the loader writes its session cookie from the token pair
  * the API returns. No access or refresh token is ever handed to the page.
  *
- * The deployment must name the finalize endpoint in the frontend server's
- * `DMS_AUTH_ESTABLISH_ENDPOINTS`, otherwise `/auth/establish` answers 403:
- * turning a backend route into a login is the operator's decision, not a
- * module's.
+ * The finalize endpoint is declared by the module itself, through
+ * `authEstablishEndpoints` on its `AddFrontendModule` registration: the DMS
+ * carries it in the frontend manifest and the loader writes it into the
+ * workspace, so a standard deployment needs no configuration. Any endpoint
+ * neither declared nor named in the frontend server's
+ * `DMS_AUTH_ESTABLISH_ENDPOINTS` is answered 403 and never called.
  */
 
 /** Loader route that opens a session from a backend-issued token pair. */

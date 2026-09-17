@@ -56,6 +56,12 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
     sourcePath: path.join(__dirname, "../frontend-vue"),
     renderer: { name: "vue", version: "3" },
     priority: 0,
+    // Self-service registration ends on an authenticated user: the finalize
+    // route provisions the workspace and mints the token pair, and the
+    // frontend server seals its session cookie from it. Declaring it here is
+    // what lets `/auth/establish` call it, so no deployment has to name it in
+    // DMS_AUTH_ESTABLISH_ENDPOINTS by hand.
+    authEstablishEndpoints: ["/api/saas/register/finalize"],
     options: {
       dmsSaas: {
         stripePublishableKey: config.stripe.publishableKey,
