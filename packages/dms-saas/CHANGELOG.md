@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.4
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.3...v0.1.4)
+
+### 🚀 Enhancements
+
+- Declare the workspace finalize endpoint as session-opening ([#11](https://github.com/AntelopeJS/dms-saas/pull/11))
+
+### 🏡 Chore
+
+- Require @antelopejs/core 1.7 ([#10](https://github.com/AntelopeJS/dms-saas/pull/10))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.3
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.2...v0.1.3)
