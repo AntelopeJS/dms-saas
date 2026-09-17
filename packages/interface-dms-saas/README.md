@@ -47,5 +47,6 @@ rewrites `<pkg>/db/tables/plans.table` into the `dist` path it resolved through
 able to resolve that path back.
 
 This package is released on its own workflow and must be published before the
-runtime module: `@antelopejs/dms-saas` depends on it with `workspace:*`, which
-pnpm rewrites to the released version on publish.
+runtime module: `@antelopejs/dms-saas` depends on it through
+`>=<interface version> <1.0.0`, a range that only resolves once this package is
+released.

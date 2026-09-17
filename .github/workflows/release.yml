@@ -29,11 +29,26 @@ jobs:
           case "$CHANNEL" in latest|next) ;; *) exit 1 ;; esac
           node <<'NODE'
           const pkg = require('./packages/dms-saas/package.json')
-          if (pkg.name !== '@antelopejs/dms-saas' || pkg.repository.url !== 'git+https://github.com/AntelopeJS/dms-saas.git' || pkg.publishConfig.registry !== 'https://registry.npmjs.org/' || pkg.publishConfig.access !== 'public' || pkg.publishConfig.provenance !== true || pkg.dependencies['@antelopejs/interface-dms-saas'] !== 'workspace:*') process.exit(1)
+          const iface = require('./packages/interface-dms-saas/package.json')
+          // The interface sitting in the tree only has to SATISFY the range the
+          // module publishes: a floor that lags it widens what consumers may
+          // install, it does not create a second copy. The fleet shape is
+          // `>=<floor> <1.0.0`, so the ceiling is out of reach for a 0.x
+          // interface and comparing the release triples is enough.
+          const compare = (a, b) => {
+            const parts = (v) => v.split('-')[0].split('.').map(Number)
+            const [x, y] = [parts(a), parts(b)]
+            return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]
+          }
+          const satisfiesFleetRange = (version, range) => {
+            const floor = /^>=(\d+\.\d+\.\d+) <1\.0\.0$/.exec(range ?? '')?.[1]
+            return floor !== undefined && compare(version, floor) >= 0
+          }
+          if (pkg.name !== '@antelopejs/dms-saas' || pkg.repository.url !== 'git+https://github.com/AntelopeJS/dms-saas.git' || pkg.publishConfig.registry !== 'https://registry.npmjs.org/' || pkg.publishConfig.access !== 'public' || pkg.publishConfig.provenance !== true || !satisfiesFleetRange(iface.version, pkg.dependencies['@antelopejs/interface-dms-saas'])) process.exit(1)
           NODE
-      # The module resolves its interface through workspace:*, which pnpm
-      # rewrites on publish: releasing it before the interface exists on npm
-      # would ship a dependency nobody can install.
+      # The module resolves its interface through a `>=<interface version> <1.0.0`
+      # range: releasing it before that interface version exists on npm would
+      # ship a dependency nobody can install.
       - name: Verify the published interface
         run: node packages/dms-saas/scripts/verify-interface-package.cjs
   release:
