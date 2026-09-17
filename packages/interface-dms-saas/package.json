@@ -87,7 +87,7 @@
     "@antelopejs/interface-dms": ">=0.0.1 <1.0.0"
   },
   "devDependencies": {
-    "@antelopejs/interface-core": "^0.0.12",
+    "@antelopejs/interface-core": ">=0.0.13 <1.0.0",
     "@antelopejs/interface-database": ">=0.1.7 <1.0.0",
     "@antelopejs/interface-database-decorators": ">=0.1.6 <1.0.0",
     "@types/node": "^24.0.0",
@@ -101,7 +101,7 @@
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@antelopejs/interface-core": ">=0.0.12 <1.0.0",
+    "@antelopejs/interface-core": ">=0.0.13 <1.0.0",
     "@antelopejs/interface-database": ">=0.1.7 <1.0.0",
     "@antelopejs/interface-database-decorators": ">=0.1.6 <1.0.0"
   },
