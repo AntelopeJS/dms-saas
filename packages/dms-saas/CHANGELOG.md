@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.5
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.4...v0.1.5)
+
+### 🚀 Enhancements
+
+- Extend the DMS members page by its page id ([#12](https://github.com/AntelopeJS/dms-saas/pull/12))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.4
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.3...v0.1.4)
