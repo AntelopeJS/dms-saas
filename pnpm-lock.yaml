@@ -64,11 +64,11 @@ importers:
         version: 3.24.4
     devDependencies:
       '@antelopejs/core':
-        specifier: ^1.4.11
-        version: 1.5.1(@types/node@24.13.3)
+        specifier: '>=2.0.0 <3'
+        version: 2.0.0(@types/node@24.13.3)
       '@antelopejs/dms-frontend':
         specifier: '>=0.0.1 <1.0.0'
-        version: 0.0.1(@antelopejs/core@1.5.1(@types/node@24.13.3))
+        version: 0.0.1(@antelopejs/core@2.0.0(@types/node@24.13.3))
       '@antelopejs/file-storage-local':
         specifier: 0.1.4
         version: 0.1.4
@@ -172,6 +172,10 @@ packages:
 
   '@antelopejs/core@1.5.1':
     resolution: {integrity: sha512-Nnwc3alC/9qQllC6Vy56wP2n9i9w8gB7jzVVaqcW+mKVSXAqMF2cWlQCbWqiieDHyXvoi9r90rK15FcRm9fKUw==}
+    hasBin: true
+
+  '@antelopejs/core@2.0.0':
+    resolution: {integrity: sha512-2g64Oz/P0ccyar9ASQlG/fRCtAR+CMG+VRbb9KWzKksoFcsF/bIORtr2VrU7oo6PgKhmrxuTL+saL64eELFAag==}
     hasBin: true
 
   '@antelopejs/dms-frontend@0.0.1':
@@ -3359,7 +3363,26 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@antelopejs/dms-frontend@0.0.1(@antelopejs/core@1.5.1(@types/node@24.13.3))':
+  '@antelopejs/core@2.0.0(@types/node@24.13.3)':
+    dependencies:
+      '@antelopejs/interface-core': 0.0.13
+      '@types/proper-lockfile': 4.1.4
+      boxen: 8.0.1
+      chalk: 4.1.2
+      commander: 13.1.0
+      figlet: 1.11.0
+      inly: 5.0.1
+      inquirer: 12.11.1(@types/node@24.13.3)
+      jiti: 2.7.0
+      mocha: 11.7.6
+      proper-lockfile: 4.1.2
+      reflect-metadata: 0.2.2
+      semver: 7.7.4
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@types/node'
+
+  '@antelopejs/dms-frontend@0.0.1(@antelopejs/core@2.0.0(@types/node@24.13.3))':
     dependencies:
       boxen: 5.1.2
       chalk: 4.1.2
@@ -3370,7 +3393,7 @@ snapshots:
       semver: 7.7.4
       unzipper: 0.12.5
     optionalDependencies:
-      '@antelopejs/core': 1.5.1(@types/node@24.13.3)
+      '@antelopejs/core': 2.0.0(@types/node@24.13.3)
       '@oxc-parser/binding-darwin-arm64': 0.95.0
       '@oxc-parser/binding-darwin-x64': 0.95.0
       '@oxc-parser/binding-linux-arm64-gnu': 0.95.0
