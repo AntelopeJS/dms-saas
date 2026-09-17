@@ -41,7 +41,7 @@
     "verify:interface": "node scripts/verify-interface-package.cjs",
     "test": "pnpm run build && pnpm --filter @antelopejs/interface-dms-saas run check:package-contract && pnpm run check:package-contract && pnpm run test:unit",
     "test:unit": "vitest run",
-    "release": "pnpm --dir frontend-vue install --frozen-lockfile && pnpm run verify:interface && release-it",
+    "release": "pnpm --filter @antelopejs/interface-dms-saas build && pnpm --dir frontend-vue install --frozen-lockfile && pnpm run verify:interface && release-it",
     "prepack": "pnpm run build && pnpm run check:package-contract",
     "knip": "knip --dependencies",
     "knip:all": "knip"
