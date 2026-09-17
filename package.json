@@ -13,10 +13,5 @@
     "oxfmt": "^0.66.0",
     "oxlint": "1.81.0",
     "oxlint-tsgolint": "^7.0.2001"
-  },
-  "pnpm": {
-    "overrides": {
-      "@antelopejs/interface-core": ">=0.0.13 <1.0.0"
-    }
   }
 }
