@@ -64,11 +64,11 @@ importers:
         version: 3.24.4
     devDependencies:
       '@antelopejs/core':
-        specifier: '>=2.0.0 <3'
-        version: 2.0.0(@types/node@24.13.3)
+        specifier: '>=1.7.0 <2'
+        version: 1.7.0(@types/node@24.13.3)
       '@antelopejs/dms-frontend':
         specifier: '>=0.0.1 <1.0.0'
-        version: 0.0.1(@antelopejs/core@2.0.0(@types/node@24.13.3))
+        version: 0.0.1(@antelopejs/core@1.7.0(@types/node@24.13.3))
       '@antelopejs/file-storage-local':
         specifier: 0.1.4
         version: 0.1.4
@@ -170,12 +170,8 @@ packages:
   2fa@0.1.2:
     resolution: {integrity: sha512-PbQttc6USc2TmZwOPE/zlNWTJTySLt50rWhUbZgPkZ5LAOLpgShT3yclbxwHPfHGUXEjfLrTo3Lunyx8onGnXw==}
 
-  '@antelopejs/core@1.5.1':
-    resolution: {integrity: sha512-Nnwc3alC/9qQllC6Vy56wP2n9i9w8gB7jzVVaqcW+mKVSXAqMF2cWlQCbWqiieDHyXvoi9r90rK15FcRm9fKUw==}
-    hasBin: true
-
-  '@antelopejs/core@2.0.0':
-    resolution: {integrity: sha512-2g64Oz/P0ccyar9ASQlG/fRCtAR+CMG+VRbb9KWzKksoFcsF/bIORtr2VrU7oo6PgKhmrxuTL+saL64eELFAag==}
+  '@antelopejs/core@1.7.0':
+    resolution: {integrity: sha512-2VdIAGPGQXRtmabq3jds9T7iFXPsRByqJHeBhk6s6fgnZwW4Z0zZVP3ForkwoY18+rn/aUpv6UkxVYr95ApYeA==}
     hasBin: true
 
   '@antelopejs/dms-frontend@0.0.1':
@@ -1512,10 +1508,6 @@ packages:
   cli-cursor@5.0.0:
     resolution: {integrity: sha512-aCj4O5wKyszjMmDT4tZj93kxyydN/K5zPWSCe6/0AV/AA1pqe5ZBIw0a2ZfPQV7lL5/yb5HsUreJ6UFAF1tEQw==}
     engines: {node: '>=18'}
-
-  cli-progress@3.12.0:
-    resolution: {integrity: sha512-tRkV3HJ1ASwm19THiiLIXLO7Im7wlTuKnvkYaTkyoAPefqjNg7W7DHKUlGRxy9vxDvbyCYQkQozvptuMkGCg8A==}
-    engines: {node: '>=4'}
 
   cli-spinners@3.4.0:
     resolution: {integrity: sha512-bXfOC4QcT1tKXGorxL3wbJm6XJPDqEnij2gQ2m7ESQuE+/z9YFIWnl/5RpTiKWbMq3EVKR4fRLJGn6DVfu0mpw==}
@@ -3343,27 +3335,7 @@ snapshots:
       qr-image: 3.2.0
       thirty-two: 0.0.2
 
-  '@antelopejs/core@1.5.1(@types/node@24.13.3)':
-    dependencies:
-      '@antelopejs/interface-core': 0.0.13
-      '@types/proper-lockfile': 4.1.4
-      boxen: 8.0.1
-      chalk: 4.1.2
-      cli-progress: 3.12.0
-      commander: 13.1.0
-      figlet: 1.11.0
-      inly: 5.0.1
-      inquirer: 12.11.1(@types/node@24.13.3)
-      jiti: 2.7.0
-      mocha: 11.7.6
-      proper-lockfile: 4.1.2
-      reflect-metadata: 0.2.2
-      semver: 7.7.4
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - '@types/node'
-
-  '@antelopejs/core@2.0.0(@types/node@24.13.3)':
+  '@antelopejs/core@1.7.0(@types/node@24.13.3)':
     dependencies:
       '@antelopejs/interface-core': 0.0.13
       '@types/proper-lockfile': 4.1.4
@@ -3382,7 +3354,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@antelopejs/dms-frontend@0.0.1(@antelopejs/core@2.0.0(@types/node@24.13.3))':
+  '@antelopejs/dms-frontend@0.0.1(@antelopejs/core@1.7.0(@types/node@24.13.3))':
     dependencies:
       boxen: 5.1.2
       chalk: 4.1.2
@@ -3393,7 +3365,7 @@ snapshots:
       semver: 7.7.4
       unzipper: 0.12.5
     optionalDependencies:
-      '@antelopejs/core': 2.0.0(@types/node@24.13.3)
+      '@antelopejs/core': 1.7.0(@types/node@24.13.3)
       '@oxc-parser/binding-darwin-arm64': 0.95.0
       '@oxc-parser/binding-darwin-x64': 0.95.0
       '@oxc-parser/binding-linux-arm64-gnu': 0.95.0
@@ -3403,7 +3375,7 @@ snapshots:
   '@antelopejs/dms@0.2.2(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.13(@antelopejs/interface-core@0.0.13))(@antelopejs/interface-core@0.0.13))(@types/node@24.13.3)':
     dependencies:
       2fa: 0.1.2
-      '@antelopejs/core': 1.5.1(@types/node@24.13.3)
+      '@antelopejs/core': 1.7.0(@types/node@24.13.3)
       '@antelopejs/interface-api': 0.0.13(@antelopejs/interface-core@0.0.13)
       '@antelopejs/interface-api-util': 0.1.2(@antelopejs/interface-api@0.0.13(@antelopejs/interface-core@0.0.13))(@antelopejs/interface-core@0.0.13)
       '@antelopejs/interface-core': 0.0.13
@@ -4561,10 +4533,6 @@ snapshots:
   cli-cursor@5.0.0:
     dependencies:
       restore-cursor: 5.1.0
-
-  cli-progress@3.12.0:
-    dependencies:
-      string-width: 4.2.3
 
   cli-spinners@3.4.0: {}
 
