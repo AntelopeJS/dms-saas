@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.0...v0.1.1)
+
+### 🩹 Fixes
+
+- **frontend:** Open the workspace session through the Inertia loader ([#6](https://github.com/AntelopeJS/dms-saas/pull/6))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.0.2...v0.1.0)
