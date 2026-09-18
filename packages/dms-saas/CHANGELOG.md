@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.6
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.5...v0.1.6)
+
+### 💅 Refactors
+
+- **frontend:** Import the SDK through #dms/frontend-module ([#14](https://github.com/AntelopeJS/dms-saas/pull/14))
+
+### 🏡 Chore
+
+- Align community files with the organization defaults ([#13](https://github.com/AntelopeJS/dms-saas/pull/13))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.5
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.4...v0.1.5)
