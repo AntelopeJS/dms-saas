@@ -2,7 +2,7 @@ import { defineAsyncComponent, type Component } from 'vue'
 import type {
 	DmsFrontendModule,
 	DmsFrontendSdk,
-} from '#dms-inertia/frontend-module'
+} from '#dms/frontend-module'
 import authLinks from './app/plugins/auth-links'
 import billingDataTypes from './app/plugins/billing-data-types'
 import footerLinks from './app/plugins/footer-links'
