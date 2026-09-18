@@ -30,7 +30,9 @@ This package lives in `packages/dms-saas` of the `AntelopeJS/dms-saas`
 workspace. From that directory run `pnpm install`,
 `pnpm --dir frontend-vue install`, `pnpm build`, `pnpm typecheck`, and
 `pnpm test:frontend`. The frontend check generates a temporary workspace, then
-builds client, SSR, and email bundles and runs Vue typechecking.
+builds client, SSR, and email bundles and runs Vue typechecking. To run the
+playground frontend during backend development, use `pnpm frontend:dev`; this
+dispatches through the core CLI as `ajs dms dev`.
 
 ## Completing a registration that entered without a workspace
 

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "ajs project run -w",
     "build": "rimraf dist && tsc -p tsconfig.build.json",
-    "frontend:dev": "acms dev"
+    "frontend:dev": "ajs dms dev"
   },
   "dependencies": {
     "@antelopejs/dms": ">=0.3.5 <1.0.0",
@@ -19,7 +19,8 @@
     "@antelopejs/interface-database-decorators": "^0.1.6"
   },
   "devDependencies": {
-    "@antelopejs-private/cms-nuxt": "^0.0.20",
+    "@antelopejs/core": "1.8.0",
+    "@antelopejs/dms-frontend": "0.2.0",
     "@types/node": "^22.14.1",
     "dotenv": "^17.4.2",
     "rimraf": "^6.0.1",
