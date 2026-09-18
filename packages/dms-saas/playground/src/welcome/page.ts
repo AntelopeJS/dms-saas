@@ -6,14 +6,19 @@ import {
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { Form } from "@antelopejs/interface-dms/base/form";
 
+const WelcomePageController: ReturnType<typeof PageController> = PageController(
+  "welcome",
+  {
+    displayName: "Welcome",
+    icon: "i-ph-hand-waving",
+    category: pagesCategory,
+    order: 0,
+    description: "Playground welcome page",
+  },
+);
+
 @RegisterPage()
-export class PageWelcome extends PageController("welcome", {
-  displayName: "Welcome",
-  icon: "i-ph-hand-waving",
-  category: pagesCategory,
-  order: 0,
-  description: "Playground welcome page",
-}) {
+export class PageWelcome extends WelcomePageController {
   static form = Form({
     title: "Welcome",
     description: "Static form on the playground welcome page",
