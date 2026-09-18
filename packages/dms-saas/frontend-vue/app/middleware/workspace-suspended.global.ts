@@ -12,6 +12,9 @@ const EXEMPT_PREFIXES = [
   BILLING_PATH,
   "/register",
   "/legal",
+  "/terms-of-use",
+  "/terms-and-conditions",
+  "/privacy-policy",
 ];
 
 function isExempt(path: string): boolean {

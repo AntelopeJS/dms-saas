@@ -448,7 +448,7 @@ onMounted(async () => {
             <i18n-t keypath="saas.register.legal_acceptance" tag="span">
               <template #terms_and_conditions>
                 <DmsLink
-                  to="/legal/terms-and-conditions"
+                  to="/terms-and-conditions"
                   target="_blank"
                   class="text-primary underline"
                 >
@@ -457,7 +457,7 @@ onMounted(async () => {
               </template>
               <template #privacy_policy>
                 <DmsLink
-                  to="/legal/privacy-policy"
+                  to="/privacy-policy"
                   target="_blank"
                   class="text-primary underline"
                 >

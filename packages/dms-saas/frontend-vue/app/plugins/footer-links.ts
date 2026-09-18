@@ -6,9 +6,9 @@ const TERMS_OF_USE_LABEL = "saas.legal.terms_of_use";
 const TERMS_AND_CONDITIONS_LABEL = "saas.legal.terms_and_conditions";
 const PRIVACY_POLICY_LABEL = "saas.legal.privacy_policy";
 
-const TERMS_OF_USE_ROUTE = "/legal/terms-of-use";
-const TERMS_AND_CONDITIONS_ROUTE = "/legal/terms-and-conditions";
-const PRIVACY_POLICY_ROUTE = "/legal/privacy-policy";
+const TERMS_OF_USE_ROUTE = "/terms-of-use";
+const TERMS_AND_CONDITIONS_ROUTE = "/terms-and-conditions";
+const PRIVACY_POLICY_ROUTE = "/privacy-policy";
 
 const ORDER_TERMS_OF_USE = 100;
 const ORDER_TERMS_AND_CONDITIONS = 200;
