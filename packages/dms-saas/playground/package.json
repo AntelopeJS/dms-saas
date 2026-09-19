@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@antelopejs/core": "1.8.0",
-    "@antelopejs/dms-frontend": "0.2.0",
+    "@antelopejs/dms-frontend": "0.2.1",
     "@types/node": "^22.14.1",
     "dotenv": "^17.4.2",
     "rimraf": "^6.0.1",

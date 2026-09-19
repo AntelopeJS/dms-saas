@@ -52,6 +52,9 @@ export default defineConfig({
         version: ">=0.3.3 <1.0.0",
       },
       config: {
+        auth: {
+          jwtSecret: "dev",
+        },
         homepage: "/welcome",
         meta: {
           title: "AntelopeJS SaaS",
