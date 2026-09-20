@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.8
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.7...v0.1.8)
+
+### 🩹 Fixes
+
+- **playground:** Use hoisted dependency layout ([#20](https://github.com/AntelopeJS/dms-saas/pull/20))
+- **playground:** Configure DMS JWT secret ([#21](https://github.com/AntelopeJS/dms-saas/pull/21))
+- **frontend:** Theme the workspace switcher with app tokens ([#22](https://github.com/AntelopeJS/dms-saas/pull/22))
+
+### 🏡 Chore
+
+- Add orb playground setup ([#19](https://github.com/AntelopeJS/dms-saas/pull/19))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.7
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.6...v0.1.7)
