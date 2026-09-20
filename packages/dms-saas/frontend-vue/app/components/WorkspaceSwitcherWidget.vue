@@ -132,7 +132,9 @@ onMounted(load)
 		v-else-if="isVisible"
 		v-model:open="isOpen"
 		:content="popoverPlacement"
-		:ui="{ content: 'workspace-switcher-popover' }"
+		:ui="{
+			content: 'rounded-none border-0 bg-transparent p-0 shadow-none ring-0',
+		}"
 	>
 		<UTooltip
 			:text="triggerLabel"
@@ -141,29 +143,58 @@ onMounted(load)
 		>
 			<button
 				type="button"
-				class="workspace-switcher-trigger"
-				:class="{ 'workspace-switcher-trigger--collapsed': collapsed }"
+				class="border-default bg-elevated text-highlighted hover:border-accented flex items-center gap-2.5 rounded-md border text-left transition-colors duration-150"
+				:class="
+					collapsed ? 'size-9 justify-center p-1' : 'w-full px-2.5 py-[9px]'
+				"
 				:aria-label="$t('saas.workspaces.switcher_title')"
 			>
-				<span class="workspace-switcher-avatar">
+				<span
+					class="from-primary-500 to-primary-600 bg-linear-to-br inline-flex size-[26px] shrink-0 items-center justify-center rounded-md text-[13px] font-bold text-white"
+				>
 					<template v-if="current">{{ initialOf(current.name) }}</template>
-					<svg v-if="!current" viewBox="0 0 24 24" aria-hidden="true">
+					<svg
+						v-if="!current"
+						class="size-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.8"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
 						<path
 							d="M3 21h18M5 21V5l7-3 7 3v16M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01"
 						/>
 					</svg>
 				</span>
 				<template v-if="!collapsed">
-					<span class="min-w-0 flex-1">
-						<span class="workspace-switcher-plan">
+					<span class="flex min-w-0 flex-1 flex-col leading-[1.25]">
+						<span
+							class="text-primary font-mono text-[10px] uppercase tracking-[0.08em]"
+						>
 							{{ triggerCaption }}
 						</span>
-						<span class="workspace-switcher-name">
+						<span
+							class="text-highlighted overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-semibold tracking-[-0.01em]"
+						>
 							{{ triggerLabel }}
 						</span>
 					</span>
-					<span class="workspace-switcher-chevron" aria-hidden="true">
-						<svg viewBox="0 0 24 24">
+					<span
+						class="text-dimmed ml-auto inline-flex size-4 shrink-0"
+						aria-hidden="true"
+					>
+						<svg
+							class="h-full w-full"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.8"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
 							<path d="m7 15 5 5 5-5" />
 							<path d="m7 9 5-5 5 5" />
 						</svg>
@@ -173,14 +204,16 @@ onMounted(load)
 		</UTooltip>
 
 		<template #content>
-			<div class="workspace-switcher-menu">
-				<p class="workspace-switcher-menu-title">
+			<div
+				class="border-accented bg-elevated flex w-56 flex-col gap-0.5 rounded-lg border p-[5px] shadow-lg"
+			>
+				<p class="text-dimmed m-0 px-[9px] pb-[3px] pt-[5px] text-[10.5px]">
 					{{ $t('saas.workspaces.switcher_title') }}
 				</p>
 				<input
 					v-if="showSearch"
 					v-model="searchQuery"
-					class="workspace-switcher-search"
+					class="border-accented bg-default text-highlighted w-full rounded-md border px-2 py-1.5 text-xs"
 					type="search"
 					:placeholder="$t('saas.workspaces.select')"
 				/>
@@ -191,53 +224,68 @@ onMounted(load)
 					<li v-for="workspace in filtered" :key="workspace._id">
 						<button
 							type="button"
-							class="workspace-switcher-row"
-							:class="{
-								'workspace-switcher-row--current': workspace.isCurrent,
-								'cursor-default': workspace.isCurrent || !!switchingId,
-							}"
+							class="hover:bg-accented hover:text-highlighted flex w-full items-center gap-[9px] rounded-md border-0 px-[9px] py-2 text-left text-[13px]"
+							:class="[
+								workspace.isCurrent
+									? 'bg-primary/12 text-highlighted'
+									: 'text-muted bg-transparent',
+								{ 'cursor-default': workspace.isCurrent || !!switchingId },
+							]"
 							@click="selectWorkspace(workspace)"
 						>
-							<span class="workspace-switcher-row-avatar">
+							<span
+								class="from-primary-500 to-primary-600 bg-linear-to-br inline-flex size-[22px] shrink-0 items-center justify-center rounded-[5px] text-[11px] font-bold text-white"
+							>
 								{{ initialOf(workspace.name) }}
 							</span>
 							<span
-								class="workspace-switcher-row-name"
-								:class="{
-									'workspace-switcher-row-name--current': workspace.isCurrent,
-								}"
+								class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+								:class="{ 'text-highlighted': workspace.isCurrent }"
 							>
 								{{ workspace.name }}
 							</span>
 							<span
 								v-if="workspace.planName"
-								class="workspace-switcher-row-plan"
+								class="text-primary shrink-0 whitespace-nowrap font-mono text-[9.5px] uppercase tracking-[0.08em]"
 							>
 								{{ workspace.planName }}
 							</span>
 							<span
 								v-if="switchingId === workspace._id"
-								class="workspace-switcher-spinner"
+								class="border-(--ui-text-dimmed) border-t-primary size-3.5 shrink-0 animate-spin rounded-full border-2 [animation-duration:700ms]"
 								aria-hidden="true"
 							/>
 							<span
 								v-else-if="workspace.isCurrent"
-								class="workspace-switcher-check"
+								class="text-primary inline-flex size-4 shrink-0"
 								aria-hidden="true"
 							>
-								<svg viewBox="0 0 24 24"><path d="m4 12 5 5L20 6" /></svg>
+								<svg
+									class="h-full w-full"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.8"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<path d="m4 12 5 5L20 6" />
+								</svg>
 							</span>
 						</button>
 					</li>
 				</ul>
-				<p v-else-if="workspaces.length" class="workspace-switcher-empty">
+				<p
+					v-else-if="workspaces.length"
+					class="text-dimmed m-0 px-[9px] py-2 text-[13px]"
+				>
 					{{ $t('saas.workspaces.no_results') }}
 				</p>
-				<div v-if="workspaces.length" class="workspace-switcher-separator" />
+				<div v-if="workspaces.length" class="bg-border mx-0.5 my-1 h-px" />
 				<button
 					v-if="canCreateWorkspace"
 					type="button"
-					class="workspace-switcher-create"
+					class="text-primary w-full justify-start border-0 bg-transparent px-[9px] py-2 text-left text-[13px]"
 					@click="openCreateModal"
 				>
 					＋ {{ $t('saas.workspaces.create.button') }}
@@ -256,242 +304,3 @@ onMounted(load)
 		</template>
 	</UModal>
 </template>
-
-<style scoped>
-:global(.workspace-switcher-popover) {
-	padding: 0;
-	border: 0;
-	border-radius: 0;
-	background: transparent;
-	box-shadow: none;
-}
-
-.workspace-switcher-trigger {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	width: 100%;
-	padding: 9px 10px;
-	border: 1px solid rgba(120, 140, 200, 0.1);
-	border-radius: 6px;
-	background: #15151b;
-	color: #f1f1f3;
-	text-align: left;
-	transition: border-color 150ms ease;
-}
-
-.workspace-switcher-trigger:hover {
-	border-color: rgba(140, 160, 220, 0.18);
-}
-
-.workspace-switcher-trigger--collapsed {
-	width: 36px;
-	height: 36px;
-	justify-content: center;
-	padding: 4px;
-}
-
-.workspace-switcher-avatar,
-.workspace-switcher-row-avatar {
-	display: inline-flex;
-	flex-shrink: 0;
-	align-items: center;
-	justify-content: center;
-	color: #fff;
-	font-weight: 700;
-	background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-}
-
-.workspace-switcher-avatar {
-	width: 26px;
-	height: 26px;
-	border-radius: 6px;
-	font-size: 13px;
-}
-
-.workspace-switcher-avatar svg,
-.workspace-switcher-chevron svg,
-.workspace-switcher-check svg {
-	width: 100%;
-	height: 100%;
-	fill: none;
-	stroke: currentColor;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-	stroke-width: 1.8;
-}
-
-.workspace-switcher-avatar svg {
-	width: 16px;
-	height: 16px;
-}
-
-.workspace-switcher-trigger:not(.workspace-switcher-trigger--collapsed)
-	> span:nth-child(2) {
-	display: flex;
-	min-width: 0;
-	flex-direction: column;
-	line-height: 1.25;
-}
-
-.workspace-switcher-plan,
-.workspace-switcher-row-plan {
-	color: #a78bfa;
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-}
-
-.workspace-switcher-plan {
-	font-size: 10px;
-}
-
-.workspace-switcher-name {
-	overflow: hidden;
-	color: #f1f1f3;
-	font-family: 'Space Grotesk', Inter, ui-sans-serif, sans-serif;
-	font-size: 13.5px;
-	font-weight: 600;
-	letter-spacing: -0.01em;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.workspace-switcher-chevron {
-	display: inline-flex;
-	width: 16px;
-	height: 16px;
-	margin-left: auto;
-	flex-shrink: 0;
-	color: #71717a;
-}
-
-.workspace-switcher-menu {
-	display: flex;
-	width: 224px;
-	flex-direction: column;
-	gap: 2px;
-	padding: 5px;
-	border: 1px solid rgba(140, 160, 220, 0.18);
-	border-radius: 8px;
-	background: #15151b;
-	box-shadow: 0 16px 48px -16px rgb(0 0 0 / 70%);
-}
-
-.workspace-switcher-menu-title,
-.workspace-switcher-empty {
-	color: #71717a;
-}
-
-.workspace-switcher-menu-title {
-	margin: 0;
-	padding: 5px 9px 3px;
-	font-size: 10.5px;
-}
-
-.workspace-switcher-search {
-	width: 100%;
-	padding: 6px 8px;
-	border: 1px solid rgba(140, 160, 220, 0.18);
-	border-radius: 6px;
-	background: #0a0b12;
-	color: #f1f1f3;
-	font-size: 12px;
-}
-
-.workspace-switcher-row {
-	display: flex;
-	width: 100%;
-	align-items: center;
-	gap: 9px;
-	padding: 8px 9px;
-	border: 0;
-	border-radius: 6px;
-	background: transparent;
-	color: #9b9ba4;
-	font-size: 13px;
-	text-align: left;
-}
-
-.workspace-switcher-row:hover {
-	background: #1f1f24;
-	color: #f1f1f3;
-}
-
-.workspace-switcher-row--current {
-	background: color-mix(in oklab, #8b5cf6 12%, transparent);
-	color: #f1f1f3;
-}
-
-.workspace-switcher-row-avatar {
-	width: 22px;
-	height: 22px;
-	border-radius: 5px;
-	font-size: 11px;
-}
-
-.workspace-switcher-row-name {
-	min-width: 0;
-	flex: 1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.workspace-switcher-row-name--current {
-	color: #f1f1f3;
-}
-
-.workspace-switcher-row-plan {
-	flex-shrink: 0;
-	font-size: 9.5px;
-	white-space: nowrap;
-}
-
-.workspace-switcher-check {
-	display: inline-flex;
-	width: 16px;
-	height: 16px;
-	flex-shrink: 0;
-	color: #a78bfa;
-}
-
-.workspace-switcher-spinner {
-	width: 14px;
-	height: 14px;
-	flex-shrink: 0;
-	border: 2px solid #71717a;
-	border-top-color: #a78bfa;
-	border-radius: 50%;
-	animation: workspace-switcher-spin 700ms linear infinite;
-}
-
-.workspace-switcher-separator {
-	height: 1px;
-	margin: 4px 2px;
-	background: rgba(120, 140, 200, 0.06);
-}
-
-.workspace-switcher-create {
-	justify-content: flex-start;
-	width: 100%;
-	padding: 8px 9px;
-	border: 0;
-	background: transparent;
-	color: #a78bfa;
-	font-size: 13px;
-	text-align: left;
-}
-
-.workspace-switcher-empty {
-	margin: 0;
-	padding: 8px 9px;
-	font-size: 13px;
-}
-
-@keyframes workspace-switcher-spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
-</style>
