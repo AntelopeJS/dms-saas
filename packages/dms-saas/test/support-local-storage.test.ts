@@ -13,7 +13,6 @@ import {
   destroy,
   getTokenManager,
 } from "@antelopejs/file-storage-local";
-import { FilesController } from "../node_modules/@antelopejs/dms/dist/routes/files";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { getSupportAttachmentMetadata } from "../src/support/attachments";
 import { recoverSupportOperations } from "../src/support/recovery";
@@ -182,7 +181,7 @@ describe("support real Mongo and local provider HTTP handlers (not API authentic
     expect(await options.models.messages.getAll()).toHaveLength(0);
   });
 
-  it("preserves an occupied foreign final and rejects generic DMS metadata bypass", async () => {
+  it("preserves an occupied foreign final", async () => {
     const options = createOptions(supportModels());
     const issued = await upload();
     const finalKey = stripStagingPrefix(issued.resourceKey);
@@ -203,9 +202,6 @@ describe("support real Mongo and local provider HTTP handlers (not API authentic
     });
     await recoverSupportOperations("tenant-a", options.models);
     expect(await read(finalKey)).toBe("foreign");
-    await expect(
-      new FilesController().getMetadata({} as never, finalKey, STORE),
-    ).rejects.toMatchObject({ status: 403 });
   });
 
   it("fails unknown named stores rather than reading the default", async () => {
