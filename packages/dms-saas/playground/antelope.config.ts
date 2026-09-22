@@ -4,6 +4,11 @@ import { config as loadDotenv } from "dotenv";
 
 loadDotenv({ path: resolve(__dirname, ".env") });
 
+// The dev frontend (`ajs dms dev`) is a separate CLI process, not an Antelope
+// module, so its origins cannot be published as config variables.
+const CLIENT_HOSTS = ["localhost", "127.0.0.1"];
+const CLIENT_PORTS = [3000, 3001];
+
 export default defineConfig({
   name: "playground",
   logging: {
@@ -37,12 +42,9 @@ export default defineConfig({
           webhookSecret: "whsec_placeholder",
           publishableKey: "pk_test_placeholder",
         },
-        allowedRedirectHosts: [
-          "localhost:3000",
-          "localhost:3001",
-          "127.0.0.1:3000",
-          "127.0.0.1:3001",
-        ],
+        allowedRedirectHosts: CLIENT_HOSTS.flatMap((host) =>
+          CLIENT_PORTS.map((port) => `${host}:${port}`),
+        ),
       },
     },
     dms: {
@@ -93,7 +95,8 @@ export default defineConfig({
       },
       config: {
         storagePath: ".antelope/file-storage",
-        baseUrl: "http://127.0.0.1:5010",
+        // Minted asset and presigned URLs are opened by the browser.
+        baseUrl: "${@api.API_PUBLIC_BASE_URL}",
         defaultVisibility: "private",
       },
     },
@@ -111,7 +114,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/api",
-        version: "^1.2.4",
+        version: "^1.3.0",
       },
       config: {
         servers: [
