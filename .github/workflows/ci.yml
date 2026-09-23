@@ -51,10 +51,8 @@ jobs:
 
       - run: pnpm --filter @antelopejs/interface-dms-saas lint
       - run: pnpm --filter @antelopejs/dms-saas lint
-      # tsconfig.json is the config the editors and oxlint's type-aware pass
-      # read; tsconfig.build.json is the one the build uses. Without this the
-      # first is never exercised, and a resolution failure there degrades every
-      # type-aware rule to `any` without failing anything.
+      # oxlint's type-aware pass degrades to `any` on a broken tsconfig
+      # without failing, so the typecheck is what catches it.
       - run: pnpm --filter @antelopejs/interface-dms-saas typecheck
       - run: pnpm --filter @antelopejs/dms-saas typecheck
       # Unused dependencies only. `pnpm knip:all` also reports dead files and

@@ -281,6 +281,11 @@ function writeTypescriptFixture(consumerRoot, mode) {
       skipLibCheck: false,
       strict: true,
       target: "es2022",
+      // TypeScript 6 no longer loads every @types package by default.
+      types: ["node"],
+      // The legacy `node` (node10) mode is probed on purpose; TypeScript 6 only
+      // deprecates it.
+      ignoreDeprecations: "6.0",
     },
     files: ["consumer.ts"],
   };

@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "noEmit": true,
     "moduleResolution": "bundler",
     "target": "esnext",
-    "module": "preserve",
+    "module": "commonjs",
+    "types": ["node"],
     "strict": true,
     "noImplicitAny": true,
     "esModuleInterop": true,
