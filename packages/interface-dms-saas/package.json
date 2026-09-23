@@ -16,18 +16,6 @@
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "dist/*": [
-        "dist/*",
-        "dist/*/index.d.ts"
-      ],
-      "*": [
-        "dist/*",
-        "dist/*/index.d.ts"
-      ]
-    }
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -46,21 +34,6 @@
       "types": "./dist/db/tables/index.d.ts",
       "default": "./dist/db/tables/index.js"
     },
-    "./dist": {
-      "types": "./dist/index.d.ts"
-    },
-    "./dist/db": {
-      "types": "./dist/db/index.d.ts"
-    },
-    "./dist/db/models": {
-      "types": "./dist/db/models/index.d.ts"
-    },
-    "./dist/db/tables": {
-      "types": "./dist/db/tables/index.d.ts"
-    },
-    "./dist/*": {
-      "types": "./dist/*.d.ts"
-    },
     "./*": {
       "types": "./dist/*.d.ts",
       "default": "./dist/*.js"
@@ -77,7 +50,7 @@
     "lint:fix": "oxlint --fix --max-warnings=1000000 && oxfmt .",
     "format": "oxfmt .",
     "typecheck": "tsc --noEmit",
-    "check:package-contract": "node scripts/check-package-contract.mjs",
+    "check:exports": "node scripts/check-exports.mjs",
     "knip": "knip --dependencies",
     "knip:all": "knip",
     "release": "pnpm run lint && pnpm run build && release-it",

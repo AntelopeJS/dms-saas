@@ -40,11 +40,9 @@ Their own subpaths stay the direct route to the same symbols. `./db` is the one
 surface the root entry leaves out: importing it registers the SaaS tables, and a
 consumer that only wants types should not pay for that.
 
-The `exports` map also carries a types-only `./dist/...` twin of every subpath.
-Nothing should import those: they exist because TypeScript's declaration emit
-rewrites `<pkg>/db/tables/plans.table` into the `dist` path it resolved through
-`typesVersions`, and an exports-aware consumer of the emitted `.d.ts` has to be
-able to resolve that path back.
+Subpaths resolve through the `exports` map only, so consumers must compile with
+`moduleResolution` set to `bundler`, `node16` or `nodenext`; the legacy `node`
+(node10) mode is not supported.
 
 This package is released on its own workflow and must be published before the
 runtime module: `@antelopejs/dms-saas` depends on it through
