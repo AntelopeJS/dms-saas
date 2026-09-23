@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ajs project run -w",
-    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsc",
     "frontend:dev": "ajs dms dev"
   },
   "dependencies": {
@@ -24,7 +24,7 @@
     "@types/node": "^22.14.1",
     "dotenv": "^17.4.2",
     "rimraf": "^6.0.1",
-    "typescript": "^5.8.3"
+    "typescript": "^6.0.3"
   },
   "antelopeJs": {
     "baseUrl": "dist",
