@@ -25,15 +25,18 @@ jobs:
           CHANNEL: ${{ inputs.channel }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          test "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH"
-          case "$CHANNEL" in latest|next) ;; *) exit 1 ;; esac
+          case "$CHANNEL" in
+            latest) test "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH" ;;
+            next) test "$GITHUB_REF" = "refs/heads/next" ;;
+            *) exit 1 ;;
+          esac
           node <<'NODE'
           const pkg = require('./packages/interface-dms-saas/package.json')
           if (pkg.name !== '@antelopejs/interface-dms-saas' || pkg.repository.url !== 'git+https://github.com/AntelopeJS/dms-saas.git' || pkg.publishConfig.registry !== 'https://registry.npmjs.org/' || pkg.publishConfig.access !== 'public' || pkg.publishConfig.provenance !== true) process.exit(1)
           NODE
   release:
     needs: validate
-    uses: AntelopeJS/.github/.github/workflows/release-npm-public.yml@1df63ee37c5ecb869124cb58f199cef1e19dd138
+    uses: AntelopeJS/.github/.github/workflows/release-npm-public.yml@f4ce81591d09d271a480fd796e12a725cc973e0f
     with:
       channel: ${{ inputs.channel }}
       package-directory: packages/interface-dms-saas
