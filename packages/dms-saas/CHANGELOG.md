@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.2.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.8...v0.2.0)
+
+### 💅 Refactors
+
+- **build:** Merge tsconfig.build.json into tsconfig.json ([#27](https://github.com/AntelopeJS/dms-saas/pull/27))
+- **package:** ⚠️  Drop moduleResolution node support and pack-based checks ([#31](https://github.com/AntelopeJS/dms-saas/pull/31))
+
+### 🏡 Chore
+
+- **agents:** Install Node 24 in setup script ([#23](https://github.com/AntelopeJS/dms-saas/pull/23))
+- **playground:** Derive the api origin from config variables ([#25](https://github.com/AntelopeJS/dms-saas/pull/25))
+- **playground:** Drop the private registry from .npmrc ([#30](https://github.com/AntelopeJS/dms-saas/pull/30))
+- **release:** @antelopejs/interface-dms-saas v0.1.0 ([6c4d4ae](https://github.com/AntelopeJS/dms-saas/commit/6c4d4ae))
+- **release:** @antelopejs/interface-dms-saas v0.1.1 ([2c70b49](https://github.com/AntelopeJS/dms-saas/commit/2c70b49))
+
+### ✅ Tests
+
+- **support:** Drop the DMS metadata assertion reaching into node_modules ([#24](https://github.com/AntelopeJS/dms-saas/pull/24))
+
+### 🤖 CI
+
+- **release:** Release next from a dedicated branch and restore requireCommits ([#28](https://github.com/AntelopeJS/dms-saas/pull/28))
+- **release:** Reference the shared release workflows through v1 ([#29](https://github.com/AntelopeJS/dms-saas/pull/29))
+
+#### ⚠️ Breaking Changes
+
+- **package:** ⚠️  Drop moduleResolution node support and pack-based checks ([#31](https://github.com/AntelopeJS/dms-saas/pull/31))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.8
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.1.7...v0.1.8)
