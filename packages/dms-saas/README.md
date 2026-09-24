@@ -32,7 +32,9 @@ workspace. From that directory run `pnpm install`,
 `pnpm test:frontend`. The frontend check generates a temporary workspace, then
 builds client, SSR, and email bundles and runs Vue typechecking. To run the
 playground frontend during backend development, use `pnpm frontend:dev`; this
-dispatches through the core CLI as `ajs dms dev`.
+dispatches through the core CLI as `ajs dms dev`. The playground connects to
+MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, either in the
+environment or in `playground/.env`.
 
 ## Completing a registration that entered without a workspace
 
@@ -506,7 +508,7 @@ remain indefinitely. The existing retention policy still removes old terminal
 `success`/`skipped` receipts, so deduplication is not guaranteed after that window.
 
 Revision mutations require the published database interface `0.1.6` or later
-and an adapter implementing that contract. The MongoDB test adapter uses `1.3.0`,
+and an adapter implementing that contract. The MongoDB test adapter uses `1.3.1`,
 and any DMS release carrying this module satisfies the requirement. New records
 initialize revisions; legacy PostgreSQL rows with a declared revision column
 require an explicit revision backfill
@@ -663,7 +665,7 @@ records positive promotion confirmation before validating final metadata, then
 uses the existing database operation receipt to authorize publication. Published
 prerequisites are the database interface `0.1.6`, the storage interface `0.1.3`,
 and a compatible provider: local `0.1.4` or S3 `0.1.3`, all of which any DMS
-release carrying this module provides. Tests use MongoDB `1.3.0`.
+release carrying this module provides. Tests use MongoDB `1.3.1`.
 There is no legacy move/existence fallback.
 
 Source admissions remain insert-only and permanent. Rejected work cannot publish,

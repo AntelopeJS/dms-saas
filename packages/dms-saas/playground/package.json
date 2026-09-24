@@ -10,17 +10,17 @@
     "frontend:dev": "ajs dms dev"
   },
   "dependencies": {
-    "@antelopejs/dms": ">=0.3.5 <1.0.0",
+    "@antelopejs/dms": ">=0.4.0 <1.0.0",
     "@antelopejs/interface-api": "^0.0.13",
     "@antelopejs/interface-api-util": "^0.1.2",
-    "@antelopejs/interface-core": ">=0.0.13 <1.0.0",
+    "@antelopejs/interface-core": ">=0.1.1 <1.0.0",
     "@antelopejs/interface-data-api": "^0.1.9",
-    "@antelopejs/interface-database": "^0.1.4",
+    "@antelopejs/interface-database": "^0.1.7",
     "@antelopejs/interface-database-decorators": "^0.1.6"
   },
   "devDependencies": {
-    "@antelopejs/core": "1.9.0",
-    "@antelopejs/dms-frontend": "0.2.1",
+    "@antelopejs/core": "1.9.1",
+    "@antelopejs/dms-frontend": "0.2.6",
     "@types/node": "^22.14.1",
     "dotenv": "^17.4.2",
     "rimraf": "^6.0.1",
