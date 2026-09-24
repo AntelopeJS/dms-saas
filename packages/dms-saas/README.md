@@ -32,7 +32,9 @@ workspace. From that directory run `pnpm install`,
 `pnpm test:frontend`. The frontend check generates a temporary workspace, then
 builds client, SSR, and email bundles and runs Vue typechecking. To run the
 playground frontend during backend development, use `pnpm frontend:dev`; this
-dispatches through the core CLI as `ajs dms dev`.
+dispatches through the core CLI as `ajs dms dev`. The playground connects to
+MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, either in the
+environment or in `playground/.env`.
 
 ## Completing a registration that entered without a workspace
 
