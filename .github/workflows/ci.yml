@@ -61,10 +61,9 @@ jobs:
       - run: pnpm --filter @antelopejs/dms-saas knip
       # Builds the interface package first, which the module's own build needs.
       - run: pnpm --filter @antelopejs/dms-saas build
-      # Packs each tarball and type-checks every published subpath against
-      # exports/typesVersions -- the guard over the published contract.
-      - run: pnpm --filter @antelopejs/interface-dms-saas check:package-contract
-      - run: pnpm --filter @antelopejs/dms-saas check:package-contract
+      # Reads the interface package's built `dist` against its `exports` map:
+      # no dangling target, no unreachable module, no unexported directory.
+      - run: pnpm --filter @antelopejs/interface-dms-saas check:exports
       - run: pnpm --filter @antelopejs/dms-saas test:unit
       # Compile the published DMS source together with this frontend module.
       - run: pnpm --filter @antelopejs/dms-saas test:frontend
