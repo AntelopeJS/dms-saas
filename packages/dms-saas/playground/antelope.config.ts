@@ -51,7 +51,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/dms",
-        version: ">=0.3.3 <1.0.0",
+        version: ">=0.4.0 <1.0.0",
       },
       config: {
         auth: {
@@ -68,7 +68,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/mongodb",
-        version: "^1.2.7",
+        version: "^1.3.1",
       },
       config: {
         url: "mongodb://localhost:27017",
@@ -91,7 +91,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/file-storage-local",
-        version: "^0.1.3",
+        version: "^0.1.5",
       },
       config: {
         storagePath: ".antelope/file-storage",
@@ -104,7 +104,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/nodemailer",
-        version: "^0.0.4",
+        version: "^0.0.5",
       },
       config: {
         ethereal: true,
