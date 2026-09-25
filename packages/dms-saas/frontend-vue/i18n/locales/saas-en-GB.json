@@ -97,7 +97,8 @@
       "billing": {
         "country_required": "Billing country is required",
         "info_not_found": "Billing information not found",
-        "invalid_return_url": "Invalid return URL"
+        "invalid_return_url": "Invalid return URL",
+        "identity_incomplete": "Some required billing fields are missing or invalid."
       },
       "migration": {
         "already_pending": "A migration is already pending for this plan"
@@ -701,7 +702,9 @@
         "subtotal": "Subtotal",
         "tax": "Tax",
         "total": "Total",
-        "lines": "Line items"
+        "lines": "Line items",
+        "total_excl_tax": "Total excl. tax",
+        "total_incl_tax": "Total incl. tax"
       },
       "actions": {
         "download_pdf": "Download PDF",
@@ -991,7 +994,13 @@
           "suspend_warning": "Without settlement the workspace is suspended on {date} — data and volumes are preserved.",
           "suspended_summary": "Invoice {invoice} of {amount} is still unpaid. Settling it restores access immediately.",
           "settle": "Settle on Stripe",
-          "load_failed": "Could not check the billing status of this workspace."
+          "load_failed": "Could not check the billing status of this workspace.",
+          "banner": {
+            "generic": "Payment failed — this workspace has an unpaid invoice. The workspace owner must settle it to avoid suspension.",
+            "summary": "Payment failed — invoice {invoice} of {amount} is unpaid.",
+            "with_deadline": "Payment failed — invoice {invoice} of {amount} is unpaid. Settle it before {date} to avoid suspension.",
+            "settle": "Settle"
+          }
         },
         "payment_method": {
           "title": "Payment method",
@@ -1001,8 +1010,14 @@
           "declined": "declined",
           "default": "default",
           "expires": "exp. {date}",
-          "none": "No card on file.",
-          "portal_hint": "Card changes, receipts and history all happen in the Stripe portal; the card is never stored on our side."
+          "none": "No card yet — add one.",
+          "portal_hint": "Card changes, receipts and history all happen in the Stripe portal; the card is never stored on our side.",
+          "verified": "verified",
+          "never_charged": "never charged",
+          "add": "Add a card",
+          "owner_only": "The payment method is managed by the workspace owner.",
+          "update_note": "The last charge on this card was declined: update it in the Stripe portal, then settle the unpaid invoice.",
+          "free_note": "Verified — never charged while the workspace stays on a free plan."
         },
         "billing_email": {
           "label": "Billing e-mail",
@@ -1012,11 +1027,29 @@
           "verified": "verified (VIES)",
           "pending": "verification in progress",
           "unverified": "not verified"
+        },
+        "identity": {
+          "to_complete": "to complete",
+          "incomplete_toast": "Fill in the highlighted fields.",
+          "optional": "optional",
+          "country_placeholder": "Select a country",
+          "customer_type_hint": {
+            "business": "Invoiced to a company, with its VAT number.",
+            "individual": "Invoiced in your own name."
+          },
+          "errors": {
+            "customerType": "Choose a customer type.",
+            "companyName": "The company name is required.",
+            "country": "Choose the billing country.",
+            "line1": "The address is required.",
+            "postalCode": "The postal code is required.",
+            "city": "The city is required.",
+            "billingEmail": "Enter a valid e-mail address."
+          }
         }
       },
       "plan": {
         "current": "Current plan",
-        "none": "No plan",
         "change": "Change plan",
         "go_paid": "Upgrade to a paid plan",
         "blocked_hint": "Plan changes resume once the unpaid invoice is settled.",
@@ -1035,14 +1068,25 @@
         },
         "comparison": {
           "title": "Change plan",
-          "subtitle": "Currently on {plan}. Upgrades apply immediately and are prorated; downgrades take effect at the next cycle.",
+          "subtitle": "Workspace {workspace} — currently on {plan}. Upgrades apply immediately and are prorated; downgrades take effect at the next cycle.",
           "subtitle_no_plan": "Upgrades apply immediately and are prorated; downgrades take effect at the next cycle.",
           "current": "current",
           "scheduled": "scheduled",
           "choose": "Choose",
           "show_detail": "See full detail",
           "hide_detail": "Hide detail",
-          "footer": "The plan price is prepaid usage credit at public rates, deducted from your consumption by the minute. It does not carry over. Beyond it the same rate applies — never a cliff."
+          "close": "Close"
+        },
+        "upgrade": {
+          "title": "Upgrade to {plan}",
+          "description": "Confirm who is billed, then enter your card on Stripe's secure payment page.",
+          "subscription": "{plan} subscription",
+          "due_today": "Due today",
+          "excl_tax": "{amount} excl. tax",
+          "tax_note": "Tax is computed from the billing country below.",
+          "card_title": "Payment card",
+          "card_note": "The next step opens Stripe's secure payment page, where the card is entered and charged. It is never stored on our side.",
+          "confirm": "Continue to payment"
         }
       },
       "data_export": {

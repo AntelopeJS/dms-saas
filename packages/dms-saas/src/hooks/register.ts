@@ -12,6 +12,7 @@ import { reconcileWorkspaceLifecycleDeliveries } from "../operator-actions";
 import { SAAS_MODULE_ID } from "../pages/module";
 import { ensureLegalDocumentsSingleton } from "../routes";
 import { resumePendingPlanMigrations } from "../workers";
+import { backfillDefaultSubscriptions } from "../workspaces/default-plan";
 import { exportSaasTenantData } from "./tenant-export";
 
 function throwDatabaseInitializationFailures(
@@ -64,7 +65,9 @@ export function registerSaasHookListeners(): void {
     await ensureLegalDocumentsSingleton();
     const results = await Promise.allSettled([
       resumePendingPlanMigrations(),
-      recomputeAllTenantBillingStates(),
+      // The backfill publishes the billing state of every workspace it
+      // covers, so it runs before the full recompute rather than beside it.
+      backfillDefaultSubscriptions().then(recomputeAllTenantBillingStates),
       reconcileWorkspaceLifecycleDeliveries(),
     ]);
     throwDatabaseInitializationFailures(results);

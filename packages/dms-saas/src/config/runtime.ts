@@ -84,6 +84,10 @@ export function resolveRegistrationPaymentMethodId(
   return paymentMethodId || undefined;
 }
 
+export function getDefaultPlanSlug(): string | undefined {
+  return runtimeConfig?.defaultPlanSlug;
+}
+
 export function getAllowedRedirectHosts(): string[] {
   return runtimeConfig?.allowedRedirectHosts ?? [];
 }

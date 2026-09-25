@@ -187,6 +187,27 @@ server (`payment_method_types: ["card"]`); the Payment Element is created from
 its client secret alone, since Stripe refuses `paymentMethodTypes` next to a
 `clientSecret`.
 
+## Default plan
+
+A workspace is never without a plan. The default plan is the catalogue's
+first free plan — the lowest `order` among active plans priced 0 and open to
+individuals — unless `defaultPlanSlug` names another such plan:
+
+```json
+{ "modules": { "dms-saas": { "config": { "defaultPlanSlug": "free" } } } }
+```
+
+It is what registration opens, and it is attached, as an active card-less
+subscription, to every workspace that has no subscription at all — the
+platform's `default` tenant and workspaces created outside dms-saas included.
+The backfill runs at startup and with the billing-state recompute every 15
+minutes, and the billing page covers a workspace on first read; each pass is
+idempotent and never touches a workspace that holds any subscription. While
+the catalogue has no free plan, nothing is attached and a warning is logged.
+
+Once attached, the plan's permissions cap the workspace's members like any
+other plan (see [Tenant owner permissions](#tenant-owner-permissions)).
+
 ## Extension points
 
 ### Consuming this module
