@@ -56,4 +56,12 @@ export interface DmsSaasConfig {
    * individuals; a slug naming no such plan is ignored with a warning.
    */
   defaultPlanSlug?: string;
+  /**
+   * i18n key prefixes the plan pages look up feature labels under, tried in
+   * order before `saas.plan_features`: for a prefix `p`, the label of feature
+   * `f` is `p.f.label` and its tooltip `p.f.tooltip`. A module ships those keys
+   * in its own frontend locale files; a missing key falls back to the
+   * feature's stored display name and tooltip.
+   */
+  planFeatureTranslationPrefixes?: string[];
 }

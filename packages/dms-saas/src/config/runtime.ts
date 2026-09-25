@@ -38,9 +38,27 @@ function assertValidRegistrationPaymentMethod(config: DmsSaasConfig): void {
   }
 }
 
+function assertValidPlanFeatureTranslationPrefixes(
+  config: DmsSaasConfig,
+): void {
+  const prefixes = config.planFeatureTranslationPrefixes;
+  if (prefixes === undefined) return;
+  const isValid =
+    Array.isArray(prefixes) &&
+    prefixes.every(
+      (prefix) => typeof prefix === "string" && prefix.trim().length > 0,
+    );
+  if (!isValid) {
+    throw new Error(
+      "Invalid dms-saas planFeatureTranslationPrefixes: expected an array of non-empty strings",
+    );
+  }
+}
+
 export function setRuntimeConfig(config: DmsSaasConfig): void {
   assertValidAdmissionMode(config);
   assertValidRegistrationPaymentMethod(config);
+  assertValidPlanFeatureTranslationPrefixes(config);
   runtimeConfig = config;
 }
 
@@ -86,6 +104,11 @@ export function resolveRegistrationPaymentMethodId(
 
 export function getDefaultPlanSlug(): string | undefined {
   return runtimeConfig?.defaultPlanSlug;
+}
+
+/** Consumer i18n prefixes for plan feature labels, in lookup order. */
+export function getPlanFeatureTranslationPrefixes(): string[] {
+  return runtimeConfig?.planFeatureTranslationPrefixes ?? [];
 }
 
 export function getAllowedRedirectHosts(): string[] {
