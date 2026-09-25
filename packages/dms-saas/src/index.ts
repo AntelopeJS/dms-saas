@@ -17,6 +17,7 @@ import {
   unregisterAutomationNodes,
 } from "./automation";
 import {
+  getPlanContactUrl,
   getRegistrationPaymentMethodPolicy,
   resolveDevMode,
   setRuntimeConfig,
@@ -75,6 +76,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
         stripePublishableKey: config.stripe.publishableKey,
         admissionMode: config.admissionMode ?? "open",
         registrationPaymentMethod: getRegistrationPaymentMethodPolicy(),
+        planContactUrl: getPlanContactUrl(),
       },
     },
   });

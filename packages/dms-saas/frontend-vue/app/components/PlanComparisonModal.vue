@@ -22,6 +22,7 @@ const { resolveApiError } = useApiErrorMessage();
 const { changePlan } = useTenantPlan();
 const { formatFeatureValue } = usePlanFeatureFormat();
 const { featureLabel, featureTooltip } = usePlanFeatureLabel();
+const contactUrl = usePlanContactUrl();
 const { formatMajorUnits } = useMoneyFormat();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
@@ -143,7 +144,13 @@ async function select(plan: TenantPlanView): Promise<void> {
                 >
                   <div class="flex flex-col items-center gap-2">
                     <span class="font-semibold">{{ plan.name }}</span>
-                    <span class="text-primary font-semibold tabular-nums">
+                    <span
+                      v-if="plan.isContactOnly"
+                      class="text-primary font-semibold"
+                    >
+                      {{ $t("saas.workspace.plan.comparison.on_quote") }}
+                    </span>
+                    <span v-else class="text-primary font-semibold tabular-nums">
                       {{ priceLabel(plan) }}
                       <span class="text-xs">
                         /{{ planIntervalLabel(plan.interval) }}
@@ -163,6 +170,21 @@ async function select(plan: TenantPlanView): Promise<void> {
                     >
                       {{ $t("saas.workspace.plan.comparison.scheduled") }}
                     </UBadge>
+                    <!-- Sold on quote: the contact link replaces "Choose". -->
+                    <template v-else-if="plan.isContactOnly">
+                      <UButton
+                        v-if="contactUrl"
+                        size="xs"
+                        color="neutral"
+                        variant="subtle"
+                        icon="i-ph-envelope-simple"
+                        :to="contactUrl"
+                        target="_blank"
+                        external
+                      >
+                        {{ $t("saas.workspace.plan.comparison.contact") }}
+                      </UButton>
+                    </template>
                     <UButton
                       v-else
                       size="xs"

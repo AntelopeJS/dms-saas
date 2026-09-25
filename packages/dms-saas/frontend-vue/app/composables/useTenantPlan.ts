@@ -20,6 +20,8 @@ export interface TenantPlanView {
   currency: string;
   interval: PlanInterval;
   order: number;
+  /** Sold on quote: shown with a contact link, never selectable. */
+  isContactOnly: boolean;
   checkoutAvailable: boolean;
   featureValues: Record<string, unknown>;
 }
@@ -31,6 +33,7 @@ export interface CurrentPlan {
   price: number;
   currency: string;
   interval: PlanInterval;
+  isContactOnly?: boolean;
 }
 
 export interface PendingPlanChange {

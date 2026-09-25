@@ -31,6 +31,7 @@ import {
   toTenantBillingAddress,
 } from "../stripe";
 import { hashEmail, stripeSecondsToDate } from "../utils";
+import { assertPlanIsSelfServe } from "../plans";
 import { resolveDefaultPlan } from "./default-plan";
 import { isFreePlan } from "./free-workspace-guard";
 import {
@@ -168,6 +169,7 @@ export async function ensurePlanIsAvailableForCustomer(
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );
+  assertPlanIsSelfServe(plan);
   return plan;
 }
 

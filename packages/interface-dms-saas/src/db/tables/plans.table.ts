@@ -83,6 +83,13 @@ export class Plan extends Table {
   @Field("boolean")
   declare isPublic: boolean;
 
+  /**
+   * Sold on quote: listed with a "contact us" call to action instead of a
+   * price, never self-served. Operators still assign it to a workspace.
+   */
+  @Field("boolean")
+  declare isContactOnly?: boolean;
+
   @Field("any")
   declare paymentProviderRefs: PlanProviderRefs;
 

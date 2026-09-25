@@ -72,4 +72,10 @@ export interface DmsSaasConfig {
    * individuals; a slug naming no such plan is ignored with a warning.
    */
   defaultPlanSlug?: string;
+  /**
+   * Where the "Contact us" button of a contact-only plan (`isContactOnly`)
+   * leads: an http(s) page or a `mailto:` address. Without it, such a plan
+   * still reads "on quote" but offers no button.
+   */
+  planContactUrl?: string;
 }

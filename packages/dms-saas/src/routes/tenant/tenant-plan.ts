@@ -27,7 +27,11 @@ import {
   TenantSubscriptionModel,
 } from "../../db";
 import { toPendingPlanChange } from "../../plan-changes";
-import { buildTenantPlanCatalog, isDowngrade } from "../../plans";
+import {
+  assertPlanIsSelfServe,
+  buildTenantPlanCatalog,
+  isDowngrade,
+} from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
 import {
   canRecoverComplimentarySubscription,
@@ -213,6 +217,7 @@ export class SaasTenantPlanController extends Controller(
       body.planId,
       billingInfo?.customerType,
     );
+    assertPlanIsSelfServe(newPlan);
     await assertSeatLimit(tenantId, newPlan);
     assert(
       !isRecovery || isPaidPlan(newPlan),
