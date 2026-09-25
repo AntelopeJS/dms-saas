@@ -8,6 +8,7 @@ interface PlanOption {
   price: number;
   currency: string;
   interval: "month" | "year";
+  isContactOnly?: boolean;
 }
 
 interface FreePlanAvailability {
@@ -129,11 +130,12 @@ async function load(): Promise<void> {
       $authFetch<PlanOption[]>(PLANS_ENDPOINT),
       $authFetch<CreateOptions>(OPTIONS_ENDPOINT),
     ]);
-    plans.value = loadedPlans;
+    // Sold on quote, so not something a workspace can be created on.
+    plans.value = loadedPlans.filter((plan) => !plan.isContactOnly);
     freePlan.value = options.freePlan;
     selectedPlanId.value = selectablePlans.value[0]?._id ?? null;
     // Nothing to pay for, so no card to set up.
-    if (loadedPlans.length === 0) return;
+    if (plans.value.length === 0) return;
   } catch (error) {
     errorMessage.value = resolveApiError(
       error,

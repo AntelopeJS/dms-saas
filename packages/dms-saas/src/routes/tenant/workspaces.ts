@@ -48,6 +48,7 @@ import type {
 import {
   assertBillingCountry,
   assertFreePlanAllowedForCard,
+  countPendingInvitations,
   ensurePlanIsAvailableForCustomer,
   provisionWorkspace,
   requestWorkspaceDeletion,
@@ -338,9 +339,14 @@ export class SaasWorkspacesController extends Controller(
     }
   }
 
+  /**
+   * Read by the billing page, the recovery surface of a blocked workspace:
+   * the name and retention period are the workspace's own identity, nothing
+   * the access gate protects. Renaming and deleting stay gated.
+   */
   @Get("/current")
   async getCurrent(
-    @AuthTenantOwner() _user: User,
+    @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Context() ctx: RequestContext,
   ): Promise<CurrentWorkspace> {
     const tenantId = getRequestTenantId(ctx);
@@ -381,7 +387,10 @@ export class SaasWorkspacesController extends Controller(
 
     const { subscription, billingInfo, members, invoices, creditNotes, plan } =
       await loadWorkspaceRelations(id, this.planModel);
-    const memberRows = await buildMemberRows(members, this.userModel);
+    const [memberRows, pendingInvitationsCount] = await Promise.all([
+      buildMemberRows(members, this.userModel),
+      countPendingInvitations(id),
+    ]);
 
     const projection = buildWorkspaceProjection({
       tenant,
@@ -403,6 +412,9 @@ export class SaasWorkspacesController extends Controller(
       currency: projection.currency,
       mrr: projection.mrr,
       membersCount: projection.membersCount,
+      // Shown beside the member count: a workspace created for an owner who
+      // has not signed up yet has no member, only this invitation.
+      pendingInvitationsCount,
       subscription: subscription ?? null,
       billingInfo: billingInfo ?? null,
       members: memberRows,

@@ -1,6 +1,9 @@
 /** Prefix dms-saas resolves its own feature labels under, after any consumer's. */
 const BUILT_IN_PREFIX = "saas.plan_features";
 
+/** Key, under each consumer prefix, of the note shown below the plan table. */
+const COMPARISON_NOTE_KEY = "comparison_note";
+
 /** The part of a feature definition its label and tooltip come from. */
 export interface LabelledFeature {
   featureId: string;
@@ -68,6 +71,23 @@ export function resolvePlanFeatureTooltip(
 }
 
 /**
+ * Note the plan comparison shows below its table, as visible text: the first
+ * translation found under `<prefix>.comparison_note` for the consumer
+ * prefixes, in order. What a plan's price stands for is the consumer's to
+ * say, so dms-saas ships no text of its own and shows no note without one.
+ *
+ * @param prefixes Consumer prefixes, from the tenant plan response
+ * @param lookup Locale message reader
+ */
+export function resolvePlanComparisonNote(
+  prefixes: readonly string[],
+  lookup: TranslationLookup,
+): string | null {
+  const keys = prefixes.map((prefix) => `${prefix}.${COMPARISON_NOTE_KEY}`);
+  return translateFirst(keys, lookup);
+}
+
+/**
  * Locale-bound feature label and tooltip readers for the plan pages.
  *
  * @param prefixes Consumer prefixes, from the tenant plan response
@@ -93,5 +113,6 @@ export function usePlanFeatureLabel(prefixes: () => readonly string[]) {
       resolvePlanFeatureLabel(feature, prefixes(), lookup),
     featureTooltip: (feature: LabelledFeature) =>
       resolvePlanFeatureTooltip(feature, prefixes(), lookup),
+    comparisonNote: () => resolvePlanComparisonNote(prefixes(), lookup),
   };
 }

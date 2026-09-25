@@ -246,6 +246,40 @@ reads at a glance; any other unit is shown verbatim after the grouped number.
 | `GB-hour(s)` | GB-months (730 hours) | per GB-month |
 | `minute(s)`, `build minute(s)` | minutes, build minutes | per minute, per build minute |
 
+The comparison table shows a note below the rows, as visible text, when the
+consumer ships one: the first `<prefix>.comparison_note` found under
+`planFeatureTranslationPrefixes`. What a plan's price stands for is the
+consumer's to say, so dms-saas ships no note of its own — with the prefix
+above, Cloud's would live at `cloud.plan_features.comparison_note`.
+
+## Plans sold on quote
+
+A plan with `isContactOnly: true` is sold on quote. It is listed like any
+other — it still needs `isActive` and `isPublic` to appear on the plan pages —
+but reads "On quote" instead of its price, and its "Choose" button becomes
+"Contact us", pointing at `planContactUrl`:
+
+```json
+{ "modules": { "dms-saas": { "config": { "planContactUrl": "mailto:sales@example.com" } } } }
+```
+
+The URL is an `http(s)` page or a `mailto:` address, checked at startup.
+Without it the plan still reads "On quote", with no button.
+
+Customers cannot select such a plan: changing plan (`PUT /api/saas/tenant/plan`)
+and creating a workspace (`POST /api/saas/workspaces`) answer
+`400 saas.errors.plan.contact_only`, and the create-workspace modal leaves it
+out. A platform owner assigns it from the back office, where the plan form
+carries the flag ("Sold on quote") and the plan card an "On quote" badge. The
+flag is writable through `POST` and `PUT /api/saas/plans` like every other
+plan field, so a module seeding its catalogue sets it there:
+
+```json
+{ "name": "Enterprise", "price": 0, "interval": "month", "isActive": true, "isPublic": true, "isContactOnly": true }
+```
+
+A workspace already on such a plan sees "On quote" on its plan card.
+
 ## Extension points
 
 ### Consuming this module

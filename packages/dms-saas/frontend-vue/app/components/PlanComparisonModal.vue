@@ -25,9 +25,10 @@ const toast = useToast();
 const { resolveApiError } = useApiErrorMessage();
 const { changePlan } = useTenantPlan();
 const { formatFeatureValue } = usePlanFeatureFormat();
-const { featureLabel, featureTooltip } = usePlanFeatureLabel(
+const { featureLabel, featureTooltip, comparisonNote } = usePlanFeatureLabel(
   () => props.featureTranslationPrefixes ?? [],
 );
+const contactUrl = usePlanContactUrl();
 const { formatMajorUnits } = useMoneyFormat();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
@@ -58,6 +59,8 @@ const visibleRows = computed<FeatureRow[]>(() =>
       tooltip: featureTooltip(feature),
     })),
 );
+
+const note = computed(() => comparisonNote());
 
 const hasDetailRows = computed(() =>
   comparedFeatures.value.some((feature) => feature.isDetailRow),
@@ -167,7 +170,13 @@ async function select(plan: TenantPlanView): Promise<void> {
                 >
                   <div class="flex flex-col items-center gap-2">
                     <span class="font-semibold">{{ plan.name }}</span>
-                    <span class="text-primary font-semibold tabular-nums">
+                    <span
+                      v-if="plan.isContactOnly"
+                      class="text-primary font-semibold"
+                    >
+                      {{ $t("saas.workspace.plan.comparison.on_quote") }}
+                    </span>
+                    <span v-else class="text-primary font-semibold tabular-nums">
                       {{ priceLabel(plan) }}
                       <span class="text-xs">
                         /{{ planIntervalLabel(plan.interval) }}
@@ -187,6 +196,21 @@ async function select(plan: TenantPlanView): Promise<void> {
                     >
                       {{ $t("saas.workspace.plan.comparison.scheduled") }}
                     </UBadge>
+                    <!-- Sold on quote: the contact link replaces "Choose". -->
+                    <template v-else-if="plan.isContactOnly">
+                      <UButton
+                        v-if="contactUrl"
+                        size="xs"
+                        color="neutral"
+                        variant="subtle"
+                        icon="i-ph-envelope-simple"
+                        :to="contactUrl"
+                        target="_blank"
+                        external
+                      >
+                        {{ $t("saas.workspace.plan.comparison.contact") }}
+                      </UButton>
+                    </template>
                     <UButton
                       v-else
                       size="xs"
@@ -263,7 +287,10 @@ async function select(plan: TenantPlanView): Promise<void> {
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end">
+      <div class="flex w-full items-center justify-end gap-4">
+        <p v-if="note" class="text-muted grow text-sm">
+          {{ note }}
+        </p>
         <UButton color="neutral" variant="subtle" @click="open = false">
           {{ $t("saas.workspace.plan.comparison.close") }}
         </UButton>

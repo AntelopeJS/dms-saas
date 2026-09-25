@@ -37,6 +37,8 @@ const upgradeTarget = ref<TenantPlanView | null>(null);
 const current = computed(() => data.value?.current ?? null);
 const pendingPlan = computed(() => data.value?.pendingPlan ?? null);
 const isPaid = computed(() => (current.value?.price ?? 0) > FREE_PLAN_PRICE);
+/** A plan sold on quote has a negotiated price, not the catalogue's. */
+const isOnQuote = computed(() => !!current.value?.isContactOnly);
 
 /** The card is readable on a blocked workspace's billing page, but plan
  * mutations stay gated server-side: settling the invoice comes first. */
@@ -69,9 +71,10 @@ const pendingDowngradeLabel = computed(() => {
 });
 
 /** A workspace still on Free is being asked to convert, not to switch: the
- * button carries the primary weight and different copy. */
+ * button carries the primary weight and different copy. One on a negotiated
+ * plan is not on Free, whatever price the catalogue stores. */
 const changeAction = computed(() =>
-  isPaid.value
+  isPaid.value || isOnQuote.value
     ? { color: "neutral" as const, variant: "subtle" as const, key: "change" }
     : { color: "primary" as const, variant: "solid" as const, key: "go_paid" },
 );
@@ -104,13 +107,15 @@ function openUpgrade(plan: TenantPlanView): void {
   isUpgradeOpen.value = true;
 }
 
-const priceLabel = computed(() =>
-  current.value
-    ? formatMajorUnits(current.value.price, current.value.currency)
-    : "",
-);
+const priceLabel = computed(() => {
+  if (!current.value) return "";
+  if (isOnQuote.value) return t("saas.workspace.plan.comparison.on_quote");
+  return formatMajorUnits(current.value.price, current.value.currency);
+});
 const currentIntervalLabel = computed(() =>
-  current.value ? planIntervalLabel(current.value.interval) : "",
+  current.value && !isOnQuote.value
+    ? planIntervalLabel(current.value.interval)
+    : "",
 );
 
 async function fetchPlan(force: boolean): Promise<void> {
@@ -147,9 +152,15 @@ async function cancelDowngrade(): Promise<void> {
   }
 }
 
+/** The workspace name only titles the owner's plan comparison, and reading
+ * it is owner-only: a member's card never asks. */
+async function loadWorkspaceForOwner(): Promise<void> {
+  const status = await loadBillingStatus();
+  if (status?.isTenantOwner) await loadWorkspace().catch(() => undefined);
+}
+
 onMounted(() => {
-  void loadBillingStatus();
-  void loadWorkspace().catch(() => undefined);
+  void loadWorkspaceForOwner();
   return fetchPlan(false);
 });
 </script>

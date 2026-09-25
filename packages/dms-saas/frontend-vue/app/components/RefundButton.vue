@@ -67,7 +67,16 @@ async function confirmRefund(): Promise<void> {
   }
 }
 
-onMounted(loadEligibility);
+/** The eligibility read is owner-only and, like the refund itself, closed
+ * while the access gate blocks the workspace: the card has nothing to offer
+ * then, so it skips the request instead of collecting a 403. */
+async function loadIfOffered(): Promise<void> {
+  const access = await loadWorkspaceAccess();
+  if (access && (access.blocked || !access.isTenantOwner)) return;
+  await loadEligibility();
+}
+
+onMounted(loadIfOffered);
 </script>
 
 <template>

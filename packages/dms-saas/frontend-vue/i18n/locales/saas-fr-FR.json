@@ -44,7 +44,8 @@
         "seat_limit_reached": "La limite de membres du plan est atteinte",
         "no_pending_change": "Aucun changement de plan programmé à annuler",
         "unpaid_invoice_blocks_downgrade": "Une facture est impayée. Réglez-la avant de passer à un plan moins cher.",
-        "no_free_plan": "Aucun plan gratuit n'est disponible pour l'inscription pour le moment."
+        "no_free_plan": "Aucun plan gratuit n'est disponible pour l'inscription pour le moment.",
+        "contact_only": "Ce plan est sur devis : contactez-nous pour y souscrire."
       },
       "workspace": {
         "not_found": "Espace introuvable",
@@ -381,7 +382,9 @@
         "trial_days_description": "Nombre de jours d'essai gratuit avant le premier prélèvement (0 = aucun).",
         "is_active_description": "Si désactivé, le plan reste visible côté admin mais n'est plus souscriptible.",
         "border_color_description": "Couleur d'accentuation utilisée pour le badge et le ring de mise en avant sur la card.",
-        "border_label_description": "Texte du badge flottant affiché en haut de la card (ex. Populaire, Recommandé)."
+        "border_label_description": "Texte du badge flottant affiché en haut de la card (ex. Populaire, Recommandé).",
+        "is_contact_only": "Sur devis",
+        "is_contact_only_description": "Affiché « Sur devis » avec un bouton « Nous contacter » à la place du prix. Les clients ne peuvent pas le choisir eux-mêmes : attribuez-le à un workspace depuis le back-office."
       },
       "audience": {
         "any": "Tout le monde",
@@ -404,7 +407,9 @@
         "members": "{count} membres max",
         "members_unlimited": "Membres illimités",
         "subscriptions": "{count} abonnements actifs"
-      }
+      },
+      "on_quote": "Sur devis",
+      "contact": "Nous contacter"
     },
     "workspaces": {
       "admin": {
@@ -558,8 +563,9 @@
       },
       "summary": {
         "title": "Résumé workspace",
-        "members": "{count} membre(s)",
-        "per_month": "/mois"
+        "members": "{count} membre | {count} membres",
+        "per_month": "/mois",
+        "pending_invitations": "{count} invitation en attente | {count} invitations en attente"
       },
       "tabs": {
         "invoices": "Factures",
@@ -1121,7 +1127,9 @@
           "choose": "Choisir",
           "show_detail": "Voir tout le détail",
           "hide_detail": "Masquer le détail",
-          "close": "Fermer"
+          "close": "Fermer",
+          "on_quote": "Sur devis",
+          "contact": "Nous contacter"
         },
         "upgrade": {
           "title": "Passer en {plan}",

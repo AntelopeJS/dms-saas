@@ -9,6 +9,7 @@ interface PlanProp {
   currency: string;
   interval: "month" | "year";
   trialDays: number;
+  isContactOnly?: boolean;
   borderColor: string | null;
   borderLabel: string | null;
 }
@@ -16,8 +17,11 @@ interface PlanProp {
 const props = defineProps<{ plan: PlanProp; selected?: boolean }>();
 const emit = defineEmits<{ select: [planId: string] }>();
 const planIntervalLabel = usePlanIntervalLabel("saas.plans.cycle");
+const contactUrl = usePlanContactUrl();
+const { t } = useI18n();
 
 const formattedPrice = computed(() => {
+  if (props.plan.isContactOnly) return t("saas.plans.on_quote");
   const price = `${props.plan.price.toFixed(2)} ${props.plan.currency.toUpperCase()}`;
   return `${price}/${planIntervalLabel(props.plan.interval)}`;
 });
@@ -50,7 +54,21 @@ const borderStyle = computed(() => {
         {{ $t("saas.plans.trial_days", { days: plan.trialDays }) }}
       </div>
     </div>
-    <template #footer>
+    <template v-if="plan.isContactOnly" #footer>
+      <UButton
+        v-if="contactUrl"
+        block
+        color="neutral"
+        variant="subtle"
+        icon="i-ph-envelope-simple"
+        :to="contactUrl"
+        target="_blank"
+        external
+      >
+        {{ $t("saas.plans.contact") }}
+      </UButton>
+    </template>
+    <template v-else #footer>
       <UButton block color="primary" @click="emit('select', plan._id)">
         {{ $t("saas.plans.choose") }}
       </UButton>

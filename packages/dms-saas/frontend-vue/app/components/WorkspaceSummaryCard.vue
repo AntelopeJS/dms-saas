@@ -9,6 +9,7 @@ interface WorkspaceSummaryData {
   currency: string;
   mrr: number;
   membersCount: number;
+  pendingInvitationsCount: number;
   createdAt: string;
   subscription: { stripeCustomerId: string | null } | null;
 }
@@ -34,7 +35,10 @@ const props = defineProps<{
   routeParams?: Record<string, string>;
 }>();
 
+const PEOPLE_SEPARATOR = " · ";
+
 const { $authFetch } = useAuthFetch();
+const { t } = useI18n();
 
 const tenantId = computed(() => props.routeParams?.id ?? "");
 const { triggerRef } = useDetailRefresh(tenantId.value);
@@ -53,6 +57,25 @@ const formattedMrr = computed(() => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(workspace.value.mrr);
+});
+
+/** Members, then the invitations still pending, if any. */
+const peopleLabel = computed(() => {
+  if (!workspace.value) return "";
+  const { membersCount, pendingInvitationsCount } = workspace.value;
+  const parts = [
+    t("saas.workspaces.summary.members", { count: membersCount }, membersCount),
+  ];
+  if (pendingInvitationsCount > 0) {
+    parts.push(
+      t(
+        "saas.workspaces.summary.pending_invitations",
+        { count: pendingInvitationsCount },
+        pendingInvitationsCount,
+      ),
+    );
+  }
+  return parts.join(PEOPLE_SEPARATOR);
 });
 
 function formatDate(value: string | null): string {
@@ -110,13 +133,7 @@ watch(triggerRef, () => {
           <div class="mt-2 flex flex-col gap-1 text-sm text-muted">
             <div class="flex items-center gap-2">
               <UIcon name="i-ph-users" />
-              <span>
-                {{
-                  $t("saas.workspaces.summary.members", {
-                    count: workspace.membersCount,
-                  })
-                }}
-              </span>
+              <span>{{ peopleLabel }}</span>
             </div>
           </div>
         </div>
