@@ -530,7 +530,8 @@
         "company_name": "Company name",
         "customer_type": "Customer type",
         "vat_number": "VAT number",
-        "owner": "Owner"
+        "owner": "Owner",
+        "owner_state": "Owner status"
       },
       "status": {
         "active": "Active",
@@ -560,6 +561,10 @@
         "suspended": "Suspended",
         "cancelled": "Cancelled",
         "pending_payment": "Pending payment"
+      },
+      "owner_state": {
+        "joined": "Joined",
+        "invited": "Invited"
       },
       "summary": {
         "title": "Workspace summary",
@@ -1059,6 +1064,7 @@
         "change": "Change plan",
         "go_paid": "Upgrade to a paid plan",
         "blocked_hint": "Plan changes resume once the unpaid invoice is settled.",
+        "blocked_hint_inactive": "Plan changes resume once the workspace is active again.",
         "next_renewal": "Next renewal on {date}.",
         "unlimited": "unlimited",
         "units": {

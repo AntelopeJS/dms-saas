@@ -530,7 +530,8 @@
         "company_name": "Raison sociale",
         "customer_type": "Type de client",
         "vat_number": "Numéro de TVA",
-        "owner": "Propriétaire"
+        "owner": "Propriétaire",
+        "owner_state": "Statut du propriétaire"
       },
       "status": {
         "active": "Actif",
@@ -560,6 +561,10 @@
         "suspended": "Suspendu",
         "cancelled": "Annulé",
         "pending_payment": "Paiement en attente"
+      },
+      "owner_state": {
+        "joined": "A rejoint",
+        "invited": "Invité"
       },
       "summary": {
         "title": "Résumé workspace",
@@ -1059,6 +1064,7 @@
         "change": "Changer de plan",
         "go_paid": "Passer en payant",
         "blocked_hint": "Le changement de plan redevient possible une fois la facture réglée.",
+        "blocked_hint_inactive": "Le changement de plan redevient possible une fois l’espace de travail réactivé.",
         "next_renewal": "Prochain renouvellement le {date}.",
         "unlimited": "illimité",
         "units": {
