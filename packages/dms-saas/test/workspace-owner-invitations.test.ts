@@ -50,7 +50,14 @@ const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
 const CONSOLE_URL = "https://console.example.test";
 const DAY_MS = 86_400_000;
 const sendInviteEmail =
-  vi.fn<(email: string, token: string) => Promise<void>>();
+  vi.fn<
+    (
+      email: string,
+      token: string,
+      inviteeName?: string,
+      context?: auth.AdminInviteEmailContext,
+    ) => Promise<void>
+  >();
 let mongodb: MongoMemoryReplSet;
 
 beforeAll(async () => {
@@ -93,9 +100,12 @@ beforeEach(() => {
   });
 });
 
+const WORKSPACE_NAME = "Invited workspace";
+
 const operator = {
   _id: randomUUID(),
   email: "operator@example.test",
+  name: "Olivia Operator",
   owner: true,
   language: "en",
 } as User;
@@ -133,9 +143,9 @@ async function insertPlan(): Promise<string> {
   return planId;
 }
 
-async function createWorkspaceFor(ownerEmail: string) {
-  return listController().createWorkspace(operator, {
-    name: "Invited workspace",
+async function createWorkspaceFor(ownerEmail: string, by: User = operator) {
+  return listController().createWorkspace(by, {
+    name: WORKSPACE_NAME,
     ownerEmail,
     planId: await insertPlan(),
   });
@@ -177,8 +187,49 @@ describe("back-office workspace creation for a new owner", () => {
       owner.inviteId,
     );
 
-    expect(sendInviteEmail).toHaveBeenCalledWith(email, owner.token, undefined);
+    expect(sendInviteEmail).toHaveBeenCalledWith(
+      email,
+      owner.token,
+      undefined,
+      {
+        workspaceName: WORKSPACE_NAME,
+        inviterName: "Olivia Operator",
+        language: "en",
+      },
+    );
     expect(created).toMatchObject({ email, asTenantOwner: true });
+  });
+
+  it("writes the invitation in the stored invitation language", async () => {
+    const email = `${randomUUID()}@example.test`;
+    const frenchOperator = { ...operator, language: "fr" } as User;
+
+    const created = await createWorkspaceFor(email, frenchOperator);
+
+    expect((await storedInvite(created.tenantId)).language).toBe("fr");
+    expect(sendInviteEmail).toHaveBeenCalledWith(
+      email,
+      expect.any(String),
+      undefined,
+      expect.objectContaining({ language: "fr" }),
+    );
+  });
+
+  it("leaves the inviter unnamed when the operator has no name", async () => {
+    const email = `${randomUUID()}@example.test`;
+    const namelessOperator = { ...operator, name: " " } as User;
+
+    await createWorkspaceFor(email, namelessOperator);
+
+    expect(sendInviteEmail).toHaveBeenCalledWith(
+      email,
+      expect.any(String),
+      undefined,
+      expect.objectContaining({
+        workspaceName: WORKSPACE_NAME,
+        inviterName: undefined,
+      }),
+    );
   });
 
   it("surfaces a failed invitation email instead of reporting success", async () => {
@@ -383,6 +434,11 @@ describe("resend invitation from the back office", () => {
       email,
       renewed.token,
       undefined,
+      {
+        workspaceName: WORKSPACE_NAME,
+        inviterName: "Olivia Operator",
+        language: renewed.language,
+      },
     );
   });
 

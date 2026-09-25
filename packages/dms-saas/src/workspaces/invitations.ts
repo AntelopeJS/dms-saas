@@ -1,9 +1,17 @@
 import { assert } from "@antelopejs/interface-api-util";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { sendAdminInviteEmail } from "@antelopejs/interface-dms/auth";
+import {
+  type AdminInviteEmailContext,
+  sendAdminInviteEmail,
+} from "@antelopejs/interface-dms/auth";
+import type { User } from "@antelopejs/interface-dms/auth/db";
 import { GetClientBaseUrl } from "@antelopejs/interface-dms/client-base-url";
-import { type UserInvite, UserInviteModel } from "@antelopejs/interface-dms/db";
+import {
+  TenantModel,
+  type UserInvite,
+  UserInviteModel,
+} from "@antelopejs/interface-dms/db";
 import {
   assertInviteReady,
   loadInviteForAction,
@@ -24,6 +32,17 @@ export interface InvitationLink {
   link: string;
   expiresAt: Date;
 }
+
+/** Who invites and into which workspace, as the invitation email names them. */
+interface InvitationSender {
+  workspaceName?: string;
+  inviterName?: string;
+}
+
+type DeliverableInvitation = Pick<
+  UserInvite,
+  "email" | "token" | "firstname" | "lastname" | "language"
+>;
 
 export interface ReissuedInvitation {
   invite: UserInvite;
@@ -55,19 +74,38 @@ export async function buildInvitationLink(
   return `${baseUrl}${SIGNUP_PATH}?${params.toString()}`;
 }
 
+/** The operator as an invitation email names them; nameless accounts stay unnamed. */
+export function inviterNameOf(user: Pick<User, "name">): string | undefined {
+  return user.name?.trim() || undefined;
+}
+
+function invitationEmailContext(
+  invite: DeliverableInvitation,
+  sender: InvitationSender,
+): AdminInviteEmailContext {
+  return {
+    workspaceName: sender.workspaceName,
+    inviterName: sender.inviterName,
+    language: invite.language,
+  };
+}
+
 /**
  * Sends the invitation email and reports the outcome instead of throwing: the
  * invitation exists either way, and the caller tells the operator to hand the
- * link over when the email did not leave.
+ * link over when the email did not leave. The email is written in the
+ * invitation's language and names the workspace and inviter when known.
  */
 export async function deliverInvitationEmail(
-  invite: Pick<UserInvite, "email" | "token" | "firstname" | "lastname">,
+  invite: DeliverableInvitation,
+  sender: InvitationSender = {},
 ): Promise<InvitationEmailDelivery> {
   try {
     await sendAdminInviteEmail(
       invite.email,
       invite.token,
       inviteeDisplayName(invite.firstname, invite.lastname),
+      invitationEmailContext(invite, sender),
     );
     return "sent";
   } catch (error) {
@@ -133,16 +171,29 @@ async function renewInvite(
   return renewed;
 }
 
-/** Reissues the invitation and emails the new link. */
+async function workspaceNameOf(tenantId: string): Promise<string | undefined> {
+  const tenant = await GetModel(TenantModel).get(tenantId);
+  return tenant?.name || undefined;
+}
+
+/**
+ * Reissues the invitation and emails the new link. The inviter is whoever
+ * resends it: the invitation does not record who first sent it.
+ */
 export async function resendInvitation(
   tenantId: string,
   inviteId: string,
+  inviterName?: string,
 ): Promise<ReissuedInvitation> {
   const invite = await renewInvite(
     tenantId,
     await loadActionableInvite(tenantId, inviteId),
   );
-  return { invite, emailDelivery: await deliverInvitationEmail(invite) };
+  const emailDelivery = await deliverInvitationEmail(invite, {
+    workspaceName: await workspaceNameOf(tenantId),
+    inviterName,
+  });
+  return { invite, emailDelivery };
 }
 
 /**

@@ -14,6 +14,10 @@ export interface InvitationCommandInput {
   actor: OperatorActor;
 }
 
+export interface ResendInvitationCommandInput extends InvitationCommandInput {
+  inviterName?: string;
+}
+
 interface JournaledEffect<T> {
   action: WorkspaceOperatorAction;
   run: () => Promise<T>;
@@ -53,11 +57,12 @@ async function runJournaled<T>(
  * action so the back office keeps a trace of who re-sent what.
  */
 export async function resendInvitationCommand(
-  input: InvitationCommandInput,
+  input: ResendInvitationCommandInput,
 ): Promise<ReissuedInvitation> {
   return runJournaled(input, {
     action: "invitation.resend",
-    run: () => resendInvitation(input.tenantId, input.inviteId),
+    run: () =>
+      resendInvitation(input.tenantId, input.inviteId, input.inviterName),
     detailsOf: ({ invite, emailDelivery }) => ({
       email: invite.email,
       emailDelivery,
