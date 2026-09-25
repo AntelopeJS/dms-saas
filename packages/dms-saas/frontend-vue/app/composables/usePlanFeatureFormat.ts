@@ -1,4 +1,8 @@
 import { formatMajorUnits } from "./useMoneyFormat";
+import {
+  resolvePlanFeatureValueText,
+  usePlanTranslationLookup,
+} from "./usePlanFeatureLabel";
 
 const UNLIMITED_NUMERIC_VALUE = -1;
 const EMPTY_LABEL = "—";
@@ -47,17 +51,26 @@ export interface PlanFeatureFormatContext {
   currency: string | null;
   unlimitedLabel: string;
   translateUnit: UnitLabelTranslator;
+  /** Translation of a text value, or null to show it as stored. */
+  translateValue?: FeatureValueTranslator;
 }
+
+/** Translates a text feature value; `null` when no translation exists. */
+export type FeatureValueTranslator = (
+  featureId: string,
+  value: string,
+) => string | null;
 
 /** The part of a feature definition that decides how its value reads. */
 export interface FormattableFeature {
+  featureId?: string;
   valueType: string;
   unit: string | null;
 }
 
 type FeatureValueFormatter = (
   value: unknown,
-  unit: string | null,
+  feature: FormattableFeature,
   context: PlanFeatureFormatContext,
 ) => string;
 
@@ -242,16 +255,31 @@ function formatNumeric(
   return formatNumberWithUnit(numeric, unit, context);
 }
 
-function formatText(value: unknown, unit: string | null): string {
+function translateText(
+  text: string,
+  feature: FormattableFeature,
+  context: PlanFeatureFormatContext,
+): string {
+  if (!feature.featureId || !context.translateValue) return text;
+  return context.translateValue(feature.featureId, text) ?? text;
+}
+
+function formatText(
+  value: unknown,
+  feature: FormattableFeature,
+  context: PlanFeatureFormatContext,
+): string {
   const text = String(value).trim();
   if (!text) return EMPTY_LABEL;
-  return unit ? `${text} ${unit}` : text;
+  const shown = translateText(text, feature, context);
+  return feature.unit ? `${shown} ${feature.unit}` : shown;
 }
 
 const FORMATTERS: Record<string, FeatureValueFormatter> = {
   boolean: (value) => formatBoolean(value),
-  number: formatNumeric,
-  string: (value, unit) => formatText(value, unit),
+  number: (value, feature, context) =>
+    formatNumeric(value, feature.unit, context),
+  string: formatText,
 };
 
 /**
@@ -259,7 +287,8 @@ const FORMATTERS: Record<string, FeatureValueFormatter> = {
  * convention `maxMembers` already uses), booleans as ✓/—, numbers grouped in
  * the viewer's locale and scaled by unit — bytes to KB…TB, minute-based
  * usage to hours, GB-hours to GB-months, and `per <unit>` prices to the same
- * readable unit.
+ * readable unit. Text values read through `context.translateValue` when the
+ * feature carries its id.
  *
  * @param feature Feature definition carrying the value type and unit
  * @param value Value a plan sets for the feature
@@ -275,12 +304,20 @@ export function formatPlanFeatureValue(
   }
   const formatter = FORMATTERS[feature.valueType];
   if (!formatter) return String(value);
-  return formatter(value, feature.unit, context);
+  return formatter(value, feature, context);
 }
 
-/** Locale-bound view of {@link formatPlanFeatureValue}, for components. */
-export function usePlanFeatureFormat() {
+/**
+ * Locale-bound view of {@link formatPlanFeatureValue}, for components.
+ *
+ * @param prefixes Consumer prefixes text values translate under, from the
+ *   tenant plan response
+ */
+export function usePlanFeatureFormat(
+  prefixes: () => readonly string[] = () => [],
+) {
   const { t, locale } = useI18n();
+  const lookup = usePlanTranslationLookup();
 
   function formatFeatureValue(
     feature: TenantPlanFeature,
@@ -292,6 +329,8 @@ export function usePlanFeatureFormat() {
       currency,
       unlimitedLabel: t("saas.workspace.plan.unlimited"),
       translateUnit: (key, params, count) => t(key, params, count),
+      translateValue: (featureId, text) =>
+        resolvePlanFeatureValueText(featureId, text, prefixes(), lookup),
     });
   }
 

@@ -232,6 +232,13 @@ Keys are dot paths, so a feature id containing dots nests: the label of
 `cloud.plan_features.cloud.price.cpu_minutes.label`. A key missing in the
 viewer's locale falls back to the fallback locale, then to the stored text.
 
+A text value reads through the same prefixes before its stored form: value
+`<value>` of feature `<featureId>` is looked up at
+`<prefix>.values.<featureId>.<value>`, then
+`saas.plan_features.values.<featureId>.<value>` — so Cloud translates the
+`upgrade` value of `cloud.plan.egress_overage` at
+`cloud.plan_features.values.cloud.plan.egress_overage.upgrade`.
+
 Values are formatted from the feature's `valueType` and `unit`: `-1` reads as
 unlimited, booleans as ✓/—, numbers are grouped in the viewer's locale. A
 `per <unit>` unit makes the value a price in the plan's currency, and

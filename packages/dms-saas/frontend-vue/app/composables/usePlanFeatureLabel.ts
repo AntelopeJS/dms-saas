@@ -1,6 +1,9 @@
 /** Prefix dms-saas resolves its own feature labels under, after any consumer's. */
 const BUILT_IN_PREFIX = "saas.plan_features";
 
+/** Segment, under each prefix, the translated text feature values live under. */
+const VALUES_SEGMENT = "values";
+
 /** Key, under each consumer prefix, of the note shown below the plan table. */
 const COMPARISON_NOTE_KEY = "comparison_note";
 
@@ -71,6 +74,28 @@ export function resolvePlanFeatureTooltip(
 }
 
 /**
+ * Translation of a text feature value: the first found under
+ * `<prefix>.values.<featureId>.<value>` — consumer prefixes in order, then
+ * `saas.plan_features` — or `null` so the caller shows the stored value.
+ *
+ * @param featureId Feature the value belongs to
+ * @param value Text value a plan sets for the feature
+ * @param prefixes Consumer prefixes, from the tenant plan response
+ * @param lookup Locale message reader
+ */
+export function resolvePlanFeatureValueText(
+  featureId: string,
+  value: string,
+  prefixes: readonly string[],
+  lookup: TranslationLookup,
+): string | null {
+  const keys = [...prefixes, BUILT_IN_PREFIX].map(
+    (prefix) => `${prefix}.${VALUES_SEGMENT}.${featureId}.${value}`,
+  );
+  return translateFirst(keys, lookup);
+}
+
+/**
  * Note the plan comparison shows below its table, as visible text: the first
  * translation found under `<prefix>.comparison_note` for the consumer
  * prefixes, in order. What a plan's price stands for is the consumer's to
@@ -88,11 +113,10 @@ export function resolvePlanComparisonNote(
 }
 
 /**
- * Locale-bound feature label and tooltip readers for the plan pages.
- *
- * @param prefixes Consumer prefixes, from the tenant plan response
+ * Reader of the viewer's locale messages that also finds a key shipped in the
+ * fallback locale only.
  */
-export function usePlanFeatureLabel(prefixes: () => readonly string[]) {
+export function usePlanTranslationLookup(): TranslationLookup {
   const { t, te, fallbackLocale } = useI18n();
 
   // `te` only reads the active locale; a key shipped in the fallback locale
@@ -105,8 +129,16 @@ export function usePlanFeatureLabel(prefixes: () => readonly string[]) {
     );
   }
 
-  const lookup: TranslationLookup = (key) =>
-    hasTranslation(key) ? t(key) : null;
+  return (key) => (hasTranslation(key) ? t(key) : null);
+}
+
+/**
+ * Locale-bound feature label and tooltip readers for the plan pages.
+ *
+ * @param prefixes Consumer prefixes, from the tenant plan response
+ */
+export function usePlanFeatureLabel(prefixes: () => readonly string[]) {
+  const lookup = usePlanTranslationLookup();
 
   return {
     featureLabel: (feature: LabelledFeature) =>

@@ -20,7 +20,9 @@ const {
 const { data: billingStatus, load: loadBillingStatus } = useBillingStatus();
 const { formatMajorUnits } = useMoneyFormat();
 const { t, locale } = useI18n();
-const { formatFeatureValue } = usePlanFeatureFormat();
+const { formatFeatureValue } = usePlanFeatureFormat(
+  () => data.value?.featureTranslationPrefixes ?? [],
+);
 const { featureLabel } = usePlanFeatureLabel(
   () => data.value?.featureTranslationPrefixes ?? [],
 );

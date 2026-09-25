@@ -24,7 +24,9 @@ const { t } = useI18n();
 const toast = useToast();
 const { resolveApiError } = useApiErrorMessage();
 const { changePlan } = useTenantPlan();
-const { formatFeatureValue } = usePlanFeatureFormat();
+const { formatFeatureValue } = usePlanFeatureFormat(
+  () => props.featureTranslationPrefixes ?? [],
+);
 const { featureLabel, featureTooltip, comparisonNote } = usePlanFeatureLabel(
   () => props.featureTranslationPrefixes ?? [],
 );
