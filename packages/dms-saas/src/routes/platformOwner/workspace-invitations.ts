@@ -9,6 +9,7 @@ import {
   operatorActorOf,
   resendInvitationCommand,
 } from "../../operator-actions";
+import { inviterNameOf } from "../../workspaces/invitations";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_GATEWAY = 502;
@@ -41,6 +42,7 @@ export class SaasWorkspaceInvitationsController extends Controller(
       tenantId,
       inviteId,
       actor: operatorActorOf(user),
+      inviterName: inviterNameOf(user),
     });
     assert(
       emailDelivery === "sent",
