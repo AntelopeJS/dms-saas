@@ -25,10 +25,13 @@ async function getActivePlanForTenant(
   return { plan, stripeSubscriptionId: subscription.stripeSubscriptionId };
 }
 
-async function enforceSeatCapacity(tenantId: string): Promise<void> {
+async function enforceSeatCapacity(
+  tenantId: string,
+  releasedInviteeEmail?: string,
+): Promise<void> {
   const active = await getActivePlanForTenant(tenantId);
   if (!active) return;
-  const occupied = await countOccupiedSeats(tenantId);
+  const occupied = await countOccupiedSeats(tenantId, releasedInviteeEmail);
   assert(
     hasSeatCapacity(active.plan.maxMembers, occupied),
     HTTP_PAYMENT_REQUIRED,
@@ -69,12 +72,17 @@ async function syncSeatsAfterRemoval(
 }
 
 export function registerSeatHooks(): void {
-  RegisterHook(Hook.MEMBER_BEING_ADDED, async ({ tenantId }) => {
+  RegisterHook(Hook.MEMBER_BEING_ADDED, async ({ tenantId, deliveryId }) => {
+    // A delivery id means an accepted invitation: the membership takes over
+    // the seat that invitation already held, and it is still counted here.
+    if (deliveryId) return undefined;
     await enforceSeatCapacity(tenantId);
     return undefined;
   });
-  RegisterHook(Hook.INVITE_BEING_CREATED, async ({ tenantId }) => {
-    await enforceSeatCapacity(tenantId);
+  // An invitation to an already-invited email replaces the existing one (a
+  // resend, a renewed link), so that invitee's seat is not claimed twice.
+  RegisterHook(Hook.INVITE_BEING_CREATED, async ({ tenantId, email }) => {
+    await enforceSeatCapacity(tenantId, email);
     return undefined;
   });
   RegisterHook(Hook.MEMBER_ADDED, async ({ tenantId, userId }) => {
