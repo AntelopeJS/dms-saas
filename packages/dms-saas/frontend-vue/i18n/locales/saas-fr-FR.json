@@ -97,7 +97,8 @@
       "billing": {
         "country_required": "Le pays de facturation est requis",
         "info_not_found": "Informations de facturation introuvables",
-        "invalid_return_url": "URL de retour invalide"
+        "invalid_return_url": "URL de retour invalide",
+        "identity_incomplete": "Des champs de facturation obligatoires sont manquants ou invalides."
       },
       "migration": {
         "already_pending": "Une migration est déjà en attente pour ce plan"
@@ -701,7 +702,9 @@
         "subtotal": "Total HT",
         "tax": "TVA",
         "total": "Total TTC",
-        "lines": "Lignes"
+        "lines": "Lignes",
+        "total_excl_tax": "Total HT",
+        "total_incl_tax": "Total TTC"
       },
       "actions": {
         "download_pdf": "Télécharger PDF",
@@ -991,7 +994,13 @@
           "suspend_warning": "Sans régularisation, le workspace est suspendu le {date} — données et volumes préservés.",
           "suspended_summary": "La facture {invoice} de {amount} reste impayée. Le règlement rétablit l'accès immédiatement.",
           "settle": "Régler sur Stripe",
-          "load_failed": "Impossible de vérifier l'état de facturation de ce workspace."
+          "load_failed": "Impossible de vérifier l'état de facturation de ce workspace.",
+          "banner": {
+            "generic": "Paiement échoué — ce workspace a une facture impayée. Le propriétaire du workspace doit la régler pour éviter la suspension.",
+            "summary": "Paiement échoué — la facture {invoice} de {amount} est impayée.",
+            "with_deadline": "Paiement échoué — la facture {invoice} de {amount} est impayée. Régularisez avant le {date} pour éviter la suspension.",
+            "settle": "Régulariser"
+          }
         },
         "payment_method": {
           "title": "Moyen de paiement",
@@ -1001,8 +1010,14 @@
           "declined": "refusée",
           "default": "par défaut",
           "expires": "exp. {date}",
-          "none": "Aucune carte enregistrée.",
-          "portal_hint": "Changement de carte, reçus, historique : tout se passe dans le portail Stripe ; la carte n'est jamais stockée chez nous."
+          "none": "Pas encore de carte — ajoutez-en une.",
+          "portal_hint": "Changement de carte, reçus, historique : tout se passe dans le portail Stripe ; la carte n'est jamais stockée chez nous.",
+          "verified": "vérifiée",
+          "never_charged": "jamais débitée",
+          "add": "Ajouter une carte",
+          "owner_only": "Le moyen de paiement est géré par le propriétaire du workspace.",
+          "update_note": "Le dernier prélèvement sur cette carte a été refusé : mettez-la à jour dans le portail Stripe, puis réglez la facture impayée.",
+          "free_note": "Vérifiée — jamais débitée tant que le workspace reste sur un plan gratuit."
         },
         "billing_email": {
           "label": "E-mail de facturation",
@@ -1012,11 +1027,29 @@
           "verified": "vérifiée (VIES)",
           "pending": "vérification en cours",
           "unverified": "non vérifiée"
+        },
+        "identity": {
+          "to_complete": "à compléter",
+          "incomplete_toast": "Complétez les champs signalés.",
+          "optional": "facultatif",
+          "country_placeholder": "Choisir un pays",
+          "customer_type_hint": {
+            "business": "Facture au nom d'une société, avec son n° de TVA.",
+            "individual": "Facture à votre nom."
+          },
+          "errors": {
+            "customerType": "Choisissez un type de client.",
+            "companyName": "La raison sociale est obligatoire.",
+            "country": "Choisissez le pays de facturation.",
+            "line1": "L'adresse est obligatoire.",
+            "postalCode": "Le code postal est obligatoire.",
+            "city": "La ville est obligatoire.",
+            "billingEmail": "Saisissez une adresse e-mail valide."
+          }
         }
       },
       "plan": {
         "current": "Plan actuel",
-        "none": "Aucun plan",
         "change": "Changer de plan",
         "go_paid": "Passer en payant",
         "blocked_hint": "Le changement de plan redevient possible une fois la facture réglée.",
@@ -1035,14 +1068,25 @@
         },
         "comparison": {
           "title": "Changer de plan",
-          "subtitle": "Actuellement en {plan}. Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
+          "subtitle": "Workspace {workspace} — actuellement en {plan}. Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
           "subtitle_no_plan": "Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
           "current": "actuel",
           "scheduled": "programmé",
           "choose": "Choisir",
           "show_detail": "Voir tout le détail",
           "hide_detail": "Masquer le détail",
-          "footer": "Le prix du plan est un crédit d'usage prépayé aux tarifs publics, déduit de votre consommation à la minute. Il n'est pas reportable. Au-delà, le même tarif s'applique : jamais de cliff."
+          "close": "Fermer"
+        },
+        "upgrade": {
+          "title": "Passer en {plan}",
+          "description": "Confirmez l'identité facturée, puis saisissez votre carte sur la page de paiement sécurisée de Stripe.",
+          "subscription": "Abonnement {plan}",
+          "due_today": "Prélevé aujourd'hui",
+          "excl_tax": "{amount} HT",
+          "tax_note": "TVA calculée selon le pays de facturation ci-dessous.",
+          "card_title": "Carte bancaire",
+          "card_note": "L'étape suivante ouvre la page de paiement sécurisée de Stripe, où la carte est saisie et débitée. Elle n'est jamais stockée chez nous.",
+          "confirm": "Continuer vers le paiement"
         }
       },
       "data_export": {

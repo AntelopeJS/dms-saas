@@ -32,6 +32,7 @@ import {
   isComplimentaryPlanLocked,
   isComplimentarySubscription,
 } from "../../workspaces/complimentary";
+import { ensureDefaultSubscription } from "../../workspaces/default-plan";
 
 import {
   applyImmediateChange,
@@ -79,6 +80,22 @@ export class SaasTenantPlanController extends Controller(
   }
 
   /**
+   * "No plan" is not a state a workspace can be shown in: one that slipped
+   * through every creation path gets the default plan on first read rather
+   * than waiting for the next backfill.
+   */
+  private async loadSubscription(
+    tenantId: string,
+    tenantSubscriptionModel: TenantSubscriptionModel,
+  ): Promise<TenantSubscription | undefined> {
+    const subscription = await tenantSubscriptionModel.findOne();
+    if (subscription || !(await ensureDefaultSubscription(tenantId))) {
+      return subscription;
+    }
+    return tenantSubscriptionModel.findOne();
+  }
+
+  /**
    * The plan card is the first block of the billing page, which stays reachable
    * while the access gate blocks the workspace. Reading the plan is part of the
    * recovery path; changing it is not, so the mutations below stay gated — a
@@ -95,7 +112,10 @@ export class SaasTenantPlanController extends Controller(
     const tenantId = getRequestTenantId(ctx);
     const tenant = await this.tenantModel.get(tenantId);
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
-    const subscription = await tenantSubscriptionModel.findOne();
+    const subscription = await this.loadSubscription(
+      tenantId,
+      tenantSubscriptionModel,
+    );
     const current = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;

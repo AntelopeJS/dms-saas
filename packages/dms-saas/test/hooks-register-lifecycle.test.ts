@@ -15,6 +15,7 @@ const hookDoubles = vi.hoisted(() => ({
   ensureLegalDocumentsSingleton: vi.fn<() => Promise<void>>(),
   resumePendingPlanMigrations: vi.fn<() => Promise<void>>(),
   recomputeAllTenantBillingStates: vi.fn<() => Promise<void>>(),
+  backfillDefaultSubscriptions: vi.fn<() => Promise<number>>(),
   reconcileWorkspaceLifecycleDeliveries: vi.fn<() => Promise<void>>(),
 }));
 
@@ -47,6 +48,9 @@ vi.mock("../src/routes", () => ({
 }));
 vi.mock("../src/workers", () => ({
   resumePendingPlanMigrations: hookDoubles.resumePendingPlanMigrations,
+}));
+vi.mock("../src/workspaces/default-plan", () => ({
+  backfillDefaultSubscriptions: hookDoubles.backfillDefaultSubscriptions,
 }));
 vi.mock("../src/hooks/tenant-export", () => ({
   exportSaasTenantData: vi.fn(),
@@ -82,6 +86,7 @@ beforeEach(() => {
   hookDoubles.ensureLegalDocumentsSingleton.mockResolvedValue(undefined);
   hookDoubles.resumePendingPlanMigrations.mockResolvedValue(undefined);
   hookDoubles.recomputeAllTenantBillingStates.mockResolvedValue(undefined);
+  hookDoubles.backfillDefaultSubscriptions.mockResolvedValue(0);
   hookDoubles.reconcileWorkspaceLifecycleDeliveries.mockResolvedValue(
     undefined,
   );
@@ -89,6 +94,23 @@ beforeEach(() => {
 });
 
 describe("database initialized hook", () => {
+  it("backfills the default plan before recomputing billing states", async () => {
+    const backfill = createDeferred();
+    hookDoubles.backfillDefaultSubscriptions.mockReturnValue(
+      backfill.promise.then(() => 1),
+    );
+    const completion = getDatabaseInitializedListener()();
+
+    await vi.waitFor(() => {
+      expect(hookDoubles.backfillDefaultSubscriptions).toHaveBeenCalledOnce();
+    });
+    expect(hookDoubles.recomputeAllTenantBillingStates).not.toHaveBeenCalled();
+
+    backfill.resolve();
+    await completion;
+    expect(hookDoubles.recomputeAllTenantBillingStates).toHaveBeenCalledOnce();
+  });
+
   it("stays pending until migration recovery and billing recomputation finish", async () => {
     const migrations = createDeferred();
     const billing = createDeferred();

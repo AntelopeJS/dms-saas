@@ -50,4 +50,10 @@ export interface DmsSaasConfig {
    * accepted automatically and need no entry here.
    */
   allowedRedirectHosts?: string[];
+  /**
+   * Slug of the free plan every workspace falls back to, so none is ever left
+   * without a plan. Defaults to the lowest-ordered active free plan open to
+   * individuals; a slug naming no such plan is ignored with a warning.
+   */
+  defaultPlanSlug?: string;
 }
