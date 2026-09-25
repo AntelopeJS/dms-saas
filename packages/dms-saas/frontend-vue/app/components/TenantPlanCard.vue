@@ -21,6 +21,9 @@ const { data: billingStatus, load: loadBillingStatus } = useBillingStatus();
 const { formatMajorUnits } = useMoneyFormat();
 const { t, locale } = useI18n();
 const { formatFeatureValue } = usePlanFeatureFormat();
+const { featureLabel } = usePlanFeatureLabel(
+  () => data.value?.featureTranslationPrefixes ?? [],
+);
 const { workspace, load: loadWorkspace } = useCurrentWorkspace();
 const { isOpen: isComparisonOpen } = usePlanComparison();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
@@ -91,7 +94,7 @@ const summary = computed(() => {
     )
     .map(
       (feature) =>
-        `${feature.displayName} ${formatFeatureValue(feature, view.featureValues[feature.featureId])}`,
+        `${featureLabel(feature)} ${formatFeatureValue(feature, view.featureValues[feature.featureId], view.currency)}`,
     )
     .join(SUMMARY_SEPARATOR);
 });
@@ -247,6 +250,7 @@ onMounted(() => {
         v-model:open="isComparisonOpen"
         :plans="data.available"
         :features="data.features"
+        :feature-translation-prefixes="data.featureTranslationPrefixes"
         :current-plan-id="current?._id ?? null"
         :pending-plan-id="pendingPlan?.planId ?? null"
         :is-recovery="data.canRecoverComplimentary"

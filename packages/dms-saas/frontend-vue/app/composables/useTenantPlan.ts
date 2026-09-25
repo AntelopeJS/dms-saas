@@ -43,6 +43,8 @@ export interface TenantPlanResponse {
   current: CurrentPlan | null;
   available: TenantPlanView[];
   features: TenantPlanFeature[];
+  /** Consumer i18n prefixes feature labels resolve under, in lookup order. */
+  featureTranslationPrefixes: string[];
   status: string | null;
   freeUntil: string | null;
   isComplimentary: boolean;
