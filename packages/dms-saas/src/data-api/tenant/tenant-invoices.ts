@@ -30,6 +30,11 @@ import {
   MoneyCentsType,
 } from "../../utils";
 
+/**
+ * Only the six columns a customer reads an invoice by are listed; the rest
+ * (document type, tax split, line items, credit-note details) stay readable
+ * on the invoice's detail page, which reads every field.
+ */
 @RegisterDataController()
 @AuthUser()
 export class tenantInvoicesDataAPI extends DataController(
@@ -53,7 +58,6 @@ export class tenantInvoicesDataAPI extends DataController(
   declare _id: string;
 
   @Select()
-  @Listable()
   @Sortable()
   @Exported()
   @Column({
@@ -78,7 +82,6 @@ export class tenantInvoicesDataAPI extends DataController(
   declare number: string | null;
 
   @Select()
-  @Listable()
   @Column({
     name: "$saas.invoices.column.parent_invoice",
     type: new DefaultDataTypes.StringType(),
@@ -108,14 +111,13 @@ export class tenantInvoicesDataAPI extends DataController(
   @Sortable()
   @Exported()
   @Column({
-    name: "$saas.invoices.column.subtotal",
+    name: "$saas.invoices.column.total_excl_tax",
     type: new MoneyCentsType(),
   })
   @Access(AccessMode.ReadOnly)
   declare subtotal: number;
 
   @Select()
-  @Listable()
   @Exported()
   @Column({
     name: "$saas.invoices.column.tax",
@@ -129,7 +131,7 @@ export class tenantInvoicesDataAPI extends DataController(
   @Sortable()
   @Exported()
   @Column({
-    name: "$saas.invoices.column.total",
+    name: "$saas.invoices.column.total_incl_tax",
     type: new MoneyCentsType(),
   })
   @Access(AccessMode.ReadOnly)
@@ -142,7 +144,6 @@ export class tenantInvoicesDataAPI extends DataController(
   declare amount: number;
 
   @Select()
-  @Listable()
   @Column({
     name: "$saas.invoices.column.lines",
     type: new InvoiceLinesType(),
@@ -163,7 +164,6 @@ export class tenantInvoicesDataAPI extends DataController(
   declare status: string;
 
   @Select()
-  @Listable()
   @Column({
     name: "$saas.invoices.column.credit_note_reason",
     type: new DefaultDataTypes.StringType(),
@@ -173,7 +173,6 @@ export class tenantInvoicesDataAPI extends DataController(
   declare creditNoteReason: string | null;
 
   @Select()
-  @Listable()
   @Column({
     name: "$saas.invoices.column.credit_note_type",
     type: new DefaultDataTypes.StringType(),
@@ -183,7 +182,6 @@ export class tenantInvoicesDataAPI extends DataController(
   declare creditNoteType: string | null;
 
   @Select()
-  @Listable()
   @Column({
     name: "$saas.invoices.column.memo",
     type: new DefaultDataTypes.StringType(),
@@ -204,7 +202,6 @@ export class tenantInvoicesDataAPI extends DataController(
   declare issuedAt: Date;
 
   @Select()
-  @Listable()
   @Column({
     name: "$saas.invoices.column.voided_at",
     type: new DefaultDataTypes.DateType(),

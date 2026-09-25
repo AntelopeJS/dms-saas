@@ -31,6 +31,7 @@ import {
   toTenantBillingAddress,
 } from "../stripe";
 import { hashEmail, stripeSecondsToDate } from "../utils";
+import { resolveDefaultPlan } from "./default-plan";
 import { isFreePlan } from "./free-workspace-guard";
 import {
   beginProvisioningAttempt,
@@ -46,7 +47,6 @@ const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
 const SEAT_BILLING_INITIAL_QUANTITY = 1;
 /** Registration opens individual workspaces: business plans need the upgrade flow. */
-const REGISTRATION_CUSTOMER_TYPE: WorkspaceCustomerType = "individual";
 
 export type WorkspaceCustomerType = "individual" | "business";
 
@@ -217,22 +217,13 @@ export async function resolveCardDetails(
 
 /**
  * The free plan a registration lands on: plan choice belongs to the upgrade
- * flow, so signing up only ever opens the operator's first free plan an
- * individual may hold.
+ * flow, so signing up only ever opens the catalogue's default free plan.
  *
- * @returns The lowest-ordered active free plan open to individuals
+ * @returns The default plan (see {@link resolveDefaultPlan})
  * @throws 409 when the catalogue offers no such plan
  */
 export async function resolveRegistrationPlan(): Promise<Plan> {
-  const plans = await GetModel(PlanModel).findActiveNotDeleted();
-  const freePlan = plans
-    .filter(
-      (plan) =>
-        isFreePlan(plan) &&
-        (plan.audience === "any" ||
-          plan.audience === REGISTRATION_CUSTOMER_TYPE),
-    )
-    .sort((left, right) => left.order - right.order)[0];
+  const freePlan = await resolveDefaultPlan();
   assert(freePlan, HTTP_CONFLICT, "saas.errors.plan.no_free_plan");
   return freePlan;
 }

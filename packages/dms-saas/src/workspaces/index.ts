@@ -1,4 +1,5 @@
 export * from "./billing-profile";
+export * from "./default-plan";
 export * from "./deletion";
 export * from "./free-workspace-guard";
 export * from "./invitations";

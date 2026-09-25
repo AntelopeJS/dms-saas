@@ -1,20 +1,31 @@
 import { Controller, Get, JSONBody, Put } from "@antelopejs/interface-api";
+import { assert } from "@antelopejs/interface-api-util";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   AuthTenantMember,
   AuthTenantOwner,
 } from "@antelopejs/interface-dms/guards";
 import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import type {
-  TenantBillingAddress,
-  TenantBillingInfo,
-  TenantCustomerType,
-  VatVerificationStatus,
+import {
+  PlanModel,
+  type TenantBillingAddress,
+  type TenantBillingInfo,
+  TenantBillingInfoModel,
+  type TenantCustomerType,
+  type TenantSubscription,
+  TenantSubscriptionModel,
+  type VatVerificationStatus,
 } from "../../db";
-import { TenantBillingInfoModel, TenantSubscriptionModel } from "../../db";
+import {
+  type BillingIdentity,
+  type BillingIdentityField,
+  type BillingIdentityInput,
+  findMissingBillingIdentityFields,
+  parseBillingIdentity,
+} from "../../workspaces/billing-identity";
 import { isComplimentarySubscription } from "../../workspaces/complimentary";
 import {
-  type CustomerBillingAddress,
   fetchPrimaryTaxId,
   reconcileStripeTaxId,
   syncStripeCustomerBilling,
@@ -22,21 +33,14 @@ import {
   toVatVerificationStatus,
 } from "../../stripe";
 
-const DEFAULT_CUSTOMER_TYPE: TenantCustomerType = "individual";
-const BUSINESS_CUSTOMER_TYPE: TenantCustomerType = "business";
+const HTTP_BAD_REQUEST = 400;
+const ANY_AUDIENCE = "any";
 const SETTLED_VAT_STATUSES = new Set<VatVerificationStatus>([
   "verified",
   "unverified",
 ]);
 
-interface UpdateBillingInfoBody {
-  companyName?: string | null;
-  vatNumber?: string | null;
-  billingEmail?: string | null;
-  address?: CustomerBillingAddress;
-}
-
-interface BillingInfoResponse {
+interface StoredBillingInfo {
   customerType: TenantCustomerType | null;
   companyName: string | null;
   vatNumber: string | null;
@@ -45,11 +49,16 @@ interface BillingInfoResponse {
   address: TenantBillingAddress | null;
 }
 
-interface BillingInfoValues extends BillingInfoResponse {
+interface BillingInfoResponse extends StoredBillingInfo {
+  /** Required fields still missing; drives the "to complete" badge. */
+  missingFields: BillingIdentityField[];
+}
+
+interface BillingInfoValues extends StoredBillingInfo {
   updatedAt: Date;
 }
 
-const EMPTY_BILLING_INFO: BillingInfoResponse = {
+const EMPTY_BILLING_INFO: StoredBillingInfo = {
   customerType: null,
   companyName: null,
   vatNumber: null,
@@ -58,7 +67,7 @@ const EMPTY_BILLING_INFO: BillingInfoResponse = {
   address: null,
 };
 
-function toResponse(info: BillingInfoResponse): BillingInfoResponse {
+function toResponse(info: StoredBillingInfo): BillingInfoResponse {
   return {
     customerType: info.customerType,
     companyName: info.companyName,
@@ -66,33 +75,43 @@ function toResponse(info: BillingInfoResponse): BillingInfoResponse {
     vatVerificationStatus: info.vatVerificationStatus ?? null,
     billingEmail: info.billingEmail,
     address: info.address,
+    missingFields: findMissingBillingIdentityFields({
+      ...info,
+      address: info.address ?? undefined,
+    }),
   };
-}
-
-function normalizeEmail(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
 }
 
 function buildBillingInfoValues(
-  current: TenantBillingInfo | undefined,
-  body: UpdateBillingInfoBody,
+  identity: BillingIdentity,
   vatVerificationStatus: VatVerificationStatus | null,
 ): BillingInfoValues {
-  const customerType = current?.customerType ?? DEFAULT_CUSTOMER_TYPE;
-  const isBusiness = customerType === BUSINESS_CUSTOMER_TYPE;
   return {
-    customerType,
-    companyName: isBusiness ? (body.companyName ?? null) : null,
-    vatNumber: isBusiness ? (body.vatNumber ?? null) : null,
+    customerType: identity.customerType,
+    companyName: identity.companyName,
+    vatNumber: identity.vatNumber,
     vatVerificationStatus,
-    // Stripe keeps an emptied e-mail, so preserving it locally avoids a silent
-    // divergence that the next customer.updated webhook would undo anyway.
-    billingEmail:
-      normalizeEmail(body.billingEmail) ?? current?.billingEmail ?? null,
-    address: toTenantBillingAddress(body.address),
+    billingEmail: identity.billingEmail,
+    address: toTenantBillingAddress(identity.address),
     updatedAt: new Date(),
   };
+}
+
+/**
+ * A plan reserved to one customer type must not end up billed to the other:
+ * switching type is refused while such a plan is in force.
+ */
+async function assertCustomerTypeFitsPlan(
+  customerType: TenantCustomerType,
+  subscription: TenantSubscription | undefined,
+): Promise<void> {
+  if (!subscription?.planId) return;
+  const plan = await GetModel(PlanModel).get(subscription.planId);
+  assert(
+    !plan || plan.audience === ANY_AUDIENCE || plan.audience === customerType,
+    HTTP_BAD_REQUEST,
+    "saas.errors.plan.not_available_for_customer_type",
+  );
 }
 
 async function persistBillingInfo(
@@ -150,7 +169,7 @@ export class SaasTenantBillingController extends Controller(
     subscriptionModel: TenantSubscriptionModel,
   ): Promise<BillingInfoResponse> {
     const info = await billingModel.findOne();
-    if (!info) return EMPTY_BILLING_INFO;
+    if (!info) return toResponse(EMPTY_BILLING_INFO);
     const subscription = await subscriptionModel.findOne();
     const refreshed = await this.refreshVatVerification(
       info,
@@ -164,47 +183,46 @@ export class SaasTenantBillingController extends Controller(
 
   private async syncStripe(
     customerId: string,
-    customerType: TenantCustomerType,
     fallbackName: string,
-    body: UpdateBillingInfoBody,
+    identity: BillingIdentity,
   ): Promise<VatVerificationStatus | null> {
     await syncStripeCustomerBilling(customerId, {
-      customerType,
-      companyName: body.companyName,
+      customerType: identity.customerType,
+      companyName: identity.companyName,
       fallbackName,
-      billingEmail: normalizeEmail(body.billingEmail),
-      address: body.address,
+      billingEmail: identity.billingEmail,
+      address: identity.address,
     });
     return reconcileStripeTaxId(customerId, {
-      customerType,
-      vatNumber: body.vatNumber,
-      address: body.address,
+      customerType: identity.customerType,
+      vatNumber: identity.vatNumber,
+      address: identity.address,
     });
   }
 
   @Put("/billing-info")
   async updateBillingInfo(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
-    @JSONBody() body: UpdateBillingInfoBody,
+    @JSONBody() body: BillingIdentityInput,
     @TenantScopedModel(TenantBillingInfoModel)
     billingModel: TenantBillingInfoModel,
     @TenantScopedModel(TenantSubscriptionModel)
     subscriptionModel: TenantSubscriptionModel,
   ): Promise<BillingInfoResponse> {
+    const identity = parseBillingIdentity(body);
     const info = await billingModel.findOne();
-    const customerType = info?.customerType ?? DEFAULT_CUSTOMER_TYPE;
     const subscription = await subscriptionModel.findOne();
+    await assertCustomerTypeFitsPlan(identity.customerType, subscription);
     const vatVerificationStatus =
       subscription?.stripeCustomerId &&
       !isComplimentarySubscription(subscription)
         ? await this.syncStripe(
             subscription.stripeCustomerId,
-            customerType,
             user.name,
-            body,
+            identity,
           )
         : null;
-    const values = buildBillingInfoValues(info, body, vatVerificationStatus);
+    const values = buildBillingInfoValues(identity, vatVerificationStatus);
     await persistBillingInfo(billingModel, info, values);
     const updated = await billingModel.findOne();
     return toResponse(updated ?? values);
