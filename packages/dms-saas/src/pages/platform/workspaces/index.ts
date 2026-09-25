@@ -10,24 +10,26 @@ import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
 import {
-  Form,
   Grid,
   GridRow,
-  HttpMethod,
   KpiCard,
   TableView,
 } from "@antelopejs/interface-dms/base";
-import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
+import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { recomputeTenantBillingState } from "../../../billing-state";
 import { isAllowedRedirectUrl } from "../../../config";
-import { plansDataAPI, workspacesDataAPI } from "../../../data-api";
+import { workspacesDataAPI } from "../../../data-api";
 import { type Plan, PlanModel, TenantSubscriptionModel } from "../../../db";
 import {
   createWorkspaceCheckoutSession,
   type WorkspaceCheckoutSession,
 } from "../../../stripe";
 import { parseFutureDate } from "../../../utils";
+import {
+  deliverInvitationEmail,
+  type InvitationEmailDelivery,
+} from "../../../workspaces/invitations";
 import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
 
@@ -54,58 +56,12 @@ const STATUS_TABS = STATUS_TAB_DEFS.map(({ id, label }) => ({
   filters: [{ accessorKey: STATUS_TAB_FILTER_KEY, value: id, mode: "is" }],
 }));
 
-const workspaceCreateForm = Form({
-  fields: [
-    {
-      id: "name",
-      label: "$saas.workspaces.admin.create.field.name",
-      description: "$saas.workspaces.admin.create.field.name_description",
-      type: new DefaultDataTypes.StringType({
-        placeholder: "$saas.workspaces.admin.create.placeholder.name",
-      }),
-      required: true,
-    },
-    {
-      id: "planId",
-      label: "$saas.workspaces.admin.create.field.plan",
-      description: "$saas.workspaces.admin.create.field.plan_description",
-      type: new DefaultDataTypes.RelationType({
-        placeholder: "$saas.workspaces.admin.create.placeholder.plan",
-        dataApiController: plansDataAPI,
-        keyMapping: { label: "name", value: "_id" },
-      }),
-      required: true,
-    },
-    {
-      id: "ownerEmail",
-      label: "$saas.workspaces.admin.create.field.owner_email",
-      description:
-        "$saas.workspaces.admin.create.field.owner_email_description",
-      type: new DefaultDataTypes.EmailType({
-        placeholder: "$saas.workspaces.admin.create.placeholder.owner_email",
-      }),
-      required: true,
-    },
-    {
-      id: "freeWorkspace",
-      label: "$saas.workspaces.admin.create.field.free_workspace",
-      description:
-        "$saas.workspaces.admin.create.field.free_workspace_description",
-      type: new DefaultDataTypes.BooleanType(),
-      defaultValue: true,
-    },
-    {
-      id: "freeUntil",
-      label: "$saas.workspaces.admin.create.field.free_until",
-      description: "$saas.workspaces.admin.create.field.free_until_description",
-      type: new DefaultDataTypes.DateType(),
-    },
-  ],
-  fieldsOrientation: "vertical",
-  submitUrl: "/modules/saas/customers/workspaces/create",
-  submitUrlMethod: HttpMethod.post,
-  successMessage: "$saas.workspaces.admin.create.success",
-});
+// A custom form rather than the generic one: the generic form always reports
+// success, and the operator must learn when the owner's invitation email did
+// not leave.
+const workspaceCreateModal = CustomComponent(
+  "DmsSaasWorkspaceAdminCreateModal",
+);
 
 const HTTP_BAD_REQUEST = 400;
 
@@ -215,6 +171,7 @@ async function insertFreeSubscription(
 interface ProvisionedTenant {
   tenantId: string;
   inviteResult: InviteUserToTenantResult;
+  invitationEmail: InvitationEmailDelivery | null;
 }
 
 async function provisionTenantWithOwner(
@@ -234,9 +191,19 @@ async function provisionTenantWithOwner(
     language: ownerLanguage,
     roleIds: [],
     asTenantOwner: true,
-    sendEmail: true,
   });
-  return { tenantId, inviteResult };
+  // Sent here rather than through `sendEmail`, which fires and forgets: the
+  // operator has to learn that the owner never got the link.
+  const invitationEmail =
+    inviteResult.kind === "invited"
+      ? await deliverInvitationEmail({
+          email: ownerEmail,
+          token: inviteResult.token,
+          firstname: null,
+          lastname: null,
+        })
+      : null;
+  return { tenantId, inviteResult, invitationEmail };
 }
 
 async function insertPendingSubscription(
@@ -350,7 +317,7 @@ export class SaasWorkspacesListController extends PageController(
         target: {
           type: "modal",
           size: "lg",
-          component: workspaceCreateForm,
+          component: workspaceCreateModal,
           title: "$saas.workspaces.admin.create.title",
           description: "$saas.workspaces.admin.create.description",
         },
@@ -379,13 +346,14 @@ export class SaasWorkspacesListController extends PageController(
       : validatePaidCheckoutInput(body, plan);
 
     const now = new Date();
-    const { tenantId, inviteResult } = await provisionTenantWithOwner(
-      this.tenantModel,
-      input.name,
-      input.ownerEmail,
-      user.language,
-      now,
-    );
+    const { tenantId, inviteResult, invitationEmail } =
+      await provisionTenantWithOwner(
+        this.tenantModel,
+        input.name,
+        input.ownerEmail,
+        user.language,
+        now,
+      );
 
     if (!checkoutInput) {
       await insertFreeSubscription(
@@ -396,7 +364,12 @@ export class SaasWorkspacesListController extends PageController(
         input.freeUntil,
       );
       await recomputeTenantBillingState(tenantId);
-      return { tenantId, owner: inviteResult, checkoutUrl: null };
+      return {
+        tenantId,
+        owner: inviteResult,
+        invitationEmail,
+        checkoutUrl: null,
+      };
     }
 
     const checkout = await createWorkspaceCheckoutSession({
@@ -415,6 +388,11 @@ export class SaasWorkspacesListController extends PageController(
       now,
     );
     await recomputeTenantBillingState(tenantId);
-    return { tenantId, owner: inviteResult, checkoutUrl: checkout.url };
+    return {
+      tenantId,
+      owner: inviteResult,
+      invitationEmail,
+      checkoutUrl: checkout.url,
+    };
   }
 }
