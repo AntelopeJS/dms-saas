@@ -27,7 +27,11 @@ import {
 } from "../../db";
 import { getPlanFeatureTranslationPrefixes } from "../../config";
 import { toPendingPlanChange } from "../../plan-changes";
-import { buildTenantPlanCatalog, isDowngrade } from "../../plans";
+import {
+  assertPlanIsSelfServe,
+  buildTenantPlanCatalog,
+  isDowngrade,
+} from "../../plans";
 import {
   canRecoverComplimentarySubscription,
   isComplimentaryPlanLocked,
@@ -183,6 +187,7 @@ export class SaasTenantPlanController extends Controller(
       body.planId,
       billingInfo?.customerType,
     );
+    assertPlanIsSelfServe(newPlan);
     await assertSeatLimit(tenantId, newPlan);
     assert(
       !isRecovery || isPaidPlan(newPlan),

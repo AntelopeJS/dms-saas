@@ -44,7 +44,8 @@
         "seat_limit_reached": "The plan's member limit has been reached",
         "no_pending_change": "No scheduled plan change to cancel",
         "unpaid_invoice_blocks_downgrade": "An invoice is unpaid. Settle it before changing to a cheaper plan.",
-        "no_free_plan": "No free plan is available for sign-up right now."
+        "no_free_plan": "No free plan is available for sign-up right now.",
+        "contact_only": "This plan is sold on quote: contact us to subscribe to it."
       },
       "workspace": {
         "not_found": "Workspace not found",
@@ -381,7 +382,9 @@
         "trial_days_description": "Number of free trial days before the first charge (0 = none).",
         "is_active_description": "If disabled, the plan stays visible to admins but cannot be subscribed to.",
         "border_color_description": "Accent color used for the highlight badge and ring on the card.",
-        "border_label_description": "Text of the floating badge shown at the top of the card (e.g. Popular, Recommended)."
+        "border_label_description": "Text of the floating badge shown at the top of the card (e.g. Popular, Recommended).",
+        "is_contact_only": "Sold on quote",
+        "is_contact_only_description": "Shown with \"On quote\" and a \"Contact us\" button instead of a price. Customers cannot pick it themselves: assign it to a workspace from the back office."
       },
       "audience": {
         "any": "Anyone",
@@ -404,7 +407,9 @@
         "members": "{count} members max",
         "members_unlimited": "Unlimited members",
         "subscriptions": "{count} active subscriptions"
-      }
+      },
+      "on_quote": "On quote",
+      "contact": "Contact us"
     },
     "workspaces": {
       "admin": {
@@ -558,8 +563,9 @@
       },
       "summary": {
         "title": "Workspace summary",
-        "members": "{count} member(s)",
-        "per_month": "/mo"
+        "members": "{count} member | {count} members",
+        "per_month": "/mo",
+        "pending_invitations": "{count} pending invitation | {count} pending invitations"
       },
       "tabs": {
         "invoices": "Invoices",
@@ -1121,7 +1127,9 @@
           "choose": "Choose",
           "show_detail": "See full detail",
           "hide_detail": "Hide detail",
-          "close": "Close"
+          "close": "Close",
+          "on_quote": "On quote",
+          "contact": "Contact us"
         },
         "upgrade": {
           "title": "Upgrade to {plan}",

@@ -140,6 +140,13 @@ const OPTIONS_FIELDS: FormField[] = [
     defaultValue: true,
   },
   {
+    id: "isContactOnly",
+    label: "$saas.plans.field.is_contact_only",
+    description: "$saas.plans.field.is_contact_only_description",
+    type: new DefaultDataTypes.BooleanType(),
+    defaultValue: false,
+  },
+  {
     id: "order",
     label: "$saas.plans.field.order",
     description: "$saas.plans.field.order_description",

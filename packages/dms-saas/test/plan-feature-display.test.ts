@@ -9,6 +9,7 @@ import {
   type LabelledFeature,
   resolvePlanFeatureLabel,
   resolvePlanFeatureTooltip,
+  resolvePlanFeatureValueText,
 } from "../frontend-vue/app/composables/usePlanFeatureLabel";
 
 type LocaleTree = { [key: string]: string | LocaleTree };
@@ -201,5 +202,57 @@ describe("plan feature labels", () => {
     expect(
       resolvePlanFeatureTooltip(feature, ["cloud.plan_features"], lookup),
     ).toBe("Stored tooltip");
+  });
+});
+
+describe("plan feature text values", () => {
+  const FEATURE_ID = "cloud.plan.egress_beyond";
+  const PREFIXES = ["missing.prefix", "cloud.plan_features"];
+  const messages: Record<string, string> = {
+    "cloud.plan_features.values.cloud.plan.egress_beyond.upgrade":
+      "passer à un plan payant",
+    "saas.plan_features.values.cloud.plan.egress_beyond.negotiated": "négocié",
+  };
+  const lookup = (key: string): string | null => messages[key] ?? null;
+  const textFeature: FormattableFeature = {
+    featureId: FEATURE_ID,
+    valueType: "string",
+    unit: null,
+  };
+
+  function translatedContext(): PlanFeatureFormatContext {
+    return {
+      ...context("fr-FR"),
+      translateValue: (featureId, value) =>
+        resolvePlanFeatureValueText(featureId, value, PREFIXES, lookup),
+    };
+  }
+
+  it("reads the value under the first consumer prefix that has it", () => {
+    expect(
+      formatPlanFeatureValue(textFeature, "upgrade", translatedContext()),
+    ).toBe("passer à un plan payant");
+  });
+
+  it("falls back to the built-in saas prefix", () => {
+    expect(
+      formatPlanFeatureValue(textFeature, "negotiated", translatedContext()),
+    ).toBe("négocié");
+  });
+
+  it("shows the stored value when no translation exists", () => {
+    expect(
+      formatPlanFeatureValue(textFeature, "daily", translatedContext()),
+    ).toBe("daily");
+  });
+
+  it("shows the stored value when the feature carries no id", () => {
+    expect(
+      formatPlanFeatureValue(
+        { valueType: "string", unit: null },
+        "upgrade",
+        translatedContext(),
+      ),
+    ).toBe("upgrade");
   });
 });

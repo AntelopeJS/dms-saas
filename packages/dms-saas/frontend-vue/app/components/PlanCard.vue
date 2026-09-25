@@ -18,6 +18,7 @@ interface PlanProp {
   borderLabel: string | null;
   trialDays: number;
   maxMembers: number;
+  isContactOnly?: boolean;
   workspaceCount: number;
   features?: { featureId: string; value: unknown }[];
 }
@@ -169,6 +170,14 @@ function onDeleted(): void {
               {{ formattedPrice }}
             </span>
             <span v-if="cycle" class="text-muted">/{{ cycle }}</span>
+            <UBadge
+              v-if="plan.isContactOnly"
+              color="neutral"
+              variant="subtle"
+              class="ml-2 self-center"
+            >
+              {{ $t("saas.plans.on_quote") }}
+            </UBadge>
           </div>
           <p v-if="plan.trialDays > 0" class="text-xs text-muted mt-1">
             {{ $t("saas.plans.trial_days", { days: plan.trialDays }) }}

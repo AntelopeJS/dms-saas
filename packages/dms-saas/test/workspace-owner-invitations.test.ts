@@ -34,6 +34,7 @@ import { workspaceOwnerLabel } from "../src/data-api/platformOwner/workspaces";
 import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
 import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
 import { SaasWorkspaceInvitationsController } from "../src/routes/platformOwner/workspace-invitations";
+import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 
 vi.mock("../src/billing-state", () => ({
   recomputeTenantBillingState: async () => undefined,
@@ -101,6 +102,14 @@ function listController(): SaasWorkspacesListController {
   const controller = new SaasWorkspacesListController();
   controller.planModel = GetModel(PlanModel);
   controller.tenantModel = GetModel(TenantModel);
+  return controller;
+}
+
+function detailController(): SaasWorkspacesController {
+  const controller = new SaasWorkspacesController();
+  controller.planModel = GetModel(PlanModel);
+  controller.tenantModel = GetModel(TenantModel);
+  controller.userModel = GetModel(UserModel);
   return controller;
 }
 
@@ -244,6 +253,28 @@ describe("pending invitations listed on the workspace detail", () => {
 
     expect(statusOf(new Date(Date.now() + DAY_MS))).toBe(true);
     expect(statusOf(new Date(Date.now() - DAY_MS))).toBe(false);
+  });
+
+  it("counts the owner invitation beside the members in the detail header", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+
+    const detail = await detailController().getDetail(operator, tenantId);
+
+    expect(detail).toMatchObject({
+      membersCount: 0,
+      pendingInvitationsCount: 1,
+    });
+  });
+
+  it("leaves an expired invitation out of the pending count", async () => {
+    const { tenantId, owner } = await createInvitedWorkspace();
+    await GetModel(UserInviteModel, tenantId).update(owner.inviteId, {
+      expiresAt: new Date(Date.now() - DAY_MS),
+    });
+
+    const detail = await detailController().getDetail(operator, tenantId);
+
+    expect(detail.pendingInvitationsCount).toBe(0);
   });
 });
 

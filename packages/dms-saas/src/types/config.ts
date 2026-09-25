@@ -64,4 +64,10 @@ export interface DmsSaasConfig {
    * feature's stored display name and tooltip.
    */
   planFeatureTranslationPrefixes?: string[];
+  /**
+   * Where the "Contact us" button of a contact-only plan (`isContactOnly`)
+   * leads: an http(s) page or a `mailto:` address. Without it, such a plan
+   * still reads "on quote" but offers no button.
+   */
+  planContactUrl?: string;
 }

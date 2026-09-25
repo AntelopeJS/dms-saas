@@ -79,6 +79,17 @@ export async function deliverInvitationEmail(
   }
 }
 
+/** Invitations of the workspace its invitees can still redeem. */
+export async function countPendingInvitations(
+  tenantId: string,
+  now: Date = new Date(),
+): Promise<number> {
+  const invites = await GetModel(UserInviteModel, tenantId).getAll();
+  return invites.filter(
+    (invite) => invitationStatusOf(invite, now) === "pending",
+  ).length;
+}
+
 /** Oldest unaccepted invitation that would make its invitee a workspace owner. */
 export async function findPendingOwnerInvite(
   tenantId: string,
