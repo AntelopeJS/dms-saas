@@ -1,12 +1,22 @@
 import { assert } from "@antelopejs/interface-api-util";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { Hook, RegisterHook } from "@antelopejs/interface-dms/hooks";
+import {
+  Hook,
+  type InviteDeletedReason,
+  RegisterHook,
+} from "@antelopejs/interface-dms/hooks";
 import type { Plan } from "../db";
 import { PlanModel, TenantSubscriptionModel } from "../db";
 import { countOccupiedSeats, hasSeatCapacity } from "./seat-capacity";
 import { syncStripeSeatQuantity } from "./seat-sync";
 
 const HTTP_PAYMENT_REQUIRED = 402;
+
+/** Deletions whose invitation lives on in a successor holding the same seat. */
+const REISSUED_INVITE_REASONS: ReadonlySet<InviteDeletedReason> = new Set([
+  "resent",
+  "replaced",
+]);
 
 interface ActivePlanContext {
   plan: Plan;
@@ -42,6 +52,7 @@ async function enforceSeatCapacity(
 async function syncSeatsAfterChange(
   tenantId: string,
   idempotencyKey: string,
+  releasedInviteeEmail?: string,
 ): Promise<void> {
   const active = await getActivePlanForTenant(tenantId);
   if (!active) return;
@@ -50,6 +61,9 @@ async function syncSeatsAfterChange(
     plan: active.plan,
     stripeSubscriptionId: active.stripeSubscriptionId,
     idempotencyKey,
+    quantityOverride: releasedInviteeEmail
+      ? await countOccupiedSeats(tenantId, releasedInviteeEmail)
+      : undefined,
   });
 }
 
@@ -85,7 +99,10 @@ export function registerSeatHooks(): void {
     await enforceSeatCapacity(tenantId, email);
     return undefined;
   });
-  RegisterHook(Hook.MEMBER_ADDED, async ({ tenantId, userId }) => {
+  RegisterHook(Hook.MEMBER_ADDED, async ({ tenantId, userId, deliveryId }) => {
+    // The accepted invitation is still stored at this point; its deletion
+    // right after syncs the count once it no longer holds the seat.
+    if (deliveryId) return undefined;
     await syncSeatsAfterChange(
       tenantId,
       `seat-sync:member-added:${tenantId}:${userId}`,
@@ -99,13 +116,19 @@ export function registerSeatHooks(): void {
     );
     return undefined;
   });
-  RegisterHook(Hook.INVITE_DELETED, async ({ tenantId, inviteId }) => {
-    await syncSeatsAfterChange(
-      tenantId,
-      `seat-sync:invite-deleted:${tenantId}:${inviteId}`,
-    );
-    return undefined;
-  });
+  // The hook runs before the row is deleted: an invitation that ends here
+  // must not be billed, while a reissued one keeps its seat for its successor.
+  RegisterHook(
+    Hook.INVITE_DELETED,
+    async ({ tenantId, inviteId, email, reason }) => {
+      await syncSeatsAfterChange(
+        tenantId,
+        `seat-sync:invite-deleted:${tenantId}:${inviteId}`,
+        REISSUED_INVITE_REASONS.has(reason) ? undefined : email,
+      );
+      return undefined;
+    },
+  );
   RegisterHook(Hook.MEMBER_REMOVED, async ({ tenantId, userIds }) => {
     await syncSeatsAfterRemoval(
       tenantId,
