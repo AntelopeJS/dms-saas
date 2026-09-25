@@ -1,15 +1,21 @@
 import { assert } from "@antelopejs/interface-api-util";
+import {
+  DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY,
+  REGISTRATION_PAYMENT_METHOD_POLICIES,
+  type RegistrationPaymentMethodPolicy,
+} from "@antelopejs/interface-dms-saas/registration";
 import type { DmsSaasConfig } from "../types";
 import { isDevMode } from "./dev-mode";
 
 const REDIRECT_PROTOCOLS = ["http:", "https:"];
 const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "[::1]"];
+const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAVAILABLE = 503;
 const ADMISSION_MODES = ["open", "invitation-only"];
 
 let runtimeConfig: DmsSaasConfig | null = null;
 
-export function setRuntimeConfig(config: DmsSaasConfig): void {
+function assertValidAdmissionMode(config: DmsSaasConfig): void {
   if (
     config.admissionMode !== undefined &&
     !ADMISSION_MODES.includes(config.admissionMode)
@@ -18,7 +24,64 @@ export function setRuntimeConfig(config: DmsSaasConfig): void {
       "Invalid dms-saas admissionMode: expected open or invitation-only",
     );
   }
+}
+
+function assertValidRegistrationPaymentMethod(config: DmsSaasConfig): void {
+  const policy = config.registration?.paymentMethod;
+  if (
+    policy !== undefined &&
+    !REGISTRATION_PAYMENT_METHOD_POLICIES.includes(policy)
+  ) {
+    throw new Error(
+      "Invalid dms-saas registration.paymentMethod: expected required, optional or none",
+    );
+  }
+}
+
+export function setRuntimeConfig(config: DmsSaasConfig): void {
+  assertValidAdmissionMode(config);
+  assertValidRegistrationPaymentMethod(config);
   runtimeConfig = config;
+}
+
+/** Whether public registration asks for a card; invitation sign-up never does. */
+export function getRegistrationPaymentMethodPolicy(): RegistrationPaymentMethodPolicy {
+  return (
+    runtimeConfig?.registration?.paymentMethod ??
+    DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY
+  );
+}
+
+/** The card setup intent only exists for a registration that may take a card. */
+export function assertRegistrationCardAccepted(): void {
+  assert(
+    getRegistrationPaymentMethodPolicy() !== "none",
+    HTTP_BAD_REQUEST,
+    "saas.errors.registration.payment_method_disabled",
+  );
+}
+
+/**
+ * The card a registration may go on with under the configured policy.
+ *
+ * A card sent while the policy is `none` is dropped rather than refused: the
+ * deployment promised no Stripe call, and the visitor loses nothing by it.
+ *
+ * @param paymentMethodId Card confirmed by the visitor, if any
+ * @returns The card to provision with, or undefined for a card-less workspace
+ * @throws 400 when the policy requires a card and none was sent
+ */
+export function resolveRegistrationPaymentMethodId(
+  paymentMethodId: string | undefined,
+): string | undefined {
+  const policy = getRegistrationPaymentMethodPolicy();
+  if (policy === "none") return undefined;
+  assert(
+    policy === "optional" || paymentMethodId,
+    HTTP_BAD_REQUEST,
+    "saas.errors.registration.payment_method_required",
+  );
+  return paymentMethodId || undefined;
 }
 
 export function getAllowedRedirectHosts(): string[] {

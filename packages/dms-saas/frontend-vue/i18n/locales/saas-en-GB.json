@@ -43,7 +43,8 @@
         "no_stripe_price": "Plan has no Stripe price",
         "seat_limit_reached": "The plan's member limit has been reached",
         "no_pending_change": "No scheduled plan change to cancel",
-        "unpaid_invoice_blocks_downgrade": "An invoice is unpaid. Settle it before changing to a cheaper plan."
+        "unpaid_invoice_blocks_downgrade": "An invoice is unpaid. Settle it before changing to a cheaper plan.",
+        "no_free_plan": "No free plan is available for sign-up right now."
       },
       "workspace": {
         "not_found": "Workspace not found",
@@ -164,7 +165,9 @@
       "registration": {
         "extras_invalid": "The additional registration fields are not in a supported format",
         "extras_too_large": "The additional registration fields are too large",
-        "extras_too_complex": "The additional registration fields have too many entries"
+        "extras_too_complex": "The additional registration fields have too many entries",
+        "payment_method_required": "A payment method is required to sign up.",
+        "payment_method_disabled": "This deployment does not take a card at sign-up."
       }
     },
     "dashboard": {
@@ -194,14 +197,12 @@
     },
     "register": {
       "title": "Sign up",
-      "page_description": "Create an account, pick a plan and provision your first workspace.",
-      "submit": "Sign up and pay",
-      "choose_plan": "Choose a plan",
+      "page_description": "Create an account and open your first workspace on the free plan.",
+      "submit": "Create my account",
       "field": {
         "email": "Email",
         "password": "Password",
         "full_name": "Full name",
-        "workspace_name": "Workspace name",
         "company_name": "Company name",
         "vat_number": "VAT number",
         "country": "Country",
@@ -217,31 +218,26 @@
         "business": "Business"
       },
       "error": {
-        "no_plan": "Please select a plan",
         "no_payment": "Payment method required",
-        "no_country": "Please select your billing country",
         "legal_required": "You must accept the terms and conditions and privacy policy",
         "failed": "Registration failed",
         "load": "Could not load the registration options"
       },
       "legal_acceptance": "I accept the {terms_and_conditions} and the {privacy_policy}",
-      "price": "{price}/{interval}",
-      "interval": {
-        "month": "month",
-        "year": "year"
-      }
+      "hint": {
+        "password": "At least 8 characters, with an uppercase letter, a number and one of {'@'}$!%*?&",
+        "card": "Saved securely via Stripe. You are not charged on the free plan."
+      },
+      "skip_payment_method": "Add a card later",
+      "default_workspace_name": "{name}'s workspace"
     },
     "no_workspace": {
       "title": "Set up your first workspace",
-      "subtitle": "You're signed in, but you don't belong to any workspace yet. Pick a plan and create one to get started.",
+      "subtitle": "You're signed in, but you don't belong to any workspace yet. Create one on the free plan to get started — you can rename it and upgrade later.",
       "logout": "Sign out",
-      "submit": "Create workspace and pay",
+      "submit": "Create workspace",
       "submitting": "Creating your workspace…",
       "section": {
-        "details": "Workspace details",
-        "details_hint": "This is the workspace name your team will see.",
-        "plan": "Choose a plan",
-        "plan_hint": "You can switch later from the billing settings.",
         "payment": "Payment method",
         "payment_hint": "Saved securely via Stripe."
       },
@@ -251,7 +247,7 @@
       }
     },
     "oauth_registration": {
-      "entry_note": "Signing up with a provider still asks for a plan and a card on the next step.",
+      "entry_note": "Signing up with a provider still asks you to accept the terms on the next step.",
       "identity": {
         "provider": "Signed in with {provider} as {email}",
         "password": "Signed in as {email}",
@@ -588,7 +584,8 @@
             "load": "Could not load the creation options.",
             "failed": "Could not create the workspace.",
             "card": "Could not initialise card payment."
-          }
+          },
+          "no_plans": "No plan is available right now. Please contact support to create a workspace."
         }
       }
     },

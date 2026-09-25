@@ -5,53 +5,29 @@ import {
   reactive,
   ref,
   toValue,
-  watch,
 } from "vue";
-import { formatMajorUnits } from "./useMoneyFormat";
-import {
-  formatPlanIntervalLabel,
-  type PlanInterval,
-} from "./usePlanIntervalLabel";
 
 /**
- * A plan as the public registration screen sees it.
+ * Whether registration asks for a card, as the deployment configured it in
+ * `registration.paymentMethod`: `required` always does, `optional` lets the
+ * visitor skip it, `none` never shows the card step and never calls Stripe.
  */
-export interface RegistrationPlan {
-  _id: string;
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  interval: PlanInterval;
-  trialDays: number;
-  audience: string;
-  borderColor: string | null;
-  borderLabel: string | null;
-  order: number;
-}
+export type RegistrationPaymentMethodPolicy = "required" | "optional" | "none";
 
 export interface RegistrationForm {
-  customerType: "individual" | "business";
   email: string;
   password: string;
   name: string;
-  workspaceName: string;
-  companyName: string;
-  vatNumber: string;
-  country: string;
-  addressLine1: string;
-  postalCode: string;
-  city: string;
-  selectedPlanId: string | null;
   hasAcceptedLegal: boolean;
+  /** The visitor chose to add a card later. Only read under `optional`. */
+  skipsPaymentMethod: boolean;
 }
 
 /** Everything the submit guard looks at, independent of how it is bound. */
 export interface RegistrationRequirements {
-  selectedPlanId: string | null;
+  isPaymentRequired: boolean;
   isPaymentReady: boolean;
   hasAcceptedLegal: boolean;
-  country: string;
 }
 
 export type RegistrationTranslator = (
@@ -72,7 +48,7 @@ export interface UseSaasRegistrationOptions {
    */
   paymentElementId?: string;
   /**
-   * Whatever the consuming SaaS captures on top of the billing fields, read
+   * Whatever the consuming SaaS captures on top of the account fields, read
    * when the visitor submits. It stays the consumer's data: dms-saas forwards
    * it inside the provisioning transaction, to the consumer's own
    * `TENANT_BEING_PROVISIONED` listener, and neither reads nor stores it. A
@@ -89,24 +65,12 @@ interface RegistrationRequirement {
   isMet: (requirements: RegistrationRequirements) => boolean;
 }
 
-interface RegistrationAddress {
-  country: string;
-  line1?: string;
-  postalCode?: string;
-  city?: string;
-}
-
 interface RegistrationPayload {
   email: string;
   password: string;
   name: string;
   workspaceName: string;
-  planId: string;
-  customerType: string;
-  companyName?: string;
-  vatNumber?: string;
-  paymentMethodId: string;
-  address: RegistrationAddress;
+  paymentMethodId?: string;
   extras?: Record<string, unknown>;
 }
 
@@ -121,43 +85,46 @@ interface SetupIntentResponse {
   clientSecret: string | null;
 }
 
-interface DmsSaasPublicRuntimeConfig {
+/** What dms-saas publishes to the browser through the frontend module options. */
+export interface DmsSaasPublicRuntimeConfig {
   stripePublishableKey?: string;
   admissionMode?: "open" | "invitation-only";
+  registrationPaymentMethod?: RegistrationPaymentMethodPolicy;
 }
 
-const PLANS_ENDPOINT = "/api/saas/plans/public";
+type PaymentStepRule = (skipsPaymentMethod: boolean) => boolean;
+
 const SETUP_INTENT_ENDPOINT = "/api/saas/register/setup-intent";
 const REGISTER_ENDPOINT = "/api/saas/register";
 const DEFAULT_PAYMENT_ELEMENT_ID = "dms-saas-register-payment-element";
 const DEFAULT_REDIRECT = "/auth/login";
-const ANY_AUDIENCE = "any";
-const PLAN_PRICE_KEY = "saas.register.price";
-const NO_PLAN_ERROR_KEY = "saas.register.error.no_plan";
+const DEFAULT_PAYMENT_POLICY: RegistrationPaymentMethodPolicy = "required";
+const INVITATION_ONLY = "invitation-only";
+const DEFAULT_WORKSPACE_NAME_KEY = "saas.register.default_workspace_name";
 const NO_PAYMENT_ERROR_KEY = "saas.register.error.no_payment";
 const LOAD_ERROR_KEY = "saas.register.error.load";
 const SUBMIT_ERROR_KEY = "saas.register.error.failed";
 
+const PAYMENT_STEP_RULES: Record<RegistrationPaymentMethodPolicy, PaymentStepRule> =
+  {
+    required: () => true,
+    optional: (skipsPaymentMethod) => !skipsPaymentMethod,
+    none: () => false,
+  };
+
 /**
- * Checked in the order the visitor can act on them, so a missing plan is never
- * reported as a payment failure.
+ * Checked in the order the visitor can act on them: the card field comes
+ * before the legal checkbox on every screen.
  */
 const REGISTRATION_REQUIREMENTS: RegistrationRequirement[] = [
   {
-    errorKey: NO_PLAN_ERROR_KEY,
-    isMet: (requirements) => Boolean(requirements.selectedPlanId),
-  },
-  {
     errorKey: NO_PAYMENT_ERROR_KEY,
-    isMet: (requirements) => requirements.isPaymentReady,
+    isMet: (requirements) =>
+      !requirements.isPaymentRequired || requirements.isPaymentReady,
   },
   {
     errorKey: "saas.register.error.legal_required",
     isMet: (requirements) => requirements.hasAcceptedLegal,
-  },
-  {
-    errorKey: "saas.register.error.no_country",
-    isMet: (requirements) => Boolean(requirements.country),
   },
 ];
 
@@ -177,82 +144,44 @@ export function firstMissingRegistrationRequirement(
   return missing?.errorKey ?? null;
 }
 
-function planIntervalLabel(
-  interval: PlanInterval,
-  translate: RegistrationTranslator,
-): string {
-  return formatPlanIntervalLabel(interval, "saas.register.interval", translate);
+/**
+ * The card policy the deployment published, falling back to the backend's
+ * own default when it published none.
+ *
+ * @param config dms-saas public runtime config
+ * @returns The configured policy, or `required`
+ */
+export function resolveRegistrationPaymentPolicy(
+  config: DmsSaasPublicRuntimeConfig | undefined,
+): RegistrationPaymentMethodPolicy {
+  const policy = config?.registrationPaymentMethod;
+  return policy && policy in PAYMENT_STEP_RULES ? policy : DEFAULT_PAYMENT_POLICY;
 }
 
 /**
- * Price the way a summary line reads it: amount and cadence as one string, in
- * the visitor's locale, decimals dropped on whole amounts.
+ * Whether the registration still collects a card.
  *
- * Takes its locale and translator instead of reading them from the component
- * context, so a consumer can price a plan outside a `setup()` call.
- *
- * @param plan Plan to price
- * @param locale BCP 47 locale the amount is formatted in
- * @param translate Translation function for the price pattern and the cadence
- * @returns Localised price, e.g. `20 €/mois`
+ * @param policy Configured card policy
+ * @param skipsPaymentMethod Whether the visitor chose to add a card later
+ * @returns True when the card step is shown and must be completed
  */
-export function formatRegistrationPlanPrice(
-  plan: RegistrationPlan,
-  locale: string,
-  translate: RegistrationTranslator,
-): string {
-  const price = formatMajorUnits(plan.price, plan.currency, locale, {
-    hideWholeAmountDecimals: true,
-  });
-  return translate(PLAN_PRICE_KEY, {
-    price,
-    interval: planIntervalLabel(plan.interval, translate),
-  });
+export function isPaymentStepShown(
+  policy: RegistrationPaymentMethodPolicy,
+  skipsPaymentMethod: boolean,
+): boolean {
+  return PAYMENT_STEP_RULES[policy](skipsPaymentMethod);
 }
 
 /**
- * The offer a customer type is entitled to, in the order it should read.
+ * Whether the deployment has closed public registration to invitations.
  *
- * Sorted here because the endpoint returns plans in storage order, and the
- * first plan on offer is the one that ends up pre-selected: it has to be the
- * one the operator ranked first, not the one created first.
- *
- * @param all Every publicly visible plan
- * @param customerType Customer type the visitor declared
- * @returns Plans that customer type may subscribe to
+ * @param config dms-saas public runtime config
+ * @returns True when only invited accounts may sign up
  */
-export function resolveOfferedPlans(
-  all: RegistrationPlan[],
-  customerType: string,
-): RegistrationPlan[] {
-  return all
-    .filter(
-      (plan) => plan.audience === ANY_AUDIENCE || plan.audience === customerType,
-    )
-    .sort((left, right) => left.order - right.order);
-}
-
-/**
- * The plan selection to hold on to now that this is the offer.
- *
- * Switching customer type reshuffles the offer: a selection the visitor can no
- * longer subscribe to would travel to the API and come back rejected, so it
- * falls back to the first plan they may actually buy.
- *
- * @param available Plans the current customer type may subscribe to
- * @param current Plan id currently selected, if any
- * @returns Plan id to select, or null when nothing is on offer
- */
-export function resolveSelectedPlanId(
-  available: RegistrationPlan[],
-  current: string | null,
-): string | null {
-  const isStillOffered = available.some((plan) => plan._id === current);
-  return isStillOffered ? current : (available[0]?._id ?? null);
-}
-
-function optionalField(value: string): string | undefined {
-  return value.trim() || undefined;
+export function isRegistrationClosedBy(
+  config: DmsSaasPublicRuntimeConfig | undefined,
+): boolean {
+  return config?.admissionMode === INVITATION_ONLY;
 }
 
 /**
@@ -276,12 +205,16 @@ export function snapshotRegistrationExtras(
 /**
  * The public registration flow, without a single line of presentation.
  *
- * dms-saas owns what is dangerous to re-derive — the Stripe setup intent and
- * card confirmation, the order the fields are validated in, the shape of the
- * provisioning call, the mapping from API failures to a message — and hands
- * the consumer plain state to bind and one action to call. Each SaaS then
- * writes the markup its conversion funnel needs: the fields it groups, the way
- * it presents plans, whether it is one page or three steps, its own copy.
+ * Registration is short on purpose: an account, the legal acceptance and —
+ * when the deployment asks for one — a card. The workspace it opens lands on
+ * the free plan under a default name; plan, customer type and billing address
+ * are collected by the upgrade flow.
+ *
+ * dms-saas owns what is dangerous to re-derive — the card policy, the Stripe
+ * setup intent and card confirmation, the order the fields are validated in,
+ * the shape of the provisioning call, the mapping from API failures to a
+ * message — and hands the consumer plain state to bind and one action to
+ * call. Each SaaS then writes the markup its conversion funnel needs.
  *
  * The screen shipped in this package is one consumer among others: replace it
  * by turning it off (`publicScreens.register: false` in the module config) and
@@ -289,12 +222,11 @@ export function snapshotRegistrationExtras(
  * want on this composable rather than forking its logic.
  *
  * @param options Landing route and payment element id
- * @returns Bindable form state, plan data, submission action and status
+ * @returns Bindable form state, card policy, submission action and status
  */
 export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
   const { $authFetch } = useAuthFetch();
   const { resolveApiError } = useApiErrorMessage();
-  const { countryItems } = useBillingCountries();
   const { $i18n } = useDmsApp();
   const config = useDmsRuntimeConfig();
 
@@ -304,24 +236,18 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
   const paymentElementId =
     options.paymentElementId ?? DEFAULT_PAYMENT_ELEMENT_ID;
   const redirectTo = options.redirectTo ?? DEFAULT_REDIRECT;
+  const saasConfig = config.public.dmsSaas as
+    | DmsSaasPublicRuntimeConfig
+    | undefined;
 
   const form = reactive<RegistrationForm>({
-    customerType: "individual",
     email: "",
     password: "",
     name: "",
-    workspaceName: "",
-    companyName: "",
-    vatNumber: "",
-    country: "",
-    addressLine1: "",
-    postalCode: "",
-    city: "",
-    selectedPlanId: null,
     hasAcceptedLegal: false,
+    skipsPaymentMethod: false,
   });
 
-  const allPlans = ref<RegistrationPlan[]>([]);
   const isLoading = ref(true);
   const isSubmitting = ref(false);
   const errorMessage = ref<string | null>(null);
@@ -329,19 +255,15 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
     null,
   );
 
-  const stripePublishableKey = computed<string>(
-    () =>
-      (config.public.dmsSaas as DmsSaasPublicRuntimeConfig | undefined)
-        ?.stripePublishableKey ?? "",
-  );
+  /** Registration by invitation only: render the closed state, not the form. */
+  const isRegistrationClosed = isRegistrationClosedBy(saasConfig);
+  const paymentMethodPolicy = resolveRegistrationPaymentPolicy(saasConfig);
+  /** Whether the screen should offer to add the card later. */
+  const canSkipPaymentMethod = paymentMethodPolicy === "optional";
 
-  /** Plans the current customer type may subscribe to, in the operator's order. */
-  const plans = computed(() =>
-    resolveOfferedPlans(allPlans.value, form.customerType),
-  );
-
-  const selectedPlan = computed(
-    () => plans.value.find((plan) => plan._id === form.selectedPlanId) ?? null,
+  /** Bind the card field's visibility to this, with `v-show`, not `v-if`. */
+  const isPaymentStepVisible = computed(() =>
+    isPaymentStepShown(paymentMethodPolicy, form.skipsPaymentMethod),
   );
 
   /**
@@ -351,10 +273,9 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
   const isPaymentReady = computed(() => stripeHandle.value !== null);
 
   const requirements = computed<RegistrationRequirements>(() => ({
-    selectedPlanId: form.selectedPlanId,
+    isPaymentRequired: isPaymentStepVisible.value,
     isPaymentReady: isPaymentReady.value,
     hasAcceptedLegal: form.hasAcceptedLegal,
-    country: form.country,
   }));
 
   const missingRequirement = computed(() =>
@@ -365,34 +286,13 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
     () => !isSubmitting.value && missingRequirement.value === null,
   );
 
-  function formatPlanPrice(plan: RegistrationPlan): string {
-    return formatRegistrationPlanPrice(plan, $i18n.locale.value, translate);
-  }
-
-  // Repaired synchronously, not on the next flush: a consumer that switches
-  // customer type and submits in the same tick would otherwise send the plan
-  // the visitor can no longer buy.
-  watch(
-    plans,
-    (available) => {
-      form.selectedPlanId = resolveSelectedPlanId(
-        available,
-        form.selectedPlanId,
-      );
-    },
-    { flush: "sync" },
-  );
-
-  async function loadPlans(): Promise<void> {
-    allPlans.value = await $authFetch<RegistrationPlan[]>(PLANS_ENDPOINT);
-  }
-
   async function mountPaymentElement(): Promise<void> {
-    if (!stripePublishableKey.value) return;
+    const publishableKey = saasConfig?.stripePublishableKey;
+    if (!publishableKey) return;
     const setup = await $authFetch<SetupIntentResponse>(SETUP_INTENT_ENDPOINT);
     if (!setup.clientSecret) return;
     stripeHandle.value = useStripePaymentElement({
-      publishableKey: stripePublishableKey.value,
+      publishableKey,
       clientSecret: setup.clientSecret,
       containerId: paymentElementId,
     });
@@ -411,33 +311,23 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
    *
    * Taken whole, before the card confirmation: that step can hold a 3-D Secure
    * challenge open for seconds while the fields stay editable, and a payload
-   * half read before and half after would pair, say, the plan chosen then with
-   * the customer type chosen since — which the API rejects, once the card has
-   * already been confirmed.
+   * half read before and half after would not be the one the visitor sent.
    */
-  function captureSubmission(planId: string): RegistrationSubmission {
-    const isBusiness = form.customerType === "business";
+  function captureSubmission(): RegistrationSubmission {
     return {
       email: form.email,
       password: form.password,
       name: form.name,
-      workspaceName: form.workspaceName,
-      planId,
-      customerType: form.customerType,
-      companyName: isBusiness ? form.companyName : undefined,
-      vatNumber: isBusiness ? optionalField(form.vatNumber) : undefined,
-      address: {
-        country: form.country,
-        line1: optionalField(form.addressLine1),
-        postalCode: optionalField(form.postalCode),
-        city: optionalField(form.city),
-      },
+      workspaceName: translate(DEFAULT_WORKSPACE_NAME_KEY, {
+        name: form.name.trim(),
+      }),
       extras: snapshotRegistrationExtras(toValue(options.extras)),
     };
   }
 
   /**
-   * Confirm the card, provision the workspace, land on the configured route.
+   * Confirm the card when one is collected, provision the workspace, land on
+   * the configured route.
    *
    * Everything the caller needs to know travels through `errorMessage`:
    * nothing throws, so a consumer template can bind the action directly.
@@ -449,11 +339,8 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
     // the first is in flight would run both again.
     if (isSubmitting.value) return null;
 
-    const planId = form.selectedPlanId;
-    if (missingRequirement.value || !planId) {
-      errorMessage.value = translate(
-        missingRequirement.value ?? NO_PLAN_ERROR_KEY,
-      );
+    if (missingRequirement.value) {
+      errorMessage.value = translate(missingRequirement.value);
       return null;
     }
 
@@ -463,9 +350,11 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
     try {
       // Inside the guard: freezing the capture reads the consumer's object,
       // and a consumer's object is never guaranteed to be serialisable.
-      const submission = captureSubmission(planId);
-      const paymentMethodId = await confirmPaymentMethod();
-      if (!paymentMethodId) return null;
+      const submission = captureSubmission();
+      const paymentMethodId = isPaymentStepVisible.value
+        ? await confirmPaymentMethod()
+        : undefined;
+      if (paymentMethodId === null) return null;
 
       const result = await $authFetch<RegistrationResult>(REGISTER_ENDPOINT, {
         method: "POST",
@@ -477,8 +366,8 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
       return tenantId;
     } catch (error) {
       // Once the workspace exists, whatever failed after it is a landing
-      // problem: calling it a failed registration sends a visitor who has
-      // already paid back through a flow that would charge them again.
+      // problem: calling it a failed registration sends the visitor back
+      // through a flow that would create a second account.
       if (tenantId) return tenantId;
       errorMessage.value = resolveApiError(error, SUBMIT_ERROR_KEY);
       return null;
@@ -488,15 +377,14 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
   }
 
   onMounted(async () => {
-    if (
-      (config.public.dmsSaas as DmsSaasPublicRuntimeConfig | undefined)
-        ?.admissionMode === "invitation-only"
-    ) {
+    // Closed registration and a card-less policy never reach Stripe: the
+    // setup intent would only answer 403 or 400.
+    if (isRegistrationClosed || paymentMethodPolicy === "none") {
       isLoading.value = false;
       return;
     }
     try {
-      await Promise.all([loadPlans(), mountPaymentElement()]);
+      await mountPaymentElement();
     } catch (error) {
       errorMessage.value = resolveApiError(error, LOAD_ERROR_KEY);
     } finally {
@@ -506,17 +394,17 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 
   return {
     form,
-    plans,
-    selectedPlan,
-    countryItems,
     paymentElementId,
+    paymentMethodPolicy,
+    canSkipPaymentMethod,
+    isPaymentStepVisible,
     isPaymentReady,
+    isRegistrationClosed,
     isLoading,
     isSubmitting,
     errorMessage,
     missingRequirement,
     canSubmit,
-    formatPlanPrice,
     submit,
   };
 }
