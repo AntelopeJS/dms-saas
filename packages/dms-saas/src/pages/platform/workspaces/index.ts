@@ -16,6 +16,7 @@ import {
   TableView,
 } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
+import type { WatchAction } from "@antelopejs/interface-dms/base/types";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { recomputeTenantBillingState } from "../../../billing-state";
 import { isAllowedRedirectUrl } from "../../../config";
@@ -39,21 +40,53 @@ const KPI_ACTIVE = "/api/saas/dashboard/kpi/state-active";
 const KPI_FREE = "/api/saas/dashboard/kpi/state-free";
 const KPI_PAST_DUE = "/api/saas/dashboard/kpi/state-past-due";
 
+// Shared with the create modal (WorkspaceAdminCreateModal.vue), which emits
+// the event, and the frontend plugin registering the refresh function.
+const WORKSPACE_CREATED_EVENT = "DmsSaas.Workspaces.Created";
+const WORKSPACE_CREATED_SOURCE = "saas.workspaces.create";
+const REFRESH_FUNCTION_ID = "DmsSaas.RefreshData";
+
+/**
+ * Refetch on every workspace the create modal adds. Declared as a raw watch
+ * action because `.watch()` only listens to the component's own events, and
+ * the counters have to hear the modal's.
+ */
+const WORKSPACE_CREATED_WATCH: WatchAction = {
+  component: WORKSPACE_CREATED_SOURCE,
+  event: WORKSPACE_CREATED_EVENT,
+  functionId: REFRESH_FUNCTION_ID,
+};
+
+function workspaceKpiCard(title: string, icon: string, fetchUrl: string) {
+  return KpiCard({
+    title,
+    icon,
+    fetchUrl,
+    variant: "stat",
+    valueFormat: "compact",
+    showDelta: false,
+  }).transformOptions(
+    (options) =>
+      options && {
+        ...options,
+        watchActions: [
+          ...(options.watchActions ?? []),
+          WORKSPACE_CREATED_WATCH,
+        ],
+      },
+  );
+}
+
 const ACTIVE_STATUS = "active";
 const PENDING_PAYMENT_STATUS = "pending_payment";
 
 const STATUS_TAB_FILTER_KEY = "billingState";
 
-const STATUS_TAB_DEFS = [
-  { id: "active", label: "Active" },
-  { id: "free", label: "Free" },
-  { id: "past_due", label: "Past due" },
-  { id: "suspended", label: "Suspended" },
-];
+const STATUS_TAB_IDS = ["active", "free", "past_due", "suspended"];
 
-const STATUS_TABS = STATUS_TAB_DEFS.map(({ id, label }) => ({
+const STATUS_TABS = STATUS_TAB_IDS.map((id) => ({
   id,
-  label,
+  label: `$saas.workspaces.billing_state.${id}`,
   filters: [{ accessorKey: STATUS_TAB_FILTER_KEY, value: id, mode: "is" }],
 }));
 
@@ -266,47 +299,31 @@ export class SaasWorkspacesListController extends PageController(
     GridRow()
       .child(
         "workspaces",
-        KpiCard({
-          title: "$saas.workspaces.kpi.workspaces",
-          icon: "i-ph-buildings",
-          fetchUrl: KPI_WORKSPACES,
-          variant: "stat",
-          valueFormat: "compact",
-          showDelta: false,
-        }),
+        workspaceKpiCard(
+          "$saas.workspaces.kpi.workspaces",
+          "i-ph-buildings",
+          KPI_WORKSPACES,
+        ),
       )
       .child(
         "active",
-        KpiCard({
-          title: "$saas.workspaces.kpi.active",
-          icon: "i-ph-check-circle",
-          fetchUrl: KPI_ACTIVE,
-          variant: "stat",
-          valueFormat: "compact",
-          showDelta: false,
-        }),
+        workspaceKpiCard(
+          "$saas.workspaces.kpi.active",
+          "i-ph-check-circle",
+          KPI_ACTIVE,
+        ),
       )
       .child(
         "free",
-        KpiCard({
-          title: "$saas.workspaces.kpi.free",
-          icon: "i-ph-gift",
-          fetchUrl: KPI_FREE,
-          variant: "stat",
-          valueFormat: "compact",
-          showDelta: false,
-        }),
+        workspaceKpiCard("$saas.workspaces.kpi.free", "i-ph-gift", KPI_FREE),
       )
       .child(
         "pastDue",
-        KpiCard({
-          title: "$saas.workspaces.kpi.past_due",
-          icon: "i-ph-warning",
-          fetchUrl: KPI_PAST_DUE,
-          variant: "stat",
-          valueFormat: "compact",
-          showDelta: false,
-        }),
+        workspaceKpiCard(
+          "$saas.workspaces.kpi.past_due",
+          "i-ph-warning",
+          KPI_PAST_DUE,
+        ),
       ),
   );
 

@@ -50,6 +50,15 @@ const isAccessBlocked = computed(
     !data.value?.canRecoverComplimentary,
 );
 
+/** Settling an invoice only lifts a block when there is one to settle: an
+ * operator suspension, or a member who cannot see the invoice, gets the copy
+ * that promises nothing about payment. */
+const blockedHintKey = computed(() =>
+  billingStatus.value?.unpaidInvoice
+    ? "saas.workspace.plan.blocked_hint"
+    : "saas.workspace.plan.blocked_hint_inactive",
+);
+
 /** Plan mutations are owner-only server-side; a member gets the read-only
  * card instead of buttons that can only end in a 403 toast. */
 const isTenantOwner = computed(() => !!billingStatus.value?.isTenantOwner);
@@ -231,7 +240,7 @@ onMounted(() => {
       </p>
 
       <p v-if="isAccessBlocked" class="text-muted text-sm">
-        {{ $t("saas.workspace.plan.blocked_hint") }}
+        {{ $t(blockedHintKey) }}
       </p>
 
       <p v-else-if="data.isPlanChangeLocked" class="text-muted text-sm">

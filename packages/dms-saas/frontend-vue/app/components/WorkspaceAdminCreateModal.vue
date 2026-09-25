@@ -26,6 +26,10 @@ const props = defineProps<{
 const PLANS_ENDPOINT = "/api/saas/plans";
 const CREATE_ENDPOINT = "/modules/saas/customers/workspaces/create";
 const WARNING_TOAST_DURATION = 0;
+// Heard by the back-office counters, which refetch through a watch action
+// declared on the workspaces page.
+const WORKSPACE_CREATED_EVENT = "DmsSaas.Workspaces.Created";
+const WORKSPACE_CREATED_SOURCE = "saas.workspaces.create";
 
 const { $authFetch } = useAuthFetch();
 const nuxtApp = useDmsApp();
@@ -113,6 +117,11 @@ async function submit(): Promise<void> {
       },
     });
     notifyCreated(created);
+    window.dispatchEvent(
+      new CustomEvent(WORKSPACE_CREATED_EVENT, {
+        detail: { component: WORKSPACE_CREATED_SOURCE },
+      }),
+    );
     props.onSuccessCallback?.();
   } catch (error) {
     errorMessage.value = resolveApiError(

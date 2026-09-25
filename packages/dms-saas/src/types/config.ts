@@ -27,6 +27,28 @@ export interface DmsSaasRegistrationConfig {
   paymentMethod?: RegistrationPaymentMethodPolicy;
 }
 
+/**
+ * Permissions a plan never takes away from a workspace member. DMS page
+ * metadata carries no "about the signed-in user only" flag, so the personal
+ * pages are listed here rather than derived.
+ */
+export interface DmsSaasPlanExemptPermissionsConfig {
+  /**
+   * Page ids about the signed-in user alone (profile, notifications…). Every
+   * member holds them, their components and actions included, whatever the
+   * plan. Defaults to the DMS profile, notifications, appearance and shortcuts
+   * pages; a list replaces the defaults.
+   */
+  personalPages?: string[];
+  /**
+   * Ids every member holds on their own, without what is nested under them:
+   * the settings hub and the categories grouping its pages. Defaults to
+   * `settings`, `settings.user` and `settings.workspace`; a list replaces the
+   * defaults.
+   */
+  navigation?: string[];
+}
+
 export interface DmsSaasConfig {
   stripe: DmsSaasStripeConfig;
   /** Deployment-wide admission policy. Defaults to open; invitations remain available. */
@@ -70,4 +92,11 @@ export interface DmsSaasConfig {
    * still reads "on quote" but offers no button.
    */
   planContactUrl?: string;
+  /**
+   * Permissions left out of plan gating. A plan's permission list otherwise
+   * caps what every member holds: a listed id grants itself and every id
+   * nested under it (a page grants its components and actions), and anything
+   * outside the list is withheld.
+   */
+  planExemptPermissions?: DmsSaasPlanExemptPermissionsConfig;
 }

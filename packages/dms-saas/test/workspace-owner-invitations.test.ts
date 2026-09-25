@@ -30,7 +30,10 @@ import {
 import { setRuntimeConfig } from "../src/config";
 import { PlanModel } from "../src/db";
 import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
-import { workspaceOwnerLabel } from "../src/data-api/platformOwner/workspaces";
+import {
+  hasWorkspaceOwnerJoined,
+  workspaceOwnerLabel,
+} from "../src/data-api/platformOwner/workspaces";
 import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
 import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
 import { SaasWorkspaceInvitationsController } from "../src/routes/platformOwner/workspace-invitations";
@@ -263,9 +266,8 @@ describe("workspace owner column", () => {
   it("names the invitee while the owner invitation is pending", async () => {
     const { email, tenantId } = await createInvitedWorkspace();
 
-    expect(await workspaceOwnerLabel(tenantId)).toBe(
-      `pending invitation · ${email}`,
-    );
+    expect(await workspaceOwnerLabel(tenantId)).toBe(email);
+    expect(await hasWorkspaceOwnerJoined(tenantId)).toBe(false);
   });
 
   it("names the owners once one has joined", async () => {
@@ -283,6 +285,7 @@ describe("workspace owner column", () => {
     });
 
     expect(await workspaceOwnerLabel(tenantId)).toBe("joined@example.test");
+    expect(await hasWorkspaceOwnerJoined(tenantId)).toBe(true);
   });
 
   it("shows no owner when there is neither an owner nor an owner invitation", async () => {
@@ -424,5 +427,23 @@ describe("resend invitation from the back office", () => {
       action: "invitation.resend",
       details: { emailDelivery: "failed" },
     });
+  });
+});
+
+describe("back-office workspace counters", () => {
+  it("refetch every counter when the create modal adds a workspace", async () => {
+    const grid = await SaasWorkspacesListController.kpis.serialize();
+    const cards =
+      grid.children?.flatMap((row) => row.component.children ?? []) ?? [];
+    expect(cards).toHaveLength(4);
+    for (const card of cards) {
+      expect(
+        (card.component.options as { watchActions?: unknown[] }).watchActions,
+      ).toContainEqual({
+        component: "saas.workspaces.create",
+        event: "DmsSaas.Workspaces.Created",
+        functionId: "DmsSaas.RefreshData",
+      });
+    }
   });
 });
