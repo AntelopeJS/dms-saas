@@ -25,7 +25,7 @@ import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
 import { MongoMemoryReplSet } from "mongodb-memory-server-core";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { setRuntimeConfig } from "../src/config";
-import { PlanModel } from "../src/db";
+import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import { getSeatUsage, registerSeatHooks } from "../src/plans";
 import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
 import {
@@ -35,6 +35,10 @@ import {
 
 vi.mock("../src/billing-state", () => ({
   recomputeTenantBillingState: async () => undefined,
+}));
+vi.mock("../src/stripe/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/stripe/client")>()),
+  getStripeClient: () => fakeStripe,
 }));
 vi.mock("../src/data-api", async () => ({
   ...(await import("../src/data-api/platformOwner/plans")),
@@ -51,6 +55,16 @@ const require = createRequire(import.meta.url);
 const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
 const DAY_MS = 86_400_000;
 const SEAT_LIMIT_ERROR = { body: "saas.errors.plan.seat_limit_reached" };
+const STRIPE_SUBSCRIPTION_ID = "sub_seat_billed";
+const billedQuantities: number[] = [];
+const fakeStripe = {
+  subscriptions: {
+    retrieve: async () => ({ items: { data: [{ id: "si_seats" }] } }),
+    update: async (_id: string, params: { items: { quantity: number }[] }) => {
+      billedQuantities.push(params.items[0]!.quantity);
+    },
+  },
+};
 let mongodb: MongoMemoryReplSet;
 
 const operator = {
@@ -231,5 +245,58 @@ describe("seats held by invitations at the plan cap", () => {
       pendingInvites: 1,
       occupied: 1,
     });
+  });
+});
+
+describe("seats billed for invitations", () => {
+  async function createSeatBilledWorkspace() {
+    const workspace = await createFreeWorkspace();
+    const subscriptions = GetModel(TenantSubscriptionModel, workspace.tenantId);
+    const subscription = await subscriptions.findOne();
+    if (!subscription) throw new Error("Expected a subscription");
+    await subscriptions.update(subscription._id, {
+      stripeSubscriptionId: STRIPE_SUBSCRIPTION_ID,
+    });
+    await GetModel(PlanModel).update(subscription.planId!, {
+      billingMode: "seat",
+    });
+    billedQuantities.length = 0;
+    return workspace;
+  }
+
+  async function resolveOwnerInvite(
+    tenantId: string,
+    reason: "accepted" | "cancelled",
+    userId?: string,
+  ): Promise<void> {
+    const [invite] = await pendingInvites(tenantId);
+    if (!invite) throw new Error("Expected the invitation");
+    await completeInviteResolution(
+      await decideInvite({ tenantId, invite, reason, userId }),
+    );
+  }
+
+  it("keeps billing one seat while the invitation is resent", async () => {
+    const { tenantId, inviteId } = await createSeatBilledWorkspace();
+
+    await resendInvitation(tenantId, inviteId);
+
+    expect(billedQuantities).toEqual([1, 1]);
+  });
+
+  it("bills the seat once the invitation turns into a member", async () => {
+    const { email, tenantId } = await createSeatBilledWorkspace();
+
+    await resolveOwnerInvite(tenantId, "accepted", await insertUser(email));
+
+    expect(billedQuantities).toEqual([1]);
+  });
+
+  it("releases the seat of a cancelled invitation", async () => {
+    const { tenantId } = await createSeatBilledWorkspace();
+
+    await resolveOwnerInvite(tenantId, "cancelled");
+
+    expect(billedQuantities).toEqual([0]);
   });
 });
