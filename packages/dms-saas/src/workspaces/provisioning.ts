@@ -31,6 +31,7 @@ import {
   toTenantBillingAddress,
 } from "../stripe";
 import { hashEmail, stripeSecondsToDate } from "../utils";
+import { isFreePlan } from "./free-workspace-guard";
 import {
   beginProvisioningAttempt,
   recordProvisioningState,
@@ -40,9 +41,12 @@ export { rollbackWorkspaceProvisioning } from "./provisioning-rollback";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
+const HTTP_CONFLICT = 409;
 const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
 const SEAT_BILLING_INITIAL_QUANTITY = 1;
+/** Registration opens individual workspaces: business plans need the upgrade flow. */
+const REGISTRATION_CUSTOMER_TYPE: WorkspaceCustomerType = "individual";
 
 export type WorkspaceCustomerType = "individual" | "business";
 
@@ -60,7 +64,8 @@ export interface WorkspaceBillingProfile {
 export interface WorkspaceProvisioningPayload extends WorkspaceBillingProfile {
   workspaceName: string;
   planId: string;
-  paymentMethodId: string;
+  /** Absent for a card-less workspace, which only a free plan allows. */
+  paymentMethodId?: string;
   /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else. Opaque here: dms-saas never reads it, never
@@ -72,7 +77,6 @@ export interface WorkspaceProvisioningPayload extends WorkspaceBillingProfile {
 export interface StripeCustomerProfile extends WorkspaceBillingProfile {
   email: string;
   fallbackName: string;
-  paymentMethodId: string;
 }
 
 export interface WorkspaceProvisioningHandles {
@@ -105,7 +109,8 @@ export interface ProvisionedWorkspace {
 }
 
 interface CreatedSubscription {
-  stripeSubscriptionId: string;
+  /** Null for a card-less workspace, which has no Stripe side at all. */
+  stripeSubscriptionId: string | null;
   isTrialing: boolean;
   currentPeriodEnd: Date | null;
   /**
@@ -113,6 +118,11 @@ interface CreatedSubscription {
    * subscription owes nothing now (a trial), so there is nothing to charge.
    */
   latestInvoiceId: string | null;
+}
+
+interface ProvisionedBilling {
+  stripeCustomerId: string | null;
+  subscription: CreatedSubscription;
 }
 
 interface SubscriptionCreationInput {
@@ -128,7 +138,7 @@ interface TenantRecordsInput {
   tenantId: string;
   userId: string;
   payload: WorkspaceProvisioningPayload;
-  stripeCustomerId: string;
+  stripeCustomerId: string | null;
   cardFingerprint: string | null;
   subscription: CreatedSubscription;
   billingEmail: string;
@@ -162,13 +172,31 @@ export async function ensurePlanIsAvailableForCustomer(
   return plan;
 }
 
+const NO_CARD: CardDetails = { fingerprint: null, billingAddress: undefined };
+
+/**
+ * A workspace without a card stays entirely local: the upgrade checkout
+ * creates the Stripe customer the day one is needed.
+ */
+const CARDLESS_BILLING: ProvisionedBilling = {
+  stripeCustomerId: null,
+  subscription: {
+    stripeSubscriptionId: null,
+    isTrialing: false,
+    currentPeriodEnd: null,
+    latestInvoiceId: null,
+  },
+};
+
 /**
  * Read once by the caller: both the free-workspace cap and the inherited
- * billing address need it before provisioning starts.
+ * billing address need it before provisioning starts. Without a card there is
+ * nothing to read, and Stripe is not called.
  */
 export async function resolveCardDetails(
-  paymentMethodId: string,
+  paymentMethodId: string | undefined,
 ): Promise<CardDetails> {
+  if (!paymentMethodId) return NO_CARD;
   const stripe = getStripeClient();
   const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
   const address = paymentMethod.billing_details?.address;
@@ -187,8 +215,31 @@ export async function resolveCardDetails(
   };
 }
 
+/**
+ * The free plan a registration lands on: plan choice belongs to the upgrade
+ * flow, so signing up only ever opens the operator's first free plan an
+ * individual may hold.
+ *
+ * @returns The lowest-ordered active free plan open to individuals
+ * @throws 409 when the catalogue offers no such plan
+ */
+export async function resolveRegistrationPlan(): Promise<Plan> {
+  const plans = await GetModel(PlanModel).findActiveNotDeleted();
+  const freePlan = plans
+    .filter(
+      (plan) =>
+        isFreePlan(plan) &&
+        (plan.audience === "any" ||
+          plan.audience === REGISTRATION_CUSTOMER_TYPE),
+    )
+    .sort((left, right) => left.order - right.order)[0];
+  assert(freePlan, HTTP_CONFLICT, "saas.errors.plan.no_free_plan");
+  return freePlan;
+}
+
 async function createStripeCustomer(
   profile: StripeCustomerProfile,
+  paymentMethodId: string,
   handles: WorkspaceProvisioningHandles,
 ): Promise<string> {
   const stripe = getStripeClient();
@@ -216,11 +267,11 @@ async function createStripeCustomer(
   // and the PII it carries.
   handles.stripeCustomerId = customer.id;
   await recordProvisioningState(handles);
-  await stripe.paymentMethods.attach(profile.paymentMethodId, {
+  await stripe.paymentMethods.attach(paymentMethodId, {
     customer: customer.id,
   });
   await stripe.customers.update(customer.id, {
-    invoice_settings: { default_payment_method: profile.paymentMethodId },
+    invoice_settings: { default_payment_method: paymentMethodId },
   });
   await reconcileStripeTaxId(customer.id, {
     customerType: profile.customerType,
@@ -445,6 +496,13 @@ export async function provisionWorkspace(
 ): Promise<ProvisionedWorkspace> {
   const plan = await GetModel(PlanModel).get(input.payload.planId);
   assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_available");
+  // Nothing can be charged without a card, so only a free plan goes on
+  // without one — checked before any durable state is written.
+  assert(
+    input.payload.paymentMethodId || isFreePlan(plan),
+    HTTP_BAD_REQUEST,
+    "saas.errors.workspace.payment_method_required",
+  );
   await beginProvisioningAttempt(input, plan);
   try {
     const provisioned = await runProvisioning(input);
@@ -459,25 +517,37 @@ export async function provisionWorkspace(
   }
 }
 
+async function provisionStripeBilling(
+  input: WorkspaceProvisioningInput,
+  plan: Plan,
+  paymentMethodId: string,
+): Promise<ProvisionedBilling> {
+  const { stripeCustomerProfile, handles } = input;
+  const stripeCustomerId = await createStripeCustomer(
+    stripeCustomerProfile,
+    paymentMethodId,
+    handles,
+  );
+  const subscription = await createSubscription({
+    stripeCustomerId,
+    plan,
+    userId: input.userId,
+    email: stripeCustomerProfile.email,
+    cardFingerprint: input.card.fingerprint,
+    handles,
+  });
+  return { stripeCustomerId, subscription };
+}
+
 async function runProvisioning(
   input: WorkspaceProvisioningInput,
 ): Promise<ProvisionedWorkspace> {
   const { userId, payload, stripeCustomerProfile, card, handles } = input;
   const plan = await GetModel(PlanModel).get(payload.planId);
   assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_available");
-  const stripeCustomerId = await createStripeCustomer(
-    stripeCustomerProfile,
-    handles,
-  );
-  const subscription = await createSubscription({
-    stripeCustomerId,
-    plan,
-    userId,
-    email: stripeCustomerProfile.email,
-    cardFingerprint: card.fingerprint,
-    handles,
-  });
-  handles.stripeSubscriptionId = subscription.stripeSubscriptionId;
+  const { stripeCustomerId, subscription } = payload.paymentMethodId
+    ? await provisionStripeBilling(input, plan, payload.paymentMethodId)
+    : CARDLESS_BILLING;
 
   const tenantId = await createOwnedTenant(
     payload.workspaceName,

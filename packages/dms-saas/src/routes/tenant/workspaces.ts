@@ -327,7 +327,6 @@ export class SaasWorkspacesController extends Controller(
           ...input.billingProfile,
           email: user.email,
           fallbackName: user.name,
-          paymentMethodId: input.paymentMethodId,
         },
         card: input.card,
         handles,

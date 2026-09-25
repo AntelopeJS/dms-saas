@@ -19,6 +19,8 @@ import type {
 import type { ProvisioningAttempt } from "../src/workspaces/db/provisioning-attempt.table";
 import type { SubscriptionTransition, TenantSubscription } from "../src/db";
 import { getWorkspaceDeletionOperationId } from "../src/workspaces/deletion";
+import { setRuntimeConfig } from "../src/config";
+import type { DmsSaasConfig } from "../src/types";
 import {
   isWorkspaceProvisioningCommitted,
   reconcileWorkspaceLifecycleDeliveries,
@@ -56,15 +58,19 @@ const world: FakeWorld = {
   trials: new Set(),
 };
 
+// Registration always lands on the free plan; its Stripe subscription still
+// opens a (zero-total) first invoice, settled last like any other.
 const PLAN = {
-  _id: "plan_pro",
-  name: "Pro",
+  _id: "plan_free",
+  name: "Free",
+  price: 0,
+  order: 0,
   audience: "any",
   isActive: true,
   isDeleted: false,
   trialDays: 0,
   billingMode: "flat",
-  paymentProviderRefs: { stripePriceId: "price_pro" },
+  paymentProviderRefs: { stripePriceId: "price_free" },
 };
 
 let sequence = 0;
@@ -108,6 +114,9 @@ const stripeFake = {
     listTaxIds: async () => ({ data: [] }),
     deleteTaxId: async () => ({}),
     createTaxId: async () => ({}),
+  },
+  setupIntents: {
+    create: async () => ({ client_secret: "seti_secret" }),
   },
   paymentMethods: {
     attach: async () => ({}),
@@ -200,7 +209,16 @@ const modelFakes: Record<string, (tenantId?: string) => unknown> = {
       if (row && row.status !== "succeeded") row.status = "failed";
     },
   }),
-  PlanModel: () => ({ get: async () => PLAN }),
+  CardCapacityModel: () => ({
+    reserve: async () => true,
+    confirm: async () => undefined,
+    releaseCancelled: async () => undefined,
+  }),
+  BillingSettingsModel: () => ({ get: async () => undefined }),
+  PlanModel: () => ({
+    get: async () => PLAN,
+    findActiveNotDeleted: async () => [PLAN],
+  }),
   TenantModel: () => ({
     get: async (id: string) =>
       world.tenants.has(id) ? { _id: id } : undefined,
@@ -355,10 +373,7 @@ function buildRegisterBody(input: RegisterBodyInput = {}) {
     password: "correct horse battery staple",
     name: "Owner",
     workspaceName: "Acme Studio",
-    planId: PLAN._id,
-    customerType: "individual" as const,
     paymentMethodId: "pm_test",
-    address: { country: "BE" },
     ...input,
   };
 }
@@ -844,5 +859,168 @@ describe("extras validation on the public endpoint", () => {
       JSON.parse('{"profile":{"__proto__":{"admin":true}}}'),
       "saas.errors.registration.extras_invalid",
     );
+  });
+});
+
+describe("registration card policy", () => {
+  const STRIPE_CONFIG = {
+    secretKey: "sk_test",
+    webhookSecret: "whsec_test",
+    publishableKey: "pk_test",
+  };
+
+  function applyPolicy(
+    paymentMethod: NonNullable<DmsSaasConfig["registration"]>["paymentMethod"],
+  ): void {
+    setRuntimeConfig({
+      stripe: STRIPE_CONFIG,
+      registration: { paymentMethod },
+    });
+  }
+
+  function subscriptionOf(tenantId: string): TenantSubscription | undefined {
+    return subscriptions.get(tenantId);
+  }
+
+  function cardlessBody() {
+    const { paymentMethodId: _card, ...body } = buildRegisterBody();
+    return body;
+  }
+
+  afterEach(() => {
+    setRuntimeConfig({ stripe: STRIPE_CONFIG });
+  });
+
+  it("defaults to requiring a card, as before the option existed", async () => {
+    setRuntimeConfig({ stripe: STRIPE_CONFIG });
+
+    await expect(
+      buildController().register(cardlessBody()),
+    ).rejects.toMatchObject({
+      status: 400,
+      body: "saas.errors.registration.payment_method_required",
+    });
+    expect(world.users.size).toBe(0);
+  });
+
+  it("provisions through Stripe on the free plan when a card is required", async () => {
+    applyPolicy("required");
+
+    const result = await buildController().register(buildRegisterBody());
+
+    expect(world.stripeCustomers.size).toBe(1);
+    expect(subscriptionOf(result.tenantId)).toMatchObject({
+      planId: PLAN._id,
+      cardFingerprint: "fp_test",
+    });
+  });
+
+  it("never calls Stripe under `none`, even when a card is sent", async () => {
+    applyPolicy("none");
+    const retrieve = vi.spyOn(stripeFake.paymentMethods, "retrieve");
+
+    const result = await buildController().register(buildRegisterBody());
+
+    expect(retrieve).not.toHaveBeenCalled();
+    expect(world.stripeCustomers.size).toBe(0);
+    expect(world.liveSubscriptions.size).toBe(0);
+    expect(subscriptionOf(result.tenantId)).toMatchObject({
+      planId: PLAN._id,
+      status: "active",
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      cardFingerprint: null,
+    });
+    expect(
+      [...deliveries.values()].every((row) => row.status === "succeeded"),
+    ).toBe(true);
+  });
+
+  it("lets the visitor skip the card under `optional`", async () => {
+    applyPolicy("optional");
+
+    const result = await buildController().register(cardlessBody());
+
+    expect(world.stripeCustomers.size).toBe(0);
+    expect(subscriptionOf(result.tenantId)).toMatchObject({
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+    });
+  });
+
+  it("still takes a card offered under `optional`", async () => {
+    applyPolicy("optional");
+
+    const result = await buildController().register(buildRegisterBody());
+
+    expect(world.stripeCustomers.size).toBe(1);
+    expect(subscriptionOf(result.tenantId)?.stripeSubscriptionId).toBeTruthy();
+  });
+
+  it("opens a card-less workspace from the OAuth entry too", async () => {
+    applyPolicy("none");
+    const { email: _email, password: _password, ...body } = cardlessBody();
+
+    const response = await buildController().finalize({
+      ...body,
+      tenant_assignment_token: "tat_test",
+    });
+
+    expect(response.access_token).toBe("access");
+    expect(world.stripeCustomers.size).toBe(0);
+  });
+
+  it("names the workspace by default when the screen sent no name", async () => {
+    applyPolicy("none");
+    const { workspaceName: _name, ...body } = cardlessBody();
+
+    const result = await buildController().register(body);
+
+    expect(world.tenants.get(result.tenantId)).toBe("My workspace");
+  });
+
+  it("refuses to sign up when the catalogue has no free plan", async () => {
+    applyPolicy("none");
+    vi.spyOn(PLAN, "price", "get").mockReturnValue(20);
+
+    await expect(
+      buildController().register(cardlessBody()),
+    ).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.plan.no_free_plan",
+    });
+    expect(world.users.size).toBe(0);
+  });
+
+  it("restricts the registration SetupIntent to cards", async () => {
+    applyPolicy("required");
+    const create = vi.spyOn(stripeFake.setupIntents, "create");
+
+    await expect(buildController().createSetupIntent()).resolves.toEqual({
+      clientSecret: "seti_secret",
+    });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ payment_method_types: ["card"] }),
+    );
+  });
+
+  it("offers no SetupIntent when the deployment takes no card", async () => {
+    applyPolicy("none");
+    const create = vi.spyOn(stripeFake.setupIntents, "create");
+
+    await expect(buildController().createSetupIntent()).rejects.toMatchObject({
+      status: 400,
+      body: "saas.errors.registration.payment_method_disabled",
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown policy at configuration time", () => {
+    expect(() =>
+      setRuntimeConfig({
+        stripe: STRIPE_CONFIG,
+        registration: { paymentMethod: "sometimes" },
+      } as never),
+    ).toThrow("Invalid dms-saas registration.paymentMethod");
   });
 });

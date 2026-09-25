@@ -41,7 +41,8 @@ environment or in `playground/.env`.
 An account can reach the product before it owns anything to log into: an OAuth
 sign-in for an unknown e-mail, or any entry point the core answers with
 `requires_tenant_assignment`. The `auth/no-workspace` page is where that
-account buys its way in — a workspace, a plan, a card — and
+account opens its first workspace — on the free plan, with a card when
+`registration.paymentMethod` asks for one — and
 `POST /api/saas/register/finalize` provisions it and answers with a token pair
 for the workspace it just created, so the visitor lands signed in instead of
 back on the login screen.
@@ -59,8 +60,8 @@ declare the finalize endpoint in the frontend server's environment:
 DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize
 ```
 
-Without it the loader answers `403` and a visitor who has paid stays signed
-out. A replacement completion screen keeps the same requirement, and can build
+Without it the loader answers `403` and a visitor who has just registered stays
+signed out. A replacement completion screen keeps the same requirement, and can build
 its request with the auto-imported `buildSessionEstablishRequest()` helper
 rather than restating the endpoint and the payload shape.
 
@@ -131,6 +132,61 @@ accepted, each is promoted before the tenant message is persisted, and failed
 writes move promoted files back to staging. Ticket-specific metadata routes
 verify that a key belongs to the requested thread before issuing its read URL.
 
+## Registration
+
+Public registration is short: an account (name, e-mail, password) and the
+acceptance of the terms, plus a card when the deployment asks for one. The
+workspace it opens lands on the catalogue's first free plan — the lowest
+`order` among active plans priced 0 and open to individuals — under a default
+name its owner renames from the workspace settings. Customer type, billing
+address, VAT number and plan choice belong to the upgrade flow. Registration
+answers `409 saas.errors.plan.no_free_plan` while the catalogue has no such
+plan.
+
+Two module options shape it:
+
+```json
+{
+  "modules": {
+    "dms-saas": {
+      "config": {
+        "admissionMode": "open",
+        "registration": { "paymentMethod": "required" }
+      }
+    }
+  }
+}
+```
+
+`registration.paymentMethod` decides whether registration asks for a card:
+
+| Value | Behaviour |
+| --- | --- |
+| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer and a free subscription on that card, and the free-workspace-per-card cap applies. |
+| `optional` | The card step is shown, and the visitor may choose to add a card later. Without a card the workspace is card-less, as under `none`. |
+| `none` | The card step is never shown, `GET /api/saas/register/setup-intent` answers `400 saas.errors.registration.payment_method_disabled`, and Stripe is never called: the workspace gets a local free subscription with no Stripe customer, which the upgrade checkout creates when the owner first pays. A card sent anyway is ignored. |
+
+The option covers both public entry points — `POST /api/saas/register` and the
+`auth/no-workspace` completion — and nothing else: invitation sign-up never
+asks for a plan or a card, whatever `admissionMode` and
+`registration.paymentMethod` say. Tenant-side workspace creation keeps
+requiring a card.
+
+`admissionMode: "invitation-only"` closes public registration: every
+`/api/saas/register` route answers `403 saas.errors.registration_closed` before
+looking at the card policy, the registration screens render a "registration by
+invitation only" state instead of the form, and the login page drops its
+sign-up link. Invitations keep working.
+
+Both values reach the browser through the frontend module options
+(`useDmsRuntimeConfig().public.dmsSaas.admissionMode` and
+`.registrationPaymentMethod`); `useSaasRegistration()` already reads them.
+
+The Stripe SetupIntent behind the card step is restricted to cards on the
+server (`payment_method_types: ["card"]`); the Payment Element is created from
+its client secret alone, since Stripe refuses `paymentMethodTypes` next to a
+`clientSecret`.
+
 ## Extension points
 
 ### Consuming this module
@@ -153,7 +209,7 @@ boots the registration graph:
 | `@antelopejs/interface-dms-saas/pages` | workspace settings category and tenant billing page extensions |
 | `@antelopejs/interface-dms-saas/plans` | plan projections, catalog builder, and price normalization |
 | `@antelopejs/interface-dms-saas/provisioning` | provisioning hook payload |
-| `@antelopejs/interface-dms-saas/registration` | public registration capture limits |
+| `@antelopejs/interface-dms-saas/registration` | public registration capture limits and card policies |
 | `@antelopejs/interface-dms-saas/workspace-lifecycle` | workspace lifecycle events and operator actions |
 
 `invoiceLineItems` and `workspaceLifecycle` come off the root entry as
@@ -199,19 +255,29 @@ races the bundled one instead of overriding it:
 
 Then register your own page on the `register` slug and build it on the
 `useSaasRegistration()` composable the Vue adapter auto-imports. It holds the
-whole flow — plan loading and filtering by customer type, the Stripe setup
-intent and card confirmation, the order the requirements are validated in, the
-provisioning call and the landing route — and renders nothing:
+whole flow — the card policy, the Stripe setup intent and card confirmation,
+the order the requirements are validated in, the provisioning call and the
+landing route — and renders nothing, so a re-themed screen keeps the same
+steps:
 
 ```vue
 <script setup lang="ts">
-const { form, plans, errorMessage, isSubmitting, formatPlanPrice, submit } =
-  useSaasRegistration({ redirectTo: "/welcome" });
+const {
+  form, // name, email, password, hasAcceptedLegal, skipsPaymentMethod
+  paymentElementId,
+  canSkipPaymentMethod, // true under `optional`
+  isPaymentStepVisible, // bind with v-show so the Stripe element stays mounted
+  isRegistrationClosed, // render the invitation-only state instead of the form
+  errorMessage,
+  isSubmitting,
+  submit,
+} = useSaasRegistration({ redirectTo: "/welcome" });
 </script>
 ```
 
 Nothing it returns throws: a failure surfaces as a translated `errorMessage`,
-and `submit()` resolves to the new tenant id or `null`. Every screen stays
+and `submit()` resolves to the new tenant id or `null`. The workspace name is
+the localised `saas.register.default_workspace_name`. Every screen stays
 enabled by default, so an existing project needs no configuration change.
 
 ### Registration extras and the provisioning hook

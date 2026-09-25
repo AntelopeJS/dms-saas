@@ -21,6 +21,7 @@ interface CreateOptions {
 
 const props = defineProps<{
   onSuccessCallback?: (tenantId: string) => void;
+  onCancelCallback?: () => void;
 }>();
 
 const PLANS_ENDPOINT = "/api/saas/plans/public";
@@ -52,6 +53,7 @@ const freePlan = ref<FreePlanAvailability>({
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 const errorMessage = ref<string | null>(null);
+const nameError = ref<string | null>(null);
 const cardError = ref<string | null>(null);
 const stripeHandle = ref<ReturnType<typeof useStripePaymentElement> | null>(
   null,
@@ -94,6 +96,11 @@ const selectablePlans = computed(() =>
   plans.value.filter((plan) => !isPlanDisabled(plan)),
 );
 
+// Only once the catalogue actually loaded: a failed load reports itself.
+const hasNoPlanOnOffer = computed(
+  () => !isLoading.value && !errorMessage.value && plans.value.length === 0,
+);
+
 function selectPlan(plan: PlanOption): void {
   if (isPlanDisabled(plan)) return;
   selectedPlanId.value = plan._id;
@@ -125,6 +132,8 @@ async function load(): Promise<void> {
     plans.value = loadedPlans;
     freePlan.value = options.freePlan;
     selectedPlanId.value = selectablePlans.value[0]?._id ?? null;
+    // Nothing to pay for, so no card to set up.
+    if (loadedPlans.length === 0) return;
   } catch (error) {
     errorMessage.value = resolveApiError(
       error,
@@ -147,10 +156,10 @@ async function load(): Promise<void> {
 }
 
 function validate(): boolean {
-  if (!workspaceName.value.trim()) {
-    errorMessage.value = t("saas.workspaces.create.error.name");
-    return false;
-  }
+  nameError.value = workspaceName.value.trim()
+    ? null
+    : t("saas.workspaces.create.error.name");
+  if (nameError.value) return false;
   if (!selectedPlanId.value) {
     errorMessage.value = t("saas.workspaces.create.error.plan");
     return false;
@@ -201,17 +210,28 @@ onMounted(load);
     <USkeleton class="h-24 w-full" />
   </div>
   <form v-else class="flex flex-col gap-4" @submit.prevent="submit">
-    <UFormField :label="$t('saas.workspaces.create.field.name')">
+    <UFormField
+      :label="$t('saas.workspaces.create.field.name')"
+      :error="nameError ?? false"
+    >
       <UInput
         v-model="workspaceName"
         :placeholder="$t('saas.workspaces.create.placeholder.name')"
         class="w-full"
         autofocus
-        required
+        @update:model-value="nameError = null"
       />
     </UFormField>
 
-    <div class="flex flex-col gap-2">
+    <UAlert
+      v-if="hasNoPlanOnOffer"
+      color="neutral"
+      variant="subtle"
+      icon="i-ph-info"
+      :description="$t('saas.workspaces.create.self_serve.no_plans')"
+    />
+
+    <div v-else class="flex flex-col gap-2">
       <span class="text-sm font-medium">
         {{ $t("saas.workspaces.create.field.plan") }}
         <span class="text-muted font-normal">
@@ -240,7 +260,10 @@ onMounted(load);
       </button>
     </div>
 
-    <UFormField :label="$t('saas.workspaces.create.self_serve.card')">
+    <UFormField
+      v-if="!hasNoPlanOnOffer"
+      :label="$t('saas.workspaces.create.self_serve.card')"
+    >
       <div :id="PAYMENT_ELEMENT_ID" class="border-default rounded-md border p-4" />
       <p v-if="cardError" class="text-error mt-1 text-sm">{{ cardError }}</p>
     </UFormField>
@@ -248,7 +271,20 @@ onMounted(load);
     <p v-if="errorMessage" class="text-error text-sm">{{ errorMessage }}</p>
 
     <div class="flex justify-end gap-2">
-      <UButton type="submit" color="primary" :loading="isSubmitting">
+      <UButton
+        color="neutral"
+        variant="ghost"
+        :disabled="isSubmitting"
+        @click="props.onCancelCallback?.()"
+      >
+        {{ $t("common.cancel") }}
+      </UButton>
+      <UButton
+        type="submit"
+        color="primary"
+        :loading="isSubmitting"
+        :disabled="hasNoPlanOnOffer"
+      >
         {{ $t("saas.workspaces.create.self_serve.submit") }}
       </UButton>
     </div>
