@@ -29,6 +29,7 @@ import { parseFutureDate } from "../../../utils";
 import {
   deliverInvitationEmail,
   type InvitationEmailDelivery,
+  inviterNameOf,
 } from "../../../workspaces/invitations";
 import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
@@ -174,13 +175,20 @@ interface ProvisionedTenant {
   invitationEmail: InvitationEmailDelivery | null;
 }
 
+interface WorkspaceOwnerProvisioning {
+  name: string;
+  ownerEmail: string;
+  operator: User;
+  now: Date;
+}
+
 async function provisionTenantWithOwner(
   tenantModel: TenantModel,
-  name: string,
-  ownerEmail: string,
-  ownerLanguage: string,
-  now: Date,
+  { name, ownerEmail, operator, now }: WorkspaceOwnerProvisioning,
 ): Promise<ProvisionedTenant> {
+  // The owner has no account yet, so the operator's language is the best
+  // guess at theirs; the email follows the language stored on the invitation.
+  const ownerLanguage = operator.language;
   const inserted = await tenantModel.insert([
     { name, createdAt: now, updatedAt: now },
   ]);
@@ -196,12 +204,16 @@ async function provisionTenantWithOwner(
   // operator has to learn that the owner never got the link.
   const invitationEmail =
     inviteResult.kind === "invited"
-      ? await deliverInvitationEmail({
-          email: ownerEmail,
-          token: inviteResult.token,
-          firstname: null,
-          lastname: null,
-        })
+      ? await deliverInvitationEmail(
+          {
+            email: ownerEmail,
+            token: inviteResult.token,
+            firstname: null,
+            lastname: null,
+            language: ownerLanguage,
+          },
+          { workspaceName: name, inviterName: inviterNameOf(operator) },
+        )
       : null;
   return { tenantId, inviteResult, invitationEmail };
 }
@@ -347,13 +359,12 @@ export class SaasWorkspacesListController extends PageController(
 
     const now = new Date();
     const { tenantId, inviteResult, invitationEmail } =
-      await provisionTenantWithOwner(
-        this.tenantModel,
-        input.name,
-        input.ownerEmail,
-        user.language,
+      await provisionTenantWithOwner(this.tenantModel, {
+        name: input.name,
+        ownerEmail: input.ownerEmail,
+        operator: user,
         now,
-      );
+      });
 
     if (!checkoutInput) {
       await insertFreeSubscription(
