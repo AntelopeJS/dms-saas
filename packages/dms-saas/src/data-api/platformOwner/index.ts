@@ -2,6 +2,7 @@ export * from "./admin-user-invoices";
 export * from "./admin-user-workspaces";
 export * from "./credit-notes";
 export * from "./features";
+export * from "./invitations";
 export * from "./invoices";
 export * from "./members";
 export * from "./plan-migrations";

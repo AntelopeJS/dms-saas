@@ -168,6 +168,10 @@
         "extras_too_complex": "Les champs d'inscription supplémentaires comportent trop d'entrées",
         "payment_method_required": "Un moyen de paiement est requis pour s'inscrire.",
         "payment_method_disabled": "Ce déploiement ne demande pas de carte à l'inscription."
+      },
+      "invitations": {
+        "not_found": "Cette invitation n'existe plus.",
+        "email_not_sent": "L'invitation a été renouvelée mais l'e-mail n'a pas pu être envoyé. Copiez le lien d'invitation et envoyez-le vous-même."
       }
     },
     "dashboard": {
@@ -441,7 +445,9 @@
             "name": "Le nom est obligatoire.",
             "plan": "Le plan est obligatoire.",
             "owner_email": "L'email du propriétaire est obligatoire.",
-            "free_until_past": "La date d'expiration doit être dans le futur."
+            "free_until_past": "La date d'expiration doit être dans le futur.",
+            "load": "Impossible de charger les plans.",
+            "failed": "Impossible de créer l'espace de travail."
           },
           "field": {
             "name": "Nom du workspace",
@@ -459,6 +465,11 @@
             "name": "Acme Corp",
             "plan": "Sélectionner un plan",
             "owner_email": "proprietaire{'@'}example.com"
+          },
+          "submit": "Créer l'espace de travail",
+          "email_failed": {
+            "title": "Espace de travail créé, mais l'e-mail d'invitation n'a pas pu être envoyé",
+            "description": "Le propriétaire n'a pas été prévenu. Copiez le lien d'invitation et envoyez-le-lui vous-même."
           }
         }
       },
@@ -586,6 +597,37 @@
             "card": "Impossible d'initialiser le paiement par carte."
           },
           "no_plans": "Aucun plan n'est disponible pour le moment. Contactez le support pour créer un workspace."
+        }
+      },
+      "invitations": {
+        "caption": "Invitations en attente",
+        "column": {
+          "status": "Statut",
+          "sent_at": "Envoyée",
+          "expires_at": "Expire"
+        },
+        "status": {
+          "pending": "En attente",
+          "expired": "Expirée"
+        },
+        "action": {
+          "resend": "Renvoyer",
+          "resend_success": "Invitation renvoyée.",
+          "resend_confirm_title": "Renvoyer cette invitation ?",
+          "resend_confirm_description": "Un nouveau lien valable 7 jours est envoyé par e-mail à l'invité. L'ancien lien cesse de fonctionner.",
+          "copy_link": "Copier le lien d'invitation"
+        },
+        "link": {
+          "title": "Lien d'invitation",
+          "description": "Envoyez ce lien à l'invité pour qu'il crée son compte et rejoigne l'espace de travail.",
+          "label": "Lien d'inscription",
+          "expires": "Valable jusqu'au {date}.",
+          "copy": "Copier",
+          "copied": "Lien d'invitation copié.",
+          "copy_failed": "Impossible de copier le lien. Copiez-le manuellement :",
+          "error": "Impossible de récupérer le lien d'invitation.",
+          "warning": "Toute personne disposant de ce lien peut rejoindre l'espace de travail à la place de l'invité. Ne le partagez qu'avec lui.",
+          "close": "Fermer"
         }
       }
     },

@@ -2,7 +2,9 @@ export type WorkspaceOperatorAction =
   | "workspace.suspend"
   | "workspace.unsuspend"
   | "subscription.upgrade"
-  | "customer_balance.credit";
+  | "customer_balance.credit"
+  | "invitation.resend"
+  | "invitation.link_copy";
 
 export type OperatorActionStatus =
   | "pending"
