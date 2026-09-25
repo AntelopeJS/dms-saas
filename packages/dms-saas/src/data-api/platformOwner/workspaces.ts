@@ -32,6 +32,7 @@ import {
   TenantBillingState,
   TenantSubscriptionModel,
 } from "../../db";
+import { findPendingOwnerInvite } from "../../workspaces/invitations";
 
 const BILLING_STATE_ITEMS = [
   { label: "$saas.workspaces.billing_state.free", value: "free" },
@@ -47,6 +48,7 @@ const BILLING_STATE_ITEMS = [
 ];
 
 const NO_VALUE = "—";
+const PENDING_OWNER_PREFIX = "pending invitation · ";
 
 interface TenantRowInstance {
   table: { _id: string };
@@ -54,6 +56,26 @@ interface TenantRowInstance {
 
 function tenantIdOf(self: unknown): string {
   return (self as TenantRowInstance).table._id;
+}
+
+async function memberOwnerEmails(tenantId: string): Promise<string[]> {
+  const owners = await GetModel(TenantMemberModel, tenantId).listOwners();
+  const userModel = GetModel(UserModel);
+  const users = await Promise.all(owners.map((m) => userModel.get(m.userId)));
+  return users
+    .filter((u): u is NonNullable<typeof u> => !!u)
+    .map((u) => u.email);
+}
+
+/**
+ * Owners who joined, or else the invitee who will own the workspace once they
+ * accept: a workspace created for a new account has no member yet.
+ */
+export async function workspaceOwnerLabel(tenantId: string): Promise<string> {
+  const emails = await memberOwnerEmails(tenantId);
+  if (emails.length > 0) return emails.join(", ");
+  const invite = await findPendingOwnerInvite(tenantId);
+  return invite ? `${PENDING_OWNER_PREFIX}${invite.email}` : NO_VALUE;
 }
 
 @RegisterDataController()
@@ -133,19 +155,7 @@ export class workspacesDataAPI extends DataController(
   })
   @Access(AccessMode.ReadOnly)
   get owner(): PromiseLike<string> {
-    return GetModel(TenantMemberModel, tenantIdOf(this))
-      .listOwners()
-      .then(async (owners) => {
-        if (owners.length === 0) return NO_VALUE;
-        const userModel = GetModel(UserModel);
-        const users = await Promise.all(
-          owners.map((m) => userModel.get(m.userId)),
-        );
-        const emails = users
-          .filter((u): u is NonNullable<typeof u> => !!u)
-          .map((u) => u.email);
-        return emails.length > 0 ? emails.join(", ") : NO_VALUE;
-      });
+    return workspaceOwnerLabel(tenantIdOf(this));
   }
 
   @Select()

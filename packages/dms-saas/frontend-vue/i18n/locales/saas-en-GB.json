@@ -168,6 +168,10 @@
         "extras_too_complex": "The additional registration fields have too many entries",
         "payment_method_required": "A payment method is required to sign up.",
         "payment_method_disabled": "This deployment does not take a card at sign-up."
+      },
+      "invitations": {
+        "not_found": "This invitation no longer exists.",
+        "email_not_sent": "The invitation was renewed but the email could not be sent. Copy the invitation link and send it yourself."
       }
     },
     "dashboard": {
@@ -441,7 +445,9 @@
             "name": "Name is required.",
             "plan": "Plan is required.",
             "owner_email": "Owner email is required.",
-            "free_until_past": "The expiration date must be in the future."
+            "free_until_past": "The expiration date must be in the future.",
+            "load": "Could not load the plans.",
+            "failed": "Could not create the workspace."
           },
           "field": {
             "name": "Workspace name",
@@ -459,6 +465,11 @@
             "name": "Acme Corp",
             "plan": "Select a plan",
             "owner_email": "owner{'@'}example.com"
+          },
+          "submit": "Create workspace",
+          "email_failed": {
+            "title": "Workspace created, but the invitation email could not be sent",
+            "description": "The owner has not been notified. Copy the invitation link and send it to them yourself."
           }
         }
       },
@@ -586,6 +597,37 @@
             "card": "Could not initialise card payment."
           },
           "no_plans": "No plan is available right now. Please contact support to create a workspace."
+        }
+      },
+      "invitations": {
+        "caption": "Pending invitations",
+        "column": {
+          "status": "Status",
+          "sent_at": "Sent",
+          "expires_at": "Expires"
+        },
+        "status": {
+          "pending": "Pending",
+          "expired": "Expired"
+        },
+        "action": {
+          "resend": "Resend",
+          "resend_success": "Invitation sent again.",
+          "resend_confirm_title": "Resend this invitation?",
+          "resend_confirm_description": "A new link valid for 7 days is emailed to the invitee. The previous link stops working.",
+          "copy_link": "Copy invitation link"
+        },
+        "link": {
+          "title": "Invitation link",
+          "description": "Send this link to the invitee so they can create their account and join the workspace.",
+          "label": "Signup link",
+          "expires": "Valid until {date}.",
+          "copy": "Copy",
+          "copied": "Invitation link copied.",
+          "copy_failed": "Could not copy the link. Copy it manually:",
+          "error": "Could not retrieve the invitation link.",
+          "warning": "Anyone with this link can join the workspace as the invitee. Share it only with them.",
+          "close": "Close"
         }
       }
     },
