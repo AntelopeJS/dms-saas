@@ -4,6 +4,8 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 const props = defineProps<{
   plans: TenantPlanView[];
   features: TenantPlanFeature[];
+  /** Consumer i18n prefixes feature labels and tooltips resolve under. */
+  featureTranslationPrefixes?: string[];
   currentPlanId: string | null;
   pendingPlanId: string | null;
   isRecovery?: boolean;
@@ -23,6 +25,9 @@ const toast = useToast();
 const { resolveApiError } = useApiErrorMessage();
 const { changePlan } = useTenantPlan();
 const { formatFeatureValue } = usePlanFeatureFormat();
+const { featureLabel, featureTooltip } = usePlanFeatureLabel(
+  () => props.featureTranslationPrefixes ?? [],
+);
 const { formatMajorUnits } = useMoneyFormat();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
@@ -38,10 +43,20 @@ const comparedFeatures = computed(() =>
   ),
 );
 
-const visibleFeatures = computed(() =>
-  comparedFeatures.value.filter(
-    (feature) => showDetailRows.value || !feature.isDetailRow,
-  ),
+interface FeatureRow {
+  feature: TenantPlanFeature;
+  label: string;
+  tooltip: string | null;
+}
+
+const visibleRows = computed<FeatureRow[]>(() =>
+  comparedFeatures.value
+    .filter((feature) => showDetailRows.value || !feature.isDetailRow)
+    .map((feature) => ({
+      feature,
+      label: featureLabel(feature),
+      tooltip: featureTooltip(feature),
+    })),
 );
 
 const hasDetailRows = computed(() =>
@@ -192,20 +207,20 @@ async function select(plan: TenantPlanView): Promise<void> {
             </thead>
             <tbody>
               <tr
-                v-for="feature in visibleFeatures"
+                v-for="{ feature, label, tooltip } in visibleRows"
                 :key="feature.featureId"
                 class="border-default border-b last:border-0"
               >
                 <th scope="row" class="p-3 text-left font-normal">
                   <span class="inline-flex items-center gap-1">
-                    {{ feature.displayName }}
-                    <UTooltip v-if="feature.tooltip" :text="feature.tooltip">
+                    {{ label }}
+                    <UTooltip v-if="tooltip" :text="tooltip">
                       <UButton
                         variant="link"
                         color="neutral"
                         size="xs"
                         icon="i-ph-info"
-                        :aria-label="feature.tooltip"
+                        :aria-label="tooltip"
                         class="text-muted p-0"
                       />
                     </UTooltip>
@@ -221,6 +236,7 @@ async function select(plan: TenantPlanView): Promise<void> {
                     formatFeatureValue(
                       feature,
                       plan.featureValues[feature.featureId],
+                      plan.currency,
                     )
                   }}
                 </td>

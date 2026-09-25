@@ -25,6 +25,7 @@ import {
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../../db";
+import { getPlanFeatureTranslationPrefixes } from "../../config";
 import { toPendingPlanChange } from "../../plan-changes";
 import { buildTenantPlanCatalog, isDowngrade } from "../../plans";
 import {
@@ -127,6 +128,7 @@ export class SaasTenantPlanController extends Controller(
       current,
       available: catalog.plans,
       features: catalog.features,
+      featureTranslationPrefixes: getPlanFeatureTranslationPrefixes(),
       status: subscription?.status ?? null,
       freeUntil: subscription?.freeUntil ?? null,
       isComplimentary: isComplimentarySubscription(subscription),

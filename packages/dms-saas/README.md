@@ -208,6 +208,44 @@ the catalogue has no free plan, nothing is attached and a warning is logged.
 Once attached, the plan's permissions cap the workspace's members like any
 other plan (see [Tenant owner permissions](#tenant-owner-permissions)).
 
+## Plan feature labels and values
+
+A feature row stores one display name and one tooltip, in no particular
+language. The tenant plan pages (the plan card summary and the plan comparison
+table) look for a translation first, for feature `<featureId>`:
+
+1. `<prefix>.<featureId>.label` and `<prefix>.<featureId>.tooltip` for each
+   prefix of `planFeatureTranslationPrefixes`, in order;
+2. `saas.plan_features.<featureId>.label` / `.tooltip`;
+3. the stored display name and tooltip.
+
+A module translates the features it declares by shipping the keys in its own
+frontend locale files (`frontend-vue/i18n/locales/<name>-<locale>.json`) and
+naming its prefix in the dms-saas config:
+
+```json
+{ "modules": { "dms-saas": { "config": { "planFeatureTranslationPrefixes": ["cloud.plan_features"] } } } }
+```
+
+Keys are dot paths, so a feature id containing dots nests: the label of
+`cloud.price.cpu_minutes` under `cloud.plan_features` lives at
+`cloud.plan_features.cloud.price.cpu_minutes.label`. A key missing in the
+viewer's locale falls back to the fallback locale, then to the stored text.
+
+Values are formatted from the feature's `valueType` and `unit`: `-1` reads as
+unlimited, booleans as ✓/—, numbers are grouped in the viewer's locale. A
+`per <unit>` unit makes the value a price in the plan's currency, and
+`currency units` an amount of it. Known units are scaled to something a person
+reads at a glance; any other unit is shown verbatim after the grouped number.
+
+| Stored unit | Quantity reads as | `per <unit>` price reads as |
+|-------------|-------------------|-----------------------------|
+| `byte(s)` | bytes, KB, MB, GB or TB (powers of 1000) | per GB |
+| `vCPU-minute(s)` | vCPU-hours | per vCPU-hour |
+| `GiB-minute(s)`, `GB-minute(s)` | GiB-hours, GB-hours | per GiB-hour, per GB-hour |
+| `GB-hour(s)` | GB-months (730 hours) | per GB-month |
+| `minute(s)`, `build minute(s)` | minutes, build minutes | per minute, per build minute |
+
 ## Extension points
 
 ### Consuming this module
