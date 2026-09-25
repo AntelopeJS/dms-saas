@@ -4,7 +4,10 @@ import {
   REGISTRATION_PAYMENT_METHOD_POLICIES,
   type RegistrationPaymentMethodPolicy,
 } from "@antelopejs/interface-dms-saas/registration";
-import type { DmsSaasConfig } from "../types";
+import type {
+  DmsSaasConfig,
+  DmsSaasPlanExemptPermissionsConfig,
+} from "../types";
 import { isDevMode } from "./dev-mode";
 
 const REDIRECT_PROTOCOLS = ["http:", "https:"];
@@ -39,21 +42,41 @@ function assertValidRegistrationPaymentMethod(config: DmsSaasConfig): void {
   }
 }
 
-function assertValidPlanFeatureTranslationPrefixes(
-  config: DmsSaasConfig,
-): void {
-  const prefixes = config.planFeatureTranslationPrefixes;
-  if (prefixes === undefined) return;
+const DEFAULT_PLAN_EXEMPT_PERMISSIONS: Required<DmsSaasPlanExemptPermissionsConfig> =
+  {
+    personalPages: [
+      "settings.user.profile",
+      "settings.user.notifications",
+      "settings.user.appearance",
+      "settings.user.shortcuts",
+    ],
+    navigation: ["settings", "settings.user", "settings.workspace"],
+  };
+
+function assertOptionalNonEmptyStrings(value: unknown, name: string): void {
+  if (value === undefined) return;
   const isValid =
-    Array.isArray(prefixes) &&
-    prefixes.every(
-      (prefix) => typeof prefix === "string" && prefix.trim().length > 0,
+    Array.isArray(value) &&
+    value.every(
+      (entry) => typeof entry === "string" && entry.trim().length > 0,
     );
   if (!isValid) {
     throw new Error(
-      "Invalid dms-saas planFeatureTranslationPrefixes: expected an array of non-empty strings",
+      `Invalid dms-saas ${name}: expected an array of non-empty strings`,
     );
   }
+}
+
+function assertValidPlanExemptPermissions(config: DmsSaasConfig): void {
+  const exempt = config.planExemptPermissions;
+  assertOptionalNonEmptyStrings(
+    exempt?.personalPages,
+    "planExemptPermissions.personalPages",
+  );
+  assertOptionalNonEmptyStrings(
+    exempt?.navigation,
+    "planExemptPermissions.navigation",
+  );
 }
 
 function isContactUrl(value: unknown): boolean {
@@ -76,7 +99,11 @@ function assertValidPlanContactUrl(config: DmsSaasConfig): void {
 export function setRuntimeConfig(config: DmsSaasConfig): void {
   assertValidAdmissionMode(config);
   assertValidRegistrationPaymentMethod(config);
-  assertValidPlanFeatureTranslationPrefixes(config);
+  assertOptionalNonEmptyStrings(
+    config.planFeatureTranslationPrefixes,
+    "planFeatureTranslationPrefixes",
+  );
+  assertValidPlanExemptPermissions(config);
   assertValidPlanContactUrl(config);
   runtimeConfig = config;
 }
@@ -128,6 +155,18 @@ export function getDefaultPlanSlug(): string | undefined {
 /** Consumer i18n prefixes for plan feature labels, in lookup order. */
 export function getPlanFeatureTranslationPrefixes(): string[] {
   return runtimeConfig?.planFeatureTranslationPrefixes ?? [];
+}
+
+/** Permissions plan gating leaves to every member, defaults filled in. */
+export function getPlanExemptPermissions(): Required<DmsSaasPlanExemptPermissionsConfig> {
+  const configured = runtimeConfig?.planExemptPermissions;
+  return {
+    personalPages:
+      configured?.personalPages ??
+      DEFAULT_PLAN_EXEMPT_PERMISSIONS.personalPages,
+    navigation:
+      configured?.navigation ?? DEFAULT_PLAN_EXEMPT_PERMISSIONS.navigation,
+  };
 }
 
 /** Contact link of contact-only plans, if the deployment configured one. */
