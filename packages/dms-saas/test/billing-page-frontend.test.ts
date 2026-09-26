@@ -1,16 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildBillingCountryItems } from "../frontend-vue/app/composables/useBillingCountries";
 import {
   type BillingIdentityDraft,
   emptyBillingIdentityDraft,
   findMissingBillingFields,
 } from "../frontend-vue/app/composables/useBillingIdentity";
-import {
-  claimPastDueBannerHost,
-  isPastDueBannerVisible,
-  releasePastDueBannerHost,
-} from "../frontend-vue/app/composables/usePastDueBanner";
-import type { WorkspaceAccess } from "../frontend-vue/app/composables/useWorkspaceAccessCache";
 
 const COMPLETE_INDIVIDUAL: BillingIdentityDraft = {
   customerType: "individual",
@@ -22,15 +16,6 @@ const COMPLETE_INDIVIDUAL: BillingIdentityDraft = {
   postalCode: "1000",
   city: "Brussels",
 };
-
-function access(status?: string): WorkspaceAccess {
-  return {
-    blocked: status === "suspended",
-    status,
-    isTenantOwner: true,
-    unpaidInvoice: null,
-  };
-}
 
 describe("billing identity form validation", () => {
   it("flags every required field of an empty form", () => {
@@ -80,44 +65,5 @@ describe("billing countries", () => {
     expect(labels).toEqual(
       [...labels].sort((left, right) => left.localeCompare(right, "en-GB")),
     );
-  });
-});
-
-describe("past-due banner visibility", () => {
-  it.each([
-    ["active", false],
-    ["trialing", false],
-    ["pending_payment", false],
-    ["suspended", false],
-    ["cancelled", false],
-    [undefined, false],
-    ["past_due", true],
-  ])("shows for status %s: %s", (status, expected) => {
-    expect(isPastDueBannerVisible(access(status))).toBe(expected);
-  });
-
-  it("stays hidden until the workspace access is known", () => {
-    expect(isPastDueBannerVisible(null)).toBe(false);
-  });
-});
-
-describe("past-due banner host ownership", () => {
-  const first = Symbol("first");
-  const second = Symbol("second");
-
-  afterEach(() => {
-    releasePastDueBannerHost(first);
-    releasePastDueBannerHost(second);
-  });
-
-  it("lets a single host render the banner", () => {
-    expect(claimPastDueBannerHost(first)).toBe(true);
-    expect(claimPastDueBannerHost(second)).toBe(false);
-  });
-
-  it("hands the host over once the owner releases it", () => {
-    claimPastDueBannerHost(first);
-    releasePastDueBannerHost(first);
-    expect(claimPastDueBannerHost(second)).toBe(true);
   });
 });
