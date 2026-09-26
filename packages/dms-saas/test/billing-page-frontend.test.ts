@@ -5,6 +5,7 @@ import {
   emptyBillingIdentityDraft,
   findMissingBillingFields,
 } from "../frontend-vue/app/composables/useBillingIdentity";
+import { resolvePastDueBannerAction } from "../frontend-vue/app/composables/usePastDueBannerAction";
 
 const COMPLETE_INDIVIDUAL: BillingIdentityDraft = {
   customerType: "individual",
@@ -65,5 +66,45 @@ describe("billing countries", () => {
     expect(labels).toEqual(
       [...labels].sort((left, right) => left.localeCompare(right, "en-GB")),
     );
+  });
+});
+
+describe("past-due banner action", () => {
+  const UNPAID_INVOICE = {
+    number: "INV-0001",
+    amount: 1200,
+    currency: "eur",
+    hostedInvoiceUrl: "https://invoice.stripe.test/i/1",
+    failedAt: null,
+    nextRetryAt: null,
+    suspendAt: null,
+  };
+
+  it("offers the invoice payment page when Stripe provides one", () => {
+    expect(
+      resolvePastDueBannerAction({
+        isTenantOwner: true,
+        unpaidInvoice: UNPAID_INVOICE,
+      }),
+    ).toBe("settle");
+  });
+
+  it("sends the owner to the billing page without invoice details", () => {
+    expect(
+      resolvePastDueBannerAction({ isTenantOwner: true, unpaidInvoice: null }),
+    ).toBe("open_billing");
+    expect(
+      resolvePastDueBannerAction({
+        isTenantOwner: true,
+        unpaidInvoice: { ...UNPAID_INVOICE, hostedInvoiceUrl: null },
+      }),
+    ).toBe("open_billing");
+  });
+
+  it("offers a member nothing to act on", () => {
+    expect(
+      resolvePastDueBannerAction({ isTenantOwner: false, unpaidInvoice: null }),
+    ).toBe("none");
+    expect(resolvePastDueBannerAction(null)).toBe("none");
   });
 });

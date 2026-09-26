@@ -8,11 +8,15 @@ import {
 import type { Plan } from "../db";
 import { PlanModel, TenantSubscriptionModel } from "../db";
 import {
+  isPlatformSupportEntry,
+  isPlatformSupportInvite,
+  markPlatformSupport,
+  releasePlatformSupport,
+} from "./platform-support";
+import {
   countOccupiedSeats,
   countSeatedUsers,
   hasSeatCapacity,
-  isPlatformOwnerEmail,
-  isPlatformOwnerUser,
 } from "./seat-capacity";
 import { syncStripeSeatQuantity } from "./seat-sync";
 
@@ -82,7 +86,7 @@ async function syncSeatsAfterRemoval(
   if (!active) return;
   const [currentOccupied, removedSeats] = await Promise.all([
     countOccupiedSeats(tenantId),
-    countSeatedUsers(removedUserIds),
+    countSeatedUsers(tenantId, removedUserIds),
   ]);
   const nextOccupied = Math.max(0, currentOccupied - removedSeats);
   await syncStripeSeatQuantity({
@@ -94,38 +98,51 @@ async function syncSeatsAfterRemoval(
   });
 }
 
-// Platform owners enter a workspace to support it, never as one of its
-// seats: they pass the quota and leave the billed quantity untouched.
+// Platform owners entering a workspace they do not own come to support it,
+// never as one of its seats: they pass the quota and leave the billed
+// quantity untouched. A workspace owner is the customer and always holds one.
 export function registerSeatHooks(): void {
   RegisterHook(
     Hook.MEMBER_BEING_ADDED,
-    async ({ tenantId, userId, deliveryId }) => {
+    async ({ tenantId, userId, isTenantOwner, deliveryId }) => {
       // A delivery id means an accepted invitation: the membership takes over
       // the seat that invitation already held, and it is still counted here.
       if (deliveryId) return undefined;
-      if (await isPlatformOwnerUser(userId)) return undefined;
+      if (await isPlatformSupportEntry(userId, isTenantOwner)) return undefined;
       await enforceSeatCapacity(tenantId);
       return undefined;
     },
   );
   // An invitation to an already-invited email replaces the existing one (a
   // resend, a renewed link), so that invitee's seat is not claimed twice.
-  RegisterHook(Hook.INVITE_BEING_CREATED, async ({ tenantId, email }) => {
-    if (await isPlatformOwnerEmail(email)) return undefined;
-    await enforceSeatCapacity(tenantId, email);
-    return undefined;
-  });
-  RegisterHook(Hook.MEMBER_ADDED, async ({ tenantId, userId, deliveryId }) => {
-    // The accepted invitation is still stored at this point; its deletion
-    // right after syncs the count once it no longer holds the seat.
-    if (deliveryId) return undefined;
-    if (await isPlatformOwnerUser(userId)) return undefined;
-    await syncSeatsAfterChange(
-      tenantId,
-      `seat-sync:member-added:${tenantId}:${userId}`,
-    );
-    return undefined;
-  });
+  RegisterHook(
+    Hook.INVITE_BEING_CREATED,
+    async ({ tenantId, email, asTenantOwner }) => {
+      if (await isPlatformSupportInvite(email, asTenantOwner)) return undefined;
+      await enforceSeatCapacity(tenantId, email);
+      return undefined;
+    },
+  );
+  // The support marker is written here, whether the platform owner joined
+  // from the back-office or accepted an invitation, so every way in is
+  // covered; the DMS may replay an acceptance, which the marking absorbs.
+  RegisterHook(
+    Hook.MEMBER_ADDED,
+    async ({ tenantId, userId, isTenantOwner, deliveryId }) => {
+      if (await isPlatformSupportEntry(userId, isTenantOwner)) {
+        await markPlatformSupport(tenantId, userId);
+        return undefined;
+      }
+      // The accepted invitation is still stored at this point; its deletion
+      // right after syncs the count once it no longer holds the seat.
+      if (deliveryId) return undefined;
+      await syncSeatsAfterChange(
+        tenantId,
+        `seat-sync:member-added:${tenantId}:${userId}`,
+      );
+      return undefined;
+    },
+  );
   RegisterHook(Hook.INVITE_CREATED, async ({ tenantId, inviteId }) => {
     await syncSeatsAfterChange(
       tenantId,
@@ -146,12 +163,15 @@ export function registerSeatHooks(): void {
       return undefined;
     },
   );
+  // The hook runs before the memberships are deleted, while their support
+  // markers still tell which of them held a seat.
   RegisterHook(Hook.MEMBER_REMOVED, async ({ tenantId, userIds }) => {
     await syncSeatsAfterRemoval(
       tenantId,
       userIds,
       `seat-sync:member-removed:${tenantId}:${userIds.join(",")}`,
     );
+    await releasePlatformSupport(tenantId, userIds);
     return undefined;
   });
 }
