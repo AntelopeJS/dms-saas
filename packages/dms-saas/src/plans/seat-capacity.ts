@@ -2,9 +2,11 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   type TenantMember,
   TenantMemberModel,
+  type UserInvite,
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
+import { PlatformSupportMarkerModel } from "./db";
 
 /** A platform owner holding a membership to support the workspace. */
 export interface PlatformSupportMember {
@@ -29,6 +31,12 @@ interface PlatformOwnerDirectory {
   emails: Set<string>;
 }
 
+/** What tells a customer's seat from platform support in one workspace. */
+interface SupportDirectory {
+  owners: PlatformOwnerDirectory;
+  markedUserIds: Set<string>;
+}
+
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -41,23 +49,58 @@ async function loadPlatformOwners(): Promise<PlatformOwnerDirectory> {
   };
 }
 
+async function loadSupportDirectory(
+  tenantId: string,
+): Promise<SupportDirectory> {
+  const [owners, markedUserIds] = await Promise.all([
+    loadPlatformOwners(),
+    GetModel(PlatformSupportMarkerModel, tenantId).listUserIds(),
+  ]);
+  return { owners, markedUserIds };
+}
+
 /**
- * Platform owners who enter a customer workspace do it to support it: they
- * never take one of the customer's seats, neither as members nor as invitees.
+ * A membership is support only while all three hold: it was entered as
+ * support, its user is still a platform owner, and it does not own the
+ * workspace — an owner is the customer and always takes a seat.
  */
-export async function isPlatformOwnerUser(userId: string): Promise<boolean> {
-  const user = await GetModel(UserModel).get(userId);
-  return user?.owner === true;
+function supportUserOf(
+  member: TenantMember,
+  support: SupportDirectory,
+): User | undefined {
+  if (member.isTenantOwner) return undefined;
+  if (!support.markedUserIds.has(member.userId)) return undefined;
+  return support.owners.byUserId.get(member.userId);
 }
 
-export async function isPlatformOwnerEmail(email: string): Promise<boolean> {
-  const user = await GetModel(UserModel).getByEmail(email);
-  return user?.owner === true;
+/**
+ * Platform owners invited to a workspace hold no seat, unless the invitation
+ * hands them its ownership: that invitee is the customer.
+ */
+function holdsSeat(
+  invite: UserInvite,
+  owners: PlatformOwnerDirectory,
+): boolean {
+  return (
+    invite.asTenantOwner || !owners.emails.has(normalizeEmail(invite.email))
+  );
 }
 
-export async function countSeatedUsers(userIds: string[]): Promise<number> {
-  const owners = await loadPlatformOwners();
-  return userIds.filter((userId) => !owners.byUserId.has(userId)).length;
+/** How many of these members, all still in the workspace, hold a seat. */
+export async function countSeatedUsers(
+  tenantId: string,
+  userIds: string[],
+): Promise<number> {
+  const [members, support] = await Promise.all([
+    GetModel(TenantMemberModel, tenantId).listAll(),
+    loadSupportDirectory(tenantId),
+  ]);
+  const supportUserIds = new Set(
+    members
+      .filter((member) => supportUserOf(member, support))
+      .map((member) => member.userId),
+  );
+  return userIds.filter((userId) => !supportUserIds.has(userId)).length;
 }
 
 function toPlatformSupportMember(owner: User): PlatformSupportMember {
@@ -66,10 +109,10 @@ function toPlatformSupportMember(owner: User): PlatformSupportMember {
 
 function listPlatformSupport(
   members: TenantMember[],
-  owners: PlatformOwnerDirectory,
+  support: SupportDirectory,
 ): PlatformSupportMember[] {
   return members.flatMap((member) => {
-    const owner = owners.byUserId.get(member.userId);
+    const owner = supportUserOf(member, support);
     return owner ? [toPlatformSupportMember(owner)] : [];
   });
 }
@@ -77,8 +120,8 @@ function listPlatformSupport(
 /**
  * A pending invite holds a seat as much as a member does — that is what the
  * enforcement counts, so the members page has to show the same breakdown or
- * the quota reads as wrong to whoever hits the 402. Platform owners hold no
- * seat: they are listed apart as platform support.
+ * the quota reads as wrong to whoever hits the 402. Platform support holds no
+ * seat: it is listed apart.
  *
  * The DMS keeps one invitation per email and reissues one by inserting its
  * successor before deleting it, so invitations are counted per invitee: the
@@ -90,24 +133,22 @@ export async function getSeatUsage(
   tenantId: string,
   releasedInviteeEmail?: string,
 ): Promise<SeatUsage> {
-  const memberModel = GetModel(TenantMemberModel, tenantId);
-  const inviteModel = GetModel(UserInviteModel, tenantId);
-  const [members, invites, owners] = await Promise.all([
-    memberModel.listAll(),
-    inviteModel.getAll(),
-    loadPlatformOwners(),
+  const [members, invites, support] = await Promise.all([
+    GetModel(TenantMemberModel, tenantId).listAll(),
+    GetModel(UserInviteModel, tenantId).getAll(),
+    loadSupportDirectory(tenantId),
   ]);
   const nowMs = Date.now();
   const pendingInvitees = new Set(
     invites
       .filter((invite) => new Date(invite.expiresAt).getTime() > nowMs)
-      .map((invite) => normalizeEmail(invite.email))
-      .filter((email) => !owners.emails.has(email)),
+      .filter((invite) => holdsSeat(invite, support.owners))
+      .map((invite) => normalizeEmail(invite.email)),
   );
   if (releasedInviteeEmail) {
     pendingInvitees.delete(normalizeEmail(releasedInviteeEmail));
   }
-  const platformSupport = listPlatformSupport(members, owners);
+  const platformSupport = listPlatformSupport(members, support);
   const seatedMembers = members.length - platformSupport.length;
   return {
     members: seatedMembers,

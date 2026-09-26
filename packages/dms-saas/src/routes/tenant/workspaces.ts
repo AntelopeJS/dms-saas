@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HTTPResult,
   JSONBody,
   Parameter,
   Post,
@@ -10,6 +11,7 @@ import {
   type RequestContext,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
+import { Logging } from "@antelopejs/interface-core/logging";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel, Model } from "@antelopejs/interface-database-decorators";
 import {
@@ -37,6 +39,7 @@ import {
 } from "../../db";
 import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
+import { getSeatUsage } from "../../plans";
 import { buildWorkspaceProjection } from "../../utils";
 import type {
   CardDetails,
@@ -62,6 +65,7 @@ import {
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const HTTP_BAD_REQUEST = 400;
+const HTTP_INTERNAL_ERROR = 500;
 
 const CANCELLED_STATUS: TenantSubscriptionStatus = "cancelled";
 
@@ -387,9 +391,10 @@ export class SaasWorkspacesController extends Controller(
 
     const { subscription, billingInfo, members, invoices, creditNotes, plan } =
       await loadWorkspaceRelations(id, this.planModel);
-    const [memberRows, pendingInvitationsCount] = await Promise.all([
+    const [memberRows, pendingInvitationsCount, seats] = await Promise.all([
       buildMemberRows(members, this.userModel),
       countPendingInvitations(id),
+      getSeatUsage(id),
     ]);
 
     const projection = buildWorkspaceProjection({
@@ -411,7 +416,10 @@ export class SaasWorkspacesController extends Controller(
       planName: projection.planName,
       currency: projection.currency,
       mrr: projection.mrr,
-      membersCount: projection.membersCount,
+      // Counted as the customer's seats count them: platform support is
+      // announced apart, so the two numbers match the members page.
+      membersCount: seats.members,
+      platformSupportCount: seats.platformSupport.length,
       // Shown beside the member count: a workspace created for an owner who
       // has not signed up yet has no member, only this invitation.
       pendingInvitationsCount,
@@ -432,10 +440,18 @@ export class SaasWorkspacesController extends Controller(
     const existing = await memberModel.getByUser(user._id);
     assert(!existing, HTTP_CONFLICT, "saas.workspaces.join.already_member");
 
-    await applyTenantOwnership(this.userModel, user._id, id, {
-      roleIds: [],
-      isTenantOwner: false,
-    });
+    // A storage failure is logged here and answered with the usual i18n key,
+    // never with the raw driver message.
+    try {
+      await applyTenantOwnership(this.userModel, user._id, id, {
+        roleIds: [],
+        isTenantOwner: false,
+      });
+    } catch (error) {
+      if (error instanceof HTTPResult) throw error;
+      Logging.Error(`[dms-saas:workspaces] joining ${id} failed`, error);
+      throw new HTTPResult(HTTP_INTERNAL_ERROR, "saas.workspaces.join.error");
+    }
     return { joined: true };
   }
 }

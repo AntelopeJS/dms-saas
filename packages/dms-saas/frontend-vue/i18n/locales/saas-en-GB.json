@@ -569,6 +569,7 @@
       "summary": {
         "title": "Workspace summary",
         "members": "{count} member | {count} members",
+        "platform_support": "{count} platform support | {count} platform support",
         "per_month": "/mo",
         "pending_invitations": "{count} pending invitation | {count} pending invitations"
       },
@@ -968,7 +969,7 @@
         "platform_support": {
           "title": "Platform support",
           "badge": "Platform support",
-          "description": "These platform team members have access to this workspace to support you. They do not use a seat."
+          "description": "These platform team members have access to this workspace to support you. They are listed in the members table without a role and do not use a seat."
         }
       },
       "free_access": {
@@ -1013,6 +1014,8 @@
           "load_failed": "Could not check the billing status of this workspace.",
           "banner": {
             "generic": "Payment failed — this workspace has an unpaid invoice. The workspace owner must settle it to avoid suspension.",
+            "generic_owner": "Payment failed — this workspace has an unpaid invoice. Settle it from the billing page to avoid suspension.",
+            "open_billing": "Open billing",
             "summary": "Payment failed — invoice {invoice} of {amount} is unpaid.",
             "with_deadline": "Payment failed — invoice {invoice} of {amount} is unpaid. Settle it before {date} to avoid suspension.",
             "settle": "Settle"

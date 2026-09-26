@@ -569,6 +569,7 @@
       "summary": {
         "title": "Résumé workspace",
         "members": "{count} membre | {count} membres",
+        "platform_support": "{count} support plateforme | {count} supports plateforme",
         "per_month": "/mois",
         "pending_invitations": "{count} invitation en attente | {count} invitations en attente"
       },
@@ -968,7 +969,7 @@
         "platform_support": {
           "title": "Support de la plateforme",
           "badge": "Support plateforme",
-          "description": "Ces membres de l'équipe de la plateforme ont accès à ce workspace pour vous accompagner. Ils n'occupent aucun siège."
+          "description": "Ces membres de l'équipe de la plateforme ont accès à ce workspace pour vous accompagner. Ils apparaissent sans rôle dans la liste des membres et n'occupent aucun siège."
         }
       },
       "free_access": {
@@ -1013,6 +1014,8 @@
           "load_failed": "Impossible de vérifier l'état de facturation de ce workspace.",
           "banner": {
             "generic": "Paiement échoué — ce workspace a une facture impayée. Le propriétaire du workspace doit la régler pour éviter la suspension.",
+            "generic_owner": "Paiement échoué — ce workspace a une facture impayée. Réglez-la depuis la page de facturation pour éviter la suspension.",
+            "open_billing": "Ouvrir la facturation",
             "summary": "Paiement échoué — la facture {invoice} de {amount} est impayée.",
             "with_deadline": "Paiement échoué — la facture {invoice} de {amount} est impayée. Régularisez avant le {date} pour éviter la suspension.",
             "settle": "Régulariser"

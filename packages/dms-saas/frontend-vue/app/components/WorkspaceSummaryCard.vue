@@ -9,9 +9,15 @@ interface WorkspaceSummaryData {
   currency: string;
   mrr: number;
   membersCount: number;
+  platformSupportCount: number;
   pendingInvitationsCount: number;
   createdAt: string;
   subscription: { stripeCustomerId: string | null } | null;
+}
+
+interface PeopleCount {
+  key: string;
+  count: number;
 }
 
 type BadgeColor =
@@ -36,9 +42,15 @@ const props = defineProps<{
 }>();
 
 const PEOPLE_SEPARATOR = " · ";
+const MISSING_DATE = "—";
+const DAY_FORMAT: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+};
 
 const { $authFetch } = useAuthFetch();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const tenantId = computed(() => props.routeParams?.id ?? "");
 const { triggerRef } = useDetailRefresh(tenantId.value);
@@ -59,32 +71,27 @@ const formattedMrr = computed(() => {
   }).format(workspace.value.mrr);
 });
 
-/** Members, then the invitations still pending, if any. */
+/** Seated members, then platform support and pending invitations, if any. */
 const peopleLabel = computed(() => {
   if (!workspace.value) return "";
-  const { membersCount, pendingInvitationsCount } = workspace.value;
-  const parts = [
-    t("saas.workspaces.summary.members", { count: membersCount }, membersCount),
+  const { membersCount, platformSupportCount, pendingInvitationsCount } =
+    workspace.value;
+  const optionalCounts: PeopleCount[] = [
+    { key: "platform_support", count: platformSupportCount },
+    { key: "pending_invitations", count: pendingInvitationsCount },
   ];
-  if (pendingInvitationsCount > 0) {
-    parts.push(
-      t(
-        "saas.workspaces.summary.pending_invitations",
-        { count: pendingInvitationsCount },
-        pendingInvitationsCount,
+  return [
+    t("saas.workspaces.summary.members", { count: membersCount }, membersCount),
+    ...optionalCounts
+      .filter(({ count }) => count > 0)
+      .map(({ key, count }) =>
+        t(`saas.workspaces.summary.${key}`, { count }, count),
       ),
-    );
-  }
-  return parts.join(PEOPLE_SEPARATOR);
+  ].join(PEOPLE_SEPARATOR);
 });
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+function formatDay(value: string | null): string {
+  return formatDate(value, locale.value, DAY_FORMAT) ?? MISSING_DATE;
 }
 
 async function load(): Promise<void> {
@@ -162,7 +169,7 @@ watch(triggerRef, () => {
           <dt class="text-muted">
             {{ $t("saas.workspaces.column.created_at") }}
           </dt>
-          <dd class="mt-0.5">{{ formatDate(workspace.createdAt) }}</dd>
+          <dd class="mt-0.5">{{ formatDay(workspace.createdAt) }}</dd>
         </div>
         <div>
           <dt class="text-muted">
