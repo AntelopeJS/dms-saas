@@ -1,6 +1,12 @@
 const SEAT_QUOTA_ENDPOINT = "/api/saas/tenant/seats";
 const SEAT_QUOTA_STATE_KEY = "saas-seat-quota";
 
+export interface PlatformSupportMember {
+  userId: string;
+  name: string;
+  email: string;
+}
+
 export interface SeatQuotaResponse {
   members: number;
   pendingInvites: number;
@@ -8,6 +14,8 @@ export interface SeatQuotaResponse {
   /** `null` when no plan is in force, i.e. no seat ceiling to enforce. */
   maxMembers: number | null;
   isTenantOwner: boolean;
+  /** Platform owners with access to the workspace; they hold no seat. */
+  platformSupport: PlatformSupportMember[];
 }
 
 export function useSeatQuota(): SharedRequest<SeatQuotaResponse> {

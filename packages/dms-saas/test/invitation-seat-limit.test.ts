@@ -19,6 +19,7 @@ import {
   completeInviteResolution,
   decideInvite,
 } from "@antelopejs/interface-dms/invite-resolution";
+import { ExecuteHooks, Hook } from "@antelopejs/interface-dms/hooks";
 import { createUserInviteToken } from "@antelopejs/interface-dms/invites";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
 import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
@@ -28,6 +29,7 @@ import { setRuntimeConfig } from "../src/config";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import { getSeatUsage, registerSeatHooks } from "../src/plans";
 import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
+import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import {
   resendInvitation,
   resolveInvitationLink,
@@ -148,15 +150,30 @@ async function pendingInvites(tenantId: string): Promise<UserInvite[]> {
   return GetModel(UserInviteModel, tenantId).getAll();
 }
 
-async function insertUser(email: string): Promise<string> {
+async function insertUser(email: string, isPlatformOwner = false) {
   const userId = randomUUID();
   await GetModel(UserModel).insert({
     _id: userId,
     email,
     name: "Invitee",
     language: "en",
+    owner: isPlatformOwner,
   });
   return userId;
+}
+
+async function insertPlatformOwner(): Promise<User> {
+  const email = `${randomUUID()}@platform.test`;
+  const user = await GetModel(UserModel).get(await insertUser(email, true));
+  if (!user) throw new Error("Expected the platform owner");
+  return user;
+}
+
+async function joinAsMember(platformOwner: User, tenantId: string) {
+  const controller = new SaasWorkspacesController();
+  controller.tenantModel = GetModel(TenantModel);
+  controller.userModel = GetModel(UserModel);
+  return controller.joinAsMember(platformOwner, tenantId);
 }
 
 function inviteAnotherMember(tenantId: string) {
@@ -248,6 +265,58 @@ describe("seats held by invitations at the plan cap", () => {
   });
 });
 
+describe("platform owners supporting a full workspace", () => {
+  it("lets a platform owner join without taking a seat", async () => {
+    const { tenantId } = await createFreeWorkspace();
+    const platformOwner = await insertPlatformOwner();
+
+    await expect(joinAsMember(platformOwner, tenantId)).resolves.toEqual({
+      joined: true,
+    });
+
+    expect(await getSeatUsage(tenantId)).toEqual({
+      members: 0,
+      pendingInvites: 1,
+      occupied: 1,
+      platformSupport: [
+        {
+          userId: platformOwner._id,
+          name: platformOwner.name,
+          email: platformOwner.email,
+        },
+      ],
+    });
+  });
+
+  it("lets a platform owner be invited without taking a seat", async () => {
+    const { tenantId } = await createFreeWorkspace();
+    const platformOwner = await insertPlatformOwner();
+
+    await createUserInviteToken({
+      tenantId,
+      email: platformOwner.email,
+      language: "en",
+      roleIds: [],
+      asTenantOwner: false,
+    });
+
+    expect(await pendingInvites(tenantId)).toHaveLength(2);
+    expect(await getSeatUsage(tenantId)).toMatchObject({
+      pendingInvites: 1,
+      occupied: 1,
+    });
+  });
+
+  it("still refuses a customer member once a platform owner joined", async () => {
+    const { tenantId } = await createFreeWorkspace();
+    await joinAsMember(await insertPlatformOwner(), tenantId);
+
+    await expect(inviteAnotherMember(tenantId)).rejects.toMatchObject(
+      SEAT_LIMIT_ERROR,
+    );
+  });
+});
+
 describe("seats billed for invitations", () => {
   async function createSeatBilledWorkspace() {
     const workspace = await createFreeWorkspace();
@@ -288,6 +357,19 @@ describe("seats billed for invitations", () => {
     const { email, tenantId } = await createSeatBilledWorkspace();
 
     await resolveOwnerInvite(tenantId, "accepted", await insertUser(email));
+
+    expect(billedQuantities).toEqual([1]);
+  });
+
+  it("never bills a platform owner joining or leaving", async () => {
+    const { tenantId } = await createSeatBilledWorkspace();
+    const platformOwner = await insertPlatformOwner();
+
+    await joinAsMember(platformOwner, tenantId);
+    await ExecuteHooks(Hook.MEMBER_REMOVED, {
+      tenantId,
+      userIds: [platformOwner._id],
+    });
 
     expect(billedQuantities).toEqual([1]);
   });

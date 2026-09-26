@@ -11,12 +11,9 @@ import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { PlanModel, TenantSubscriptionModel } from "../../db";
-import { getSeatUsage } from "../../plans";
+import { getSeatUsage, type SeatUsage } from "../../plans";
 
-interface SeatQuotaResult {
-  members: number;
-  pendingInvites: number;
-  occupied: number;
+interface SeatQuotaResult extends SeatUsage {
   maxMembers: number | null;
   isTenantOwner: boolean;
 }
@@ -24,7 +21,8 @@ interface SeatQuotaResult {
 /**
  * Feeds the seat-quota banner injected into the DMS members page. The limit is
  * `null` when no plan is in force, mirroring the enforcement hooks: without an
- * active plan there is no seat ceiling to announce.
+ * active plan there is no seat ceiling to announce. Platform owners holding a
+ * membership are listed apart so the customer sees who supports the workspace.
  */
 export class SaasTenantSeatsController extends Controller(
   "/api/saas/tenant/seats",
