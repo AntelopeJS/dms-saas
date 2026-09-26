@@ -12,6 +12,8 @@ const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "[::1]"];
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAVAILABLE = 503;
 const ADMISSION_MODES = ["open", "invitation-only"];
+const DEFAULT_UPCOMING_INVOICE_PREVIEW_CACHE_TTL_SECONDS = 3600;
+const MS_PER_SECOND = 1000;
 
 let runtimeConfig: DmsSaasConfig | null = null;
 
@@ -38,9 +40,20 @@ function assertValidRegistrationPaymentMethod(config: DmsSaasConfig): void {
   }
 }
 
+function assertValidUpcomingInvoicePreviewCacheTtl(
+  config: DmsSaasConfig,
+): void {
+  const ttl = config.upcomingInvoicePreviewCacheTtlSeconds;
+  if (ttl === undefined || (Number.isFinite(ttl) && ttl >= 0)) return;
+  throw new Error(
+    "Invalid dms-saas upcomingInvoicePreviewCacheTtlSeconds: expected a non-negative number",
+  );
+}
+
 export function setRuntimeConfig(config: DmsSaasConfig): void {
   assertValidAdmissionMode(config);
   assertValidRegistrationPaymentMethod(config);
+  assertValidUpcomingInvoicePreviewCacheTtl(config);
   runtimeConfig = config;
 }
 
@@ -86,6 +99,14 @@ export function resolveRegistrationPaymentMethodId(
 
 export function getDefaultPlanSlug(): string | undefined {
   return runtimeConfig?.defaultPlanSlug;
+}
+
+/** Upcoming invoice preview cache lifetime; zero disables the cache. */
+export function getUpcomingInvoicePreviewCacheTtlMs(): number {
+  const seconds =
+    runtimeConfig?.upcomingInvoicePreviewCacheTtlSeconds ??
+    DEFAULT_UPCOMING_INVOICE_PREVIEW_CACHE_TTL_SECONDS;
+  return seconds * MS_PER_SECOND;
 }
 
 export function getAllowedRedirectHosts(): string[] {

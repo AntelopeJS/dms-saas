@@ -1,6 +1,7 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import { StripeWebhookEventModel } from "../db";
+import { invalidatePreviewForStripeEvent } from "../upcoming-invoice/invalidation";
 import {
   handleChargeRefundUpdated,
   handleCustomerUpdated,
@@ -71,5 +72,6 @@ export async function dispatchStripeWebhookEvent(
     );
     throw error;
   }
+  await invalidatePreviewForStripeEvent(event);
   await stripeWebhookEventModel.markResult(event.id, claimed, "success", null);
 }

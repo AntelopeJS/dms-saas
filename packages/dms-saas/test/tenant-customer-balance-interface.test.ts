@@ -56,6 +56,9 @@ vi.mock("../src/stripe/customer-balance", () => ({
   retrieveStripeCustomerBalance: (...args: unknown[]) =>
     harness.retrieveBalance(...args),
 }));
+vi.mock("../src/upcoming-invoice/preview", () => ({
+  getUpcomingInvoicePreview: vi.fn(),
+}));
 
 import * as billingImplementation from "../src/implementations/dms-saas/billing";
 import * as billingInterface from "@antelopejs/interface-dms-saas/billing";

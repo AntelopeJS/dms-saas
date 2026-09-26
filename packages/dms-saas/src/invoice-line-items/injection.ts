@@ -15,7 +15,8 @@ import { getStripeClient } from "../stripe/client";
 import { TenantSubscriptionModel } from "../db";
 import { clipInvoiceUsageWindow } from "./billing-window";
 
-const LINE_KEY_METADATA = "saasLineKey";
+/** Stripe metadata key carrying the `<provider id>:<key>` of a usage line. */
+export const LINE_KEY_METADATA = "saasLineKey";
 const LINE_PROVIDER_METADATA = "saasLineProvider";
 const LINE_QUANTITY_METADATA = "saasLineQuantity";
 const LINE_UNIT_METADATA = "saasLineUnit";
@@ -97,7 +98,8 @@ async function fetchInjectedLineKeys(invoiceId: string): Promise<Set<string>> {
   return new Set(keys);
 }
 
-async function resolveProviderLineItems(
+/** Run one provider, turning a throw into a logged failure count. */
+export async function resolveProviderLineItems(
   provider: InvoiceLineItemsProvider,
   context: InvoiceLineItemsContext,
 ): Promise<ProviderResolution> {
@@ -116,7 +118,7 @@ async function resolveProviderLineItems(
   }
 }
 
-function reportSkippedLineItems(
+export function reportSkippedLineItems(
   providerId: string,
   invoiceId: string,
   skipped: SkippedInvoiceLineItem[],
@@ -129,7 +131,7 @@ function reportSkippedLineItems(
   }
 }
 
-function buildLineItemMetadata(
+export function buildLineItemMetadata(
   providerId: string,
   prepared: PreparedInvoiceLineItem,
 ): Record<string, string> {

@@ -72,4 +72,10 @@ export interface DmsSaasConfig {
    * individuals; a slug naming no such plan is ignored with a warning.
    */
   defaultPlanSlug?: string;
+  /**
+   * How long a workspace's upcoming invoice preview is served from cache, in
+   * seconds. Defaults to one hour; `0` prices every request with Stripe. Plan,
+   * billing identity and invoice changes invalidate it sooner.
+   */
+  upcomingInvoicePreviewCacheTtlSeconds?: number;
 }
