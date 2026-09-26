@@ -2,8 +2,9 @@
  * Completing a self-service registration that entered without a workspace.
  *
  * The account already exists — it signed in through OAuth, or through any
- * entry point that ends on a tenant assignment token — and everything that is
- * still missing is bought here: a workspace, a plan, a card. The API answers
+ * entry point that ends on a tenant assignment token — and what is still
+ * missing is opened here: a workspace on the free plan, with a card when the
+ * deployment asks for one. The API answers
  * with a session for the workspace it just provisioned, so the visitor lands
  * signed in rather than back on the login screen.
  *
@@ -26,34 +27,17 @@ export const SESSION_ESTABLISH_ENDPOINT = "/auth/establish";
 /** DMS API route that provisions the workspace and mints that token pair. */
 export const WORKSPACE_FINALIZE_ENDPOINT = "/api/saas/register/finalize";
 
-export interface WorkspaceFinalizationAddress {
-  country: string;
-  line1?: string;
-  postalCode?: string;
-  city?: string;
-}
-
-/** The completion form as the visitor left it, plus the confirmed card. */
+/** The completion form as the visitor left it, plus the card if one was taken. */
 export interface WorkspaceFinalization {
   tenantAssignmentToken: string;
   workspaceName: string;
-  planId: string;
-  customerType: "individual" | "business";
-  companyName: string;
-  vatNumber: string;
-  address: WorkspaceFinalizationAddress;
-  paymentMethodId: string;
+  paymentMethodId?: string;
 }
 
 export interface WorkspaceFinalizationPayload {
   tenant_assignment_token: string;
   workspaceName: string;
-  planId: string;
-  customerType: "individual" | "business";
-  companyName?: string;
-  vatNumber?: string;
-  address: WorkspaceFinalizationAddress;
-  paymentMethodId: string;
+  paymentMethodId?: string;
 }
 
 /** What `/auth/establish` takes: an endpoint to call, and its body. */
@@ -70,26 +54,17 @@ export interface SessionEstablishRequest {
  * named in the envelope is the one the operator allowed — a page that inlined
  * either would drift from the other.
  *
- * Company fields only travel for a business customer: an individual who typed
- * a company name and switched back would otherwise be invoiced as one.
- *
- * @param finalization Completion form and confirmed payment method
+ * @param finalization Completion form and the card, when one was confirmed
  * @returns Body to POST to `/auth/establish`
  */
 export function buildSessionEstablishRequest(
   finalization: WorkspaceFinalization,
 ): SessionEstablishRequest {
-  const isBusiness = finalization.customerType === "business";
   return {
     endpoint: WORKSPACE_FINALIZE_ENDPOINT,
     payload: {
       tenant_assignment_token: finalization.tenantAssignmentToken,
       workspaceName: finalization.workspaceName,
-      planId: finalization.planId,
-      customerType: finalization.customerType,
-      companyName: isBusiness ? finalization.companyName : undefined,
-      vatNumber: isBusiness ? finalization.vatNumber : undefined,
-      address: finalization.address,
       paymentMethodId: finalization.paymentMethodId,
     },
   };

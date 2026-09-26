@@ -1,3 +1,5 @@
+import type { RegistrationPaymentMethodPolicy } from "@antelopejs/interface-dms-saas/registration";
+
 export interface DmsSaasStripeConfig {
   secretKey: string;
   webhookSecret: string;
@@ -15,10 +17,22 @@ export interface DmsSaasPublicScreensConfig {
 
 export type PublicScreenId = keyof DmsSaasPublicScreensConfig;
 
+/** Public registration flow settings. */
+export interface DmsSaasRegistrationConfig {
+  /**
+   * Whether registration asks for a card. Defaults to `required`; `optional`
+   * lets the visitor skip the card step, `none` never shows it and never
+   * calls Stripe.
+   */
+  paymentMethod?: RegistrationPaymentMethodPolicy;
+}
+
 export interface DmsSaasConfig {
   stripe: DmsSaasStripeConfig;
   /** Deployment-wide admission policy. Defaults to open; invitations remain available. */
   admissionMode?: "open" | "invitation-only";
+  /** Public registration flow settings. Invitation sign-up ignores them. */
+  registration?: DmsSaasRegistrationConfig;
   /**
    * Server-selected named storage for private support uploads. Keep the name's
    * backend binding stable while any support admission or file remains retained.

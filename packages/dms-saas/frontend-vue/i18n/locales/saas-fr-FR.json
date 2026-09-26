@@ -43,7 +43,8 @@
         "no_stripe_price": "Le plan n'a pas de tarif Stripe",
         "seat_limit_reached": "La limite de membres du plan est atteinte",
         "no_pending_change": "Aucun changement de plan programmé à annuler",
-        "unpaid_invoice_blocks_downgrade": "Une facture est impayée. Réglez-la avant de passer à un plan moins cher."
+        "unpaid_invoice_blocks_downgrade": "Une facture est impayée. Réglez-la avant de passer à un plan moins cher.",
+        "no_free_plan": "Aucun plan gratuit n'est disponible pour l'inscription pour le moment."
       },
       "workspace": {
         "not_found": "Espace introuvable",
@@ -164,7 +165,9 @@
       "registration": {
         "extras_invalid": "Les champs d'inscription supplémentaires ne sont pas dans un format accepté",
         "extras_too_large": "Les champs d'inscription supplémentaires sont trop volumineux",
-        "extras_too_complex": "Les champs d'inscription supplémentaires comportent trop d'entrées"
+        "extras_too_complex": "Les champs d'inscription supplémentaires comportent trop d'entrées",
+        "payment_method_required": "Un moyen de paiement est requis pour s'inscrire.",
+        "payment_method_disabled": "Ce déploiement ne demande pas de carte à l'inscription."
       }
     },
     "dashboard": {
@@ -194,14 +197,12 @@
     },
     "register": {
       "title": "Inscription",
-      "page_description": "Créer un compte, choisir un plan et provisionner votre premier workspace.",
-      "submit": "S'inscrire et payer",
-      "choose_plan": "Choisir un plan",
+      "page_description": "Créer un compte et ouvrir votre premier workspace sur le plan gratuit.",
+      "submit": "Créer mon compte",
       "field": {
         "email": "Email",
         "password": "Mot de passe",
         "full_name": "Nom complet",
-        "workspace_name": "Nom du workspace",
         "company_name": "Raison sociale",
         "vat_number": "Numéro de TVA",
         "country": "Pays",
@@ -217,31 +218,26 @@
         "business": "Professionnel"
       },
       "error": {
-        "no_plan": "Veuillez sélectionner un plan",
         "no_payment": "Méthode de paiement requise",
-        "no_country": "Veuillez sélectionner votre pays de facturation",
         "legal_required": "Vous devez accepter les conditions générales et la politique de confidentialité",
         "failed": "Échec de l'inscription",
         "load": "Impossible de charger les options d'inscription"
       },
       "legal_acceptance": "J'accepte les {terms_and_conditions} et la {privacy_policy}",
-      "price": "{price}/{interval}",
-      "interval": {
-        "month": "mois",
-        "year": "an"
-      }
+      "hint": {
+        "password": "Au moins 8 caractères, dont une majuscule, un chiffre et l'un de {'@'}$!%*?&",
+        "card": "Enregistrée en toute sécurité via Stripe. Aucun débit sur le plan gratuit."
+      },
+      "skip_payment_method": "Ajouter une carte plus tard",
+      "default_workspace_name": "Workspace de {name}"
     },
     "no_workspace": {
       "title": "Configurez votre premier workspace",
-      "subtitle": "Vous êtes connecté, mais vous n'appartenez encore à aucun workspace. Choisissez un plan et créez-en un pour commencer.",
+      "subtitle": "Vous êtes connecté, mais vous n'appartenez encore à aucun workspace. Créez-en un sur le plan gratuit pour commencer — vous pourrez le renommer et changer de plan plus tard.",
       "logout": "Se déconnecter",
-      "submit": "Créer le workspace et payer",
+      "submit": "Créer le workspace",
       "submitting": "Création de votre workspace…",
       "section": {
-        "details": "Détails du workspace",
-        "details_hint": "C'est le nom de l'espace de travail que verra votre équipe.",
-        "plan": "Choisir un plan",
-        "plan_hint": "Vous pourrez en changer plus tard depuis les paramètres de facturation.",
         "payment": "Méthode de paiement",
         "payment_hint": "Stockée en toute sécurité via Stripe."
       },
@@ -251,7 +247,7 @@
       }
     },
     "oauth_registration": {
-      "entry_note": "S'inscrire via un fournisseur demande quand même un plan et une carte à l'étape suivante.",
+      "entry_note": "S'inscrire via un fournisseur vous demande quand même d'accepter les conditions à l'étape suivante.",
       "identity": {
         "provider": "Connecté avec {provider} en tant que {email}",
         "password": "Connecté en tant que {email}",
@@ -588,7 +584,8 @@
             "load": "Impossible de charger les options de création.",
             "failed": "Impossible de créer le workspace.",
             "card": "Impossible d'initialiser le paiement par carte."
-          }
+          },
+          "no_plans": "Aucun plan n'est disponible pour le moment. Contactez le support pour créer un workspace."
         }
       }
     },

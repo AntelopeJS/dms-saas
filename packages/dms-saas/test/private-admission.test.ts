@@ -215,6 +215,29 @@ describe("deployment admission", () => {
     expect(stripe.called).not.toHaveBeenCalled();
   });
 
+  it.each(["required", "optional", "none"] as const)(
+    "answers registration_closed before the %s card policy is consulted",
+    async (paymentMethod) => {
+      setRuntimeConfig({
+        stripe: STRIPE_CONFIG,
+        admissionMode: "invitation-only",
+        registration: { paymentMethod },
+      });
+      const controller = new SaasRegisterApiController();
+      await expect(controller.createSetupIntent()).rejects.toMatchObject(
+        CLOSED_ERROR,
+      );
+      await expect(
+        controller.register({
+          email: "visitor@example.test",
+          password: "VisitorPassw0rd!",
+          name: "Visitor",
+        }),
+      ).rejects.toMatchObject(CLOSED_ERROR);
+      expect(stripe.called).not.toHaveBeenCalled();
+    },
+  );
+
   it("is reversible and preserves the platform-owner workspace exception", () => {
     expect(() => assertAdmissionOpen()).toThrow();
     expect(() => assertAdmissionOpen(true)).not.toThrow();
@@ -365,4 +388,49 @@ describe("actual DMS invitation account creation while admission is closed", () 
     await assertOAuthInvitation(created.tenantId);
     expect(stripe.called).not.toHaveBeenCalled();
   });
+});
+
+describe("invitation sign-up never asks for a plan or a card", () => {
+  const ADMISSION_MODES = ["open", "invitation-only"] as const;
+  const PAYMENT_POLICIES = ["required", "optional", "none"] as const;
+  const COMBINATIONS = ADMISSION_MODES.flatMap((admissionMode) =>
+    PAYMENT_POLICIES.map((paymentMethod) => ({ admissionMode, paymentMethod })),
+  );
+
+  it.each(COMBINATIONS)(
+    "joins the inviting workspace under $admissionMode / $paymentMethod",
+    async ({ admissionMode, paymentMethod }) => {
+      setRuntimeConfig({
+        stripe: STRIPE_CONFIG,
+        admissionMode,
+        registration: { paymentMethod },
+      });
+      const tenantId = randomUUID();
+      await GetModel(TenantModel).insert({
+        _id: tenantId,
+        name: "Plan-less workspace",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const email = `${randomUUID()}@example.test`;
+      const invite = await inviteUserToTenant({ tenantId, email });
+      if (invite.kind !== "invited") throw new Error("Expected invitation");
+
+      const result = await signup(
+        GetModel(UserModel),
+        GetModel(SessionModel),
+        signupBody(email, invite.token),
+        "test",
+        "127.0.0.1",
+      );
+
+      expect(
+        await GetModel(TenantMemberModel, tenantId).getByUser(result.user._id!),
+      ).toBeDefined();
+      expect(
+        await GetModel(TenantSubscriptionModel, tenantId).findOne(),
+      ).toBeUndefined();
+      expect(stripe.called).not.toHaveBeenCalled();
+    },
+  );
 });

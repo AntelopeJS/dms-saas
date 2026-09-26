@@ -15,7 +15,11 @@ import {
   registerAutomationNodes,
   unregisterAutomationNodes,
 } from "./automation";
-import { resolveDevMode, setRuntimeConfig } from "./config";
+import {
+  getRegistrationPaymentMethodPolicy,
+  resolveDevMode,
+  setRuntimeConfig,
+} from "./config";
 import { registerSaasCrons } from "./crons";
 import { registerSaasHookListeners } from "./hooks";
 import * as billingImplementation from "./implementations/dms-saas/billing";
@@ -66,6 +70,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
       dmsSaas: {
         stripePublishableKey: config.stripe.publishableKey,
         admissionMode: config.admissionMode ?? "open",
+        registrationPaymentMethod: getRegistrationPaymentMethodPolicy(),
       },
     },
   });

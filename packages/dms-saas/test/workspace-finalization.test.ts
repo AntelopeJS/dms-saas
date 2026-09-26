@@ -9,11 +9,6 @@ import {
 const FINALIZATION: WorkspaceFinalization = {
   tenantAssignmentToken: "tat_test",
   workspaceName: "Acme",
-  planId: "plan_pro",
-  customerType: "individual",
-  companyName: "",
-  vatNumber: "",
-  address: { country: "BE" },
   paymentMethodId: "pm_test",
 };
 
@@ -33,38 +28,18 @@ describe("buildSessionEstablishRequest", () => {
     expect(buildSessionEstablishRequest(FINALIZATION).payload).toEqual({
       tenant_assignment_token: "tat_test",
       workspaceName: "Acme",
-      planId: "plan_pro",
-      customerType: "individual",
-      companyName: undefined,
-      vatNumber: undefined,
-      address: { country: "BE" },
       paymentMethodId: "pm_test",
     });
   });
 
-  it("carries the company fields of a business customer", () => {
+  it("sends no card when the visitor registered without one", () => {
     const request = buildSessionEstablishRequest({
-      ...FINALIZATION,
-      customerType: "business",
-      companyName: "Acme SA",
-      vatNumber: "BE0123456789",
+      tenantAssignmentToken: "tat_test",
+      workspaceName: "Acme",
     });
 
-    expect(request.payload.companyName).toBe("Acme SA");
-    expect(request.payload.vatNumber).toBe("BE0123456789");
-  });
-
-  it("drops company fields an individual typed before switching back", () => {
-    // Left behind by a visitor who changed their mind, they would otherwise
-    // invoice a private person as a company.
-    const request = buildSessionEstablishRequest({
-      ...FINALIZATION,
-      companyName: "Acme SA",
-      vatNumber: "BE0123456789",
-    });
-
-    expect(request.payload.companyName).toBeUndefined();
-    expect(request.payload.vatNumber).toBeUndefined();
+    expect(request.payload.paymentMethodId).toBeUndefined();
+    expect(request.payload).not.toHaveProperty("planId");
   });
 
   it("sends no token of its own", () => {

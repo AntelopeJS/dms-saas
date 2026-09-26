@@ -25,33 +25,66 @@ import {
   UserModel,
 } from "@antelopejs/interface-dms/auth/db";
 import { resolveEntryProvider } from "../../auth";
-import { assertAdmissionOpen } from "../../config";
+import {
+  assertAdmissionOpen,
+  assertRegistrationCardAccepted,
+  resolveRegistrationPaymentMethodId,
+} from "../../config";
+import type { Plan } from "../../db";
 import { createCardSetupIntent } from "../../stripe";
 import type {
-  StripeCustomerProfile,
+  WorkspaceBillingProfile,
   WorkspaceProvisioningHandles,
-  WorkspaceProvisioningPayload,
+  WorkspaceProvisioningInput,
 } from "../../workspaces";
 import {
-  assertBillingCountry,
   assertRegistrationExtras,
-  ensurePlanIsAvailableForCustomer,
   provisionWorkspace,
   resolveCardDetails,
+  resolveRegistrationPlan,
   rollbackWorkspaceProvisioning,
 } from "../../workspaces";
 
 const HTTP_BAD_REQUEST = 400;
 const AUTH_KEY_BYTES = 32;
+/** Renamable from the workspace settings; the screens send a localised one. */
+const DEFAULT_WORKSPACE_NAME = "My workspace";
 
-interface RegisterBody extends WorkspaceProvisioningPayload {
+/**
+ * What a registration asks for on top of the account: nothing but the
+ * optional card. Plan, customer type and billing address belong to the
+ * upgrade flow, so every registration lands on the free plan.
+ */
+interface RegistrationPayload {
+  workspaceName?: string;
+  paymentMethodId?: string;
+  /**
+   * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
+   * listeners and nowhere else.
+   */
+  extras?: Record<string, unknown>;
+}
+
+interface RegisterBody extends RegistrationPayload {
   email: string;
   password: string;
   name: string;
 }
 
-interface FinalizeBody extends WorkspaceProvisioningPayload {
+interface FinalizeBody extends RegistrationPayload {
   tenant_assignment_token: string;
+}
+
+/** Everything settled before an account or a Stripe object exists. */
+interface AdmittedRegistration {
+  plan: Plan;
+  paymentMethodId: string | undefined;
+}
+
+interface RegistrationAccount {
+  userId: string;
+  email: string;
+  name: string;
 }
 
 interface PendingRegistrationBody {
@@ -85,19 +118,52 @@ function generateAuthKey(): string {
   return randomBytes(AUTH_KEY_BYTES).toString("hex");
 }
 
-function toStripeProfile(
-  payload: WorkspaceProvisioningPayload,
-  email: string,
-  fallbackName: string,
-): StripeCustomerProfile {
+/**
+ * Validate a registration against the deployment before anything is created:
+ * the card policy, the extras bounds, and the free plan it will land on.
+ */
+async function admitRegistration(
+  body: RegistrationPayload,
+): Promise<AdmittedRegistration> {
+  const paymentMethodId = resolveRegistrationPaymentMethodId(
+    body.paymentMethodId,
+  );
+  assertRegistrationExtras(body.extras);
+  return { plan: await resolveRegistrationPlan(), paymentMethodId };
+}
+
+/**
+ * The provisioning call for a registration. The billing profile starts as an
+ * individual one, addressed where the card is when there is a card: the
+ * upgrade flow collects the rest.
+ */
+async function buildRegistrationProvisioning(
+  account: RegistrationAccount,
+  body: RegistrationPayload,
+  admitted: AdmittedRegistration,
+  handles: WorkspaceProvisioningHandles,
+): Promise<WorkspaceProvisioningInput> {
+  const card = await resolveCardDetails(admitted.paymentMethodId);
+  const billingProfile: WorkspaceBillingProfile = {
+    customerType: "individual",
+    address: card.billingAddress,
+  };
   return {
-    email,
-    fallbackName,
-    customerType: payload.customerType,
-    companyName: payload.companyName,
-    vatNumber: payload.vatNumber,
-    address: payload.address,
-    paymentMethodId: payload.paymentMethodId,
+    userId: account.userId,
+    payload: {
+      ...billingProfile,
+      workspaceName: body.workspaceName?.trim() || DEFAULT_WORKSPACE_NAME,
+      planId: admitted.plan._id,
+      paymentMethodId: admitted.paymentMethodId,
+      extras: body.extras,
+    },
+    stripeCustomerProfile: {
+      ...billingProfile,
+      email: account.email,
+      fallbackName: account.name,
+    },
+    card,
+    handles,
   };
 }
 
@@ -180,27 +246,27 @@ export class SaasRegisterApiController extends Controller(
   @Get("/setup-intent")
   async createSetupIntent(): Promise<SetupIntentResponse> {
     assertAdmissionOpen();
+    assertRegistrationCardAccepted();
     return createCardSetupIntent();
   }
 
   @Post("/")
   async register(@JSONBody() body: RegisterBody): Promise<RegisterResult> {
     assertAdmissionOpen();
-    assertBillingCountry(body.address);
-    assertRegistrationExtras(body.extras);
-    await ensurePlanIsAvailableForCustomer(body.planId, body.customerType);
+    const admitted = await admitRegistration(body);
     await this.ensureEmailAvailable(body.email);
 
     const handles: WorkspaceProvisioningHandles = {};
     try {
       handles.userId = await this.createInitialUser(body);
-      const { tenantId } = await provisionWorkspace({
+      const account = {
         userId: handles.userId,
-        payload: body,
-        stripeCustomerProfile: toStripeProfile(body, body.email, body.name),
-        card: await resolveCardDetails(body.paymentMethodId),
-        handles,
-      });
+        email: body.email,
+        name: body.name,
+      };
+      const { tenantId } = await provisionWorkspace(
+        await buildRegistrationProvisioning(account, body, admitted, handles),
+      );
       return { userId: handles.userId, tenantId };
     } catch (error) {
       await rollbackWorkspaceProvisioning(handles);
@@ -249,24 +315,18 @@ export class SaasRegisterApiController extends Controller(
   @Post("/finalize")
   async finalize(@JSONBody() body: FinalizeBody): Promise<AuthResponse> {
     assertAdmissionOpen();
-    assertBillingCountry(body.address);
-    assertRegistrationExtras(body.extras);
+    const admitted = await admitRegistration(body);
     const { user } = await validateTenantAssignmentToken(
       body.tenant_assignment_token,
     );
     await this.ensureNoWorkspaceYet(user._id);
 
-    await ensurePlanIsAvailableForCustomer(body.planId, body.customerType);
-
     const handles: WorkspaceProvisioningHandles = { userId: user._id };
     try {
-      const { tenantId } = await provisionWorkspace({
-        userId: user._id,
-        payload: body,
-        stripeCustomerProfile: toStripeProfile(body, user.email, user.name),
-        card: await resolveCardDetails(body.paymentMethodId),
-        handles,
-      });
+      const account = { userId: user._id, email: user.email, name: user.name };
+      const { tenantId } = await provisionWorkspace(
+        await buildRegistrationProvisioning(account, body, admitted, handles),
+      );
       return await this.issueAuthResponse(user, tenantId);
     } catch (error) {
       await rollbackWorkspaceProvisioning(handles);
