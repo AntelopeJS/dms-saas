@@ -20,12 +20,19 @@ interface UserSummaryData {
   workspaces: Array<{ isTenantOwner: boolean }>;
 }
 
+const MISSING_DATE = "—";
+const DAY_FORMAT: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+};
+
 const props = defineProps<{
   routeParams?: Record<string, string>;
 }>();
 
 const { $authFetch } = useAuthFetch();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const userId = computed(() => props.routeParams?.id ?? "");
 const user = ref<UserSummaryData | null>(null);
@@ -48,13 +55,8 @@ const memberCount = computed(
   () => user.value?.workspaces.filter((w) => !w.isTenantOwner).length ?? 0,
 );
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+function formatDay(value: string | null): string {
+  return formatDate(value, locale.value, DAY_FORMAT) ?? MISSING_DATE;
 }
 
 async function load(): Promise<void> {
@@ -114,11 +116,11 @@ onMounted(load);
       <dl class="grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
         <div>
           <dt class="text-muted">{{ $t("saas.users.column.created_at") }}</dt>
-          <dd class="mt-0.5">{{ formatDate(user.createdAt) }}</dd>
+          <dd class="mt-0.5">{{ formatDay(user.createdAt) }}</dd>
         </div>
         <div>
           <dt class="text-muted">{{ $t("saas.users.info.last_active") }}</dt>
-          <dd class="mt-0.5">{{ formatDate(user.lastActiveAt) }}</dd>
+          <dd class="mt-0.5">{{ formatDay(user.lastActiveAt) }}</dd>
         </div>
         <div>
           <dt class="text-muted">{{ $t("saas.users.info.language") }}</dt>

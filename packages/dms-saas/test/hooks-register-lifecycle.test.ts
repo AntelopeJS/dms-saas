@@ -17,6 +17,7 @@ const hookDoubles = vi.hoisted(() => ({
   recomputeAllTenantBillingStates: vi.fn<() => Promise<void>>(),
   backfillDefaultSubscriptions: vi.fn<() => Promise<number>>(),
   reconcileWorkspaceLifecycleDeliveries: vi.fn<() => Promise<void>>(),
+  migrateLegacyPlatformSupport: vi.fn<() => Promise<void>>(),
 }));
 
 vi.mock("@antelopejs/interface-database-decorators", () => ({
@@ -41,6 +42,9 @@ vi.mock("../src/db", () => ({ TenantBillingStateModel: class {} }));
 vi.mock("../src/operator-actions", () => ({
   reconcileWorkspaceLifecycleDeliveries:
     hookDoubles.reconcileWorkspaceLifecycleDeliveries,
+}));
+vi.mock("../src/plans/platform-support", () => ({
+  migrateLegacyPlatformSupport: hookDoubles.migrateLegacyPlatformSupport,
 }));
 vi.mock("../src/pages/module", () => ({ SAAS_MODULE_ID: "dms-saas" }));
 vi.mock("../src/routes", () => ({
@@ -90,6 +94,7 @@ beforeEach(() => {
   hookDoubles.reconcileWorkspaceLifecycleDeliveries.mockResolvedValue(
     undefined,
   );
+  hookDoubles.migrateLegacyPlatformSupport.mockResolvedValue(undefined);
   registerSaasHookListeners();
 });
 
@@ -133,6 +138,7 @@ describe("database initialized hook", () => {
       expect(
         hookDoubles.reconcileWorkspaceLifecycleDeliveries,
       ).toHaveBeenCalledOnce();
+      expect(hookDoubles.migrateLegacyPlatformSupport).toHaveBeenCalledOnce();
     });
     expect(isSettled).toBe(false);
 

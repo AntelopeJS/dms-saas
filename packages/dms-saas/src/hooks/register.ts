@@ -9,6 +9,7 @@ import { emitAutomationEvent, emitTenantDeletedEvent } from "../automation";
 import { recomputeAllTenantBillingStates } from "../billing-state";
 import { TenantBillingStateModel } from "../db";
 import { reconcileWorkspaceLifecycleDeliveries } from "../operator-actions";
+import { migrateLegacyPlatformSupport } from "../plans/platform-support";
 import { SAAS_MODULE_ID } from "../pages/module";
 import { ensureLegalDocumentsSingleton } from "../routes";
 import { resumePendingPlanMigrations } from "../workers";
@@ -69,6 +70,7 @@ export function registerSaasHookListeners(): void {
       // covers, so it runs before the full recompute rather than beside it.
       backfillDefaultSubscriptions().then(recomputeAllTenantBillingStates),
       reconcileWorkspaceLifecycleDeliveries(),
+      migrateLegacyPlatformSupport(),
     ]);
     throwDatabaseInitializationFailures(results);
     return undefined;

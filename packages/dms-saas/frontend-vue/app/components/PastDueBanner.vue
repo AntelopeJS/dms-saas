@@ -2,6 +2,7 @@
 import { computed, onMounted } from "vue";
 
 const KEY_PREFIX = "saas.workspace.billing.past_due.banner";
+const BILLING_PATH = "/settings/workspace/billing";
 const DEADLINE_FORMAT: Intl.DateTimeFormatOptions = {
   day: "numeric",
   month: "long",
@@ -17,9 +18,18 @@ const { t, locale } = useI18n();
 // Owner-only in the API payload: a member gets the generic line and no
 // settle button, the owner pays.
 const invoice = computed(() => data.value?.unpaidInvoice ?? null);
+const action = computed(() => resolvePastDueBannerAction(data.value));
+
+// Without the invoice details the owner still has to be told where to act,
+// while a member is only told who does.
+const genericMessage = computed(() =>
+  data.value?.isTenantOwner
+    ? t(`${KEY_PREFIX}.generic_owner`)
+    : t(`${KEY_PREFIX}.generic`),
+);
 
 const message = computed(() => {
-  if (!invoice.value) return t(`${KEY_PREFIX}.generic`);
+  if (!invoice.value) return genericMessage.value;
   const amount = formatMinorUnits(invoice.value.amount, invoice.value.currency);
   const subject = { invoice: invoice.value.number ?? amount, amount };
   const suspendOn = formatDate(
@@ -48,7 +58,7 @@ onMounted(load);
   >
     <p class="min-w-0 grow">{{ message }}</p>
     <UButton
-      v-if="invoice?.hostedInvoiceUrl"
+      v-if="action === 'settle'"
       size="sm"
       color="error"
       variant="outline"
@@ -56,6 +66,16 @@ onMounted(load);
       @click="settle"
     >
       {{ $t(`${KEY_PREFIX}.settle`) }}
+    </UButton>
+    <UButton
+      v-else-if="action === 'open_billing'"
+      size="sm"
+      color="error"
+      variant="outline"
+      trailing-icon="i-ph-arrow-right"
+      :to="BILLING_PATH"
+    >
+      {{ $t(`${KEY_PREFIX}.open_billing`) }}
     </UButton>
   </div>
 </template>
