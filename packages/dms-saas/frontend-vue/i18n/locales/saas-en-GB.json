@@ -964,7 +964,12 @@
         "limit_reached_owner": "Your plan's seat limit is reached. Upgrade to add more members.",
         "limit_reached_member": "Your plan's seat limit is reached. Ask a workspace owner to upgrade the plan.",
         "upgrade": "Upgrade",
-        "load_failed": "Seat usage could not be loaded"
+        "load_failed": "Seat usage could not be loaded",
+        "platform_support": {
+          "title": "Platform support",
+          "badge": "Platform support",
+          "description": "These platform team members have access to this workspace to support you. They do not use a seat."
+        }
       },
       "free_access": {
         "banner_title": "Complimentary access",

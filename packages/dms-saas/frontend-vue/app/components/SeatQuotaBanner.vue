@@ -30,6 +30,8 @@ const breakdown = computed(() =>
   }),
 );
 
+const platformSupport = computed(() => quota.value?.platformSupport ?? []);
+
 const limitMessage = computed(() =>
   quota.value?.isTenantOwner
     ? t(`${KEY_PREFIX}.limit_reached_owner`)
@@ -73,6 +75,32 @@ onMounted(refresh);
       >
         {{ $t(`${KEY_PREFIX}.upgrade`) }}
       </UButton>
+    </div>
+    <div
+      v-if="platformSupport.length > 0"
+      class="border-default mt-4 flex flex-col gap-2 border-t pt-4"
+    >
+      <div class="flex flex-col gap-1">
+        <h4 class="text-sm font-semibold">
+          {{ $t(`${KEY_PREFIX}.platform_support.title`) }}
+        </h4>
+        <p class="text-muted text-sm">
+          {{ $t(`${KEY_PREFIX}.platform_support.description`) }}
+        </p>
+      </div>
+      <ul class="flex flex-col gap-2">
+        <li
+          v-for="member in platformSupport"
+          :key="member.userId"
+          class="flex flex-wrap items-center gap-2 text-sm"
+        >
+          <span class="font-medium">{{ member.name }}</span>
+          <span class="text-muted">{{ member.email }}</span>
+          <UBadge color="info" variant="subtle" icon="i-ph-lifebuoy">
+            {{ $t(`${KEY_PREFIX}.platform_support.badge`) }}
+          </UBadge>
+        </li>
+      </ul>
     </div>
   </UCard>
 </template>

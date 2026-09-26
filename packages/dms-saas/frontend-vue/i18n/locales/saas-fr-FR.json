@@ -964,7 +964,12 @@
         "limit_reached_owner": "La limite de sièges de votre plan est atteinte. Passez à un plan supérieur pour ajouter des membres.",
         "limit_reached_member": "La limite de sièges de votre plan est atteinte. Demandez à un propriétaire du workspace de changer de plan.",
         "upgrade": "Changer de plan",
-        "load_failed": "Impossible de charger l'utilisation des sièges"
+        "load_failed": "Impossible de charger l'utilisation des sièges",
+        "platform_support": {
+          "title": "Support de la plateforme",
+          "badge": "Support plateforme",
+          "description": "Ces membres de l'équipe de la plateforme ont accès à ce workspace pour vous accompagner. Ils n'occupent aucun siège."
+        }
       },
       "free_access": {
         "banner_title": "Accès offert",
@@ -1126,8 +1131,8 @@
         },
         "comparison": {
           "title": "Changer de plan",
-          "subtitle": "Workspace {workspace} — actuellement en {plan}. Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
-          "subtitle_no_plan": "Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
+          "subtitle": "Espace de travail {workspace} — plan actuel : {plan}. Le passage à un plan supérieur s'applique immédiatement, au prorata ; le passage à un plan inférieur prend effet au prochain cycle de facturation.",
+          "subtitle_no_plan": "Le passage à un plan supérieur s'applique immédiatement, au prorata ; le passage à un plan inférieur prend effet au prochain cycle de facturation.",
           "current": "actuel",
           "scheduled": "programmé",
           "choose": "Choisir",
