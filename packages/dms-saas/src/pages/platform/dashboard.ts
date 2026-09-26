@@ -101,13 +101,14 @@ export class SaasDashboardController extends PageController(
         )
         .child(
           "subscriptions",
-          // Standalone rather than nested in a ChartCard: a nested chart does
-          // not fetch, and a nested donut does not draw the card's series.
-          ChartDonut({
+          // The card fetches; the nested donut draws the card's first series.
+          ChartCard({
             title: "$saas.dashboard.subscriptions_title",
             description: "$saas.dashboard.subscriptions_description",
+            icon: "i-ph-chart-donut",
             fetchUrl: DASHBOARD_CHART_SUBSCRIPTIONS,
-            showLegend: true,
+            showDelta: false,
+            chart: ChartDonut({ showLegend: true }),
           }),
         ),
     )

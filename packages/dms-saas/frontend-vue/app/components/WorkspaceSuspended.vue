@@ -37,11 +37,9 @@ async function loadAccess(): Promise<void> {
     const result = await $authFetch<WorkspaceAccess>(ACCESS_ENDPOINT);
     access.value = result;
     if (!result.blocked) {
-      // Drop the middleware's cached blocked state before navigating,
-      // otherwise it redirects straight back here and the recovery path
-      // never resolves. The shared billing payloads cached while blocked go
-      // with it: an SPA navigation keeps useState alive, and the billing page
-      // would keep announcing a suspension the user just settled.
+      // Drop the access and billing payloads cached while blocked before
+      // navigating: an SPA navigation keeps useState alive, and the billing
+      // page would keep announcing a suspension the user just settled.
       cachedAccess.value = null;
       billingStatusState.value = null;
       tenantPlanState.value = null;

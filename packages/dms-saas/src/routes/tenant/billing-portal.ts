@@ -61,13 +61,13 @@ export class SaasBillingPortalController extends Controller(
   "/api/saas/billing",
 ) {
   /**
-   * Read by the global suspension middleware and by the suspended screen. The
+   * Read by the suspended screen and by the refund card. The
    * unpaid invoice comes along so the screen can offer settlement without a
    * second call: owner-only, because it carries the payment link, and only when
    * a blocked workspace is one payment away from recovery — a cancelled
    * subscription is not restored by paying, one awaiting its first payment has
    * nothing to settle here, and an unblocked one renders no screen at all, so
-   * the middleware's hot path reads no invoice.
+   * its reads skip the invoice lookup.
    */
   @Get("/access")
   async getWorkspaceAccess(
