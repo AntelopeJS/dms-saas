@@ -26,7 +26,9 @@ export default defineConfig({
       source: {
         type: "local",
         path: ".",
-        installCommand: ["pnpm install", "pnpm build"],
+        // Not a workspace package: without `--ignore-workspace`, pnpm
+        // installs the root workspace instead of this lockfile.
+        installCommand: ["pnpm install --ignore-workspace", "pnpm build"],
       },
     },
     "dms-saas": {
@@ -34,7 +36,10 @@ export default defineConfig({
         type: "local",
         path: "..",
         watchDir: ["src"],
-        installCommand: ["pnpm install", "pnpm build"],
+        // Build only: the workspace is installed beforehand, as the README
+        // says. Installing it here inherited the playground's hoisted linker
+        // and relinked the whole workspace away from the layout CI uses.
+        installCommand: ["pnpm build"],
       },
       config: {
         stripe: {
