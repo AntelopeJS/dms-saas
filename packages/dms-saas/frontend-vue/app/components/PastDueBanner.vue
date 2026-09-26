@@ -7,6 +7,9 @@ const DEADLINE_FORMAT: Intl.DateTimeFormatOptions = {
   month: "long",
 };
 
+// Rendered as the content of the DMS layout banner registered server-side
+// (see registerPastDueBanner), which already decided it shows and draws the
+// alert chrome, icon and role around it.
 const { data, load } = useBillingStatus();
 const { formatMinorUnits } = useMoneyFormat();
 const { t, locale } = useI18n();
@@ -40,11 +43,9 @@ onMounted(load);
 
 <template>
   <div
-    role="alert"
     data-saas-past-due-banner
-    class="border-error/30 bg-error/10 mb-4 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-2.5 text-sm"
+    class="flex flex-wrap items-center gap-x-3 gap-y-2"
   >
-    <UIcon name="i-ph-warning" class="text-error size-5 shrink-0" />
     <p class="min-w-0 grow">{{ message }}</p>
     <UButton
       v-if="invoice?.hostedInvoiceUrl"
