@@ -325,7 +325,7 @@ boots the registration graph:
 | Subpath | Surface |
 | --- | --- |
 | `@antelopejs/interface-dms-saas` | every extension point except `db`: billing, data API, pages, plans, provisioning and registration flat, plus the `invoiceLineItems` and `workspaceLifecycle` namespaces |
-| `@antelopejs/interface-dms-saas/billing` | customer balance and complimentary subscription state |
+| `@antelopejs/interface-dms-saas/billing` | customer balance, upcoming invoice preview and complimentary subscription state |
 | `@antelopejs/interface-dms-saas/data-api` | hidden-value data API filters |
 | `@antelopejs/interface-dms-saas/db` | canonical SaaS tables and data models |
 | `@antelopejs/interface-dms-saas/hidden-filter` | the `HiddenStringFilter` decorator on its own |
@@ -545,6 +545,79 @@ export async function stop(): Promise<void> {
   why it is only reported at error level once dms-saas is attached. Two modules
   registering the same `id` before that collapse into one silently, so pick an
   `id` no other module could plausibly choose.
+- Resolvers are also called to price the [upcoming invoice
+  preview](#upcoming-invoice-preview). Such a call carries `isPreview: true`,
+  a synthetic `upcoming_<subscription id>` `invoiceId`, and a `periodEnd` set
+  to the time of the request: the running cycle's usage so far. Its lines are
+  only quoted to Stripe, never invoiced. A resolver that throws or returns an
+  invalid line then makes the preview `unavailable` rather than short.
+
+### Upcoming invoice preview
+
+`GetUpcomingInvoicePreview` returns what Stripe will bill the current
+workspace next, tax included, so a page can show the exact VAT and total before
+the invoice exists. Stripe computes every figure (Stripe Tax: country, VAT
+number, reverse charge); dms-saas copies them without recomputing any.
+
+```ts
+import { GetUpcomingInvoicePreview } from "@antelopejs/interface-dms-saas/billing";
+
+const preview = await GetUpcomingInvoicePreview({ tenantId, userId });
+if (preview.status === "available") {
+  const { taxMinorUnits, totalMinorUnits, currency } = preview;
+  render({ tax: taxMinorUnits, total: totalMinorUnits, currency });
+}
+```
+
+The scope must come from a trusted authentication boundary: the call rejects
+with `403` a user who is not a member of the tenant or is refused by the tenant
+access gate (a workspace awaiting its first payment, or suspended). The same
+preview is served to the frontend by
+`GET /api/saas/tenant/upcoming-invoice` for any member of the current workspace.
+
+The result is always one of three states, and Stripe errors never throw:
+
+| `status` | Meaning | `reason` |
+| --- | --- | --- |
+| `available` | Stripe priced the next invoice | — |
+| `absent` | Nothing to bill next | `free_plan`, `complimentary`, `customer_not_configured`, `subscription_not_configured` (no plan, or no Stripe subscription yet), `no_upcoming_invoice` (the subscription ends with the current cycle) |
+| `unavailable` | An invoice is due but cannot be priced exactly right now; the cause is logged | `stripe_not_configured` (placeholder keys), `tax_not_configured` (Stripe Tax inactive), `tax_location_invalid`, `tax_location_required`, `tax_calculation_failed`, `usage_unavailable` (a line items provider failed), `provider_error` (any other Stripe failure) |
+
+A missing payment method does not prevent a preview: Stripe prices the invoice
+all the same.
+
+An `available` preview carries:
+
+- `currency` (uppercase ISO 4217) and integer amounts in its minor units:
+  `subtotalMinorUnits` (lines before discounts and tax),
+  `totalExcludingTaxMinorUnits`, `taxMinorUnits`, `totalMinorUnits` (tax
+  included) and `amountDueMinorUnits` (after the customer balance).
+- `taxes`: one entry per tax Stripe applied, with its amount, taxable amount,
+  `ratePercentage`, `country`, `taxType` (`vat`…), `taxabilityReason` and
+  `isReverseCharge`. `taxCountry` and `isReverseCharge` summarize them; a
+  reverse-charged invoice has a zero tax amount and `isReverseCharge: true`.
+- `lines`: `subscription` for the plan, `usage` for the lines quoted by the
+  [invoice line items](#invoice-line-items) providers (with their
+  `usageLineKey`), `invoice_item` for any other pending Stripe item. Each has
+  its pre-tax amount, its tax and its period. `hasMoreLines` flags a list
+  Stripe truncated; the totals are always complete.
+- `periodStart` / `periodEnd` (the cycle the invoice closes), `billingDate`
+  (when Stripe issues it), `usageThrough` (how far the quoted usage runs, null
+  without usage lines) and `computedAt`. Dates are ISO 8601 strings.
+
+Usage is quoted up to the time of the request with the same providers, paid
+coverage window and line validation as the renewal invoice, so the preview's
+tax covers plan and usage together. It is an estimate of a cycle still running:
+the renewal invoice bills the whole cycle.
+
+Previews are cached per workspace for an hour, shared by every instance through
+the database. Set `upcomingInvoicePreviewCacheTtlSeconds` to change that
+lifetime, or to `0` to price every request. A cached preview is dropped as soon
+as the workspace's subscription (plan change, status) or billing identity
+(address, VAT number) changes locally, and when Stripe reports an invoice
+created, finalized, paid or voided, a subscription updated or deleted, or a
+customer updated. `unavailable` results are never cached. Display
+`computedAt` to tell the reader how current the figures are.
 
 ### Workspace settings pages
 
