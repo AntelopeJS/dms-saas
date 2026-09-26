@@ -99,4 +99,10 @@ export interface DmsSaasConfig {
    * outside the list is withheld.
    */
   planExemptPermissions?: DmsSaasPlanExemptPermissionsConfig;
+  /**
+   * How long a workspace's upcoming invoice preview is served from cache, in
+   * seconds. Defaults to one hour; `0` prices every request with Stripe. Plan,
+   * billing identity and invoice changes invalidate it sooner.
+   */
+  upcomingInvoicePreviewCacheTtlSeconds?: number;
 }
