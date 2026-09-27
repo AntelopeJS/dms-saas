@@ -16,6 +16,7 @@ import type {
 import { InvoiceModel, TenantSubscriptionModel } from "../db";
 import {
   getRowInstance,
+  insertOrUpdateById,
   stripeSecondsToDate as optionalStripeDate,
 } from "../utils";
 import { getStripeClient } from "./client";
@@ -101,14 +102,8 @@ export async function resolveInvoiceLines(
   return lines.map(toInvoiceLine);
 }
 
-export async function upsertInvoice(
-  invoice: Stripe.Invoice,
-  tenantId: string,
-): Promise<void> {
-  const invoiceModel = GetModel(InvoiceModel, tenantId);
-  const existing = await invoiceModel.findOneByStripeInvoice(invoice.id);
-  const lines = await resolveInvoiceLines(invoice);
-  const payload = {
+function toInvoicePayload(invoice: Stripe.Invoice, lines: InvoiceLine[]) {
+  return {
     documentType: "invoice" as const,
     stripeInvoiceId: invoice.id,
     stripeCreditNoteId: null,
@@ -137,14 +132,28 @@ export async function upsertInvoice(
     issuedAt: optionalStripeDate(invoice.created) ?? new Date(),
     updatedAt: new Date(),
   };
+}
+
+export async function upsertInvoice(
+  invoice: Stripe.Invoice,
+  tenantId: string,
+): Promise<void> {
+  const invoiceModel = GetModel(InvoiceModel, tenantId);
+  const existing = await invoiceModel.findOneByStripeInvoice(invoice.id);
+  const payload = toInvoicePayload(invoice, await resolveInvoiceLines(invoice));
   if (existing) {
     await invoiceModel.update(existing._id, payload);
-  } else {
-    await invoiceModel.insert({
-      ...payload,
-      createdAt: new Date(),
-    });
+    return;
   }
+  // Every invoice.* event of one invoice mirrors it, concurrently and across
+  // the Stripe round-trip above: keying the row by the Stripe id is what keeps
+  // them to one row. Legacy rows keep their random key and the lookup above.
+  await insertOrUpdateById(
+    invoiceModel,
+    invoice.id,
+    { ...payload, _id: invoice.id, createdAt: new Date() },
+    payload,
+  );
 }
 
 export interface MirroredInvoice {
