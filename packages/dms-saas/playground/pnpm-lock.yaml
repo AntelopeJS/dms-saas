@@ -15,19 +15,19 @@ importers:
         specifier: '>=0.0.14 <1.0.0'
         version: 0.0.14(@antelopejs/interface-core@0.1.1)
       '@antelopejs/interface-api-util':
-        specifier: ^0.1.2
+        specifier: '>=0.1.2 <1.0.0'
         version: 0.1.2(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)
       '@antelopejs/interface-core':
         specifier: '>=0.1.1 <1.0.0'
         version: 0.1.1
       '@antelopejs/interface-data-api':
-        specifier: ^0.1.9
+        specifier: '>=0.1.9 <1.0.0'
         version: 0.1.9(@antelopejs/interface-api-util@0.1.2(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-database-decorators@0.1.6(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-database@0.1.7(@antelopejs/interface-core@0.1.1)))(@antelopejs/interface-database@0.1.7(@antelopejs/interface-core@0.1.1))
       '@antelopejs/interface-database':
-        specifier: ^0.1.7
+        specifier: '>=0.1.7 <1.0.0'
         version: 0.1.7(@antelopejs/interface-core@0.1.1)
       '@antelopejs/interface-database-decorators':
-        specifier: ^0.1.6
+        specifier: '>=0.1.6 <1.0.0'
         version: 0.1.6(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-database@0.1.7(@antelopejs/interface-core@0.1.1))
     devDependencies:
       '@antelopejs/core':
