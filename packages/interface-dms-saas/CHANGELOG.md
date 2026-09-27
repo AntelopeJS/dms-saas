@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.1.2
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.1.1...v0.1.2)
+
+### 🚀 Enhancements
+
+- **backoffice:** Make owner invitations visible and recoverable ([#35](https://github.com/AntelopeJS/dms-saas/pull/35))
+- **billing:** Billing page per the product, always-a-plan, global past-due banner ([#36](https://github.com/AntelopeJS/dms-saas/pull/36))
+- **invitations:** Name the workspace and inviter in owner invitation emails ([#39](https://github.com/AntelopeJS/dms-saas/pull/39))
+- **seats:** Let platform support enter a workspace without taking a seat ([#42](https://github.com/AntelopeJS/dms-saas/pull/42))
+- **billing:** Upcoming invoice preview API ([#43](https://github.com/AntelopeJS/dms-saas/pull/43))
+
+### 🩹 Fixes
+
+- **registration:** Short, card-optional registration flow ([#34](https://github.com/AntelopeJS/dms-saas/pull/34))
+- **billing:** Readable plan comparison ([#37](https://github.com/AntelopeJS/dms-saas/pull/37))
+- **billing:** Translated text values, quiet suspended billing page, consistent back office ([#38](https://github.com/AntelopeJS/dms-saas/pull/38))
+- **invitations:** Resending an owner invitation must not hit the seat limit ([#40](https://github.com/AntelopeJS/dms-saas/pull/40))
+- **workspaces:** Clearer suspended billing copy and translated back-office tabs ([#41](https://github.com/AntelopeJS/dms-saas/pull/41))
+- **seats:** A platform owner who owns the workspace is a real member ([#45](https://github.com/AntelopeJS/dms-saas/pull/45))
+
+### 💅 Refactors
+
+- **billing:** Adopt the DMS layout banner, access redirect and nested donut ([#44](https://github.com/AntelopeJS/dms-saas/pull/44))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.2.0 ([544bb48](https://github.com/AntelopeJS/dms-saas/commit/544bb48))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.1.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.1.0...v0.1.1)
