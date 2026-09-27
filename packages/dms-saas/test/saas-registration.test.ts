@@ -154,11 +154,11 @@ describe("registration copy", () => {
   );
 
   it.each(["saas-en-GB.json", "saas-fr-FR.json"])(
-    "states the password rule in %s",
+    "states the password policy in %s",
     (file) => {
-      expect(lookup(readLocale(file), "saas.register.hint.password")).toEqual(
-        expect.any(String),
-      );
+      expect(
+        lookup(readLocale(file), "saas.errors.registration.password_policy"),
+      ).toEqual(expect.any(String));
     },
   );
 });

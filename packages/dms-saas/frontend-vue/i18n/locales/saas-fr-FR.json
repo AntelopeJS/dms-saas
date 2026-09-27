@@ -226,7 +226,6 @@
       },
       "legal_acceptance": "J'accepte les {terms_and_conditions} et la {privacy_policy}",
       "hint": {
-        "password": "Au moins 8 caractères, dont une majuscule, un chiffre et l'un de {'@'}$!%*?&",
         "card": "Enregistrée en toute sécurité via Stripe. Aucun débit sur le plan gratuit."
       },
       "skip_payment_method": "Ajouter une carte plus tard",

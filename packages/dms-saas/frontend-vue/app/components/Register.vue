@@ -15,11 +15,13 @@ const {
   paymentElementId,
   canSkipPaymentMethod,
   isPaymentStepVisible,
+  passwordStrength,
   isRegistrationClosed,
   errorMessage,
   isSubmitting,
   submit,
 } = useSaasRegistration();
+const { strength, score, color } = passwordStrength;
 </script>
 
 <template>
@@ -52,18 +54,23 @@ const {
           />
         </UFormField>
 
-        <UFormField
-          :label="$t('saas.register.field.password')"
-          :hint="$t('saas.register.hint.password')"
-        >
+        <UFormField :label="$t('saas.register.field.password')">
           <UInput
             v-model="form.password"
             type="password"
             autocomplete="new-password"
+            :color="color"
+            aria-describedby="password-strength"
             class="w-full"
             required
           />
         </UFormField>
+
+        <DmsPasswordStrength
+          :color="color"
+          :score="score"
+          :strength="strength"
+        />
 
         <UCheckbox
           v-if="canSkipPaymentMethod"

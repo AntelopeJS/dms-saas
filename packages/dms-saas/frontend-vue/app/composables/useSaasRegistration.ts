@@ -4,6 +4,7 @@ import {
   onMounted,
   reactive,
   ref,
+  toRef,
   toValue,
 } from "vue";
 
@@ -90,6 +91,7 @@ const DEFAULT_WORKSPACE_NAME_KEY = "saas.register.default_workspace_name";
 const NO_PAYMENT_ERROR_KEY = "saas.register.error.no_payment";
 const LOAD_ERROR_KEY = "saas.register.error.load";
 const SUBMIT_ERROR_KEY = "saas.register.error.failed";
+const PASSWORD_POLICY_ERROR_KEY = "saas.errors.registration.password_policy";
 
 const PAYMENT_STEP_RULES: Record<RegistrationPaymentMethodPolicy, PaymentStepRule> =
   {
@@ -258,14 +260,24 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
    */
   const isPaymentReady = computed(() => stripeHandle.value !== null);
 
+  /**
+   * DMS's password rules, scored for `<DmsPasswordStrength>`. The API holds
+   * the password to the same policy.
+   */
+  const passwordStrength = usePasswordStrength(toRef(form, "password"));
+
   const requirements = computed<RegistrationRequirements>(() => ({
     isPaymentRequired: isPaymentStepVisible.value,
     isPaymentReady: isPaymentReady.value,
     hasAcceptedLegal: form.hasAcceptedLegal,
   }));
 
+  // The password comes first: a card confirmed for a registration the API
+  // then refuses would be confirmed for nothing.
   const missingRequirement = computed(() =>
-    firstMissingRegistrationRequirement(requirements.value),
+    passwordSchema.safeParse(form.password).success
+      ? firstMissingRegistrationRequirement(requirements.value)
+      : PASSWORD_POLICY_ERROR_KEY,
   );
 
   const canSubmit = computed(
@@ -385,6 +397,7 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
     canSkipPaymentMethod,
     isPaymentStepVisible,
     isPaymentReady,
+    passwordStrength,
     isRegistrationClosed,
     isLoading,
     isSubmitting,

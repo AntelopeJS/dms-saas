@@ -277,6 +277,7 @@ const {
   paymentElementId,
   canSkipPaymentMethod, // true under `optional`
   isPaymentStepVisible, // bind with v-show so the Stripe element stays mounted
+  passwordStrength, // { strength, score, color } for <DmsPasswordStrength>
   isRegistrationClosed, // render the invitation-only state instead of the form
   errorMessage,
   isSubmitting,
@@ -286,7 +287,8 @@ const {
 ```
 
 Nothing it returns throws: a failure surfaces as a translated `errorMessage`,
-and `submit()` resolves to the new tenant id or `null`. The workspace name is
+and `submit()` resolves to the new tenant id or `null`. A password outside the
+DMS policy stops `submit()` before the card is confirmed. The workspace name is
 the localised `saas.register.default_workspace_name`. Every screen stays
 enabled by default, so an existing project needs no configuration change.
 

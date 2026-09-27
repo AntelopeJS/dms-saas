@@ -226,7 +226,6 @@
       },
       "legal_acceptance": "I accept the {terms_and_conditions} and the {privacy_policy}",
       "hint": {
-        "password": "At least 8 characters, with an uppercase letter, a number and one of {'@'}$!%*?&",
         "card": "Saved securely via Stripe. You are not charged on the free plan."
       },
       "skip_payment_method": "Add a card later",
