@@ -74,30 +74,10 @@ permissions, regardless of assigned roles. Permissions outside the plan are
 removed even when a role grants them. Other members retain only the intersection
 of their incoming permissions and the resolved plan.
 
-A permission listed by a plan covers every id nested under it: DMS builds
-component and action ids by suffixing the page id, so a plan listing
-`settings.user.members` grants its owner `settings.user.members.table.view`,
-`settings.user.members.table.add` and every other registered id below it, and
-lets a member keep the ones their roles grant. A plan listing `*` covers every
-registered permission.
-
-Some permissions stay out of plan gating, because DMS page metadata cannot tell
-a page about the signed-in user from a workspace page. Every member of a tenant
-with a plan holds them, whatever the plan and their roles:
-
-- `planExemptPermissions.personalPages`: pages about the signed-in user, with
-  their components and actions. Defaults to `settings.user.profile`,
-  `settings.user.notifications`, `settings.user.appearance` and
-  `settings.user.shortcuts`.
-- `planExemptPermissions.navigation`: ids granted on their own, without what is
-  nested under them, so the settings hub and its groups show. Defaults to
-  `settings`, `settings.user` and `settings.workspace`.
-
-A configured list replaces its default:
-
-```json
-{ "modules": { "dms-saas": { "config": { "planExemptPermissions": { "personalPages": ["settings.user.profile"] } } } } }
-```
+A plan grants exactly the ids it lists, nothing nested under them: the plan
+editor's permission tree adds a node's descendants and ancestors when it is
+ticked, so plans built from the UI list every component id, and plans seeded by
+code must list them too.
 
 Tenant ownership never grants `*`, even if a plan contains it. An incoming `*`
 (including the DMS platform owner's wildcard) retains the existing behavior:

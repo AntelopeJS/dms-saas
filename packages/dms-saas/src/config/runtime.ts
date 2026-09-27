@@ -2,7 +2,6 @@ import { assert } from "@antelopejs/interface-api-util";
 import {
   DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY,
   type DmsSaasConfig,
-  type DmsSaasPlanExemptPermissionsConfig,
   REGISTRATION_PAYMENT_METHOD_POLICIES,
   type RegistrationPaymentMethodPolicy,
 } from "../types";
@@ -39,47 +38,9 @@ function assertValidRegistrationPaymentMethod(config: DmsSaasConfig): void {
   }
 }
 
-const DEFAULT_PLAN_EXEMPT_PERMISSIONS: Required<DmsSaasPlanExemptPermissionsConfig> =
-  {
-    personalPages: [
-      "settings.user.profile",
-      "settings.user.notifications",
-      "settings.user.appearance",
-      "settings.user.shortcuts",
-    ],
-    navigation: ["settings", "settings.user", "settings.workspace"],
-  };
-
-function assertOptionalNonEmptyStrings(value: unknown, name: string): void {
-  if (value === undefined) return;
-  const isValid =
-    Array.isArray(value) &&
-    value.every(
-      (entry) => typeof entry === "string" && entry.trim().length > 0,
-    );
-  if (!isValid) {
-    throw new Error(
-      `Invalid dms-saas ${name}: expected an array of non-empty strings`,
-    );
-  }
-}
-
-function assertValidPlanExemptPermissions(config: DmsSaasConfig): void {
-  const exempt = config.planExemptPermissions;
-  assertOptionalNonEmptyStrings(
-    exempt?.personalPages,
-    "planExemptPermissions.personalPages",
-  );
-  assertOptionalNonEmptyStrings(
-    exempt?.navigation,
-    "planExemptPermissions.navigation",
-  );
-}
-
 export function setRuntimeConfig(config: DmsSaasConfig): void {
   assertValidAdmissionMode(config);
   assertValidRegistrationPaymentMethod(config);
-  assertValidPlanExemptPermissions(config);
   runtimeConfig = config;
 }
 
@@ -125,18 +86,6 @@ export function resolveRegistrationPaymentMethodId(
 
 export function getDefaultPlanSlug(): string | undefined {
   return runtimeConfig?.defaultPlanSlug;
-}
-
-/** Permissions plan gating leaves to every member, defaults filled in. */
-export function getPlanExemptPermissions(): Required<DmsSaasPlanExemptPermissionsConfig> {
-  const configured = runtimeConfig?.planExemptPermissions;
-  return {
-    personalPages:
-      configured?.personalPages ??
-      DEFAULT_PLAN_EXEMPT_PERMISSIONS.personalPages,
-    navigation:
-      configured?.navigation ?? DEFAULT_PLAN_EXEMPT_PERMISSIONS.navigation,
-  };
 }
 
 export function getAllowedRedirectHosts(): string[] {

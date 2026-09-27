@@ -16,7 +16,6 @@ const harness = vi.hoisted(() => ({
   getModel: vi.fn(),
   subscription: { planId: "child" } as SubscriptionFixture | undefined,
   members: new Map<string, MemberFixture>(),
-  registered: [] as string[],
 }));
 
 vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
@@ -29,9 +28,6 @@ vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
 vi.mock("@antelopejs/interface-dms/permissions-resolver", () => ({
   RegisterPermissionsResolver: harness.register,
 }));
-vi.mock("@antelopejs/interface-dms/permissions", () => ({
-  GetPermissions: async () => permissionTree(harness.registered),
-}));
 vi.mock("../src/db", async () => ({
   PlanModel: (
     await import("@antelopejs/interface-dms-saas/db/models/plans.model")
@@ -40,49 +36,8 @@ vi.mock("../src/db", async () => ({
 }));
 
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
-import type { PermissionTree } from "@antelopejs/interface-dms/permissions";
 import { registerPlanPermissionsResolver } from "../src/auth/plan-permissions-resolver";
-import { setRuntimeConfig } from "../src/config/runtime";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
-
-const STRIPE_CONFIG = {
-  secretKey: "sk_test",
-  webhookSecret: "whsec_test",
-  publishableKey: "pk_test",
-};
-
-const NAVIGATION = ["settings", "settings.user", "settings.workspace"];
-const PERSONAL_PAGES = [
-  "settings.user.profile",
-  "settings.user.notifications",
-  "settings.user.appearance",
-  "settings.user.shortcuts",
-];
-const EXEMPT = [...NAVIGATION, ...PERSONAL_PAGES];
-
-const MEMBERS_PAGE = "settings.user.members";
-const MEMBERS_TABLE_VIEW = "settings.user.members.table.view";
-const MEMBERS_TABLE_ADD = "settings.user.members.table.add";
-const PROFILE_FORM = "settings.user.profile.profileComponent";
-const ROLES_PAGE = "settings.user.roles";
-const ROLES_TABLE = "settings.user.roles.table";
-const BILLING_PLAN_CARD = "settings.workspace.billing.planCard";
-
-function permissionTree(ids: string[]): Record<string, PermissionTree> {
-  const tree: Record<string, PermissionTree> = {};
-  for (const id of ids) {
-    let level = tree;
-    const parts = id.split(".");
-    parts.forEach((part, index) => {
-      level[part] ??= { children: {} };
-      if (index === parts.length - 1) {
-        level[part].data = { id, title: id };
-      }
-      level = level[part].children;
-    });
-  }
-  return tree;
-}
 
 const plans = new Map<string, Plan>();
 const planModel: PlanModel = Object.create(PlanModel.prototype);
@@ -102,14 +57,8 @@ function resolve(current: string[], tenantId = "tenant-a") {
   return registration.resolver("user", tenantId, new Set(current));
 }
 
-function setMember(isTenantOwner: boolean, tenantId = "tenant-a"): void {
-  harness.members.set(`${tenantId}:user`, { isTenantOwner, roleIds: [] });
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
-  setRuntimeConfig({ stripe: STRIPE_CONFIG });
-  harness.registered = [];
   plans.clear();
   plans.set("parent", plan("parent", ["read"], null));
   plans.set("child", plan("child", ["write"], "parent"));
@@ -140,25 +89,24 @@ describe("plan permissions policy", () => {
         isTenantOwner: true,
         roleIds: grants.length ? ["owner-role"] : [],
       });
-      expect(await resolve(grants)).toEqual(
-        new Set(["read", "write", ...EXEMPT]),
-      );
+      expect(await resolve(grants)).toEqual(new Set(["read", "write"]));
     },
   );
 
   it("intersects non-owner grants without granting missing plan permissions", async () => {
-    setMember(false);
-    expect(await resolve(["read", "excluded"])).toEqual(
-      new Set(["read", ...EXEMPT]),
-    );
-    expect(await resolve([])).toEqual(new Set(EXEMPT));
+    harness.members.set("tenant-a:user", {
+      isTenantOwner: false,
+      roleIds: ["editor"],
+    });
+    expect(await resolve(["read", "excluded"])).toEqual(new Set(["read"]));
+    expect(await resolve([])).toEqual(new Set());
   });
 
   it("does not reuse ownership from another tenant or grant absent members", async () => {
-    setMember(false, "tenant-b");
-    expect(await resolve([], "tenant-b")).toEqual(new Set(EXEMPT));
-    expect(await resolve(["read"], "tenant-c")).toEqual(new Set(["read"]));
-    expect(await resolve([])).toEqual(new Set(["read", "write", ...EXEMPT]));
+    harness.members.set("tenant-b:user", { isTenantOwner: false, roleIds: [] });
+    expect(await resolve([], "tenant-b")).toEqual(new Set());
+    expect(await resolve([], "tenant-c")).toEqual(new Set());
+    expect(await resolve([])).toEqual(new Set(["read", "write"]));
     expect(harness.getModel).toHaveBeenCalledWith(
       TenantMemberModel,
       "tenant-b",
@@ -168,7 +116,7 @@ describe("plan permissions policy", () => {
   it.each([true, false])(
     "preserves the platform wildcard (tenant owner: %s)",
     async (isTenantOwner) => {
-      setMember(isTenantOwner);
+      harness.members.set("tenant-a:user", { isTenantOwner, roleIds: [] });
       expect(await resolve(["*", "read", "excluded"])).toEqual(
         new Set(["*", "read"]),
       );
@@ -179,12 +127,9 @@ describe("plan permissions policy", () => {
     },
   );
 
-  it("grants a wildcard plan's owner every registered permission, never the wildcard", async () => {
+  it("never grants a tenant wildcard, even if a plan contains one", async () => {
     plans.set("child", plan("child", ["*", "write"], null));
-    harness.registered = [MEMBERS_TABLE_VIEW, ROLES_TABLE];
-    expect(await resolve([])).toEqual(
-      new Set(["write", MEMBERS_TABLE_VIEW, ROLES_TABLE, ...EXEMPT]),
-    );
+    expect(await resolve([])).toEqual(new Set(["write"]));
   });
 
   it("removes every explicit grant for an empty plan without mutating input", async () => {
@@ -192,7 +137,7 @@ describe("plan permissions policy", () => {
     const current = new Set(["excluded"]);
     const registration = harness.register.mock.calls[0][0];
     expect(await registration.resolver("user", "tenant-a", current)).toEqual(
-      new Set(EXEMPT),
+      new Set(),
     );
     expect(current).toEqual(new Set(["excluded"]));
   });
@@ -220,100 +165,5 @@ describe("plan permissions policy", () => {
       order: 100,
       resolver: expect.any(Function),
     });
-  });
-});
-
-describe("plan permissions reach what their pages hold", () => {
-  beforeEach(() => {
-    plans.set(
-      "child",
-      plan("child", [MEMBERS_PAGE, "settings.workspace.billing"], null),
-    );
-    harness.registered = [
-      ...NAVIGATION,
-      MEMBERS_PAGE,
-      "settings.user.members.table",
-      MEMBERS_TABLE_VIEW,
-      MEMBERS_TABLE_ADD,
-      "settings.user.profile",
-      PROFILE_FORM,
-      ROLES_PAGE,
-      ROLES_TABLE,
-      "settings.workspace.billing",
-      BILLING_PLAN_CARD,
-      "settings.workspace.billingextra",
-    ];
-  });
-
-  it("grants an owner the components and actions of every plan page", async () => {
-    setMember(true);
-    const permissions = await resolve([]);
-    for (const id of [
-      MEMBERS_TABLE_VIEW,
-      MEMBERS_TABLE_ADD,
-      BILLING_PLAN_CARD,
-    ]) {
-      expect(permissions.has(id)).toBe(true);
-    }
-  });
-
-  it("keeps an owner away from pages the plan leaves out", async () => {
-    setMember(true);
-    const permissions = await resolve([ROLES_PAGE]);
-    expect(permissions.has(ROLES_PAGE)).toBe(false);
-    expect(permissions.has(ROLES_TABLE)).toBe(false);
-  });
-
-  it("matches descendants by whole id segment, not by prefix", async () => {
-    setMember(true);
-    expect((await resolve([])).has("settings.workspace.billingextra")).toBe(
-      false,
-    );
-  });
-
-  it("keeps a member's component grants under a plan page and drops the rest", async () => {
-    setMember(false);
-    const permissions = await resolve([MEMBERS_TABLE_VIEW, ROLES_TABLE]);
-    expect(permissions.has(MEMBERS_TABLE_VIEW)).toBe(true);
-    expect(permissions.has(ROLES_TABLE)).toBe(false);
-    expect(permissions.has(MEMBERS_TABLE_ADD)).toBe(false);
-  });
-
-  it.each([true, false])(
-    "gives every member their personal pages with their components (tenant owner: %s)",
-    async (isTenantOwner) => {
-      setMember(isTenantOwner);
-      const permissions = await resolve([]);
-      for (const id of ["settings", "settings.user.profile", PROFILE_FORM]) {
-        expect(permissions.has(id)).toBe(true);
-      }
-    },
-  );
-
-  it("grants navigation entries on their own, not what they hold", async () => {
-    setMember(false);
-    const permissions = await resolve(["settings.workspace.secret"]);
-    expect(permissions.has("settings.workspace")).toBe(true);
-    expect(permissions.has("settings.workspace.secret")).toBe(false);
-    expect(permissions.has(BILLING_PLAN_CARD)).toBe(false);
-  });
-
-  it("follows the configured exemptions instead of the defaults", async () => {
-    setRuntimeConfig({
-      stripe: STRIPE_CONFIG,
-      planExemptPermissions: { personalPages: [ROLES_PAGE], navigation: [] },
-    });
-    setMember(false);
-    const permissions = await resolve([]);
-    expect(permissions).toEqual(new Set([ROLES_PAGE, ROLES_TABLE]));
-  });
-
-  it("refuses a malformed exemption list", () => {
-    expect(() =>
-      setRuntimeConfig({
-        stripe: STRIPE_CONFIG,
-        planExemptPermissions: { navigation: [""] },
-      }),
-    ).toThrow("planExemptPermissions.navigation");
   });
 });
