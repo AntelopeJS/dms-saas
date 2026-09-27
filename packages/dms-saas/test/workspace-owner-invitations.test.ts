@@ -31,7 +31,7 @@ import {
 import { setRuntimeConfig } from "../src/config";
 import { PlanModel } from "../src/db";
 import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
-import { workspaceOwnerLabel } from "../src/data-api/platformOwner/workspaces";
+import { workspacesDataAPI } from "../src/data-api/platformOwner/workspaces";
 import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
 import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
 import { SaasWorkspaceInvitationsController } from "../src/routes/platformOwner/workspace-invitations";
@@ -201,16 +201,45 @@ describe("back-office workspace creation for a new owner", () => {
   });
 });
 
-describe("workspace owner column", () => {
-  it("names the invitee while the owner invitation is pending", async () => {
+interface OwnerColumns {
+  owner: unknown;
+  ownerStatus: unknown;
+}
+
+/** The owner and owner status cells the workspaces table shows for a tenant. */
+async function ownerColumnsOf(tenantId: string): Promise<OwnerColumns> {
+  const row = { table: { _id: tenantId } };
+  const read = (key: "owner" | "ownerStatus") =>
+    Object.getOwnPropertyDescriptor(
+      workspacesDataAPI.prototype,
+      key,
+    )!.get!.call(row);
+  return { owner: await read("owner"), ownerStatus: await read("ownerStatus") };
+}
+
+describe("workspace owner columns", () => {
+  it("shows the invitee while the owner invitation is pending", async () => {
     const { email, tenantId } = await createInvitedWorkspace();
 
-    expect(await workspaceOwnerLabel(tenantId)).toBe(
-      `pending invitation · ${email}`,
-    );
+    expect(await ownerColumnsOf(tenantId)).toEqual({
+      owner: email,
+      ownerStatus: "invitation_pending",
+    });
   });
 
-  it("names the owners once one has joined", async () => {
+  it("flags an owner invitation that can no longer be redeemed", async () => {
+    const { email, tenantId, owner } = await createInvitedWorkspace();
+    await GetModel(UserInviteModel, tenantId).update(owner.inviteId, {
+      expiresAt: new Date(Date.now() - DAY_MS),
+    });
+
+    expect(await ownerColumnsOf(tenantId)).toEqual({
+      owner: email,
+      ownerStatus: "invitation_expired",
+    });
+  });
+
+  it("shows the owners once one has joined", async () => {
     const { tenantId } = await createInvitedWorkspace();
     const ownerId = randomUUID();
     await GetModel(UserModel).insert({
@@ -224,7 +253,10 @@ describe("workspace owner column", () => {
       isTenantOwner: true,
     });
 
-    expect(await workspaceOwnerLabel(tenantId)).toBe("joined@example.test");
+    expect(await ownerColumnsOf(tenantId)).toEqual({
+      owner: "joined@example.test",
+      ownerStatus: "joined",
+    });
   });
 
   it("shows no owner when there is neither an owner nor an owner invitation", async () => {
@@ -232,7 +264,10 @@ describe("workspace owner column", () => {
       { name: "Orphan", createdAt: new Date(), updatedAt: new Date() },
     ]);
 
-    expect(await workspaceOwnerLabel(tenantId!)).toBe("—");
+    expect(await ownerColumnsOf(tenantId!)).toEqual({
+      owner: "—",
+      ownerStatus: "none",
+    });
   });
 });
 

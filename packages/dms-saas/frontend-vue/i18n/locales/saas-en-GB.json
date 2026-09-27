@@ -524,7 +524,8 @@
         "company_name": "Company name",
         "customer_type": "Customer type",
         "vat_number": "VAT number",
-        "owner": "Owner"
+        "owner": "Owner",
+        "owner_status": "Owner status"
       },
       "status": {
         "active": "Active",
@@ -554,6 +555,12 @@
         "suspended": "Suspended",
         "cancelled": "Cancelled",
         "pending_payment": "Pending payment"
+      },
+      "owner_status": {
+        "joined": "Joined",
+        "invitation_pending": "Invitation pending",
+        "invitation_expired": "Invitation expired",
+        "none": "No owner"
       },
       "summary": {
         "title": "Workspace summary",

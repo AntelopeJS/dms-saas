@@ -524,7 +524,8 @@
         "company_name": "Raison sociale",
         "customer_type": "Type de client",
         "vat_number": "Numéro de TVA",
-        "owner": "Propriétaire"
+        "owner": "Propriétaire",
+        "owner_status": "Statut du propriétaire"
       },
       "status": {
         "active": "Actif",
@@ -554,6 +555,12 @@
         "suspended": "Suspendu",
         "cancelled": "Annulé",
         "pending_payment": "Paiement en attente"
+      },
+      "owner_status": {
+        "joined": "A rejoint",
+        "invitation_pending": "Invitation en attente",
+        "invitation_expired": "Invitation expirée",
+        "none": "Aucun propriétaire"
       },
       "summary": {
         "title": "Résumé workspace",
