@@ -14,6 +14,7 @@ import {
 } from "@antelopejs/interface-dms/db";
 import { inviteUserToTenant } from "@antelopejs/interface-dms/invites";
 import * as auth from "@antelopejs/interface-dms/auth";
+import * as saasMode from "@antelopejs/interface-dms/utils/saas-mode";
 import {
   UserModel,
   SessionModel,
@@ -87,14 +88,13 @@ const CLOSED_ERROR = { status: 403, body: "saas.errors.registration_closed" };
 let mongodb: MongoMemoryReplSet;
 
 beforeAll(async () => {
-  const modules = require("@antelopejs/interface-core/modules");
+  // DMS answers isSaasMode() from the registrations it holds, so wire its
+  // implementation in and declare SaaS mode the way construct() does.
   ImplementInterface(
-    { ListModules: modules.ListModules },
-    { ListModules: async () => ["@antelopejs/dms-saas"] },
+    saasMode,
+    require(path.join(dmsRoot, "dist/implementations/dms/saas-mode.js")),
   );
-  // saas-mode lives in the interface package, not the DMS runtime: requiring it
-  // from `dmsRoot` would load a second copy of a module that holds state.
-  await require("@antelopejs/interface-dms/utils/saas-mode").detectSaasMode();
+  saasMode.RegisterSaasMode();
   const { applyConfig } = require(path.join(dmsRoot, "dist/config.js"));
   applyConfig({ auth: AUTH_CONFIG });
   const implementation = require(
