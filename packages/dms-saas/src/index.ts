@@ -2,6 +2,7 @@ import path from "node:path";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { AddFrontendModule } from "@antelopejs/interface-dms/page";
+import { RegisterSaasMode } from "@antelopejs/interface-dms/utils/saas-mode";
 import * as billingInterface from "@antelopejs/interface-dms-saas/billing";
 import * as invoiceLineItemsInterface from "@antelopejs/interface-dms-saas/invoice-line-items";
 import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
@@ -40,6 +41,9 @@ let registeredCronTasks: ScheduledTask[] = [];
 
 export async function construct(config: DmsSaasConfig): Promise<void> {
   setRuntimeConfig(config);
+  // DMS stops treating default-tenant ownership as platform ownership while
+  // this registration exists; the core drops it when this module unloads.
+  RegisterSaasMode();
   await resolveDevMode();
   initStripeClient(config.stripe);
   registerSaasHookListeners();
