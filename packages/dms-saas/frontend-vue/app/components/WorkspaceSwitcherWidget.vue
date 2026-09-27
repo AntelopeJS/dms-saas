@@ -5,10 +5,6 @@ const props = defineProps<{
 	collapsed?: boolean
 }>()
 
-interface DmsSaasPublicRuntimeConfig {
-	admissionMode?: 'open' | 'invitation-only'
-}
-
 const toast = useToast()
 const { t } = useI18n()
 const { resolveApiError } = useApiErrorMessage()
@@ -100,6 +96,10 @@ async function selectWorkspace(workspace: MyWorkspace): Promise<void> {
 function openCreateModal(): void {
 	isOpen.value = false
 	isCreateOpen.value = true
+}
+
+function closeCreateModal(): void {
+	isCreateOpen.value = false
 }
 
 async function onWorkspaceCreated(tenantId: string): Promise<void> {
@@ -300,7 +300,10 @@ onMounted(load)
 		:description="$t('saas.workspaces.create.self_serve.description')"
 	>
 		<template #body>
-			<DmsSaasWorkspaceCreateModal :on-success-callback="onWorkspaceCreated" />
+			<DmsSaasWorkspaceCreateModal
+				:on-success-callback="onWorkspaceCreated"
+				:on-cancel-callback="closeCreateModal"
+			/>
 		</template>
 	</UModal>
 </template>

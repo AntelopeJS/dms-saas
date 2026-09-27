@@ -15,10 +15,40 @@ export interface DmsSaasPublicScreensConfig {
 
 export type PublicScreenId = keyof DmsSaasPublicScreensConfig;
 
+/**
+ * Whether public registration asks for a card: `required` always does,
+ * `optional` lets the visitor skip it, `none` never shows the card step and
+ * never calls Stripe. A registration without a card lands on the free plan.
+ */
+export const REGISTRATION_PAYMENT_METHOD_POLICIES = [
+  "required",
+  "optional",
+  "none",
+] as const;
+
+export type RegistrationPaymentMethodPolicy =
+  (typeof REGISTRATION_PAYMENT_METHOD_POLICIES)[number];
+
+/** Policy applied when the deployment configures none. */
+export const DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY: RegistrationPaymentMethodPolicy =
+  "required";
+
+/** Public registration flow settings. */
+export interface DmsSaasRegistrationConfig {
+  /**
+   * Whether registration asks for a card. Defaults to `required`; `optional`
+   * lets the visitor skip the card step, `none` never shows it and never
+   * calls Stripe.
+   */
+  paymentMethod?: RegistrationPaymentMethodPolicy;
+}
+
 export interface DmsSaasConfig {
   stripe: DmsSaasStripeConfig;
   /** Deployment-wide admission policy. Defaults to open; invitations remain available. */
   admissionMode?: "open" | "invitation-only";
+  /** Public registration flow settings. Invitation sign-up ignores them. */
+  registration?: DmsSaasRegistrationConfig;
   /**
    * Server-selected named storage for private support uploads. Keep the name's
    * backend binding stable while any support admission or file remains retained.
