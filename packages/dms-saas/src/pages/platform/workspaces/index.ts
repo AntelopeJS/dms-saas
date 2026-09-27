@@ -16,7 +16,6 @@ import {
   TableView,
 } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
-import type { WatchAction } from "@antelopejs/interface-dms/base/types";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { recomputeTenantBillingState } from "../../../billing-state";
 import { workspacesDataAPI } from "../../../data-api";
@@ -34,43 +33,6 @@ const KPI_WORKSPACES = "/api/saas/dashboard/kpi/workspaces";
 const KPI_ACTIVE = "/api/saas/dashboard/kpi/state-active";
 const KPI_FREE = "/api/saas/dashboard/kpi/state-free";
 const KPI_PAST_DUE = "/api/saas/dashboard/kpi/state-past-due";
-
-// Shared with the create modal (WorkspaceAdminCreateModal.vue), which emits
-// the event, and the frontend plugin registering the refresh function.
-const WORKSPACE_CREATED_EVENT = "DmsSaas.Workspaces.Created";
-const WORKSPACE_CREATED_SOURCE = "saas.workspaces.create";
-const REFRESH_FUNCTION_ID = "DmsSaas.RefreshData";
-
-/**
- * Refetch on every workspace the create modal adds. Declared as a raw watch
- * action because `.watch()` only listens to the component's own events, and
- * the counters have to hear the modal's.
- */
-const WORKSPACE_CREATED_WATCH: WatchAction = {
-  component: WORKSPACE_CREATED_SOURCE,
-  event: WORKSPACE_CREATED_EVENT,
-  functionId: REFRESH_FUNCTION_ID,
-};
-
-function workspaceKpiCard(title: string, icon: string, fetchUrl: string) {
-  return KpiCard({
-    title,
-    icon,
-    fetchUrl,
-    variant: "stat",
-    valueFormat: "compact",
-    showDelta: false,
-  }).transformOptions(
-    (options) =>
-      options && {
-        ...options,
-        watchActions: [
-          ...(options.watchActions ?? []),
-          WORKSPACE_CREATED_WATCH,
-        ],
-      },
-  );
-}
 
 const ACTIVE_STATUS = "active";
 
@@ -234,31 +196,47 @@ export class SaasWorkspacesListController extends PageController(
     GridRow()
       .child(
         "workspaces",
-        workspaceKpiCard(
-          "$saas.workspaces.kpi.workspaces",
-          "i-ph-buildings",
-          KPI_WORKSPACES,
-        ),
+        KpiCard({
+          title: "$saas.workspaces.kpi.workspaces",
+          icon: "i-ph-buildings",
+          fetchUrl: KPI_WORKSPACES,
+          variant: "stat",
+          valueFormat: "compact",
+          showDelta: false,
+        }),
       )
       .child(
         "active",
-        workspaceKpiCard(
-          "$saas.workspaces.kpi.active",
-          "i-ph-check-circle",
-          KPI_ACTIVE,
-        ),
+        KpiCard({
+          title: "$saas.workspaces.kpi.active",
+          icon: "i-ph-check-circle",
+          fetchUrl: KPI_ACTIVE,
+          variant: "stat",
+          valueFormat: "compact",
+          showDelta: false,
+        }),
       )
       .child(
         "free",
-        workspaceKpiCard("$saas.workspaces.kpi.free", "i-ph-gift", KPI_FREE),
+        KpiCard({
+          title: "$saas.workspaces.kpi.free",
+          icon: "i-ph-gift",
+          fetchUrl: KPI_FREE,
+          variant: "stat",
+          valueFormat: "compact",
+          showDelta: false,
+        }),
       )
       .child(
         "pastDue",
-        workspaceKpiCard(
-          "$saas.workspaces.kpi.past_due",
-          "i-ph-warning",
-          KPI_PAST_DUE,
-        ),
+        KpiCard({
+          title: "$saas.workspaces.kpi.past_due",
+          icon: "i-ph-warning",
+          fetchUrl: KPI_PAST_DUE,
+          variant: "stat",
+          valueFormat: "compact",
+          showDelta: false,
+        }),
       ),
   );
 

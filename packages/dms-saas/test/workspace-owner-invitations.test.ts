@@ -462,21 +462,3 @@ describe("resend invitation from the back office", () => {
     });
   });
 });
-
-describe("back-office workspace counters", () => {
-  it("refetch every counter when the create modal adds a workspace", async () => {
-    const grid = await SaasWorkspacesListController.kpis.serialize();
-    const cards =
-      grid.children?.flatMap((row) => row.component.children ?? []) ?? [];
-    expect(cards).toHaveLength(4);
-    for (const card of cards) {
-      expect(
-        (card.component.options as { watchActions?: unknown[] }).watchActions,
-      ).toContainEqual({
-        component: "saas.workspaces.create",
-        event: "DmsSaas.Workspaces.Created",
-        functionId: "DmsSaas.RefreshData",
-      });
-    }
-  });
-});
