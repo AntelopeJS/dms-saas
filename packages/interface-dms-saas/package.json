@@ -1,6 +1,6 @@
 {
   "name": "@antelopejs/interface-dms-saas",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Public interfaces for the DMS SaaS module",
   "license": "Apache-2.0",
   "repository": {
@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "@antelopejs/interface-data-api": ">=0.1.9 <1.0.0",
-    "@antelopejs/interface-dms": ">=0.2.0 <1.0.0"
+    "@antelopejs/interface-dms": ">=0.2.5 <1.0.0"
   },
   "devDependencies": {
     "@antelopejs/interface-core": ">=0.1.1 <1.0.0",

@@ -18,6 +18,9 @@ const FREE_STATUS = "free";
 const PAST_DUE_STATUS = "past_due";
 const OPEN_STATUS = "open";
 const PAID_STATUS = "paid";
+const COUNTED_AS_ACTIVE = [ACTIVE_STATUS, TRIALING_STATUS];
+const SUBSCRIPTIONS_SERIES_NAME = "subscriptions";
+const REVENUE_SERIES_NAME = "revenue";
 const PRICE_DIVIDER = 100;
 const REVENUE_BUCKETS = 12;
 const DAYS_PER_MONTH = 30;
@@ -41,19 +44,22 @@ interface TopListItem {
   value: number;
 }
 
-interface ChartPoint {
+interface ChartSeriesPoint {
   x: string;
   y: number;
+  label?: string;
 }
 
 interface ChartSeries {
   name: string;
-  data: ChartPoint[];
+  data: ChartSeriesPoint[];
 }
 
-interface DonutSlice {
-  label: string;
+/** What a `ChartCard` reads from its `fetchUrl`: the headline value and the
+ * series its nested chart draws — a nested chart does not fetch on its own. */
+interface ChartCardPayload {
   value: number;
+  series: ChartSeries[];
 }
 
 interface ActivityEntry {
@@ -63,6 +69,10 @@ interface ActivityEntry {
   title: string;
   subtitle: string;
   timestamp: string;
+}
+
+function sumValues(points: ChartSeriesPoint[]): number {
+  return points.reduce((total, point) => total + point.y, 0);
 }
 
 function formatStatusLabel(status: string): string {
@@ -123,12 +133,28 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
     return { value: Math.round(total * PRICE_DIVIDER) / PRICE_DIVIDER };
   }
 
+  /**
+   * Subscription count per status, across workspaces. The active KPI and the
+   * by-status chart both read it, so the two cards on the page cannot
+   * disagree.
+   */
+  private async countSubscriptionsByStatus(): Promise<Map<string, number>> {
+    const rows = await this.tenantSubscriptionModel.table.pluck("status").run();
+    const counts = new Map<string, number>();
+    for (const { status } of rows) {
+      if (!status) continue;
+      counts.set(status, (counts.get(status) ?? 0) + 1);
+    }
+    return counts;
+  }
+
   @Get("/kpi/active-subscriptions")
   async kpiActive(@AuthOwnerOnly() _user: User) {
-    const value = await this.tenantSubscriptionModel.table
-      .getAll([ACTIVE_STATUS, TRIALING_STATUS], "status")
-      .count()
-      .run();
+    const counts = await this.countSubscriptionsByStatus();
+    const value = COUNTED_AS_ACTIVE.reduce(
+      (total, status) => total + (counts.get(status) ?? 0),
+      0,
+    );
     return { value };
   }
 
@@ -193,7 +219,7 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   }
 
   @Get("/chart/revenue")
-  async chartRevenue(@AuthOwnerOnly() _user: User): Promise<ChartSeries[]> {
+  async chartRevenue(@AuthOwnerOnly() _user: User): Promise<ChartCardPayload> {
     const now = Date.now();
     const buckets = new Map<string, number>();
     for (let bucket = REVENUE_BUCKETS - 1; bucket >= 0; bucket -= 1) {
@@ -223,24 +249,25 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
       }
     }
     const data = Array.from(buckets.entries()).map(([x, y]) => ({ x, y }));
-    return [{ name: "revenue", data }];
+    return {
+      value: sumValues(data),
+      series: [{ name: REVENUE_SERIES_NAME, data }],
+    };
   }
 
   @Get("/chart/subscriptions-by-status")
   async chartSubscriptionsByStatus(
     @AuthOwnerOnly() _user: User,
-  ): Promise<DonutSlice[]> {
-    const rows = await this.tenantSubscriptionModel.table.pluck("status").run();
-    const counts = new Map<string, number>();
-    for (const row of rows) {
-      const status = row.status;
-      if (!status) continue;
-      counts.set(status, (counts.get(status) ?? 0) + 1);
-    }
-    return Array.from(counts.entries()).map(([status, value]) => ({
-      label: formatStatusLabel(status),
-      value,
-    }));
+  ): Promise<ChartCardPayload> {
+    const counts = await this.countSubscriptionsByStatus();
+    const data = Array.from(counts.entries()).map(([status, count]) => {
+      const label = formatStatusLabel(status);
+      return { x: label, y: count, label };
+    });
+    return {
+      value: sumValues(data),
+      series: [{ name: SUBSCRIPTIONS_SERIES_NAME, data }],
+    };
   }
 
   @Get("/recent-activity")

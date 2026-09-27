@@ -11,6 +11,7 @@ import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import {
   creditNotesDataAPI,
+  invitationsDataAPI,
   invoicesDataAPI,
   membersDataAPI,
 } from "../../../data-api";
@@ -27,6 +28,48 @@ const NO_ROW_ACTIONS = {
 } as const;
 
 const ROUTE_FILTER_TENANT = { id: { field: "_instance" } };
+
+const INVITATION_ACTIONS_URL =
+  "/api/saas/workspaces/{_instance}/invitations/{_id}";
+
+const invitationLink = CustomComponent("DmsSaasWorkspaceInvitationLink");
+
+const invitationTable = TableView(invitationsDataAPI, {
+  caption: "$saas.workspaces.invitations.caption",
+  rowActions: {
+    ...NO_ROW_ACTIONS,
+    custom: [
+      {
+        label: "$saas.workspaces.invitations.action.resend",
+        icon: "i-ph-arrow-clockwise",
+        target: {
+          type: "api",
+          url: `${INVITATION_ACTIONS_URL}/resend`,
+          method: "POST",
+          successMessage: "$saas.workspaces.invitations.action.resend_success",
+          confirm: {
+            title: "$saas.workspaces.invitations.action.resend_confirm_title",
+            description:
+              "$saas.workspaces.invitations.action.resend_confirm_description",
+            confirmColor: "primary",
+          },
+        },
+      },
+      {
+        label: "$saas.workspaces.invitations.action.copy_link",
+        icon: "i-ph-link",
+        target: {
+          type: "modal",
+          size: "lg",
+          component: invitationLink,
+          title: "$saas.workspaces.invitations.link.title",
+          description: "$saas.workspaces.invitations.link.description",
+        },
+      },
+    ],
+  },
+  routeParamFilters: ROUTE_FILTER_TENANT,
+});
 
 const detailHeader = CustomComponent("DmsSaasWorkspaceDetailHeader").meta({
   name: "$saas.workspaces.detail",
@@ -103,12 +146,17 @@ const tabs = Tab({
     { slot: "creditNotes" },
   )
   .child(
-    "memberTable",
-    TableView(membersDataAPI, {
-      caption: "$saas.workspaces.tabs.members",
-      rowActions: NO_ROW_ACTIONS,
-      routeParamFilters: ROUTE_FILTER_TENANT,
-    }),
+    "members",
+    VStack({ spacing: "1.5rem", alignment: "stretch" })
+      .child(
+        "memberTable",
+        TableView(membersDataAPI, {
+          caption: "$saas.workspaces.tabs.members",
+          rowActions: NO_ROW_ACTIONS,
+          routeParamFilters: ROUTE_FILTER_TENANT,
+        }),
+      )
+      .child("invitationTable", invitationTable),
     { slot: "members" },
   );
 

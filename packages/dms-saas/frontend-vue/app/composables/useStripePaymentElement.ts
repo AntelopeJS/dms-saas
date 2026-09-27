@@ -15,7 +15,9 @@ interface StripePaymentElementHandle {
   confirmAndGetPaymentMethod: () => Promise<ConfirmResult>;
 }
 
-const ALLOWED_PAYMENT_METHODS = ["card"];
+// Payment method types are fixed server-side on the SetupIntent: Stripe
+// rejects `paymentMethodTypes` next to a `clientSecret`, since it only applies
+// to an Elements instance created in deferred-intent `mode`.
 const ALLOWED_CARD_BRANDS = ["visa", "mastercard"];
 
 export function useStripePaymentElement(
@@ -32,10 +34,8 @@ export function useStripePaymentElement(
     }
     elementsInstance = stripeInstance.elements({
       clientSecret: options.clientSecret,
-      paymentMethodTypes: ALLOWED_PAYMENT_METHODS,
     });
     const paymentElement = elementsInstance.create("payment", {
-      paymentMethodTypes: ALLOWED_PAYMENT_METHODS,
       wallets: { applePay: "never", googlePay: "never" },
       fields: {
         billingDetails: { address: "auto", name: "auto", email: "never" },

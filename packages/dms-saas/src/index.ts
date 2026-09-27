@@ -2,6 +2,7 @@ import path from "node:path";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { AddFrontendModule } from "@antelopejs/interface-dms/page";
+import { RegisterSaasMode } from "@antelopejs/interface-dms/utils/saas-mode";
 import * as billingInterface from "@antelopejs/interface-dms-saas/billing";
 import * as invoiceLineItemsInterface from "@antelopejs/interface-dms-saas/invoice-line-items";
 import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
@@ -15,7 +16,12 @@ import {
   registerAutomationNodes,
   unregisterAutomationNodes,
 } from "./automation";
-import { resolveDevMode, setRuntimeConfig } from "./config";
+import { registerPastDueBanner } from "./billing-state";
+import {
+  getRegistrationPaymentMethodPolicy,
+  resolveDevMode,
+  setRuntimeConfig,
+} from "./config";
 import { registerSaasCrons } from "./crons";
 import { registerSaasHookListeners } from "./hooks";
 import * as billingImplementation from "./implementations/dms-saas/billing";
@@ -36,12 +42,16 @@ let registeredCronTasks: ScheduledTask[] = [];
 
 export async function construct(config: DmsSaasConfig): Promise<void> {
   setRuntimeConfig(config);
+  // DMS stops treating default-tenant ownership as platform ownership while
+  // this registration exists; the core drops it when this module unloads.
+  RegisterSaasMode();
   await resolveDevMode();
   initStripeClient(config.stripe);
   registerSaasHookListeners();
   registerPlanPermissionsResolver();
   registerSubscriptionAccessGate();
   registerSeatHooks();
+  registerPastDueBanner();
   ImplementInterface(billingInterface, billingImplementation);
   ImplementInterface(invoiceLineItemsInterface, invoiceLineItemsImplementation);
   ImplementInterface(pagesInterface, pagesImplementation);
@@ -66,6 +76,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
       dmsSaas: {
         stripePublishableKey: config.stripe.publishableKey,
         admissionMode: config.admissionMode ?? "open",
+        registrationPaymentMethod: getRegistrationPaymentMethodPolicy(),
       },
     },
   });

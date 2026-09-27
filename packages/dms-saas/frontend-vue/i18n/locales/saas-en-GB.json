@@ -43,7 +43,8 @@
         "no_stripe_price": "Plan has no Stripe price",
         "seat_limit_reached": "The plan's member limit has been reached",
         "no_pending_change": "No scheduled plan change to cancel",
-        "unpaid_invoice_blocks_downgrade": "An invoice is unpaid. Settle it before changing to a cheaper plan."
+        "unpaid_invoice_blocks_downgrade": "An invoice is unpaid. Settle it before changing to a cheaper plan.",
+        "no_free_plan": "No free plan is available for sign-up right now."
       },
       "workspace": {
         "not_found": "Workspace not found",
@@ -96,7 +97,8 @@
       "billing": {
         "country_required": "Billing country is required",
         "info_not_found": "Billing information not found",
-        "invalid_return_url": "Invalid return URL"
+        "invalid_return_url": "Invalid return URL",
+        "identity_incomplete": "Some required billing fields are missing or invalid."
       },
       "migration": {
         "already_pending": "A migration is already pending for this plan"
@@ -164,7 +166,14 @@
       "registration": {
         "extras_invalid": "The additional registration fields are not in a supported format",
         "extras_too_large": "The additional registration fields are too large",
-        "extras_too_complex": "The additional registration fields have too many entries"
+        "extras_too_complex": "The additional registration fields have too many entries",
+        "payment_method_required": "A payment method is required to sign up.",
+        "payment_method_disabled": "This deployment does not take a card at sign-up.",
+        "password_policy": "The password must be at least 8 characters long, with an uppercase letter, a number and one of {'@'}$!%*?&, and no other special character."
+      },
+      "invitations": {
+        "not_found": "This invitation no longer exists.",
+        "email_not_sent": "The invitation was renewed but the email could not be sent. Copy the invitation link and send it yourself."
       }
     },
     "dashboard": {
@@ -194,14 +203,12 @@
     },
     "register": {
       "title": "Sign up",
-      "page_description": "Create an account, pick a plan and provision your first workspace.",
-      "submit": "Sign up and pay",
-      "choose_plan": "Choose a plan",
+      "page_description": "Create an account and open your first workspace on the free plan.",
+      "submit": "Create my account",
       "field": {
         "email": "Email",
         "password": "Password",
         "full_name": "Full name",
-        "workspace_name": "Workspace name",
         "company_name": "Company name",
         "vat_number": "VAT number",
         "country": "Country",
@@ -217,31 +224,25 @@
         "business": "Business"
       },
       "error": {
-        "no_plan": "Please select a plan",
         "no_payment": "Payment method required",
-        "no_country": "Please select your billing country",
         "legal_required": "You must accept the terms and conditions and privacy policy",
         "failed": "Registration failed",
         "load": "Could not load the registration options"
       },
       "legal_acceptance": "I accept the {terms_and_conditions} and the {privacy_policy}",
-      "price": "{price}/{interval}",
-      "interval": {
-        "month": "month",
-        "year": "year"
-      }
+      "hint": {
+        "card": "Saved securely via Stripe. You are not charged on the free plan."
+      },
+      "skip_payment_method": "Add a card later",
+      "default_workspace_name": "{name}'s workspace"
     },
     "no_workspace": {
       "title": "Set up your first workspace",
-      "subtitle": "You're signed in, but you don't belong to any workspace yet. Pick a plan and create one to get started.",
+      "subtitle": "You're signed in, but you don't belong to any workspace yet. Create one on the free plan to get started — you can rename it and upgrade later.",
       "logout": "Sign out",
-      "submit": "Create workspace and pay",
+      "submit": "Create workspace",
       "submitting": "Creating your workspace…",
       "section": {
-        "details": "Workspace details",
-        "details_hint": "This is the workspace name your team will see.",
-        "plan": "Choose a plan",
-        "plan_hint": "You can switch later from the billing settings.",
         "payment": "Payment method",
         "payment_hint": "Saved securely via Stripe."
       },
@@ -251,7 +252,7 @@
       }
     },
     "oauth_registration": {
-      "entry_note": "Signing up with a provider still asks for a plan and a card on the next step.",
+      "entry_note": "Signing up with a provider still asks you to accept the terms on the next step.",
       "identity": {
         "provider": "Signed in with {provider} as {email}",
         "password": "Signed in as {email}",
@@ -445,7 +446,9 @@
             "name": "Name is required.",
             "plan": "Plan is required.",
             "owner_email": "Owner email is required.",
-            "free_until_past": "The expiration date must be in the future."
+            "free_until_past": "The expiration date must be in the future.",
+            "load": "Could not load the plans.",
+            "failed": "Could not create the workspace."
           },
           "field": {
             "name": "Workspace name",
@@ -454,8 +457,6 @@
             "owner_email": "Owner email",
             "owner_email_description": "If the email matches an existing user, they are added as owner. Otherwise an invite is sent.",
             "name_description": "Internal workspace name (can be renamed later).",
-            "free_workspace": "Free workspace",
-            "free_workspace_description": "No Stripe billing. Untick to open a Stripe Checkout session the owner must complete.",
             "free_until": "Free until",
             "free_until_description": "Optional. Date when the comp expires. Leave empty for indefinite. After that date the workspace is flagged past_due and access is blocked until a paid plan is picked."
           },
@@ -463,6 +464,11 @@
             "name": "Acme Corp",
             "plan": "Select a plan",
             "owner_email": "owner{'@'}example.com"
+          },
+          "submit": "Create workspace",
+          "email_failed": {
+            "title": "Workspace created, but the invitation email could not be sent",
+            "description": "The owner has not been notified. Copy the invitation link and send it to them yourself."
           }
         }
       },
@@ -517,7 +523,8 @@
         "company_name": "Company name",
         "customer_type": "Customer type",
         "vat_number": "VAT number",
-        "owner": "Owner"
+        "owner": "Owner",
+        "owner_status": "Owner status"
       },
       "status": {
         "active": "Active",
@@ -548,10 +555,18 @@
         "cancelled": "Cancelled",
         "pending_payment": "Pending payment"
       },
+      "owner_status": {
+        "joined": "Joined",
+        "invitation_pending": "Invitation pending",
+        "invitation_expired": "Invitation expired",
+        "none": "No owner"
+      },
       "summary": {
         "title": "Workspace summary",
-        "members": "{count} member(s)",
-        "per_month": "/mo"
+        "members": "{count} member | {count} members",
+        "platform_support": "{count} platform support | {count} platform support",
+        "per_month": "/mo",
+        "pending_invitations": "{count} pending invitation | {count} pending invitations"
       },
       "tabs": {
         "invoices": "Invoices",
@@ -588,7 +603,39 @@
             "load": "Could not load the creation options.",
             "failed": "Could not create the workspace.",
             "card": "Could not initialise card payment."
-          }
+          },
+          "no_plans": "No plan is available right now. Please contact support to create a workspace."
+        }
+      },
+      "invitations": {
+        "caption": "Pending invitations",
+        "column": {
+          "status": "Status",
+          "sent_at": "Sent",
+          "expires_at": "Expires"
+        },
+        "status": {
+          "pending": "Pending",
+          "expired": "Expired"
+        },
+        "action": {
+          "resend": "Resend",
+          "resend_success": "Invitation sent again.",
+          "resend_confirm_title": "Resend this invitation?",
+          "resend_confirm_description": "A new link valid for 7 days is emailed to the invitee. The previous link stops working.",
+          "copy_link": "Copy invitation link"
+        },
+        "link": {
+          "title": "Invitation link",
+          "description": "Send this link to the invitee so they can create their account and join the workspace.",
+          "label": "Signup link",
+          "expires": "Valid until {date}.",
+          "copy": "Copy",
+          "copied": "Invitation link copied.",
+          "copy_failed": "Could not copy the link. Copy it manually:",
+          "error": "Could not retrieve the invitation link.",
+          "warning": "Anyone with this link can join the workspace as the invitee. Share it only with them.",
+          "close": "Close"
         }
       }
     },
@@ -662,7 +709,9 @@
         "subtotal": "Subtotal",
         "tax": "Tax",
         "total": "Total",
-        "lines": "Line items"
+        "lines": "Line items",
+        "total_excl_tax": "Total excl. tax",
+        "total_incl_tax": "Total incl. tax"
       },
       "actions": {
         "download_pdf": "Download PDF",
@@ -911,7 +960,12 @@
         "limit_reached_owner": "Your plan's seat limit is reached. Upgrade to add more members.",
         "limit_reached_member": "Your plan's seat limit is reached. Ask a workspace owner to upgrade the plan.",
         "upgrade": "Upgrade",
-        "load_failed": "Seat usage could not be loaded"
+        "load_failed": "Seat usage could not be loaded",
+        "platform_support": {
+          "title": "Platform support",
+          "badge": "Platform support",
+          "description": "These platform team members have access to this workspace to support you. They are listed in the members table without a role and do not use a seat."
+        }
       },
       "free_access": {
         "banner_title": "Complimentary access",
@@ -952,7 +1006,15 @@
           "suspend_warning": "Without settlement the workspace is suspended on {date} — data and volumes are preserved.",
           "suspended_summary": "Invoice {invoice} of {amount} is still unpaid. Settling it restores access immediately.",
           "settle": "Settle on Stripe",
-          "load_failed": "Could not check the billing status of this workspace."
+          "load_failed": "Could not check the billing status of this workspace.",
+          "banner": {
+            "generic": "Payment failed — this workspace has an unpaid invoice. The workspace owner must settle it to avoid suspension.",
+            "generic_owner": "Payment failed — this workspace has an unpaid invoice. Settle it from the billing page to avoid suspension.",
+            "open_billing": "Open billing",
+            "summary": "Payment failed — invoice {invoice} of {amount} is unpaid.",
+            "with_deadline": "Payment failed — invoice {invoice} of {amount} is unpaid. Settle it before {date} to avoid suspension.",
+            "settle": "Settle"
+          }
         },
         "payment_method": {
           "title": "Payment method",
@@ -962,8 +1024,15 @@
           "declined": "declined",
           "default": "default",
           "expires": "exp. {date}",
-          "none": "No card on file.",
-          "portal_hint": "Card changes, receipts and history all happen in the Stripe portal; the card is never stored on our side."
+          "none": "No card yet — you'll be asked for one when you move to a paid plan.",
+          "none_with_portal": "No card on file — add one from the Stripe portal below.",
+          "portal_hint": "Card changes, receipts and history all happen in the Stripe portal; the card is never stored on our side.",
+          "verified": "verified",
+          "never_charged": "never charged",
+          "add": "Upgrade to a paid plan",
+          "owner_only": "The payment method is managed by the workspace owner.",
+          "update_note": "The last charge on this card was declined: update it in the Stripe portal, then settle the unpaid invoice.",
+          "free_note": "Verified — never charged while the workspace stays on a free plan."
         },
         "billing_email": {
           "label": "Billing e-mail",
@@ -973,16 +1042,61 @@
           "verified": "verified (VIES)",
           "pending": "verification in progress",
           "unverified": "not verified"
+        },
+        "identity": {
+          "to_complete": "to complete",
+          "incomplete_toast": "Fill in the highlighted fields.",
+          "optional": "optional",
+          "country_placeholder": "Select a country",
+          "customer_type_hint": {
+            "business": "Invoiced to a company, with its VAT number.",
+            "individual": "Invoiced in your own name."
+          },
+          "errors": {
+            "customerType": "Choose a customer type.",
+            "companyName": "The company name is required.",
+            "country": "Choose the billing country.",
+            "line1": "The address is required.",
+            "postalCode": "The postal code is required.",
+            "city": "The city is required.",
+            "billingEmail": "Enter a valid e-mail address."
+          }
         }
       },
       "plan": {
         "current": "Current plan",
-        "none": "No plan",
         "change": "Change plan",
         "go_paid": "Upgrade to a paid plan",
         "blocked_hint": "Plan changes resume once the unpaid invoice is settled.",
+        "blocked_hint_inactive": "Plan changes resume once the workspace is active again.",
         "next_renewal": "Next renewal on {date}.",
         "unlimited": "unlimited",
+        "units": {
+          "byte": {
+            "quantity": "{value} byte | {value} bytes",
+            "price": "{price} / byte"
+          },
+          "kilobyte": {
+            "quantity": "{value} KB",
+            "price": "{price} / KB"
+          },
+          "megabyte": {
+            "quantity": "{value} MB",
+            "price": "{price} / MB"
+          },
+          "gigabyte": {
+            "quantity": "{value} GB",
+            "price": "{price} / GB"
+          },
+          "terabyte": {
+            "quantity": "{value} TB",
+            "price": "{price} / TB"
+          },
+          "minute": {
+            "quantity": "{value} minute | {value} minutes",
+            "price": "{price} / minute"
+          }
+        },
         "pending_downgrade": "Downgrade to {plan} at next cycle",
         "pending_downgrade_on": "Downgrade to {plan} on {date}",
         "cancel_downgrade": "Cancel downgrade",
@@ -996,14 +1110,25 @@
         },
         "comparison": {
           "title": "Change plan",
-          "subtitle": "Currently on {plan}. Upgrades apply immediately and are prorated; downgrades take effect at the next cycle.",
+          "subtitle": "Workspace {workspace} — currently on {plan}. Upgrades apply immediately and are prorated; downgrades take effect at the next cycle.",
           "subtitle_no_plan": "Upgrades apply immediately and are prorated; downgrades take effect at the next cycle.",
           "current": "current",
           "scheduled": "scheduled",
           "choose": "Choose",
           "show_detail": "See full detail",
           "hide_detail": "Hide detail",
-          "footer": "The plan price is prepaid usage credit at public rates, deducted from your consumption by the minute. It does not carry over. Beyond it the same rate applies — never a cliff."
+          "close": "Close"
+        },
+        "upgrade": {
+          "title": "Upgrade to {plan}",
+          "description": "Confirm who is billed, then enter your card on Stripe's secure payment page.",
+          "subscription": "{plan} subscription",
+          "due_today": "Due today",
+          "excl_tax": "{amount} excl. tax",
+          "tax_note": "Tax is computed from the billing country below.",
+          "card_title": "Payment card",
+          "card_note": "The next step opens Stripe's secure payment page, where the card is entered and charged. It is never stored on our side.",
+          "confirm": "Continue to payment"
         }
       },
       "data_export": {

@@ -37,6 +37,7 @@ import {
 } from "../../db";
 import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
+import { getSeatUsage } from "../../plans";
 import { buildWorkspaceProjection } from "../../utils";
 import type {
   CardDetails,
@@ -48,6 +49,7 @@ import type {
 import {
   assertBillingCountry,
   assertFreePlanAllowedForCard,
+  countPendingInvitations,
   ensurePlanIsAvailableForCustomer,
   provisionWorkspace,
   requestWorkspaceDeletion,
@@ -327,7 +329,6 @@ export class SaasWorkspacesController extends Controller(
           ...input.billingProfile,
           email: user.email,
           fallbackName: user.name,
-          paymentMethodId: input.paymentMethodId,
         },
         card: input.card,
         handles,
@@ -339,9 +340,14 @@ export class SaasWorkspacesController extends Controller(
     }
   }
 
+  /**
+   * Read by the billing page, the recovery surface of a blocked workspace:
+   * the name and retention period are the workspace's own identity, nothing
+   * the access gate protects. Renaming and deleting stay gated.
+   */
   @Get("/current")
   async getCurrent(
-    @AuthTenantOwner() _user: User,
+    @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Context() ctx: RequestContext,
   ): Promise<CurrentWorkspace> {
     const tenantId = getRequestTenantId(ctx);
@@ -382,7 +388,11 @@ export class SaasWorkspacesController extends Controller(
 
     const { subscription, billingInfo, members, invoices, creditNotes, plan } =
       await loadWorkspaceRelations(id, this.planModel);
-    const memberRows = await buildMemberRows(members, this.userModel);
+    const [memberRows, pendingInvitationsCount, seats] = await Promise.all([
+      buildMemberRows(members, this.userModel),
+      countPendingInvitations(id),
+      getSeatUsage(id),
+    ]);
 
     const projection = buildWorkspaceProjection({
       tenant,
@@ -403,7 +413,13 @@ export class SaasWorkspacesController extends Controller(
       planName: projection.planName,
       currency: projection.currency,
       mrr: projection.mrr,
-      membersCount: projection.membersCount,
+      // Counted as the customer's seats count them: platform support is
+      // announced apart, so the two numbers match the members page.
+      membersCount: seats.members,
+      platformSupportCount: seats.platformSupport.length,
+      // Shown beside the member count: a workspace created for an owner who
+      // has not signed up yet has no member, only this invitation.
+      pendingInvitationsCount,
       subscription: subscription ?? null,
       billingInfo: billingInfo ?? null,
       members: memberRows,

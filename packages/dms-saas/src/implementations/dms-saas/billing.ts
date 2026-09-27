@@ -8,9 +8,12 @@ import type {
   TenantCustomerBalance,
   TenantCustomerBalanceAbsenceReason,
   TenantCustomerBalanceScope,
+  UpcomingInvoicePreview,
+  UpcomingInvoicePreviewScope,
 } from "@antelopejs/interface-dms-saas/billing";
 import { TenantSubscriptionModel } from "../../db";
 import { retrieveStripeCustomerBalance } from "../../stripe/customer-balance";
+import { getUpcomingInvoicePreview } from "../../upcoming-invoice/preview";
 import { isComplimentarySubscription } from "@antelopejs/interface-dms-saas/billing";
 
 const HTTP_FORBIDDEN = 403;
@@ -65,4 +68,12 @@ export async function GetTenantCustomerBalance(
     );
     throw new HTTPResult(HTTP_BAD_GATEWAY, PROVIDER_UNAVAILABLE);
   }
+}
+
+/** Implements the current-tenant upcoming invoice preview interface. */
+export async function GetUpcomingInvoicePreview(
+  scope: UpcomingInvoicePreviewScope,
+): Promise<UpcomingInvoicePreview> {
+  await assertAuthorizedTenant(scope);
+  return getUpcomingInvoicePreview(scope.tenantId);
 }

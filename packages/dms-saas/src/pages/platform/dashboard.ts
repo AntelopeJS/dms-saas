@@ -101,15 +101,14 @@ export class SaasDashboardController extends PageController(
         )
         .child(
           "subscriptions",
+          // The card fetches; the nested donut draws the card's first series.
           ChartCard({
             title: "$saas.dashboard.subscriptions_title",
             description: "$saas.dashboard.subscriptions_description",
             icon: "i-ph-chart-donut",
+            fetchUrl: DASHBOARD_CHART_SUBSCRIPTIONS,
             showDelta: false,
-            chart: ChartDonut({
-              fetchUrl: DASHBOARD_CHART_SUBSCRIPTIONS,
-              showLegend: true,
-            }),
+            chart: ChartDonut({ showLegend: true }),
           }),
         ),
     )

@@ -14,7 +14,7 @@ on the runtime, and imports the extension points from it:
 | Subpath | Surface |
 | --- | --- |
 | `@antelopejs/interface-dms-saas` | every extension point except `db`: billing, data API, pages, plans, provisioning and registration flat, plus the `invoiceLineItems` and `workspaceLifecycle` namespaces |
-| `@antelopejs/interface-dms-saas/billing` | customer balance and complimentary subscription state |
+| `@antelopejs/interface-dms-saas/billing` | customer balance, upcoming invoice preview and complimentary subscription state |
 | `@antelopejs/interface-dms-saas/data-api` | hidden-value data API filters |
 | `@antelopejs/interface-dms-saas/db` | canonical SaaS tables and data models |
 | `@antelopejs/interface-dms-saas/hidden-filter` | the `HiddenStringFilter` decorator on its own |

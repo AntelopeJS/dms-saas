@@ -3,10 +3,6 @@ const REGISTER_LINK_LABEL = "saas.auth.login.create_account";
 const REGISTER_LINK_ROUTE = "/register";
 const REGISTER_LINK_ORDER = 100;
 
-interface DmsSaasPublicRuntimeConfig {
-  admissionMode?: "open" | "invitation-only";
-}
-
 export default defineDmsPlugin(() => {
   const config = useDmsRuntimeConfig();
   const dmsSaas = config.public.dmsSaas as

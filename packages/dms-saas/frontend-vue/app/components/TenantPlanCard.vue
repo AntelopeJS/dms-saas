@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 
 const FREE_PLAN_PRICE = 0;
+const SUMMARY_SEPARATOR = " · ";
 const FULL_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   year: "numeric",
   month: "long",
@@ -19,12 +20,17 @@ const {
 const { data: billingStatus, load: loadBillingStatus } = useBillingStatus();
 const { formatMajorUnits } = useMoneyFormat();
 const { t, locale } = useI18n();
+const { formatFeatureValue } = usePlanFeatureFormat();
+const { featureLabel } = usePlanFeatureLabel();
+const { workspace, load: loadWorkspace } = useCurrentWorkspace();
+const { isOpen: isComparisonOpen } = usePlanComparison();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
 const data = ref<TenantPlanResponse | null>(null);
 const isLoading = ref(true);
 const isCancelling = ref(false);
-const isComparisonOpen = ref(false);
+const isUpgradeOpen = ref(false);
+const upgradeTarget = ref<TenantPlanView | null>(null);
 
 const current = computed(() => data.value?.current ?? null);
 const pendingPlan = computed(() => data.value?.pendingPlan ?? null);
@@ -36,6 +42,15 @@ const isAccessBlocked = computed(
   () =>
     isBlockingSubscriptionStatus(data.value?.status) &&
     !data.value?.canRecoverComplimentary,
+);
+
+/** Settling an invoice only lifts a block when there is one to settle: an
+ * operator suspension, or a member who cannot see the invoice, gets the copy
+ * that promises nothing about payment. */
+const blockedHintKey = computed(() =>
+  billingStatus.value?.unpaidInvoice
+    ? "saas.workspace.plan.blocked_hint"
+    : "saas.workspace.plan.blocked_hint_inactive",
 );
 
 /** Plan mutations are owner-only server-side; a member gets the read-only
@@ -67,6 +82,34 @@ const changeAction = computed(() =>
     ? { color: "neutral" as const, variant: "subtle" as const, key: "change" }
     : { color: "primary" as const, variant: "solid" as const, key: "go_paid" },
 );
+
+/**
+ * One line on what the plan includes: the catalogue's own description when it
+ * has one, else the plan's key (non-detail) limits.
+ */
+const summary = computed(() => {
+  if (current.value?.description) return current.value.description;
+  const view = data.value?.available.find(
+    (plan) => plan._id === current.value?._id,
+  );
+  if (!view || !data.value) return "";
+  return data.value.features
+    .filter(
+      (feature) =>
+        !feature.isDetailRow &&
+        view.featureValues[feature.featureId] !== undefined,
+    )
+    .map(
+      (feature) =>
+        `${featureLabel(feature)} ${formatFeatureValue(feature, view.featureValues[feature.featureId], view.currency)}`,
+    )
+    .join(SUMMARY_SEPARATOR);
+});
+
+function openUpgrade(plan: TenantPlanView): void {
+  upgradeTarget.value = plan;
+  isUpgradeOpen.value = true;
+}
 
 const priceLabel = computed(() =>
   current.value
@@ -111,8 +154,15 @@ async function cancelDowngrade(): Promise<void> {
   }
 }
 
+/** The workspace name only titles the owner's plan comparison, and reading
+ * it is owner-only: a member's card never asks. */
+async function loadWorkspaceForOwner(): Promise<void> {
+  const status = await loadBillingStatus();
+  if (status?.isTenantOwner) await loadWorkspace().catch(() => undefined);
+}
+
 onMounted(() => {
-  void loadBillingStatus();
+  void loadWorkspaceForOwner();
   return fetchPlan(false);
 });
 </script>
@@ -140,11 +190,11 @@ onMounted(() => {
     <div v-else-if="data" class="flex flex-col gap-4">
       <div class="flex flex-wrap items-start gap-4">
         <div class="min-w-60 grow">
-          <h2 class="text-lg font-semibold">
-            {{ current?.name ?? $t("saas.workspace.plan.none") }}
+          <h2 v-if="current" class="text-lg font-semibold">
+            {{ current.name }}
           </h2>
-          <p v-if="current?.description" class="text-muted mt-1 text-sm">
-            {{ current.description }}
+          <p v-if="summary" class="text-muted mt-1 text-sm">
+            {{ summary }}
           </p>
         </div>
         <div v-if="current" class="text-right">
@@ -167,9 +217,9 @@ onMounted(() => {
         </div>
         <div class="mt-2 flex justify-between gap-4 font-semibold">
           <span>{{ $t("saas.admission.total") }}</span>
-          <span class="tabular-nums">{{
-            formatMajorUnits(0, current.currency)
-          }}</span>
+          <span class="tabular-nums">
+            {{ formatMajorUnits(0, current.currency) }}
+          </span>
         </div>
       </div>
 
@@ -181,7 +231,7 @@ onMounted(() => {
       </p>
 
       <p v-if="isAccessBlocked" class="text-muted text-sm">
-        {{ $t("saas.workspace.plan.blocked_hint") }}
+        {{ $t(blockedHintKey) }}
       </p>
 
       <p v-else-if="data.isPlanChangeLocked" class="text-muted text-sm">
@@ -216,6 +266,14 @@ onMounted(() => {
         :current-plan-id="current?._id ?? null"
         :pending-plan-id="pendingPlan?.planId ?? null"
         :is-recovery="data.canRecoverComplimentary"
+        :is-current-paid="isPaid"
+        :workspace-name="workspace?.name ?? null"
+        @changed="refresh"
+        @upgrade="openUpgrade"
+      />
+      <DmsSaasPlanUpgradeModal
+        v-model:open="isUpgradeOpen"
+        :plan="upgradeTarget"
         @changed="refresh"
       />
     </div>

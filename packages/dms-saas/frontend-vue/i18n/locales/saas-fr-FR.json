@@ -43,7 +43,8 @@
         "no_stripe_price": "Le plan n'a pas de tarif Stripe",
         "seat_limit_reached": "La limite de membres du plan est atteinte",
         "no_pending_change": "Aucun changement de plan programmé à annuler",
-        "unpaid_invoice_blocks_downgrade": "Une facture est impayée. Réglez-la avant de passer à un plan moins cher."
+        "unpaid_invoice_blocks_downgrade": "Une facture est impayée. Réglez-la avant de passer à un plan moins cher.",
+        "no_free_plan": "Aucun plan gratuit n'est disponible pour l'inscription pour le moment."
       },
       "workspace": {
         "not_found": "Espace introuvable",
@@ -96,7 +97,8 @@
       "billing": {
         "country_required": "Le pays de facturation est requis",
         "info_not_found": "Informations de facturation introuvables",
-        "invalid_return_url": "URL de retour invalide"
+        "invalid_return_url": "URL de retour invalide",
+        "identity_incomplete": "Des champs de facturation obligatoires sont manquants ou invalides."
       },
       "migration": {
         "already_pending": "Une migration est déjà en attente pour ce plan"
@@ -164,7 +166,14 @@
       "registration": {
         "extras_invalid": "Les champs d'inscription supplémentaires ne sont pas dans un format accepté",
         "extras_too_large": "Les champs d'inscription supplémentaires sont trop volumineux",
-        "extras_too_complex": "Les champs d'inscription supplémentaires comportent trop d'entrées"
+        "extras_too_complex": "Les champs d'inscription supplémentaires comportent trop d'entrées",
+        "payment_method_required": "Un moyen de paiement est requis pour s'inscrire.",
+        "payment_method_disabled": "Ce déploiement ne demande pas de carte à l'inscription.",
+        "password_policy": "Le mot de passe doit comporter au moins 8 caractères, dont une majuscule, un chiffre et l'un de {'@'}$!%*?&, sans autre caractère spécial."
+      },
+      "invitations": {
+        "not_found": "Cette invitation n'existe plus.",
+        "email_not_sent": "L'invitation a été renouvelée mais l'e-mail n'a pas pu être envoyé. Copiez le lien d'invitation et envoyez-le vous-même."
       }
     },
     "dashboard": {
@@ -194,14 +203,12 @@
     },
     "register": {
       "title": "Inscription",
-      "page_description": "Créer un compte, choisir un plan et provisionner votre premier workspace.",
-      "submit": "S'inscrire et payer",
-      "choose_plan": "Choisir un plan",
+      "page_description": "Créer un compte et ouvrir votre premier workspace sur le plan gratuit.",
+      "submit": "Créer mon compte",
       "field": {
         "email": "Email",
         "password": "Mot de passe",
         "full_name": "Nom complet",
-        "workspace_name": "Nom du workspace",
         "company_name": "Raison sociale",
         "vat_number": "Numéro de TVA",
         "country": "Pays",
@@ -217,31 +224,25 @@
         "business": "Professionnel"
       },
       "error": {
-        "no_plan": "Veuillez sélectionner un plan",
         "no_payment": "Méthode de paiement requise",
-        "no_country": "Veuillez sélectionner votre pays de facturation",
         "legal_required": "Vous devez accepter les conditions générales et la politique de confidentialité",
         "failed": "Échec de l'inscription",
         "load": "Impossible de charger les options d'inscription"
       },
       "legal_acceptance": "J'accepte les {terms_and_conditions} et la {privacy_policy}",
-      "price": "{price}/{interval}",
-      "interval": {
-        "month": "mois",
-        "year": "an"
-      }
+      "hint": {
+        "card": "Enregistrée en toute sécurité via Stripe. Aucun débit sur le plan gratuit."
+      },
+      "skip_payment_method": "Ajouter une carte plus tard",
+      "default_workspace_name": "Workspace de {name}"
     },
     "no_workspace": {
       "title": "Configurez votre premier workspace",
-      "subtitle": "Vous êtes connecté, mais vous n'appartenez encore à aucun workspace. Choisissez un plan et créez-en un pour commencer.",
+      "subtitle": "Vous êtes connecté, mais vous n'appartenez encore à aucun workspace. Créez-en un sur le plan gratuit pour commencer — vous pourrez le renommer et changer de plan plus tard.",
       "logout": "Se déconnecter",
-      "submit": "Créer le workspace et payer",
+      "submit": "Créer le workspace",
       "submitting": "Création de votre workspace…",
       "section": {
-        "details": "Détails du workspace",
-        "details_hint": "C'est le nom de l'espace de travail que verra votre équipe.",
-        "plan": "Choisir un plan",
-        "plan_hint": "Vous pourrez en changer plus tard depuis les paramètres de facturation.",
         "payment": "Méthode de paiement",
         "payment_hint": "Stockée en toute sécurité via Stripe."
       },
@@ -251,7 +252,7 @@
       }
     },
     "oauth_registration": {
-      "entry_note": "S'inscrire via un fournisseur demande quand même un plan et une carte à l'étape suivante.",
+      "entry_note": "S'inscrire via un fournisseur vous demande quand même d'accepter les conditions à l'étape suivante.",
       "identity": {
         "provider": "Connecté avec {provider} en tant que {email}",
         "password": "Connecté en tant que {email}",
@@ -445,7 +446,9 @@
             "name": "Le nom est obligatoire.",
             "plan": "Le plan est obligatoire.",
             "owner_email": "L'email du propriétaire est obligatoire.",
-            "free_until_past": "La date d'expiration doit être dans le futur."
+            "free_until_past": "La date d'expiration doit être dans le futur.",
+            "load": "Impossible de charger les plans.",
+            "failed": "Impossible de créer l'espace de travail."
           },
           "field": {
             "name": "Nom du workspace",
@@ -454,8 +457,6 @@
             "owner_email": "Email du propriétaire",
             "owner_email_description": "Si l'email correspond à un utilisateur existant, il est ajouté comme propriétaire. Sinon, une invitation lui est envoyée.",
             "name_description": "Nom interne du workspace (peut être renommé plus tard).",
-            "free_workspace": "Workspace gratuit",
-            "free_workspace_description": "Pas de facturation Stripe. Décocher pour ouvrir une session Stripe Checkout que le propriétaire devra valider.",
             "free_until": "Gratuit jusqu'au",
             "free_until_description": "Optionnel. Date à laquelle l'offre gratuite expire. Laisser vide pour une durée indéfinie. Après cette date, le workspace passe en past_due et l'accès est bloqué jusqu'à la sélection d'un plan payant."
           },
@@ -463,6 +464,11 @@
             "name": "Acme Corp",
             "plan": "Sélectionner un plan",
             "owner_email": "proprietaire{'@'}example.com"
+          },
+          "submit": "Créer l'espace de travail",
+          "email_failed": {
+            "title": "Espace de travail créé, mais l'e-mail d'invitation n'a pas pu être envoyé",
+            "description": "Le propriétaire n'a pas été prévenu. Copiez le lien d'invitation et envoyez-le-lui vous-même."
           }
         }
       },
@@ -517,7 +523,8 @@
         "company_name": "Raison sociale",
         "customer_type": "Type de client",
         "vat_number": "Numéro de TVA",
-        "owner": "Propriétaire"
+        "owner": "Propriétaire",
+        "owner_status": "Statut du propriétaire"
       },
       "status": {
         "active": "Actif",
@@ -548,10 +555,18 @@
         "cancelled": "Annulé",
         "pending_payment": "Paiement en attente"
       },
+      "owner_status": {
+        "joined": "A rejoint",
+        "invitation_pending": "Invitation en attente",
+        "invitation_expired": "Invitation expirée",
+        "none": "Aucun propriétaire"
+      },
       "summary": {
         "title": "Résumé workspace",
-        "members": "{count} membre(s)",
-        "per_month": "/mois"
+        "members": "{count} membre | {count} membres",
+        "platform_support": "{count} support plateforme | {count} supports plateforme",
+        "per_month": "/mois",
+        "pending_invitations": "{count} invitation en attente | {count} invitations en attente"
       },
       "tabs": {
         "invoices": "Factures",
@@ -588,7 +603,39 @@
             "load": "Impossible de charger les options de création.",
             "failed": "Impossible de créer le workspace.",
             "card": "Impossible d'initialiser le paiement par carte."
-          }
+          },
+          "no_plans": "Aucun plan n'est disponible pour le moment. Contactez le support pour créer un workspace."
+        }
+      },
+      "invitations": {
+        "caption": "Invitations en attente",
+        "column": {
+          "status": "Statut",
+          "sent_at": "Envoyée",
+          "expires_at": "Expire"
+        },
+        "status": {
+          "pending": "En attente",
+          "expired": "Expirée"
+        },
+        "action": {
+          "resend": "Renvoyer",
+          "resend_success": "Invitation renvoyée.",
+          "resend_confirm_title": "Renvoyer cette invitation ?",
+          "resend_confirm_description": "Un nouveau lien valable 7 jours est envoyé par e-mail à l'invité. L'ancien lien cesse de fonctionner.",
+          "copy_link": "Copier le lien d'invitation"
+        },
+        "link": {
+          "title": "Lien d'invitation",
+          "description": "Envoyez ce lien à l'invité pour qu'il crée son compte et rejoigne l'espace de travail.",
+          "label": "Lien d'inscription",
+          "expires": "Valable jusqu'au {date}.",
+          "copy": "Copier",
+          "copied": "Lien d'invitation copié.",
+          "copy_failed": "Impossible de copier le lien. Copiez-le manuellement :",
+          "error": "Impossible de récupérer le lien d'invitation.",
+          "warning": "Toute personne disposant de ce lien peut rejoindre l'espace de travail à la place de l'invité. Ne le partagez qu'avec lui.",
+          "close": "Fermer"
         }
       }
     },
@@ -662,7 +709,9 @@
         "subtotal": "Total HT",
         "tax": "TVA",
         "total": "Total TTC",
-        "lines": "Lignes"
+        "lines": "Lignes",
+        "total_excl_tax": "Total HT",
+        "total_incl_tax": "Total TTC"
       },
       "actions": {
         "download_pdf": "Télécharger PDF",
@@ -911,7 +960,12 @@
         "limit_reached_owner": "La limite de sièges de votre plan est atteinte. Passez à un plan supérieur pour ajouter des membres.",
         "limit_reached_member": "La limite de sièges de votre plan est atteinte. Demandez à un propriétaire du workspace de changer de plan.",
         "upgrade": "Changer de plan",
-        "load_failed": "Impossible de charger l'utilisation des sièges"
+        "load_failed": "Impossible de charger l'utilisation des sièges",
+        "platform_support": {
+          "title": "Support de la plateforme",
+          "badge": "Support plateforme",
+          "description": "Ces membres de l'équipe de la plateforme ont accès à ce workspace pour vous accompagner. Ils apparaissent sans rôle dans la liste des membres et n'occupent aucun siège."
+        }
       },
       "free_access": {
         "banner_title": "Accès offert",
@@ -952,7 +1006,15 @@
           "suspend_warning": "Sans régularisation, le workspace est suspendu le {date} — données et volumes préservés.",
           "suspended_summary": "La facture {invoice} de {amount} reste impayée. Le règlement rétablit l'accès immédiatement.",
           "settle": "Régler sur Stripe",
-          "load_failed": "Impossible de vérifier l'état de facturation de ce workspace."
+          "load_failed": "Impossible de vérifier l'état de facturation de ce workspace.",
+          "banner": {
+            "generic": "Paiement échoué — ce workspace a une facture impayée. Le propriétaire du workspace doit la régler pour éviter la suspension.",
+            "generic_owner": "Paiement échoué — ce workspace a une facture impayée. Réglez-la depuis la page de facturation pour éviter la suspension.",
+            "open_billing": "Ouvrir la facturation",
+            "summary": "Paiement échoué — la facture {invoice} de {amount} est impayée.",
+            "with_deadline": "Paiement échoué — la facture {invoice} de {amount} est impayée. Régularisez avant le {date} pour éviter la suspension.",
+            "settle": "Régulariser"
+          }
         },
         "payment_method": {
           "title": "Moyen de paiement",
@@ -962,8 +1024,15 @@
           "declined": "refusée",
           "default": "par défaut",
           "expires": "exp. {date}",
-          "none": "Aucune carte enregistrée.",
-          "portal_hint": "Changement de carte, reçus, historique : tout se passe dans le portail Stripe ; la carte n'est jamais stockée chez nous."
+          "none": "Pas encore de carte — elle vous sera demandée au passage à un plan payant.",
+          "none_with_portal": "Aucune carte enregistrée — ajoutez-en une depuis le portail Stripe ci-dessous.",
+          "portal_hint": "Changement de carte, reçus, historique : tout se passe dans le portail Stripe ; la carte n'est jamais stockée chez nous.",
+          "verified": "vérifiée",
+          "never_charged": "jamais débitée",
+          "add": "Passer à un plan payant",
+          "owner_only": "Le moyen de paiement est géré par le propriétaire du workspace.",
+          "update_note": "Le dernier prélèvement sur cette carte a été refusé : mettez-la à jour dans le portail Stripe, puis réglez la facture impayée.",
+          "free_note": "Vérifiée — jamais débitée tant que le workspace reste sur un plan gratuit."
         },
         "billing_email": {
           "label": "E-mail de facturation",
@@ -973,16 +1042,61 @@
           "verified": "vérifiée (VIES)",
           "pending": "vérification en cours",
           "unverified": "non vérifiée"
+        },
+        "identity": {
+          "to_complete": "à compléter",
+          "incomplete_toast": "Complétez les champs signalés.",
+          "optional": "facultatif",
+          "country_placeholder": "Choisir un pays",
+          "customer_type_hint": {
+            "business": "Facture au nom d'une société, avec son n° de TVA.",
+            "individual": "Facture à votre nom."
+          },
+          "errors": {
+            "customerType": "Choisissez un type de client.",
+            "companyName": "La raison sociale est obligatoire.",
+            "country": "Choisissez le pays de facturation.",
+            "line1": "L'adresse est obligatoire.",
+            "postalCode": "Le code postal est obligatoire.",
+            "city": "La ville est obligatoire.",
+            "billingEmail": "Saisissez une adresse e-mail valide."
+          }
         }
       },
       "plan": {
         "current": "Plan actuel",
-        "none": "Aucun plan",
         "change": "Changer de plan",
         "go_paid": "Passer en payant",
         "blocked_hint": "Le changement de plan redevient possible une fois la facture réglée.",
+        "blocked_hint_inactive": "Le changement de plan redevient possible une fois l’espace de travail réactivé.",
         "next_renewal": "Prochain renouvellement le {date}.",
         "unlimited": "illimité",
+        "units": {
+          "byte": {
+            "quantity": "{value} octet | {value} octets",
+            "price": "{price} / octet"
+          },
+          "kilobyte": {
+            "quantity": "{value} Ko",
+            "price": "{price} / Ko"
+          },
+          "megabyte": {
+            "quantity": "{value} Mo",
+            "price": "{price} / Mo"
+          },
+          "gigabyte": {
+            "quantity": "{value} Go",
+            "price": "{price} / Go"
+          },
+          "terabyte": {
+            "quantity": "{value} To",
+            "price": "{price} / To"
+          },
+          "minute": {
+            "quantity": "{value} minute | {value} minutes",
+            "price": "{price} / minute"
+          }
+        },
         "pending_downgrade": "Downgrade vers {plan} au prochain cycle",
         "pending_downgrade_on": "Downgrade vers {plan} le {date}",
         "cancel_downgrade": "Annuler le downgrade",
@@ -996,14 +1110,25 @@
         },
         "comparison": {
           "title": "Changer de plan",
-          "subtitle": "Actuellement en {plan}. Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
-          "subtitle_no_plan": "Les upgrades s'appliquent immédiatement au prorata ; les downgrades prennent effet au prochain cycle.",
+          "subtitle": "Espace de travail {workspace} — plan actuel : {plan}. Le passage à un plan supérieur s'applique immédiatement, au prorata ; le passage à un plan inférieur prend effet au prochain cycle de facturation.",
+          "subtitle_no_plan": "Le passage à un plan supérieur s'applique immédiatement, au prorata ; le passage à un plan inférieur prend effet au prochain cycle de facturation.",
           "current": "actuel",
           "scheduled": "programmé",
           "choose": "Choisir",
           "show_detail": "Voir tout le détail",
           "hide_detail": "Masquer le détail",
-          "footer": "Le prix du plan est un crédit d'usage prépayé aux tarifs publics, déduit de votre consommation à la minute. Il n'est pas reportable. Au-delà, le même tarif s'applique : jamais de cliff."
+          "close": "Fermer"
+        },
+        "upgrade": {
+          "title": "Passer en {plan}",
+          "description": "Confirmez l'identité facturée, puis saisissez votre carte sur la page de paiement sécurisée de Stripe.",
+          "subscription": "Abonnement {plan}",
+          "due_today": "Prélevé aujourd'hui",
+          "excl_tax": "{amount} HT",
+          "tax_note": "TVA calculée selon le pays de facturation ci-dessous.",
+          "card_title": "Carte bancaire",
+          "card_note": "L'étape suivante ouvre la page de paiement sécurisée de Stripe, où la carte est saisie et débitée. Elle n'est jamais stockée chez nous.",
+          "confirm": "Continuer vers le paiement"
         }
       },
       "data_export": {

@@ -7,9 +7,12 @@ const props = defineProps<{
   currentPlanId: string | null;
   pendingPlanId: string | null;
   isRecovery?: boolean;
+  /** A paid plan chosen from a free one goes through the upgrade flow. */
+  isCurrentPaid?: boolean;
+  workspaceName?: string | null;
 }>();
 
-const emit = defineEmits<{ changed: [] }>();
+const emit = defineEmits<{ changed: []; upgrade: [plan: TenantPlanView] }>();
 
 const open = defineModel<boolean>("open", { default: false });
 
@@ -18,20 +21,40 @@ const toast = useToast();
 const { resolveApiError } = useApiErrorMessage();
 const { changePlan } = useTenantPlan();
 const { formatFeatureValue } = usePlanFeatureFormat();
+const { featureLabel, featureTooltip } = usePlanFeatureLabel();
 const { formatMajorUnits } = useMoneyFormat();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
 const showDetailRows = ref(false);
 const pendingPlanRequest = ref<string | null>(null);
 
-const visibleFeatures = computed(() =>
-  props.features.filter(
-    (feature) => showDetailRows.value || !feature.isDetailRow,
+/** A feature no compared plan sets would only render a row of dashes. */
+const comparedFeatures = computed(() =>
+  props.features.filter((feature) =>
+    props.plans.some(
+      (plan) => plan.featureValues[feature.featureId] !== undefined,
+    ),
   ),
 );
 
+interface FeatureRow {
+  feature: TenantPlanFeature;
+  label: string;
+  tooltip: string | null;
+}
+
+const visibleRows = computed<FeatureRow[]>(() =>
+  comparedFeatures.value
+    .filter((feature) => showDetailRows.value || !feature.isDetailRow)
+    .map((feature) => ({
+      feature,
+      label: featureLabel(feature),
+      tooltip: featureTooltip(feature),
+    })),
+);
+
 const hasDetailRows = computed(() =>
-  props.features.some((feature) => feature.isDetailRow),
+  comparedFeatures.value.some((feature) => feature.isDetailRow),
 );
 
 const currentPlan = computed(
@@ -46,7 +69,22 @@ function isCurrent(plan: TenantPlanView): boolean {
   return plan._id === props.currentPlanId;
 }
 
+/** The paid plans are the way forward from a free one or a recovery. */
+function isHighlighted(plan: TenantPlanView): boolean {
+  const isWayForward = props.isRecovery || !props.isCurrentPaid;
+  return isWayForward && plan.checkoutAvailable;
+}
+
+function needsUpgradeFlow(plan: TenantPlanView): boolean {
+  return !props.isCurrentPaid && plan.price > 0;
+}
+
 async function select(plan: TenantPlanView): Promise<void> {
+  if (needsUpgradeFlow(plan)) {
+    open.value = false;
+    emit("upgrade", plan);
+    return;
+  }
   pendingPlanRequest.value = plan._id;
   try {
     const result = await changePlan(plan._id);
@@ -82,6 +120,7 @@ async function select(plan: TenantPlanView): Promise<void> {
     :description="
       currentPlan
         ? $t('saas.workspace.plan.comparison.subtitle', {
+            workspace: workspaceName ?? '',
             plan: currentPlan.name,
           })
         : $t('saas.workspace.plan.comparison.subtitle_no_plan')
@@ -91,7 +130,7 @@ async function select(plan: TenantPlanView): Promise<void> {
     <template #body>
       <div class="flex flex-col gap-4">
         <div class="overflow-x-auto">
-          <table class="w-full min-w-3xl border-collapse text-sm">
+          <table class="min-w-3xl w-full border-collapse text-sm">
             <thead>
               <tr>
                 <th class="w-56" />
@@ -100,11 +139,11 @@ async function select(plan: TenantPlanView): Promise<void> {
                   :key="plan._id"
                   scope="col"
                   class="border-default border-b p-3 text-center align-top"
-                  :class="isCurrent(plan) ? 'bg-elevated/50' : ''"
+                  :class="isCurrent(plan) ? 'bg-primary/10 rounded-t-lg' : ''"
                 >
                   <div class="flex flex-col items-center gap-2">
                     <span class="font-semibold">{{ plan.name }}</span>
-                    <span class="text-muted tabular-nums">
+                    <span class="text-primary font-semibold tabular-nums">
                       {{ priceLabel(plan) }}
                       <span class="text-xs">
                         /{{ planIntervalLabel(plan.interval) }}
@@ -127,16 +166,8 @@ async function select(plan: TenantPlanView): Promise<void> {
                     <UButton
                       v-else
                       size="xs"
-                      :color="
-                        isRecovery && plan.checkoutAvailable
-                          ? 'primary'
-                          : 'neutral'
-                      "
-                      :variant="
-                        isRecovery && plan.checkoutAvailable
-                          ? 'solid'
-                          : 'subtle'
-                      "
+                      :color="isHighlighted(plan) ? 'primary' : 'neutral'"
+                      :variant="isHighlighted(plan) ? 'solid' : 'subtle'"
                       :loading="pendingPlanRequest === plan._id"
                       :disabled="
                         pendingPlanRequest !== null ||
@@ -152,20 +183,20 @@ async function select(plan: TenantPlanView): Promise<void> {
             </thead>
             <tbody>
               <tr
-                v-for="feature in visibleFeatures"
+                v-for="{ feature, label, tooltip } in visibleRows"
                 :key="feature.featureId"
                 class="border-default border-b last:border-0"
               >
                 <th scope="row" class="p-3 text-left font-normal">
                   <span class="inline-flex items-center gap-1">
-                    {{ feature.displayName }}
-                    <UTooltip v-if="feature.tooltip" :text="feature.tooltip">
+                    {{ label }}
+                    <UTooltip v-if="tooltip" :text="tooltip">
                       <UButton
                         variant="link"
                         color="neutral"
                         size="xs"
                         icon="i-ph-info"
-                        :aria-label="feature.tooltip"
+                        :aria-label="tooltip"
                         class="text-muted p-0"
                       />
                     </UTooltip>
@@ -175,12 +206,13 @@ async function select(plan: TenantPlanView): Promise<void> {
                   v-for="plan in plans"
                   :key="plan._id"
                   class="p-3 text-center tabular-nums"
-                  :class="isCurrent(plan) ? 'bg-elevated/50' : ''"
+                  :class="isCurrent(plan) ? 'bg-primary/10' : ''"
                 >
                   {{
                     formatFeatureValue(
                       feature,
                       plan.featureValues[feature.featureId],
+                      plan.currency,
                     )
                   }}
                 </td>
@@ -203,10 +235,14 @@ async function select(plan: TenantPlanView): Promise<void> {
             }}
           </UButton>
         </div>
+      </div>
+    </template>
 
-        <p class="text-muted text-xs">
-          {{ $t("saas.workspace.plan.comparison.footer") }}
-        </p>
+    <template #footer>
+      <div class="flex w-full justify-end">
+        <UButton color="neutral" variant="subtle" @click="open = false">
+          {{ $t("saas.workspace.plan.comparison.close") }}
+        </UButton>
       </div>
     </template>
   </UModal>

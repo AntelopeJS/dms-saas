@@ -41,7 +41,8 @@ environment or in `playground/.env`.
 An account can reach the product before it owns anything to log into: an OAuth
 sign-in for an unknown e-mail, or any entry point the core answers with
 `requires_tenant_assignment`. The `auth/no-workspace` page is where that
-account buys its way in — a workspace, a plan, a card — and
+account opens its first workspace — on the free plan, with a card when
+`registration.paymentMethod` asks for one — and
 `POST /api/saas/register/finalize` provisions it and answers with a token pair
 for the workspace it just created, so the visitor lands signed in instead of
 back on the login screen.
@@ -59,8 +60,8 @@ declare the finalize endpoint in the frontend server's environment:
 DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize
 ```
 
-Without it the loader answers `403` and a visitor who has paid stays signed
-out. A replacement completion screen keeps the same requirement, and can build
+Without it the loader answers `403` and a visitor who has just registered stays
+signed out. A replacement completion screen keeps the same requirement, and can build
 its request with the auto-imported `buildSessionEstablishRequest()` helper
 rather than restating the endpoint and the payload shape.
 
@@ -72,6 +73,11 @@ explicit permissions from that tenant's resolved plan, including inherited
 permissions, regardless of assigned roles. Permissions outside the plan are
 removed even when a role grants them. Other members retain only the intersection
 of their incoming permissions and the resolved plan.
+
+A plan grants exactly the ids it lists, nothing nested under them: the plan
+editor's permission tree adds a node's descendants and ancestors when it is
+ticked, so plans built from the UI list every component id, and plans seeded by
+code must list them too.
 
 Tenant ownership never grants `*`, even if a plan contains it. An incoming `*`
 (including the DMS platform owner's wildcard) retains the existing behavior:
@@ -131,6 +137,164 @@ accepted, each is promoted before the tenant message is persisted, and failed
 writes move promoted files back to staging. Ticket-specific metadata routes
 verify that a key belongs to the requested thread before issuing its read URL.
 
+## Registration
+
+Public registration is short: an account (name, e-mail, password) and the
+acceptance of the terms, plus a card when the deployment asks for one. The
+workspace it opens lands on the catalogue's first free plan — the lowest
+`order` among active plans priced 0 and open to individuals — under a default
+name its owner renames from the workspace settings. Customer type, billing
+address, VAT number and plan choice belong to the upgrade flow. Registration
+answers `409 saas.errors.plan.no_free_plan` while the catalogue has no such
+plan.
+
+`POST /api/saas/register` holds the password to the DMS password policy
+(`isPasswordCompliant` from `@antelopejs/interface-dms/auth/password`) before
+it looks the e-mail up or creates anything, and answers
+`400 saas.errors.registration.password_policy` otherwise. The OAuth completion
+carries no password.
+
+Two module options shape it:
+
+```json
+{
+  "modules": {
+    "dms-saas": {
+      "config": {
+        "admissionMode": "open",
+        "registration": { "paymentMethod": "required" }
+      }
+    }
+  }
+}
+```
+
+`registration.paymentMethod` decides whether registration asks for a card:
+
+| Value | Behaviour |
+| --- | --- |
+| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer and a free subscription on that card, and the free-workspace-per-card cap applies. |
+| `optional` | The card step is shown, and the visitor may choose to add a card later. Without a card the workspace is card-less, as under `none`. |
+| `none` | The card step is never shown, `GET /api/saas/register/setup-intent` answers `400 saas.errors.registration.payment_method_disabled`, and Stripe is never called: the workspace gets a local free subscription with no Stripe customer, which the upgrade checkout creates when the owner first pays. A card sent anyway is ignored. |
+
+Under `optional` and `none`, a card-less workspace has no card fingerprint, so
+the free-workspace-per-card cap does not apply to it: the only remaining limit
+on free workspaces is one account per e-mail address.
+
+The option covers both public entry points — `POST /api/saas/register` and the
+`auth/no-workspace` completion — and nothing else: invitation sign-up never
+asks for a plan or a card, whatever `admissionMode` and
+`registration.paymentMethod` say. Tenant-side workspace creation keeps
+requiring a card.
+
+`admissionMode: "invitation-only"` closes public registration: every
+`/api/saas/register` route answers `403 saas.errors.registration_closed` before
+looking at the card policy, the registration screens render a "registration by
+invitation only" state instead of the form, and the login page drops its
+sign-up link. Invitations keep working.
+
+Both values reach the browser through the frontend module options
+(`useDmsRuntimeConfig().public.dmsSaas.admissionMode` and
+`.registrationPaymentMethod`); `useSaasRegistration()` already reads them.
+
+The Stripe SetupIntent behind the card step is restricted to cards on the
+server (`payment_method_types: ["card"]`); the Payment Element is created from
+its client secret alone, since Stripe refuses `paymentMethodTypes` next to a
+`clientSecret`.
+
+## Default plan
+
+A workspace is never without a plan. The default plan is the catalogue's
+first free plan — the lowest `order` among active plans priced 0 and open to
+individuals — unless `defaultPlanSlug` names another such plan:
+
+```json
+{ "modules": { "dms-saas": { "config": { "defaultPlanSlug": "free" } } } }
+```
+
+It is what registration opens, and it is attached, as an active card-less
+subscription, to every workspace that has no subscription at all — the
+platform's `default` tenant and workspaces created outside dms-saas included.
+The backfill runs at startup and with the billing-state recompute every 15
+minutes, and the billing page covers a workspace on first read; each pass is
+idempotent and never touches a workspace that holds any subscription. While
+the catalogue has no free plan, nothing is attached and a warning is logged.
+
+Once attached, the plan's permissions cap the workspace's members like any
+other plan (see [Tenant owner permissions](#tenant-owner-permissions)).
+
+## Plan feature labels and values
+
+A feature row stores one display name and one tooltip. The tenant plan pages
+(the plan card summary and the plan comparison table) render both through the
+DMS display string convention: a value starting with `$` is an i18n key,
+anything else is shown as written. A module declaring features either stores
+plain text or stores `$<key>` and ships that key in its own frontend locale
+files (`frontend-vue/i18n/locales/<name>-<locale>.json`):
+
+```ts
+{
+  displayName: "$cloud.plan_features.egress.label",
+  tooltip: "$cloud.plan_features.egress.tooltip",
+}
+```
+
+A key missing in the viewer's locale falls back to the fallback locale; a
+tooltip key missing everywhere hides the tooltip.
+
+Values are formatted from the feature's `valueType` and `unit`: `-1` reads as
+unlimited, booleans as ✓/—, numbers are grouped in the viewer's locale. A
+`per <unit>` unit makes the value a price in the plan's currency, and
+`currency units` an amount of it. Known units are scaled to something a person
+reads at a glance; any other unit is shown verbatim after the grouped number.
+A text value follows the same convention as labels: a `$<key>` value is
+translated in the declaring module's locales, anything else is shown as stored.
+
+| Stored unit | Quantity reads as | `per <unit>` price reads as |
+|-------------|-------------------|-----------------------------|
+| `byte(s)` | bytes, KB, MB, GB or TB (powers of 1000) | per GB |
+| `minute(s)` | minutes | per minute |
+
+A module declaring features in its own units teaches the plan pages how they
+read with `registerPlanFeatureUnit`, auto-imported like the other dms-saas
+composables. Call it from a frontend plugin that runs on the server and in the
+browser, so server-rendered and hydrated values agree. Each scale says how
+many stored units it holds; a quantity takes the largest scale it fills, and a
+`per <unit>` price reads per `priceScale`. Labels are full i18n keys the module
+ships in its own locales, each a node holding a `quantity` message
+(`{value}`, pluralised on the scaled value) and a `price` message (`{price}`):
+
+```ts
+// frontend-vue/app/plugins/plan-feature-units.ts
+const MINUTES_PER_HOUR = 60;
+const vcpuHour = { label: "cloud.plan.units.vcpu_hour", size: MINUTES_PER_HOUR };
+
+export default defineDmsPlugin(() => {
+  registerPlanFeatureUnit(["vCPU-minute", "vCPU-minutes"], {
+    scales: [vcpuHour],
+    priceScale: vcpuHour,
+  });
+});
+```
+
+```json
+{
+  "cloud": {
+    "plan": {
+      "units": {
+        "vcpu_hour": {
+          "quantity": "{value} vCPU-hour | {value} vCPU-hours",
+          "price": "{price} / vCPU-hour"
+        }
+      }
+    }
+  }
+}
+```
+
+Units match case-insensitively, and a registered unit takes precedence over a
+built-in one of the same name.
+
 ## Extension points
 
 ### Consuming this module
@@ -144,7 +308,7 @@ boots the registration graph:
 | Subpath | Surface |
 | --- | --- |
 | `@antelopejs/interface-dms-saas` | every extension point except `db`: billing, data API, pages, plans, provisioning and registration flat, plus the `invoiceLineItems` and `workspaceLifecycle` namespaces |
-| `@antelopejs/interface-dms-saas/billing` | customer balance and complimentary subscription state |
+| `@antelopejs/interface-dms-saas/billing` | customer balance, upcoming invoice preview and complimentary subscription state |
 | `@antelopejs/interface-dms-saas/data-api` | hidden-value data API filters |
 | `@antelopejs/interface-dms-saas/db` | canonical SaaS tables and data models |
 | `@antelopejs/interface-dms-saas/hidden-filter` | the `HiddenStringFilter` decorator on its own |
@@ -199,19 +363,31 @@ races the bundled one instead of overriding it:
 
 Then register your own page on the `register` slug and build it on the
 `useSaasRegistration()` composable the Vue adapter auto-imports. It holds the
-whole flow — plan loading and filtering by customer type, the Stripe setup
-intent and card confirmation, the order the requirements are validated in, the
-provisioning call and the landing route — and renders nothing:
+whole flow — the card policy, the Stripe setup intent and card confirmation,
+the order the requirements are validated in, the provisioning call and the
+landing route — and renders nothing, so a re-themed screen keeps the same
+steps:
 
 ```vue
 <script setup lang="ts">
-const { form, plans, errorMessage, isSubmitting, formatPlanPrice, submit } =
-  useSaasRegistration({ redirectTo: "/welcome" });
+const {
+  form, // name, email, password, hasAcceptedLegal, skipsPaymentMethod
+  paymentElementId,
+  canSkipPaymentMethod, // true under `optional`
+  isPaymentStepVisible, // bind with v-show so the Stripe element stays mounted
+  passwordStrength, // { strength, score, color } for <DmsPasswordStrength>
+  isRegistrationClosed, // render the invitation-only state instead of the form
+  errorMessage,
+  isSubmitting,
+  submit,
+} = useSaasRegistration({ redirectTo: "/welcome" });
 </script>
 ```
 
 Nothing it returns throws: a failure surfaces as a translated `errorMessage`,
-and `submit()` resolves to the new tenant id or `null`. Every screen stays
+and `submit()` resolves to the new tenant id or `null`. A password outside the
+DMS policy stops `submit()` before the card is confirmed. The workspace name is
+the localised `saas.register.default_workspace_name`. Every screen stays
 enabled by default, so an existing project needs no configuration change.
 
 ### Registration extras and the provisioning hook
@@ -354,6 +530,77 @@ export async function stop(): Promise<void> {
   why it is only reported at error level once dms-saas is attached. Two modules
   registering the same `id` before that collapse into one silently, so pick an
   `id` no other module could plausibly choose.
+- Resolvers are also called to price the [upcoming invoice
+  preview](#upcoming-invoice-preview). Such a call carries `isPreview: true`,
+  a synthetic `upcoming_<subscription id>` `invoiceId`, and a `periodEnd` set
+  to the time of the request: the running cycle's usage so far. Its lines are
+  only quoted to Stripe, never invoiced. A resolver that throws or returns an
+  invalid line then makes the preview `unavailable` rather than short.
+
+### Upcoming invoice preview
+
+`GetUpcomingInvoicePreview` returns what Stripe will bill the current
+workspace next, tax included, so a page can show the exact VAT and total before
+the invoice exists. Stripe computes every figure (Stripe Tax: country, VAT
+number, reverse charge); dms-saas copies them without recomputing any.
+
+```ts
+import { GetUpcomingInvoicePreview } from "@antelopejs/interface-dms-saas/billing";
+
+const preview = await GetUpcomingInvoicePreview({ tenantId, userId });
+if (preview.status === "available") {
+  const { taxMinorUnits, totalMinorUnits, currency } = preview;
+  render({ tax: taxMinorUnits, total: totalMinorUnits, currency });
+}
+```
+
+The scope must come from a trusted authentication boundary: the call rejects
+with `403` a user who is not a member of the tenant or is refused by the tenant
+access gate (a workspace awaiting its first payment, or suspended).
+
+The result is always one of three states, and Stripe errors never throw:
+
+| `status` | Meaning | `reason` |
+| --- | --- | --- |
+| `available` | Stripe priced the next invoice | — |
+| `absent` | Nothing to bill next | `free_plan`, `complimentary`, `customer_not_configured`, `subscription_not_configured` (no plan, or no Stripe subscription yet), `no_upcoming_invoice` (the subscription ends with the current cycle) |
+| `unavailable` | An invoice is due but cannot be priced exactly right now; the cause is logged | `stripe_not_configured` (placeholder keys), `tax_not_configured` (Stripe Tax inactive), `tax_location_invalid`, `tax_location_required`, `tax_calculation_failed`, `usage_unavailable` (a line items provider failed), `provider_error` (any other Stripe failure) |
+
+A missing payment method does not prevent a preview: Stripe prices the invoice
+all the same.
+
+An `available` preview carries:
+
+- `currency` (uppercase ISO 4217) and integer amounts in its minor units:
+  `subtotalMinorUnits` (lines before discounts and tax),
+  `totalExcludingTaxMinorUnits`, `taxMinorUnits`, `totalMinorUnits` (tax
+  included) and `amountDueMinorUnits` (after the customer balance).
+- `taxes`: one entry per tax Stripe applied, with its amount, taxable amount,
+  `ratePercentage`, `country`, `taxType` (`vat`…), `taxabilityReason` and
+  `isReverseCharge`. `taxCountry` and `isReverseCharge` summarize them; a
+  reverse-charged invoice has a zero tax amount and `isReverseCharge: true`.
+- `lines`: `subscription` for the plan, `usage` for the lines quoted by the
+  [invoice line items](#invoice-line-items) providers (with their
+  `usageLineKey`), `invoice_item` for any other pending Stripe item. Each has
+  its pre-tax amount, its tax and its period. `hasMoreLines` flags a list
+  Stripe truncated; the totals are always complete.
+- `periodStart` / `periodEnd` (the cycle the invoice closes), `billingDate`
+  (when Stripe issues it), `usageThrough` (how far the quoted usage runs, null
+  without usage lines) and `computedAt`. Dates are ISO 8601 strings.
+
+Usage is quoted up to the time of the request with the same providers, paid
+coverage window and line validation as the renewal invoice, so the preview's
+tax covers plan and usage together. It is an estimate of a cycle still running:
+the renewal invoice bills the whole cycle.
+
+Previews are cached per workspace for an hour, shared by every instance through
+the database. Set `upcomingInvoicePreviewCacheTtlSeconds` to change that
+lifetime, or to `0` to price every request. A cached preview is dropped as soon
+as the workspace's subscription (plan change, status) or billing identity
+(address, VAT number) changes locally, and when Stripe reports an invoice
+created, finalized, paid or voided, a subscription updated or deleted, or a
+customer updated. `unavailable` results are never cached. Display
+`computedAt` to tell the reader how current the figures are.
 
 ### Workspace settings pages
 

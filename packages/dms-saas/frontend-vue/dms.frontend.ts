@@ -9,7 +9,12 @@ import footerLinks from './app/plugins/footer-links'
 import planCards from './app/plugins/plan-cards-display.client'
 import segmentConditions from './app/plugins/segment-conditions-data-type.client'
 import sidebarWidgets from './app/plugins/sidebar-widgets'
-import workspaceSuspended from './app/middleware/workspace-suspended.global'
+
+// The tenant access gate's refusal code: the server answers a refused page
+// visit, a reload as much as an Inertia one, with a redirect to the suspended
+// screen instead of its generic 403 page.
+const WORKSPACE_ACCESS_BLOCKED_CODE = 'saas.errors.workspace.access_blocked'
+const WORKSPACE_SUSPENDED_PATH = '/workspace-suspended'
 
 interface VueModule {
 	default: Component
@@ -59,9 +64,10 @@ const frontendModule: DmsFrontendModule = {
 		sdk.registerPlugin(planCards, { clientOnly: true })
 		sdk.registerPlugin(segmentConditions, { clientOnly: true })
 		sdk.registerPlugin(sidebarWidgets)
-		sdk.registerMiddleware('workspace-suspended', workspaceSuspended, {
-			global: true,
-		})
+		sdk.registerAccessRedirect(
+			WORKSPACE_ACCESS_BLOCKED_CODE,
+			WORKSPACE_SUSPENDED_PATH,
+		)
 	},
 }
 

@@ -1,15 +1,23 @@
 import { assert } from "@antelopejs/interface-api-util";
-import type { DmsSaasConfig } from "../types";
+import {
+  DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY,
+  type DmsSaasConfig,
+  REGISTRATION_PAYMENT_METHOD_POLICIES,
+  type RegistrationPaymentMethodPolicy,
+} from "../types";
 import { isDevMode } from "./dev-mode";
 
 const REDIRECT_PROTOCOLS = ["http:", "https:"];
 const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "[::1]"];
+const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAVAILABLE = 503;
 const ADMISSION_MODES = ["open", "invitation-only"];
+const DEFAULT_UPCOMING_INVOICE_PREVIEW_CACHE_TTL_SECONDS = 3600;
+const MS_PER_SECOND = 1000;
 
 let runtimeConfig: DmsSaasConfig | null = null;
 
-export function setRuntimeConfig(config: DmsSaasConfig): void {
+function assertValidAdmissionMode(config: DmsSaasConfig): void {
   if (
     config.admissionMode !== undefined &&
     !ADMISSION_MODES.includes(config.admissionMode)
@@ -18,7 +26,87 @@ export function setRuntimeConfig(config: DmsSaasConfig): void {
       "Invalid dms-saas admissionMode: expected open or invitation-only",
     );
   }
+}
+
+function assertValidRegistrationPaymentMethod(config: DmsSaasConfig): void {
+  const policy = config.registration?.paymentMethod;
+  if (
+    policy !== undefined &&
+    !REGISTRATION_PAYMENT_METHOD_POLICIES.includes(policy)
+  ) {
+    throw new Error(
+      "Invalid dms-saas registration.paymentMethod: expected required, optional or none",
+    );
+  }
+}
+
+function assertValidUpcomingInvoicePreviewCacheTtl(
+  config: DmsSaasConfig,
+): void {
+  const ttl = config.upcomingInvoicePreviewCacheTtlSeconds;
+  if (ttl === undefined || (Number.isFinite(ttl) && ttl >= 0)) return;
+  throw new Error(
+    "Invalid dms-saas upcomingInvoicePreviewCacheTtlSeconds: expected a non-negative number",
+  );
+}
+
+export function setRuntimeConfig(config: DmsSaasConfig): void {
+  assertValidAdmissionMode(config);
+  assertValidRegistrationPaymentMethod(config);
+  assertValidUpcomingInvoicePreviewCacheTtl(config);
   runtimeConfig = config;
+}
+
+/** Whether public registration asks for a card; invitation sign-up never does. */
+export function getRegistrationPaymentMethodPolicy(): RegistrationPaymentMethodPolicy {
+  return (
+    runtimeConfig?.registration?.paymentMethod ??
+    DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY
+  );
+}
+
+/** The card setup intent only exists for a registration that may take a card. */
+export function assertRegistrationCardAccepted(): void {
+  assert(
+    getRegistrationPaymentMethodPolicy() !== "none",
+    HTTP_BAD_REQUEST,
+    "saas.errors.registration.payment_method_disabled",
+  );
+}
+
+/**
+ * The card a registration may go on with under the configured policy.
+ *
+ * A card sent while the policy is `none` is dropped rather than refused: the
+ * deployment promised no Stripe call, and the visitor loses nothing by it.
+ *
+ * @param paymentMethodId Card confirmed by the visitor, if any
+ * @returns The card to provision with, or undefined for a card-less workspace
+ * @throws 400 when the policy requires a card and none was sent
+ */
+export function resolveRegistrationPaymentMethodId(
+  paymentMethodId: string | undefined,
+): string | undefined {
+  const policy = getRegistrationPaymentMethodPolicy();
+  if (policy === "none") return undefined;
+  assert(
+    policy === "optional" || paymentMethodId,
+    HTTP_BAD_REQUEST,
+    "saas.errors.registration.payment_method_required",
+  );
+  return paymentMethodId || undefined;
+}
+
+export function getDefaultPlanSlug(): string | undefined {
+  return runtimeConfig?.defaultPlanSlug;
+}
+
+/** Upcoming invoice preview cache lifetime; zero disables the cache. */
+export function getUpcomingInvoicePreviewCacheTtlMs(): number {
+  const seconds =
+    runtimeConfig?.upcomingInvoicePreviewCacheTtlSeconds ??
+    DEFAULT_UPCOMING_INVOICE_PREVIEW_CACHE_TTL_SECONDS;
+  return seconds * MS_PER_SECOND;
 }
 
 export function getAllowedRedirectHosts(): string[] {
