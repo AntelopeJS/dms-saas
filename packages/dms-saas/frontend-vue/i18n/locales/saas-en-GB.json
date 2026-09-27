@@ -563,8 +563,9 @@
       },
       "summary": {
         "title": "Workspace summary",
-        "members": "{count} member(s)",
-        "per_month": "/mo"
+        "members": "{count} member | {count} members",
+        "per_month": "/mo",
+        "pending_invitations": "{count} pending invitation | {count} pending invitations"
       },
       "tabs": {
         "invoices": "Invoices",

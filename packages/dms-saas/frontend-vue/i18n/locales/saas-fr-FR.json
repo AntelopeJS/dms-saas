@@ -563,8 +563,9 @@
       },
       "summary": {
         "title": "Résumé workspace",
-        "members": "{count} membre(s)",
-        "per_month": "/mois"
+        "members": "{count} membre | {count} membres",
+        "per_month": "/mois",
+        "pending_invitations": "{count} invitation en attente | {count} invitations en attente"
       },
       "tabs": {
         "invoices": "Factures",

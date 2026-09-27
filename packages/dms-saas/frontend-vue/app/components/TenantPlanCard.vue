@@ -145,9 +145,15 @@ async function cancelDowngrade(): Promise<void> {
   }
 }
 
+/** The workspace name only titles the owner's plan comparison, and reading
+ * it is owner-only: a member's card never asks. */
+async function loadWorkspaceForOwner(): Promise<void> {
+  const status = await loadBillingStatus();
+  if (status?.isTenantOwner) await loadWorkspace().catch(() => undefined);
+}
+
 onMounted(() => {
-  void loadBillingStatus();
-  void loadWorkspace().catch(() => undefined);
+  void loadWorkspaceForOwner();
   return fetchPlan(false);
 });
 </script>
