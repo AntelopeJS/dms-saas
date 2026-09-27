@@ -21,12 +21,14 @@ import {
   FeatureModel,
   type Plan,
   PlanModel,
+  type TenantBillingInfo,
   TenantBillingInfoModel,
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../../db";
 import { toPendingPlanChange } from "../../plan-changes";
 import { buildTenantPlanCatalog, isDowngrade } from "../../plans";
+import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
 import {
   canRecoverComplimentarySubscription,
   isComplimentaryPlanLocked,
@@ -53,6 +55,36 @@ import {
   scheduleDowngrade,
   startPaidCheckout,
 } from "./tenant-plan-ops";
+
+/** A paid target without a live Stripe subscription goes through Checkout. */
+function startsPaidCheckout(
+  newPlan: Plan,
+  subscription: TenantSubscription | undefined,
+): boolean {
+  return isPaidPlan(newPlan) && !subscription?.stripeSubscriptionId;
+}
+
+/**
+ * Moving to a paid plan issues invoices, which Stripe cannot do without a
+ * complete billing identity. The upgrade modal saves it first; this guard
+ * keeps a direct API call from reaching Checkout without one.
+ */
+function assertBillingIdentityComplete(
+  billingInfo: TenantBillingInfo | undefined,
+): void {
+  const missing = findMissingBillingIdentityFields({
+    customerType: billingInfo?.customerType,
+    companyName: billingInfo?.companyName,
+    vatNumber: billingInfo?.vatNumber,
+    billingEmail: billingInfo?.billingEmail,
+    address: billingInfo?.address ?? undefined,
+  });
+  assert(
+    missing.length === 0,
+    HTTP_BAD_REQUEST,
+    "saas.errors.billing.identity_incomplete",
+  );
+}
 
 export class SaasTenantPlanController extends Controller(
   "/api/saas/tenant/plan",
@@ -190,6 +222,9 @@ export class SaasTenantPlanController extends Controller(
     if (subscription?.planId === body.planId && !isRecovery) {
       return this.resolveSamePlanRequest(tenantId, subscription);
     }
+    if (!isRecovery && startsPaidCheckout(newPlan, subscription)) {
+      assertBillingIdentityComplete(billingInfo);
+    }
 
     return this.routePlanChange({
       tenantId,
@@ -232,7 +267,7 @@ export class SaasTenantPlanController extends Controller(
     const { tenantId, user, newPlan, subscription, tenantSubscriptionModel } =
       request;
 
-    if (isPaidPlan(newPlan) && !subscription?.stripeSubscriptionId) {
+    if (startsPaidCheckout(newPlan, subscription)) {
       return startPaidCheckout(request);
     }
     if (!subscription) {
