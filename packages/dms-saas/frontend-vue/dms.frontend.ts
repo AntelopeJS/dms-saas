@@ -7,8 +7,10 @@ import authLinks from './app/plugins/auth-links'
 import billingDataTypes from './app/plugins/billing-data-types'
 import footerLinks from './app/plugins/footer-links'
 import planCards from './app/plugins/plan-cards-display.client'
+import refreshDataFunction from './app/plugins/refresh-data-function'
 import segmentConditions from './app/plugins/segment-conditions-data-type.client'
 import sidebarWidgets from './app/plugins/sidebar-widgets'
+import workspaceSuspendedRecovery from './app/plugins/workspace-suspended-recovery.client'
 import workspaceSuspended from './app/middleware/workspace-suspended.global'
 
 interface VueModule {
@@ -57,8 +59,10 @@ const frontendModule: DmsFrontendModule = {
 		sdk.registerPlugin(billingDataTypes)
 		sdk.registerPlugin(footerLinks)
 		sdk.registerPlugin(planCards, { clientOnly: true })
+		sdk.registerPlugin(refreshDataFunction)
 		sdk.registerPlugin(segmentConditions, { clientOnly: true })
 		sdk.registerPlugin(sidebarWidgets)
+		sdk.registerPlugin(workspaceSuspendedRecovery, { clientOnly: true })
 		sdk.registerMiddleware('workspace-suspended', workspaceSuspended, {
 			global: true,
 		})
