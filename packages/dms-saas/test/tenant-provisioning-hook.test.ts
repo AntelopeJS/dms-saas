@@ -370,7 +370,7 @@ interface RegisterBodyInput {
 function buildRegisterBody(input: RegisterBodyInput = {}) {
   return {
     email: `owner-${nextId("mail")}@example.com`,
-    password: "correct horse battery staple",
+    password: "CorrectHorse9!",
     name: "Owner",
     workspaceName: "Acme Studio",
     paymentMethodId: "pm_test",
@@ -810,6 +810,51 @@ describe("emitTenantBeingProvisioned", () => {
     await expect(
       emitTenantBeingProvisioned({ tenantId: "t1", userId: "u1" }),
     ).rejects.toThrow("write failed");
+  });
+});
+
+describe("password policy on the public endpoint", () => {
+  it.each([
+    ["too short", "Ab1!"],
+    ["without an uppercase letter", "correct horse 9!"],
+    ["without a number", "CorrectHorse!"],
+    ["without a special character", "CorrectHorse9"],
+    ["with a special character outside the allowed set", "CorrectHorse9#"],
+  ])(
+    "refuses a password %s before anything exists",
+    async (_case, password) => {
+      const lookup = vi.spyOn(userModelFake, "getByEmail");
+      const retrieve = vi.spyOn(stripeFake.paymentMethods, "retrieve");
+
+      await expect(
+        buildController().register({ ...buildRegisterBody(), password }),
+      ).rejects.toMatchObject({
+        status: 400,
+        body: "saas.errors.registration.password_policy",
+      });
+      expect(lookup).not.toHaveBeenCalled();
+      expect(retrieve).not.toHaveBeenCalled();
+      expect(world.users.size).toBe(0);
+      expect(world.stripeCustomers.size).toBe(0);
+    },
+  );
+
+  it("refuses a registration that sends no password", async () => {
+    const { password: _password, ...body } = buildRegisterBody();
+
+    await expect(
+      buildController().register(body as never),
+    ).rejects.toMatchObject({
+      status: 400,
+      body: "saas.errors.registration.password_policy",
+    });
+    expect(world.users.size).toBe(0);
+  });
+
+  it("registers an account whose password meets the policy", async () => {
+    const result = await buildController().register(buildRegisterBody());
+
+    expect(world.users.has(result.userId)).toBe(true);
   });
 });
 

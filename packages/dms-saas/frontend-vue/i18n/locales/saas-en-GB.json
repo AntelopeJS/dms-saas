@@ -167,7 +167,8 @@
         "extras_too_large": "The additional registration fields are too large",
         "extras_too_complex": "The additional registration fields have too many entries",
         "payment_method_required": "A payment method is required to sign up.",
-        "payment_method_disabled": "This deployment does not take a card at sign-up."
+        "payment_method_disabled": "This deployment does not take a card at sign-up.",
+        "password_policy": "The password must be at least 8 characters long, with an uppercase letter, a number and one of {'@'}$!%*?&, and no other special character."
       }
     },
     "dashboard": {

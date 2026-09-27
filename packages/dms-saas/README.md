@@ -143,6 +143,12 @@ address, VAT number and plan choice belong to the upgrade flow. Registration
 answers `409 saas.errors.plan.no_free_plan` while the catalogue has no such
 plan.
 
+`POST /api/saas/register` holds the password to the DMS password policy
+(`isPasswordCompliant` from `@antelopejs/interface-dms/auth/password`) before
+it looks the e-mail up or creates anything, and answers
+`400 saas.errors.registration.password_policy` otherwise. The OAuth completion
+carries no password.
+
 Two module options shape it:
 
 ```json

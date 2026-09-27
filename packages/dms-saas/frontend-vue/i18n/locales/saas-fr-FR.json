@@ -167,7 +167,8 @@
         "extras_too_large": "Les champs d'inscription supplémentaires sont trop volumineux",
         "extras_too_complex": "Les champs d'inscription supplémentaires comportent trop d'entrées",
         "payment_method_required": "Un moyen de paiement est requis pour s'inscrire.",
-        "payment_method_disabled": "Ce déploiement ne demande pas de carte à l'inscription."
+        "payment_method_disabled": "Ce déploiement ne demande pas de carte à l'inscription.",
+        "password_policy": "Le mot de passe doit comporter au moins 8 caractères, dont une majuscule, un chiffre et l'un de {'@'}$!%*?&, sans autre caractère spécial."
       }
     },
     "dashboard": {

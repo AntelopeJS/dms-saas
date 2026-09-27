@@ -24,6 +24,7 @@ import {
   type User,
   UserModel,
 } from "@antelopejs/interface-dms/auth/db";
+import { isPasswordCompliant } from "@antelopejs/interface-dms/auth/password";
 import { resolveEntryProvider } from "../../auth";
 import {
   assertAdmissionOpen,
@@ -116,6 +117,19 @@ interface RegisterResult {
 
 function generateAuthKey(): string {
   return randomBytes(AUTH_KEY_BYTES).toString("hex");
+}
+
+/**
+ * Hold a password-based registration to the DMS password policy, before the
+ * e-mail is looked up and before any account or Stripe object exists. The
+ * OAuth completion has no password and never comes through here.
+ */
+function assertRegistrationPassword(password: unknown): void {
+  assert(
+    typeof password === "string" && isPasswordCompliant(password),
+    HTTP_BAD_REQUEST,
+    "saas.errors.registration.password_policy",
+  );
 }
 
 /**
@@ -253,6 +267,7 @@ export class SaasRegisterApiController extends Controller(
   @Post("/")
   async register(@JSONBody() body: RegisterBody): Promise<RegisterResult> {
     assertAdmissionOpen();
+    assertRegistrationPassword(body.password);
     const admitted = await admitRegistration(body);
     await this.ensureEmailAvailable(body.email);
 
