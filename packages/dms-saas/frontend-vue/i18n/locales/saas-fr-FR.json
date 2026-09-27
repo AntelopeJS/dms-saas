@@ -456,8 +456,6 @@
             "owner_email": "Email du propriétaire",
             "owner_email_description": "Si l'email correspond à un utilisateur existant, il est ajouté comme propriétaire. Sinon, une invitation lui est envoyée.",
             "name_description": "Nom interne du workspace (peut être renommé plus tard).",
-            "free_workspace": "Workspace gratuit",
-            "free_workspace_description": "Pas de facturation Stripe. Décocher pour ouvrir une session Stripe Checkout que le propriétaire devra valider.",
             "free_until": "Gratuit jusqu'au",
             "free_until_description": "Optionnel. Date à laquelle l'offre gratuite expire. Laisser vide pour une durée indéfinie. Après cette date, le workspace passe en past_due et l'accès est bloqué jusqu'à la sélection d'un plan payant."
           },

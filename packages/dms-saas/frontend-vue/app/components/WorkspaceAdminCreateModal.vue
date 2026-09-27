@@ -37,7 +37,6 @@ const plans = ref<PlanOption[]>([]);
 const name = ref("");
 const planId = ref<string | undefined>(undefined);
 const ownerEmail = ref("");
-const isFreeWorkspace = ref(true);
 const freeUntil = ref("");
 const isLoading = ref(true);
 const isSubmitting = ref(false);
@@ -107,9 +106,7 @@ async function submit(): Promise<void> {
         name: name.value.trim(),
         planId: planId.value,
         ownerEmail: ownerEmail.value.trim(),
-        freeWorkspace: isFreeWorkspace.value,
-        freeUntil:
-          isFreeWorkspace.value && freeUntil.value ? freeUntil.value : null,
+        freeUntil: freeUntil.value || null,
       },
     });
     notifyCreated(created);
@@ -172,17 +169,6 @@ onMounted(load);
       />
     </UFormField>
     <UFormField
-      :description="
-        $t('saas.workspaces.admin.create.field.free_workspace_description')
-      "
-    >
-      <USwitch
-        v-model="isFreeWorkspace"
-        :label="$t('saas.workspaces.admin.create.field.free_workspace')"
-      />
-    </UFormField>
-    <UFormField
-      v-if="isFreeWorkspace"
       :label="$t('saas.workspaces.admin.create.field.free_until')"
       :description="
         $t('saas.workspaces.admin.create.field.free_until_description')

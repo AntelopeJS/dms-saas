@@ -456,8 +456,6 @@
             "owner_email": "Owner email",
             "owner_email_description": "If the email matches an existing user, they are added as owner. Otherwise an invite is sent.",
             "name_description": "Internal workspace name (can be renamed later).",
-            "free_workspace": "Free workspace",
-            "free_workspace_description": "No Stripe billing. Untick to open a Stripe Checkout session the owner must complete.",
             "free_until": "Free until",
             "free_until_description": "Optional. Date when the comp expires. Leave empty for indefinite. After that date the workspace is flagged past_due and access is blocked until a paid plan is picked."
           },

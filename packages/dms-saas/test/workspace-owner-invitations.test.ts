@@ -129,7 +129,6 @@ async function createWorkspaceFor(ownerEmail: string) {
     name: "Invited workspace",
     ownerEmail,
     planId: await insertPlan(),
-    freeWorkspace: true,
   });
 }
 

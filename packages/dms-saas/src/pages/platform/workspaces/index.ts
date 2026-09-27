@@ -18,13 +18,8 @@ import {
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { recomputeTenantBillingState } from "../../../billing-state";
-import { isAllowedRedirectUrl } from "../../../config";
 import { workspacesDataAPI } from "../../../data-api";
-import { type Plan, PlanModel, TenantSubscriptionModel } from "../../../db";
-import {
-  createWorkspaceCheckoutSession,
-  type WorkspaceCheckoutSession,
-} from "../../../stripe";
+import { PlanModel, TenantSubscriptionModel } from "../../../db";
 import { parseFutureDate } from "../../../utils";
 import {
   deliverInvitationEmail,
@@ -39,7 +34,6 @@ const KPI_FREE = "/api/saas/dashboard/kpi/state-free";
 const KPI_PAST_DUE = "/api/saas/dashboard/kpi/state-past-due";
 
 const ACTIVE_STATUS = "active";
-const PENDING_PAYMENT_STATUS = "pending_payment";
 
 const STATUS_TAB_FILTER_KEY = "billingState";
 
@@ -69,24 +63,14 @@ interface CreateWorkspaceBody {
   name?: unknown;
   planId?: unknown;
   ownerEmail?: unknown;
-  freeWorkspace?: unknown;
   freeUntil?: unknown;
-  successUrl?: unknown;
-  cancelUrl?: unknown;
 }
 
 interface ValidatedWorkspaceInput {
   name: string;
   planId: string;
   ownerEmail: string;
-  freeWorkspace: boolean;
   freeUntil: Date | null;
-}
-
-interface ValidatedCheckoutInput {
-  stripePriceId: string;
-  successUrl: string;
-  cancelUrl: string;
 }
 
 function asNonEmptyString(value: unknown): string | null {
@@ -101,13 +85,10 @@ function validateWorkspaceInput(
   const name = asNonEmptyString(body.name);
   const planId = asNonEmptyString(body.planId);
   const ownerEmail = asNonEmptyString(body.ownerEmail);
-  const freeWorkspace = body.freeWorkspace !== false;
-  const freeUntil = freeWorkspace
-    ? parseFutureDate(
-        body.freeUntil,
-        "saas.workspaces.admin.create.error.free_until_past",
-      )
-    : null;
+  const freeUntil = parseFutureDate(
+    body.freeUntil,
+    "saas.workspaces.admin.create.error.free_until_past",
+  );
   assert(name, HTTP_BAD_REQUEST, "saas.workspaces.admin.create.error.name");
   assert(planId, HTTP_BAD_REQUEST, "saas.workspaces.admin.create.error.plan");
   assert(
@@ -115,32 +96,7 @@ function validateWorkspaceInput(
     HTTP_BAD_REQUEST,
     "saas.workspaces.admin.create.error.owner_email",
   );
-  return { name, planId, ownerEmail, freeWorkspace, freeUntil };
-}
-
-function validatePaidCheckoutInput(
-  body: CreateWorkspaceBody,
-  plan: Plan,
-): ValidatedCheckoutInput {
-  const stripePriceId = plan.paymentProviderRefs?.stripePriceId ?? null;
-  assert(
-    stripePriceId,
-    HTTP_BAD_REQUEST,
-    "saas.errors.plan.not_synced_with_stripe",
-  );
-  const successUrl = asNonEmptyString(body.successUrl);
-  const cancelUrl = asNonEmptyString(body.cancelUrl);
-  assert(
-    successUrl && isAllowedRedirectUrl(successUrl),
-    HTTP_BAD_REQUEST,
-    "saas.errors.billing.invalid_return_url",
-  );
-  assert(
-    cancelUrl && isAllowedRedirectUrl(cancelUrl),
-    HTTP_BAD_REQUEST,
-    "saas.errors.billing.invalid_return_url",
-  );
-  return { stripePriceId, successUrl, cancelUrl };
+  return { name, planId, ownerEmail, freeUntil };
 }
 
 async function insertFreeSubscription(
@@ -204,27 +160,6 @@ async function provisionTenantWithOwner(
         })
       : null;
   return { tenantId, inviteResult, invitationEmail };
-}
-
-async function insertPendingSubscription(
-  tenantId: string,
-  planId: string,
-  userId: string,
-  checkout: WorkspaceCheckoutSession,
-  now: Date,
-): Promise<void> {
-  await GetModel(TenantSubscriptionModel, tenantId).insert([
-    {
-      planId,
-      status: PENDING_PAYMENT_STATUS,
-      stripeCustomerId: checkout.customerId,
-      stripeSubscriptionId: null,
-      stripeCheckoutSessionId: checkout.sessionId,
-      createdBy: userId,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]);
 }
 
 @RegisterPage()
@@ -341,9 +276,6 @@ export class SaasWorkspacesListController extends PageController(
       HTTP_BAD_REQUEST,
       "saas.errors.plan.not_available",
     );
-    const checkoutInput = input.freeWorkspace
-      ? null
-      : validatePaidCheckoutInput(body, plan);
 
     const now = new Date();
     const { tenantId, inviteResult, invitationEmail } =
@@ -355,44 +287,14 @@ export class SaasWorkspacesListController extends PageController(
         now,
       );
 
-    if (!checkoutInput) {
-      await insertFreeSubscription(
-        tenantId,
-        input.planId,
-        user._id,
-        now,
-        input.freeUntil,
-      );
-      await recomputeTenantBillingState(tenantId);
-      return {
-        tenantId,
-        owner: inviteResult,
-        invitationEmail,
-        checkoutUrl: null,
-      };
-    }
-
-    const checkout = await createWorkspaceCheckoutSession({
-      tenantId,
-      ownerEmail: input.ownerEmail,
-      stripePriceId: checkoutInput.stripePriceId,
-      trialDays: plan.trialDays,
-      successUrl: checkoutInput.successUrl,
-      cancelUrl: checkoutInput.cancelUrl,
-    });
-    await insertPendingSubscription(
+    await insertFreeSubscription(
       tenantId,
       input.planId,
       user._id,
-      checkout,
       now,
+      input.freeUntil,
     );
     await recomputeTenantBillingState(tenantId);
-    return {
-      tenantId,
-      owner: inviteResult,
-      invitationEmail,
-      checkoutUrl: checkout.url,
-    };
+    return { tenantId, owner: inviteResult, invitationEmail };
   }
 }
