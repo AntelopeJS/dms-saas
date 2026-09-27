@@ -1,6 +1,7 @@
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { describe, expect, it } from "vitest";
 import type { InvoiceModel, TenantSubscriptionModel } from "../src/db";
+import { SaasDashboardController as SaasDashboardPageController } from "../src/pages/platform/dashboard";
 import { SaasDashboardController } from "../src/routes/platformOwner/dashboard";
 
 interface StatusRow {
@@ -86,5 +87,45 @@ describe("back-office dashboard subscriptions", () => {
 
     expect(payload.value).toBe(25);
     expect(payload.series[0]?.data.at(-1)?.y).toBe(25);
+  });
+});
+
+interface SerializedBlock {
+  componentName?: string;
+  options?: Record<string, unknown>;
+  children: SerializedChild[];
+}
+
+interface SerializedChild {
+  id: string;
+  component: SerializedBlock;
+}
+
+function findChild(
+  block: SerializedBlock,
+  id: string,
+): SerializedBlock | undefined {
+  for (const child of block.children) {
+    if (child.id === id) return child.component;
+    const nested = findChild(child.component, id);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
+describe("back-office dashboard layout", () => {
+  it("nests the subscriptions donut in a card that fetches its series", () => {
+    const charts =
+      SaasDashboardPageController.charts.serializeSync() as SerializedBlock;
+    const card = findChild(charts, "subscriptions");
+    const donut = card && findChild(card, "chart");
+
+    expect(card?.componentName).toBe("dms-chart-card");
+    expect(card?.options).toMatchObject({
+      fetchUrl: "/api/saas/dashboard/chart/subscriptions-by-status",
+    });
+    expect(donut?.componentName).toBe("dms-chart");
+    expect(donut?.options).toMatchObject({ type: "donut" });
+    expect(donut?.options).not.toHaveProperty("fetchUrl");
   });
 });

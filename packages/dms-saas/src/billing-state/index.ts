@@ -7,6 +7,7 @@ import {
   TenantSubscriptionModel,
 } from "../db";
 
+export * from "./past-due-banner";
 export * from "./recovery";
 
 const ACTIVE_STATUS = "active";

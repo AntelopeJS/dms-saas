@@ -14,8 +14,8 @@ export interface CachedWorkspaceAccess {
 
 /**
  * Per-session cache of the current workspace's subscription access, shared
- * between the global workspace-suspended middleware (reader/writer) and the
- * suspended screen (invalidator once the workspace unblocks).
+ * between its readers (the refund card) and the suspended screen (invalidator
+ * once the workspace unblocks).
  */
 export function useWorkspaceAccessCache() {
   return useDmsState<CachedWorkspaceAccess | null>(
@@ -49,46 +49,4 @@ export async function loadWorkspaceAccess(): Promise<WorkspaceAccess | null> {
   } catch {
     return null;
   }
-}
-
-const SUSPENDED_PATH = "/workspace-suspended";
-// The billing page carries `bypassTenantAccessGate`, so the gate lets it
-// through: redirecting it here would close the recovery path the flag opens.
-const BILLING_PATH = "/settings/workspace/billing";
-
-// Paths a blocked workspace member must still reach: auth flows, the
-// suspended screen itself, billing, registration and legal pages.
-const EXEMPT_PREFIXES = [
-  "/auth",
-  SUSPENDED_PATH,
-  BILLING_PATH,
-  "/register",
-  "/legal",
-  "/terms-of-use",
-  "/terms-and-conditions",
-  "/privacy-policy",
-];
-
-function isExempt(path: string): boolean {
-  return EXEMPT_PREFIXES.some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
-  );
-}
-
-/**
- * Where a signed-in member of a blocked workspace goes instead of `path`: the
- * suspended screen, unless `path` is one of the surfaces a blocked workspace
- * keeps. Cached per workspace: the entry is invalidated when the active tenant
- * changes, and cleared by the suspended screen once the workspace unblocks. A
- * transport error fails open: the worst case is a 403 instead of the
- * dedicated screen.
- */
-export async function suspendedScreenRedirect(
-  path: string,
-): Promise<string | undefined> {
-  if (isExempt(path)) return undefined;
-  const { loggedIn } = useUserSession();
-  if (!loggedIn.value) return undefined;
-  const access = await loadWorkspaceAccess();
-  return access?.blocked ? SUSPENDED_PATH : undefined;
 }
