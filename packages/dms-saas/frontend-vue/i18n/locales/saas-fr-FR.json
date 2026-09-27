@@ -1060,6 +1060,7 @@
         "change": "Changer de plan",
         "go_paid": "Passer en payant",
         "blocked_hint": "Le changement de plan redevient possible une fois la facture réglée.",
+        "blocked_hint_inactive": "Le changement de plan redevient possible une fois l’espace de travail réactivé.",
         "next_renewal": "Prochain renouvellement le {date}.",
         "unlimited": "illimité",
         "units": {

@@ -38,16 +38,11 @@ const ACTIVE_STATUS = "active";
 
 const STATUS_TAB_FILTER_KEY = "billingState";
 
-const STATUS_TAB_DEFS = [
-  { id: "active", label: "Active" },
-  { id: "free", label: "Free" },
-  { id: "past_due", label: "Past due" },
-  { id: "suspended", label: "Suspended" },
-];
+const STATUS_TAB_IDS = ["active", "free", "past_due", "suspended"];
 
-const STATUS_TABS = STATUS_TAB_DEFS.map(({ id, label }) => ({
+const STATUS_TABS = STATUS_TAB_IDS.map((id) => ({
   id,
-  label,
+  label: `$saas.workspaces.billing_state.${id}`,
   filters: [{ accessorKey: STATUS_TAB_FILTER_KEY, value: id, mode: "is" }],
 }));
 

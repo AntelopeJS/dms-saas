@@ -74,6 +74,11 @@ permissions, regardless of assigned roles. Permissions outside the plan are
 removed even when a role grants them. Other members retain only the intersection
 of their incoming permissions and the resolved plan.
 
+A plan grants exactly the ids it lists, nothing nested under them: the plan
+editor's permission tree adds a node's descendants and ancestors when it is
+ticked, so plans built from the UI list every component id, and plans seeded by
+code must list them too.
+
 Tenant ownership never grants `*`, even if a plan contains it. An incoming `*`
 (including the DMS platform owner's wildcard) retains the existing behavior:
 the wildcard survives, and other incoming permissions are intersected with the

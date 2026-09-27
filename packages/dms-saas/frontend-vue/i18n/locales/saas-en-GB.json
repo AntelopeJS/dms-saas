@@ -1060,6 +1060,7 @@
         "change": "Change plan",
         "go_paid": "Upgrade to a paid plan",
         "blocked_hint": "Plan changes resume once the unpaid invoice is settled.",
+        "blocked_hint_inactive": "Plan changes resume once the workspace is active again.",
         "next_renewal": "Next renewal on {date}.",
         "unlimited": "unlimited",
         "units": {
