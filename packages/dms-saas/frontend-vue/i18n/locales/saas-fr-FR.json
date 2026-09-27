@@ -1061,6 +1061,32 @@
         "blocked_hint": "Le changement de plan redevient possible une fois la facture réglée.",
         "next_renewal": "Prochain renouvellement le {date}.",
         "unlimited": "illimité",
+        "units": {
+          "byte": {
+            "quantity": "{value} octet | {value} octets",
+            "price": "{price} / octet"
+          },
+          "kilobyte": {
+            "quantity": "{value} Ko",
+            "price": "{price} / Ko"
+          },
+          "megabyte": {
+            "quantity": "{value} Mo",
+            "price": "{price} / Mo"
+          },
+          "gigabyte": {
+            "quantity": "{value} Go",
+            "price": "{price} / Go"
+          },
+          "terabyte": {
+            "quantity": "{value} To",
+            "price": "{price} / To"
+          },
+          "minute": {
+            "quantity": "{value} minute | {value} minutes",
+            "price": "{price} / minute"
+          }
+        },
         "pending_downgrade": "Downgrade vers {plan} au prochain cycle",
         "pending_downgrade_on": "Downgrade vers {plan} le {date}",
         "cancel_downgrade": "Annuler le downgrade",

@@ -218,6 +218,76 @@ the catalogue has no free plan, nothing is attached and a warning is logged.
 Once attached, the plan's permissions cap the workspace's members like any
 other plan (see [Tenant owner permissions](#tenant-owner-permissions)).
 
+## Plan feature labels and values
+
+A feature row stores one display name and one tooltip. The tenant plan pages
+(the plan card summary and the plan comparison table) render both through the
+DMS display string convention: a value starting with `$` is an i18n key,
+anything else is shown as written. A module declaring features either stores
+plain text or stores `$<key>` and ships that key in its own frontend locale
+files (`frontend-vue/i18n/locales/<name>-<locale>.json`):
+
+```ts
+{
+  displayName: "$cloud.plan_features.egress.label",
+  tooltip: "$cloud.plan_features.egress.tooltip",
+}
+```
+
+A key missing in the viewer's locale falls back to the fallback locale; a
+tooltip key missing everywhere hides the tooltip.
+
+Values are formatted from the feature's `valueType` and `unit`: `-1` reads as
+unlimited, booleans as ✓/—, numbers are grouped in the viewer's locale. A
+`per <unit>` unit makes the value a price in the plan's currency, and
+`currency units` an amount of it. Known units are scaled to something a person
+reads at a glance; any other unit is shown verbatim after the grouped number.
+
+| Stored unit | Quantity reads as | `per <unit>` price reads as |
+|-------------|-------------------|-----------------------------|
+| `byte(s)` | bytes, KB, MB, GB or TB (powers of 1000) | per GB |
+| `minute(s)` | minutes | per minute |
+
+A module declaring features in its own units teaches the plan pages how they
+read with `registerPlanFeatureUnit`, auto-imported like the other dms-saas
+composables. Call it from a frontend plugin that runs on the server and in the
+browser, so server-rendered and hydrated values agree. Each scale says how
+many stored units it holds; a quantity takes the largest scale it fills, and a
+`per <unit>` price reads per `priceScale`. Labels are full i18n keys the module
+ships in its own locales, each a node holding a `quantity` message
+(`{value}`, pluralised on the scaled value) and a `price` message (`{price}`):
+
+```ts
+// frontend-vue/app/plugins/plan-feature-units.ts
+const MINUTES_PER_HOUR = 60;
+const vcpuHour = { label: "cloud.plan.units.vcpu_hour", size: MINUTES_PER_HOUR };
+
+export default defineDmsPlugin(() => {
+  registerPlanFeatureUnit(["vCPU-minute", "vCPU-minutes"], {
+    scales: [vcpuHour],
+    priceScale: vcpuHour,
+  });
+});
+```
+
+```json
+{
+  "cloud": {
+    "plan": {
+      "units": {
+        "vcpu_hour": {
+          "quantity": "{value} vCPU-hour | {value} vCPU-hours",
+          "price": "{price} / vCPU-hour"
+        }
+      }
+    }
+  }
+}
+```
+
+Units match case-insensitively, and a registered unit takes precedence over a
+built-in one of the same name.
+
 ## Extension points
 
 ### Consuming this module

@@ -1061,6 +1061,32 @@
         "blocked_hint": "Plan changes resume once the unpaid invoice is settled.",
         "next_renewal": "Next renewal on {date}.",
         "unlimited": "unlimited",
+        "units": {
+          "byte": {
+            "quantity": "{value} byte | {value} bytes",
+            "price": "{price} / byte"
+          },
+          "kilobyte": {
+            "quantity": "{value} KB",
+            "price": "{price} / KB"
+          },
+          "megabyte": {
+            "quantity": "{value} MB",
+            "price": "{price} / MB"
+          },
+          "gigabyte": {
+            "quantity": "{value} GB",
+            "price": "{price} / GB"
+          },
+          "terabyte": {
+            "quantity": "{value} TB",
+            "price": "{price} / TB"
+          },
+          "minute": {
+            "quantity": "{value} minute | {value} minutes",
+            "price": "{price} / minute"
+          }
+        },
         "pending_downgrade": "Downgrade to {plan} at next cycle",
         "pending_downgrade_on": "Downgrade to {plan} on {date}",
         "cancel_downgrade": "Cancel downgrade",
