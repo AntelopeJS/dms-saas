@@ -33,6 +33,11 @@ export interface InvoiceLineItem {
  * For workspaces with paid usage coverage, these boundaries are clipped to
  * the invoiced subscription's paid period. Complimentary and grace usage is
  * excluded; providers are not invoked for an empty covered window.
+ *
+ * `isPreview` is set when dms-saas prices the upcoming invoice rather than
+ * billing a closed cycle: `periodEnd` is then the time of the request, the
+ * lines are only quoted to Stripe and never invoiced, and `invoiceId` is a
+ * synthetic `upcoming_` identifier that names no Stripe invoice.
  */
 export interface InvoiceLineItemsContext {
   tenantId: string;
@@ -40,6 +45,7 @@ export interface InvoiceLineItemsContext {
   currency: string;
   periodStart: Date;
   periodEnd: Date;
+  isPreview?: boolean;
 }
 
 export type InvoiceLineItemsResolver = (
