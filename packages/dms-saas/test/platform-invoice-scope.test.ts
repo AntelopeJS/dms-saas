@@ -196,30 +196,30 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
     });
   });
 
-  it("rejects a credit note before projection and presence acquisition", async () => {
-    current = { _id: "invoice", documentType: "credit_note" };
-    prepareRead();
-
-    await expect(get()).rejects.toMatchObject({
-      status: 404,
-      body: "saas.errors.invoice.not_found",
-    });
-    expect(Query.Get).toHaveBeenCalledTimes(1);
-    expect(Query.ReadProperties).not.toHaveBeenCalled();
-    expect(presence).not.toHaveBeenCalled();
-  });
-
-  it.each(["invoice", undefined])(
-    "allows document type %s",
+  it.each(["credit_note", undefined])(
+    "rejects document type %s before projection and presence acquisition",
     async (documentType) => {
       current = { _id: "invoice", documentType };
       prepareRead();
 
-      await expect(get()).resolves.toEqual({ _id: "invoice" });
+      await expect(get()).rejects.toMatchObject({
+        status: 404,
+        body: "saas.errors.invoice.not_found",
+      });
       expect(Query.Get).toHaveBeenCalledTimes(1);
-      expect(presence).toHaveBeenCalledTimes(1);
+      expect(Query.ReadProperties).not.toHaveBeenCalled();
+      expect(presence).not.toHaveBeenCalled();
     },
   );
+
+  it("allows invoice rows", async () => {
+    current = { _id: "invoice", documentType: "invoice" };
+    prepareRead();
+
+    await expect(get()).resolves.toEqual({ _id: "invoice" });
+    expect(Query.Get).toHaveBeenCalledTimes(1);
+    expect(presence).toHaveBeenCalledTimes(1);
+  });
 
   it("preserves missing-row 404s", async () => {
     current = undefined;

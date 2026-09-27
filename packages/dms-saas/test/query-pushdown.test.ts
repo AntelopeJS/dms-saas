@@ -81,7 +81,7 @@ describe("invoice query pushdown", () => {
     const result = await model.getAllInvoices();
     expect(result.every((row) => row instanceof Invoice)).toBe(true);
     expect(result).toEqual(
-      rows.filter((row) => row.documentType !== "credit_note"),
+      rows.filter((row) => row.documentType === "invoice"),
     );
     expect(capture.transferred).toEqual([2]);
     expect(capture.queries[0].map((stage) => stage.stage)).toEqual([

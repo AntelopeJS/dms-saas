@@ -432,6 +432,7 @@ async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
     {
       planId: payload.planId,
       status: subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS,
+      isComplimentary: false,
       stripeCustomerId: input.stripeCustomerId,
       stripeSubscriptionId: subscription.stripeSubscriptionId,
       currentPeriodEnd: subscription.currentPeriodEnd,

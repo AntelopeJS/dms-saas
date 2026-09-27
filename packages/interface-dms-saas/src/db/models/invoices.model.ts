@@ -4,13 +4,16 @@ import { Invoice, invoicesTableName } from "../tables/invoices.table";
 import { hasSelectedRow } from "./update-result";
 
 const STATUS_OPEN = "open";
+const INVOICE_DOCUMENT_TYPE = "invoice";
 
 /** Data access for tenant invoices. */
 export class InvoiceModel extends BasicDataModel(Invoice, invoicesTableName) {
   /** Returns invoices, excluding credit notes. */
   async getAllInvoices(): Promise<Invoice[]> {
     const rows = await this.table
-      .filter((invoice) => invoice.key("documentType").ne("credit_note"))
+      .filter((invoice) =>
+        invoice.key("documentType").eq(INVOICE_DOCUMENT_TYPE),
+      )
       .run();
     return rows
       .map((row) => InvoiceModel.fromDatabase(row))

@@ -17,9 +17,8 @@ See the design documents in `dms/saas/` (sibling repo) for the full architectura
 The module registers `frontend-vue/dms.frontend.ts` with the Vue 3 Inertia
 adapter. It preserves the `DmsSaas*` component names, the `auth/no-workspace`
 page override, client-only displays, global guards, and English/French catalogs.
-Public module configuration moves from `public.cmsSaas` to `public.dmsSaas` —
-a breaking change for any frontend reading the old key. Stripe secrets are
-never exposed to the frontend.
+Public module configuration is exposed under `public.dmsSaas`. Stripe secrets
+are never exposed to the frontend.
 
 The backend integration requires `@antelopejs/dms`. Frontend source
 verification runs through `@antelopejs/dms-frontend` and the DMS frontend
@@ -711,7 +710,7 @@ jobs never use timed takeover; startup marks interrupted jobs as
 `reconciliation_required`, retaining their per-workspace evidence and pending
 subscription intents instead of blindly replaying effects.
 
-The historical `migrate-and-delete` endpoint now requests migration only.
+The `migrate-and-delete` endpoint requests a migration only.
 Inspect `GET /api/saas/plans-deletion/migrations/:migrationId` for the snapshot,
 outcomes, and reconciliation requirements. **Snapshot completion does not retire
 the source plan.** The source remains available even at zero observed references;
@@ -743,9 +742,8 @@ the terminal receipt, and does not promise exactly-once delivery or external ord
 
 Stripe webhook dispatch admits an event once and fences completion with its
 admitted revision. An old `pending` record never permits timed takeover. Handler
-failures become `reconciliation_required`; legacy `failed` records also block
-replay because they may contain partial effects. Redelivery receives an error
-while unresolved, rather than a successful acknowledgement or another execution.
+failures become `reconciliation_required`, which blocks replay because the
+attempt may have partial effects. Redelivery receives an error while unresolved, rather than a successful acknowledgement or another execution.
 
 Inspect `stripe_webhook_events` by Stripe event ID for its result, revision, and
 error message. Recovery requires establishing the prior executor's quiescence
@@ -882,10 +880,7 @@ interrupted pre-payment preparation requires payment/provisioning recovery;
 it never emits `created` merely because the tenant exists. HTTP creation requests
 are not made idempotent by the delivery operation ID.
 
-These additions require a dms-saas package built from this source revision (or
-a later release containing it), including its lifecycle table fields and worker.
-The previously published `0.2.5` package does not provide the gate or `created`
-contract. Register consumers before startup reconciliation; use the existing
+Register consumers before startup reconciliation; use the existing
 tenant inventory and gate for bootstrap/backfill rather than treating `created`
 as a historical inventory API.
 
@@ -913,7 +908,6 @@ uses the existing database operation receipt to authorize publication. Published
 prerequisites are the database interface `0.1.6`, the storage interface `0.1.3`,
 and a compatible provider: local `0.1.4` or S3 `0.1.3`, all of which any DMS
 release carrying this module provides. Tests use MongoDB `1.3.1`.
-There is no legacy move/existence fallback.
 
 Source admissions remain insert-only and permanent. Rejected work cannot publish,
 even if a delayed promotion finishes. Owner-initiated paginated support recovery
@@ -931,8 +925,26 @@ cleanup pass, so storage expiry/operational cleanup must account for them. Do no
 delete receipts to free a source for another request or garbage-collect a file
 that a committed support message still references.
 
-The earlier draft seal schema has no production installations and is replaced,
-not migrated online. If retaining development fixtures from that draft, stop
-writers and reconcile or discard those disposable support fixtures and their
-private files offline before adopting this schema. Do not reinterpret old seal
-records as confirmed promotion ownership.
+## Upgrading
+
+### Rows written by earlier builds
+
+Billing no longer infers state from rows that predate the current fields. Rows
+imported from the pre-DMS codebase or written by earlier builds must be fixed
+in the database, with writers stopped, before upgrading:
+
+- **`tenant_subscriptions.isComplimentary`** is required. Only
+  `isComplimentary: true` makes a subscription complimentary; a missing value
+  is read as not complimentary. Set `isComplimentary: true` on admin gifts that
+  lack it (typically rows with no `stripeCustomerId`, no `stripeSubscriptionId`
+  and a status other than `pending_payment`), otherwise they are billed and
+  shown as paid plans. Backfill `isComplimentary: false` on every other row
+  that lacks the field, including workspaces created through paid provisioning
+  before this change, so the stored rows match the table type.
+- **`invoices.documentType`** is required. Invoice lists and reads only match
+  `documentType: "invoice"`; a row without it is neither listed nor readable.
+  Set `documentType: "invoice"` on every invoice row that lacks it.
+- **`stripe_webhook_events.result`** no longer accepts `failed`. Such attempts
+  may carry partial effects: establish their outcome as described for
+  `reconciliation_required` above, then set their result to
+  `reconciliation_required` or delete the record once resolved.

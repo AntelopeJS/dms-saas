@@ -471,7 +471,7 @@ describe("terminal-only webhook cleanup on Mongo", () => {
     });
   });
 
-  it("retains pending, failed and cutoff-boundary rows while overlapping cleanup is idempotent", async () => {
+  it("retains pending, unresolved and cutoff-boundary rows while overlapping cleanup is idempotent", async () => {
     const model = GetModel(StripeWebhookEventModel);
     await model.insert([
       {
@@ -481,8 +481,8 @@ describe("terminal-only webhook cleanup on Mongo", () => {
         revision: randomUUID(),
       },
       {
-        _id: "old-failed",
-        result: "failed",
+        _id: "old-unresolved",
+        result: "reconciliation_required",
         processedAt: BEFORE,
         revision: randomUUID(),
       },
@@ -505,8 +505,8 @@ describe("terminal-only webhook cleanup on Mongo", () => {
     ]);
     expect((await model.getAll()).map((row) => row._id).sort()).toEqual([
       "boundary",
-      "old-failed",
       "old-pending",
+      "old-unresolved",
     ]);
   });
 });

@@ -17,7 +17,7 @@ vi.mock("../src/stripe/webhook-credit-notes", () => ({
 }));
 
 const SETUP_TIMEOUT_MS = 60_000;
-const BEYOND_LEGACY_TIMEOUT_MS = 16 * 60 * 1000;
+const BEYOND_OLD_CLAIM_TIMEOUT_MS = 16 * 60 * 1000;
 let mongodb: MongoMemoryReplSet;
 
 beforeAll(async () => {
@@ -56,7 +56,7 @@ it("does not take over a paused handler beyond the old timeout", async () => {
   await started.promise;
   try {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(Date.now() + BEYOND_LEGACY_TIMEOUT_MS);
+    vi.setSystemTime(Date.now() + BEYOND_OLD_CLAIM_TIMEOUT_MS);
     await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow(
       "reconciliation",
     );
@@ -135,7 +135,7 @@ it.each([true, false])(
   },
 );
 
-it("keeps partial failures and legacy failed attempts out of replay and retention", async () => {
+it("keeps partial failures out of replay and retention", async () => {
   const model = GetModel(StripeWebhookEventModel);
   const input = event();
   handlers.created.mockRejectedValueOnce(new Error("effect outcome unknown"));
@@ -145,20 +145,9 @@ it("keeps partial failures and legacy failed attempts out of replay and retentio
   await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow(
     "reconciliation",
   );
-  const legacy = event();
-  await model.insert({
-    _id: legacy.id,
-    type: legacy.type,
-    result: "failed",
-    processedAt: new Date(0),
-  });
-  await expect(model.tryClaim(legacy.id, legacy.type)).rejects.toThrow(
-    "reconciliation",
-  );
   await model.deleteProcessedBefore(
-    new Date(Date.now() + BEYOND_LEGACY_TIMEOUT_MS),
+    new Date(Date.now() + BEYOND_OLD_CLAIM_TIMEOUT_MS),
   );
   expect((await model.get(input.id))?.result).toBe("reconciliation_required");
-  expect((await model.get(legacy.id))?.result).toBe("failed");
   expect(handlers.created).toHaveBeenCalledOnce();
 });

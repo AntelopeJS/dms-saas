@@ -98,6 +98,7 @@ async function checkoutRequest(
     _id: tenantId,
     planId: "source",
     status: "active",
+    isComplimentary: true,
   });
   return {
     tenantId,
@@ -161,24 +162,6 @@ describe("subscription effect admission with real Mongo mutations", () => {
     const completed = await request.tenantSubscriptionModel.findOne();
     expect(completed?.isComplimentary).toBe(false);
     expect(completed?.paidUsagePeriods).toHaveLength(1);
-  });
-
-  it("keeps legacy complimentary history waived while checkout is pending or expires", async () => {
-    const request = await checkoutRequest();
-    await startPaidCheckout(request);
-    const pending = await request.tenantSubscriptionModel.findOne();
-    expect(pending).toMatchObject({
-      stripeCustomerId: "customer",
-      isComplimentary: true,
-      paidUsagePeriods: [],
-    });
-    await handleCheckoutSessionExpired(await sessionEvent(request, true));
-    const expired = await request.tenantSubscriptionModel.findOne();
-    expect(expired).toMatchObject({
-      isComplimentary: true,
-      paidUsagePeriods: [],
-    });
-    expect(expired?.stripeSubscriptionId).toBeFalsy();
   });
 
   it("fences an expiration observed before a competing completion admission", async () => {

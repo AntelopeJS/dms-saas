@@ -11,7 +11,6 @@ export const stripeWebhookEventsTableName = "stripe_webhook_events";
 export const WEBHOOK_RESULTS = [
   "pending",
   "success",
-  "failed",
   "skipped",
   "reconciliation_required",
 ] as const;
