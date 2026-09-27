@@ -166,6 +166,10 @@ Two module options shape it:
 | `optional` | The card step is shown, and the visitor may choose to add a card later. Without a card the workspace is card-less, as under `none`. |
 | `none` | The card step is never shown, `GET /api/saas/register/setup-intent` answers `400 saas.errors.registration.payment_method_disabled`, and Stripe is never called: the workspace gets a local free subscription with no Stripe customer, which the upgrade checkout creates when the owner first pays. A card sent anyway is ignored. |
 
+Under `optional` and `none`, a card-less workspace has no card fingerprint, so
+the free-workspace-per-card cap does not apply to it: the only remaining limit
+on free workspaces is one account per e-mail address.
+
 The option covers both public entry points — `POST /api/saas/register` and the
 `auth/no-workspace` completion — and nothing else: invitation sign-up never
 asks for a plan or a card, whatever `admissionMode` and
