@@ -6,6 +6,7 @@ import {
   formatPlanFeatureValue,
   type FormattableFeature,
   type PlanFeatureFormatContext,
+  registerPlanFeatureUnit,
 } from "../frontend-vue/app/composables/usePlanFeatureFormat";
 import {
   type LabelledFeature,
@@ -106,25 +107,20 @@ describe("plan feature value formatting", () => {
   });
 
   it.each([
-    ["vCPU-minute", 6_000, "100 vCPU-hours"],
-    ["vCPU-minute", 60, "1 vCPU-hour"],
-    ["GiB-minute", 90, "1.5 GiB-hours"],
-    ["GB-hour", 14_600, "20 GB-months"],
-    ["build minute", 2_000, "2,000 build minutes"],
-  ])("converts a %s quantity of %d to %s", (unit, value, expected) => {
+    ["minute", 1, "1 minute"],
+    ["minutes", 2_000, "2,000 minutes"],
+  ])("reads a %s quantity of %d as %s", (unit, value, expected) => {
     expect(formatPlanFeatureValue(numeric(unit), value, context("en-GB"))).toBe(
       expected,
     );
   });
 
   it.each([
-    ["per vCPU-minute", 0.0005, "€0.03 / vCPU-hour"],
-    ["per GiB-minute", 0.00005, "€0.003 / GiB-hour"],
-    ["per GB-hour", 0.0002, "€0.146 / GB-month"],
     ["per byte", 0.00000000009, "€0.09 / GB"],
-    ["per build minute", 0.008, "€0.008 / build minute"],
+    ["per minute", 0.008, "€0.008 / minute"],
     ["per seat", 12.5, "€12.50 per seat"],
-    ["per vCPU-minute", 0, "€0.00 / vCPU-hour"],
+    ["per minute", 0, "€0.00 / minute"],
+    ["per API call", 0.0005, "€0.0005 per API call"],
   ])("reads a %s price of %d as %s", (unit, value, expected) => {
     expect(formatPlanFeatureValue(numeric(unit), value, context("en-GB"))).toBe(
       expected,
@@ -140,11 +136,11 @@ describe("plan feature value formatting", () => {
   it("falls back to a plain number when the plan has no currency", () => {
     expect(
       formatPlanFeatureValue(
-        numeric("per vCPU-minute"),
-        0.0005,
+        numeric("per byte"),
+        0.00000000009,
         context("en-GB", null),
       ),
-    ).toBe("0.03 / vCPU-hour");
+    ).toBe("0.09 / GB");
   });
 
   it("localises units and number grouping in French", () => {
@@ -152,12 +148,100 @@ describe("plan feature value formatting", () => {
     expect(
       plain(formatPlanFeatureValue(numeric("byte"), 100_000_000_000, fr)),
     ).toBe("100 Go");
+    expect(plain(formatPlanFeatureValue(numeric("minutes"), 10_000, fr))).toBe(
+      "10 000 minutes",
+    );
     expect(
-      plain(formatPlanFeatureValue(numeric("vCPU-minute"), 600_000, fr)),
-    ).toBe("10 000 heures vCPU");
+      plain(formatPlanFeatureValue(numeric("per byte"), 0.00000000009, fr)),
+    ).toBe("0,09 € / Go");
+  });
+});
+
+describe("registered plan feature units", () => {
+  const CONSUMER_MESSAGES: LocaleTree = {
+    cloud: {
+      units: {
+        vcpu_hour: {
+          quantity: "{value} vCPU-hour | {value} vCPU-hours",
+          price: "{price} / vCPU-hour",
+        },
+        vcpu_day: {
+          quantity: "{value} vCPU-day | {value} vCPU-days",
+          price: "{price} / vCPU-day",
+        },
+        pod: {
+          quantity: "{value} pod | {value} pods",
+          price: "{price} / pod",
+        },
+      },
+    },
+  };
+  const MINUTES_PER_HOUR = 60;
+  const MINUTES_PER_DAY = 1_440;
+
+  function consumerContext(): PlanFeatureFormatContext {
+    return {
+      ...context("en-GB"),
+      translateUnit: translator({ ...EN, ...CONSUMER_MESSAGES }),
+    };
+  }
+
+  registerPlanFeatureUnit(["vCPU-minute", "vCPU-minutes"], {
+    scales: [
+      { label: "cloud.units.vcpu_day", size: MINUTES_PER_DAY },
+      { label: "cloud.units.vcpu_hour", size: MINUTES_PER_HOUR },
+    ],
+    priceScale: { label: "cloud.units.vcpu_hour", size: MINUTES_PER_HOUR },
+  });
+
+  it.each([
+    ["vCPU-minute", 60, "1 vCPU-hour"],
+    ["VCPU-MINUTES", 1_200, "20 vCPU-hours"],
+    ["vCPU-minutes", 4_320, "3 vCPU-days"],
+    ["vCPU-minute", 30, "0.5 vCPU-hours"],
+  ])("scales a %s quantity of %d to %s", (unit, value, expected) => {
     expect(
-      plain(formatPlanFeatureValue(numeric("per GB-hour"), 0.0002, fr)),
-    ).toBe("0,146 € / Go-mois");
+      formatPlanFeatureValue(numeric(unit), value, consumerContext()),
+    ).toBe(expected);
+  });
+
+  it("reads a registered unit's price per its price scale", () => {
+    expect(
+      formatPlanFeatureValue(
+        numeric("per vCPU-minute"),
+        0.0005,
+        consumerContext(),
+      ),
+    ).toBe("€0.03 / vCPU-hour");
+  });
+
+  it("lets a registered unit override a built-in one", async () => {
+    // A fresh module instance keeps the override out of the other tests.
+    vi.resetModules();
+    const fresh =
+      await import("../frontend-vue/app/composables/usePlanFeatureFormat");
+    fresh.registerPlanFeatureUnit("minutes", {
+      scales: [{ label: "cloud.units.pod", size: 1 }],
+      priceScale: { label: "cloud.units.pod", size: 1 },
+    });
+    expect(
+      fresh.formatPlanFeatureValue(numeric("minutes"), 3, consumerContext()),
+    ).toBe("3 pods");
+  });
+
+  it("refuses a rule without a positive scale", () => {
+    expect(() =>
+      registerPlanFeatureUnit("empty", {
+        scales: [],
+        priceScale: { label: "cloud.units.pod", size: 1 },
+      }),
+    ).toThrow("Invalid plan feature unit rule");
+    expect(() =>
+      registerPlanFeatureUnit("zero", {
+        scales: [{ label: "cloud.units.pod", size: 0 }],
+        priceScale: { label: "cloud.units.pod", size: 1 },
+      }),
+    ).toThrow("Invalid plan feature unit rule");
   });
 });
 

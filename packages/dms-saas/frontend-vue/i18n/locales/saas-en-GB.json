@@ -1082,29 +1082,9 @@
             "quantity": "{value} TB",
             "price": "{price} / TB"
           },
-          "vcpu_hour": {
-            "quantity": "{value} vCPU-hour | {value} vCPU-hours",
-            "price": "{price} / vCPU-hour"
-          },
-          "gib_hour": {
-            "quantity": "{value} GiB-hour | {value} GiB-hours",
-            "price": "{price} / GiB-hour"
-          },
-          "gb_hour": {
-            "quantity": "{value} GB-hour | {value} GB-hours",
-            "price": "{price} / GB-hour"
-          },
-          "gb_month": {
-            "quantity": "{value} GB-month | {value} GB-months",
-            "price": "{price} / GB-month"
-          },
           "minute": {
             "quantity": "{value} minute | {value} minutes",
             "price": "{price} / minute"
-          },
-          "build_minute": {
-            "quantity": "{value} build minute | {value} build minutes",
-            "price": "{price} / build minute"
           }
         },
         "pending_downgrade": "Downgrade to {plan} at next cycle",

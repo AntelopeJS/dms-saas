@@ -11,13 +11,14 @@ const MIN_PRICE_FRACTION_DIGITS = 2;
 const MAX_PRICE_SIGNIFICANT_DIGITS = 3;
 /** Upper bound `Intl.NumberFormat` accepts for fraction digits. */
 const MAX_FRACTION_DIGITS = 20;
-const MINUTES_PER_HOUR = 60;
-/** Average month length (365.25 × 24 / 12, rounded), the usual cloud billing convention. */
-const HOURS_PER_MONTH = 730;
 const BYTES_PER_KILOBYTE = 1_000;
 
-/** One way of showing a unit: its label and how many base units it holds. */
-interface DisplayScale {
+/**
+ * One way of showing a unit: how many stored units it holds, and the i18n
+ * key of a message node with a `quantity` message (`{value}`, pluralised on
+ * the scaled value) and a `price` message (`{price}`).
+ */
+export interface PlanFeatureUnitScale {
   label: string;
   size: number;
 }
@@ -26,14 +27,14 @@ interface DisplayScale {
  * How a stored unit reads on a plan page. Quantities take the largest scale
  * they fill; a price reads per `priceScale` of the unit.
  */
-interface UnitRule {
-  scales: DisplayScale[];
-  priceScale: DisplayScale;
+export interface PlanFeatureUnitRule {
+  scales: PlanFeatureUnitScale[];
+  priceScale: PlanFeatureUnitScale;
 }
 
 type UnitKind = "quantity" | "price";
 
-/** Translates `saas.workspace.plan.units.*` keys, pluralised on `count`. */
+/** Translates unit label keys, pluralised on `count`. */
 export type UnitLabelTranslator = (
   key: string,
   params: Record<string, string>,
@@ -61,47 +62,83 @@ type FeatureValueFormatter = (
   context: PlanFeatureFormatContext,
 ) => string;
 
-function scale(label: string, size: number): DisplayScale {
-  return { label, size };
-}
-
-function singleScaleRule(label: string, size: number): UnitRule {
-  return { scales: [scale(label, size)], priceScale: scale(label, size) };
+/** A built-in scale, labelled under dms-saas's own unit messages. */
+function builtInScale(name: string, size: number): PlanFeatureUnitScale {
+  return { label: `${UNIT_LABEL_KEY_PREFIX}.${name}`, size };
 }
 
 const BYTE_SCALES = ["byte", "kilobyte", "megabyte", "gigabyte", "terabyte"].map(
-  (label, power) => scale(label, BYTES_PER_KILOBYTE ** power),
+  (name, power) => builtInScale(name, BYTES_PER_KILOBYTE ** power),
 );
 const GIGABYTE_SCALE = BYTE_SCALES[3]!;
+const MINUTE_SCALE = builtInScale("minute", 1);
 
-const BYTE_RULE: UnitRule = { scales: BYTE_SCALES, priceScale: GIGABYTE_SCALE };
-const VCPU_MINUTE_RULE = singleScaleRule("vcpu_hour", MINUTES_PER_HOUR);
-const GIB_MINUTE_RULE = singleScaleRule("gib_hour", MINUTES_PER_HOUR);
-const GB_MINUTE_RULE = singleScaleRule("gb_hour", MINUTES_PER_HOUR);
-const GB_HOUR_RULE = singleScaleRule("gb_month", HOURS_PER_MONTH);
-const MINUTE_RULE = singleScaleRule("minute", 1);
-const BUILD_MINUTE_RULE = singleScaleRule("build_minute", 1);
+const BYTE_RULE: PlanFeatureUnitRule = {
+  scales: BYTE_SCALES,
+  priceScale: GIGABYTE_SCALE,
+};
+const MINUTE_RULE: PlanFeatureUnitRule = {
+  scales: [MINUTE_SCALE],
+  priceScale: MINUTE_SCALE,
+};
 
 /**
- * Units a feature may declare, normalised to lower case and singular. A unit
- * missing here still reads, as a grouped number followed by the unit verbatim.
+ * Generic units dms-saas knows, normalised to lower case. A unit missing here
+ * and from the registry still reads, as a grouped number followed by the unit
+ * verbatim.
  */
-const UNIT_RULES: Record<string, UnitRule> = {
-  byte: BYTE_RULE,
-  bytes: BYTE_RULE,
-  "vcpu-minute": VCPU_MINUTE_RULE,
-  "vcpu-minutes": VCPU_MINUTE_RULE,
-  "gib-minute": GIB_MINUTE_RULE,
-  "gib-minutes": GIB_MINUTE_RULE,
-  "gb-minute": GB_MINUTE_RULE,
-  "gb-minutes": GB_MINUTE_RULE,
-  "gb-hour": GB_HOUR_RULE,
-  "gb-hours": GB_HOUR_RULE,
-  minute: MINUTE_RULE,
-  minutes: MINUTE_RULE,
-  "build minute": BUILD_MINUTE_RULE,
-  "build minutes": BUILD_MINUTE_RULE,
-};
+const BUILT_IN_UNIT_RULES = new Map<string, PlanFeatureUnitRule>([
+  ["byte", BYTE_RULE],
+  ["bytes", BYTE_RULE],
+  ["minute", MINUTE_RULE],
+  ["minutes", MINUTE_RULE],
+]);
+
+/**
+ * Units consumer modules registered. Registration happens at plugin setup,
+ * on the server and in the browser alike, and always maps a unit to the same
+ * rule, so one module-level map is safe to share across SSR requests.
+ */
+const registeredUnitRules = new Map<string, PlanFeatureUnitRule>();
+
+function normalizeUnit(unit: string): string {
+  return unit.trim().toLowerCase();
+}
+
+/**
+ * Teaches the plan pages how a feature unit reads, e.g. vCPU-minutes shown
+ * in vCPU-hours. Call it from a frontend plugin of the module declaring the
+ * features; labels are full i18n keys that module ships in its own locales.
+ * A registered unit takes precedence over a built-in one of the same name.
+ *
+ * @param unit Stored unit or its spellings (matched case-insensitively), without `per `
+ * @param rule Display scales, in any order, and the scale prices read per
+ * @throws When the rule has no scale or a scale is not a positive size
+ */
+export function registerPlanFeatureUnit(
+  unit: string | string[],
+  rule: PlanFeatureUnitRule,
+): void {
+  const scales = [...rule.scales].sort((left, right) => left.size - right.size);
+  const isValid =
+    scales.length > 0 &&
+    [...scales, rule.priceScale].every((candidate) => candidate.size > 0);
+  if (!isValid) {
+    throw new Error(
+      "Invalid plan feature unit rule: expected at least one scale, all with a positive size",
+    );
+  }
+  for (const name of [unit].flat()) {
+    registeredUnitRules.set(normalizeUnit(name), {
+      scales,
+      priceScale: rule.priceScale,
+    });
+  }
+}
+
+function findUnitRule(base: string): PlanFeatureUnitRule | undefined {
+  return registeredUnitRules.get(base) ?? BUILT_IN_UNIT_RULES.get(base);
+}
 
 /** Units whose value is an amount of the plan's currency. */
 const MONEY_UNITS = new Set(["currency", "currency unit", "currency units"]);
@@ -112,7 +149,7 @@ interface ParsedUnit {
 }
 
 function parseUnit(unit: string): ParsedUnit {
-  const normalized = unit.trim().toLowerCase();
+  const normalized = normalizeUnit(unit);
   if (normalized.startsWith(PRICE_UNIT_PREFIX)) {
     return {
       kind: "price",
@@ -156,19 +193,22 @@ function formatPrice(value: number, context: PlanFeatureFormatContext): string {
   }).format(value);
 }
 
-function pickScale(scales: DisplayScale[], value: number): DisplayScale {
+function pickScale(
+  scales: PlanFeatureUnitScale[],
+  value: number,
+): PlanFeatureUnitScale {
   const magnitude = Math.abs(value);
   const fitting = scales.filter((candidate) => candidate.size <= magnitude);
   return fitting.at(-1) ?? scales[0]!;
 }
 
 function unitLabelKey(label: string, kind: UnitKind): string {
-  return `${UNIT_LABEL_KEY_PREFIX}.${label}.${kind}`;
+  return `${label}.${kind}`;
 }
 
 function formatQuantityInRule(
   value: number,
-  rule: UnitRule,
+  rule: PlanFeatureUnitRule,
   context: PlanFeatureFormatContext,
 ): string {
   const chosen = pickScale(rule.scales, value);
@@ -182,7 +222,7 @@ function formatQuantityInRule(
 
 function formatPriceInRule(
   value: number,
-  rule: UnitRule,
+  rule: PlanFeatureUnitRule,
   context: PlanFeatureFormatContext,
 ): string {
   const scaled = value * rule.priceScale.size;
@@ -215,7 +255,7 @@ function formatNumberWithUnit(
   if (parsed.kind === "quantity" && MONEY_UNITS.has(parsed.base)) {
     return formatMajorUnits(value, context.currency, context.locale);
   }
-  const rule = UNIT_RULES[parsed.base];
+  const rule = findUnitRule(parsed.base);
   if (!rule) return formatWithUnknownUnit(value, parsed, unit, context);
   return parsed.kind === "price"
     ? formatPriceInRule(value, rule, context)
@@ -257,9 +297,9 @@ const FORMATTERS: Record<string, FeatureValueFormatter> = {
 /**
  * Renders a plan's feature value for people: `-1` reads as unlimited (the
  * convention `maxMembers` already uses), booleans as ✓/—, numbers grouped in
- * the viewer's locale and scaled by unit — bytes to KB…TB, minute-based
- * usage to hours, GB-hours to GB-months, and `per <unit>` prices to the same
- * readable unit.
+ * the viewer's locale and scaled by unit — bytes to KB…TB, plus any unit a
+ * consumer registered — and `per <unit>` prices read per the same readable
+ * unit.
  *
  * @param feature Feature definition carrying the value type and unit
  * @param value Value a plan sets for the feature

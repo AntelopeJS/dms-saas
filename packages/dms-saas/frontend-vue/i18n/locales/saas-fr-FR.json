@@ -1082,29 +1082,9 @@
             "quantity": "{value} To",
             "price": "{price} / To"
           },
-          "vcpu_hour": {
-            "quantity": "{value} heure vCPU | {value} heures vCPU",
-            "price": "{price} / heure vCPU"
-          },
-          "gib_hour": {
-            "quantity": "{value} Gio-heure | {value} Gio-heures",
-            "price": "{price} / Gio-heure"
-          },
-          "gb_hour": {
-            "quantity": "{value} Go-heure | {value} Go-heures",
-            "price": "{price} / Go-heure"
-          },
-          "gb_month": {
-            "quantity": "{value} Go-mois | {value} Go-mois",
-            "price": "{price} / Go-mois"
-          },
           "minute": {
             "quantity": "{value} minute | {value} minutes",
             "price": "{price} / minute"
-          },
-          "build_minute": {
-            "quantity": "{value} minute de build | {value} minutes de build",
-            "price": "{price} / minute de build"
           }
         },
         "pending_downgrade": "Downgrade vers {plan} au prochain cycle",

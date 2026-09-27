@@ -246,10 +246,47 @@ reads at a glance; any other unit is shown verbatim after the grouped number.
 | Stored unit | Quantity reads as | `per <unit>` price reads as |
 |-------------|-------------------|-----------------------------|
 | `byte(s)` | bytes, KB, MB, GB or TB (powers of 1000) | per GB |
-| `vCPU-minute(s)` | vCPU-hours | per vCPU-hour |
-| `GiB-minute(s)`, `GB-minute(s)` | GiB-hours, GB-hours | per GiB-hour, per GB-hour |
-| `GB-hour(s)` | GB-months (730 hours) | per GB-month |
-| `minute(s)`, `build minute(s)` | minutes, build minutes | per minute, per build minute |
+| `minute(s)` | minutes | per minute |
+
+A module declaring features in its own units teaches the plan pages how they
+read with `registerPlanFeatureUnit`, auto-imported like the other dms-saas
+composables. Call it from a frontend plugin that runs on the server and in the
+browser, so server-rendered and hydrated values agree. Each scale says how
+many stored units it holds; a quantity takes the largest scale it fills, and a
+`per <unit>` price reads per `priceScale`. Labels are full i18n keys the module
+ships in its own locales, each a node holding a `quantity` message
+(`{value}`, pluralised on the scaled value) and a `price` message (`{price}`):
+
+```ts
+// frontend-vue/app/plugins/plan-feature-units.ts
+const MINUTES_PER_HOUR = 60;
+const vcpuHour = { label: "cloud.plan.units.vcpu_hour", size: MINUTES_PER_HOUR };
+
+export default defineDmsPlugin(() => {
+  registerPlanFeatureUnit(["vCPU-minute", "vCPU-minutes"], {
+    scales: [vcpuHour],
+    priceScale: vcpuHour,
+  });
+});
+```
+
+```json
+{
+  "cloud": {
+    "plan": {
+      "units": {
+        "vcpu_hour": {
+          "quantity": "{value} vCPU-hour | {value} vCPU-hours",
+          "price": "{price} / vCPU-hour"
+        }
+      }
+    }
+  }
+}
+```
+
+Units match case-insensitively, and a registered unit takes precedence over a
+built-in one of the same name.
 
 ## Extension points
 
