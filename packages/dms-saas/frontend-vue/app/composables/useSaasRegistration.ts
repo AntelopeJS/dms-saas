@@ -7,13 +7,6 @@ import {
   toValue,
 } from "vue";
 
-/**
- * Whether registration asks for a card, as the deployment configured it in
- * `registration.paymentMethod`: `required` always does, `optional` lets the
- * visitor skip it, `none` never shows the card step and never calls Stripe.
- */
-export type RegistrationPaymentMethodPolicy = "required" | "optional" | "none";
-
 export interface RegistrationForm {
   email: string;
   password: string;
@@ -83,13 +76,6 @@ interface RegistrationResult {
 
 interface SetupIntentResponse {
   clientSecret: string | null;
-}
-
-/** What dms-saas publishes to the browser through the frontend module options. */
-export interface DmsSaasPublicRuntimeConfig {
-  stripePublishableKey?: string;
-  admissionMode?: "open" | "invitation-only";
-  registrationPaymentMethod?: RegistrationPaymentMethodPolicy;
 }
 
 type PaymentStepRule = (skipsPaymentMethod: boolean) => boolean;

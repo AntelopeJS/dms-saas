@@ -12,12 +12,6 @@ interface DmsPublicRuntime {
   oauthProviders?: OAuthProviderOption[];
 }
 
-interface DmsSaasPublicRuntimeConfig {
-  stripePublishableKey?: string;
-  admissionMode?: "open" | "invitation-only";
-  registrationPaymentMethod?: "required" | "optional" | "none";
-}
-
 interface PendingRegistration {
   email: string;
   name: string;

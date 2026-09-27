@@ -5,10 +5,6 @@ const props = defineProps<{
 	collapsed?: boolean
 }>()
 
-interface DmsSaasPublicRuntimeConfig {
-	admissionMode?: 'open' | 'invitation-only'
-}
-
 const toast = useToast()
 const { t } = useI18n()
 const { resolveApiError } = useApiErrorMessage()
