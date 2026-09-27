@@ -48,6 +48,11 @@ export interface PlanFeatureFormatContext {
   currency: string | null;
   unlimitedLabel: string;
   translateUnit: UnitLabelTranslator;
+  /**
+   * Renders a stored text value through the DMS display string convention:
+   * a `$key` is translated, anything else is returned as is.
+   */
+  translateText: (text: string) => string;
 }
 
 /** The part of a feature definition that decides how its value reads. */
@@ -282,16 +287,21 @@ function formatNumeric(
   return formatNumberWithUnit(numeric, unit, context);
 }
 
-function formatText(value: unknown, unit: string | null): string {
+function formatText(
+  value: unknown,
+  unit: string | null,
+  context: PlanFeatureFormatContext,
+): string {
   const text = String(value).trim();
   if (!text) return EMPTY_LABEL;
-  return unit ? `${text} ${unit}` : text;
+  const shown = context.translateText(text);
+  return unit ? `${shown} ${unit}` : shown;
 }
 
 const FORMATTERS: Record<string, FeatureValueFormatter> = {
   boolean: (value) => formatBoolean(value),
   number: formatNumeric,
-  string: (value, unit) => formatText(value, unit),
+  string: formatText,
 };
 
 /**
@@ -299,7 +309,8 @@ const FORMATTERS: Record<string, FeatureValueFormatter> = {
  * convention `maxMembers` already uses), booleans as ✓/—, numbers grouped in
  * the viewer's locale and scaled by unit — bytes to KB…TB, plus any unit a
  * consumer registered — and `per <unit>` prices read per the same readable
- * unit.
+ * unit. Text values follow the DMS display string convention: a `$key` is
+ * translated, plain text is shown as stored.
  *
  * @param feature Feature definition carrying the value type and unit
  * @param value Value a plan sets for the feature
@@ -321,6 +332,7 @@ export function formatPlanFeatureValue(
 /** Locale-bound view of {@link formatPlanFeatureValue}, for components. */
 export function usePlanFeatureFormat() {
   const { t, locale } = useI18n();
+  const { processI18n } = useTranslation();
 
   function formatFeatureValue(
     feature: TenantPlanFeature,
@@ -332,6 +344,7 @@ export function usePlanFeatureFormat() {
       currency,
       unlimitedLabel: t("saas.workspace.plan.unlimited"),
       translateUnit: (key, params, count) => t(key, params, count),
+      translateText: (text) => processI18n(text),
     });
   }
 

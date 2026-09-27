@@ -242,6 +242,8 @@ unlimited, booleans as ✓/—, numbers are grouped in the viewer's locale. A
 `per <unit>` unit makes the value a price in the plan's currency, and
 `currency units` an amount of it. Known units are scaled to something a person
 reads at a glance; any other unit is shown verbatim after the grouped number.
+A text value follows the same convention as labels: a `$<key>` value is
+translated in the declaring module's locales, anything else is shown as stored.
 
 | Stored unit | Quantity reads as | `per <unit>` price reads as |
 |-------------|-------------------|-----------------------------|

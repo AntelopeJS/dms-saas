@@ -49,6 +49,31 @@ function translator(
   };
 }
 
+const require = createRequire(import.meta.url);
+const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
+type Translate = (key: string) => string;
+
+interface DmsTranslationHelpers {
+  resolveI18nKey: (translate: Translate, key: string) => string;
+  resolveOptionalI18nKey: (
+    translate: Translate,
+    key: string | undefined,
+  ) => string | undefined;
+}
+
+// The real DMS helpers the plan pages get auto-imported, not a re-implementation.
+const dmsTranslation = (await import(
+  path.join(
+    dmsRoot,
+    "frontend-vue/layers/dms-core/app/composables/translation/useTranslation.ts",
+  )
+)) as DmsTranslationHelpers;
+
+/** Messages a consumer module ships for its text feature values. */
+const VALUE_MESSAGES: Record<string, string> = {
+  "cloud.plan_features.values.upgrade": "Upgrade required",
+};
+
 const EN = readLocale("saas-en-GB.json");
 const FR = readLocale("saas-fr-FR.json");
 
@@ -61,6 +86,8 @@ function context(
     currency,
     unlimitedLabel: UNLIMITED,
     translateUnit: translator(locale === "en-GB" ? EN : FR),
+    translateText: (text) =>
+      dmsTranslation.resolveI18nKey((key) => VALUE_MESSAGES[key] ?? key, text),
   };
 }
 
@@ -87,6 +114,12 @@ describe("plan feature value formatting", () => {
     [numeric("resources"), 25000, "25,000 resources"],
     [numeric("requests per 15 minutes"), 1000, "1,000 requests per 15 minutes"],
     [{ valueType: "string", unit: null }, "Priority", "Priority"],
+    [
+      { valueType: "string", unit: null },
+      "$cloud.plan_features.values.upgrade",
+      "Upgrade required",
+    ],
+    [{ valueType: "string", unit: "support" }, "24/7", "24/7 support"],
   ])("renders %o with value %o as %s", (feature, value, expected) => {
     expect(formatPlanFeatureValue(feature, value, context("en-GB"))).toBe(
       expected,
@@ -244,26 +277,6 @@ describe("registered plan feature units", () => {
     ).toThrow("Invalid plan feature unit rule");
   });
 });
-
-const require = createRequire(import.meta.url);
-const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
-type Translate = (key: string) => string;
-
-interface DmsTranslationHelpers {
-  resolveI18nKey: (translate: Translate, key: string) => string;
-  resolveOptionalI18nKey: (
-    translate: Translate,
-    key: string | undefined,
-  ) => string | undefined;
-}
-
-// The real DMS helpers the plan pages get auto-imported, not a re-implementation.
-const dmsTranslation = (await import(
-  path.join(
-    dmsRoot,
-    "frontend-vue/layers/dms-core/app/composables/translation/useTranslation.ts",
-  )
-)) as DmsTranslationHelpers;
 
 describe("plan feature labels", () => {
   const MESSAGES: Record<string, string> = {
