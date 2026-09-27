@@ -1,10 +1,10 @@
 import { assert } from "@antelopejs/interface-api-util";
 import {
   DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY,
+  type DmsSaasConfig,
   REGISTRATION_PAYMENT_METHOD_POLICIES,
   type RegistrationPaymentMethodPolicy,
-} from "@antelopejs/interface-dms-saas/registration";
-import type { DmsSaasConfig } from "../types";
+} from "../types";
 import { isDevMode } from "./dev-mode";
 
 const REDIRECT_PROTOCOLS = ["http:", "https:"];

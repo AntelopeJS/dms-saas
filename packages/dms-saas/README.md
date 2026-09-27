@@ -209,7 +209,7 @@ boots the registration graph:
 | `@antelopejs/interface-dms-saas/pages` | workspace settings category and tenant billing page extensions |
 | `@antelopejs/interface-dms-saas/plans` | plan projections, catalog builder, and price normalization |
 | `@antelopejs/interface-dms-saas/provisioning` | provisioning hook payload |
-| `@antelopejs/interface-dms-saas/registration` | public registration capture limits and card policies |
+| `@antelopejs/interface-dms-saas/registration` | public registration capture limits |
 | `@antelopejs/interface-dms-saas/workspace-lifecycle` | workspace lifecycle events and operator actions |
 
 `invoiceLineItems` and `workspaceLifecycle` come off the root entry as

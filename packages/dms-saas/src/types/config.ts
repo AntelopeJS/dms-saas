@@ -1,5 +1,3 @@
-import type { RegistrationPaymentMethodPolicy } from "@antelopejs/interface-dms-saas/registration";
-
 export interface DmsSaasStripeConfig {
   secretKey: string;
   webhookSecret: string;
@@ -16,6 +14,24 @@ export interface DmsSaasPublicScreensConfig {
 }
 
 export type PublicScreenId = keyof DmsSaasPublicScreensConfig;
+
+/**
+ * Whether public registration asks for a card: `required` always does,
+ * `optional` lets the visitor skip it, `none` never shows the card step and
+ * never calls Stripe. A registration without a card lands on the free plan.
+ */
+export const REGISTRATION_PAYMENT_METHOD_POLICIES = [
+  "required",
+  "optional",
+  "none",
+] as const;
+
+export type RegistrationPaymentMethodPolicy =
+  (typeof REGISTRATION_PAYMENT_METHOD_POLICIES)[number];
+
+/** Policy applied when the deployment configures none. */
+export const DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY: RegistrationPaymentMethodPolicy =
+  "required";
 
 /** Public registration flow settings. */
 export interface DmsSaasRegistrationConfig {
