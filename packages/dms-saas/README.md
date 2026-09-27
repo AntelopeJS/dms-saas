@@ -91,51 +91,6 @@ do not need a separate tenant-owner grant list. Subscription access gates remain
 independent and unchanged. This resolver alone does not constrain
 `defaultGranted` permissions or guards that do not consult effective permissions.
 
-## Native support tickets
-
-The Support page stores tickets, messages, and ticket events in the active
-tenant schema. Platform ticket listing uses `CROSS_INSTANCE`; MongoDB's
-`_instance` identifies each ticket's tenant. Detail reads and writes use that
-tenant's scoped models.
-
-Support listings use the Data API endpoints:
-
-- `/api/saas/tenant/tables/support-tickets/list`
-- `/api/saas/tables/support-tickets/list`
-- `/api/saas/tables/support-owners/list`
-- Existing tenant and platform detail URLs, with `/messages/list` and
-  `/events/list` children (and `/count` variants)
-
-List queries accept `offset`, `limit`, `sortKey`, `sortDirection`, and
-`filter_<field>`. Responses contain `{ results, total, offset, limit }`. Owner
-rows contain `_id`, `name`, and `email`. Global ticket rows include the joined
-`tenantName`.
-
-Pages default to 20 rows and are capped at 100. String filters use the DMS
-comparison modes, for example `filter_status=is:open`. Recent-first reads keep
-timestamp/ID compound ordering. Message and event pagination loads only the
-requested collection; ticket scope is enforced by the server.
-
-Status and assignment changes record the actor, previous/new values, and time
-in `support_ticket_events`. This includes automatic reply transitions: support
-replies wait for the customer, and customer replies resume tickets waiting for
-them. Existing tickets start with no historical events; old history is not
-invented. Existing central mirror data is unused and is not automatically deleted.
-
-Support level comes from the inherited plan feature whose id is
-`support-sla`. Supported string values are `community`, `email`, `priority`,
-and `dedicated`. An absent or invalid value falls back to community support.
-Those levels respectively expose normal; low/normal; low/normal/high; and all
-priorities. Displayed first-response targets are no guarantee, 48 business
-hours, 8 business hours, and 2 elapsed hours.
-
-Attachments use the DMS upload token and staging flow below the tenant-bound
-`support-attachments/{tenantId}` path. A message accepts up to five image, PDF,
-or text files of 10 MiB each. Only staged keys from that tenant path are
-accepted, each is promoted before the tenant message is persisted, and failed
-writes move promoted files back to staging. Ticket-specific metadata routes
-verify that a key belongs to the requested thread before issuing its read URL.
-
 ## Registration
 
 Public registration is short: an account (name, e-mail, password) and the
@@ -880,47 +835,6 @@ are not made idempotent by the delivery operation ID.
 Register consumers before startup reconciliation; use the existing
 tenant inventory and gate for bootstrap/backfill rather than treating `created`
 as a historical inventory API.
-
-## Support attachment storage and recovery
-
-Configure `supportStorage` with an explicit named file-storage definition. Support
-issues private staged uploads through its tenant-member `/api/saas/support/uploads`
-route and persists the tenant, source key and storage name before returning the
-upload capability. Native `/api/files` routes do not authorize support files.
-Support read routes check ticket/message membership before minting a read URL.
-
-Keep every old named storage definition unchanged while its uploads, receipts or
-files remain live. Selecting a new `supportStorage` name affects only new uploads;
-existing receipts retain their original routing. Unknown names fail closed. A name
-does not identify a provider incarnation and cannot detect remapping that same
-name to a different backend. Use isolated nonreused keys and prevent privileged or
-external writers from modifying support objects.
-
-The storage adapter must provide write-once uploads and dedicated no-clobber
-`PromoteFile`, with trusted-origin replay and private visibility preservation.
-Promotion moves a staged upload to its canonical key without the staging prefix;
-support never retains an expiring staged key as the published reference. Support
-records positive promotion confirmation before validating final metadata, then
-uses the existing database operation receipt to authorize publication. Published
-prerequisites are the database interface `0.1.6`, the storage interface `0.1.3`,
-and a compatible provider: local `0.1.4` or S3 `0.1.3`, all of which any DMS
-release carrying this module provides. Tests use MongoDB `1.3.1`.
-
-Source admissions remain insert-only and permanent. Rejected work cannot publish,
-even if a delayed promotion finishes. Owner-initiated paginated support recovery
-repeats ordinary deletion of owned rejected sources and positively confirmed
-finals. It never promotes rejected work just to establish cleanup ownership and
-never deletes an unconfirmed or foreign final. Uncertain acknowledgements can
-therefore retain private orphans. Recovery is not autonomous garbage collection;
-operators must repeat complete passes, including after delayed uploads finish.
-Already issued signed read URLs remain valid until their normal expiry.
-
-Never-submitted upload receipts have no operation to recover. Configure provider
-staging expiry for abandoned bytes; permanent issuance/admission metadata is not
-automatically collected. Upload capabilities and in-flight writes can outlive a
-cleanup pass, so storage expiry/operational cleanup must account for them. Do not
-delete receipts to free a source for another request or garbage-collect a file
-that a committed support message still references.
 
 ## Upgrading
 

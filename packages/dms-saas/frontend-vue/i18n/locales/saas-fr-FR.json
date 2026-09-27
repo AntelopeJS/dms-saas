@@ -17,7 +17,6 @@
       "customers": "Clients",
       "catalog": "Catalogue",
       "billing": "Facturation",
-      "support": "Support",
       "configuration": "Configuration"
     },
     "errors": {
@@ -111,35 +110,6 @@
       },
       "webhook": {
         "invalid_signature": "Signature webhook invalide"
-      },
-      "support": {
-        "priority_not_available": "Cette priorité n'est pas incluse dans votre plan",
-        "invalid_message": "Saisissez un message de 10 000 caractères maximum",
-        "too_many_attachments": "Un message peut contenir jusqu'à 5 pièces jointes",
-        "invalid_attachments": "Les pièces jointes sont invalides",
-        "invalid_attachment": "La pièce jointe est invalide",
-        "invalid_subject": "Saisissez un sujet de 200 caractères maximum",
-        "invalid_category": "Sélectionnez une catégorie valide",
-        "invalid_priority": "Sélectionnez une priorité valide",
-        "invalid_status": "Sélectionnez un statut valide",
-        "invalid_pagination": "Utilisez des nombres entiers positifs pour la page et sa taille",
-        "invalid_status_transition": "Cette transition de statut n'est pas autorisée",
-        "closed_ticket_reply": "Rouvrez le ticket fermé avant de répondre",
-        "invalid_assignee": "Assignez le ticket à un administrateur plateforme",
-        "platform_attachments_not_available": "Les réponses de la plateforme ne peuvent pas ajouter de pièces jointes",
-        "tenant_busy": "Une autre mise à jour du support est en cours. Réessayez.",
-        "invalid_request_id": "Un identifiant stable de demande de support est requis",
-        "request_reused": "Cet identifiant correspond à un autre contenu. Réessayez la demande initiale.",
-        "operation_pending": "Cette demande est en attente. Réessayez avec le même contenu.",
-        "operation_unknown": "Le résultat n'est pas encore confirmé. Réessayez avec le même contenu.",
-        "projection_pending": "L'historique du support est en cours de récupération. Réessayez bientôt.",
-        "attachment_pending": "L'admission de la pièce jointe est en attente. Réessayez la même demande.",
-        "attachment_already_admitted": "Ce fichier appartient déjà à une autre demande. Téléversez-le à nouveau.",
-        "storage_unavailable": "Le stockage des pièces jointes n'est pas configuré. Contactez l'administrateur de la plateforme.",
-        "invalid_cursor": "Curseur de récupération du support invalide",
-        "ticket_not_found": "Ticket de support introuvable",
-        "message_not_found": "Message de support introuvable",
-        "attachment_not_found": "Pièce jointe introuvable"
       },
       "platform_notes": {
         "invalid_target": "Type de cible invalide",
@@ -1231,101 +1201,6 @@
         "delete": "Impossible de supprimer la note"
       }
     },
-    "support": {
-      "tenant": {
-        "title": "Support",
-        "description": "Ouvrez et suivez les demandes de support de ce workspace",
-        "new": "Nouveau ticket",
-        "create": "Ouvrir le ticket",
-        "created": "Ticket de support ouvert",
-        "empty": "Aucun ticket de support",
-        "select": "Sélectionnez un ticket pour lire la conversation"
-      },
-      "platform": {
-        "title": "Boîte de réception support",
-        "description": "Traitez les demandes de support de tous les workspaces",
-        "empty": "Aucun ticket ne correspond à ces filtres",
-        "select": "Sélectionnez un ticket dans la boîte de réception",
-        "assignee": "Assigné à",
-        "unassigned": "Non assigné"
-      },
-      "subject": "Sujet",
-      "message": "Message",
-      "attachments": "Pièces jointes",
-      "attachment": "Pièce jointe {number}",
-      "remove_attachment": "Retirer la pièce jointe",
-      "reply_placeholder": "Écrire une réponse…",
-      "send": "Envoyer la réponse",
-      "conversation": "Conversation",
-      "pagination": {
-        "latest_page": "Messages les plus récents",
-        "older_messages": "Choisissez une page suivante pour voir les anciens messages"
-      },
-      "history": {
-        "title": "Historique du ticket",
-        "empty": "Aucune modification du ticket",
-        "status_changed": "{actor} a changé le statut de {previous} à {next}",
-        "assignment_changed": "{actor} a changé l’assignation de {previous} à {next}"
-      },
-      "category": {
-        "label": "Catégorie",
-        "question": "Question",
-        "incident": "Incident",
-        "billing": "Facturation",
-        "feature_request": "Demande de fonctionnalité"
-      },
-      "priority": {
-        "label": "Priorité",
-        "low": "Basse",
-        "normal": "Normale",
-        "high": "Haute",
-        "urgent": "Urgente"
-      },
-      "status": {
-        "open": "Ouvert",
-        "in_progress": "En cours",
-        "waiting_customer": "En attente du client",
-        "resolved": "Résolu",
-        "closed": "Fermé"
-      },
-      "author": {
-        "tenant": "Workspace",
-        "platform": "Équipe support"
-      },
-      "filters": {
-        "status": "Statut",
-        "priority": "Priorité",
-        "all_statuses": "Tous les statuts",
-        "all_priorities": "Toutes les priorités",
-        "apply": "Appliquer les filtres"
-      },
-      "sla": {
-        "community": {
-          "title": "Support communautaire",
-          "description": "Assistance communautaire sans délai de réponse garanti."
-        },
-        "email": {
-          "title": "Support e-mail",
-          "description": "Objectif de première réponse sous 2 jours ouvrés."
-        },
-        "priority": {
-          "title": "Support prioritaire",
-          "description": "Objectif de première réponse sous 8 heures ouvrées."
-        },
-        "dedicated": {
-          "title": "Support dédié",
-          "description": "Objectif de première réponse sous 2 heures."
-        }
-      },
-      "error": {
-        "load": "Impossible de charger le support",
-        "create": "Impossible d'ouvrir le ticket",
-        "reply": "Impossible d'envoyer la réponse",
-        "update": "Impossible de mettre à jour le ticket",
-        "upload": "Impossible de téléverser la pièce jointe. Sélectionnez le fichier pour réessayer.",
-        "attachment": "Impossible d'ouvrir la pièce jointe"
-      }
-    },
     "notifications": {
       "subjects": {
         "plan_migrated": "Plan migré",
@@ -1343,9 +1218,7 @@
         "workspace_reactivated": "Workspace réactivé",
         "complimentary_access_granted": "Accès gratuit accordé",
         "automation": "Automatisation",
-        "seat_overage": "Dépassement de sièges du plan",
-        "support_new_message": "Nouveau message de support",
-        "support_status_changed": "Statut du ticket de support modifié"
+        "seat_overage": "Dépassement de sièges du plan"
       },
       "payload": {
         "workspace_suspended_admin": {
@@ -1367,20 +1240,6 @@
         "workspace_deletion_requested": {
           "title": "Suppression du workspace demandée",
           "description": "L'accès est révoqué et les données seront détruites à la fin de la période de rétention."
-        },
-        "support_new_ticket": {
-          "title": "Nouveau ticket de support"
-        },
-        "support_tenant_reply": {
-          "title": "Nouvelle réponse client",
-          "description": "Un client a ajouté un message à un ticket de support."
-        },
-        "support_platform_reply": {
-          "title": "Le support a répondu à votre ticket",
-          "description": "L’équipe support a ajouté un message à votre ticket."
-        },
-        "support_status_changed": {
-          "title": "Le statut de votre ticket de support a changé"
         }
       },
       "category": {

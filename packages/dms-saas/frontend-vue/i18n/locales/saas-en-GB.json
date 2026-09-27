@@ -17,7 +17,6 @@
       "customers": "Customers",
       "catalog": "Catalogue",
       "billing": "Billing",
-      "support": "Support",
       "configuration": "Configuration"
     },
     "errors": {
@@ -111,35 +110,6 @@
       },
       "webhook": {
         "invalid_signature": "Invalid webhook signature"
-      },
-      "support": {
-        "priority_not_available": "This priority is not included in your plan",
-        "invalid_message": "Enter a message of up to 10,000 characters",
-        "too_many_attachments": "A message can contain up to 5 attachments",
-        "invalid_attachments": "The attachments are invalid",
-        "invalid_attachment": "The attachment is invalid",
-        "invalid_subject": "Enter a subject of up to 200 characters",
-        "invalid_category": "Select a valid category",
-        "invalid_priority": "Select a valid priority",
-        "invalid_status": "Select a valid status",
-        "invalid_pagination": "Use positive whole numbers for page and page size",
-        "invalid_status_transition": "This ticket status transition is not allowed",
-        "closed_ticket_reply": "Reopen the closed ticket before replying",
-        "invalid_assignee": "Assign the ticket to a platform owner",
-        "platform_attachments_not_available": "Platform replies cannot add attachments",
-        "tenant_busy": "Another support update is in progress. Try again.",
-        "invalid_request_id": "A stable support request ID is required",
-        "request_reused": "This request ID belongs to different content. Retry the original request.",
-        "operation_pending": "This support request is pending. Retry with the same content.",
-        "operation_unknown": "The support result is not yet confirmed. Retry with the same content.",
-        "projection_pending": "The support history is being recovered. Retry shortly.",
-        "attachment_pending": "Attachment admission is pending. Retry the same request.",
-        "attachment_already_admitted": "This upload already belongs to another request. Upload the file again.",
-        "storage_unavailable": "Support uploads are not configured. Contact the platform administrator.",
-        "invalid_cursor": "Invalid support recovery cursor",
-        "ticket_not_found": "Support ticket not found",
-        "message_not_found": "Support message not found",
-        "attachment_not_found": "Attachment not found"
       },
       "platform_notes": {
         "invalid_target": "Invalid target type",
@@ -1231,101 +1201,6 @@
         "delete": "Unable to delete the note"
       }
     },
-    "support": {
-      "tenant": {
-        "title": "Support",
-        "description": "Open and follow support requests for this workspace",
-        "new": "New ticket",
-        "create": "Open ticket",
-        "created": "Support ticket opened",
-        "empty": "No support tickets yet",
-        "select": "Select a ticket to read its conversation"
-      },
-      "platform": {
-        "title": "Support inbox",
-        "description": "Handle support requests across all workspaces",
-        "empty": "No tickets match these filters",
-        "select": "Select a ticket from the inbox",
-        "assignee": "Assignee",
-        "unassigned": "Unassigned"
-      },
-      "subject": "Subject",
-      "message": "Message",
-      "attachments": "Attachments",
-      "attachment": "Attachment {number}",
-      "remove_attachment": "Remove attachment",
-      "reply_placeholder": "Write a reply…",
-      "send": "Send reply",
-      "conversation": "Conversation",
-      "pagination": {
-        "latest_page": "Latest messages",
-        "older_messages": "Choose a later page for older messages"
-      },
-      "history": {
-        "title": "Ticket history",
-        "empty": "No ticket changes yet",
-        "status_changed": "{actor} changed the status from {previous} to {next}",
-        "assignment_changed": "{actor} changed the assignee from {previous} to {next}"
-      },
-      "category": {
-        "label": "Category",
-        "question": "Question",
-        "incident": "Incident",
-        "billing": "Billing",
-        "feature_request": "Feature request"
-      },
-      "priority": {
-        "label": "Priority",
-        "low": "Low",
-        "normal": "Normal",
-        "high": "High",
-        "urgent": "Urgent"
-      },
-      "status": {
-        "open": "Open",
-        "in_progress": "In progress",
-        "waiting_customer": "Waiting for customer",
-        "resolved": "Resolved",
-        "closed": "Closed"
-      },
-      "author": {
-        "tenant": "Workspace",
-        "platform": "Support team"
-      },
-      "filters": {
-        "status": "Status",
-        "priority": "Priority",
-        "all_statuses": "All statuses",
-        "all_priorities": "All priorities",
-        "apply": "Apply filters"
-      },
-      "sla": {
-        "community": {
-          "title": "Community support",
-          "description": "Community assistance without a guaranteed response time."
-        },
-        "email": {
-          "title": "Email support",
-          "description": "Target first response within 2 business days."
-        },
-        "priority": {
-          "title": "Priority support",
-          "description": "Target first response within 8 business hours."
-        },
-        "dedicated": {
-          "title": "Dedicated support",
-          "description": "Target first response within 2 hours."
-        }
-      },
-      "error": {
-        "load": "Could not load support",
-        "create": "Could not open the ticket",
-        "reply": "Could not send the reply",
-        "update": "Could not update the ticket",
-        "upload": "Could not upload the attachment. Select the file to try again.",
-        "attachment": "Could not open the attachment"
-      }
-    },
     "notifications": {
       "subjects": {
         "plan_migrated": "Plan migrated",
@@ -1343,9 +1218,7 @@
         "workspace_reactivated": "Workspace reactivated",
         "complimentary_access_granted": "Complimentary access granted",
         "automation": "Automation",
-        "seat_overage": "Plan seat overage",
-        "support_new_message": "New support message",
-        "support_status_changed": "Support ticket status changed"
+        "seat_overage": "Plan seat overage"
       },
       "payload": {
         "workspace_suspended_admin": {
@@ -1367,20 +1240,6 @@
         "workspace_deletion_requested": {
           "title": "Workspace deletion requested",
           "description": "Access is revoked and data will be destroyed at the end of the retention period."
-        },
-        "support_new_ticket": {
-          "title": "New support ticket"
-        },
-        "support_tenant_reply": {
-          "title": "New customer reply",
-          "description": "A customer added a message to a support ticket."
-        },
-        "support_platform_reply": {
-          "title": "Support replied to your ticket",
-          "description": "The support team added a message to your ticket."
-        },
-        "support_status_changed": {
-          "title": "Your support ticket status changed"
         }
       },
       "category": {

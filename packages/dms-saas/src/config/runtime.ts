@@ -10,7 +10,6 @@ import { isDevMode } from "./dev-mode";
 const REDIRECT_PROTOCOLS = ["http:", "https:"];
 const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "[::1]"];
 const HTTP_BAD_REQUEST = 400;
-const HTTP_UNAVAILABLE = 503;
 const ADMISSION_MODES = ["open", "invitation-only"];
 const DEFAULT_UPCOMING_INVOICE_PREVIEW_CACHE_TTL_SECONDS = 3600;
 const MS_PER_SECOND = 1000;
@@ -111,17 +110,6 @@ export function getUpcomingInvoicePreviewCacheTtlMs(): number {
 
 export function getAllowedRedirectHosts(): string[] {
   return runtimeConfig?.allowedRedirectHosts ?? [];
-}
-
-/** Returns the explicit server-owned storage binding; support never falls back to default. */
-export function getSupportStorage(): string {
-  const storage = runtimeConfig?.supportStorage;
-  assert(
-    typeof storage === "string" && storage.trim().length > 0,
-    HTTP_UNAVAILABLE,
-    "saas.errors.support.storage_unavailable",
-  );
-  return storage;
 }
 
 /** Public registration is independent of invitation acceptance and account recovery. */

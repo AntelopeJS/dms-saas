@@ -8,6 +8,5 @@ export * from "./members";
 export * from "./plan-migrations";
 export * from "./plans";
 export * from "./segments";
-export * from "./support";
 export * from "./users";
 export * from "./workspaces";
