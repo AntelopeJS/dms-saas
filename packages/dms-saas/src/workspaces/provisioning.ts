@@ -46,7 +46,6 @@ const HTTP_CONFLICT = 409;
 const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
 const SEAT_BILLING_INITIAL_QUANTITY = 1;
-/** Registration opens individual workspaces: business plans need the upgrade flow. */
 
 export type WorkspaceCustomerType = "individual" | "business";
 
