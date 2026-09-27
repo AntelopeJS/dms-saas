@@ -37,6 +37,7 @@ import {
 } from "../../db";
 import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
+import { getSeatUsage } from "../../plans";
 import { buildWorkspaceProjection } from "../../utils";
 import type {
   CardDetails,
@@ -387,9 +388,10 @@ export class SaasWorkspacesController extends Controller(
 
     const { subscription, billingInfo, members, invoices, creditNotes, plan } =
       await loadWorkspaceRelations(id, this.planModel);
-    const [memberRows, pendingInvitationsCount] = await Promise.all([
+    const [memberRows, pendingInvitationsCount, seats] = await Promise.all([
       buildMemberRows(members, this.userModel),
       countPendingInvitations(id),
+      getSeatUsage(id),
     ]);
 
     const projection = buildWorkspaceProjection({
@@ -411,7 +413,10 @@ export class SaasWorkspacesController extends Controller(
       planName: projection.planName,
       currency: projection.currency,
       mrr: projection.mrr,
-      membersCount: projection.membersCount,
+      // Counted as the customer's seats count them: platform support is
+      // announced apart, so the two numbers match the members page.
+      membersCount: seats.members,
+      platformSupportCount: seats.platformSupport.length,
       // Shown beside the member count: a workspace created for an owner who
       // has not signed up yet has no member, only this invitation.
       pendingInvitationsCount,

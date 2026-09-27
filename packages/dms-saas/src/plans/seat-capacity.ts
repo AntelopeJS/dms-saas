@@ -2,6 +2,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   type TenantMember,
   TenantMemberModel,
+  type UserInvite,
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
@@ -42,22 +43,46 @@ async function loadPlatformOwners(): Promise<PlatformOwnerDirectory> {
 }
 
 /**
- * Platform owners who enter a customer workspace do it to support it: they
- * never take one of the customer's seats, neither as members nor as invitees.
+ * A membership is platform support when its user is a platform owner and it
+ * does not own the workspace — an owner is the customer and always takes a
+ * seat.
  */
-export async function isPlatformOwnerUser(userId: string): Promise<boolean> {
-  const user = await GetModel(UserModel).get(userId);
-  return user?.owner === true;
+function supportUserOf(
+  member: TenantMember,
+  owners: PlatformOwnerDirectory,
+): User | undefined {
+  if (member.isTenantOwner) return undefined;
+  return owners.byUserId.get(member.userId);
 }
 
-export async function isPlatformOwnerEmail(email: string): Promise<boolean> {
-  const user = await GetModel(UserModel).getByEmail(email);
-  return user?.owner === true;
+/**
+ * Platform owners invited to a workspace hold no seat, unless the invitation
+ * hands them its ownership: that invitee is the customer.
+ */
+function holdsSeat(
+  invite: UserInvite,
+  owners: PlatformOwnerDirectory,
+): boolean {
+  return (
+    invite.asTenantOwner || !owners.emails.has(normalizeEmail(invite.email))
+  );
 }
 
-export async function countSeatedUsers(userIds: string[]): Promise<number> {
-  const owners = await loadPlatformOwners();
-  return userIds.filter((userId) => !owners.byUserId.has(userId)).length;
+/** How many of these members, all still in the workspace, hold a seat. */
+export async function countSeatedUsers(
+  tenantId: string,
+  userIds: string[],
+): Promise<number> {
+  const [members, owners] = await Promise.all([
+    GetModel(TenantMemberModel, tenantId).listAll(),
+    loadPlatformOwners(),
+  ]);
+  const supportUserIds = new Set(
+    members
+      .filter((member) => supportUserOf(member, owners))
+      .map((member) => member.userId),
+  );
+  return userIds.filter((userId) => !supportUserIds.has(userId)).length;
 }
 
 function toPlatformSupportMember(owner: User): PlatformSupportMember {
@@ -69,7 +94,7 @@ function listPlatformSupport(
   owners: PlatformOwnerDirectory,
 ): PlatformSupportMember[] {
   return members.flatMap((member) => {
-    const owner = owners.byUserId.get(member.userId);
+    const owner = supportUserOf(member, owners);
     return owner ? [toPlatformSupportMember(owner)] : [];
   });
 }
@@ -77,8 +102,8 @@ function listPlatformSupport(
 /**
  * A pending invite holds a seat as much as a member does — that is what the
  * enforcement counts, so the members page has to show the same breakdown or
- * the quota reads as wrong to whoever hits the 402. Platform owners hold no
- * seat: they are listed apart as platform support.
+ * the quota reads as wrong to whoever hits the 402. Platform support holds no
+ * seat: it is listed apart.
  *
  * The DMS keeps one invitation per email and reissues one by inserting its
  * successor before deleting it, so invitations are counted per invitee: the
@@ -90,19 +115,17 @@ export async function getSeatUsage(
   tenantId: string,
   releasedInviteeEmail?: string,
 ): Promise<SeatUsage> {
-  const memberModel = GetModel(TenantMemberModel, tenantId);
-  const inviteModel = GetModel(UserInviteModel, tenantId);
   const [members, invites, owners] = await Promise.all([
-    memberModel.listAll(),
-    inviteModel.getAll(),
+    GetModel(TenantMemberModel, tenantId).listAll(),
+    GetModel(UserInviteModel, tenantId).getAll(),
     loadPlatformOwners(),
   ]);
   const nowMs = Date.now();
   const pendingInvitees = new Set(
     invites
       .filter((invite) => new Date(invite.expiresAt).getTime() > nowMs)
-      .map((invite) => normalizeEmail(invite.email))
-      .filter((email) => !owners.emails.has(email)),
+      .filter((invite) => holdsSeat(invite, owners))
+      .map((invite) => normalizeEmail(invite.email)),
   );
   if (releasedInviteeEmail) {
     pendingInvitees.delete(normalizeEmail(releasedInviteeEmail));
