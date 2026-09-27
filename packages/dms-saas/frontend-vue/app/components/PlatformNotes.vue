@@ -30,6 +30,10 @@ const props = defineProps<{
   routeParams?: Record<string, string>;
 }>();
 
+// The card and its delete modal are sibling roots, so the renderer's extra
+// attributes (page and component ids) have no single element to land on.
+defineOptions({ inheritAttrs: false });
+
 const { $authFetch } = useAuthFetch();
 const { t } = useI18n();
 const toast = useToast();

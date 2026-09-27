@@ -7,7 +7,13 @@ import {
 } from "@antelopejs/interface-dms/hooks";
 import type { Plan } from "../db";
 import { PlanModel, TenantSubscriptionModel } from "../db";
-import { countOccupiedSeats, hasSeatCapacity } from "./seat-capacity";
+import {
+  countOccupiedSeats,
+  countSeatedUsers,
+  hasSeatCapacity,
+  isPlatformOwnerEmail,
+  isPlatformOwnerUser,
+} from "./seat-capacity";
 import { syncStripeSeatQuantity } from "./seat-sync";
 
 const HTTP_PAYMENT_REQUIRED = 402;
@@ -69,13 +75,16 @@ async function syncSeatsAfterChange(
 
 async function syncSeatsAfterRemoval(
   tenantId: string,
-  removedCount: number,
+  removedUserIds: string[],
   idempotencyKey: string,
 ): Promise<void> {
   const active = await getActivePlanForTenant(tenantId);
   if (!active) return;
-  const currentOccupied = await countOccupiedSeats(tenantId);
-  const nextOccupied = Math.max(0, currentOccupied - removedCount);
+  const [currentOccupied, removedSeats] = await Promise.all([
+    countOccupiedSeats(tenantId),
+    countSeatedUsers(removedUserIds),
+  ]);
+  const nextOccupied = Math.max(0, currentOccupied - removedSeats);
   await syncStripeSeatQuantity({
     tenantId,
     plan: active.plan,
@@ -85,17 +94,24 @@ async function syncSeatsAfterRemoval(
   });
 }
 
+// Platform owners enter a workspace to support it, never as one of its
+// seats: they pass the quota and leave the billed quantity untouched.
 export function registerSeatHooks(): void {
-  RegisterHook(Hook.MEMBER_BEING_ADDED, async ({ tenantId, deliveryId }) => {
-    // A delivery id means an accepted invitation: the membership takes over
-    // the seat that invitation already held, and it is still counted here.
-    if (deliveryId) return undefined;
-    await enforceSeatCapacity(tenantId);
-    return undefined;
-  });
+  RegisterHook(
+    Hook.MEMBER_BEING_ADDED,
+    async ({ tenantId, userId, deliveryId }) => {
+      // A delivery id means an accepted invitation: the membership takes over
+      // the seat that invitation already held, and it is still counted here.
+      if (deliveryId) return undefined;
+      if (await isPlatformOwnerUser(userId)) return undefined;
+      await enforceSeatCapacity(tenantId);
+      return undefined;
+    },
+  );
   // An invitation to an already-invited email replaces the existing one (a
   // resend, a renewed link), so that invitee's seat is not claimed twice.
   RegisterHook(Hook.INVITE_BEING_CREATED, async ({ tenantId, email }) => {
+    if (await isPlatformOwnerEmail(email)) return undefined;
     await enforceSeatCapacity(tenantId, email);
     return undefined;
   });
@@ -103,6 +119,7 @@ export function registerSeatHooks(): void {
     // The accepted invitation is still stored at this point; its deletion
     // right after syncs the count once it no longer holds the seat.
     if (deliveryId) return undefined;
+    if (await isPlatformOwnerUser(userId)) return undefined;
     await syncSeatsAfterChange(
       tenantId,
       `seat-sync:member-added:${tenantId}:${userId}`,
@@ -132,7 +149,7 @@ export function registerSeatHooks(): void {
   RegisterHook(Hook.MEMBER_REMOVED, async ({ tenantId, userIds }) => {
     await syncSeatsAfterRemoval(
       tenantId,
-      userIds.length,
+      userIds,
       `seat-sync:member-removed:${tenantId}:${userIds.join(",")}`,
     );
     return undefined;
