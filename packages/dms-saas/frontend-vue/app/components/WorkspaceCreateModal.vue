@@ -272,10 +272,11 @@ onMounted(load);
 
     <div class="flex justify-end gap-2">
       <UButton
+        v-if="props.onCancelCallback"
         color="neutral"
         variant="ghost"
         :disabled="isSubmitting"
-        @click="props.onCancelCallback?.()"
+        @click="props.onCancelCallback()"
       >
         {{ $t("common.cancel") }}
       </UButton>
