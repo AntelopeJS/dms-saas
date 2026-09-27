@@ -67,8 +67,8 @@ importers:
         specifier: '>=0.4.6 <1.0.0'
         version: 0.4.6(@antelopejs/core@1.9.1(@types/node@24.13.3))(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.13(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))
       '@antelopejs/dms-frontend':
-        specifier: 0.3.1
-        version: 0.3.1(@antelopejs/core@1.9.1(@types/node@24.13.3))
+        specifier: 0.3.2
+        version: 0.3.2(@antelopejs/core@1.9.1(@types/node@24.13.3))
       '@antelopejs/file-storage-local':
         specifier: 0.1.5
         version: 0.1.5
@@ -174,8 +174,8 @@ packages:
     resolution: {integrity: sha512-MPLJak0rPluV4lgsdsO5ba03sgTxIGSncajBcoaoppuppQmksdpaemojIHiVLJ4LiG0iiH21Roaed8XXy1XkYQ==}
     hasBin: true
 
-  '@antelopejs/dms-frontend@0.3.1':
-    resolution: {integrity: sha512-4BrpFxWcB/SSOTsntyrxivAAf65uqITo5pPJKp25SNV/UuvW32h1lbtijfRHEbOIir0/LfBE85rGWGLbzLC2JA==}
+  '@antelopejs/dms-frontend@0.3.2':
+    resolution: {integrity: sha512-BNqLqW3UbfeOMnd4RkEynr/1mMWFhwB8dt1JbggaGte8/KrJQ3MQ5TOovnACMmrqAD7FxsMLBsNqjzGjX4O4ZA==}
     engines: {node: '>=20.12.0'}
     hasBin: true
     peerDependencies:
@@ -3346,7 +3346,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@antelopejs/dms-frontend@0.3.1(@antelopejs/core@1.9.1(@types/node@24.13.3))':
+  '@antelopejs/dms-frontend@0.3.2(@antelopejs/core@1.9.1(@types/node@24.13.3))':
     dependencies:
       boxen: 5.1.2
       chalk: 4.1.2
