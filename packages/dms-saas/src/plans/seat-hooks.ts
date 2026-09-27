@@ -10,8 +10,6 @@ import { PlanModel, TenantSubscriptionModel } from "../db";
 import {
   isPlatformSupportEntry,
   isPlatformSupportInvite,
-  markPlatformSupport,
-  releasePlatformSupport,
 } from "./platform-support";
 import {
   countOccupiedSeats,
@@ -123,19 +121,13 @@ export function registerSeatHooks(): void {
       return undefined;
     },
   );
-  // The support marker is written here, whether the platform owner joined
-  // from the back-office or accepted an invitation, so every way in is
-  // covered; the DMS may replay an acceptance, which the marking absorbs.
   RegisterHook(
     Hook.MEMBER_ADDED,
     async ({ tenantId, userId, isTenantOwner, deliveryId }) => {
-      if (await isPlatformSupportEntry(userId, isTenantOwner)) {
-        await markPlatformSupport(tenantId, userId);
-        return undefined;
-      }
       // The accepted invitation is still stored at this point; its deletion
       // right after syncs the count once it no longer holds the seat.
       if (deliveryId) return undefined;
+      if (await isPlatformSupportEntry(userId, isTenantOwner)) return undefined;
       await syncSeatsAfterChange(
         tenantId,
         `seat-sync:member-added:${tenantId}:${userId}`,
@@ -163,15 +155,14 @@ export function registerSeatHooks(): void {
       return undefined;
     },
   );
-  // The hook runs before the memberships are deleted, while their support
-  // markers still tell which of them held a seat.
+  // The hook runs before the memberships are deleted, while they still tell
+  // which of them held a seat.
   RegisterHook(Hook.MEMBER_REMOVED, async ({ tenantId, userIds }) => {
     await syncSeatsAfterRemoval(
       tenantId,
       userIds,
       `seat-sync:member-removed:${tenantId}:${userIds.join(",")}`,
     );
-    await releasePlatformSupport(tenantId, userIds);
     return undefined;
   });
 }

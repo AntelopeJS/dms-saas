@@ -1,7 +1,6 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { HTTPResult } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import {
   GetModel,
@@ -37,13 +36,7 @@ import {
 } from "vitest";
 import { setRuntimeConfig } from "../src/config";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
-import {
-  DataMigrationModel,
-  getSeatUsage,
-  migrateLegacyPlatformSupport,
-  PlatformSupportMarkerModel,
-  registerSeatHooks,
-} from "../src/plans";
+import { getSeatUsage, registerSeatHooks } from "../src/plans";
 import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
 import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import {
@@ -206,10 +199,6 @@ async function acceptPendingInvite(tenantId: string, userId: string) {
   await completeInviteResolution(
     await decideInvite({ tenantId, invite, reason: "accepted", userId }),
   );
-}
-
-async function supportMarkers(tenantId: string): Promise<Set<string>> {
-  return GetModel(PlatformSupportMarkerModel, tenantId).listUserIds();
 }
 
 function inviteAnotherMember(tenantId: string) {
@@ -375,9 +364,6 @@ describe("platform owners supporting a full workspace", () => {
     );
 
     for (const { tenantId } of [first, second]) {
-      expect(await supportMarkers(tenantId)).toEqual(
-        new Set([platformOwner._id]),
-      );
       expect(await getSeatUsage(tenantId)).toMatchObject({
         members: 0,
         occupied: 1,
@@ -386,38 +372,6 @@ describe("platform owners supporting a full workspace", () => {
         ],
       });
     }
-  });
-
-  it("releases the marker of one workspace only", async () => {
-    const first = await createFreeWorkspace();
-    const second = await createFreeWorkspace();
-    const platformOwner = await insertPlatformOwner();
-    await joinAsMember(platformOwner, first.tenantId);
-    await joinAsMember(platformOwner, second.tenantId);
-
-    await ExecuteHooks(Hook.MEMBER_REMOVED, {
-      tenantId: first.tenantId,
-      userIds: [platformOwner._id],
-    });
-
-    expect(await supportMarkers(first.tenantId)).toEqual(new Set());
-    expect(await supportMarkers(second.tenantId)).toEqual(
-      new Set([platformOwner._id]),
-    );
-  });
-
-  it("answers a failed join with the usual error key", async () => {
-    const { tenantId } = await createFreeWorkspace();
-    vi.spyOn(PlatformSupportMarkerModel.prototype, "mark").mockRejectedValue(
-      new Error("E11000 duplicate key error"),
-    );
-
-    const failure = await joinAsMember(await insertPlatformOwner(), tenantId)
-      .then(() => undefined)
-      .catch((error: unknown) => error);
-
-    expect(failure).toBeInstanceOf(HTTPResult);
-    expect(failure).toMatchObject({ body: "saas.workspaces.join.error" });
   });
 
   it("still refuses a customer member once a platform owner joined", async () => {
@@ -442,10 +396,36 @@ describe("platform owners who are customers", () => {
       occupied: 1,
       platformSupport: [],
     });
-    expect(await supportMarkers(tenantId)).toEqual(new Set());
     await expect(inviteAnotherMember(tenantId)).rejects.toMatchObject(
       SEAT_LIMIT_ERROR,
     );
+  });
+
+  it("refuses a platform owner made owner of a full workspace", async () => {
+    const { tenantId } = await createFreeWorkspace();
+    const platformOwner = await insertPlatformOwner();
+
+    await expect(
+      applyTenantOwnership(GetModel(UserModel), platformOwner._id, tenantId, {
+        roleIds: [],
+        isTenantOwner: true,
+      }),
+    ).rejects.toMatchObject(SEAT_LIMIT_ERROR);
+  });
+
+  it("holds a seat for an owner invitation sent to a platform owner", async () => {
+    const { tenantId } = await createFreeWorkspace();
+    const platformOwner = await insertPlatformOwner();
+
+    await expect(
+      createUserInviteToken({
+        tenantId,
+        email: platformOwner.email,
+        language: "en",
+        roleIds: [],
+        asTenantOwner: true,
+      }),
+    ).rejects.toMatchObject(SEAT_LIMIT_ERROR);
   });
 
   it("seats a platform owner invited to own the workspace", async () => {
@@ -483,7 +463,7 @@ describe("platform owners who are customers", () => {
     });
   });
 
-  it("keeps the seat of a member later promoted to platform owner", async () => {
+  it("keeps the seat of a workspace owner later promoted to platform owner", async () => {
     const { email, tenantId } = await createFreeWorkspace();
     const userId = await insertUser(email);
     await acceptPendingInvite(tenantId, userId);
@@ -497,7 +477,7 @@ describe("platform owners who are customers", () => {
     });
   });
 
-  it("marks the membership of an invited platform owner as support", async () => {
+  it("counts the membership of an invited platform owner as support", async () => {
     const { tenantId } = await createFreeWorkspace();
     const platformOwner = await insertPlatformOwner();
     await createUserInviteToken({
@@ -526,152 +506,6 @@ describe("platform owners who are customers", () => {
       occupied: 1,
       platformSupport: [expect.objectContaining({ userId: platformOwner._id })],
     });
-  });
-});
-
-describe("support memberships from before the markers", () => {
-  async function insertLegacyMembership(
-    tenantId: string,
-    userId: string,
-    isTenantOwner: boolean,
-  ): Promise<void> {
-    await GetModel(TenantMemberModel, tenantId).insert({
-      _id: `${tenantId}:${userId}`,
-      userId,
-      roleIds: [],
-      isTenantOwner,
-      joinedAt: new Date(),
-      invitedBy: null,
-    });
-  }
-
-  /** A marker as first written: keyed by the user id alone. */
-  async function insertLegacyMarker(
-    tenantId: string,
-    userId: string,
-  ): Promise<void> {
-    await GetModel(PlatformSupportMarkerModel, tenantId).insert({
-      _id: userId,
-    });
-  }
-
-  async function forgetMigration(): Promise<void> {
-    await GetModel(DataMigrationModel).delete("platform-support-members:v1");
-  }
-
-  async function isMigrationApplied(): Promise<boolean> {
-    return GetModel(DataMigrationModel).isApplied(
-      "platform-support-members:v1",
-    );
-  }
-
-  it("marks the platform owners who do not own the workspace, once", async () => {
-    await forgetMigration();
-    const { tenantId } = await createFreeWorkspace();
-    const supporter = await insertPlatformOwner();
-    const workspaceOwner = await insertPlatformOwner();
-    await insertLegacyMembership(tenantId, supporter._id, false);
-    await insertLegacyMembership(tenantId, workspaceOwner._id, true);
-
-    await migrateLegacyPlatformSupport();
-
-    expect(await supportMarkers(tenantId)).toEqual(new Set([supporter._id]));
-    expect(await getSeatUsage(tenantId)).toMatchObject({
-      members: 1,
-      platformSupport: [expect.objectContaining({ userId: supporter._id })],
-    });
-
-    const promoted = await insertPlatformOwner();
-    await insertLegacyMembership(tenantId, promoted._id, false);
-    await migrateLegacyPlatformSupport();
-
-    expect(await supportMarkers(tenantId)).toEqual(new Set([supporter._id]));
-  });
-
-  it("marks a platform owner in every workspace they support", async () => {
-    await forgetMigration();
-    const first = await createFreeWorkspace();
-    const second = await createFreeWorkspace();
-    const supporter = await insertPlatformOwner();
-    await insertLegacyMembership(first.tenantId, supporter._id, false);
-    await insertLegacyMembership(second.tenantId, supporter._id, false);
-
-    await migrateLegacyPlatformSupport();
-
-    expect(await supportMarkers(first.tenantId)).toEqual(
-      new Set([supporter._id]),
-    );
-    expect(await supportMarkers(second.tenantId)).toEqual(
-      new Set([supporter._id]),
-    );
-    expect(await isMigrationApplied()).toBe(true);
-  });
-
-  it("finishes a migration that stopped on a marker keyed by the user", async () => {
-    await forgetMigration();
-    const first = await createFreeWorkspace();
-    const second = await createFreeWorkspace();
-    const supporter = await insertPlatformOwner();
-    await insertLegacyMembership(first.tenantId, supporter._id, false);
-    await insertLegacyMembership(second.tenantId, supporter._id, false);
-    await insertLegacyMarker(first.tenantId, supporter._id);
-
-    await migrateLegacyPlatformSupport();
-
-    for (const { tenantId } of [first, second]) {
-      expect(await supportMarkers(tenantId)).toEqual(new Set([supporter._id]));
-      expect(await getSeatUsage(tenantId)).toMatchObject({ members: 0 });
-    }
-    expect(
-      await GetModel(PlatformSupportMarkerModel, first.tenantId).get(
-        supporter._id,
-      ),
-    ).toBeUndefined();
-    await expect(migrateLegacyPlatformSupport()).resolves.toBeUndefined();
-  });
-
-  it("rekeys a marker keyed by the user once the migration applied", async () => {
-    const { tenantId } = await createFreeWorkspace();
-    const supporter = await insertPlatformOwner();
-    await insertLegacyMembership(tenantId, supporter._id, false);
-    await insertLegacyMarker(tenantId, supporter._id);
-    await migrateLegacyPlatformSupport();
-
-    expect(await supportMarkers(tenantId)).toEqual(new Set([supporter._id]));
-    expect(await joinAsMember(await insertPlatformOwner(), tenantId)).toEqual({
-      joined: true,
-    });
-  });
-
-  it("keeps the module starting when one marking fails", async () => {
-    await forgetMigration();
-    const first = await createFreeWorkspace();
-    const second = await createFreeWorkspace();
-    const supporter = await insertPlatformOwner();
-    await insertLegacyMembership(first.tenantId, supporter._id, false);
-    await insertLegacyMembership(second.tenantId, supporter._id, false);
-    const mark = PlatformSupportMarkerModel.prototype.mark;
-    vi.spyOn(PlatformSupportMarkerModel.prototype, "mark").mockImplementation(
-      async function (this: PlatformSupportMarkerModel, tenantId, userId) {
-        if (tenantId === first.tenantId) throw new Error("storage hiccup");
-        return mark.call(this, tenantId, userId);
-      },
-    );
-
-    await expect(migrateLegacyPlatformSupport()).resolves.toBeUndefined();
-
-    expect(await supportMarkers(second.tenantId)).toEqual(
-      new Set([supporter._id]),
-    );
-    expect(await isMigrationApplied()).toBe(false);
-
-    vi.restoreAllMocks();
-    await migrateLegacyPlatformSupport();
-
-    expect(await supportMarkers(first.tenantId)).toEqual(
-      new Set([supporter._id]),
-    );
-    expect(await isMigrationApplied()).toBe(true);
   });
 });
 
@@ -740,19 +574,6 @@ describe("seats billed for invitations", () => {
     await ExecuteHooks(Hook.MEMBER_REMOVED, { tenantId, userIds: [userId] });
 
     expect(billedQuantities).toEqual([1, 0]);
-  });
-
-  it("forgets the support marker of a platform owner who leaves", async () => {
-    const { tenantId } = await createSeatBilledWorkspace();
-    const platformOwner = await insertPlatformOwner();
-    await joinAsMember(platformOwner, tenantId);
-
-    await ExecuteHooks(Hook.MEMBER_REMOVED, {
-      tenantId,
-      userIds: [platformOwner._id],
-    });
-
-    expect(await supportMarkers(tenantId)).toEqual(new Set());
   });
 
   it("releases the seat of a cancelled invitation", async () => {

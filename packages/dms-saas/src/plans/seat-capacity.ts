@@ -6,7 +6,6 @@ import {
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
-import { PlatformSupportMarkerModel } from "./db";
 
 /** A platform owner holding a membership to support the workspace. */
 export interface PlatformSupportMember {
@@ -31,12 +30,6 @@ interface PlatformOwnerDirectory {
   emails: Set<string>;
 }
 
-/** What tells a customer's seat from platform support in one workspace. */
-interface SupportDirectory {
-  owners: PlatformOwnerDirectory;
-  markedUserIds: Set<string>;
-}
-
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -49,28 +42,17 @@ async function loadPlatformOwners(): Promise<PlatformOwnerDirectory> {
   };
 }
 
-async function loadSupportDirectory(
-  tenantId: string,
-): Promise<SupportDirectory> {
-  const [owners, markedUserIds] = await Promise.all([
-    loadPlatformOwners(),
-    GetModel(PlatformSupportMarkerModel, tenantId).listUserIds(),
-  ]);
-  return { owners, markedUserIds };
-}
-
 /**
- * A membership is support only while all three hold: it was entered as
- * support, its user is still a platform owner, and it does not own the
- * workspace — an owner is the customer and always takes a seat.
+ * A membership is platform support when its user is a platform owner and it
+ * does not own the workspace — an owner is the customer and always takes a
+ * seat.
  */
 function supportUserOf(
   member: TenantMember,
-  support: SupportDirectory,
+  owners: PlatformOwnerDirectory,
 ): User | undefined {
   if (member.isTenantOwner) return undefined;
-  if (!support.markedUserIds.has(member.userId)) return undefined;
-  return support.owners.byUserId.get(member.userId);
+  return owners.byUserId.get(member.userId);
 }
 
 /**
@@ -91,13 +73,13 @@ export async function countSeatedUsers(
   tenantId: string,
   userIds: string[],
 ): Promise<number> {
-  const [members, support] = await Promise.all([
+  const [members, owners] = await Promise.all([
     GetModel(TenantMemberModel, tenantId).listAll(),
-    loadSupportDirectory(tenantId),
+    loadPlatformOwners(),
   ]);
   const supportUserIds = new Set(
     members
-      .filter((member) => supportUserOf(member, support))
+      .filter((member) => supportUserOf(member, owners))
       .map((member) => member.userId),
   );
   return userIds.filter((userId) => !supportUserIds.has(userId)).length;
@@ -109,10 +91,10 @@ function toPlatformSupportMember(owner: User): PlatformSupportMember {
 
 function listPlatformSupport(
   members: TenantMember[],
-  support: SupportDirectory,
+  owners: PlatformOwnerDirectory,
 ): PlatformSupportMember[] {
   return members.flatMap((member) => {
-    const owner = supportUserOf(member, support);
+    const owner = supportUserOf(member, owners);
     return owner ? [toPlatformSupportMember(owner)] : [];
   });
 }
@@ -133,22 +115,22 @@ export async function getSeatUsage(
   tenantId: string,
   releasedInviteeEmail?: string,
 ): Promise<SeatUsage> {
-  const [members, invites, support] = await Promise.all([
+  const [members, invites, owners] = await Promise.all([
     GetModel(TenantMemberModel, tenantId).listAll(),
     GetModel(UserInviteModel, tenantId).getAll(),
-    loadSupportDirectory(tenantId),
+    loadPlatformOwners(),
   ]);
   const nowMs = Date.now();
   const pendingInvitees = new Set(
     invites
       .filter((invite) => new Date(invite.expiresAt).getTime() > nowMs)
-      .filter((invite) => holdsSeat(invite, support.owners))
+      .filter((invite) => holdsSeat(invite, owners))
       .map((invite) => normalizeEmail(invite.email)),
   );
   if (releasedInviteeEmail) {
     pendingInvitees.delete(normalizeEmail(releasedInviteeEmail));
   }
-  const platformSupport = listPlatformSupport(members, support);
+  const platformSupport = listPlatformSupport(members, owners);
   const seatedMembers = members.length - platformSupport.length;
   return {
     members: seatedMembers,
