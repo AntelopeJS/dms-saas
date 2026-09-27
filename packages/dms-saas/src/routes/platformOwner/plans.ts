@@ -87,7 +87,6 @@ const WRITE_FIELDS = [
   "trialDays",
   "maxMembers",
   "isPublic",
-  "isContactOnly",
   "borderColor",
   "borderLabel",
   "order",
@@ -181,7 +180,6 @@ interface PublicPlan {
   billingMode: Plan["billingMode"];
   features: Plan["features"];
   trialDays: number;
-  isContactOnly: boolean;
   borderColor: string | null;
   borderLabel: string | null;
   order: number;
@@ -200,7 +198,6 @@ function toPublicPlan(plan: Plan): PublicPlan {
     billingMode: plan.billingMode,
     features: plan.features,
     trialDays: plan.trialDays,
-    isContactOnly: !!plan.isContactOnly,
     borderColor: plan.borderColor,
     borderLabel: plan.borderLabel,
     order: plan.order,

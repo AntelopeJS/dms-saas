@@ -32,11 +32,6 @@ export interface TenantPlanView {
   currency: string;
   interval: PlanInterval;
   order: number;
-  /**
-   * Sold on quote: shown with a contact link, never selectable. Always set by
-   * dms-saas; optional so views built before the flag existed still type.
-   */
-  isContactOnly?: boolean;
   checkoutAvailable: boolean;
   featureValues: Record<string, unknown>;
 }
@@ -91,9 +86,7 @@ async function toPlanView(
     currency: plan.currency,
     interval: plan.interval,
     order: plan.order,
-    isContactOnly: !!plan.isContactOnly,
-    checkoutAvailable:
-      !plan.isContactOnly && !!plan.paymentProviderRefs?.stripePriceId,
+    checkoutAvailable: !!plan.paymentProviderRefs?.stripePriceId,
     featureValues,
   };
 }

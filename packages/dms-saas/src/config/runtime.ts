@@ -12,7 +12,6 @@ const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "[::1]"];
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAVAILABLE = 503;
 const ADMISSION_MODES = ["open", "invitation-only"];
-const CONTACT_URL_PROTOCOLS = ["http:", "https:", "mailto:"];
 
 let runtimeConfig: DmsSaasConfig | null = null;
 
@@ -39,27 +38,9 @@ function assertValidRegistrationPaymentMethod(config: DmsSaasConfig): void {
   }
 }
 
-function isContactUrl(value: unknown): boolean {
-  if (typeof value !== "string") return false;
-  try {
-    return CONTACT_URL_PROTOCOLS.includes(new URL(value).protocol);
-  } catch {
-    return false;
-  }
-}
-
-function assertValidPlanContactUrl(config: DmsSaasConfig): void {
-  const url = config.planContactUrl;
-  if (url === undefined || isContactUrl(url)) return;
-  throw new Error(
-    "Invalid dms-saas planContactUrl: expected an http(s) or mailto: URL",
-  );
-}
-
 export function setRuntimeConfig(config: DmsSaasConfig): void {
   assertValidAdmissionMode(config);
   assertValidRegistrationPaymentMethod(config);
-  assertValidPlanContactUrl(config);
   runtimeConfig = config;
 }
 
@@ -105,11 +86,6 @@ export function resolveRegistrationPaymentMethodId(
 
 export function getDefaultPlanSlug(): string | undefined {
   return runtimeConfig?.defaultPlanSlug;
-}
-
-/** Contact link of contact-only plans, if the deployment configured one. */
-export function getPlanContactUrl(): string | null {
-  return runtimeConfig?.planContactUrl ?? null;
 }
 
 export function getAllowedRedirectHosts(): string[] {
