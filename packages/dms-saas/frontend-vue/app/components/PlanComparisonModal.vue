@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps<{
   plans: TenantPlanView[];
@@ -13,8 +13,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ changed: []; upgrade: [plan: TenantPlanView] }>();
-
-const ESCAPE_KEY = "Escape";
 
 const open = defineModel<boolean>("open", { default: false });
 
@@ -47,24 +45,6 @@ const visibleFeatures = computed(() =>
 const hasDetailRows = computed(() =>
   comparedFeatures.value.some((feature) => feature.isDetailRow),
 );
-
-// The DMS shell keeps its own keyboard shortcuts, which can swallow Escape
-// before the dialog sees it; closing on it here makes the modal dismissable
-// wherever focus sits.
-function closeOnEscape(event: KeyboardEvent): void {
-  if (event.key === ESCAPE_KEY) open.value = false;
-}
-
-watch(open, (isOpen) => {
-  if (typeof window === "undefined") return;
-  if (isOpen) window.addEventListener("keydown", closeOnEscape);
-  else window.removeEventListener("keydown", closeOnEscape);
-});
-
-onBeforeUnmount(() => {
-  if (typeof window !== "undefined")
-    window.removeEventListener("keydown", closeOnEscape);
-});
 
 const currentPlan = computed(
   () => props.plans.find((plan) => plan._id === props.currentPlanId) ?? null,
