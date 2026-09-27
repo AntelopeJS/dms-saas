@@ -69,8 +69,6 @@ export interface CurrentPlanResult {
   current: Plan | null;
   available: TenantPlanView[];
   features: TenantPlanFeature[];
-  /** Consumer i18n prefixes the plan pages resolve feature labels under. */
-  featureTranslationPrefixes: string[];
   status: string | null;
   freeUntil: Date | null;
   isComplimentary: boolean;

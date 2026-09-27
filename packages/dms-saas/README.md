@@ -220,27 +220,22 @@ other plan (see [Tenant owner permissions](#tenant-owner-permissions)).
 
 ## Plan feature labels and values
 
-A feature row stores one display name and one tooltip, in no particular
-language. The tenant plan pages (the plan card summary and the plan comparison
-table) look for a translation first, for feature `<featureId>`:
+A feature row stores one display name and one tooltip. The tenant plan pages
+(the plan card summary and the plan comparison table) render both through the
+DMS display string convention: a value starting with `$` is an i18n key,
+anything else is shown as written. A module declaring features either stores
+plain text or stores `$<key>` and ships that key in its own frontend locale
+files (`frontend-vue/i18n/locales/<name>-<locale>.json`):
 
-1. `<prefix>.<featureId>.label` and `<prefix>.<featureId>.tooltip` for each
-   prefix of `planFeatureTranslationPrefixes`, in order;
-2. `saas.plan_features.<featureId>.label` / `.tooltip`;
-3. the stored display name and tooltip.
-
-A module translates the features it declares by shipping the keys in its own
-frontend locale files (`frontend-vue/i18n/locales/<name>-<locale>.json`) and
-naming its prefix in the dms-saas config:
-
-```json
-{ "modules": { "dms-saas": { "config": { "planFeatureTranslationPrefixes": ["cloud.plan_features"] } } } }
+```ts
+{
+  displayName: "$cloud.plan_features.egress.label",
+  tooltip: "$cloud.plan_features.egress.tooltip",
+}
 ```
 
-Keys are dot paths, so a feature id containing dots nests: the label of
-`cloud.price.cpu_minutes` under `cloud.plan_features` lives at
-`cloud.plan_features.cloud.price.cpu_minutes.label`. A key missing in the
-viewer's locale falls back to the fallback locale, then to the stored text.
+A key missing in the viewer's locale falls back to the fallback locale; a
+tooltip key missing everywhere hides the tooltip.
 
 Values are formatted from the feature's `valueType` and `unit`: `-1` reads as
 unlimited, booleans as ✓/—, numbers are grouped in the viewer's locale. A

@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   formatPlanFeatureValue,
   type FormattableFeature,
@@ -7,8 +9,7 @@ import {
 } from "../frontend-vue/app/composables/usePlanFeatureFormat";
 import {
   type LabelledFeature,
-  resolvePlanFeatureLabel,
-  resolvePlanFeatureTooltip,
+  usePlanFeatureLabel,
 } from "../frontend-vue/app/composables/usePlanFeatureLabel";
 
 type LocaleTree = { [key: string]: string | LocaleTree };
@@ -160,46 +161,78 @@ describe("plan feature value formatting", () => {
   });
 });
 
+const require = createRequire(import.meta.url);
+const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
+type Translate = (key: string) => string;
+
+interface DmsTranslationHelpers {
+  resolveI18nKey: (translate: Translate, key: string) => string;
+  resolveOptionalI18nKey: (
+    translate: Translate,
+    key: string | undefined,
+  ) => string | undefined;
+}
+
+// The real DMS helpers the plan pages get auto-imported, not a re-implementation.
+const dmsTranslation = (await import(
+  path.join(
+    dmsRoot,
+    "frontend-vue/layers/dms-core/app/composables/translation/useTranslation.ts",
+  )
+)) as DmsTranslationHelpers;
+
 describe("plan feature labels", () => {
-  const feature: LabelledFeature = {
-    featureId: "cloud.included.egress_bytes",
-    displayName: "Cloud included · egress_bytes",
-    tooltip: "Stored tooltip",
+  const MESSAGES: Record<string, string> = {
+    "cloud.plan_features.egress.label": "Egress included",
+    "cloud.plan_features.egress.tooltip": "Outbound traffic",
   };
 
-  function lookupFrom(messages: Record<string, string>) {
-    return (key: string) => messages[key] ?? null;
+  /** vue-i18n echoes a key it cannot resolve in any locale. */
+  function t(key: string): string {
+    return MESSAGES[key] ?? key;
   }
 
-  it("prefers the first consumer prefix that translates the feature", () => {
-    const lookup = lookupFrom({
-      "cloud.plan_features.cloud.included.egress_bytes.label":
-        "Egress included",
-      "saas.plan_features.cloud.included.egress_bytes.label": "Built-in label",
-    });
-    expect(
-      resolvePlanFeatureLabel(
-        feature,
-        ["missing.prefix", "cloud.plan_features"],
-        lookup,
-      ),
-    ).toBe("Egress included");
+  function labels() {
+    vi.stubGlobal("useI18n", () => ({ t }));
+    vi.stubGlobal("useTranslation", () => ({
+      processI18n: (key: string) => dmsTranslation.resolveI18nKey(t, key),
+    }));
+    vi.stubGlobal(
+      "resolveOptionalI18nKey",
+      dmsTranslation.resolveOptionalI18nKey,
+    );
+    return usePlanFeatureLabel();
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it("falls back to the built-in saas prefix", () => {
-    const lookup = lookupFrom({
-      "saas.plan_features.cloud.included.egress_bytes.tooltip": "Built-in",
-    });
-    expect(resolvePlanFeatureTooltip(feature, [], lookup)).toBe("Built-in");
+  it("translates `$` keys through the declaring module's locales", () => {
+    const feature: LabelledFeature = {
+      displayName: "$cloud.plan_features.egress.label",
+      tooltip: "$cloud.plan_features.egress.tooltip",
+    };
+    const { featureLabel, featureTooltip } = labels();
+    expect(featureLabel(feature)).toBe("Egress included");
+    expect(featureTooltip(feature)).toBe("Outbound traffic");
   });
 
-  it("falls back to the stored display name and tooltip", () => {
-    const lookup = lookupFrom({});
+  it("shows plain stored text as written", () => {
+    const feature: LabelledFeature = {
+      displayName: "Egress",
+      tooltip: "Stored tooltip",
+    };
+    const { featureLabel, featureTooltip } = labels();
+    expect(featureLabel(feature)).toBe("Egress");
+    expect(featureTooltip(feature)).toBe("Stored tooltip");
+  });
+
+  it("hides a missing or untranslated tooltip", () => {
+    const { featureTooltip } = labels();
+    expect(featureTooltip({ displayName: "Egress", tooltip: null })).toBeNull();
     expect(
-      resolvePlanFeatureLabel(feature, ["cloud.plan_features"], lookup),
-    ).toBe("Cloud included · egress_bytes");
-    expect(
-      resolvePlanFeatureTooltip(feature, ["cloud.plan_features"], lookup),
-    ).toBe("Stored tooltip");
+      featureTooltip({ displayName: "Egress", tooltip: "$cloud.missing" }),
+    ).toBeNull();
   });
 });

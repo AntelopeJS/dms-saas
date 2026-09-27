@@ -4,8 +4,6 @@ import { computed, ref } from "vue";
 const props = defineProps<{
   plans: TenantPlanView[];
   features: TenantPlanFeature[];
-  /** Consumer i18n prefixes feature labels and tooltips resolve under. */
-  featureTranslationPrefixes?: string[];
   currentPlanId: string | null;
   pendingPlanId: string | null;
   isRecovery?: boolean;
@@ -23,9 +21,7 @@ const toast = useToast();
 const { resolveApiError } = useApiErrorMessage();
 const { changePlan } = useTenantPlan();
 const { formatFeatureValue } = usePlanFeatureFormat();
-const { featureLabel, featureTooltip } = usePlanFeatureLabel(
-  () => props.featureTranslationPrefixes ?? [],
-);
+const { featureLabel, featureTooltip } = usePlanFeatureLabel();
 const { formatMajorUnits } = useMoneyFormat();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
