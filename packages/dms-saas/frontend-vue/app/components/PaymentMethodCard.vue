@@ -28,6 +28,12 @@ const isFreePlan = computed(
 const isTenantOwner = computed(() => !!data.value?.isTenantOwner);
 const hasStripeCustomer = computed(() => !!data.value?.hasStripeCustomer);
 
+// "You'll be asked for a card on upgrade" is only true without a Stripe
+// customer: once one exists, a missing card is added through the portal.
+const noCardKey = computed(() =>
+  hasStripeCustomer.value ? "none_with_portal" : "none",
+);
+
 const headerBadge = computed<PaymentMethodBadge>(() => {
   if (!card.value) return { color: "warning", key: "missing" };
   if (needsUpdate.value) return { color: "warning", key: "needs_update" };
@@ -108,7 +114,7 @@ onMounted(() => {
       >
         <UIcon name="i-ph-credit-card" class="text-muted size-5" />
         <span class="text-muted grow text-sm">
-          {{ $t(`${KEY_PREFIX}.none`) }}
+          {{ $t(`${KEY_PREFIX}.${noCardKey}`) }}
         </span>
         <UButton
           v-if="!hasStripeCustomer"
