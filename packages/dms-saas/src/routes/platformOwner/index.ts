@@ -8,5 +8,6 @@ export * from "./platform-owners";
 export * from "./segments";
 export * from "./support";
 export * from "./users-detail";
+export * from "./workspace-invitations";
 export * from "./workspace-operator-actions";
 export * from "./workspaces-admin";

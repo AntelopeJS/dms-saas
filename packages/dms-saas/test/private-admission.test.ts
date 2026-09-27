@@ -279,7 +279,6 @@ describe("actual DMS invitation account creation while admission is closed", () 
       name: "Invited workspace",
       ownerEmail: email,
       planId,
-      freeWorkspace: true,
     });
     expect(created.owner.kind).toBe("invited");
     if (created.owner.kind !== "invited")

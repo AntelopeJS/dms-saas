@@ -32,6 +32,11 @@ import {
   TenantBillingState,
   TenantSubscriptionModel,
 } from "../../db";
+import {
+  findPendingOwnerInvite,
+  type InvitationStatus,
+  invitationStatusOf,
+} from "../../workspaces/invitations";
 
 const BILLING_STATE_ITEMS = [
   { label: "$saas.workspaces.billing_state.free", value: "free" },
@@ -46,6 +51,30 @@ const BILLING_STATE_ITEMS = [
   },
 ];
 
+type OwnerStatus =
+  | "joined"
+  | "invitation_pending"
+  | "invitation_expired"
+  | "none";
+
+const OWNER_STATUS_ITEMS = [
+  { label: "$saas.workspaces.owner_status.joined", value: "joined" },
+  {
+    label: "$saas.workspaces.owner_status.invitation_pending",
+    value: "invitation_pending",
+  },
+  {
+    label: "$saas.workspaces.owner_status.invitation_expired",
+    value: "invitation_expired",
+  },
+  { label: "$saas.workspaces.owner_status.none", value: "none" },
+];
+
+const OWNER_STATUS_BY_INVITATION: Record<InvitationStatus, OwnerStatus> = {
+  pending: "invitation_pending",
+  expired: "invitation_expired",
+};
+
 const NO_VALUE = "—";
 
 interface TenantRowInstance {
@@ -54,6 +83,53 @@ interface TenantRowInstance {
 
 function tenantIdOf(self: unknown): string {
   return (self as TenantRowInstance).table._id;
+}
+
+async function memberOwnerEmails(tenantId: string): Promise<string[]> {
+  const owners = await GetModel(TenantMemberModel, tenantId).listOwners();
+  const userModel = GetModel(UserModel);
+  const users = await Promise.all(owners.map((m) => userModel.get(m.userId)));
+  return users
+    .filter((u): u is NonNullable<typeof u> => !!u)
+    .map((u) => u.email);
+}
+
+interface WorkspaceOwnership {
+  emails: string[];
+  inviteEmail: string | null;
+  status: OwnerStatus;
+}
+
+/**
+ * Owners who joined, or else the invitee who will own the workspace once they
+ * accept: a workspace created for a new account has no member yet.
+ */
+async function workspaceOwnership(
+  tenantId: string,
+): Promise<WorkspaceOwnership> {
+  const emails = await memberOwnerEmails(tenantId);
+  if (emails.length > 0) return { emails, inviteEmail: null, status: "joined" };
+  const invite = await findPendingOwnerInvite(tenantId);
+  if (!invite) return { emails, inviteEmail: null, status: "none" };
+  return {
+    emails,
+    inviteEmail: invite.email,
+    status: OWNER_STATUS_BY_INVITATION[invitationStatusOf(invite)],
+  };
+}
+
+// The owner and ownerStatus getters read the same row instance, so they share
+// one lookup instead of querying members and invitations twice per row.
+const ownershipByRow = new WeakMap<object, Promise<WorkspaceOwnership>>();
+
+function rowOwnership(self: unknown): Promise<WorkspaceOwnership> {
+  const row = self as object;
+  let lookup = ownershipByRow.get(row);
+  if (!lookup) {
+    lookup = workspaceOwnership(tenantIdOf(row));
+    ownershipByRow.set(row, lookup);
+  }
+  return lookup;
 }
 
 @RegisterDataController()
@@ -134,19 +210,20 @@ export class workspacesDataAPI extends DataController(
   })
   @Access(AccessMode.ReadOnly)
   get owner(): PromiseLike<string> {
-    return GetModel(TenantMemberModel, tenantIdOf(this))
-      .listOwners()
-      .then(async (owners) => {
-        if (owners.length === 0) return NO_VALUE;
-        const userModel = GetModel(UserModel);
-        const users = await Promise.all(
-          owners.map((m) => userModel.get(m.userId)),
-        );
-        const emails = users
-          .filter((u): u is NonNullable<typeof u> => !!u)
-          .map((u) => u.email);
-        return emails.length > 0 ? emails.join(", ") : NO_VALUE;
-      });
+    return rowOwnership(this).then(({ emails, inviteEmail }) =>
+      emails.length > 0 ? emails.join(", ") : (inviteEmail ?? NO_VALUE),
+    );
+  }
+
+  @Listable(["_id"])
+  @Exported()
+  @Column({
+    name: "$saas.workspaces.column.owner_status",
+    type: new DefaultDataTypes.SelectType({ items: OWNER_STATUS_ITEMS }),
+  })
+  @Access(AccessMode.ReadOnly)
+  get ownerStatus(): PromiseLike<OwnerStatus> {
+    return rowOwnership(this).then(({ status }) => status);
   }
 
   @Select()
