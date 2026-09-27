@@ -556,9 +556,7 @@ if (preview.status === "available") {
 
 The scope must come from a trusted authentication boundary: the call rejects
 with `403` a user who is not a member of the tenant or is refused by the tenant
-access gate (a workspace awaiting its first payment, or suspended). The same
-preview is served to the frontend by
-`GET /api/saas/tenant/upcoming-invoice` for any member of the current workspace.
+access gate (a workspace awaiting its first payment, or suspended).
 
 The result is always one of three states, and Stripe errors never throw:
 
