@@ -31,7 +31,7 @@ import {
   toStripeAddress,
   toTenantBillingAddress,
 } from "../stripe";
-import { hashEmail, stripeSecondsToDate } from "../utils";
+import { hashEmail, insertOrUpdateById, stripeSecondsToDate } from "../utils";
 import { resolveDefaultPlan } from "./default-plan";
 import { isFreePlan } from "./free-workspace-guard";
 import {
@@ -441,35 +441,46 @@ function initialPaidUsagePeriods(
   return [{ stripeSubscriptionId, start: startedAt, end: null }];
 }
 
+/**
+ * Both rows are keyed by the tenant id, like every other writer of them. The
+ * default-plan backfill may cover the workspace between its creation and this
+ * insert; the paid subscription then replaces that free row rather than
+ * sitting beside it or failing a creation the customer already paid for.
+ */
 async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
   const { tenantId, payload, subscription } = input;
-  const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
-  const tenantBillingInfoModel = GetModel(TenantBillingInfoModel, tenantId);
-  await tenantSubscriptionModel.insert([
-    {
-      planId: payload.planId,
-      status: subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS,
-      isComplimentary: false,
-      paidUsagePeriods: initialPaidUsagePeriods(subscription),
-      stripeCustomerId: input.stripeCustomerId,
-      stripeSubscriptionId: subscription.stripeSubscriptionId,
-      currentPeriodEnd: subscription.currentPeriodEnd,
-      cardFingerprint: input.cardFingerprint,
-      createdBy: input.userId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ]);
-  await tenantBillingInfoModel.insert([
-    {
-      customerType: payload.customerType,
-      companyName: payload.companyName ?? null,
-      vatNumber: payload.vatNumber ?? null,
-      billingEmail: input.billingEmail,
-      address: toTenantBillingAddress(payload.address),
-      updatedAt: new Date(),
-    },
-  ]);
+  const subscriptionPatch = {
+    planId: payload.planId,
+    status: subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS,
+    isComplimentary: false,
+    paidUsagePeriods: initialPaidUsagePeriods(subscription),
+    stripeCustomerId: input.stripeCustomerId,
+    stripeSubscriptionId: subscription.stripeSubscriptionId,
+    currentPeriodEnd: subscription.currentPeriodEnd,
+    cardFingerprint: input.cardFingerprint,
+    createdBy: input.userId,
+    updatedAt: new Date(),
+  };
+  await insertOrUpdateById(
+    GetModel(TenantSubscriptionModel, tenantId),
+    tenantId,
+    { ...subscriptionPatch, _id: tenantId, createdAt: new Date() },
+    subscriptionPatch,
+  );
+  const billingInfo = {
+    customerType: payload.customerType,
+    companyName: payload.companyName ?? null,
+    vatNumber: payload.vatNumber ?? null,
+    billingEmail: input.billingEmail,
+    address: toTenantBillingAddress(payload.address),
+    updatedAt: new Date(),
+  };
+  await insertOrUpdateById(
+    GetModel(TenantBillingInfoModel, tenantId),
+    tenantId,
+    { ...billingInfo, _id: tenantId },
+    billingInfo,
+  );
   await recomputeTenantBillingState(tenantId);
 }
 
