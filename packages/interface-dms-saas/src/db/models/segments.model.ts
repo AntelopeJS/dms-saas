@@ -52,13 +52,16 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
     const { _id, revision, ...changes } = patch;
     const instance = SegmentModel.fromPlainData(changes);
     triggerEvent(instance, "update");
+    // The compare-and-set owns the next revision, not the update modifier.
+    const { revision: _rotated, ...dbPatch } =
+      SegmentModel.toDatabase(instance);
     const outcome = await this.table
       .atomicMutation(id, {
         type: "update",
         revisionField: "revision",
         expectedRevision: current.revision,
         nextRevision: randomUUID(),
-        patch: SegmentModel.toDatabase(instance),
+        patch: dbPatch,
       })
       .run();
     if (outcome !== "applied")
