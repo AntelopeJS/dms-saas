@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.3.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.0...v0.3.1)
+
+### 🩹 Fixes
+
+- **segments:** Rotate the revision when the data API edits a segment ([#55](https://github.com/AntelopeJS/dms-saas/pull/55))
+- **deps:** Sync the lockfile with the interface-dms-saas >=0.2.1 floor ([#57](https://github.com/AntelopeJS/dms-saas/pull/57))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.2.1 ([d47b84a](https://github.com/AntelopeJS/dms-saas/commit/d47b84a))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.2.1...v0.3.0)
