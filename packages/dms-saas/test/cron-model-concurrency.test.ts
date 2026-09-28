@@ -432,6 +432,22 @@ describe("complete segment generations on Mongo", () => {
     expect(await links.getAll()).toEqual([]);
   });
 
+  it("does not publish a generation based on conditions the data API edited", async () => {
+    const segment = await segmentFixture();
+    const links = GetModel(UserSegmentModel);
+    const model = GetModel(SegmentModel);
+    const patch = Object.setPrototypeOf(
+      { conditions: { logical: "or", conditions: [] } },
+      Segment.prototype,
+    );
+    triggerEvent(patch, "update");
+    await model.table.get(segment._id).update(patch).run();
+    expect((await model.get(segment._id))?.revision).not.toBe(segment.revision);
+    await links.replaceForSegment(segment, ["stale"], CUTOFF);
+    expect(await links.listBySegment(segment._id)).toEqual([]);
+    expect(await links.getAll()).toEqual([]);
+  });
+
   it("retries a reader when publication and cleanup change its generation", async () => {
     const segment = await segmentFixture();
     const links = GetModel(UserSegmentModel);

@@ -64,8 +64,12 @@ export interface SegmentConditionGroup {
   )[];
 }
 
-class InitialRevisionModifier extends Modifier {
+class RevisionModifier extends Modifier {
   insert(object: Record<string, unknown>, field: string): void {
+    object[field] = randomUUID();
+  }
+
+  update(object: Record<string, unknown>, field: string): void {
     object[field] = randomUUID();
   }
 }
@@ -81,14 +85,16 @@ type AttachFieldModifier = (
 ) => void;
 
 /**
- * Seeds the revision on every insert event, so the platform data API, which
- * writes through the raw table rather than `SegmentModel.insert`, cannot
- * create a segment the compare-and-set mutations would refuse.
+ * Seeds the revision on every insert event and rotates it on every update
+ * event. The platform data API writes through the raw table rather than
+ * `SegmentModel`, so without this it could create a segment the
+ * compare-and-set mutations would refuse, or edit its conditions while a
+ * recompute of the previous conditions can still publish.
  */
-const InitialRevision = MakePropertyDecorator((target, propertyKey) => {
+const Revision = MakePropertyDecorator((target, propertyKey) => {
   (attachModifier as AttachFieldModifier)(
     target.constructor as new () => object,
-    InitialRevisionModifier,
+    RevisionModifier,
     propertyKey as string,
     {},
   );
@@ -112,7 +118,7 @@ export class Segment extends Table {
   @Field("number")
   declare estimatedCount: number;
 
-  @InitialRevision()
+  @Revision()
   @Field("string")
   declare revision: string;
 
