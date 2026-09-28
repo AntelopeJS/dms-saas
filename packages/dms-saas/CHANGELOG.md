@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.2
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.1...v0.3.2)
+
+### 💅 Refactors
+
+- **dms-saas:** Remove support ticketing feature ([#49](https://github.com/AntelopeJS/dms-saas/pull/49))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.2.2 ([78a1585](https://github.com/AntelopeJS/dms-saas/commit/78a1585))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.0...v0.3.1)
