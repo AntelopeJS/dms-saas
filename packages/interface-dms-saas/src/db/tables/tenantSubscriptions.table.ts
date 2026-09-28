@@ -154,7 +154,7 @@ export class TenantSubscription extends Table {
   declare domainTransition: SubscriptionTransition | null;
 
   @Field("string")
-  declare revision?: string;
+  declare revision: string;
 
   @Field("string")
   @Relation({ to: () => User })
@@ -183,9 +183,9 @@ export class TenantSubscription extends Table {
   @Field("date")
   declare paidUsageStartedAt?: Date | null;
 
-  /** Missing means legacy billing; an empty array means no paid usage coverage. */
+  /** Paid usage coverage; an empty array means no usage is billable. */
   @Field("any")
-  declare paidUsagePeriods?: PaidUsagePeriod[] | null;
+  declare paidUsagePeriods: PaidUsagePeriod[];
 
   @CreationTime()
   @Field("date")

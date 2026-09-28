@@ -83,10 +83,7 @@ export class OperatorActionModel extends BasicDataModel(
       .atomicMutation(current._id, {
         type: "update",
         revisionField: "revision",
-        expectedRevision:
-          current.revision === undefined
-            ? { kind: "missing" }
-            : current.revision,
+        expectedRevision: current.revision,
         nextRevision: revision,
         patch: { ...patch, updatedAt },
       })

@@ -152,6 +152,7 @@ describe("default subscription assignment", () => {
         status: "active",
         stripeSubscriptionId: null,
         isComplimentary: false,
+        paidUsagePeriods: [],
       }),
     ]);
     expect(store.recomputed).toEqual(["ws1"]);

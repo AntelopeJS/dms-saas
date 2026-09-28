@@ -15,6 +15,7 @@ import { CROSS_INSTANCE, Schema } from "@antelopejs/interface-database";
 import {
   GetModel,
   RegisterSchema,
+  triggerEvent,
   type DeepPartial,
 } from "@antelopejs/interface-database-decorators";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@antelopejs/interface-dms/constants";
 import {
   type TenantSubscription,
+  Segment,
   SegmentModel,
   StripeWebhookEventModel,
   TenantBillingStateModel,
@@ -356,6 +358,24 @@ describe("billing publication and tombstones on Mongo", () => {
 });
 
 describe("complete segment generations on Mongo", () => {
+  it("seeds a revision on a segment the data API writes through the raw table", async () => {
+    const model = GetModel(SegmentModel);
+    const row = Object.setPrototypeOf(
+      {
+        name: "Raw",
+        conditions: { logical: "and", conditions: [] },
+        estimatedCount: 0,
+      },
+      Segment.prototype,
+    );
+    triggerEvent(row, "insert");
+    const [id] = await model.table.insert(row).run();
+    const segment = (await model.get(id))!;
+    expect(typeof segment.revision).toBe("string");
+    await GetModel(UserSegmentModel).replaceForSegment(segment, ["a"], CUTOFF);
+    expect((await model.get(id))?.estimatedCount).toBe(1);
+  });
+
   it("publishes one complete membership set and count under overlap", async () => {
     const segment = await segmentFixture();
     const links = GetModel(UserSegmentModel);

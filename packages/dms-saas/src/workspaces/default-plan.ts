@@ -86,6 +86,7 @@ async function insertDefaultSubscription(
       planId: plan._id,
       status: ACTIVE_STATUS,
       isComplimentary: false,
+      paidUsagePeriods: [],
       stripeCustomerId: null,
       stripeSubscriptionId: null,
       stripeCheckoutSessionId: null,

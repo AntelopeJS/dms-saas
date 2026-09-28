@@ -99,6 +99,7 @@ async function checkoutRequest(
     planId: "source",
     status: "active",
     isComplimentary: true,
+    paidUsagePeriods: [],
   });
   return {
     tenantId,
@@ -367,5 +368,36 @@ describe("subscription effect admission with real Mongo mutations", () => {
     ).toHaveLength(1);
     expect(await model.table.count().run()).toBe(1);
     expect((await model.findOne())?._id).toBe(tenantId);
+  });
+
+  it("writes a revision and an empty coverage ledger on a free grant", async () => {
+    const tenantId = randomUUID();
+    const model = GetModel(TenantSubscriptionModel, tenantId);
+    const user = Object.assign(new User(), { _id: randomUUID() });
+    await insertFreeSubscription(user, "free", tenantId, model);
+    const inserted = await model.findOne();
+    expect(inserted?.paidUsagePeriods).toEqual([]);
+    expect(typeof inserted?.revision).toBe("string");
+  });
+
+  it("opens coverage only when the first checkout of a plan-less workspace completes", async () => {
+    const request = { ...(await checkoutRequest()), subscription: undefined };
+    await request.tenantSubscriptionModel.table.delete().run();
+    await startPaidCheckout(request);
+    const placeholder = await request.tenantSubscriptionModel.findOne();
+    expect(placeholder).toMatchObject({
+      status: "pending_payment",
+      paidUsagePeriods: [],
+    });
+    expect(typeof placeholder?.revision).toBe("string");
+    await handleCheckoutSessionCompleted(await sessionEvent(request));
+    expect(
+      (await request.tenantSubscriptionModel.findOne())?.paidUsagePeriods,
+    ).toEqual([
+      expect.objectContaining({
+        stripeSubscriptionId: "paid-subscription",
+        end: null,
+      }),
+    ]);
   });
 });

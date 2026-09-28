@@ -55,7 +55,7 @@ export class LifecycleDelivery extends Table {
   declare attemptCount: number;
 
   @Field("string")
-  declare revision?: string;
+  declare revision: string;
 
   @Field("string")
   declare receiptId: string | null;

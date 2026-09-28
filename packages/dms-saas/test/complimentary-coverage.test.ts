@@ -138,14 +138,11 @@ describe("paid usage coverage", () => {
     expect(clipInvoiceUsageWindow(FEBRUARY, second, "second")).toBeNull();
   });
 
-  it("leaves subscriptions without a coverage ledger unclipped", () => {
-    const untracked = gift({
+  it("bills nothing for a subscription with an empty coverage ledger", () => {
+    const uncovered = gift({
       isComplimentary: false,
-      stripeSubscriptionId: "untracked",
-      paidUsagePeriods: undefined,
+      stripeSubscriptionId: "uncovered",
     });
-    expect(clipInvoiceUsageWindow(FEBRUARY, untracked, "untracked")).toEqual(
-      FEBRUARY,
-    );
+    expect(clipInvoiceUsageWindow(FEBRUARY, uncovered, "uncovered")).toBeNull();
   });
 });

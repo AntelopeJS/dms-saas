@@ -73,7 +73,7 @@ export class PlanMigration extends Table {
   declare _id: string;
 
   @Field("string")
-  declare revision?: string;
+  declare revision: string;
 
   @Field("any")
   declare snapshot: PlanMigrationSnapshot | null;

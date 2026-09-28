@@ -36,5 +36,5 @@ export class StripeWebhookEvent extends Table {
   declare errorMessage: string | null;
 
   @Field("string")
-  declare revision?: string;
+  declare revision: string;
 }

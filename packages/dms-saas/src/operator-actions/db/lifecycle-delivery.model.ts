@@ -98,10 +98,7 @@ export class LifecycleDeliveryModel extends BasicDataModel(
       .atomicMutation(current._id, {
         type: "update",
         revisionField: "revision",
-        expectedRevision:
-          current.revision === undefined
-            ? { kind: "missing" }
-            : current.revision,
+        expectedRevision: current.revision,
         nextRevision: randomUUID(),
         patch: { ...patch, updatedAt: new Date() },
       })

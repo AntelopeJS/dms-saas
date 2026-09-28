@@ -284,9 +284,6 @@ async function attachCheckoutSession(
     operationId,
     {
       isComplimentary: isComplimentarySubscription(subscription),
-      paidUsagePeriods:
-        subscription.paidUsagePeriods ??
-        (isComplimentarySubscription(subscription) ? [] : null),
       stripeCustomerId: checkout.customerId,
       stripeCheckoutSessionId: checkout.sessionId,
       updatedAt: new Date(),
@@ -303,6 +300,7 @@ async function initializeCheckoutSubscription(
     planId: PLACEHOLDER_PLAN_ID,
     status: PENDING_PAYMENT_STATUS,
     isComplimentary: false,
+    paidUsagePeriods: [],
     stripeCustomerId: null,
     stripeSubscriptionId: null,
     stripeCheckoutSessionId: null,
@@ -388,6 +386,7 @@ export async function insertFreeSubscription(
         planId: newPlanId,
         status: ACTIVE_STATUS,
         isComplimentary: false,
+        paidUsagePeriods: [],
         stripeCustomerId: null,
         stripeSubscriptionId: null,
         stripeCheckoutSessionId: null,

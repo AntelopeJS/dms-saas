@@ -34,7 +34,7 @@ export class UserSegment extends Table {
   declare sourceRevision?: string;
 
   @Field("string")
-  declare revision?: string;
+  declare revision: string;
 
   @Field("date")
   declare evaluatedAt: Date;

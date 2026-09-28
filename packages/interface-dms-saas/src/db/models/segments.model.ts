@@ -9,21 +9,6 @@ import { Segment, segmentsTableName } from "../tables/segments.table";
 
 /** Data access for reusable audience segments. */
 export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
-  /** New segments start with an explicit revision on every supported backend. */
-  override insert(
-    rows: DeepPartial<Segment> | DeepPartial<Segment>[],
-    options?: ValidateOptions,
-  ): Promise<string[]> {
-    const initialize = (row: DeepPartial<Segment>): DeepPartial<Segment> => ({
-      ...row,
-      revision: randomUUID(),
-    });
-    return super.insert(
-      Array.isArray(rows) ? rows.map(initialize) : initialize(rows),
-      options,
-    );
-  }
-
   /** Every edit invalidates computations based on the previous conditions. */
   async update(
     id: string,
@@ -71,10 +56,7 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
       .atomicMutation(id, {
         type: "update",
         revisionField: "revision",
-        expectedRevision:
-          current.revision === undefined
-            ? { kind: "missing" }
-            : current.revision,
+        expectedRevision: current.revision,
         nextRevision: randomUUID(),
         patch: SegmentModel.toDatabase(instance),
       })
@@ -95,10 +77,7 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
       .atomicMutation(segment._id, {
         type: "update",
         revisionField: "revision",
-        expectedRevision:
-          segment.revision === undefined
-            ? { kind: "missing" }
-            : segment.revision,
+        expectedRevision: segment.revision,
         nextRevision: randomUUID(),
         patch: {
           membershipGeneration: generation,
