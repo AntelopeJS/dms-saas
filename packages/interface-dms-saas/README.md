@@ -48,3 +48,15 @@ This package is released on its own workflow and must be published before the
 runtime module: `@antelopejs/dms-saas` depends on it through
 `>=<interface version> <1.0.0`, a range that only resolves once this package is
 released.
+
+## Upgrading
+
+### Rows written by earlier builds
+
+The data contract no longer tolerates rows that predate the current fields:
+`TenantSubscription.isComplimentary` is a required boolean and
+`isComplimentarySubscription` only returns `true` for `isComplimentary: true`,
+`InvoiceModel.getAllInvoices` only matches `documentType: "invoice"`, and
+`WebhookResult` no longer includes `failed`. Fix such rows before upgrading, as
+described in the
+[`@antelopejs/dms-saas` upgrade notes](../dms-saas/README.md#upgrading).

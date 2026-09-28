@@ -1,24 +1,15 @@
 import { InterfaceFunction } from "@antelopejs/interface-core";
 
-/** Minimal subscription state used to recognize current and legacy admin gifts. */
+/** Minimal subscription state used to recognize admin gifts. */
 export interface ComplimentarySubscriptionState {
   isComplimentary?: boolean | null;
-  stripeCustomerId?: string | null;
-  stripeSubscriptionId?: string | null;
-  status?: string | null;
 }
 
-/** Explicit gift status wins; legacy grants had neither a customer nor a subscription. */
+/** Only the explicit admin gift marker makes a subscription complimentary. */
 export function isComplimentarySubscription(
   subscription: ComplimentarySubscriptionState | null | undefined,
 ): boolean {
-  if (!subscription) return false;
-  return (
-    subscription.isComplimentary ??
-    (subscription.status !== "pending_payment" &&
-      !subscription.stripeCustomerId &&
-      !subscription.stripeSubscriptionId)
-  );
+  return subscription?.isComplimentary === true;
 }
 
 /** Tenant identity established by a trusted server authentication boundary. */

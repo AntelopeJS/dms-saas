@@ -100,18 +100,18 @@ describe("plan interval writes", () => {
   });
 
   it("requires a valid interval before Stripe-backed fields change", async () => {
-    const legacyPlan = { _id: PLAN_ID, name: "Legacy" } as Plan;
+    const plan = { _id: PLAN_ID, name: "Custom" } as Plan;
 
     await expectInvalidInterval(() =>
-      controller({ current: legacyPlan }).update(OWNER, PLAN_ID, {
+      controller({ current: plan }).update(OWNER, PLAN_ID, {
         price: 20,
       }),
     );
   });
 
-  it("skips Stripe sync for legacy plans without an interval", async () => {
-    const legacyPlan = { _id: PLAN_ID, name: "Legacy" } as Plan;
-    const store = { current: legacyPlan };
+  it("skips Stripe sync for plans without an interval", async () => {
+    const plan = { _id: PLAN_ID, name: "Custom" } as Plan;
+    const store = { current: plan };
     stripe.isConfigured = true;
 
     await expect(

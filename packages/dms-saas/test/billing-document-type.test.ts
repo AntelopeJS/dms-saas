@@ -8,12 +8,14 @@ describe("billing document type rendering", () => {
     );
   });
 
-  it("renders legacy and current invoice rows as invoices", () => {
+  it("renders invoice rows as invoices", () => {
     expect(billingDocumentTypeKey("invoice")).toBe(
       "saas.invoices.type.invoice",
     );
-    expect(billingDocumentTypeKey(undefined)).toBe(
-      "saas.invoices.type.invoice",
-    );
+  });
+
+  it("does not label an unknown document type as an invoice", () => {
+    expect(billingDocumentTypeKey(undefined)).toBeNull();
+    expect(billingDocumentTypeKey("quote")).toBeNull();
   });
 });

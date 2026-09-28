@@ -28,8 +28,10 @@ export default defineDmsPlugin(() => {
   registerDataType({
     id: "billing_document_type",
     formatter: {
-      default: (value: unknown) =>
-        nuxtApp.$i18n.t(billingDocumentTypeKey(value)),
+      default: (value: unknown) => {
+        const key = billingDocumentTypeKey(value);
+        return key ? nuxtApp.$i18n.t(key) : "—";
+      },
     },
   });
   registerDataType({

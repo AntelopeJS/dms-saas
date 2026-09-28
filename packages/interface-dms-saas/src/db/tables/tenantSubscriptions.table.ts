@@ -177,7 +177,7 @@ export class TenantSubscription extends Table {
 
   /** Explicit admin gift marker, independent of an existing Stripe customer. */
   @Field("boolean")
-  declare isComplimentary?: boolean;
+  declare isComplimentary: boolean;
 
   /** Earliest usage eligible for the current paid subscription, excluding gifted/grace usage. */
   @Field("date")

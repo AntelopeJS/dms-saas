@@ -9,6 +9,7 @@ import { getStripeClient } from "../../stripe";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
+const INVOICE_DOCUMENT_TYPE = "invoice";
 
 interface IssueCreditNoteBody {
   invoiceId: string;
@@ -28,7 +29,7 @@ export class SaasCreditNotesIssueController extends Controller(
   ) {
     const invoice = await invoiceModel.get(body.invoiceId);
     assert(
-      invoice && invoice.documentType !== "credit_note",
+      invoice?.documentType === INVOICE_DOCUMENT_TYPE,
       HTTP_NOT_FOUND,
       "saas.errors.invoice.not_found",
     );
