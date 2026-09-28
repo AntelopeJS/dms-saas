@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.3.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.2.1...v0.3.0)
+
+### 🩹 Fixes
+
+- **playground:** Start the playground on a fresh clone ([#47](https://github.com/AntelopeJS/dms-saas/pull/47))
+
+### 💅 Refactors
+
+- **billing:** ⚠️  Drop tolerance for legacy subscription, invoice and webhook rows ([#50](https://github.com/AntelopeJS/dms-saas/pull/50))
+- **billing:** ⚠️  Always write revision and paid usage periods ([#53](https://github.com/AntelopeJS/dms-saas/pull/53))
+
+### 🏡 Chore
+
+- **playground:** Move to @antelopejs/dms-frontend 0.3.2 ([#52](https://github.com/AntelopeJS/dms-saas/pull/52))
+- **release:** @antelopejs/interface-dms-saas v0.2.0 ([b022294](https://github.com/AntelopeJS/dms-saas/commit/b022294))
+
+#### ⚠️ Breaking Changes
+
+- **billing:** ⚠️  Drop tolerance for legacy subscription, invoice and webhook rows ([#50](https://github.com/AntelopeJS/dms-saas/pull/50))
+- **billing:** ⚠️  Always write revision and paid usage periods ([#53](https://github.com/AntelopeJS/dms-saas/pull/53))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+- Alessandro Aloisio ([@alessaloisio](http://github.com/alessaloisio))
+
 ## v0.2.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.2.0...v0.2.1)
