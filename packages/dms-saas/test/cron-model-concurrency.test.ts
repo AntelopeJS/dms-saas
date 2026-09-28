@@ -442,9 +442,7 @@ describe("complete segment generations on Mongo", () => {
     );
     triggerEvent(patch, "update");
     await model.table.get(segment._id).update(patch).run();
-    expect((await model.get(segment._id))?.revision).not.toBe(
-      segment.revision,
-    );
+    expect((await model.get(segment._id))?.revision).not.toBe(segment.revision);
     await links.replaceForSegment(segment, ["stale"], CUTOFF);
     expect(await links.listBySegment(segment._id)).toEqual([]);
     expect(await links.getAll()).toEqual([]);
