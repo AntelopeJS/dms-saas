@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.2.2
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.2.1...v0.2.2)
+
+### 🩹 Fixes
+
+- **deps:** Sync the lockfile with the interface-dms-saas >=0.2.1 floor ([#57](https://github.com/AntelopeJS/dms-saas/pull/57))
+
+### 💅 Refactors
+
+- **dms-saas:** Remove support ticketing feature ([#49](https://github.com/AntelopeJS/dms-saas/pull/49))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.3.1 ([148fbf0](https://github.com/AntelopeJS/dms-saas/commit/148fbf0))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.2.0...v0.2.1)
