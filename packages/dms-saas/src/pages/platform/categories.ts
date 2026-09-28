@@ -40,11 +40,3 @@ export const configurationCategory = Category("configuration", {
   type: "label",
   order: 40,
 });
-
-export const supportCategory = Category("support", {
-  displayName: "$saas.menu.support",
-  category: saasModule,
-  icon: "i-ph-lifebuoy",
-  type: "label",
-  order: 35,
-});

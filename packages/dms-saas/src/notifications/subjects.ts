@@ -28,8 +28,6 @@ const SUBJECT_KEYS = {
     "saas.notifications.subjects.free_workspace_ending_soon",
   workspaceReactivated: "saas.notifications.subjects.workspace_reactivated",
   seatOverage: "saas.notifications.subjects.seat_overage",
-  supportNewMessage: "saas.notifications.subjects.support_new_message",
-  supportStatusChanged: "saas.notifications.subjects.support_status_changed",
   complimentaryAccessGranted:
     "saas.notifications.subjects.complimentary_access_granted",
   automation: "saas.notifications.subjects.automation",
@@ -138,22 +136,6 @@ export const seatOverageSubject = NotificationSubject("saas.seat_overage", {
   labelKey: SUBJECT_KEYS.seatOverage,
   togglePermission: "default",
 });
-export const supportNewMessageSubject = NotificationSubject(
-  "saas.support_new_message",
-  {
-    category: SaasCategory,
-    labelKey: SUBJECT_KEYS.supportNewMessage,
-    togglePermission: "default",
-  },
-);
-export const supportStatusChangedSubject = NotificationSubject(
-  "saas.support_status_changed",
-  {
-    category: SaasCategory,
-    labelKey: SUBJECT_KEYS.supportStatusChanged,
-    togglePermission: "default",
-  },
-);
 export const complimentaryAccessGrantedSubject = NotificationSubject(
   "saas.complimentary_access_granted",
   {

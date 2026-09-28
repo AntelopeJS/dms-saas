@@ -50,11 +50,6 @@ export interface DmsSaasConfig {
   /** Public registration flow settings. Invitation sign-up ignores them. */
   registration?: DmsSaasRegistrationConfig;
   /**
-   * Server-selected named storage for private support uploads. Keep the name's
-   * backend binding stable while any support admission or file remains retained.
-   */
-  supportStorage?: string;
-  /**
    * Opt out of the reference screens this module ships, to replace them with
    * your own pages. Every screen is registered by default.
    */

@@ -8,7 +8,6 @@ export * from "./plans/edit";
 export * from "./plans/migrations";
 export * from "./segments";
 export * from "./settings";
-export * from "./support";
 export * from "./users";
 export * from "./users/detail";
 export * from "./workspaces";

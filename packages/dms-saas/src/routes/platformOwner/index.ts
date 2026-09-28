@@ -6,7 +6,6 @@ export * from "./plans";
 export * from "./platform-notes";
 export * from "./platform-owners";
 export * from "./segments";
-export * from "./support";
 export * from "./users-detail";
 export * from "./workspace-invitations";
 export * from "./workspace-operator-actions";
