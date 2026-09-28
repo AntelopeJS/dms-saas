@@ -79,10 +79,7 @@ export class StripeWebhookEventModel extends BasicDataModel(
         .atomicMutation(current._id, {
           type: "delete",
           revisionField: "revision",
-          expectedRevision:
-            current.revision === undefined
-              ? { kind: "missing" }
-              : current.revision,
+          expectedRevision: current.revision,
         })
         .run();
       if (outcome === "unknown")

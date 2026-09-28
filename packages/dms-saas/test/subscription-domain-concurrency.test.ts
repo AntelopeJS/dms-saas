@@ -131,15 +131,15 @@ describe("subscription domain admission on the production Mongo provider", () =>
     expect((await model.get(current._id))?.deletionStartedAt).toEqual(marker);
   });
 
-  it("bootstraps an absent revision but never interprets explicit null as absent", async () => {
+  it("refuses to mutate a row without a revision, absent or null", async () => {
     const model = GetModel(TenantSubscriptionModel, randomUUID());
     const id = randomUUID();
     await model.table.insert({ _id: id, status: "active" }).run();
-    const legacy = await model.get(id);
-    if (!legacy) throw new Error("Missing legacy subscription");
-    expect(legacy.revision).toBeUndefined();
-    await model.beginTransition(legacy, transition());
-    expect(typeof (await model.get(id))?.revision).toBe("string");
+    const absent = await model.get(id);
+    if (!absent) throw new Error("Missing revision-less subscription");
+    expect(absent.revision).toBeUndefined();
+    await expect(model.beginTransition(absent, transition())).rejects.toThrow();
+    expect((await model.get(id))?.revision).toBeUndefined();
     await model.table.get(id).update(JSON.parse('{"revision":null}')).run();
     const invalid = await model.get(id);
     if (!invalid) throw new Error("Missing null-revision subscription");

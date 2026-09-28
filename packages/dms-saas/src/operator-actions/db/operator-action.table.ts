@@ -52,7 +52,7 @@ export class OperatorAction extends Table {
   declare attemptCount: number;
 
   @Field("string")
-  declare revision?: string;
+  declare revision: string;
 
   @Field("string")
   declare lastErrorCode: string | null;

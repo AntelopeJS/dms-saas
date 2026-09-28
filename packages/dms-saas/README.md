@@ -754,12 +754,9 @@ remain indefinitely. The existing retention policy still removes old terminal
 
 Revision mutations require the published database interface `0.1.6` or later
 and an adapter implementing that contract. The MongoDB test adapter uses `1.3.1`,
-and any DMS release carrying this module satisfies the requirement. New records
-initialize revisions; legacy PostgreSQL rows with a declared revision column
-require an explicit revision backfill
-before these mutations can proceed. An absent revision is not equivalent to
-`null`, and unsupported bootstrap fails closed. Do not run this backfill against
-shared data without a separately approved migration and quiescent writers.
+and any DMS release carrying this module satisfies the requirement. Every
+record is written with a revision, and these mutations refuse a record without
+one; see [Upgrading](#upgrading) for rows written by earlier builds.
 
 Lifecycle-dependent modules register a required consumer through the public
 interface:
@@ -948,3 +945,21 @@ in the database, with writers stopped, before upgrading:
   may carry partial effects: establish their outcome as described for
   `reconciliation_required` above, then set their result to
   `reconciliation_required` or delete the record once resolved.
+- **`revision`** is required on `tenant_subscriptions`, `segments`,
+  `user_segments`, `plan_migrations`, `stripe_webhook_events`,
+  `saas_lifecycle_deliveries` and `saas_operator_actions`. Revision-fenced
+  writes no longer adopt a row without one: they refuse it, so the workflow
+  holding that row stalls. Give every row lacking the field (absent or `null`)
+  an initial revision, any unique string such as a fresh UUID. Segments created
+  through the platform data API by earlier builds are the usual case.
+- **`tenant_subscriptions.paidUsagePeriods`** is required. It is the only
+  source of usage coverage: a renewal invoice bills usage only inside a period
+  recorded for its own Stripe subscription, and a missing ledger is no longer
+  read as "bill the whole window". Rows lacking it (or holding `null`) are
+  typically default-plan, free-plan and pending-checkout subscriptions, and
+  workspaces created through paid provisioning. Set it by kind:
+  - a row with a `stripeSubscriptionId`, not complimentary:
+    `[{ stripeSubscriptionId, start, end: null }]`, where `start` is the Stripe
+    subscription's `start_date` (or any earlier date), so renewals keep billing
+    their whole window;
+  - every other row (no Stripe subscription, or `isComplimentary: true`): `[]`.

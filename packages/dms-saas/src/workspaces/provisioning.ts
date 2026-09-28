@@ -7,6 +7,7 @@ import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import type Stripe from "stripe";
 import { recomputeTenantBillingState } from "../billing-state";
 import type {
+  PaidUsagePeriod,
   Plan,
   TenantBillingAddress,
   TenantSubscriptionStatus,
@@ -110,6 +111,8 @@ export interface ProvisionedWorkspace {
 interface CreatedSubscription {
   /** Null for a card-less workspace, which has no Stripe side at all. */
   stripeSubscriptionId: string | null;
+  /** Null exactly when `stripeSubscriptionId` is. */
+  startedAt: Date | null;
   isTrialing: boolean;
   currentPeriodEnd: Date | null;
   /**
@@ -181,6 +184,7 @@ const CARDLESS_BILLING: ProvisionedBilling = {
   stripeCustomerId: null,
   subscription: {
     stripeSubscriptionId: null,
+    startedAt: null,
     isTrialing: false,
     currentPeriodEnd: null,
     latestInvoiceId: null,
@@ -371,6 +375,7 @@ async function createSubscription(
   handles.mustPreserveWorkspace = false;
   return {
     stripeSubscriptionId: subscription.id,
+    startedAt: stripeSecondsToDate(subscription.start_date) ?? new Date(),
     isTrialing: grantTrial,
     currentPeriodEnd: stripeSecondsToDate(subscription.current_period_end),
     latestInvoiceId:
@@ -424,6 +429,18 @@ async function settleSubscriptionPayment(
   }
 }
 
+/**
+ * Coverage opens at the Stripe subscription's own start, which no renewal
+ * window precedes, so every renewal bills its whole window.
+ */
+function initialPaidUsagePeriods(
+  subscription: CreatedSubscription,
+): PaidUsagePeriod[] {
+  const { stripeSubscriptionId, startedAt } = subscription;
+  if (!stripeSubscriptionId || !startedAt) return [];
+  return [{ stripeSubscriptionId, start: startedAt, end: null }];
+}
+
 async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
   const { tenantId, payload, subscription } = input;
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
@@ -433,6 +450,7 @@ async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
       planId: payload.planId,
       status: subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS,
       isComplimentary: false,
+      paidUsagePeriods: initialPaidUsagePeriods(subscription),
       stripeCustomerId: input.stripeCustomerId,
       stripeSubscriptionId: subscription.stripeSubscriptionId,
       currentPeriodEnd: subscription.currentPeriodEnd,

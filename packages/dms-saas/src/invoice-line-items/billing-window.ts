@@ -8,8 +8,8 @@ export function clipInvoiceUsageWindow(
   subscription: TenantSubscription | undefined,
   stripeSubscriptionId: string | null,
 ): InvoiceLineItemsContext | null {
+  if (!subscription) return context;
   if (isComplimentarySubscription(subscription)) return null;
-  if (!subscription?.paidUsagePeriods) return context;
   const period = subscription.paidUsagePeriods.find(
     (candidate) => candidate.stripeSubscriptionId === stripeSubscriptionId,
   );

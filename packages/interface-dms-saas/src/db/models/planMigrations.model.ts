@@ -15,7 +15,7 @@ export class PlanMigrationModel extends BasicDataModel(
   PlanMigration,
   planMigrationsTableName,
 ) {
-  /** Initialize revisions for new jobs; retained legacy records need an offline upgrade. */
+  /** Every job starts with a revision, which each progress checkpoint requires. */
   override insert(
     rows: DeepPartial<PlanMigration> | DeepPartial<PlanMigration>[],
     options?: ValidateOptions,
@@ -65,8 +65,7 @@ export class PlanMigrationModel extends BasicDataModel(
       .atomicMutation(job._id, {
         type: "update",
         revisionField: "revision",
-        expectedRevision:
-          job.revision === undefined ? { kind: "missing" } : job.revision,
+        expectedRevision: job.revision,
         nextRevision,
         patch,
       })

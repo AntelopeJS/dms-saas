@@ -27,7 +27,7 @@ interface SubscriptionFixture {
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   isComplimentary?: boolean;
-  paidUsagePeriods?: unknown[] | null;
+  paidUsagePeriods?: unknown[];
   updatedAt?: Date;
 }
 
@@ -128,6 +128,7 @@ import { getUpcomingInvoicePreview } from "../src/upcoming-invoice/preview";
 const SETUP_TIMEOUT_MS = 60_000;
 const NOW = new Date("2026-09-15T12:00:00.000Z");
 const CYCLE_START = new Date("2026-09-01T00:00:00.000Z");
+const SUBSCRIBED_AT = new Date("2026-06-01T00:00:00.000Z");
 const CYCLE_END = new Date("2026-10-01T00:00:00.000Z");
 const NEXT_CYCLE_END = new Date("2026-11-01T00:00:00.000Z");
 const ONE_HOUR_MS = 3_600_000;
@@ -151,6 +152,9 @@ function paidSubscription(): SubscriptionFixture {
     status: "active",
     stripeCustomerId: "cus_current",
     stripeSubscriptionId: "sub_current",
+    paidUsagePeriods: [
+      { stripeSubscriptionId: "sub_current", start: SUBSCRIBED_AT, end: null },
+    ],
     updatedAt: new Date("2026-09-01T00:00:00.000Z"),
   };
 }

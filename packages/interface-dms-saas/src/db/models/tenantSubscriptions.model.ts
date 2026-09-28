@@ -24,7 +24,7 @@ export class TenantSubscriptionModel extends BasicDataModel(
   TenantSubscription,
   tenantSubscriptionsTableName,
 ) {
-  /** Initialize revisions for new records; legacy null revisions require migration. */
+  /** Every record starts with a revision, which each compare-and-set mutation requires. */
   override insert(
     rows: DeepPartial<TenantSubscription> | DeepPartial<TenantSubscription>[],
     options?: ValidateOptions,
@@ -49,10 +49,7 @@ export class TenantSubscriptionModel extends BasicDataModel(
       .atomicMutation(current._id, {
         type: "update",
         revisionField: "revision",
-        expectedRevision:
-          current.revision === undefined
-            ? { kind: "missing" }
-            : current.revision,
+        expectedRevision: current.revision,
         nextRevision: randomUUID(),
         patch: TenantSubscriptionModel.toDatabase(instance),
       })
@@ -421,10 +418,7 @@ export class TenantSubscriptionModel extends BasicDataModel(
       .atomicMutation(subscription._id, {
         type: "delete",
         revisionField: "revision",
-        expectedRevision:
-          subscription.revision === undefined
-            ? { kind: "missing" }
-            : subscription.revision,
+        expectedRevision: subscription.revision,
       })
       .run();
     if (outcome === "unknown")

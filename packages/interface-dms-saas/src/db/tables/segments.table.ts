@@ -1,7 +1,11 @@
+import { randomUUID } from "node:crypto";
+import { MakePropertyDecorator } from "@antelopejs/interface-core/decorators";
 import {
+  attachModifier,
   CreationTime,
   Field,
   Index,
+  Modifier,
   RegisterTable,
   Table,
   UpdateTime,
@@ -60,6 +64,36 @@ export interface SegmentConditionGroup {
   )[];
 }
 
+class InitialRevisionModifier extends Modifier {
+  insert(object: Record<string, unknown>, field: string): void {
+    object[field] = randomUUID();
+  }
+}
+
+type AttachFieldModifier = (
+  tableClass: new () => object,
+  modifier: new () => Modifier,
+  field: string,
+  // Mirrors the shape the database decorators declare, where the value
+  // is genuinely opaque to this side.
+  // oxlint-disable-next-line anti-slop/no-object-parameters
+  options: object,
+) => void;
+
+/**
+ * Seeds the revision on every insert event, so the platform data API, which
+ * writes through the raw table rather than `SegmentModel.insert`, cannot
+ * create a segment the compare-and-set mutations would refuse.
+ */
+const InitialRevision = MakePropertyDecorator((target, propertyKey) => {
+  (attachModifier as AttachFieldModifier)(
+    target.constructor as new () => object,
+    InitialRevisionModifier,
+    propertyKey as string,
+    {},
+  );
+});
+
 /** Reusable audience segment evaluated against platform data. */
 @RegisterTable(segmentsTableName, CORE_SCHEMA_NAME)
 export class Segment extends Table {
@@ -78,8 +112,9 @@ export class Segment extends Table {
   @Field("number")
   declare estimatedCount: number;
 
+  @InitialRevision()
   @Field("string")
-  declare revision?: string;
+  declare revision: string;
 
   /** Only memberships in this fully written generation are visible. */
   @Field("string")

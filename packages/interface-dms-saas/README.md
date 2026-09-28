@@ -56,7 +56,10 @@ released.
 The data contract no longer tolerates rows that predate the current fields:
 `TenantSubscription.isComplimentary` is a required boolean and
 `isComplimentarySubscription` only returns `true` for `isComplimentary: true`,
-`InvoiceModel.getAllInvoices` only matches `documentType: "invoice"`, and
-`WebhookResult` no longer includes `failed`. Fix such rows before upgrading, as
-described in the
+`InvoiceModel.getAllInvoices` only matches `documentType: "invoice"`,
+`WebhookResult` no longer includes `failed`, `TenantSubscription.paidUsagePeriods`
+is a required array that alone decides billable usage, and `revision` is
+required on `TenantSubscription`, `Segment`, `UserSegment`, `PlanMigration` and
+`StripeWebhookEvent`, whose revision-fenced writes refuse a row without one.
+Fix such rows before upgrading, as described in the
 [`@antelopejs/dms-saas` upgrade notes](../dms-saas/README.md#upgrading).

@@ -89,9 +89,8 @@ export class UserSegmentModel extends BasicDataModel(
             evaluatedAt,
             generation,
             revision: randomUUID(),
+            sourceRevision: segment.revision,
           };
-          if (segment.revision !== undefined)
-            membership.sourceRevision = segment.revision;
           return membership;
         }),
       );
@@ -125,8 +124,7 @@ export class UserSegmentModel extends BasicDataModel(
       .atomicMutation(row._id, {
         type: "delete",
         revisionField: "revision",
-        expectedRevision:
-          row.revision === undefined ? { kind: "missing" } : row.revision,
+        expectedRevision: row.revision,
       })
       .run();
     if (outcome === "unknown")
