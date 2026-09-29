@@ -74,7 +74,7 @@ export class CreditNote extends Table {
   @Field("string")
   declare status: CreditNoteStatus;
 
-  @Index()
+  @Index({ crossInstance: true })
   @Field("date")
   declare issuedAt: Date;
 

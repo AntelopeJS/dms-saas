@@ -44,7 +44,7 @@ export class Invoice extends Table {
   @Field("string")
   declare _id: string;
 
-  @Index()
+  @Index({ crossInstance: true })
   @Field("string")
   declare documentType: BillingDocumentType;
 
@@ -86,7 +86,7 @@ export class Invoice extends Table {
   @Field("any")
   declare lines: InvoiceLine[];
 
-  @Index()
+  @Index({ crossInstance: true })
   @Field("string")
   declare status: BillingDocumentStatus;
 
@@ -114,7 +114,7 @@ export class Invoice extends Table {
   @Field("date")
   declare voidedAt: Date | null;
 
-  @Index()
+  @Index({ crossInstance: true })
   @Field("date")
   declare issuedAt: Date;
 

@@ -58,12 +58,12 @@
   },
   "dependencies": {
     "@antelopejs/interface-data-api": ">=0.1.9 <1.0.0",
-    "@antelopejs/interface-dms": ">=0.2.5 <1.0.0"
+    "@antelopejs/interface-dms": ">=0.2.7 <1.0.0"
   },
   "devDependencies": {
     "@antelopejs/interface-core": ">=0.1.1 <1.0.0",
-    "@antelopejs/interface-database": ">=0.1.7 <1.0.0",
-    "@antelopejs/interface-database-decorators": ">=0.1.6 <1.0.0",
+    "@antelopejs/interface-database": ">=0.1.8 <1.0.0",
+    "@antelopejs/interface-database-decorators": ">=0.1.7 <1.0.0",
     "@types/node": "^24.0.0",
     "knip": "^6.34.0",
     "oxfmt": "^0.66.0",
@@ -76,8 +76,8 @@
   },
   "peerDependencies": {
     "@antelopejs/interface-core": ">=0.1.1 <1.0.0",
-    "@antelopejs/interface-database": ">=0.1.7 <1.0.0",
-    "@antelopejs/interface-database-decorators": ">=0.1.6 <1.0.0"
+    "@antelopejs/interface-database": ">=0.1.8 <1.0.0",
+    "@antelopejs/interface-database-decorators": ">=0.1.7 <1.0.0"
   },
   "packageManager": "pnpm@10.2.0",
   "antelopeJs": {}
