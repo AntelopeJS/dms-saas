@@ -293,6 +293,7 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
       publishableKey,
       clientSecret: setup.clientSecret,
       containerId: paymentElementId,
+      billingEmail: () => form.email,
     });
   }
 
