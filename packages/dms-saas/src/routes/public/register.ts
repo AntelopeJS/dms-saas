@@ -245,9 +245,10 @@ export class SaasRegisterApiController extends Controller(
       user,
       sessionId,
     );
-    await this.sessionModel.update(sessionId, {
-      refreshToken: refreshTokenData.token,
-    });
+    await this.sessionModel.replaceRefreshToken(
+      sessionId,
+      refreshTokenData.token,
+    );
     return {
       token_type: "Bearer",
       access_token: accessTokenData.token,

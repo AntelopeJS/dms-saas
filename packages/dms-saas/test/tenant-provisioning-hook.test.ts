@@ -403,11 +403,16 @@ function buildRegisterBody(input: RegisterBodyInput = {}) {
   };
 }
 
+const sessionModelFake = {
+  update: vi.fn(async () => 1),
+  replaceRefreshToken: vi.fn(async () => undefined),
+};
+
 function buildController() {
   const controller = new SaasRegisterApiController();
   Object.assign(controller, {
     userModel: userModelFake,
-    sessionModel: { update: async () => ({}) },
+    sessionModel: sessionModelFake,
     userAgent: "vitest",
     forwardedFor: "",
   });
@@ -416,6 +421,8 @@ function buildController() {
 
 function resetWorld(): void {
   vi.restoreAllMocks();
+  sessionModelFake.update.mockClear();
+  sessionModelFake.replaceRefreshToken.mockClear();
   admission.close.mockReset();
   attempts.clear();
   trialIdentities.clear();
@@ -784,6 +791,15 @@ describe("the OAuth-entry path carries the same capture", () => {
       refresh_token: "refresh",
       user: OAUTH_USER,
     });
+  });
+
+  it("stores the issued refresh token through the hashing session API", async () => {
+    await buildController().finalize(buildFinalizeBody());
+
+    expect(
+      sessionModelFake.replaceRefreshToken,
+    ).toHaveBeenCalledExactlyOnceWith("session_1", "refresh");
+    expect(sessionModelFake.update).not.toHaveBeenCalled();
   });
 
   it("hands the listener the account that entered through OAuth", async () => {
