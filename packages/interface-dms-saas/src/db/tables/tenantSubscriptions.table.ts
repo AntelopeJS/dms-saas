@@ -101,12 +101,12 @@ export class TenantSubscription extends Table {
   @Field("string")
   declare _id: string;
 
-  @Index()
+  @Index({ crossInstance: true })
   @Field("string")
   @Relation({ to: () => Plan })
   declare planId: string | null;
 
-  @Index()
+  @Index({ crossInstance: true })
   @Field("string")
   declare status: TenantSubscriptionStatus;
 
@@ -117,7 +117,7 @@ export class TenantSubscription extends Table {
   @Field("any")
   declare cronNotification: SubscriptionCronNotification | null;
 
-  @Index()
+  @Index({ crossInstance: true })
   @Field("string")
   declare stripeCustomerId: string | null;
 
@@ -136,7 +136,7 @@ export class TenantSubscription extends Table {
    * `TrialConsumption` only records cards that actually consumed a trial, so
    * the cap needs its own record.
    */
-  @Index()
+  @Index({ crossInstance: true })
   @Field("string")
   declare cardFingerprint: string | null;
 
