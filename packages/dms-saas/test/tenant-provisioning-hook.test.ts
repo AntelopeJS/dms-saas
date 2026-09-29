@@ -17,7 +17,11 @@ import type {
   WorkspaceProvisioningState,
 } from "../src/operator-actions/db/lifecycle-delivery.table";
 import type { ProvisioningAttempt } from "../src/workspaces/db/provisioning-attempt.table";
-import type { SubscriptionTransition, TenantSubscription } from "../src/db";
+import type {
+  SubscriptionTransition,
+  TenantBillingInfo,
+  TenantSubscription,
+} from "../src/db";
 import { getWorkspaceDeletionOperationId } from "../src/workspaces/deletion";
 import { setRuntimeConfig } from "../src/config";
 import type { DmsSaasConfig } from "../src/types";
@@ -79,6 +83,7 @@ const owners = new Map<string, string>();
 const attempts = new Map<string, ProvisioningAttempt>();
 const trialIdentities = new Map<string, string>();
 const subscriptions = new Map<string, TenantSubscription>();
+const billingInfos = new Map<string, TenantBillingInfo>();
 const admission = vi.hoisted(() => ({ close: vi.fn() }));
 
 vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
@@ -263,10 +268,22 @@ const modelFakes: Record<string, (tenantId?: string) => unknown> = {
         throw new Error("lost admission");
       Object.assign(row, patch, { domainTransition: null });
     },
-    insert: async (rows: TenantSubscription[]) => {
+    get: async (id: string) => {
+      const row = subscriptions.get(tenantId ?? "");
+      return row?._id === id ? row : undefined;
+    },
+    insert: async (row: TenantSubscription) => {
+      if (subscriptions.get(tenantId ?? "")?._id === row._id)
+        throw new Error("duplicate key");
       countRow(tenantId ?? "");
-      subscriptions.set(tenantId ?? "", { ...rows[0], _id: "row" });
-      return ["row"];
+      subscriptions.set(tenantId ?? "", { ...row });
+      return [row._id];
+    },
+    update: async (id: string, patch: Partial<TenantSubscription>) => {
+      const row = subscriptions.get(tenantId ?? "");
+      if (row?._id !== id) return 0;
+      Object.assign(row, patch);
+      return 1;
     },
     deleteAll: async () => {
       world.tenantRows.delete(tenantId ?? "");
@@ -274,12 +291,20 @@ const modelFakes: Record<string, (tenantId?: string) => unknown> = {
     },
   }),
   TenantBillingInfoModel: (tenantId?: string) => ({
-    insert: async () => {
+    get: async (id: string) => {
+      const row = billingInfos.get(tenantId ?? "");
+      return row?._id === id ? row : undefined;
+    },
+    insert: async (row: TenantBillingInfo) => {
+      if (billingInfos.get(tenantId ?? "")?._id === row._id)
+        throw new Error("duplicate key");
       countRow(tenantId ?? "");
-      return ["row"];
+      billingInfos.set(tenantId ?? "", { ...row });
+      return [row._id];
     },
     deleteAll: async () => {
       world.tenantRows.delete(tenantId ?? "");
+      billingInfos.delete(tenantId ?? "");
     },
   }),
   TenantMemberModel: () => ({ existsByUser: async () => false }),
@@ -395,6 +420,7 @@ function resetWorld(): void {
   attempts.clear();
   trialIdentities.clear();
   subscriptions.clear();
+  billingInfos.clear();
   deliveries.clear();
   owners.clear();
   PLAN.trialDays = 0;
@@ -630,7 +656,7 @@ describe("tenant-being-provisioned hook", () => {
         JSON.stringify([
           "retention-delete",
           tenantId,
-          "row",
+          tenantId,
           row.deletionStartedAt!.toISOString(),
         ]),
       );
@@ -979,6 +1005,59 @@ describe("registration card policy", () => {
     expect(
       [...deliveries.values()].every((row) => row.status === "succeeded"),
     ).toBe(true);
+  });
+
+  it("replaces a default row the backfill wrote under the tenant key", async () => {
+    applyPolicy("required");
+    const defaultCreatedAt = new Date("2026-01-01T00:00:00.000Z");
+    const createTenantModel = modelFakes.TenantModel;
+    // The default-plan backfill covers the workspace between its creation and
+    // the insert of its paid subscription.
+    modelFakes.TenantModel = () => {
+      const tenants = createTenantModel() as {
+        insert: (rows: TenantInsertInput[]) => Promise<string[]>;
+      };
+      return {
+        ...tenants,
+        insert: async (rows: TenantInsertInput[]) => {
+          const ids = await tenants.insert(rows);
+          subscriptions.set(rows[0]._id, {
+            _id: rows[0]._id,
+            planId: "plan_default",
+            status: "active",
+            isComplimentary: false,
+            paidUsagePeriods: [],
+            stripeCustomerId: null,
+            stripeSubscriptionId: null,
+            createdBy: null,
+            createdAt: defaultCreatedAt,
+          } as TenantSubscription);
+          return ids;
+        },
+      };
+    };
+    try {
+      const result = await buildController().register(buildRegisterBody());
+
+      expect(subscriptionOf(result.tenantId)).toMatchObject({
+        _id: result.tenantId,
+        planId: PLAN._id,
+        cardFingerprint: "fp_test",
+        stripeCustomerId: expect.any(String),
+        stripeSubscriptionId: expect.any(String),
+        createdAt: defaultCreatedAt,
+      });
+      const paid = subscriptionOf(result.tenantId);
+      expect(paid?.paidUsagePeriods).toEqual([
+        expect.objectContaining({
+          stripeSubscriptionId: paid?.stripeSubscriptionId,
+          end: null,
+        }),
+      ]);
+      expect(world.paidInvoices.size).toBe(1);
+    } finally {
+      modelFakes.TenantModel = createTenantModel;
+    }
   });
 
   it("lets the visitor skip the card under `optional`", async () => {

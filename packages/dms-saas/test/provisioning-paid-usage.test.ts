@@ -24,8 +24,10 @@ const MODEL_FAKES: Record<string, () => unknown> = {
   UserModel: () => ({}),
   TenantBillingInfoModel: () => ({ insert: insertNothing }),
   TenantSubscriptionModel: () => ({
-    insert: async (rows: Partial<TenantSubscription>[]) => {
-      store.subscriptions.push(...rows);
+    insert: async (
+      rows: Partial<TenantSubscription> | Partial<TenantSubscription>[],
+    ) => {
+      store.subscriptions.push(...[rows].flat());
       return [];
     },
   }),

@@ -32,7 +32,10 @@ import {
   applyPendingPlanChangeIfEntered,
   reconcilePendingWithStripe,
 } from "../plan-changes";
-import { stripeSecondsToDate as optionalStripeDate } from "../utils";
+import {
+  insertOrUpdateById,
+  stripeSecondsToDate as optionalStripeDate,
+} from "../utils";
 import { getStripeClient } from "./client";
 import {
   fetchPrimaryTaxId,
@@ -373,19 +376,16 @@ function resolveVatFields(
   };
 }
 
-export async function handleChargeRefundUpdated(
-  event: Stripe.Event,
+/**
+ * Every status change of a refund is its own event: keying the row by the
+ * Stripe id keeps concurrent deliveries to one row. Legacy rows keep their
+ * random key and the lookup by Stripe id.
+ */
+async function upsertRefund(
+  refund: Stripe.Refund,
+  tenantId: string,
 ): Promise<void> {
-  const refund = event.data.object as Stripe.Refund;
-  const chargeId = asCustomerId(refund.charge);
-  if (!chargeId) return;
-  const stripe = getStripeClient();
-  const charge = await stripe.charges.retrieve(chargeId);
-  const customerId = asCustomerId(charge.customer);
-  if (!customerId) return;
-  const tenant = await findTenantByCustomerId(customerId);
-  if (!tenant) return;
-  const refundModel = GetModel(RefundModel, tenant._id);
+  const refundModel = GetModel(RefundModel, tenantId);
   const existing = await refundModel.findOneByStripeRefund(refund.id);
   const payload = {
     creditNoteId: existing?.creditNoteId ?? "",
@@ -398,12 +398,29 @@ export async function handleChargeRefundUpdated(
   };
   if (existing) {
     await refundModel.update(existing._id, payload);
-  } else {
-    await refundModel.insert({
-      ...payload,
-      createdAt: new Date(),
-    });
+    return;
   }
+  await insertOrUpdateById(
+    refundModel,
+    refund.id,
+    { ...payload, _id: refund.id, createdAt: new Date() },
+    payload,
+  );
+}
+
+export async function handleChargeRefundUpdated(
+  event: Stripe.Event,
+): Promise<void> {
+  const refund = event.data.object as Stripe.Refund;
+  const chargeId = asCustomerId(refund.charge);
+  if (!chargeId) return;
+  const stripe = getStripeClient();
+  const charge = await stripe.charges.retrieve(chargeId);
+  const customerId = asCustomerId(charge.customer);
+  if (!customerId) return;
+  const tenant = await findTenantByCustomerId(customerId);
+  if (!tenant) return;
+  await upsertRefund(refund, tenant._id);
   if (refund.status === "succeeded") {
     await notifyTenantOwners(tenant._id, refundProcessedSubject, {
       icon: REFUND_ICON,

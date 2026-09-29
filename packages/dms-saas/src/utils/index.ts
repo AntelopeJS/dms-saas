@@ -3,6 +3,7 @@ export * from "./billing-period-type";
 export * from "./email-hash";
 export * from "./export-dataset-stream";
 export * from "./invoice-lines-type";
+export * from "./keyed-insert";
 export * from "./money-cents-type";
 export * from "./pagination";
 export * from "./parse-future-date";

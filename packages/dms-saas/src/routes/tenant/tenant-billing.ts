@@ -1,10 +1,18 @@
-import { Controller, Get, JSONBody, Put } from "@antelopejs/interface-api";
+import {
+  Context,
+  Controller,
+  Get,
+  JSONBody,
+  Put,
+  type RequestContext,
+} from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   AuthTenantMember,
   AuthTenantOwner,
 } from "@antelopejs/interface-dms/guards";
+import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import {
@@ -32,6 +40,7 @@ import {
   toTenantBillingAddress,
   toVatVerificationStatus,
 } from "../../stripe";
+import { insertOrUpdateById } from "../../utils";
 
 const HTTP_BAD_REQUEST = 400;
 const ANY_AUDIENCE = "any";
@@ -114,16 +123,23 @@ async function assertCustomerTypeFitsPlan(
   );
 }
 
+/** First writes are keyed by the tenant id, so a double submit stays one row. */
 async function persistBillingInfo(
   model: TenantBillingInfoModel,
   current: TenantBillingInfo | undefined,
+  tenantId: string,
   values: BillingInfoValues,
 ): Promise<void> {
-  if (!current) {
-    await model.insert([values]);
+  if (current) {
+    await model.update(current._id, values);
     return;
   }
-  await model.update(current._id, values);
+  await insertOrUpdateById(
+    model,
+    tenantId,
+    { ...values, _id: tenantId },
+    values,
+  );
 }
 
 // Both routes back blocks of the billing page, which stays reachable under the
@@ -202,6 +218,7 @@ export class SaasTenantBillingController extends Controller(
 
   @Put("/billing-info")
   async updateBillingInfo(
+    @Context() ctx: RequestContext,
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
     @JSONBody() body: BillingIdentityInput,
     @TenantScopedModel(TenantBillingInfoModel)
@@ -223,7 +240,12 @@ export class SaasTenantBillingController extends Controller(
           )
         : null;
     const values = buildBillingInfoValues(identity, vatVerificationStatus);
-    await persistBillingInfo(billingModel, info, values);
+    await persistBillingInfo(
+      billingModel,
+      info,
+      getRequestTenantId(ctx),
+      values,
+    );
     const updated = await billingModel.findOne();
     return toResponse(updated ?? values);
   }

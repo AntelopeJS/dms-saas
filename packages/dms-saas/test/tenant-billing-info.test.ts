@@ -1,3 +1,4 @@
+import type { RequestContext } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { describe, expect, it, vi } from "vitest";
 import type {
@@ -8,6 +9,7 @@ import type {
 } from "../src/db";
 
 const plans = vi.hoisted(() => new Map<string, { audience: string }>());
+const TENANT_ID = vi.hoisted(() => "tenant-a");
 
 vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
   const actual =
@@ -19,6 +21,10 @@ vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
     GetModel: () => ({ get: async (id: string) => plans.get(id) }),
   };
 });
+
+vi.mock("@antelopejs/interface-dms/request-tenant", () => ({
+  getRequestTenantId: () => TENANT_ID,
+}));
 
 const { SaasTenantBillingController } =
   await import("../src/routes/tenant/tenant-billing");
@@ -40,15 +46,22 @@ interface BillingInfoStore {
 }
 
 const OWNER = { name: "Workspace Owner" } as User;
+const CONTEXT = {} as RequestContext;
 
 function billingModel(store: BillingInfoStore): TenantBillingInfoModel {
   return {
     findOne: vi.fn(async () => store.current),
-    insert: vi.fn(async (rows: BillingInfoWrite[]) => {
-      store.current = { _id: "billing-info", ...rows[0] } as TenantBillingInfo;
-      return ["billing-info"];
+    get: vi.fn(async (id: string) =>
+      store.current?._id === id ? store.current : undefined,
+    ),
+    insert: vi.fn(async (row: BillingInfoWrite & { _id: string }) => {
+      if (store.current?._id === row._id) throw new Error("duplicate key");
+      store.current = { ...row } as TenantBillingInfo;
+      return [row._id];
     }),
-    update: vi.fn(async () => undefined),
+    update: vi.fn(async (_id: string, patch: BillingInfoWrite) => {
+      store.current = { ...store.current, ...patch } as TenantBillingInfo;
+    }),
   } as unknown as TenantBillingInfoModel;
 }
 
@@ -103,6 +116,7 @@ describe("tenant billing information", () => {
 
     await expect(
       controller.updateBillingInfo(
+        CONTEXT,
         OWNER,
         {},
         billingModel(store),
@@ -118,6 +132,7 @@ describe("tenant billing information", () => {
 
     await expect(
       controller.updateBillingInfo(
+        CONTEXT,
         OWNER,
         { ...INDIVIDUAL_IDENTITY, companyName: "Ignored SRL" },
         billingModel(store),
@@ -136,11 +151,59 @@ describe("tenant billing information", () => {
     });
   });
 
+  it("keys the first billing row by the tenant", async () => {
+    const controller = new SaasTenantBillingController();
+    const store: BillingInfoStore = {};
+
+    await controller.updateBillingInfo(
+      CONTEXT,
+      OWNER,
+      INDIVIDUAL_IDENTITY,
+      billingModel(store),
+      subscriptionModel(),
+    );
+
+    expect(store.current?._id).toBe(TENANT_ID);
+  });
+
+  it("turns a racing first save into an update of the same row", async () => {
+    const controller = new SaasTenantBillingController();
+    const store: BillingInfoStore = {
+      current: {
+        _id: TENANT_ID,
+        customerType: "business",
+        companyName: "Concurrent SRL",
+      } as TenantBillingInfo,
+    };
+    const model = billingModel(store);
+    // The racing request committed after this one read no row.
+    vi.mocked(model.findOne).mockResolvedValueOnce(undefined);
+
+    await controller.updateBillingInfo(
+      CONTEXT,
+      OWNER,
+      INDIVIDUAL_IDENTITY,
+      model,
+      subscriptionModel(),
+    );
+
+    expect(model.update).toHaveBeenCalledWith(
+      TENANT_ID,
+      expect.objectContaining({ customerType: "individual" }),
+    );
+    expect(store.current).toMatchObject({
+      _id: TENANT_ID,
+      customerType: "individual",
+      billingEmail: "billing@example.com",
+    });
+  });
+
   it("requires a company name for a business", async () => {
     const controller = new SaasTenantBillingController();
 
     await expect(
       controller.updateBillingInfo(
+        CONTEXT,
         OWNER,
         { ...INDIVIDUAL_IDENTITY, customerType: "business", companyName: " " },
         billingModel({}),
@@ -154,6 +217,7 @@ describe("tenant billing information", () => {
     const store: BillingInfoStore = {};
 
     await controller.updateBillingInfo(
+      CONTEXT,
       OWNER,
       {
         ...INDIVIDUAL_IDENTITY,
@@ -178,6 +242,7 @@ describe("tenant billing information", () => {
 
     await expect(
       controller.updateBillingInfo(
+        CONTEXT,
         OWNER,
         INDIVIDUAL_IDENTITY,
         billingModel({}),
