@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.3.3
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.2...v0.3.3)
+
+### 🔥 Performance
+
+- **db:** Mark cross-instance indexes and upgrade the database stack ([#59](https://github.com/AntelopeJS/dms-saas/pull/59))
+
+### 🩹 Fixes
+
+- **db:** Key Stripe mirror rows and tenant singletons by stable ids ([#51](https://github.com/AntelopeJS/dms-saas/pull/51))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.2.3 ([0e05ed0](https://github.com/AntelopeJS/dms-saas/commit/0e05ed0))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.2
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.1...v0.3.2)
