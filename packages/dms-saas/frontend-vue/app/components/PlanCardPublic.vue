@@ -16,6 +16,7 @@ interface PlanProp {
 const props = defineProps<{ plan: PlanProp; selected?: boolean }>();
 const emit = defineEmits<{ select: [planId: string] }>();
 const planIntervalLabel = usePlanIntervalLabel("saas.plans.cycle");
+const planDescription = usePlanDescription();
 
 const formattedPrice = computed(() => {
   const price = `${props.plan.price.toFixed(2)} ${props.plan.currency.toUpperCase()}`;
@@ -44,7 +45,7 @@ const borderStyle = computed(() => {
     </template>
     <div class="flex flex-col gap-2 p-4">
       <h3 class="text-lg font-semibold">{{ plan.name }}</h3>
-      <p class="text-muted text-sm">{{ plan.description }}</p>
+      <p class="text-muted text-sm">{{ planDescription(plan.description) }}</p>
       <div class="text-2xl font-semibold tabular-nums">{{ formattedPrice }}</div>
       <div v-if="plan.trialDays > 0" class="text-success text-sm">
         {{ $t("saas.plans.trial_days", { days: plan.trialDays }) }}

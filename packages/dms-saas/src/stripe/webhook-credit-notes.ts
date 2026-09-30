@@ -259,8 +259,9 @@ export async function handleCreditNoteCreated(
   if (creditNote.status !== "issued" || !isCurrent) return;
   await notifyTenantOwners(tenantId, creditNoteIssuedSubject, {
     icon: CREDIT_NOTE_ICON,
-    title: "Credit note issued",
-    description: `A credit note of ${formatAmount(creditNote.amount, creditNote.currency)} was issued.`,
+    title: "$saas.notifications.payload.credit_note_issued.title",
+    description: "$saas.notifications.payload.credit_note_issued.description",
+    params: { amount: formatAmount(creditNote.amount, creditNote.currency) },
   });
 }
 

@@ -20,6 +20,7 @@ const SEAT_USAGE_TYPE = "licensed" as const;
 const PRICE_TAX_BEHAVIOR = "exclusive" as const;
 const IDEMPOTENCY_KEY_PREFIX = "dms-saas:plan-sync";
 const RESOURCE_MISSING_CODE = "resource_missing";
+const I18N_KEY_PREFIX = "$";
 
 /** What a Stripe price or product holds today, when it can be read back. */
 interface StripeHeldTerms {
@@ -43,6 +44,15 @@ export async function resolveProductTaxCode(): Promise<string> {
 }
 
 /**
+ * Stripe shows a product description to customers as written: a `$` i18n key
+ * has no text Stripe could show, so the product carries none.
+ */
+function stripeProductDescription(description: string | undefined): string {
+  if (!description || description.startsWith(I18N_KEY_PREFIX)) return "";
+  return description;
+}
+
+/**
  * The terms a plan's Stripe product and price must carry.
  *
  * @param plan Plan as stored
@@ -52,7 +62,7 @@ function planStripeTerms(plan: Plan, taxCode: string): PlanStripeSyncedTerms {
   return {
     product: {
       name: plan.name,
-      description: plan.description ?? "",
+      description: stripeProductDescription(plan.description),
       taxCode,
     },
     price: {

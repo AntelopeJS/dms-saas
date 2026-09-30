@@ -277,6 +277,16 @@ describe("syncing a plan written outside dms-saas", () => {
     });
   });
 
+  it("gives Stripe no description for an i18n key it could not show", async () => {
+    const plan = store(
+      seededPlan({ description: "$cloud.plans.hobby.description" }),
+    );
+
+    await syncPlanStripeRefs(plan);
+
+    expect(refsOf(plan._id).stripeSyncedTerms?.product.description).toBe("");
+  });
+
   it("writes only the refs, never the fields the writer owns", async () => {
     const plan = store(seededPlan());
 

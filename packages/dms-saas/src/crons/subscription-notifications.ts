@@ -20,9 +20,9 @@ const NOTIFICATIONS = {
     subject: freeWorkspaceExpiredSubject,
     payload: {
       icon: "i-ph-hourglass",
-      title: "Complimentary access expired",
+      title: "$saas.notifications.payload.complimentary_access_expired.title",
       description:
-        "The free access granted to your workspace has expired. Pick a paid plan to restore access.",
+        "$saas.notifications.payload.complimentary_access_expired.description",
     },
   },
   suspended: {
@@ -30,9 +30,9 @@ const NOTIFICATIONS = {
     subject: workspaceSuspendedSubject,
     payload: {
       icon: "i-ph-prohibit",
-      title: "Workspace suspended",
+      title: "$saas.notifications.payload.workspace_suspended_unpaid.title",
       description:
-        "Your workspace was suspended after a prolonged unpaid invoice. Settle the balance to restore access.",
+        "$saas.notifications.payload.workspace_suspended_unpaid.description",
     },
   },
 };

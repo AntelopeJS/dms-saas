@@ -21,6 +21,7 @@ import {
   decideInvite,
 } from "@antelopejs/interface-dms/invite-resolution";
 import { ExecuteHooks, Hook } from "@antelopejs/interface-dms/hooks";
+import { internal as inviteExtensions } from "@antelopejs/interface-dms/invite-extensions";
 import { createUserInviteToken } from "@antelopejs/interface-dms/invites";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
 import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
@@ -66,6 +67,9 @@ const require = createRequire(import.meta.url);
 const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
 const DAY_MS = 86_400_000;
 const SEAT_LIMIT_ERROR = { body: "saas.errors.plan.seat_limit_reached" };
+const INVITE_UNAVAILABLE = {
+  reason: "$saas.plans.seat_limit.invite_unavailable",
+};
 const STRIPE_SUBSCRIPTION_ID = "sub_seat_billed";
 const billedQuantities: number[] = [];
 const fakeStripe = {
@@ -582,5 +586,34 @@ describe("seats billed for invitations", () => {
     await resolveOwnerInvite(tenantId, "cancelled");
 
     expect(billedQuantities).toEqual([0]);
+  });
+});
+
+describe("invite action at the plan cap", () => {
+  function inviteAvailability(tenantId: string) {
+    return inviteExtensions.ResolveInviteAvailability({
+      tenantId,
+      user: operator,
+    });
+  }
+
+  it("is unavailable once every seat is taken, with an upgrade hint", async () => {
+    const { tenantId } = await createFreeWorkspace();
+
+    await expect(inviteAvailability(tenantId)).resolves.toEqual(
+      INVITE_UNAVAILABLE,
+    );
+  });
+
+  it("stays available while the plan has a free seat", async () => {
+    const { tenantId } = await createFreeWorkspace();
+    const subscription = await GetModel(
+      TenantSubscriptionModel,
+      tenantId,
+    ).findOne();
+    if (!subscription?.planId) throw new Error("Expected the Free plan");
+    await GetModel(PlanModel).update(subscription.planId, { maxMembers: 2 });
+
+    await expect(inviteAvailability(tenantId)).resolves.toBeUndefined();
   });
 });

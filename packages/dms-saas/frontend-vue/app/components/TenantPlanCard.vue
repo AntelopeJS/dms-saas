@@ -22,6 +22,7 @@ const { formatMajorUnits } = useMoneyFormat();
 const { t, locale } = useI18n();
 const { formatFeatureValue } = usePlanFeatureFormat();
 const { featureLabel } = usePlanFeatureLabel();
+const planDescription = usePlanDescription();
 const { workspace, load: loadWorkspace } = useCurrentWorkspace();
 const { isOpen: isComparisonOpen } = usePlanComparison();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
@@ -88,7 +89,9 @@ const changeAction = computed(() =>
  * has one, else the plan's key (non-detail) limits.
  */
 const summary = computed(() => {
-  if (current.value?.description) return current.value.description;
+  if (current.value?.description) {
+    return planDescription(current.value.description);
+  }
   const view = data.value?.available.find(
     (plan) => plan._id === current.value?._id,
   );
