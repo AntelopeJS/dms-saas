@@ -1,5 +1,7 @@
 import { Logging } from "@antelopejs/interface-core/logging";
 import Stripe from "stripe";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { TrialIdentityModel } from "../workspaces/db/trial-identity.model";
 import { getStripeClient } from "./client";
 
 const MISSING_RESOURCE_CODE = "resource_missing";
@@ -7,6 +9,29 @@ const HTTP_CLIENT_ERROR_MIN = 400;
 const HTTP_SERVER_ERROR_MIN = 500;
 const MANAGED_PAYMENTS_PARAM = "managed_payments";
 const LOG_PREFIX = "[dms-saas:checkout]";
+const MS_PER_SECOND = 1000;
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+
+/**
+ * How long a Checkout session stays payable. Stripe keeps a session open for
+ * 24 hours by default, and a pending checkout blocks every other plan change
+ * of its workspace for as long as it is open, so sessions are opened with the
+ * shortest lifetime Stripe accepts: 30 minutes.
+ */
+export const CHECKOUT_SESSION_LIFETIME_MS = 30 * MS_PER_MINUTE;
+
+/**
+ * Stripe measures the minimum lifetime from the moment it receives the
+ * request, after this clock read it and after the network delay, so the
+ * requested expiry carries a margin that keeps it above the minimum.
+ */
+const CHECKOUT_EXPIRY_MARGIN_MS = MS_PER_MINUTE;
+
+/**
+ * Session metadata key naming the trial identity a checkout reserved, so
+ * whatever releases a session nobody paid can release its trial too.
+ */
+export const TRIAL_IDENTITY_METADATA_KEY = "trialIdentityId";
 
 /**
  * Stripe Managed Payments (Stripe as merchant of record) applies to every
@@ -38,6 +63,7 @@ export interface WorkspaceCheckoutSessionInput {
   cancelUrl: string;
   planId?: string;
   existingCustomerId?: string;
+  reservedTrialIdentityId?: string | null;
 }
 
 export interface WorkspaceCheckoutSession {
@@ -151,6 +177,33 @@ async function resolveCheckoutCustomerId(
   });
 }
 
+function checkoutSessionExpiry(): number {
+  const expiresAt =
+    Date.now() + CHECKOUT_SESSION_LIFETIME_MS + CHECKOUT_EXPIRY_MARGIN_MS;
+  return Math.floor(expiresAt / MS_PER_SECOND);
+}
+
+/**
+ * Hands back the trial a checkout reserved once its session provably expired
+ * unpaid, so the owner's next checkout is offered the trial again. Best
+ * effort: a reservation left behind only withholds a trial, it bills nobody.
+ */
+export async function releaseCheckoutTrialReservation(
+  session: Stripe.Checkout.Session,
+  tenantId: string,
+): Promise<void> {
+  const identityId = session.metadata?.[TRIAL_IDENTITY_METADATA_KEY];
+  if (!identityId) return;
+  await GetModel(TrialIdentityModel)
+    .releaseUnused(identityId, tenantId)
+    .catch((error) =>
+      Logging.Warn(
+        `${LOG_PREFIX} failed to release the trial reserved by checkout session ${session.id}`,
+        error,
+      ),
+    );
+}
+
 function buildCheckoutSubscriptionData(
   metadata: Record<string, string>,
   trialDays: number | undefined,
@@ -212,6 +265,9 @@ export async function createWorkspaceCheckoutSession(
   const sessionMetadata: Record<string, string> = { tenantId: input.tenantId };
   if (input.planId) sessionMetadata.planId = input.planId;
   if (input.operationId) sessionMetadata.operationId = input.operationId;
+  if (input.reservedTrialIdentityId)
+    sessionMetadata[TRIAL_IDENTITY_METADATA_KEY] =
+      input.reservedTrialIdentityId;
 
   const session = await createSessionOptingOutOfManagedPayments(
     {
@@ -229,6 +285,7 @@ export async function createWorkspaceCheckoutSession(
       tax_id_collection: { enabled: true },
       billing_address_collection: "required",
       customer_update: { address: "auto", name: "auto" },
+      expires_at: checkoutSessionExpiry(),
     },
     input.operationId
       ? { idempotencyKey: `checkout-session:${input.operationId}` }

@@ -1,3 +1,11 @@
+/** The i18n key the server answered a failed `$authFetch` with, if any. */
+export function readApiErrorKey(error: unknown): string | undefined {
+  const data = (error as { data?: unknown } | undefined)?.data;
+  if (typeof data === "string") return data;
+  const message = (data as { message?: unknown } | undefined)?.message;
+  return typeof message === "string" ? message : undefined;
+}
+
 /**
  * Resolves an unknown error thrown by `$authFetch` into a human-readable,
  * translated message.
@@ -12,17 +20,10 @@
 export function useApiErrorMessage() {
   const nuxtApp = useDmsApp();
 
-  function extractServerKey(error: unknown): string | undefined {
-    const data = (error as { data?: unknown } | undefined)?.data;
-    if (typeof data === "string") return data;
-    const message = (data as { message?: unknown } | undefined)?.message;
-    return typeof message === "string" ? message : undefined;
-  }
-
   /** Translated server message, or `undefined` when the server sent no usable key. */
   function resolveServerMessage(error: unknown): string | undefined {
     const { t, te } = nuxtApp.$i18n;
-    const key = extractServerKey(error);
+    const key = readApiErrorKey(error);
     return key && te(key) ? t(key) : undefined;
   }
 

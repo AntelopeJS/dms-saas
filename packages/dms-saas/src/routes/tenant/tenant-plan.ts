@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   JSONBody,
+  Parameter,
   Put,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
@@ -13,6 +14,7 @@ import {
   AuthTenantMember,
   AuthTenantOwner,
 } from "@antelopejs/interface-dms/guards";
+import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import { AssertTenantAccess } from "@antelopejs/interface-dms/tenant-access";
@@ -59,6 +61,13 @@ import {
   scheduleDowngrade,
 } from "./tenant-plan-ops";
 import { startPaidCheckout } from "./tenant-plan-checkout";
+import {
+  type CancelCheckoutResult,
+  CHECKOUT_OPERATION_PARAM,
+  cancelPendingCheckout,
+  describePendingCheckout,
+  type PendingCheckoutResult,
+} from "./tenant-plan-checkout-recovery";
 
 /** A paid target without a live Stripe subscription goes through Checkout. */
 function startsPaidCheckout(
@@ -192,6 +201,43 @@ export class SaasTenantPlanController extends Controller(
       "saas.errors.plan.no_pending_change",
     );
     return dropPendingChange(tenantId, subscription);
+  }
+
+  /**
+   * The checkout the workspace is waiting on, so the owner can resume paying
+   * it rather than start another. Reachable while the access gate blocks the
+   * workspace, like the checkout it describes.
+   */
+  @Get("/checkout")
+  async getPendingCheckout(
+    @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
+    @TenantScopedModel(TenantSubscriptionModel)
+    tenantSubscriptionModel: TenantSubscriptionModel,
+  ): Promise<PendingCheckoutResult> {
+    return describePendingCheckout(await tenantSubscriptionModel.findOne());
+  }
+
+  /**
+   * The owner giving up on the pending checkout: from the billing page, or on
+   * the way back from Stripe's cancel link, which names the checkout it
+   * belongs to so that a stale link releases nothing.
+   */
+  @Delete("/checkout")
+  async cancelCheckout(
+    @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
+    @Parameter(CHECKOUT_OPERATION_PARAM, "query") operationId: unknown,
+    @Context() ctx: any,
+    @TenantScopedModel(TenantSubscriptionModel)
+    tenantSubscriptionModel: TenantSubscriptionModel,
+  ): Promise<CancelCheckoutResult> {
+    const tenantId = getRequestTenantId(ctx);
+    return runTenantLifecycleOperation(tenantId, async () =>
+      cancelPendingCheckout(
+        await tenantSubscriptionModel.findOne(),
+        tenantSubscriptionModel,
+        typeof operationId === "string" && operationId ? operationId : null,
+      ),
+    );
   }
 
   @Put("/")

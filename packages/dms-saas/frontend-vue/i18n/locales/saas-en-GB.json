@@ -45,6 +45,7 @@
         "unpaid_invoice_blocks_downgrade": "An invoice is unpaid. Settle it before changing to a cheaper plan.",
         "no_free_plan": "No free plan is available for sign-up right now.",
         "checkout_in_progress": "A payment for a plan change is already open. Complete it, or wait for it to expire, before choosing another plan.",
+        "checkout_already_paid": "This payment has already been made and is being confirmed. Your plan will update in a moment.",
         "change_in_progress": "A plan change is already being processed. Try again in a few minutes."
       },
       "workspace": {
@@ -1081,6 +1082,17 @@
         "change_applied": "Plan changed.",
         "change_scheduled": "Downgrade scheduled for the end of the current cycle.",
         "change_error": "Failed to change plan",
+        "checkout_pending": {
+          "title": "A payment is already open",
+          "description": "You opened the secure Stripe payment page without completing it. Resume that payment, or cancel it and start over.",
+          "description_paid": "Your payment has been received and is being confirmed. Your plan will update in a moment.",
+          "description_opening": "A payment page is still being opened for this workspace. Try again in a few minutes.",
+          "resume": "Resume payment",
+          "restart": "Cancel and start over",
+          "close": "Close",
+          "cancelled": "Payment cancelled. Nothing was charged and your plan is unchanged.",
+          "restart_error": "The pending payment could not be cancelled. Try again in a moment."
+        },
         "interval": {
           "month": "month",
           "year": "year"

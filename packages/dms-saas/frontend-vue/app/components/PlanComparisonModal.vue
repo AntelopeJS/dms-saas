@@ -20,6 +20,7 @@ const { t } = useI18n();
 const toast = useToast();
 const { resolveApiError } = useApiErrorMessage();
 const { changePlan } = useTenantPlan();
+const { offerFor: offerPendingCheckout } = usePendingCheckout();
 const { formatFeatureValue } = usePlanFeatureFormat();
 const { featureLabel, featureTooltip } = usePlanFeatureLabel();
 const { formatMajorUnits } = useMoneyFormat();
@@ -102,6 +103,10 @@ async function select(plan: TenantPlanView): Promise<void> {
     open.value = false;
     emit("changed");
   } catch (error) {
+    if (await offerPendingCheckout(error, plan._id)) {
+      open.value = false;
+      return;
+    }
     toast.add({
       title: resolveApiError(error, "saas.workspace.plan.change_error"),
       color: "error",
