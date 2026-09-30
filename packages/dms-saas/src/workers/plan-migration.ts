@@ -240,8 +240,24 @@ async function processTenantInJob(
   }
 }
 
-/** Execute a frozen snapshot once; interrupted jobs retain evidence and never take over. */
-export async function processPlanMigrationJob(jobId: string): Promise<void> {
+// Keyed on globalThis rather than module scope: a hot reload re-evaluates this
+// module and replays the resume pass while the previous generation's executor
+// is still running in the same process.
+const LIVE_EXECUTORS_KEY: unique symbol = Symbol.for(
+  "@antelopejs/dms-saas/plan-migration-executors",
+);
+
+interface LiveExecutorsHost {
+  [LIVE_EXECUTORS_KEY]?: Set<string>;
+}
+
+function liveExecutors(): Set<string> {
+  const host = globalThis as LiveExecutorsHost;
+  host[LIVE_EXECUTORS_KEY] ??= new Set();
+  return host[LIVE_EXECUTORS_KEY];
+}
+
+async function executePlanMigrationJob(jobId: string): Promise<void> {
   const model = GetModel(PlanMigrationModel);
   const job = await model.get(jobId);
   if (!job || job.status !== "pending") return;
@@ -257,14 +273,33 @@ export async function processPlanMigrationJob(jobId: string): Promise<void> {
   });
 }
 
-/** Resume only unstarted jobs; observed running jobs require executor-quiescence evidence. */
+/** Execute a frozen snapshot once; interrupted jobs retain evidence and never take over. */
+export async function processPlanMigrationJob(jobId: string): Promise<void> {
+  const executors = liveExecutors();
+  if (executors.has(jobId)) return;
+  // Registered before beginJob so no running row is ever observable in this
+  // process without its executor being visible to the resume pass.
+  executors.add(jobId);
+  try {
+    await executePlanMigrationJob(jobId);
+  } finally {
+    executors.delete(jobId);
+  }
+}
+
+/**
+ * Resume only unstarted jobs. A running job whose executor is still live in
+ * this process is left alone, so the pass is safe to replay on every reload;
+ * one without a live executor was interrupted and requires reconciliation.
+ */
 export async function resumePendingPlanMigrations(): Promise<void> {
   const model = GetModel(PlanMigrationModel);
   for (const job of await model.findResumable()) {
-    if (job.status === "running") {
-      await model.checkpoint(job, { status: "reconciliation_required" });
+    if (job.status !== "running") {
+      await processPlanMigrationJob(job._id);
       continue;
     }
-    await processPlanMigrationJob(job._id);
+    if (liveExecutors().has(job._id)) continue;
+    await model.markInterrupted(job);
   }
 }

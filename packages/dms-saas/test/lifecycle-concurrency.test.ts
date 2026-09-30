@@ -67,6 +67,32 @@ function failNextOutcomePersistence(model: LifecycleDeliveryModel): void {
   );
 }
 
+async function expireClaim(
+  model: LifecycleDeliveryModel,
+  id: string,
+): Promise<void> {
+  await model.update(id, { claimExpiresAt: new Date(Date.now() - 1) });
+}
+
+async function insertPendingDelivery(
+  model: LifecycleDeliveryModel,
+  consumer: string,
+): Promise<string> {
+  const id = randomUUID();
+  await model.insert({
+    _id: id,
+    operationId: id,
+    tenantId: "tenant",
+    consumer,
+    transition: "suspended",
+    status: "pending",
+    attemptCount: 0,
+    revision: randomUUID(),
+    requestedAt: new Date(),
+  });
+  return id;
+}
+
 describe("lifecycle delivery concurrency with the MongoDB provider", () => {
   it("persists a terminal receipt under concurrent completion and rejects stale failure", async () => {
     const model = GetModel(LifecycleDeliveryModel);
@@ -118,12 +144,79 @@ describe("lifecycle delivery concurrency with the MongoDB provider", () => {
       }),
     ).rejects.toThrow("connection lost");
     const [delivery] = await model.findByOperation(operationId);
-    expect(delivery.status).toBe("pending");
+    expect(delivery.status).toBe("running");
     expect(effects.size).toBe(1);
+    await reconcileWorkspaceLifecycleDeliveries();
+    expect(consume).toHaveBeenCalledOnce();
+    await expireClaim(model, delivery._id);
     await reconcileWorkspaceLifecycleDeliveries();
     expect(consume).toHaveBeenCalledTimes(2);
     expect(consume.mock.calls[0][0]).toEqual(consume.mock.calls[1][0]);
     expect(effects.size).toBe(1);
     expect((await model.get(delivery._id))?.receiptId).toBe(operationId);
+  });
+
+  it("delivers each pending delivery once across concurrent reconcile passes", async () => {
+    const model = GetModel(LifecycleDeliveryModel);
+    let release = () => {};
+    const paused = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const consume = vi.fn(
+      async (message: lifecycleInterface.WorkspaceLifecycleMessage) => {
+        await paused;
+        return { receiptId: message.operationId };
+      },
+    );
+    registration = lifecycleInterface.RegisterWorkspaceLifecycleConsumer({
+      name: "claimed.consumer",
+      transitions: ["suspended"],
+      consume,
+    });
+    const ids = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        insertPendingDelivery(model, "claimed.consumer"),
+      ),
+    );
+    const first = reconcileWorkspaceLifecycleDeliveries();
+    await vi.waitFor(() => expect(consume).toHaveBeenCalled());
+    const second = reconcileWorkspaceLifecycleDeliveries();
+    release();
+    await Promise.all([first, second]);
+    await reconcileWorkspaceLifecycleDeliveries();
+    const delivered = consume.mock.calls.map(
+      ([message]) => message.operationId,
+    );
+    expect(delivered.toSorted()).toEqual(ids.toSorted());
+    for (const id of ids)
+      expect((await model.get(id))?.status).toBe("succeeded");
+  });
+
+  it("retakes a claim only once its lease has expired", async () => {
+    const model = GetModel(LifecycleDeliveryModel);
+    const consume = vi.fn(
+      async (message: lifecycleInterface.WorkspaceLifecycleMessage) => ({
+        receiptId: message.operationId,
+      }),
+    );
+    registration = lifecycleInterface.RegisterWorkspaceLifecycleConsumer({
+      name: "stale.consumer",
+      transitions: ["suspended"],
+      consume,
+    });
+    const id = await insertPendingDelivery(model, "stale.consumer");
+    const pending = await model.get(id);
+    if (!pending) throw new Error("Pending delivery is missing");
+    const abandoned = await model.claim(pending);
+    expect(abandoned?.status).toBe("running");
+    await reconcileWorkspaceLifecycleDeliveries();
+    expect(consume).not.toHaveBeenCalled();
+    await expireClaim(model, id);
+    await reconcileWorkspaceLifecycleDeliveries();
+    expect(consume).toHaveBeenCalledOnce();
+    expect((await model.get(id))?.status).toBe("succeeded");
+    if (!abandoned) throw new Error("Claim was not acquired");
+    await model.markFailed(abandoned);
+    expect((await model.get(id))?.status).toBe("succeeded");
   });
 });

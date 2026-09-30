@@ -20,6 +20,9 @@ const STATUS_SUCCEEDED = "succeeded";
 const RECEIPT_ID_MAX_LENGTH = 200;
 const CREATION_INTENT_CONSUMER = "$workspace-created";
 
+/** Outcome of one delivery attempt that did not throw. */
+type DeliveryAttempt = "delivered" | "settled" | "held_elsewhere";
+
 export interface LifecycleDispatchInput {
   tenantId: string;
   operationId: string;
@@ -82,6 +85,8 @@ function buildDelivery(
     attemptCount: 0,
     revision: randomUUID(),
     receiptId: null,
+    claimId: null,
+    claimExpiresAt: null,
     acceptedAt: null,
     effectiveAt: null,
     lastErrorCode: null,
@@ -284,21 +289,27 @@ async function invokeConsumer(
   }
 }
 
-async function deliverOne(delivery: LifecycleDelivery): Promise<boolean> {
-  if (delivery.status === STATUS_SUCCEEDED) return false;
+async function deliverOne(
+  delivery: LifecycleDelivery,
+): Promise<DeliveryAttempt> {
+  if (delivery.status === STATUS_SUCCEEDED) return "settled";
   const consumer = resolveConsumer(delivery);
   if (!consumer) throw new Error("Workspace lifecycle consumer is unavailable");
   const model = GetModel(LifecycleDeliveryModel);
-  await invokeConsumer(model, delivery, consumer);
-  return true;
+  const claimed = await model.claim(delivery);
+  if (!claimed) return "held_elsewhere";
+  await invokeConsumer(model, claimed, consumer);
+  return "delivered";
 }
 
+/** Throws unless every consumer has returned a receipt, so callers never proceed on a delivery still in flight elsewhere. */
 export async function dispatchWorkspaceLifecycle(
   input: LifecycleDispatchInput,
 ): Promise<void> {
   const deliveries = await persistDeliveries(input);
   for (const delivery of deliveries) {
-    await deliverOne(delivery);
+    if ((await deliverOne(delivery)) === "held_elsewhere")
+      throw new Error("Workspace lifecycle delivery is in flight; retry");
   }
 }
 
@@ -315,7 +326,7 @@ export async function reconcileWorkspaceLifecycleDeliveries(): Promise<Lifecycle
       continue;
     }
     try {
-      if (await deliverOne(delivery)) result.delivered += 1;
+      if ((await deliverOne(delivery)) === "delivered") result.delivered += 1;
     } catch (error) {
       result.failed += 1;
       Logging.Error(

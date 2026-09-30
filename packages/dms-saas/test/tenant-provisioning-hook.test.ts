@@ -205,6 +205,13 @@ const modelFakes: Record<string, (tenantId?: string) => unknown> = {
       [...deliveries.values()].filter((row) => row.operationId === id),
     findReplayable: async () =>
       [...deliveries.values()].filter((row) => row.status !== "succeeded"),
+    claim: async (delivery: LifecycleDelivery) => {
+      const row = deliveries.get(delivery._id);
+      if (!row || row.status === "succeeded" || row.status === "running")
+        return null;
+      row.status = "running";
+      return { ...row };
+    },
     markSucceeded: async (delivery: LifecycleDelivery) => {
       const row = deliveries.get(delivery._id);
       if (row) row.status = "succeeded";
