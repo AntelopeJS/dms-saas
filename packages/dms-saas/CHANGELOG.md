@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.9
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.8...v0.3.9)
+
+### 🩹 Fixes
+
+- **billing:** Open Stripe Checkout on API 2025-08-27.basil and never strand a checkout ([#68](https://github.com/AntelopeJS/dms-saas/pull/68))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.2.6 ([3a5a9d3](https://github.com/AntelopeJS/dms-saas/commit/3a5a9d3))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.8
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.7...v0.3.8)
