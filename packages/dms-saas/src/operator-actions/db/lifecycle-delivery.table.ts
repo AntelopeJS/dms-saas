@@ -57,6 +57,14 @@ export class LifecycleDelivery extends Table {
   @Field("string")
   declare revision: string;
 
+  /** Token of the delivery attempt currently allowed to invoke the consumer. */
+  @Field("string")
+  declare claimId: string | null;
+
+  /** A running claim past this time belongs to a dead attempt and can be retaken. */
+  @Field("date")
+  declare claimExpiresAt: Date | null;
+
   @Field("string")
   declare receiptId: string | null;
 

@@ -249,4 +249,40 @@ describe("migration snapshots on the production Mongo provider", () => {
     release();
     await execution;
   });
+
+  it("leaves a live executor running when the resume pass is replayed", async () => {
+    const job = await createJob();
+    const tenantId = await createSubscription(job.fromPlanId);
+    const model = GetModel(TenantSubscriptionModel, tenantId);
+    let release = () => {};
+    let admitted = () => {};
+    const paused = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const ready = new Promise<void>((resolve) => {
+      admitted = resolve;
+    });
+    const update = model.updateDuringTransition.bind(model);
+    vi.spyOn(model, "updateDuringTransition").mockImplementationOnce(
+      async (...args) => {
+        admitted();
+        await paused;
+        await update(...args);
+      },
+    );
+    const execution = processPlanMigrationJob(job._id);
+    await ready;
+    await resumePendingPlanMigrations();
+    await resumePendingPlanMigrations();
+    const migrations = GetModel(PlanMigrationModel);
+    expect((await migrations.get(job._id))?.status).toBe("running");
+    release();
+    await execution;
+    const persisted = await migrations.get(job._id);
+    expect(persisted?.status).toBe("completed");
+    expect(persisted?.tenantOutcomes).toEqual([
+      { tenantId, status: "succeeded", error: null, seatQuantity: 3 },
+    ]);
+    expect((await model.findOne())?.planId).toBe(job.toPlanId);
+  });
 });

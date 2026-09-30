@@ -16,10 +16,12 @@ interface Delivery {
   transition: WorkspaceLifecycleTransition;
   provisioningInvoiceId: string | null;
   provisioningState: WorkspaceProvisioningState | null;
-  status: "pending" | "succeeded" | "failed";
+  status: "pending" | "running" | "succeeded" | "failed";
   attemptCount: number;
   revision: string;
   receiptId: string | null;
+  claimId: string | null;
+  claimExpiresAt: Date | null;
   acceptedAt: Date | null;
   effectiveAt: Date | null;
   lastErrorCode: string | null;
@@ -93,6 +95,17 @@ function updatePending(id: string, update: Partial<Delivery>): void {
   Object.assign(delivery, update, { attemptCount: delivery.attemptCount + 1 });
 }
 
+const CLAIM_LEASE_MS = 60_000;
+
+function isClaimable(delivery: Delivery): boolean {
+  if (delivery.status === "pending" || delivery.status === "failed")
+    return true;
+  return (
+    delivery.status === "running" &&
+    (delivery.claimExpiresAt?.getTime() ?? 0) <= Date.now()
+  );
+}
+
 function lifecycleDeliveryModel(): object {
   return {
     insert: async (delivery: Delivery) => {
@@ -120,9 +133,21 @@ function lifecycleDeliveryModel(): object {
     },
     delete: async (id: string) => harness.deliveries.delete(id),
     findReplayable: async () =>
-      [...harness.deliveries.values()].filter(
-        (value) => (value as Delivery).status !== "succeeded",
+      [...harness.deliveries.values()].filter((value) =>
+        isClaimable(value as Delivery),
       ),
+    claim: async (delivery: Delivery) => {
+      const row = currentDelivery(delivery._id);
+      if (!row || row.revision !== delivery.revision || !isClaimable(row))
+        return null;
+      Object.assign(row, {
+        status: "running",
+        revision: `${row.revision}+`,
+        claimId: `claim-${row.revision}`,
+        claimExpiresAt: new Date(Date.now() + CLAIM_LEASE_MS),
+      });
+      return { ...row };
+    },
     findByOperation: async (operationId: string) =>
       [...harness.deliveries.values()].filter(
         (value) => (value as Delivery).operationId === operationId,
@@ -142,6 +167,7 @@ function lifecycleDeliveryModel(): object {
       });
     },
     markFailed: async (delivery: Delivery) => {
+      if (currentDelivery(delivery._id)?.claimId !== delivery.claimId) return;
       updatePending(delivery._id, {
         status: "failed",
         lastErrorCode: "saas.errors.lifecycle.consumer_failed",
@@ -179,7 +205,7 @@ beforeEach(() => {
 });
 
 describe("workspace lifecycle outbox", () => {
-  it("replays the same identity concurrently and skips a durable receipt on later reconciliation", async () => {
+  it("delivers once across concurrent reconcilers and skips a durable receipt on later reconciliation", async () => {
     const effects = new Set<string>();
     const consume = vi.fn(
       async (
@@ -197,10 +223,10 @@ describe("workspace lifecycle outbox", () => {
       reconcileWorkspaceLifecycleDeliveries(),
       reconcileWorkspaceLifecycleDeliveries(),
     ]);
-    expect(consume).toHaveBeenCalledTimes(3);
+    expect(consume).toHaveBeenCalledOnce();
     expect(effects.size).toBe(1);
     await reconcileWorkspaceLifecycleDeliveries();
-    expect(consume).toHaveBeenCalledTimes(3);
+    expect(consume).toHaveBeenCalledOnce();
   });
 
   it("recovers partial fan-out without losing a consumer", async () => {

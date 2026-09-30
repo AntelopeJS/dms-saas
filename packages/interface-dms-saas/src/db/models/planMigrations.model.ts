@@ -56,6 +56,12 @@ export class PlanMigrationModel extends BasicDataModel(
       throw new Error("Migration progress changed; reconciliation required");
   }
 
+  /** Flag a running job whose executor is gone; a concurrent change wins and returns false. */
+  async markInterrupted(job: PlanMigration): Promise<boolean> {
+    if (job.status !== "running") return false;
+    return this.persist(job, { status: "reconciliation_required" });
+  }
+
   private async persist(
     job: PlanMigration,
     patch: Partial<PlanMigration>,
