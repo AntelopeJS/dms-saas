@@ -43,7 +43,9 @@
         "seat_limit_reached": "La limite de membres du plan est atteinte",
         "no_pending_change": "Aucun changement de plan programmé à annuler",
         "unpaid_invoice_blocks_downgrade": "Une facture est impayée. Réglez-la avant de passer à un plan moins cher.",
-        "no_free_plan": "Aucun plan gratuit n'est disponible pour l'inscription pour le moment."
+        "no_free_plan": "Aucun plan gratuit n'est disponible pour l'inscription pour le moment.",
+        "checkout_in_progress": "Un paiement de changement de plan est déjà ouvert. Terminez-le, ou attendez son expiration, avant de choisir un autre plan.",
+        "change_in_progress": "Un changement de plan est déjà en cours. Réessayez dans quelques minutes."
       },
       "workspace": {
         "not_found": "Espace introuvable",
@@ -97,7 +99,9 @@
         "country_required": "Le pays de facturation est requis",
         "info_not_found": "Informations de facturation introuvables",
         "invalid_return_url": "URL de retour invalide",
-        "identity_incomplete": "Des champs de facturation obligatoires sont manquants ou invalides."
+        "identity_incomplete": "Des champs de facturation obligatoires sont manquants ou invalides.",
+        "checkout_rejected": "Le prestataire de paiement n'a pas pu ouvrir la page de paiement. Rien n'a été débité et votre plan est inchangé. Réessayez plus tard ou contactez le support.",
+        "checkout_unavailable": "Le prestataire de paiement n'a pas répondu. Rien n'a été débité. Réessayez dans 15 minutes."
       },
       "migration": {
         "already_pending": "Une migration est déjà en attente pour ce plan"

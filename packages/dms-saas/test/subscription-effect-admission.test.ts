@@ -19,10 +19,10 @@ import {
 } from "vitest";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import {
-  startPaidCheckout,
   insertFreeSubscription,
   type PlanChangeRequest,
 } from "../src/routes/tenant/tenant-plan-ops";
+import { startPaidCheckout } from "../src/routes/tenant/tenant-plan-checkout";
 import {
   handleCheckoutSessionCompleted,
   handleCheckoutSessionExpired,
@@ -33,7 +33,9 @@ import { scheduleDeferredPlanChange } from "../src/plan-changes/deferred";
 const stripe = vi.hoisted(() => ({
   subscriptions: { retrieve: vi.fn(), cancel: vi.fn(), update: vi.fn() },
   customers: { create: vi.fn(), update: vi.fn() },
-  checkout: { sessions: { create: vi.fn(), expire: vi.fn() } },
+  checkout: {
+    sessions: { create: vi.fn(), expire: vi.fn(), retrieve: vi.fn() },
+  },
   subscriptionSchedules: { create: vi.fn(), release: vi.fn() },
 }));
 vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
@@ -50,6 +52,7 @@ vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
 }));
 
 const SETUP_TIMEOUT_MS = 60_000;
+const createdSessions = new Map<string, object>();
 const CONTENDERS = 12;
 let mongodb: MongoMemoryReplSet;
 beforeAll(async () => {
@@ -74,12 +77,20 @@ beforeEach(() => {
   stripe.customers.create.mockResolvedValue({ id: "customer" });
   stripe.customers.update.mockResolvedValue({ id: "customer" });
   stripe.checkout.sessions.create.mockImplementation(
-    async (params: Stripe.Checkout.SessionCreateParams) => ({
-      id: randomUUID(),
-      url: "https://checkout.example.test/session",
-      metadata: params.metadata,
-    }),
+    async (params: Stripe.Checkout.SessionCreateParams) => {
+      const session = {
+        id: randomUUID(),
+        url: "https://checkout.example.test/session",
+        metadata: params.metadata,
+      };
+      createdSessions.set(session.id, session);
+      return session;
+    },
   );
+  stripe.checkout.sessions.retrieve.mockImplementation(async (id: string) => ({
+    ...createdSessions.get(id),
+    status: "open",
+  }));
   stripe.subscriptions.retrieve.mockResolvedValue({
     id: "paid-subscription",
     customer: "customer",
@@ -236,7 +247,10 @@ describe("subscription effect admission with real Mongo mutations", () => {
     ).toBeUndefined();
     await expect(
       startPaidCheckout({ ...request, subscription: current }),
-    ).rejects.toThrow("different pending transition");
+    ).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.plan.checkout_in_progress",
+    });
     expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(2);
   });
 

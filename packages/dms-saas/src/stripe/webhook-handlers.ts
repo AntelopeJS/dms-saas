@@ -42,6 +42,11 @@ import {
   type TaxIdSnapshot,
   toVatVerificationStatus,
 } from "./customer-billing";
+import {
+  readSubscriptionPeriod,
+  readSubscriptionPeriodEnd,
+  requireInvoiceId,
+} from "./payload-shapes";
 import { computeUnusedPortionCents, nowInStripeSeconds } from "./proration";
 import {
   ACTIVE_STATUS,
@@ -142,9 +147,10 @@ export async function handleInvoicePaymentFailed(
   ).findOne();
   if (localSubscription?.status === CANCELLED_STATUS) return;
   await updateSubscriptionStatus(tenant._id, PAST_DUE_STATUS);
+  const invoiceId = requireInvoiceId(invoice);
   emitAutomationEvent("saas.payment-failed", {
     tenantId: tenant._id,
-    invoiceId: invoice.id,
+    invoiceId,
     invoiceNumber: invoice.number ?? null,
     amountDue: invoice.amount_due,
     currency: invoice.currency,
@@ -155,7 +161,7 @@ export async function handleInvoicePaymentFailed(
     title: "$saas.notifications.payload.payment_failed.title",
     description: "$saas.notifications.payload.payment_failed.description",
     params: {
-      invoice: invoice.number ?? invoice.id,
+      invoice: invoice.number ?? invoiceId,
       amount: formatAmount(invoice.amount_due, invoice.currency),
     },
   });
@@ -195,10 +201,11 @@ async function applyAutoProrataIfEnabled(
   );
   if (alreadyIssued) return;
 
+  const period = readSubscriptionPeriod(subscription);
   const remaining = computeUnusedPortionCents(
     lastInvoice.amount_paid,
-    subscription.current_period_start,
-    subscription.current_period_end,
+    period.start,
+    period.end,
     // The cancellation instant, not the processing instant: a redelivery must
     // compute the same amount, or the idempotency key below would reject the
     // replay as a changed request instead of deduplicating it.
@@ -273,7 +280,7 @@ async function persistSubscriptionPeriod(
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const local = await tenantSubscriptionModel.findOne();
   if (!local) return;
-  const currentPeriodEnd = optionalStripeDate(subscription.current_period_end);
+  const currentPeriodEnd = readSubscriptionPeriodEnd(subscription);
   if (local.currentPeriodEnd?.getTime() === currentPeriodEnd?.getTime()) return;
   await tenantSubscriptionModel.update(local._id, { currentPeriodEnd });
 }

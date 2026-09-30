@@ -57,8 +57,8 @@ import {
   loadAndValidateTargetPlan,
   type PlanChangeRequest,
   scheduleDowngrade,
-  startPaidCheckout,
 } from "./tenant-plan-ops";
+import { startPaidCheckout } from "./tenant-plan-checkout";
 
 /** A paid target without a live Stripe subscription goes through Checkout. */
 function startsPaidCheckout(

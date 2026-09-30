@@ -1,14 +1,23 @@
 import type Stripe from "stripe";
 import { getStripeClient } from "./client";
+import { readSubscriptionPeriod } from "./payload-shapes";
 
 const MS_PER_SECOND = 1000;
-const TAX_RATE_EXPANSION = "total_tax_amounts.tax_rate";
 
 /** The billing cycle a Stripe subscription is currently in. */
 export interface StripeSubscriptionCycle {
   currency: string;
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
+}
+
+/**
+ * A preview invoice with the tax rates its taxes reference. Since basil an
+ * invoice's taxes carry only the rate id, so the rates are fetched alongside.
+ */
+export interface PricedUpcomingInvoice {
+  invoice: Stripe.Invoice;
+  taxRates: Map<string, Stripe.TaxRate>;
 }
 
 /** A hypothetical invoice item priced on a preview and never created. */
@@ -58,27 +67,50 @@ export async function retrieveStripeSubscriptionCycle(
 ): Promise<StripeSubscriptionCycle> {
   const subscription =
     await getStripeClient().subscriptions.retrieve(subscriptionId);
+  const period = readSubscriptionPeriod(subscription);
+  if (period.start === null || period.end === null)
+    throw new Error(
+      `Stripe subscription ${subscriptionId} has no billing period`,
+    );
   return {
     currency: subscription.currency,
-    currentPeriodStart: fromStripeSeconds(subscription.current_period_start),
-    currentPeriodEnd: fromStripeSeconds(subscription.current_period_end),
+    currentPeriodStart: fromStripeSeconds(period.start),
+    currentPeriodEnd: fromStripeSeconds(period.end),
   };
+}
+
+function collectTaxRateIds(invoice: Stripe.Invoice): string[] {
+  const ids = (invoice.total_taxes ?? [])
+    .map((tax) => tax.tax_rate_details?.tax_rate)
+    .filter((id): id is string => typeof id === "string");
+  return [...new Set(ids)];
+}
+
+async function retrieveTaxRates(
+  ids: string[],
+): Promise<Map<string, Stripe.TaxRate>> {
+  const stripe = getStripeClient();
+  const rates = await Promise.all(
+    ids.map((id) => stripe.taxRates.retrieve(id)),
+  );
+  return new Map(rates.map((rate) => [rate.id, rate]));
 }
 
 /**
  * Ask Stripe to price the subscription's next invoice, quoted items included,
- * with the tax settings the subscription itself carries. Tax rates are
- * expanded so the country, type and percentage of each tax come with it.
+ * with the tax settings the subscription itself carries. The referenced tax
+ * rates come with it so the country, type and percentage of each tax are known.
  */
 export async function previewStripeUpcomingInvoice(
   request: UpcomingInvoicePreviewRequest,
-): Promise<Stripe.Invoice> {
-  return getStripeClient().invoices.createPreview({
+): Promise<PricedUpcomingInvoice> {
+  const invoice = await getStripeClient().invoices.createPreview({
     customer: request.customerId,
     subscription: request.subscriptionId,
     invoice_items: request.quotedItems.map((item) =>
       toPreviewInvoiceItem(request.currency, item),
     ),
-    expand: [TAX_RATE_EXPANSION],
   });
+  const taxRates = await retrieveTaxRates(collectTaxRateIds(invoice));
+  return { invoice, taxRates };
 }

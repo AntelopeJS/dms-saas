@@ -6,10 +6,11 @@ import type {
 } from "@antelopejs/interface-dms-saas/billing";
 import type Stripe from "stripe";
 import { LINE_KEY_METADATA } from "../invoice-line-items";
+import type { PricedUpcomingInvoice } from "../stripe/upcoming-invoice";
 
 const MS_PER_SECOND = 1000;
 const REVERSE_CHARGE_REASON = "reverse_charge";
-const SUBSCRIPTION_LINE_TYPE = "subscription";
+const INCLUSIVE_TAX_BEHAVIOR = "inclusive";
 
 /** What the preview was priced against, beyond the Stripe invoice itself. */
 export interface PreviewPricingContext {
@@ -30,21 +31,46 @@ function sumAmounts(amounts: TaxedAmount[] | null | undefined): number {
   return (amounts ?? []).reduce((total, entry) => total + entry.amount, 0);
 }
 
+/**
+ * A subscription item's recurring charge. A proration of that item carries the
+ * invoice item it was booked as, which is what tells the two apart since basil.
+ */
+function isRecurringSubscriptionLine(line: Stripe.InvoiceLineItem): boolean {
+  const details = line.parent?.subscription_item_details;
+  return !!details && !details.invoice_item;
+}
+
 function toLineKind(line: Stripe.InvoiceLineItem): UpcomingInvoiceLineKind {
-  if (line.type === SUBSCRIPTION_LINE_TYPE) return "subscription";
+  if (isRecurringSubscriptionLine(line)) return "subscription";
   return line.metadata?.[LINE_KEY_METADATA] ? "usage" : "invoice_item";
+}
+
+function isProrationLine(line: Stripe.InvoiceLineItem): boolean {
+  const parent = line.parent;
+  return !!(
+    parent?.subscription_item_details?.proration ||
+    parent?.invoice_item_details?.proration
+  );
+}
+
+/** A line amount includes its inclusive taxes; the preview shows it without. */
+function amountExcludingTax(line: Stripe.InvoiceLineItem): number {
+  const inclusiveTaxes = (line.taxes ?? []).filter(
+    (tax) => tax.tax_behavior === INCLUSIVE_TAX_BEHAVIOR,
+  );
+  return line.amount - sumAmounts(inclusiveTaxes);
 }
 
 function toPreviewLine(line: Stripe.InvoiceLineItem): UpcomingInvoiceLine {
   return {
     kind: toLineKind(line),
     description: line.description,
-    amountMinorUnits: line.amount_excluding_tax ?? line.amount,
-    taxMinorUnits: sumAmounts(line.tax_amounts),
+    amountMinorUnits: amountExcludingTax(line),
+    taxMinorUnits: sumAmounts(line.taxes),
     quantity: line.quantity,
     periodStart: toIsoDate(line.period.start),
     periodEnd: toIsoDate(line.period.end),
-    isProration: line.proration,
+    isProration: isProrationLine(line),
     usageLineKey: line.metadata?.[LINE_KEY_METADATA] ?? null,
   };
 }
@@ -53,20 +79,16 @@ function toUppercase(value: string | null | undefined): string | null {
   return value ? value.toUpperCase() : null;
 }
 
-function expandedTaxRate(
-  taxRate: string | Stripe.TaxRate,
-): Stripe.TaxRate | null {
-  return typeof taxRate === "string" ? null : taxRate;
-}
-
 function toPreviewTax(
-  taxAmount: Stripe.Invoice.TotalTaxAmount,
+  taxAmount: Stripe.Invoice.TotalTax,
+  taxRates: Map<string, Stripe.TaxRate>,
 ): UpcomingInvoiceTax {
-  const rate = expandedTaxRate(taxAmount.tax_rate);
+  const rateId = taxAmount.tax_rate_details?.tax_rate;
+  const rate = rateId ? (taxRates.get(rateId) ?? null) : null;
   return {
     amountMinorUnits: taxAmount.amount,
     taxableAmountMinorUnits: taxAmount.taxable_amount,
-    isInclusive: taxAmount.inclusive,
+    isInclusive: taxAmount.tax_behavior === INCLUSIVE_TAX_BEHAVIOR,
     ratePercentage: rate
       ? (rate.effective_percentage ?? rate.percentage)
       : null,
@@ -93,11 +115,13 @@ function resolveTaxCountry(
  * the ones Stripe will bill.
  */
 export function toAvailablePreview(
-  invoice: Stripe.Invoice,
+  { invoice, taxRates }: PricedUpcomingInvoice,
   pricing: PreviewPricingContext,
 ): AvailableUpcomingInvoicePreview {
-  const taxes = (invoice.total_tax_amounts ?? []).map(toPreviewTax);
-  const taxMinorUnits = sumAmounts(invoice.total_tax_amounts);
+  const taxes = (invoice.total_taxes ?? []).map((tax) =>
+    toPreviewTax(tax, taxRates),
+  );
+  const taxMinorUnits = sumAmounts(invoice.total_taxes);
   return {
     status: "available",
     currency: invoice.currency.toUpperCase(),
