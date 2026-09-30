@@ -39,6 +39,7 @@ const planIntervalLabel = usePlanIntervalLabel(
 );
 const planDescription = usePlanDescription();
 const config = useDmsRuntimeConfig();
+const { user } = useCurrentUser();
 
 const stripePublishableKey = computed<string>(
   () => (config.public.dmsSaas as any)?.stripePublishableKey ?? "",
@@ -121,6 +122,7 @@ async function initStripeElement(): Promise<void> {
     publishableKey: stripePublishableKey.value,
     clientSecret: setup.clientSecret,
     containerId: PAYMENT_ELEMENT_ID,
+    billingEmail: () => user.value?.email ?? "",
   });
 }
 

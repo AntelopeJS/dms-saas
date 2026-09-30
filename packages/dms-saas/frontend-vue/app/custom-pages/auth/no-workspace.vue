@@ -130,6 +130,7 @@ async function initStripeElement(): Promise<void> {
     publishableKey,
     clientSecret: setup.clientSecret,
     containerId: PAYMENT_ELEMENT_ID,
+    billingEmail: () => pendingRegistration.value?.email ?? "",
   });
 }
 
