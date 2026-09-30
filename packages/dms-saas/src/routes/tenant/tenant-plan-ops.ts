@@ -26,6 +26,7 @@ import {
 } from "../../plan-changes";
 import {
   countOccupiedSeats,
+  ensurePlanStripeRefs,
   fitsWithinSeatLimit,
   syncStripeSeatQuantity,
   type TenantPlanFeature,
@@ -135,9 +136,9 @@ export async function loadAndValidateTargetPlan(
   planId: string,
   customerType: string | null | undefined,
 ): Promise<Plan> {
-  const newPlan = await planModel.get(planId);
+  const storedPlan = await planModel.get(planId);
   assert(
-    newPlan && !newPlan.isDeleted && newPlan.isActive,
+    storedPlan && !storedPlan.isDeleted && storedPlan.isActive,
     HTTP_BAD_REQUEST,
     "saas.errors.plan.invalid",
   );
@@ -147,10 +148,12 @@ export async function loadAndValidateTargetPlan(
     "saas.errors.plan.customer_type_unknown",
   );
   assert(
-    newPlan.audience === "any" || newPlan.audience === customerType,
+    storedPlan.audience === "any" || storedPlan.audience === customerType,
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );
+  // Whatever wrote the plan, it is billed on a price that matches it.
+  const newPlan = await ensurePlanStripeRefs(storedPlan, planModel);
   // A priced plan with no Stripe price must not be selectable: isPaidPlan
   // keys off the Stripe ref, so an unsynced paid plan would be parked as a
   // free downgrade and land active without ever being billed.

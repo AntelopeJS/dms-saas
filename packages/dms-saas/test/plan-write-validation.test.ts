@@ -6,17 +6,11 @@ import type { Plan, PlanModel } from "../src/db";
 import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
 
 const stripe = vi.hoisted(() => ({
-  isConfigured: false,
-  syncPlanWithStripe: vi.fn(async (plan: unknown) => plan),
+  syncPlanStripeRefs: vi.fn(async (plan: unknown) => plan),
 }));
 
-vi.mock("../src/stripe", () => ({
-  isStripeConfigured: () => stripe.isConfigured,
-  syncPlanWithStripe: stripe.syncPlanWithStripe,
-}));
-
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: { Warn: vi.fn() },
+vi.mock("../src/plans/stripe-sync", () => ({
+  syncPlanStripeRefs: stripe.syncPlanStripeRefs,
 }));
 
 interface PlanStore {
@@ -69,8 +63,7 @@ async function expectInvalidInterval(operation: AsyncOperation): Promise<void> {
 }
 
 beforeEach(() => {
-  stripe.isConfigured = false;
-  stripe.syncPlanWithStripe.mockClear();
+  stripe.syncPlanStripeRefs.mockClear();
 });
 
 describe("plan interval writes", () => {
@@ -109,10 +102,9 @@ describe("plan interval writes", () => {
     );
   });
 
-  it("skips Stripe sync for plans without an interval", async () => {
+  it("accepts a write that leaves the Stripe-backed fields alone", async () => {
     const plan = { _id: PLAN_ID, name: "Custom" } as Plan;
     const store = { current: plan };
-    stripe.isConfigured = true;
 
     await expect(
       controller(store).update(OWNER, PLAN_ID, {
@@ -120,7 +112,41 @@ describe("plan interval writes", () => {
       }),
     ).resolves.toEqual({ _id: PLAN_ID });
     expect(store.current.isActive).toBe(false);
-    expect(stripe.syncPlanWithStripe).not.toHaveBeenCalled();
+  });
+});
+
+describe("plan writes and Stripe", () => {
+  it("syncs a created plan once it is stored", async () => {
+    const store: PlanStore = {};
+
+    await controller(store).create(OWNER, {
+      name: "Hobby",
+      price: 5,
+      interval: "month",
+    } as never);
+
+    expect(stripe.syncPlanStripeRefs).toHaveBeenCalledOnce();
+    expect(stripe.syncPlanStripeRefs.mock.calls[0]?.[0]).toMatchObject({
+      _id: PLAN_ID,
+      price: 5,
+    });
+  });
+
+  it("syncs an updated plan as written, not as it was", async () => {
+    const plan = {
+      _id: PLAN_ID,
+      name: "Hobby",
+      price: 5,
+      interval: "month",
+    } as Plan;
+    const store = { current: plan };
+
+    await controller(store).update(OWNER, PLAN_ID, { price: 6 });
+
+    expect(stripe.syncPlanStripeRefs).toHaveBeenCalledOnce();
+    expect(stripe.syncPlanStripeRefs.mock.calls[0]?.[0]).toMatchObject({
+      price: 6,
+    });
   });
 });
 
