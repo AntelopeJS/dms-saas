@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.12
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.11...v0.3.12)
+
+### 🩹 Fixes
+
+- Make database-initialized handlers safe to replay ([#71](https://github.com/AntelopeJS/dms-saas/pull/71))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.2.7 ([91b70f5](https://github.com/AntelopeJS/dms-saas/commit/91b70f5))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.11
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.10...v0.3.11)
