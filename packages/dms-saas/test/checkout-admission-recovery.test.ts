@@ -18,10 +18,14 @@ import {
   vi,
 } from "vitest";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
+import { startPaidCheckout } from "../src/routes/tenant/tenant-plan-checkout";
 import {
-  startPaidCheckout,
+  cancelPendingCheckout,
+  describePendingCheckout,
   UNRECORDED_CHECKOUT_TTL_MS,
-} from "../src/routes/tenant/tenant-plan-checkout";
+} from "../src/routes/tenant/tenant-plan-checkout-recovery";
+import { handleCheckoutSessionExpired } from "../src/stripe/webhook-checkout";
+import { CHECKOUT_SESSION_LIFETIME_MS } from "../src/stripe/workspace-checkout";
 import type { PlanChangeRequest } from "../src/routes/tenant/tenant-plan-ops";
 import { hashEmail } from "../src/utils";
 import {
@@ -96,7 +100,11 @@ beforeEach(() => {
     deleted: false,
   }));
   stripe.customers.del.mockResolvedValue({ deleted: true });
-  stripe.checkout.sessions.expire.mockResolvedValue({ status: "expired" });
+  stripe.checkout.sessions.expire.mockImplementation(async (id: string) => {
+    const session = createdSessions.get(id);
+    if (!session) return { id, status: "expired" };
+    return settleSession(id, "expired");
+  });
   stripe.checkout.sessions.create.mockImplementation(
     async (params: Stripe.Checkout.SessionCreateParams) => {
       const session = {
@@ -104,6 +112,8 @@ beforeEach(() => {
         url: CHECKOUT_URL,
         metadata: params.metadata,
         status: "open",
+        expires_at: params.expires_at,
+        mode: "subscription",
       } as Stripe.Checkout.Session;
       createdSessions.set(session.id, session);
       return session;
@@ -113,6 +123,15 @@ beforeEach(() => {
     createdSessions.get(id),
   );
 });
+
+function settleSession(
+  id: string,
+  status: Stripe.Checkout.Session.Status,
+): Stripe.Checkout.Session {
+  const settled = { ...createdSessions.get(id), status };
+  createdSessions.set(id, settled as Stripe.Checkout.Session);
+  return settled as Stripe.Checkout.Session;
+}
 
 function invalidRequest(
   message: string,
@@ -366,5 +385,177 @@ describe("paid checkout admission", () => {
       body: "saas.errors.plan.change_in_progress",
     });
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+});
+
+interface RecordedCheckout {
+  request: PlanChangeRequest;
+  sessionId: string;
+  operationId: string;
+}
+
+/** An owner who opened Stripe Checkout and closed the tab without paying. */
+async function abandonCheckout(): Promise<RecordedCheckout> {
+  const request = await checkoutRequest();
+  await startPaidCheckout(request);
+  const pending = await reload(request);
+  return {
+    request: pending,
+    sessionId: pending.subscription?.stripeCheckoutSessionId ?? "",
+    operationId: pending.subscription?.domainTransition?.operationId ?? "",
+  };
+}
+
+function cancel(checkout: RecordedCheckout, operationId: string | null) {
+  return cancelPendingCheckout(
+    checkout.request.subscription,
+    checkout.request.tenantSubscriptionModel,
+    operationId,
+  );
+}
+
+function expiredEvent(session: Stripe.Checkout.Session): Stripe.Event {
+  return { data: { object: session } } as Stripe.Event;
+}
+
+describe("abandoned checkout recovery", () => {
+  it("opens sessions that expire after the shortest lifetime Stripe accepts", async () => {
+    const before = Date.now();
+    const { operationId } = await abandonCheckout();
+
+    const params = lastSessionParams();
+    const lifetimeMs = (params.expires_at ?? 0) * 1000 - before;
+    expect(lifetimeMs).toBeGreaterThanOrEqual(CHECKOUT_SESSION_LIFETIME_MS);
+    expect(lifetimeMs).toBeLessThan(2 * CHECKOUT_SESSION_LIFETIME_MS);
+    const cancelUrl = new URL(params.cancel_url ?? "");
+    expect(cancelUrl.pathname).toBe("/cancel");
+    expect(cancelUrl.searchParams.get("checkout")).toBe("cancelled");
+    expect(cancelUrl.searchParams.get("checkoutOperation")).toBe(operationId);
+  });
+
+  it("offers an open session for resumption, then expires it when the owner starts over", async () => {
+    const checkout = await abandonCheckout();
+
+    await expect(startPaidCheckout(checkout.request)).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.plan.checkout_in_progress",
+    });
+    const { pending } = await describePendingCheckout(
+      checkout.request.subscription,
+    );
+    expect(pending).toMatchObject({
+      targetPlanId: "hobby",
+      checkoutUrl: CHECKOUT_URL,
+      isPaid: false,
+    });
+
+    await expect(cancel(checkout, null)).resolves.toEqual({ released: true });
+    expect(stripe.checkout.sessions.expire).toHaveBeenCalledWith(
+      checkout.sessionId,
+    );
+    const restarted = await startPaidCheckout(await reload(checkout.request));
+
+    expect(restarted.checkoutUrl).toBe(CHECKOUT_URL);
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(2);
+    expect(lastSessionParams().subscription_data?.trial_period_days).toBe(
+      TRIAL_DAYS,
+    );
+  });
+
+  it("releases a legacy session opened with Stripe's 24-hour default", async () => {
+    const checkout = await abandonCheckout();
+    createdSessions.set(checkout.sessionId, {
+      ...createdSessions.get(checkout.sessionId),
+      expires_at: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+    } as Stripe.Checkout.Session);
+
+    await expect(cancel(checkout, null)).resolves.toEqual({ released: true });
+
+    expect(createdSessions.get(checkout.sessionId)?.status).toBe("expired");
+    const released = await checkout.request.tenantSubscriptionModel.findOne();
+    expect(released).toMatchObject({
+      domainTransition: null,
+      stripeCheckoutSessionId: null,
+    });
+  });
+
+  it("releases the checkout the owner cancelled on Stripe's page", async () => {
+    const checkout = await abandonCheckout();
+
+    await expect(cancel(checkout, checkout.operationId)).resolves.toEqual({
+      released: true,
+    });
+
+    expect(createdSessions.get(checkout.sessionId)?.status).toBe("expired");
+    expect((await trialReservationOf(checkout.request))?.tenantId).toBeNull();
+    const retried = await startPaidCheckout(await reload(checkout.request));
+    expect(retried.checkoutUrl).toBe(CHECKOUT_URL);
+  });
+
+  it("ignores a cancel link that belongs to another checkout", async () => {
+    const checkout = await abandonCheckout();
+
+    await expect(cancel(checkout, randomUUID())).resolves.toEqual({
+      released: false,
+    });
+
+    expect(stripe.checkout.sessions.expire).not.toHaveBeenCalled();
+    const pending = await checkout.request.tenantSubscriptionModel.findOne();
+    expect(pending?.stripeCheckoutSessionId).toBe(checkout.sessionId);
+  });
+
+  it("releases the checkout and its trial when Stripe reports the session expired", async () => {
+    const checkout = await abandonCheckout();
+    const expired = settleSession(checkout.sessionId, "expired");
+
+    await handleCheckoutSessionExpired(expiredEvent(expired));
+
+    const released = await checkout.request.tenantSubscriptionModel.findOne();
+    expect(released).toMatchObject({
+      domainTransition: null,
+      stripeCheckoutSessionId: null,
+    });
+    expect((await trialReservationOf(checkout.request))?.tenantId).toBeNull();
+    const retried = await startPaidCheckout(await reload(checkout.request));
+    expect(retried.checkoutUrl).toBe(CHECKOUT_URL);
+  });
+
+  it("never releases a session the owner already paid", async () => {
+    const checkout = await abandonCheckout();
+    settleSession(checkout.sessionId, "complete");
+
+    await expect(cancel(checkout, checkout.operationId)).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.plan.checkout_already_paid",
+    });
+    await expect(startPaidCheckout(checkout.request)).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.plan.checkout_in_progress",
+    });
+
+    expect(stripe.checkout.sessions.expire).not.toHaveBeenCalled();
+    const { pending } = await describePendingCheckout(
+      checkout.request.subscription,
+    );
+    expect(pending).toMatchObject({ checkoutUrl: null, isPaid: true });
+    const retained = await checkout.request.tenantSubscriptionModel.findOne();
+    expect(retained?.domainTransition?.operationId).toBe(checkout.operationId);
+    expect(retained?.stripeCheckoutSessionId).toBe(checkout.sessionId);
+  });
+
+  it("keeps a session the owner completed just before Stripe refused its expiry", async () => {
+    const checkout = await abandonCheckout();
+    stripe.checkout.sessions.expire.mockImplementationOnce(async () => {
+      settleSession(checkout.sessionId, "complete");
+      throw invalidRequest("This Checkout Session is not open.");
+    });
+
+    await expect(cancel(checkout, null)).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.plan.checkout_already_paid",
+    });
+
+    const retained = await checkout.request.tenantSubscriptionModel.findOne();
+    expect(retained?.domainTransition?.operationId).toBe(checkout.operationId);
   });
 });

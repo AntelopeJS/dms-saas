@@ -2,6 +2,10 @@ import type { PlanInterval } from "./usePlanIntervalLabel";
 
 const TENANT_PLAN_ENDPOINT = "/api/saas/tenant/plan";
 const TENANT_PLAN_STATE_KEY = "saas-tenant-plan";
+const TENANT_CHECKOUT_ENDPOINT = `${TENANT_PLAN_ENDPOINT}/checkout`;
+
+/** Query parameter naming the checkout a Stripe cancel link belongs to. */
+export const CHECKOUT_OPERATION_PARAM = "checkoutOperation";
 
 export interface TenantPlanFeature {
   featureId: string;
@@ -68,6 +72,24 @@ export interface ChangePlanResult {
   checkoutUrl: string | null;
 }
 
+/** The Stripe Checkout a workspace is waiting on. */
+export interface PendingCheckout {
+  targetPlanId: string | null;
+  /** Where the owner resumes paying; null once nothing is left to pay. */
+  checkoutUrl: string | null;
+  expiresAt: string | null;
+  /** Paid, and waiting for Stripe to confirm it. */
+  isPaid: boolean;
+}
+
+export interface PendingCheckoutResult {
+  pending: PendingCheckout | null;
+}
+
+export interface CancelCheckoutResult {
+  released: boolean;
+}
+
 /** The payload resolves inheritance for every public plan and carries the
  * features catalogue, so the plan card and the free-access banner share it. */
 export function useTenantPlan() {
@@ -91,5 +113,23 @@ export function useTenantPlan() {
     });
   }
 
-  return { ...shared, changePlan, cancelPendingChange };
+  function loadPendingCheckout(): Promise<PendingCheckoutResult> {
+    return $authFetch<PendingCheckoutResult>(TENANT_CHECKOUT_ENDPOINT);
+  }
+
+  /** Without an operation id, gives up on whatever checkout is pending. */
+  function cancelCheckout(operationId?: string): Promise<CancelCheckoutResult> {
+    return $authFetch<CancelCheckoutResult>(TENANT_CHECKOUT_ENDPOINT, {
+      method: "DELETE",
+      query: operationId ? { [CHECKOUT_OPERATION_PARAM]: operationId } : {},
+    });
+  }
+
+  return {
+    ...shared,
+    changePlan,
+    cancelPendingChange,
+    loadPendingCheckout,
+    cancelCheckout,
+  };
 }

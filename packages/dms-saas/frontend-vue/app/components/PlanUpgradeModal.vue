@@ -16,6 +16,7 @@ const { t } = useI18n();
 const { resolveApiError } = useApiErrorMessage();
 const identity = useBillingIdentity();
 const { changePlan } = useTenantPlan();
+const { offerFor: offerPendingCheckout } = usePendingCheckout();
 const { formatMajorUnits } = useMoneyFormat();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
@@ -87,6 +88,10 @@ async function confirm(): Promise<void> {
     open.value = false;
     emit("changed");
   } catch (error) {
+    if (await offerPendingCheckout(error, plan._id)) {
+      open.value = false;
+      return;
+    }
     notifyError(resolveApiError(error, "saas.workspace.plan.change_error"));
   } finally {
     isSubmitting.value = false;

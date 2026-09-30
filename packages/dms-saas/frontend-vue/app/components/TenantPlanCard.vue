@@ -25,6 +25,7 @@ const { featureLabel } = usePlanFeatureLabel();
 const planDescription = usePlanDescription();
 const { workspace, load: loadWorkspace } = useCurrentWorkspace();
 const { isOpen: isComparisonOpen } = usePlanComparison();
+const { consumeCancelledCheckout } = usePendingCheckout();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
 const data = ref<TenantPlanResponse | null>(null);
@@ -164,8 +165,32 @@ async function loadWorkspaceForOwner(): Promise<void> {
   if (status?.isTenantOwner) await loadWorkspace().catch(() => undefined);
 }
 
-onMounted(() => {
+/** Back from Stripe's cancel link: the checkout left behind is released
+ * before the card loads, so the plan buttons work straight away. */
+async function releaseCancelledCheckout(): Promise<void> {
+  try {
+    const { released } = await consumeCancelledCheckout();
+    if (!released) return;
+    toast.add({
+      title: t("saas.workspace.plan.checkout_pending.cancelled"),
+      color: "info",
+      icon: "i-ph-info",
+    });
+  } catch (error) {
+    toast.add({
+      title: resolveApiError(
+        error,
+        "saas.workspace.plan.checkout_pending.restart_error",
+      ),
+      color: "error",
+      icon: "i-ph-warning-circle",
+    });
+  }
+}
+
+onMounted(async () => {
   void loadWorkspaceForOwner();
+  await releaseCancelledCheckout();
   return fetchPlan(false);
 });
 </script>
@@ -279,6 +304,7 @@ onMounted(() => {
         :plan="upgradeTarget"
         @changed="refresh"
       />
+      <DmsSaasPendingCheckoutModal />
     </div>
   </UCard>
 </template>

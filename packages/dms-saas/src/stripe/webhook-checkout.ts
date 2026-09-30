@@ -17,6 +17,7 @@ import { activatePaidUsage } from "../workspaces/complimentary";
 import { getStripeClient } from "./client";
 import { readSubscriptionPeriodEnd } from "./payload-shapes";
 import { ACTIVE_STATUS, asCustomerId, TRIALING_STATUS } from "./webhook-shared";
+import { releaseCheckoutTrialReservation } from "./workspace-checkout";
 
 async function promoteSubscriptionPaymentMethod(
   subscription: Stripe.Subscription,
@@ -226,6 +227,7 @@ export async function handleCheckoutSessionExpired(
   });
   if (outcome !== "applied")
     throw new Error(`Checkout expiration ${outcome}; reconciliation required`);
+  await releaseCheckoutTrialReservation(session, tenantId);
 }
 
 async function recordCheckoutTrialConsumption(
