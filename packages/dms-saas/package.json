@@ -53,15 +53,15 @@
     "@antelopejs/interface-data-api": ">=0.1.9 <1.0.0",
     "@antelopejs/interface-database": ">=0.1.8 <1.0.0",
     "@antelopejs/interface-database-decorators": ">=0.1.7 <1.0.0",
-    "@antelopejs/interface-dms": ">=0.2.7 <1.0.0",
+    "@antelopejs/interface-dms": ">=0.3.1 <1.0.0",
     "@antelopejs/interface-dms-saas": ">=0.2.3 <0.3.0",
     "node-cron": "^4.2.1",
     "stripe": "^17.5.0",
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@antelopejs/core": "1.9.1",
-    "@antelopejs/dms": ">=0.4.8 <1.0.0",
+    "@antelopejs/core": "1.10.1",
+    "@antelopejs/dms": ">=0.5.0 <1.0.0",
     "@antelopejs/dms-frontend": "0.3.2",
     "@antelopejs/mongodb": "1.4.0",
     "@antelopejs/tooling-configs": ">=0.0.7 <1.0.0",
