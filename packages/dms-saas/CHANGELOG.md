@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.11
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.10...v0.3.11)
+
+### 🚀 Enhancements
+
+- **stripe:** Move to API version 2026-08-26.dahlia with stripe v22 ([#70](https://github.com/AntelopeJS/dms-saas/pull/70))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.10
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.9...v0.3.10)
