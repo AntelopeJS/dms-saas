@@ -194,7 +194,8 @@ The sync runs:
 
 - when the plan editor creates or saves a plan, after writing it (a Stripe
   error is reported to the editor, and the next pass retries the sync);
-- at startup, in the background, for every active plan;
+- once DMS has initialised the database at startup, in the background, for
+  every active plan;
 - whenever a plan is about to be offered or billed — the tenant plan catalogue,
   a plan change, an operator action, a new workspace — so a plan written after
   startup is linked the first time it matters.

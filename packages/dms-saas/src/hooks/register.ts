@@ -10,6 +10,7 @@ import { recomputeAllTenantBillingStates } from "../billing-state";
 import { TenantBillingStateModel } from "../db";
 import { reconcileWorkspaceLifecycleDeliveries } from "../operator-actions";
 import { SAAS_MODULE_ID } from "../pages/module";
+import { startPlanReconciliation } from "../plans/stripe-sync";
 import { ensureLegalDocumentsSingleton } from "../routes";
 import { resumePendingPlanMigrations } from "../workers";
 import { backfillDefaultSubscriptions } from "../workspaces/default-plan";
@@ -61,6 +62,14 @@ export function registerSaasHookListeners(): void {
       return undefined;
     },
   );
+  // The plan table is readable only once DMS has registered its schemas, which
+  // is what this hook signals; module start() runs too early. Registered ahead
+  // of the listener below so a failure there does not skip the pass, and not
+  // awaited so DMS startup never waits on Stripe.
+  RegisterHook(Hook.DATABASE_INITIALIZED, () => {
+    startPlanReconciliation();
+    return undefined;
+  });
   RegisterHook(Hook.DATABASE_INITIALIZED, async () => {
     await ensureLegalDocumentsSingleton();
     const results = await Promise.allSettled([

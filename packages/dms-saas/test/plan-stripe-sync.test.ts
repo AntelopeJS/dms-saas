@@ -177,6 +177,7 @@ import {
   ensurePlanStripeRefs,
   loadBillablePlan,
   reconcilePlansWithStripe,
+  startPlanReconciliation,
   syncPlanStripeRefs,
 } from "../src/plans/stripe-sync";
 import { loadAndValidateTargetPlan } from "../src/routes/tenant/tenant-plan-ops";
@@ -547,6 +548,24 @@ describe("reconciling the catalogue", () => {
     expect(fake.logs.some((log) => log.includes("cloud-plan-broken"))).toBe(
       true,
     );
+  });
+
+  it("starts in the background and logs a failure instead of throwing", async () => {
+    let failCatalogueRead = (_reason: unknown) => undefined;
+    vi.spyOn(planStore, "findActiveNotDeleted").mockReturnValueOnce(
+      new Promise<Plan[]>((_resolve, reject) => {
+        failCatalogueRead = reject;
+      }),
+    );
+
+    expect(startPlanReconciliation()).toBeUndefined();
+    failCatalogueRead(new Error("Schema not found for 'dms-core'"));
+
+    await vi.waitFor(() => {
+      expect(fake.logs).toContain(
+        "error:[dms-saas:plans] Stripe plan reconciliation failed",
+      );
+    });
   });
 
   it("returns the plan as stored when the sync fails", async () => {
