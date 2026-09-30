@@ -181,7 +181,7 @@ async function issueRefundAndCancel(
   // the cancel fails, no money has left yet; the caller releases the refund
   // claim so the request can be retried. Both calls use deterministic
   // idempotency keys, so a retry never double-cancels or double-refunds.
-  await stripe.subscriptions.cancel(stripeSubscriptionId, {
+  await stripe.subscriptions.cancel(stripeSubscriptionId, undefined, {
     idempotencyKey: `cancel-self-refund:${subscriptionId}`,
   });
   await stripe.creditNotes.create(

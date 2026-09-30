@@ -138,7 +138,7 @@ const stripeFake = {
       // default_incomplete) and settled later through invoices.pay.
       return {
         id,
-        current_period_end: 1893456000,
+        items: { data: [{ current_period_end: 1893456000 }] },
         latest_invoice: nextId("inv"),
       };
     },
@@ -1132,7 +1132,7 @@ describe("registration card policy", () => {
     expect(world.users.size).toBe(0);
   });
 
-  it("restricts the registration SetupIntent to cards", async () => {
+  it("restricts the registration SetupIntent to cards through the allow-list", async () => {
     applyPolicy("required");
     const create = vi.spyOn(stripeFake.setupIntents, "create");
 
@@ -1140,8 +1140,9 @@ describe("registration card policy", () => {
       clientSecret: "seti_secret",
     });
     expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ payment_method_types: ["card"] }),
+      expect.objectContaining({ allowed_payment_method_types: ["card"] }),
     );
+    expect(create.mock.calls[0][0]).not.toHaveProperty("payment_method_types");
   });
 
   it("offers no SetupIntent when the deployment takes no card", async () => {

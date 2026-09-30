@@ -37,6 +37,7 @@ const stripe = vi.hoisted(() => ({
     sessions: { create: vi.fn(), expire: vi.fn(), retrieve: vi.fn() },
   },
   subscriptionSchedules: { create: vi.fn(), release: vi.fn() },
+  prices: { retrieve: vi.fn() },
 }));
 vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
 vi.mock("../src/config", () => ({ isAllowedRedirectUrl: () => true }));
@@ -76,6 +77,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   stripe.customers.create.mockResolvedValue({ id: "customer" });
   stripe.customers.update.mockResolvedValue({ id: "customer" });
+  stripe.prices.retrieve.mockResolvedValue({
+    id: "price",
+    recurring: { interval: "month", interval_count: 1 },
+  });
   stripe.checkout.sessions.create.mockImplementation(
     async (params: Stripe.Checkout.SessionCreateParams) => {
       const session = {
@@ -96,7 +101,7 @@ beforeEach(() => {
     customer: "customer",
     default_payment_method: "payment-method",
     status: "active",
-    current_period_end: 1_900_000_000,
+    items: { data: [{ current_period_end: 1_900_000_000 }] },
   });
 });
 
@@ -237,6 +242,10 @@ describe("subscription effect admission with real Mongo mutations", () => {
       stripe.checkout.sessions.create.mock.calls[0][0].subscription_data
         .trial_period_days,
     ).toBe(7);
+    expect(stripe.checkout.sessions.create.mock.calls[0][0]).toMatchObject({
+      managed_payments: { enabled: false },
+      subscription_data: { billing_mode: { type: "classic" } },
+    });
     const current = await request.tenantSubscriptionModel.findOne();
     expect(current?.domainTransition?.kind).toBe("checkout");
     const otherTenant = await checkoutRequest(request.user.email);

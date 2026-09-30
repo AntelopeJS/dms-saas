@@ -11,7 +11,7 @@ import type {
   Invoice,
   InvoiceLine,
 } from "../db";
-import { CreditNoteModel, InvoiceModel } from "../db";
+import { CREDIT_NOTE_TYPES, CreditNoteModel, InvoiceModel } from "../db";
 import { creditNoteIssuedSubject, notifyTenantOwners } from "../notifications";
 import { stripeSecondsToDate as optionalStripeDate } from "../utils";
 import { getStripeClient } from "./client";
@@ -69,8 +69,22 @@ async function resolveCreditNoteLines(
   return allLines;
 }
 
+/**
+ * Stripe types `CreditNote.type` as an open enum since SDK v22, so a value it
+ * adds later must not reach the mirror's closed column. `mixed` is the type
+ * that promises the least about how the credit was settled.
+ */
+const FALLBACK_CREDIT_NOTE_TYPE: CreditNoteType = "mixed";
+const KNOWN_CREDIT_NOTE_TYPES: ReadonlySet<string> = new Set(CREDIT_NOTE_TYPES);
+
+function isCreditNoteType(value: string): value is CreditNoteType {
+  return KNOWN_CREDIT_NOTE_TYPES.has(value);
+}
+
 function resolveCreditNoteType(creditNote: Stripe.CreditNote): CreditNoteType {
-  return creditNote.type;
+  return isCreditNoteType(creditNote.type)
+    ? creditNote.type
+    : FALLBACK_CREDIT_NOTE_TYPE;
 }
 
 function resolveCreditNoteTax(creditNote: Stripe.CreditNote): number {
@@ -80,12 +94,16 @@ function resolveCreditNoteTax(creditNote: Stripe.CreditNote): number {
   );
 }
 
+function resolveCreditNoteStatus(
+  creditNote: Stripe.CreditNote,
+): CreditNoteStatus {
+  return creditNote.status === "void" ? "void" : "issued";
+}
+
 function buildCreditNotePayload(
   creditNote: Stripe.CreditNote,
   invoiceRowId: string,
 ) {
-  const creditNoteStatus: CreditNoteStatus =
-    creditNote.status === "void" ? "void" : "issued";
   return {
     invoiceId: invoiceRowId,
     stripeCreditNoteId: creditNote.id,
@@ -98,7 +116,7 @@ function buildCreditNotePayload(
     refundId: readCreditNoteRefundId(creditNote),
     hostedUrl: null,
     pdfUrl: creditNote.pdf ?? null,
-    status: creditNoteStatus,
+    status: resolveCreditNoteStatus(creditNote),
     issuedAt:
       optionalStripeDate(creditNote.effective_at ?? creditNote.created) ??
       new Date(),
@@ -128,7 +146,7 @@ function buildCreditNoteInvoicePayload(
     periodStart: invoice.periodStart,
     periodEnd: invoice.periodEnd,
     lines,
-    status: creditNote.status,
+    status: resolveCreditNoteStatus(creditNote),
     creditNoteReason: creditNote.reason,
     creditNoteType: resolveCreditNoteType(creditNote),
     memo: creditNote.memo,

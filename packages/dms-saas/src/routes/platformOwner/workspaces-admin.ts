@@ -75,6 +75,7 @@ async function upsertFreeSubscription(
   if (existing?.stripeSubscriptionId) {
     await getStripeClient().subscriptions.cancel(
       existing.stripeSubscriptionId,
+      undefined,
       { idempotencyKey: `admin-grant-free:${operationId}` },
     );
   }
