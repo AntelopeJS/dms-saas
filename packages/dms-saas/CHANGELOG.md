@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.3.10
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.9...v0.3.10)
+
+### 🚀 Enhancements
+
+- **frontend-vue:** Declare the @antelopejs/dms-frontend releases the layer supports ([#61](https://github.com/AntelopeJS/dms-saas/pull/61))
+
+### 🩹 Fixes
+
+- **frontend:** Send the payer email when confirming the card setup ([#60](https://github.com/AntelopeJS/dms-saas/pull/60))
+- **billing:** Let owners resume or cancel an abandoned Stripe Checkout ([#69](https://github.com/AntelopeJS/dms-saas/pull/69))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+- Alessandro Aloisio ([@alessaloisio](http://github.com/alessaloisio))
+
 ## v0.3.9
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.8...v0.3.9)
