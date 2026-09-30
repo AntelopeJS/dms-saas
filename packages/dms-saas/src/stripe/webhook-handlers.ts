@@ -152,8 +152,12 @@ export async function handleInvoicePaymentFailed(
   });
   await notifyTenantOwners(tenant._id, paymentFailedSubject, {
     icon: PAYMENT_FAILED_ICON,
-    title: "Payment failed",
-    description: `Invoice ${invoice.number ?? invoice.id} failed (${formatAmount(invoice.amount_due, invoice.currency)}).`,
+    title: "$saas.notifications.payload.payment_failed.title",
+    description: "$saas.notifications.payload.payment_failed.description",
+    params: {
+      invoice: invoice.number ?? invoice.id,
+      amount: formatAmount(invoice.amount_due, invoice.currency),
+    },
   });
 }
 
@@ -236,8 +240,9 @@ export async function handleSubscriptionDeleted(
   });
   await notifyTenantOwners(tenant._id, subscriptionCancelledSubject, {
     icon: SUBSCRIPTION_CANCELLED_ICON,
-    title: "Subscription cancelled",
-    description: "Your subscription has been cancelled.",
+    title: "$saas.notifications.payload.subscription_cancelled.title",
+    description:
+      "$saas.notifications.payload.subscription_cancelled.description",
   });
 }
 
@@ -249,8 +254,8 @@ export async function handleTrialWillEnd(event: Stripe.Event): Promise<void> {
   if (!tenant) return;
   await notifyTenantMembers(tenant._id, trialEndingSoonSubject, {
     icon: TRIAL_ENDING_ICON,
-    title: "Trial ending soon",
-    description: "Your trial ends in 3 days.",
+    title: "$saas.notifications.payload.trial_ending_soon.title",
+    description: "$saas.notifications.payload.trial_ending_soon.description",
   });
   emitAutomationEvent("saas.trial-ending", {
     tenantId: tenant._id,
@@ -281,9 +286,9 @@ async function handleTrialTransition(
     await updateSubscriptionStatus(tenantId, PAST_DUE_STATUS);
     await notifyTenantOwners(tenantId, trialEndedBlockedSubject, {
       icon: TRIAL_ENDED_BLOCKED_ICON,
-      title: "Trial ended",
+      title: "$saas.notifications.payload.trial_ended_blocked.title",
       description:
-        "Your trial has ended and access is blocked. Update your payment method to restore access.",
+        "$saas.notifications.payload.trial_ended_blocked.description",
     });
     return;
   }
@@ -424,8 +429,9 @@ export async function handleChargeRefundUpdated(
   if (refund.status === "succeeded") {
     await notifyTenantOwners(tenant._id, refundProcessedSubject, {
       icon: REFUND_ICON,
-      title: "Refund processed",
-      description: `Refund of ${formatAmount(refund.amount, refund.currency)} processed.`,
+      title: "$saas.notifications.payload.refund_processed.title",
+      description: "$saas.notifications.payload.refund_processed.description",
+      params: { amount: formatAmount(refund.amount, refund.currency) },
     });
   }
 }

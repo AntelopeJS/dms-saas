@@ -37,6 +37,7 @@ const { resolveApiError } = useApiErrorMessage();
 const planIntervalLabel = usePlanIntervalLabel(
   "saas.workspaces.create.self_serve.interval",
 );
+const planDescription = usePlanDescription();
 const config = useDmsRuntimeConfig();
 
 const stripePublishableKey = computed<string>(
@@ -84,7 +85,7 @@ function planPriceLabel(plan: PlanOption): string {
 }
 
 function planHint(plan: PlanOption): string {
-  if (!isPlanDisabled(plan)) return plan.description;
+  if (!isPlanDisabled(plan)) return planDescription(plan.description);
   const workspace = freePlan.value.blockingWorkspaceName;
   if (!workspace) {
     return t("saas.workspaces.create.self_serve.free_unavailable");

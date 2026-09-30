@@ -202,8 +202,9 @@ async function migrateTenant(
     await notifyTenantMembers(tenantId, planMigratedSubject, {
       eventId: work.operationId,
       icon: ICON_MIGRATION,
-      title: "Plan changed",
-      description: `Your plan changed to ${work.target.name}.`,
+      title: "$saas.notifications.payload.plan_migrated.title",
+      description: "$saas.notifications.payload.plan_migrated.description",
+      params: { plan: work.target.name },
     });
   }
   await recordTenantOutcome(job, {

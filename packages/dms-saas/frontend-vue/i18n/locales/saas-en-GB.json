@@ -374,6 +374,9 @@
         "members": "{count} members max",
         "members_unlimited": "Unlimited members",
         "subscriptions": "{count} active subscriptions"
+      },
+      "seat_limit": {
+        "invite_unavailable": "All the seats of your plan are taken. Upgrade your plan to invite more members."
       }
     },
     "workspaces": {
@@ -1240,6 +1243,46 @@
         "workspace_deletion_requested": {
           "title": "Workspace deletion requested",
           "description": "Access is revoked and data will be destroyed at the end of the retention period."
+        },
+        "payment_failed": {
+          "title": "Payment failed",
+          "description": "Payment of invoice {invoice} failed ({amount})."
+        },
+        "subscription_cancelled": {
+          "title": "Subscription cancelled",
+          "description": "Your subscription has been cancelled."
+        },
+        "trial_ending_soon": {
+          "title": "Trial ending soon",
+          "description": "Your trial ends in 3 days."
+        },
+        "trial_ended_blocked": {
+          "title": "Trial ended",
+          "description": "Your trial has ended and access is blocked. Update your payment method to restore access."
+        },
+        "refund_processed": {
+          "title": "Refund processed",
+          "description": "A refund of {amount} has been processed."
+        },
+        "credit_note_issued": {
+          "title": "Credit note issued",
+          "description": "A credit note of {amount} has been issued."
+        },
+        "complimentary_access_ending_soon": {
+          "title": "Complimentary access ending soon",
+          "description": "Your complimentary access expires on {date}. Pick a paid plan before then to keep access."
+        },
+        "complimentary_access_expired": {
+          "title": "Complimentary access expired",
+          "description": "The complimentary access granted to your workspace has expired. Pick a paid plan to restore access."
+        },
+        "workspace_suspended_unpaid": {
+          "title": "Workspace suspended",
+          "description": "Your workspace was suspended after a prolonged unpaid invoice. Settle the balance to restore access."
+        },
+        "plan_migrated": {
+          "title": "Plan changed",
+          "description": "Your workspace is now on the {plan} plan."
         }
       },
       "category": {

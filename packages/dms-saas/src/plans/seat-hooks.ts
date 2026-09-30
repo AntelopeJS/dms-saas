@@ -1,10 +1,13 @@
 import { assert } from "@antelopejs/interface-api-util";
 import { GetModel } from "@antelopejs/interface-database-decorators";
+import type { CustomButtonUnavailability } from "@antelopejs/interface-dms/base/types";
+import type { ComponentFilterContext } from "@antelopejs/interface-dms/component";
 import {
   Hook,
   type InviteDeletedReason,
   RegisterHook,
 } from "@antelopejs/interface-dms/hooks";
+import { RegisterInviteAvailability } from "@antelopejs/interface-dms/invite-extensions";
 import type { Plan } from "../db";
 import { PlanModel, TenantSubscriptionModel } from "../db";
 import {
@@ -19,6 +22,10 @@ import {
 import { syncStripeSeatQuantity } from "./seat-sync";
 
 const HTTP_PAYMENT_REQUIRED = 402;
+
+const SEAT_LIMIT_INVITE_UNAVAILABLE: CustomButtonUnavailability = {
+  reason: "$saas.plans.seat_limit.invite_unavailable",
+};
 
 /** Deletions whose invitation lives on in a successor holding the same seat. */
 const REISSUED_INVITE_REASONS: ReadonlySet<InviteDeletedReason> = new Set([
@@ -55,6 +62,24 @@ async function enforceSeatCapacity(
     HTTP_PAYMENT_REQUIRED,
     "saas.errors.plan.seat_limit_reached",
   );
+}
+
+/**
+ * Disables the invite action once every seat of the plan is taken, so the
+ * admin learns it before filling the form rather than from the refusal of
+ * `INVITE_BEING_CREATED`. Reissuing an existing invitation and inviting a
+ * platform owner for support still pass that hook, but are rare enough not to
+ * keep the button enabled for them.
+ */
+async function resolveInviteSeatAvailability({
+  tenantId,
+}: ComponentFilterContext): Promise<CustomButtonUnavailability | undefined> {
+  const active = await getActivePlanForTenant(tenantId);
+  if (!active) return undefined;
+  const occupied = await countOccupiedSeats(tenantId);
+  return hasSeatCapacity(active.plan.maxMembers, occupied)
+    ? undefined
+    : SEAT_LIMIT_INVITE_UNAVAILABLE;
 }
 
 async function syncSeatsAfterChange(
@@ -100,6 +125,7 @@ async function syncSeatsAfterRemoval(
 // never as one of its seats: they pass the quota and leave the billed
 // quantity untouched. A workspace owner is the customer and always holds one.
 export function registerSeatHooks(): void {
+  RegisterInviteAvailability(resolveInviteSeatAvailability);
   RegisterHook(
     Hook.MEMBER_BEING_ADDED,
     async ({ tenantId, userId, isTenantOwner, deliveryId }) => {

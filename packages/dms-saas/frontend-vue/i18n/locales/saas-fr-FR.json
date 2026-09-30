@@ -374,6 +374,9 @@
         "members": "{count} membres max",
         "members_unlimited": "Membres illimités",
         "subscriptions": "{count} abonnements actifs"
+      },
+      "seat_limit": {
+        "invite_unavailable": "Tous les sièges de votre plan sont occupés. Passez à un plan supérieur pour inviter d'autres membres."
       }
     },
     "workspaces": {
@@ -1240,6 +1243,46 @@
         "workspace_deletion_requested": {
           "title": "Suppression du workspace demandée",
           "description": "L'accès est révoqué et les données seront détruites à la fin de la période de rétention."
+        },
+        "payment_failed": {
+          "title": "Échec du paiement",
+          "description": "Le paiement de la facture {invoice} a échoué ({amount})."
+        },
+        "subscription_cancelled": {
+          "title": "Abonnement résilié",
+          "description": "Votre abonnement a été résilié."
+        },
+        "trial_ending_soon": {
+          "title": "Fin de l'essai imminente",
+          "description": "Votre période d'essai se termine dans 3 jours."
+        },
+        "trial_ended_blocked": {
+          "title": "Période d'essai terminée",
+          "description": "Votre période d'essai est terminée et l'accès est bloqué. Mettez à jour votre moyen de paiement pour rétablir l'accès."
+        },
+        "refund_processed": {
+          "title": "Remboursement effectué",
+          "description": "Un remboursement de {amount} a été effectué."
+        },
+        "credit_note_issued": {
+          "title": "Avoir émis",
+          "description": "Un avoir de {amount} a été émis."
+        },
+        "complimentary_access_ending_soon": {
+          "title": "Fin prochaine de l'accès gratuit",
+          "description": "Votre accès gratuit expire le {date}. Choisissez un plan payant d'ici là pour conserver l'accès."
+        },
+        "complimentary_access_expired": {
+          "title": "Accès gratuit expiré",
+          "description": "L'accès gratuit accordé à votre workspace a expiré. Choisissez un plan payant pour rétablir l'accès."
+        },
+        "workspace_suspended_unpaid": {
+          "title": "Workspace suspendu",
+          "description": "Votre workspace a été suspendu suite à une facture impayée prolongée. Réglez le solde pour rétablir l'accès."
+        },
+        "plan_migrated": {
+          "title": "Plan modifié",
+          "description": "Votre workspace est désormais sur le plan {plan}."
         }
       },
       "category": {

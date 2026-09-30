@@ -10,8 +10,24 @@ export interface SaasNotificationPayload {
   title: string;
   description: string;
   linkTo?: string;
+  /** Values interpolated into `title` and `description` when they are i18n keys. */
+  params?: Record<string, string | number>;
   /** Stable domain event identity; retries must preserve the notification payload. */
   eventId?: string;
+}
+
+function buildNotification(
+  subject: NotificationSubjectInfo,
+  payload: SaasNotificationPayload,
+) {
+  const builder = Notification()
+    .icon(payload.icon)
+    .title(payload.title)
+    .description(payload.description)
+    .subject(subject);
+  if (payload.linkTo) builder.linkTo(payload.linkTo);
+  if (payload.params) builder.params(payload.params);
+  return builder.build();
 }
 
 async function sendIdempotently(
@@ -20,13 +36,10 @@ async function sendIdempotently(
   payload: SaasNotificationPayload,
   eventId: string,
 ): Promise<void> {
-  const builder = Notification()
-    .icon(payload.icon)
-    .title(payload.title)
-    .description(payload.description)
-    .subject(subject);
-  if (payload.linkTo) builder.linkTo(payload.linkTo);
-  await builder.build().toUsersIdempotently(recipients, eventId);
+  await buildNotification(subject, payload).toUsersIdempotently(
+    recipients,
+    eventId,
+  );
 }
 
 async function sendOne(
@@ -34,16 +47,7 @@ async function sendOne(
   subject: NotificationSubjectInfo,
   payload: SaasNotificationPayload,
 ): Promise<void> {
-  const base = Notification()
-    .icon(payload.icon)
-    .title(payload.title)
-    .description(payload.description)
-    .subject(subject);
-  if (payload.linkTo) {
-    await base.linkTo(payload.linkTo).build().toUser(userId);
-    return;
-  }
-  await base.build().toUser(userId);
+  await buildNotification(subject, payload).toUser(userId);
 }
 
 async function sendAll(

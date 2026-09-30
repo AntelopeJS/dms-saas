@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 
 const { $authFetch } = useAuthFetch();
 const { t } = useI18n();
+const planDescription = usePlanDescription();
 const planIntervalLabel = usePlanIntervalLabel("saas.plans.cycle");
 
 interface PlanProp {
@@ -157,7 +158,7 @@ function onDeleted(): void {
             />
           </div>
           <p v-if="plan.description" class="text-sm text-muted line-clamp-2">
-            {{ plan.description }}
+            {{ planDescription(plan.description) }}
           </p>
         </div>
       </template>

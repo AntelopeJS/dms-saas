@@ -45,8 +45,10 @@ async function notifyCurrentSubscription(
       current.freeUntil.toISOString(),
     ]),
     icon: ENDING_SOON_ICON,
-    title: "Complimentary access ending soon",
-    description: `Your free access expires on ${formatDate(current.freeUntil)}. Pick a paid plan before then to keep access.`,
+    title: "$saas.notifications.payload.complimentary_access_ending_soon.title",
+    description:
+      "$saas.notifications.payload.complimentary_access_ending_soon.description",
+    params: { date: formatDate(current.freeUntil) },
   });
 }
 
