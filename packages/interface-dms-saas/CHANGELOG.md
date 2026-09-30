@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.2.6
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.2.5...v0.2.6)
+
+### 🚀 Enhancements
+
+- **plans:** Disable the invite action at the seat limit and translate plan and billing texts ([#66](https://github.com/AntelopeJS/dms-saas/pull/66))
+
+### 🩹 Fixes
+
+- **plans:** Reconcile plans with Stripe once the database is initialised ([#67](https://github.com/AntelopeJS/dms-saas/pull/67))
+- **billing:** Open Stripe Checkout on API 2025-08-27.basil and never strand a checkout ([#68](https://github.com/AntelopeJS/dms-saas/pull/68))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.3.6 ([47f60b8](https://github.com/AntelopeJS/dms-saas/commit/47f60b8))
+- **release:** @antelopejs/dms-saas v0.3.7 ([136918e](https://github.com/AntelopeJS/dms-saas/commit/136918e))
+- **release:** @antelopejs/dms-saas v0.3.8 ([34de0b7](https://github.com/AntelopeJS/dms-saas/commit/34de0b7))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.5
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.2.4...v0.2.5)
