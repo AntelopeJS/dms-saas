@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.4
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.3...v0.3.4)
+
+### 🩹 Fixes
+
+- **deps:** Cap @antelopejs/interface-dms-saas below the next minor and check interface ranges ([#63](https://github.com/AntelopeJS/dms-saas/pull/63))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.3
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.2...v0.3.3)
