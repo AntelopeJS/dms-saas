@@ -47,6 +47,7 @@ const harness = vi.hoisted(() => ({
   isStripeConfigured: true,
   retrieveSubscription: vi.fn(),
   createPreview: vi.fn(),
+  retrieveTaxRate: vi.fn(),
   logError: vi.fn(),
   tenantByCustomer: new Map<string, string>(),
   eventHandler: vi.fn(),
@@ -89,6 +90,9 @@ vi.mock("../src/stripe/client", () => ({
     },
     invoices: {
       createPreview: (...args: unknown[]) => harness.createPreview(...args),
+    },
+    taxRates: {
+      retrieve: (...args: unknown[]) => harness.retrieveTaxRate(...args),
     },
   }),
 }));
@@ -159,8 +163,12 @@ function paidSubscription(): SubscriptionFixture {
   };
 }
 
+const FRENCH_VAT_ID = "txr_fr";
+const GERMAN_REVERSE_CHARGE_ID = "txr_de";
+
 function frenchVat(): Stripe.TaxRate {
   return {
+    id: FRENCH_VAT_ID,
     country: "fr",
     percentage: 20,
     effective_percentage: 20,
@@ -170,16 +178,48 @@ function frenchVat(): Stripe.TaxRate {
   } as Stripe.TaxRate;
 }
 
+function germanReverseCharge(): Stripe.TaxRate {
+  return {
+    ...frenchVat(),
+    id: GERMAN_REVERSE_CHARGE_ID,
+    country: "DE",
+    percentage: 0,
+    effective_percentage: 0,
+  } as Stripe.TaxRate;
+}
+
+function exclusiveTax(
+  amount: number,
+  taxRateId = FRENCH_VAT_ID,
+  taxabilityReason = "standard_rated",
+) {
+  return {
+    amount,
+    tax_behavior: "exclusive",
+    taxable_amount: amount === 0 ? 0 : 2900,
+    taxability_reason: taxabilityReason,
+    tax_rate_details: { tax_rate: taxRateId },
+    type: "tax_rate_details",
+  };
+}
+
 function planLine(taxMinorUnits: number): Stripe.InvoiceLineItem {
   return {
-    type: "subscription",
     description: "1 × Pro (at €29.00 / month)",
     amount: 2900,
-    amount_excluding_tax: 2900,
-    tax_amounts: [{ amount: taxMinorUnits }],
+    taxes: [exclusiveTax(taxMinorUnits)],
     quantity: 1,
     period: { start: seconds(CYCLE_END), end: seconds(NEXT_CYCLE_END) },
-    proration: false,
+    parent: {
+      type: "subscription_item_details",
+      invoice_item_details: null,
+      subscription_item_details: {
+        invoice_item: null,
+        proration: false,
+        subscription: "sub_current",
+        subscription_item: "si_current",
+      },
+    },
     metadata: {},
   } as unknown as Stripe.InvoiceLineItem;
 }
@@ -193,15 +233,7 @@ function invoice(overrides: Partial<Stripe.Invoice> = {}): Stripe.Invoice {
     total_excluding_tax: 2900,
     total: 3480,
     amount_due: 3480,
-    total_tax_amounts: [
-      {
-        amount: 580,
-        inclusive: false,
-        taxable_amount: 2900,
-        taxability_reason: "standard_rated",
-        tax_rate: frenchVat(),
-      },
-    ],
+    total_taxes: [exclusiveTax(580)],
     customer_address: { country: "FR" },
     automatic_tax: { enabled: true, status: "complete" },
     period_start: seconds(CYCLE_START),
@@ -260,9 +292,20 @@ beforeEach(() => {
   harness.tenantByCustomer = new Map();
   harness.retrieveSubscription.mockReset().mockResolvedValue({
     currency: "eur",
-    current_period_start: seconds(CYCLE_START),
-    current_period_end: seconds(CYCLE_END),
+    items: {
+      data: [
+        {
+          current_period_start: seconds(CYCLE_START),
+          current_period_end: seconds(CYCLE_END),
+        },
+      ],
+    },
   });
+  harness.retrieveTaxRate
+    .mockReset()
+    .mockImplementation(async (id: string) =>
+      id === GERMAN_REVERSE_CHARGE_ID ? germanReverseCharge() : frenchVat(),
+    );
   harness.createPreview.mockReset().mockResolvedValue(invoice());
   harness.logError.mockReset();
   harness.eventHandler.mockReset().mockResolvedValue(undefined);
@@ -384,8 +427,8 @@ describe("upcoming invoice preview pricing", () => {
       customer: "cus_current",
       subscription: "sub_current",
       invoice_items: [],
-      expand: ["total_tax_amounts.tax_rate"],
     });
+    expect(harness.retrieveTaxRate).toHaveBeenCalledWith(FRENCH_VAT_ID);
   });
 
   it("flags a reverse-charged business invoice", async () => {
@@ -395,19 +438,8 @@ describe("upcoming invoice preview pricing", () => {
         total: 2900,
         amount_due: 2900,
         customer_address: { country: "DE" },
-        total_tax_amounts: [
-          {
-            amount: 0,
-            inclusive: false,
-            taxable_amount: 0,
-            taxability_reason: "reverse_charge",
-            tax_rate: {
-              ...frenchVat(),
-              country: "DE",
-              percentage: 0,
-              effective_percentage: 0,
-            },
-          },
+        total_taxes: [
+          exclusiveTax(0, GERMAN_REVERSE_CHARGE_ID, "reverse_charge"),
         ],
       } as unknown as Partial<Stripe.Invoice>),
     );
@@ -442,14 +474,20 @@ describe("upcoming invoice preview pricing", () => {
     ]);
     registerProvider("cloud", resolve);
     const usageLine = {
-      type: "invoiceitem",
       description: "vCPU allocation",
       amount: 1234,
-      amount_excluding_tax: 1234,
-      tax_amounts: [{ amount: 247 }],
+      taxes: [exclusiveTax(247)],
       quantity: 1,
       period: { start: seconds(CYCLE_START), end: seconds(NOW) },
-      proration: false,
+      parent: {
+        type: "invoice_item_details",
+        invoice_item_details: {
+          invoice_item: "ii_usage",
+          proration: false,
+          subscription: "sub_current",
+        },
+        subscription_item_details: null,
+      },
       metadata: { saasLineKey: "cloud:usage-cpu-minutes" },
     };
     harness.createPreview.mockResolvedValue(

@@ -97,18 +97,18 @@ async function priceWithStripe(
     reportUnavailable(tenantId, "usage_unavailable");
     return stampOutcome(unavailable("usage_unavailable"), computedAt);
   }
-  const invoice = await previewStripeUpcomingInvoice({
+  const priced = await previewStripeUpcomingInvoice({
     customerId: target.customerId,
     subscriptionId: target.subscriptionId,
     currency: cycle.currency,
     quotedItems: usage.items,
   });
-  const taxReason = incompleteTaxReason(invoice);
+  const taxReason = incompleteTaxReason(priced.invoice);
   if (taxReason) {
     reportUnavailable(tenantId, taxReason);
     return stampOutcome(unavailable(taxReason), computedAt);
   }
-  return toAvailablePreview(invoice, {
+  return toAvailablePreview(priced, {
     billingDate: cycle.currentPeriodEnd,
     usageThrough: usage.usageThrough,
     computedAt,

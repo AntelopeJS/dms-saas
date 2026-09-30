@@ -64,7 +64,8 @@ vi.mock("../src/operator-actions/lifecycle-outbox", () => ({
   deliverWorkspaceCreated: async () => undefined,
   prepareWorkspaceCreated: async () => undefined,
 }));
-vi.mock("../src/stripe", () => ({
+vi.mock("../src/stripe", async () => ({
+  ...(await vi.importActual("../src/stripe/payload-shapes")),
   getStripeClient: () => stripe,
   reconcileStripeTaxId: async () => undefined,
   toStripeAddress: () => undefined,

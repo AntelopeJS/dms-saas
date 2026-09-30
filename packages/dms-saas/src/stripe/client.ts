@@ -1,7 +1,14 @@
 import Stripe from "stripe";
 import type { DmsSaasStripeConfig } from "../types";
 
-const STRIPE_API_VERSION = "2024-11-20.acacia" as const;
+/**
+ * The Stripe API version every request is made with. It must be the version
+ * the installed SDK is generated for — the type below breaks the build when
+ * they drift apart. Webhook endpoints render their events in their own API
+ * version, set in the Stripe Dashboard; they should be moved to this one (see
+ * payload-shapes.ts for the older shapes still accepted meanwhile).
+ */
+export const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-08-27.basil";
 const SECRET_KEY_PREFIX = "sk_";
 const PLACEHOLDER_MARKER = "placeholder";
 
@@ -19,7 +26,7 @@ function isUsableSecretKey(key: string): boolean {
 
 export function initStripeClient(config: DmsSaasStripeConfig): void {
   stripeClient = new Stripe(config.secretKey, {
-    apiVersion: STRIPE_API_VERSION as Stripe.LatestApiVersion,
+    apiVersion: STRIPE_API_VERSION,
   });
   stripeWebhookSecret = config.webhookSecret;
   stripeConfigured = isUsableSecretKey(config.secretKey);

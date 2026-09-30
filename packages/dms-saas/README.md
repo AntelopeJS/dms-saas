@@ -177,6 +177,51 @@ the catalogue has no free plan, nothing is attached and a warning is logged.
 Once attached, the plan's permissions cap the workspace's members like any
 other plan (see [Tenant owner permissions](#tenant-owner-permissions)).
 
+## Stripe API version and webhooks
+
+Every Stripe request is made with API version `2025-08-27.basil`, the version
+the installed `stripe` SDK is generated for (`STRIPE_API_VERSION` in
+`src/stripe/client.ts`; the build fails if the two drift apart).
+
+A webhook endpoint renders its events in its **own** API version, set in the
+Stripe Dashboard (Developers → Webhooks → the endpoint → API version), not in
+the version of the requests. Set every endpoint that targets
+`/api/saas/webhooks/stripe` to `2025-08-27.basil`. Until then dms-saas still
+accepts events rendered in older versions: the fields basil moved — the
+subscription billing period (now on each subscription item), the invoice's
+subscription (`parent.subscription_details`), invoice and credit note taxes
+(`total_taxes`), and the credit note refund (`refunds`) — are read from their
+basil location first and from their older one second.
+
+Checkout Sessions opt out of Stripe Managed Payments
+(`managed_payments[enabled]=false`). An account that enabled Managed Payments
+applies it to every session by default, but dms-saas is its own merchant of
+record: it collects tax ids, runs Stripe Tax on its invoices, injects invoice
+items and issues credit notes, none of which a Managed Payments session allows.
+
+## Starting a paid plan
+
+Moving a workspace without a Stripe subscription to a paid plan opens a Stripe
+Checkout Session. The request is recorded on the subscription as a pending
+checkout before Stripe is called, and the session's completion or expiry
+webhook resolves it. A pending checkout never blocks the owner for good:
+
+- when Stripe refuses to open the session (a 4xx answer), the pending
+  checkout, the trial it reserved and the Stripe customer it created are
+  rolled back, and the request answers
+  `422 saas.errors.billing.checkout_rejected`; the owner can retry at once;
+- when Stripe cannot be reached or answers a 5xx, a session may exist, so the
+  pending checkout stays and the request answers
+  `503 saas.errors.billing.checkout_unavailable`;
+- the next attempt reconciles what it finds: a pending checkout whose recorded
+  session has expired, or which never recorded a session within 15 minutes, is
+  released and a new session is opened. Its redirect URL only reaches the
+  owner once the session is recorded, so an unrecorded session is one nobody
+  can pay;
+- a recorded session that is still open answers
+  `409 saas.errors.plan.checkout_in_progress`, and any other pending plan
+  change `409 saas.errors.plan.change_in_progress`.
+
 ## Plans and Stripe
 
 dms-saas keeps every plan billed through Stripe linked to a Stripe product and

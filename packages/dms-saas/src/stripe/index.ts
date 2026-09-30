@@ -1,5 +1,6 @@
 export * from "./client";
 export * from "./customer-billing";
+export * from "./payload-shapes";
 export * from "./plan-schedule";
 export * from "./proration";
 export * from "./sync-plan";

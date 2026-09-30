@@ -20,6 +20,7 @@ import {
   stripeSecondsToDate as optionalStripeDate,
 } from "../utils";
 import { getStripeClient } from "./client";
+import { readInvoiceTax, requireInvoiceId } from "./payload-shapes";
 
 export const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 export const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
@@ -97,7 +98,9 @@ export async function resolveInvoiceLines(
   if (!invoice.lines.has_more) return invoice.lines.data.map(toInvoiceLine);
   const stripe = getStripeClient();
   const lines = await stripe.invoices
-    .listLineItems(invoice.id, { limit: INVOICE_LINES_PAGE_SIZE })
+    .listLineItems(requireInvoiceId(invoice), {
+      limit: INVOICE_LINES_PAGE_SIZE,
+    })
     .autoPagingToArray({ limit: INVOICE_LINES_HARD_CAP });
   return lines.map(toInvoiceLine);
 }
@@ -105,13 +108,13 @@ export async function resolveInvoiceLines(
 function toInvoicePayload(invoice: Stripe.Invoice, lines: InvoiceLine[]) {
   return {
     documentType: "invoice" as const,
-    stripeInvoiceId: invoice.id,
+    stripeInvoiceId: requireInvoiceId(invoice),
     stripeCreditNoteId: null,
     number: invoice.number ?? null,
     parentInvoiceNumber: null,
     amount: invoice.amount_due,
     subtotal: invoice.subtotal,
-    tax: invoice.tax ?? 0,
+    tax: readInvoiceTax(invoice),
     total: invoice.total,
     currency: invoice.currency,
     status: (invoice.status ?? "open") as InvoiceStatus,
@@ -139,7 +142,8 @@ export async function upsertInvoice(
   tenantId: string,
 ): Promise<void> {
   const invoiceModel = GetModel(InvoiceModel, tenantId);
-  const existing = await invoiceModel.findOneByStripeInvoice(invoice.id);
+  const invoiceId = requireInvoiceId(invoice);
+  const existing = await invoiceModel.findOneByStripeInvoice(invoiceId);
   const payload = toInvoicePayload(invoice, await resolveInvoiceLines(invoice));
   if (existing) {
     await invoiceModel.update(existing._id, payload);
@@ -150,8 +154,8 @@ export async function upsertInvoice(
   // them to one row. Legacy rows keep their random key and the lookup above.
   await insertOrUpdateById(
     invoiceModel,
-    invoice.id,
-    { ...payload, _id: invoice.id, createdAt: new Date() },
+    invoiceId,
+    { ...payload, _id: invoiceId, createdAt: new Date() },
     payload,
   );
 }

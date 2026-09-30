@@ -3,6 +3,7 @@ export * from "./billing-self-refund";
 export * from "./data-export";
 export * from "./tenant-billing";
 export * from "./tenant-plan";
+export * from "./tenant-plan-checkout";
 export * from "./tenant-plan-ops";
 export * from "./tenant-seats";
 export * from "./workspaces";

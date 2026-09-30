@@ -16,6 +16,10 @@ import { creditNoteIssuedSubject, notifyTenantOwners } from "../notifications";
 import { stripeSecondsToDate as optionalStripeDate } from "../utils";
 import { getStripeClient } from "./client";
 import {
+  readCreditNoteLineTax,
+  readCreditNoteRefundId,
+} from "./payload-shapes";
+import {
   asCustomerId,
   findTenantByCustomerId,
   formatAmount,
@@ -31,13 +35,6 @@ function resolveCreditNoteInvoiceId(
 ): string | null {
   if (typeof creditNote.invoice === "string") return creditNote.invoice;
   return creditNote.invoice?.id ?? null;
-}
-
-function resolveCreditNoteRefundId(
-  creditNote: Stripe.CreditNote,
-): string | null {
-  if (typeof creditNote.refund === "string") return creditNote.refund;
-  return creditNote.refund?.id ?? null;
 }
 
 function toCreditNoteLine(
@@ -77,11 +74,10 @@ function resolveCreditNoteType(creditNote: Stripe.CreditNote): CreditNoteType {
 }
 
 function resolveCreditNoteTax(creditNote: Stripe.CreditNote): number {
-  const lineTax = creditNote.tax_amounts.reduce(
-    (total, taxAmount) => total + taxAmount.amount,
-    0,
+  return (
+    readCreditNoteLineTax(creditNote) +
+    (creditNote.shipping_cost?.amount_tax ?? 0)
   );
-  return lineTax + (creditNote.shipping_cost?.amount_tax ?? 0);
 }
 
 function buildCreditNotePayload(
@@ -99,7 +95,7 @@ function buildCreditNotePayload(
     reason: creditNote.reason ?? "",
     memo: creditNote.memo,
     type: resolveCreditNoteType(creditNote),
-    refundId: resolveCreditNoteRefundId(creditNote),
+    refundId: readCreditNoteRefundId(creditNote),
     hostedUrl: null,
     pdfUrl: creditNote.pdf ?? null,
     status: creditNoteStatus,

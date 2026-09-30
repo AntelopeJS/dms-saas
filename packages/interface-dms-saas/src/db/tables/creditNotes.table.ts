@@ -22,6 +22,7 @@ export const CREDIT_NOTE_TYPES = [
   "post_payment",
   "credit_to_balance",
   "refund",
+  "mixed",
 ] as const;
 export type CreditNoteType = (typeof CREDIT_NOTE_TYPES)[number];
 

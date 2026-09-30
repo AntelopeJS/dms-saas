@@ -12,6 +12,10 @@ import { selectInvoiceLineItemsToCreate } from "@antelopejs/interface-dms-saas/i
 import type Stripe from "stripe";
 import { getInvoiceLineItemsProviders } from "../implementations/dms-saas/invoice-line-items";
 import { getStripeClient } from "../stripe/client";
+import {
+  readInvoiceSubscriptionId,
+  requireInvoiceId,
+} from "../stripe/payload-shapes";
 import { TenantSubscriptionModel } from "../db";
 import { clipInvoiceUsageWindow } from "./billing-window";
 
@@ -74,15 +78,13 @@ async function buildInjectionTarget(
   const context = clipInvoiceUsageWindow(
     {
       tenantId,
-      invoiceId: invoice.id,
+      invoiceId: requireInvoiceId(invoice),
       currency: invoice.currency,
       periodStart: stripeSecondsToDate(invoice.period_start),
       periodEnd: stripeSecondsToDate(invoice.period_end),
     },
     subscription,
-    typeof invoice.subscription === "string"
-      ? invoice.subscription
-      : (invoice.subscription?.id ?? null),
+    readInvoiceSubscriptionId(invoice),
   );
   return context ? { customerId, context } : null;
 }

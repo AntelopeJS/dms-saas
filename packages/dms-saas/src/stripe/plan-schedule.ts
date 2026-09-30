@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { stripeSecondsToDate } from "../utils/time";
 import { getStripeClient } from "./client";
+import { readSubscriptionPeriodEnd } from "./payload-shapes";
 
 const RELEASE_END_BEHAVIOR = "release" as const;
 const NEW_PHASE_ITERATIONS = 1;
@@ -98,7 +99,7 @@ export async function setSubscriptionCancelAtPeriodEnd(
   const updated = await stripe.subscriptions.update(stripeSubscriptionId, {
     cancel_at_period_end: cancelAtPeriodEnd,
   });
-  return stripeSecondsToDate(updated.current_period_end);
+  return readSubscriptionPeriodEnd(updated);
 }
 
 function toScheduleId(

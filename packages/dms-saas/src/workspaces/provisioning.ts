@@ -28,6 +28,8 @@ import {
 import { loadBillablePlan } from "../plans/stripe-sync";
 import {
   getStripeClient,
+  readStripeId,
+  readSubscriptionPeriodEnd,
   reconcileStripeTaxId,
   toStripeAddress,
   toTenantBillingAddress,
@@ -378,11 +380,8 @@ async function createSubscription(
     stripeSubscriptionId: subscription.id,
     startedAt: stripeSecondsToDate(subscription.start_date) ?? new Date(),
     isTrialing: grantTrial,
-    currentPeriodEnd: stripeSecondsToDate(subscription.current_period_end),
-    latestInvoiceId:
-      typeof subscription.latest_invoice === "string"
-        ? subscription.latest_invoice
-        : (subscription.latest_invoice?.id ?? null),
+    currentPeriodEnd: readSubscriptionPeriodEnd(subscription),
+    latestInvoiceId: readStripeId(subscription.latest_invoice),
   };
 }
 

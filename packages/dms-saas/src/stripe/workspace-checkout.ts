@@ -3,6 +3,30 @@ import Stripe from "stripe";
 import { getStripeClient } from "./client";
 
 const MISSING_RESOURCE_CODE = "resource_missing";
+const HTTP_CLIENT_ERROR_MIN = 400;
+const HTTP_SERVER_ERROR_MIN = 500;
+const MANAGED_PAYMENTS_PARAM = "managed_payments";
+const LOG_PREFIX = "[dms-saas:checkout]";
+
+/**
+ * Stripe Managed Payments (Stripe as merchant of record) applies to every
+ * Checkout Session of an account that enabled it, unless the session opts
+ * out. dms-saas is its own merchant of record: it collects tax ids, runs
+ * Stripe Tax, injects invoice items and issues credit notes, none of which a
+ * Managed Payments session allows. Every session therefore opts out
+ * explicitly. The parameter exists from API version 2025-03-31.basil on, but
+ * this SDK major does not type it yet.
+ */
+interface ManagedPaymentsSetting {
+  enabled: boolean;
+}
+
+interface CheckoutSessionCreateParams
+  extends Stripe.Checkout.SessionCreateParams {
+  managed_payments?: ManagedPaymentsSetting;
+}
+
+const MANAGED_PAYMENTS_OPT_OUT: ManagedPaymentsSetting = { enabled: false };
 
 export interface WorkspaceCheckoutSessionInput {
   operationId?: string;
@@ -68,6 +92,28 @@ export async function createTenantCheckoutCustomer(
   return customer.id;
 }
 
+/**
+ * Stripe answered with a 4xx: it validated and refused the request, so the
+ * call had no effect and the caller can safely undo its own bookkeeping. A
+ * 5xx or a network failure proves nothing either way.
+ */
+export function isDefinitiveStripeRejection(error: unknown): boolean {
+  if (!(error instanceof Stripe.errors.StripeError)) return false;
+  const status = error.statusCode;
+  return (
+    typeof status === "number" &&
+    status >= HTTP_CLIENT_ERROR_MIN &&
+    status < HTTP_SERVER_ERROR_MIN
+  );
+}
+
+function isManagedPaymentsParamRejection(error: unknown): boolean {
+  return (
+    error instanceof Stripe.errors.StripeInvalidRequestError &&
+    (error.param ?? "").startsWith(MANAGED_PAYMENTS_PARAM)
+  );
+}
+
 function isMissingResourceError(error: unknown): boolean {
   return (
     error instanceof Stripe.errors.StripeInvalidRequestError &&
@@ -120,6 +166,34 @@ function buildCheckoutSubscriptionData(
 }
 
 /**
+ * Opens the session with Managed Payments turned off. An account that never
+ * enrolled in Managed Payments may reject the parameter itself; such an
+ * account has nothing to opt out of, so the session is opened without it.
+ * Stripe stores no idempotent result for a request it rejected during
+ * validation, so the retry may reuse the idempotency key.
+ */
+async function createSessionOptingOutOfManagedPayments(
+  params: Stripe.Checkout.SessionCreateParams,
+  options: Stripe.RequestOptions | undefined,
+): Promise<Stripe.Checkout.Session> {
+  const sessions = getStripeClient().checkout.sessions;
+  const optedOut: CheckoutSessionCreateParams = {
+    ...params,
+    managed_payments: MANAGED_PAYMENTS_OPT_OUT,
+  };
+  try {
+    return await sessions.create(optedOut, options);
+  } catch (error) {
+    if (!isManagedPaymentsParamRejection(error)) throw error;
+    Logging.Warn(
+      `${LOG_PREFIX} Stripe rejected the Managed Payments opt-out; opening the session without it`,
+      error,
+    );
+    return sessions.create(params, options);
+  }
+}
+
+/**
  * Open a Stripe Checkout Session in `subscription` mode pointing at the
  * requested price. If `existingCustomerId` is provided, that Customer is
  * reused; otherwise a new Customer is created for the tenant. The session
@@ -139,7 +213,7 @@ export async function createWorkspaceCheckoutSession(
   if (input.planId) sessionMetadata.planId = input.planId;
   if (input.operationId) sessionMetadata.operationId = input.operationId;
 
-  const session = await stripe.checkout.sessions.create(
+  const session = await createSessionOptingOutOfManagedPayments(
     {
       mode: "subscription",
       customer: customerId,
