@@ -8,7 +8,8 @@ import type { DmsSaasStripeConfig } from "../types";
  * version, set in the Stripe Dashboard; they should be moved to this one (see
  * payload-shapes.ts for the older shapes still accepted meanwhile).
  */
-export const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-08-27.basil";
+export const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2026-08-26.dahlia";
+
 const SECRET_KEY_PREFIX = "sk_";
 const PLACEHOLDER_MARKER = "placeholder";
 

@@ -87,7 +87,7 @@ function stripeInvoice(status: Stripe.Invoice.Status): Stripe.Invoice {
     number: "INV-0001",
     amount_due: 5935,
     subtotal: 5935,
-    tax: 0,
+    total_taxes: [],
     total: 5935,
     currency: "eur",
     status,

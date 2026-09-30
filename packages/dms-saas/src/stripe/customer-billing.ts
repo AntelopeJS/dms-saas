@@ -30,7 +30,7 @@ export interface CustomerBillingProfile {
   address?: CustomerBillingAddress;
 }
 
-const CARD_PAYMENT_METHOD_TYPE = "card";
+const CARD_PAYMENT_METHOD_TYPE = "card" as const;
 const OFF_SESSION_USAGE = "off_session" as const;
 
 const EU_VAT_COUNTRIES = new Set([
@@ -122,9 +122,15 @@ export interface CardSetupIntent {
   clientSecret: string | null;
 }
 
+/**
+ * The card is restricted through `allowed_payment_method_types`, not
+ * `payment_method_types`: Stripe stops accepting the latter on SetupIntent
+ * creation from API version 2026-08-26.preview on, and the allow-list keeps
+ * the same single-card outcome on top of dynamic payment methods.
+ */
 export async function createCardSetupIntent(): Promise<CardSetupIntent> {
   const intent = await getStripeClient().setupIntents.create({
-    payment_method_types: [CARD_PAYMENT_METHOD_TYPE],
+    allowed_payment_method_types: [CARD_PAYMENT_METHOD_TYPE],
     usage: OFF_SESSION_USAGE,
   });
   return { clientSecret: intent.client_secret };

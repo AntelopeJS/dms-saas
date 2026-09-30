@@ -36,9 +36,9 @@ function creditNote(fields: object): Stripe.CreditNote {
 }
 
 describe("Stripe API version", () => {
-  it("pins every request to the basil release Managed Payments requires", () => {
+  it("pins every request to the latest dahlia release", () => {
     initStripeClient({ secretKey: "sk_test_version", webhookSecret: "whsec" });
-    expect(STRIPE_API_VERSION).toBe("2025-08-27.basil");
+    expect(STRIPE_API_VERSION).toBe("2026-08-26.dahlia");
     expect(
       (getStripeClient() as unknown as ClientInternals).getApiField("version"),
     ).toBe(STRIPE_API_VERSION);
@@ -186,6 +186,165 @@ describe("upcoming invoice lines", () => {
       isProration: true,
       amountMinorUnits: 1000,
       taxMinorUnits: 200,
+    });
+  });
+});
+
+// Payloads as a webhook endpoint on 2026-08-26.dahlia renders them: clover and
+// dahlia moved none of the fields dms-saas reads, so the basil readers apply
+// unchanged, next to the fields those releases added or reshaped.
+describe("dahlia webhook payloads", () => {
+  const USAGE_THROUGH = new Date("2026-09-15T00:00:00.000Z");
+
+  it("reads the period of a classic-mode subscription with a sourced discount", () => {
+    const dahlia = subscription({
+      object: "subscription",
+      billing_mode: { type: "classic", updated_at: null },
+      discounts: ["di_1"],
+      discount: {
+        id: "di_1",
+        source: { type: "coupon", coupon: "co_launch" },
+      },
+      items: {
+        data: [
+          {
+            billed_until: PERIOD_END,
+            current_period_start: PERIOD_START,
+            current_period_end: PERIOD_END,
+          },
+        ],
+      },
+    });
+    expect(readSubscriptionPeriod(dahlia)).toEqual({
+      start: PERIOD_START,
+      end: PERIOD_END,
+    });
+  });
+
+  it("reads the subscription, tax and decimal-quantity lines of an invoice", () => {
+    const dahlia = invoice({
+      object: "invoice",
+      parent: {
+        type: "subscription_details",
+        subscription_details: { subscription: "sub_dahlia" },
+      },
+      total_taxes: [
+        {
+          amount: 0,
+          taxable_amount: 1000,
+          tax_behavior: "exclusive",
+          taxability_reason: "reverse_charge",
+          type: "tax_rate_details",
+          tax_rate_details: { tax_rate: "txr_de" },
+        },
+      ],
+    });
+    expect(readInvoiceSubscriptionId(dahlia)).toBe("sub_dahlia");
+    expect(readInvoiceTax(dahlia)).toBe(0);
+  });
+
+  it("reads the refund and tax of a credit note", () => {
+    const note = creditNote({
+      object: "credit_note",
+      type: "post_payment",
+      refunds: [
+        {
+          amount_refunded: 1200,
+          refund: "re_dahlia",
+          payment_record_refund: null,
+          type: "refund",
+        },
+      ],
+      total_taxes: [{ amount: 150, taxability_reason: "standard_rated" }],
+    });
+    expect(readCreditNoteRefundId(note)).toBe("re_dahlia");
+    expect(readCreditNoteLineTax(note)).toBe(150);
+  });
+
+  it("previews reverse-charged taxes with their country and usage cutoff", () => {
+    const line = {
+      description: "Pro",
+      amount: 1000,
+      quantity: 1,
+      quantity_decimal: "1",
+      unit_amount_decimal: "1000",
+      period: { start: PERIOD_START, end: PERIOD_END },
+      metadata: {},
+      taxes: [
+        {
+          amount: 0,
+          tax_behavior: "exclusive",
+          taxability_reason: "reverse_charge",
+          taxable_amount: 1000,
+          type: "tax_rate_details",
+          tax_rate_details: { tax_rate: "txr_de" },
+        },
+      ],
+      parent: {
+        type: "subscription_item_details",
+        invoice_item_details: null,
+        subscription_item_details: {
+          invoice_item: null,
+          proration: false,
+          subscription: "sub_dahlia",
+          subscription_item: "si_dahlia",
+        },
+      },
+    };
+    const preview = toAvailablePreview(
+      {
+        invoice: invoice({
+          currency: "eur",
+          customer_address: { country: "FR" },
+          lines: { data: [line], has_more: false },
+          subtotal: 1000,
+          subtotal_excluding_tax: 1000,
+          total_excluding_tax: 1000,
+          total: 1000,
+          amount_due: 1000,
+          total_taxes: line.taxes,
+          period_start: PERIOD_START,
+          period_end: PERIOD_END,
+        }),
+        taxRates: new Map([
+          [
+            "txr_de",
+            {
+              id: "txr_de",
+              country: "de",
+              percentage: 19,
+              effective_percentage: 0,
+              tax_type: "vat",
+              display_name: "VAT",
+              jurisdiction: "DE",
+            } as Stripe.TaxRate,
+          ],
+        ]),
+      },
+      {
+        billingDate: new Date(PERIOD_END * MS_PER_SECOND),
+        usageThrough: USAGE_THROUGH,
+        computedAt: new Date(),
+      },
+    );
+    expect(preview).toMatchObject({
+      taxCountry: "DE",
+      isReverseCharge: true,
+      taxMinorUnits: 0,
+      usageThrough: USAGE_THROUGH.toISOString(),
+      taxes: [
+        {
+          country: "DE",
+          isReverseCharge: true,
+          ratePercentage: 0,
+          taxableAmountMinorUnits: 1000,
+        },
+      ],
+    });
+    expect(preview.lines[0]).toMatchObject({
+      kind: "subscription",
+      quantity: 1,
+      isProration: false,
     });
   });
 });

@@ -5,7 +5,8 @@
 // receives it, which is configured in the Stripe Dashboard. Until an operator
 // moves an endpoint to the pinned version, its events still carry the
 // pre-basil shape, so every field that moved is read from its basil location
-// first and from its legacy location second.
+// first and from its legacy location second. The clover and dahlia releases
+// moved none of the fields read here, so their payloads take the basil path.
 
 import type Stripe from "stripe";
 import { stripeSecondsToDate } from "../utils/time";

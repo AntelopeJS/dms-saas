@@ -79,7 +79,7 @@ function stripeInvoiceFixture(): Stripe.Invoice {
     number: "INV-0042",
     amount_due: 12_000,
     subtotal: 10_000,
-    tax: 2_000,
+    total_taxes: [{ amount: 2_000 }],
     total: 12_000,
     currency: "eur",
     status: "paid",
@@ -122,12 +122,12 @@ function creditNoteFixture(
     number: "CN-0042-1",
     pdf: "https://invoice.stripe.test/cn_123.pdf",
     reason: "order_change",
-    refund: "re_123",
+    refunds: [{ amount_refunded: 3_600, refund: "re_123" }],
     customer_balance_transaction: null,
     out_of_band_amount: null,
     status,
     subtotal: 3_000,
-    tax_amounts: [{ amount: 600 }],
+    total_taxes: [{ amount: 600 }],
     total: 3_600,
     type: "post_payment",
     voided_at: status === "void" ? VOIDED_SECONDS : null,
@@ -252,6 +252,19 @@ describe("Stripe credit note mirror", () => {
     });
     expect(invoices[1]?.lines[0]?.amount).toBe(-3_000);
     expect(harness.notify).toHaveBeenCalledOnce();
+  });
+
+  it("mirrors a credit note type the local schema does not know as mixed", async () => {
+    currentCreditNote = {
+      ...creditNoteFixture(),
+      type: "future_settlement",
+    } as Stripe.CreditNote;
+    await handleCreditNoteCreated(
+      event("credit_note.created", currentCreditNote),
+    );
+
+    expect(creditNotes[0]?.type).toBe("mixed");
+    expect(invoices[1]?.creditNoteType).toBe("mixed");
   });
 
   it("upserts rather than duplicating a replayed credit note", async () => {

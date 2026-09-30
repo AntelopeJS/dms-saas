@@ -152,9 +152,10 @@ Both values reach the browser through the frontend module options
 `.registrationPaymentMethod`); `useSaasRegistration()` already reads them.
 
 The Stripe SetupIntent behind the card step is restricted to cards on the
-server (`payment_method_types: ["card"]`); the Payment Element is created from
-its client secret alone, since Stripe refuses `paymentMethodTypes` next to a
-`clientSecret`.
+server (`allowed_payment_method_types: ["card"]`, since Stripe is retiring
+`payment_method_types` on SetupIntent creation); the Payment Element is
+created from its client secret alone, since Stripe refuses
+`paymentMethodTypes` next to a `clientSecret`.
 
 ## Default plan
 
@@ -179,19 +180,27 @@ other plan (see [Tenant owner permissions](#tenant-owner-permissions)).
 
 ## Stripe API version and webhooks
 
-Every Stripe request is made with API version `2025-08-27.basil`, the version
-the installed `stripe` SDK is generated for (`STRIPE_API_VERSION` in
+Every Stripe request is made with API version `2026-08-26.dahlia`, the version
+the installed `stripe` SDK (v22) is generated for (`STRIPE_API_VERSION` in
 `src/stripe/client.ts`; the build fails if the two drift apart).
 
 A webhook endpoint renders its events in its **own** API version, set in the
 Stripe Dashboard (Developers → Webhooks → the endpoint → API version), not in
-the version of the requests. Set every endpoint that targets
-`/api/saas/webhooks/stripe` to `2025-08-27.basil`. Until then dms-saas still
-accepts events rendered in older versions: the fields basil moved — the
-subscription billing period (now on each subscription item), the invoice's
-subscription (`parent.subscription_details`), invoice and credit note taxes
-(`total_taxes`), and the credit note refund (`refunds`) — are read from their
-basil location first and from their older one second.
+the version of the requests. **Every endpoint that targets
+`/api/saas/webhooks/stripe` must use `2026-08-26.dahlia`.** Until it does,
+dms-saas still accepts events rendered in older versions: the fields basil
+moved — the subscription billing period (now on each subscription item), the
+invoice's subscription (`parent.subscription_details`), invoice and credit
+note taxes (`total_taxes`), and the credit note refund (`refunds`) — are read
+from their basil location first and from their older one second. The clover
+and dahlia releases moved none of the fields dms-saas reads.
+
+New subscriptions, whether created at registration or by Checkout, are opened
+in the `classic` billing mode (`billing_mode[type]=classic`). Since
+`2025-09-30.clover` Stripe defaults new subscriptions to `flexible`, which no
+longer invoices a free-to-paid upgrade at once and records Customer Portal
+cancellations as `cancel_at` instead of `cancel_at_period_end`; the plan-change
+flows rely on the `classic` behaviour every existing subscription has.
 
 Checkout Sessions opt out of Stripe Managed Payments
 (`managed_payments[enabled]=false`). An account that enabled Managed Payments

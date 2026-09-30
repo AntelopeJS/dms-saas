@@ -4,7 +4,6 @@ import { getStripeClient } from "./client";
 import { readSubscriptionPeriodEnd } from "./payload-shapes";
 
 const RELEASE_END_BEHAVIOR = "release" as const;
-const NEW_PHASE_ITERATIONS = 1;
 
 export interface ScheduleDowngradeInput {
   stripeSubscriptionId: string;
@@ -35,6 +34,24 @@ function toCurrentPhaseParam(
   };
 }
 
+type PhaseDuration = Stripe.SubscriptionScheduleUpdateParams.Phase.Duration;
+
+/**
+ * One billing cycle of the price the phase bills. API version
+ * 2025-09-30.clover removed `iterations`, so the length `iterations: 1` used
+ * to derive from the price is now spelled out from its recurring interval.
+ */
+async function oneBillingCycleOf(priceId: string): Promise<PhaseDuration> {
+  const price = await getStripeClient().prices.retrieve(priceId);
+  if (!price.recurring) {
+    throw new Error(`Stripe price ${priceId} is not recurring`);
+  }
+  return {
+    interval: price.recurring.interval,
+    interval_count: price.recurring.interval_count,
+  };
+}
+
 /**
  * Parks a downgrade at the end of the running cycle: the customer keeps the
  * plan they paid for until then, and the renewal invoice is already priced at
@@ -45,6 +62,8 @@ export async function scheduleSubscriptionDowngrade(
   input: ScheduleDowngradeInput,
 ): Promise<Date | null> {
   const stripe = getStripeClient();
+  // Read before the schedule exists, so a failure leaves nothing half-built.
+  const nextPhaseDuration = await oneBillingCycleOf(input.stripePriceId);
   // Deliberately not idempotency-keyed: scheduling, cancelling and scheduling
   // the same downgrade again would otherwise replay the released schedule from
   // Stripe's 24h cache and fail on the phase update. Stripe already refuses a
@@ -60,7 +79,7 @@ export async function scheduleSubscriptionDowngrade(
       toCurrentPhaseParam(currentPhase),
       {
         items: [{ price: input.stripePriceId, quantity: input.quantity }],
-        iterations: NEW_PHASE_ITERATIONS,
+        duration: nextPhaseDuration,
         automatic_tax: { enabled: true },
       },
     ],

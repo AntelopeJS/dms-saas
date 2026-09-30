@@ -82,6 +82,7 @@ export async function requestWorkspaceDeletion(
   if (subscription.stripeSubscriptionId) {
     await getStripeClient().subscriptions.cancel(
       subscription.stripeSubscriptionId,
+      undefined,
       { idempotencyKey: `workspace-delete:${operationId}` },
     );
   }

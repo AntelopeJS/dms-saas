@@ -56,7 +56,7 @@
     "@antelopejs/interface-dms": ">=0.3.2 <1.0.0",
     "@antelopejs/interface-dms-saas": ">=0.2.3 <0.3.0",
     "node-cron": "^4.2.1",
-    "stripe": "^18.5.0",
+    "stripe": "^22.6.2",
     "zod": "^3.24.4"
   },
   "devDependencies": {

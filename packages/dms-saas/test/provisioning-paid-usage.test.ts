@@ -66,6 +66,7 @@ vi.mock("../src/operator-actions/lifecycle-outbox", () => ({
 }));
 vi.mock("../src/stripe", async () => ({
   ...(await vi.importActual("../src/stripe/payload-shapes")),
+  ...(await vi.importActual("../src/stripe/billing-mode")),
   getStripeClient: () => stripe,
   reconcileStripeTaxId: async () => undefined,
   toStripeAddress: () => undefined,
@@ -114,7 +115,7 @@ beforeEach(() => {
   stripe.subscriptions.create.mockResolvedValue({
     id: "sub_paid",
     start_date: SUBSCRIPTION_START_SECONDS,
-    current_period_end: PERIOD_END_SECONDS,
+    items: { data: [{ current_period_end: PERIOD_END_SECONDS }] },
     latest_invoice: "invoice",
   });
   stripe.invoices.retrieve.mockResolvedValue({ status: "paid" });
@@ -136,6 +137,14 @@ describe("initial paid usage coverage of a provisioned workspace", () => {
         ],
       }),
     ]);
+  });
+
+  it("creates the subscription in the classic billing mode", async () => {
+    await provision("pm_card");
+    expect(stripe.subscriptions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ billing_mode: { type: "classic" } }),
+      expect.anything(),
+    );
   });
 
   it("leaves a card-less workspace with an empty coverage ledger", async () => {

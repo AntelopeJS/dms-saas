@@ -61,7 +61,7 @@ async function changeProviderPlan(work: WorkspaceMigration): Promise<void> {
   if (!subscriptionId) return;
   const stripe = getStripeClient();
   if (!work.target.stripePriceId) {
-    await stripe.subscriptions.cancel(subscriptionId, {
+    await stripe.subscriptions.cancel(subscriptionId, undefined, {
       idempotencyKey: work.operationId,
     });
     return;

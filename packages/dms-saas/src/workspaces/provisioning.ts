@@ -4,7 +4,6 @@ import { TenantModel } from "@antelopejs/interface-dms/db";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
-import type Stripe from "stripe";
 import { recomputeTenantBillingState } from "../billing-state";
 import type {
   PaidUsagePeriod,
@@ -37,6 +36,7 @@ import {
 import { hashEmail, insertOrUpdateById, stripeSecondsToDate } from "../utils";
 import { resolveDefaultPlan } from "./default-plan";
 import { isFreePlan } from "./free-workspace-guard";
+import { buildSubscriptionCreateParams } from "./subscription-create-params";
 import {
   beginProvisioningAttempt,
   recordProvisioningState,
@@ -49,7 +49,6 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
-const SEAT_BILLING_INITIAL_QUANTITY = 1;
 
 export type WorkspaceCustomerType = "individual" | "business";
 
@@ -277,28 +276,6 @@ async function createStripeCustomer(
   });
   handles.mustPreserveWorkspace = false;
   return customer.id;
-}
-
-function buildSubscriptionCreateParams(
-  stripeCustomerId: string,
-  stripePriceId: string,
-  plan: Plan,
-  grantTrial: boolean,
-): Stripe.SubscriptionCreateParams {
-  const quantity =
-    plan.billingMode === "seat" ? SEAT_BILLING_INITIAL_QUANTITY : undefined;
-  return {
-    customer: stripeCustomerId,
-    items: [{ price: stripePriceId, quantity }],
-    trial_period_days: grantTrial ? plan.trialDays : undefined,
-    automatic_tax: { enabled: true },
-    // Create the subscription without settling its first invoice. The charge is
-    // deferred to settleSubscriptionPayment, run only once the workspace, its
-    // records and every TENANT_BEING_PROVISIONED listener have succeeded — so a
-    // failure before then cancels an unpaid (incomplete) subscription, with
-    // nothing to refund, instead of leaving a rolled-back workspace billed.
-    payment_behavior: "default_incomplete",
-  };
 }
 
 async function resolveTrialGrant(

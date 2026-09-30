@@ -2,6 +2,7 @@ import { Logging } from "@antelopejs/interface-core/logging";
 import Stripe from "stripe";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TrialIdentityModel } from "../workspaces/db/trial-identity.model";
+import { SUBSCRIPTION_BILLING_MODE } from "./billing-mode";
 import { getStripeClient } from "./client";
 
 const MISSING_RESOURCE_CODE = "resource_missing";
@@ -39,19 +40,10 @@ export const TRIAL_IDENTITY_METADATA_KEY = "trialIdentityId";
  * out. dms-saas is its own merchant of record: it collects tax ids, runs
  * Stripe Tax, injects invoice items and issues credit notes, none of which a
  * Managed Payments session allows. Every session therefore opts out
- * explicitly. The parameter exists from API version 2025-03-31.basil on, but
- * this SDK major does not type it yet.
+ * explicitly.
  */
-interface ManagedPaymentsSetting {
-  enabled: boolean;
-}
-
-interface CheckoutSessionCreateParams
-  extends Stripe.Checkout.SessionCreateParams {
-  managed_payments?: ManagedPaymentsSetting;
-}
-
-const MANAGED_PAYMENTS_OPT_OUT: ManagedPaymentsSetting = { enabled: false };
+const MANAGED_PAYMENTS_OPT_OUT: Stripe.Checkout.SessionCreateParams.ManagedPayments =
+  { enabled: false };
 
 export interface WorkspaceCheckoutSessionInput {
   operationId?: string;
@@ -211,6 +203,7 @@ function buildCheckoutSubscriptionData(
   const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData =
     {
       metadata,
+      billing_mode: SUBSCRIPTION_BILLING_MODE,
     };
   if (trialDays && trialDays > 0) {
     subscriptionData.trial_period_days = trialDays;
@@ -230,7 +223,7 @@ async function createSessionOptingOutOfManagedPayments(
   options: Stripe.RequestOptions | undefined,
 ): Promise<Stripe.Checkout.Session> {
   const sessions = getStripeClient().checkout.sessions;
-  const optedOut: CheckoutSessionCreateParams = {
+  const optedOut: Stripe.Checkout.SessionCreateParams = {
     ...params,
     managed_payments: MANAGED_PAYMENTS_OPT_OUT,
   };
