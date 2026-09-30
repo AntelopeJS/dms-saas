@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.7
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.6...v0.3.7)
+
+### 🚀 Enhancements
+
+- **plans:** Disable the invite action at the seat limit and translate plan and billing texts ([#66](https://github.com/AntelopeJS/dms-saas/pull/66))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.6
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.5...v0.3.6)
