@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.8
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.7...v0.3.8)
+
+### 🩹 Fixes
+
+- **plans:** Reconcile plans with Stripe once the database is initialised ([#67](https://github.com/AntelopeJS/dms-saas/pull/67))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.7
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.6...v0.3.7)
