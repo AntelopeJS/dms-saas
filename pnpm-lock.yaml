@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@antelopejs/tooling-configs':
-        specifier: '>=0.0.6 <1.0.0'
-        version: 0.0.6(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))
+        specifier: '>=0.0.7 <1.0.0'
+        version: 0.0.7(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))
       oxfmt:
         specifier: ^0.66.0
         version: 0.66.0
@@ -45,7 +45,7 @@ importers:
         specifier: '>=0.2.7 <1.0.0'
         version: 0.2.7(82f585b8262594fc49808f69de7c08f3)
       '@antelopejs/interface-dms-saas':
-        specifier: '>=0.2.2 <1.0.0'
+        specifier: '>=0.2.3 <0.3.0'
         version: link:../interface-dms-saas
       node-cron:
         specifier: ^4.2.1
@@ -70,8 +70,8 @@ importers:
         specifier: 1.4.0
         version: 1.4.0(socks@2.8.8)
       '@antelopejs/tooling-configs':
-        specifier: '>=0.0.6 <1.0.0'
-        version: 0.0.6(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))
+        specifier: '>=0.0.7 <1.0.0'
+        version: 0.0.7(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
@@ -265,9 +265,10 @@ packages:
   '@antelopejs/mongodb@1.4.0':
     resolution: {integrity: sha512-Y70RDJk/e1wCsw5I/cayVEWcN9uO+uk0Ehu52wXXOCBgBlRfIZq5Hg+KrRKRstbfv8G1tLiHUhQl5WiTtxiLMQ==}
 
-  '@antelopejs/tooling-configs@0.0.6':
-    resolution: {integrity: sha512-K8ysTXwxfGRQpM1JxJMehbwmQZqkE+7hCJiGoL2G0n9ut5MyszCsychUhfG5e+N+/EOwZ4QPN1XwNw8qNnQT3w==}
+  '@antelopejs/tooling-configs@0.0.7':
+    resolution: {integrity: sha512-AMGItAsD++kaoMfo+AwUeju+fFoHUSmXjzmKqwi2pQOdQD0kv2OuovGTZy80Eu6LKKyeaW7Ua/aBcdkhODhoFA==}
     engines: {node: '>=22.18.0'}
+    hasBin: true
     peerDependencies:
       '@nuxt/eslint-config': '>=1.2.0'
       eslint-plugin-perfectionist: '>=5.0.0'
@@ -3494,7 +3495,7 @@ snapshots:
       - snappy
       - socks
 
-  '@antelopejs/tooling-configs@0.0.6(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))':
+  '@antelopejs/tooling-configs@0.0.7(knip@6.34.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))':
     dependencies:
       '@oxlint/plugins': 1.81.0
     optionalDependencies:

@@ -46,8 +46,10 @@ Subpaths resolve through the `exports` map only, so consumers must compile with
 
 This package is released on its own workflow and must be published before the
 runtime module: `@antelopejs/dms-saas` depends on it through
-`>=<interface version> <1.0.0`, a range that only resolves once this package is
-released.
+`>=<interface version> <0.<minor + 1>.0`, a range that only resolves once this
+package is released. The runtime implements this interface, so it caps the range
+below the next minor: a breaking minor of this package never reaches an older
+dms-saas.
 
 ## Upgrading
 

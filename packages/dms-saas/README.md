@@ -288,8 +288,10 @@ attach, replayed again when dms-saas is reloaded, and dropped when the
 registering module is unloaded.
 
 The interface package must be released before dms-saas, which depends on it
-through `>=<interface version> <1.0.0`; during workspace development pnpm
-resolves that range to the sibling package. Release the interface package first,
+through `>=<interface version> <0.<minor + 1>.0`: dms-saas implements the
+interface, so it caps the range below the next minor and a breaking interface
+minor never reaches a dms-saas that does not implement it. During workspace
+development pnpm resolves that range to the sibling package. Release the interface package first,
 then
 release dms-saas, and update consumers to the published interface version.
 
