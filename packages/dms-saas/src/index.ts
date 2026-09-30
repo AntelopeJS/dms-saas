@@ -29,7 +29,7 @@ import * as invoiceLineItemsImplementation from "./implementations/dms-saas/invo
 import * as pagesImplementation from "./implementations/dms-saas/pages";
 import * as workspaceLifecycleImplementation from "./implementations/dms-saas/workspace-lifecycle";
 import { registerPublicScreens } from "./pages";
-import { registerSeatHooks } from "./plans";
+import { reconcilePlansWithStripe, registerSeatHooks } from "./plans";
 import { initStripeClient } from "./stripe";
 import type { DmsSaasConfig } from "./types";
 
@@ -85,6 +85,11 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
 export async function start(): Promise<void> {
   registeredCronTasks = registerSaasCrons();
   registerAutomationNodes();
+  // In the background: boot does not wait on Stripe, and a plan the pass
+  // misses is synced when it is next offered or billed.
+  void reconcilePlansWithStripe().catch((error: unknown) =>
+    Logging.Error("[dms-saas:plans] Stripe plan reconciliation failed", error),
+  );
 }
 
 export async function stop(): Promise<void> {

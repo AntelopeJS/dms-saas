@@ -25,9 +25,39 @@ export interface PlanFeatureValue {
   value: unknown;
 }
 
+/** Plan fields a Stripe product carries. */
+export interface PlanStripeProductTerms {
+  name: string;
+  description: string;
+  taxCode: string;
+}
+
+/** Plan fields a Stripe price carries; Stripe prices are immutable. */
+export interface PlanStripePriceTerms {
+  /** Amount in the currency's minor unit. */
+  unitAmount: number;
+  /** Lowercase ISO 4217 code, as Stripe stores it. */
+  currency: string;
+  interval: PlanInterval;
+  billingMode: PlanBillingMode;
+}
+
+/** What the linked Stripe product and price were last synced from. */
+export interface PlanStripeSyncedTerms {
+  product: PlanStripeProductTerms;
+  price: PlanStripePriceTerms;
+}
+
+/**
+ * Payment provider objects a plan is billed through. dms-saas owns them: it
+ * keeps them in line with the plan whoever writes the plan, so writers leave
+ * them alone.
+ */
 export interface PlanProviderRefs {
   stripeProductId?: string;
   stripePriceId?: string;
+  /** Absent on plans never synced, or synced before dms-saas recorded it. */
+  stripeSyncedTerms?: PlanStripeSyncedTerms;
 }
 
 /** Commercial plan offered to SaaS workspaces. */

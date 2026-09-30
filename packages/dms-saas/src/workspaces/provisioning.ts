@@ -25,6 +25,7 @@ import {
   deliverWorkspaceCreated,
   prepareWorkspaceCreated,
 } from "../operator-actions/lifecycle-outbox";
+import { loadBillablePlan } from "../plans/stripe-sync";
 import {
   getStripeClient,
   reconcileStripeTaxId,
@@ -514,7 +515,7 @@ async function createOwnedTenant(
 export async function provisionWorkspace(
   input: WorkspaceProvisioningInput,
 ): Promise<ProvisionedWorkspace> {
-  const plan = await GetModel(PlanModel).get(input.payload.planId);
+  const plan = await loadBillablePlan(input.payload.planId);
   assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_available");
   // Nothing can be charged without a card, so only a free plan goes on
   // without one — checked before any durable state is written.

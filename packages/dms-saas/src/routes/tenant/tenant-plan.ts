@@ -27,7 +27,11 @@ import {
   TenantSubscriptionModel,
 } from "../../db";
 import { toPendingPlanChange } from "../../plan-changes";
-import { buildTenantPlanCatalog, isDowngrade } from "../../plans";
+import {
+  buildTenantPlanCatalog,
+  ensurePlanStripeRefs,
+  isDowngrade,
+} from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
 import {
   canRecoverComplimentarySubscription,
@@ -104,11 +108,11 @@ export class SaasTenantPlanController extends Controller(
       current && !publicPlans.some((plan) => plan._id === current._id)
         ? [...publicPlans, current]
         : publicPlans;
-    return buildTenantPlanCatalog(
-      this.planModel,
-      this.featureModel,
-      withCurrent,
+    // Offered plans are shown payable only once Stripe holds their price.
+    const offered = await Promise.all(
+      withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
+    return buildTenantPlanCatalog(this.planModel, this.featureModel, offered);
   }
 
   /**

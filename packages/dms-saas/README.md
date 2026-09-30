@@ -177,6 +177,54 @@ the catalogue has no free plan, nothing is attached and a warning is logged.
 Once attached, the plan's permissions cap the workspace's members like any
 other plan (see [Tenant owner permissions](#tenant-owner-permissions)).
 
+## Plans and Stripe
+
+dms-saas keeps every plan billed through Stripe linked to a Stripe product and
+price that match it, whoever writes the plan: the platform-owner plan editor,
+or a module that seeds its catalogue straight into the plan table. A writer
+sets the plan's name, description, price, currency, interval and billing mode,
+and leaves `paymentProviderRefs` alone — dms-saas owns it.
+
+A plan is billed through Stripe when its price is above 0, or when it is
+already linked to a Stripe price its subscriptions may be billed on. A plan
+priced 0 that never was stays off Stripe: its workspaces hold a local free
+subscription.
+
+The sync runs:
+
+- when the plan editor creates or saves a plan, after writing it (a Stripe
+  error is reported to the editor, and the next pass retries the sync);
+- at startup, in the background, for every active plan;
+- whenever a plan is about to be offered or billed — the tenant plan catalogue,
+  a plan change, an operator action, a new workspace — so a plan written after
+  startup is linked the first time it matters.
+
+Outside the editor, a failed sync is logged and retried on the next pass; the
+plan meanwhile shows as not payable, and choosing it answers
+`400 saas.errors.plan.not_synced_with_stripe` as before. With a placeholder
+Stripe key, every sync is skipped.
+
+Each sync compares the plan with the terms recorded in
+`paymentProviderRefs.stripeSyncedTerms` and calls Stripe only when they differ:
+
+| What changed | Stripe effect |
+| --- | --- |
+| Nothing | none |
+| Name, description, or the billing settings' tax code | the product is updated in place |
+| Price, currency, interval or billing mode | a new price is created and the previous one archived; existing subscriptions stay on their price |
+
+Amounts are sent in the currency's minor unit (price × 100) and the currency
+in lowercase. A plan linked before the terms were recorded is read back from
+Stripe once: a price that still matches is kept, so its subscriptions still
+resolve to the plan.
+
+Every Stripe creation carries an idempotency key derived from the plan id, its
+creation time and the request, so replicas syncing the same plan at once, or a
+retry within Stripe's 24-hour window, land on the same product and price. Only
+`paymentProviderRefs` is written back: a sync never rolls back a concurrent
+edit, and one that raced an edit is out of line again and redone on the next
+pass.
+
 ## Plan feature labels and values
 
 A feature row stores one display name and one tooltip. The tenant plan pages

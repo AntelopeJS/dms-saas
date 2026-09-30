@@ -51,6 +51,15 @@ package is released. The runtime implements this interface, so it caps the range
 below the next minor: a breaking minor of this package never reaches an older
 dms-saas.
 
+## Writing plans
+
+A module may seed plans straight into the `db` plan table. It leaves
+`Plan.paymentProviderRefs` empty on creation and never rewrites it: dms-saas
+links every plan billed through Stripe to a matching Stripe product and price,
+at startup and whenever the plan is offered or billed, and records what it
+synced in `paymentProviderRefs.stripeSyncedTerms`. See
+[Plans and Stripe](../dms-saas/README.md#plans-and-stripe).
+
 ## Upgrading
 
 ### Rows written by earlier builds

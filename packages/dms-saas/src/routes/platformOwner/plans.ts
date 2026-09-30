@@ -8,7 +8,6 @@ import {
   Put,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
-import { Logging } from "@antelopejs/interface-core/logging";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { Model } from "@antelopejs/interface-database-decorators";
 import {
@@ -25,16 +24,7 @@ import {
   PlanModel,
   TenantSubscriptionModel,
 } from "../../db";
-import { isStripeConfigured, syncPlanWithStripe } from "../../stripe";
-
-const STRIPE_SKIP_WARNING =
-  "[dms-saas:plans] Stripe not configured (placeholder key) — skipping plan sync";
-
-async function syncPlanIfConfigured(plan: Plan): Promise<Plan> {
-  if (isStripeConfigured()) return syncPlanWithStripe(plan);
-  Logging.Warn(STRIPE_SKIP_WARNING);
-  return plan;
-}
+import { syncPlanStripeRefs } from "../../plans/stripe-sync";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -388,11 +378,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     const planId = inserted[0];
     const created = await this.planModel.get(planId);
     assert(created, HTTP_INTERNAL_ERROR, "saas.errors.plan.creation_failed");
-    const synced = await syncPlanIfConfigured(created);
-    await this.planModel.update(planId, {
-      paymentProviderRefs: synced.paymentProviderRefs,
-      updatedAt: new Date(),
-    });
+    await syncPlanStripeRefs(created, this.planModel);
     return { _id: planId };
   }
 
@@ -412,25 +398,12 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
         sanitized.inheritsFromPlanId,
       );
     }
-    // The spread row is an AntelopeJS table class: `Table` declares one
-    // field and a static, no instance methods, and the value is
-    // serialised to JSON on the way out. No prototype to lose.
-    // oxlint-disable-next-line typescript/no-misused-spread
-    const merged = { ...plan, ...sanitized };
     if (hasStripeSyncChanges(sanitized)) {
-      assertPlanInterval(merged.interval);
+      assertPlanInterval(sanitized.interval ?? plan.interval);
     }
-    const synced = isPlanInterval(merged.interval)
-      ? await syncPlanIfConfigured({
-          ...merged,
-          updatedAt: new Date(),
-        } as Plan)
-      : merged;
-    await this.planModel.update(id, {
-      ...sanitized,
-      paymentProviderRefs: synced.paymentProviderRefs,
-      updatedAt: new Date(),
-    });
+    await this.planModel.update(id, { ...sanitized, updatedAt: new Date() });
+    const updated = await this.planModel.get(id);
+    if (updated) await syncPlanStripeRefs(updated, this.planModel);
     return { _id: id };
   }
 
