@@ -17,6 +17,7 @@ const hookDoubles = vi.hoisted(() => ({
   recomputeAllTenantBillingStates: vi.fn<() => Promise<void>>(),
   backfillDefaultSubscriptions: vi.fn<() => Promise<number>>(),
   reconcileWorkspaceLifecycleDeliveries: vi.fn<() => Promise<void>>(),
+  startPlanReconciliation: vi.fn<() => void>(),
 }));
 
 vi.mock("@antelopejs/interface-database-decorators", () => ({
@@ -43,6 +44,9 @@ vi.mock("../src/operator-actions", () => ({
     hookDoubles.reconcileWorkspaceLifecycleDeliveries,
 }));
 vi.mock("../src/pages/module", () => ({ SAAS_MODULE_ID: "dms-saas" }));
+vi.mock("../src/plans/stripe-sync", () => ({
+  startPlanReconciliation: hookDoubles.startPlanReconciliation,
+}));
 vi.mock("../src/routes", () => ({
   ensureLegalDocumentsSingleton: hookDoubles.ensureLegalDocumentsSingleton,
 }));
@@ -72,13 +76,21 @@ async function flushPromiseQueue(): Promise<void> {
   await new Promise<void>((resolve) => setImmediate(resolve));
 }
 
+function getDatabaseInitializedListeners(): HookListener[] {
+  return hookDoubles.registerHook.mock.calls
+    .filter(([hook]) => hook === hookDoubles.databaseInitialized)
+    .map(([, listener]) => listener as HookListener);
+}
+
+/** Fires the hook the way DMS does: listeners in series, a failure stops it. */
 function getDatabaseInitializedListener(): HookListener {
-  const registration = hookDoubles.registerHook.mock.calls.find(
-    ([hook]) => hook === hookDoubles.databaseInitialized,
-  );
-  if (!registration)
+  const listeners = getDatabaseInitializedListeners();
+  if (listeners.length === 0)
     throw new Error("database initialized hook not registered");
-  return registration[1] as HookListener;
+  return async () => {
+    for (const listener of listeners) await listener();
+    return undefined;
+  };
 }
 
 beforeEach(() => {
@@ -196,5 +208,26 @@ describe("database initialized hook", () => {
     expect(failure).toBeInstanceOf(AggregateError);
     if (!(failure instanceof AggregateError)) return;
     expect(failure.errors).toEqual([migrationFailure, billingFailure]);
+  });
+});
+
+describe("Stripe plan reconciliation at boot", () => {
+  it("waits for the database initialized signal", async () => {
+    expect(hookDoubles.startPlanReconciliation).not.toHaveBeenCalled();
+
+    await getDatabaseInitializedListener()();
+
+    expect(hookDoubles.startPlanReconciliation).toHaveBeenCalledOnce();
+  });
+
+  it("still starts when the rest of the database initialization fails", async () => {
+    hookDoubles.ensureLegalDocumentsSingleton.mockRejectedValue(
+      new Error("legal documents unavailable"),
+    );
+
+    await expect(getDatabaseInitializedListener()()).rejects.toThrow(
+      "legal documents unavailable",
+    );
+    expect(hookDoubles.startPlanReconciliation).toHaveBeenCalledOnce();
   });
 });

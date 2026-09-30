@@ -125,9 +125,10 @@ export async function loadBillablePlan(
 }
 
 /**
- * Syncs every active plan with Stripe, one at a time. Run at boot: it links
- * plans written while dms-saas was down or by a module writing the plan table
- * directly, and repairs any sync an earlier failure left behind.
+ * Syncs every active plan with Stripe, one at a time. Run once the database is
+ * initialised: it links plans written while dms-saas was down or by a module
+ * writing the plan table directly, and repairs any sync an earlier failure
+ * left behind.
  */
 export async function reconcilePlansWithStripe(): Promise<void> {
   if (!isStripeConfigured()) {
@@ -141,4 +142,15 @@ export async function reconcilePlansWithStripe(): Promise<void> {
   for (const plan of plans) {
     await ensurePlanStripeRefs(plan, model);
   }
+}
+
+/**
+ * Starts {@link reconcilePlansWithStripe} without waiting for it, logging a
+ * failure. Boot does not wait on Stripe, and a plan the pass misses is synced
+ * when it is next offered or billed.
+ */
+export function startPlanReconciliation(): void {
+  void reconcilePlansWithStripe().catch((error: unknown) =>
+    Logging.Error(`${LOG_PREFIX} Stripe plan reconciliation failed`, error),
+  );
 }
