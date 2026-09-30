@@ -45,7 +45,7 @@ importers:
         specifier: '>=0.3.2 <1.0.0'
         version: 0.3.2(82f585b8262594fc49808f69de7c08f3)
       '@antelopejs/interface-dms-saas':
-        specifier: '>=0.2.3 <0.3.0'
+        specifier: '>=0.2.7 <0.3.0'
         version: link:../interface-dms-saas
       node-cron:
         specifier: ^4.2.1
