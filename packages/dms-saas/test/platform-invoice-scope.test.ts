@@ -13,11 +13,11 @@ import {
   ValueProxy,
 } from "@antelopejs/interface-database";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
+import { TableViewMeta, TableViewRoutes } from "@antelopejs/interface-dms/base";
 import {
-  setRealtimePresenceHook,
-  TableViewMeta,
-  TableViewRoutes,
-} from "@antelopejs/interface-dms/base";
+  type RealtimePresenceContext,
+  internal as tableView,
+} from "@antelopejs/interface-dms/base/table-view";
 import {
   afterEach,
   beforeAll,
@@ -39,7 +39,7 @@ const invoiceTable = new Schema("invoice-scope-test", {
 })
   .instance(CROSS_INSTANCE)
   .table("invoices");
-const presence = vi.fn();
+const presence = vi.fn(async (_context: RealtimePresenceContext) => {});
 let current: Record<string, unknown> | undefined;
 let isAllowed = true;
 
@@ -73,18 +73,26 @@ beforeAll(() => {
     CheckTenantAccess: async () =>
       isAllowed ? { allowed: true } : { allowed: false, code: "test.denied" },
   });
+  // The table-view routes reach the DMS through these interface functions.
+  ImplementInterface(
+    { internal: tableView },
+    {
+      internal: {
+        AcquirePresence: presence,
+        PublishMutation: async () => {},
+      },
+    },
+  );
 });
 
 beforeEach(() => {
   current = { _id: "invoice", documentType: "invoice" };
   isAllowed = true;
   presence.mockClear();
-  setRealtimePresenceHook(presence);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  setRealtimePresenceHook(undefined);
 });
 
 describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
