@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.2.7
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.2.6...v0.2.7)
+
+### 🚀 Enhancements
+
+- **frontend-vue:** Declare the @antelopejs/dms-frontend releases the layer supports ([#61](https://github.com/AntelopeJS/dms-saas/pull/61))
+- **stripe:** Move to API version 2026-08-26.dahlia with stripe v22 ([#70](https://github.com/AntelopeJS/dms-saas/pull/70))
+
+### 🩹 Fixes
+
+- **frontend:** Send the payer email when confirming the card setup ([#60](https://github.com/AntelopeJS/dms-saas/pull/60))
+- **billing:** Let owners resume or cancel an abandoned Stripe Checkout ([#69](https://github.com/AntelopeJS/dms-saas/pull/69))
+- Make database-initialized handlers safe to replay ([#71](https://github.com/AntelopeJS/dms-saas/pull/71))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.3.9 ([51aee4f](https://github.com/AntelopeJS/dms-saas/commit/51aee4f))
+- **release:** @antelopejs/dms-saas v0.3.10 ([6390f43](https://github.com/AntelopeJS/dms-saas/commit/6390f43))
+- **release:** @antelopejs/dms-saas v0.3.11 ([e67529f](https://github.com/AntelopeJS/dms-saas/commit/e67529f))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+- Alessandro Aloisio ([@alessaloisio](http://github.com/alessaloisio))
+
 ## v0.2.6
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.2.5...v0.2.6)
