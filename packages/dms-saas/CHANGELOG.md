@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.6
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.5...v0.3.6)
+
+### 🚀 Enhancements
+
+- **plans:** Keep every Stripe-billed plan synced, whoever writes it ([#65](https://github.com/AntelopeJS/dms-saas/pull/65))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.2.5 ([9496157](https://github.com/AntelopeJS/dms-saas/commit/9496157))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.5
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.4...v0.3.5)
