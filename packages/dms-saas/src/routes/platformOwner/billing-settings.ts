@@ -7,7 +7,6 @@ import {
   BillingSettingsModel,
   DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
   DEFAULT_DATA_RETENTION_DAYS,
-  DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
   DEFAULT_STRIPE_TAX_CODE,
   type RefundProrataMode,
 } from "../../db";
@@ -19,7 +18,6 @@ interface BillingSettingsBody {
   autoSuspendEnabled?: boolean;
   autoSuspendDelayDays?: number;
   dataRetentionDaysAfterCancellation?: number;
-  maxFreeWorkspacesPerCard?: number;
   moneyBackGuaranteeEnabled?: boolean;
   moneyBackGuaranteeWindowDays?: number;
   moneyBackGuaranteeMode?: RefundProrataMode;
@@ -36,8 +34,6 @@ function pickBillingSettingsUpdate(body: BillingSettingsBody) {
   if (body.dataRetentionDaysAfterCancellation !== undefined)
     out.dataRetentionDaysAfterCancellation =
       body.dataRetentionDaysAfterCancellation;
-  if (body.maxFreeWorkspacesPerCard !== undefined)
-    out.maxFreeWorkspacesPerCard = body.maxFreeWorkspacesPerCard;
   if (body.moneyBackGuaranteeEnabled !== undefined)
     out.moneyBackGuaranteeEnabled = body.moneyBackGuaranteeEnabled;
   if (body.moneyBackGuaranteeWindowDays !== undefined)
@@ -63,7 +59,6 @@ async function getOrCreateBillingSettings(
     autoSuspendEnabled: true,
     autoSuspendDelayDays: DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
     dataRetentionDaysAfterCancellation: DEFAULT_DATA_RETENTION_DAYS,
-    maxFreeWorkspacesPerCard: DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
     moneyBackGuaranteeEnabled: false,
     moneyBackGuaranteeWindowDays: DEFAULT_MONEY_BACK_WINDOW_DAYS,
     moneyBackGuaranteeMode: DEFAULT_REFUND_MODE,

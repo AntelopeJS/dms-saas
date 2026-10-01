@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
+
+interface ConfirmedPayment {
+  isConfirmed: boolean;
+  paymentMethodId?: string;
+}
 
 interface PlanOption {
   _id: string;
@@ -8,15 +13,6 @@ interface PlanOption {
   price: number;
   currency: string;
   interval: "month" | "year";
-}
-
-interface FreePlanAvailability {
-  isAvailable: boolean;
-  blockingWorkspaceName: string | null;
-}
-
-interface CreateOptions {
-  freePlan: FreePlanAvailability;
 }
 
 const props = defineProps<{
@@ -48,10 +44,6 @@ const stripePublishableKey = computed<string>(
 const workspaceName = ref("");
 const plans = ref<PlanOption[]>([]);
 const selectedPlanId = ref<string | null>(null);
-const freePlan = ref<FreePlanAvailability>({
-  isAvailable: true,
-  blockingWorkspaceName: null,
-});
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 const errorMessage = ref<string | null>(null);
@@ -63,10 +55,6 @@ const stripeHandle = ref<ReturnType<typeof useStripePaymentElement> | null>(
 
 function isFreePlan(plan: PlanOption): boolean {
   return plan.price <= FREE_PLAN_PRICE;
-}
-
-function isPlanDisabled(plan: PlanOption): boolean {
-  return isFreePlan(plan) && !freePlan.value.isAvailable;
 }
 
 function formatPrice(plan: PlanOption): string {
@@ -85,17 +73,13 @@ function planPriceLabel(plan: PlanOption): string {
   });
 }
 
-function planHint(plan: PlanOption): string {
-  if (!isPlanDisabled(plan)) return planDescription(plan.description);
-  const workspace = freePlan.value.blockingWorkspaceName;
-  if (!workspace) {
-    return t("saas.workspaces.create.self_serve.free_unavailable");
-  }
-  return t("saas.workspaces.create.self_serve.free_taken", { workspace });
-}
+const selectedPlan = computed(
+  () => plans.value.find((plan) => plan._id === selectedPlanId.value) ?? null,
+);
 
-const selectablePlans = computed(() =>
-  plans.value.filter((plan) => !isPlanDisabled(plan)),
+// A free plan bills nothing, so it never asks for a card.
+const requiresCard = computed(
+  () => !!selectedPlan.value && !isFreePlan(selectedPlan.value),
 );
 
 // Only once the catalogue actually loaded: a failed load reports itself.
@@ -104,7 +88,6 @@ const hasNoPlanOnOffer = computed(
 );
 
 function selectPlan(plan: PlanOption): void {
-  if (isPlanDisabled(plan)) return;
   selectedPlanId.value = plan._id;
 }
 
@@ -126,17 +109,39 @@ async function initStripeElement(): Promise<void> {
   });
 }
 
+let cardSetup: Promise<void> | null = null;
+
+// Set up once, on the first paid plan picked, then only hidden: switching back
+// and forth between plans keeps the card already typed in.
+async function setUpCard(): Promise<void> {
+  // The card container only exists once the form has rendered.
+  await nextTick();
+  try {
+    await initStripeElement();
+  } catch (error) {
+    cardError.value = resolveApiError(
+      error,
+      "saas.workspaces.create.self_serve.error.card",
+    );
+  }
+}
+
+function ensureCardStep(): Promise<void> {
+  if (!requiresCard.value) return Promise.resolve();
+  cardSetup ??= setUpCard();
+  return cardSetup;
+}
+
+watch(requiresCard, ensureCardStep);
+
 async function load(): Promise<void> {
   try {
-    const [loadedPlans, options] = await Promise.all([
+    const [loadedPlans] = await Promise.all([
       $authFetch<PlanOption[]>(PLANS_ENDPOINT),
-      $authFetch<CreateOptions>(OPTIONS_ENDPOINT),
+      $authFetch(OPTIONS_ENDPOINT),
     ]);
     plans.value = loadedPlans;
-    freePlan.value = options.freePlan;
-    selectedPlanId.value = selectablePlans.value[0]?._id ?? null;
-    // Nothing to pay for, so no card to set up.
-    if (loadedPlans.length === 0) return;
+    selectedPlanId.value = loadedPlans[0]?._id ?? null;
   } catch (error) {
     errorMessage.value = resolveApiError(
       error,
@@ -148,14 +153,7 @@ async function load(): Promise<void> {
   }
   // Kept out of the block above so a card-setup outage reports itself as such
   // instead of hiding behind "could not load the creation options".
-  try {
-    await initStripeElement();
-  } catch (error) {
-    cardError.value = resolveApiError(
-      error,
-      "saas.workspaces.create.self_serve.error.card",
-    );
-  }
+  await ensureCardStep();
 }
 
 function validate(): boolean {
@@ -167,11 +165,22 @@ function validate(): boolean {
     errorMessage.value = t("saas.workspaces.create.error.plan");
     return false;
   }
-  if (!stripeHandle.value) {
+  if (requiresCard.value && !stripeHandle.value) {
     errorMessage.value = t("saas.register.error.no_payment");
     return false;
   }
   return true;
+}
+
+async function confirmPaymentMethod(): Promise<ConfirmedPayment> {
+  if (!requiresCard.value) return { isConfirmed: true };
+  const confirmed = await stripeHandle.value?.confirmAndGetPaymentMethod();
+  if (confirmed?.paymentMethodId) {
+    return { isConfirmed: true, paymentMethodId: confirmed.paymentMethodId };
+  }
+  errorMessage.value =
+    confirmed?.error?.message ?? t("saas.register.error.no_payment");
+  return { isConfirmed: false };
 }
 
 async function submit(): Promise<void> {
@@ -179,18 +188,14 @@ async function submit(): Promise<void> {
   errorMessage.value = null;
   isSubmitting.value = true;
   try {
-    const confirmed = await stripeHandle.value?.confirmAndGetPaymentMethod();
-    if (!confirmed?.paymentMethodId) {
-      errorMessage.value =
-        confirmed?.error?.message ?? t("saas.register.error.no_payment");
-      return;
-    }
+    const payment = await confirmPaymentMethod();
+    if (!payment.isConfirmed) return;
     const created = await $authFetch<{ tenantId: string }>(CREATE_ENDPOINT, {
       method: "POST",
       body: {
         workspaceName: workspaceName.value.trim(),
         planId: selectedPlanId.value,
-        paymentMethodId: confirmed.paymentMethodId,
+        paymentMethodId: payment.paymentMethodId,
       },
     });
     props.onSuccessCallback?.(created.tenantId);
@@ -245,26 +250,21 @@ onMounted(load);
         v-for="plan in plans"
         :key="plan._id"
         type="button"
-        class="border-default flex flex-col gap-1 rounded-md border px-3 py-2.5 text-left transition-colors"
-        :class="[
-          selectedPlanId === plan._id ? 'border-primary bg-primary/5' : '',
-          isPlanDisabled(plan)
-            ? 'cursor-not-allowed opacity-60'
-            : 'hover:border-accented cursor-pointer',
-        ]"
-        :disabled="isPlanDisabled(plan)"
+        class="border-default hover:border-accented flex cursor-pointer flex-col gap-1 rounded-md border px-3 py-2.5 text-left transition-colors"
+        :class="selectedPlanId === plan._id ? 'border-primary bg-primary/5' : ''"
         :aria-pressed="selectedPlanId === plan._id"
         @click="selectPlan(plan)"
       >
         <span class="text-highlighted text-sm font-medium">
           {{ plan.name }} — {{ planPriceLabel(plan) }}
         </span>
-        <span class="text-muted text-xs">{{ planHint(plan) }}</span>
+        <span class="text-muted text-xs">{{ planDescription(plan.description) }}</span>
       </button>
     </div>
 
     <UFormField
       v-if="!hasNoPlanOnOffer"
+      v-show="requiresCard"
       :label="$t('saas.workspaces.create.self_serve.card')"
     >
       <div :id="PAYMENT_ELEMENT_ID" class="border-default rounded-md border p-4" />

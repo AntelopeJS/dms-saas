@@ -87,7 +87,7 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     return GetModel(ProvisioningAttemptModel).findUnresolved();
   }
 
-  /** Inspect an attempt without replaying non-idempotent hooks or releasing capacity. */
+  /** Inspect an attempt without replaying non-idempotent hooks. */
   @Get("/:tenantId/provisioning-attempt")
   async getProvisioningAttempt(
     @AuthOwnerOnly() _user: User,

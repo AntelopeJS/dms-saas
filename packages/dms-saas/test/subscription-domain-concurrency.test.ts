@@ -20,7 +20,6 @@ import type {
   SubscriptionTransition,
   TenantSubscription,
 } from "@antelopejs/interface-dms-saas/db/tables/tenantSubscriptions.table";
-import { CardCapacityModel } from "../src/workspaces/db/card-capacity.model";
 import {
   TrialIdentityModel,
   trialIdentityId,
@@ -36,7 +35,6 @@ import {
 
 const SETUP_TIMEOUT_MS = 60_000;
 const CONTENDERS = 12;
-const CAPACITY = 3;
 let mongodb: MongoMemoryReplSet;
 
 afterEach(() => vi.restoreAllMocks());
@@ -148,57 +146,6 @@ describe("subscription domain admission on the production Mongo provider", () =>
       model.beginTransition(invalid, transition()),
     ).rejects.toThrow();
     expect((await model.get(id))?.revision).toBeNull();
-  });
-});
-
-describe("durable card capacity", () => {
-  it("keeps uncertain reservations counted under concurrent admission", async () => {
-    const model = GetModel(CardCapacityModel);
-    const id = randomUUID();
-    const tenants = Array.from({ length: CONTENDERS }, () => randomUUID());
-    const results = await Promise.all(
-      tenants.map((tenant) =>
-        model.reserve(id, tenant, CAPACITY, async () => []),
-      ),
-    );
-    expect(results.filter(Boolean)).toHaveLength(CAPACITY);
-    expect((await model.get(id))?.allocations).toHaveLength(CAPACITY);
-    expect(
-      await model.reserve(id, randomUUID(), CAPACITY, async () => []),
-    ).toBe(false);
-    const accepted = tenants[results.indexOf(true)];
-    expect(await model.reserve(id, accepted, CAPACITY, async () => [])).toBe(
-      true,
-    );
-    await model.releaseCancelled(id, accepted);
-    expect(
-      await model.reserve(id, randomUUID(), CAPACITY, async () => []),
-    ).toBe(true);
-  });
-
-  it("counts legacy live usage alongside unresolved reservations", async () => {
-    const model = GetModel(CardCapacityModel);
-    const id = randomUUID();
-    expect(
-      await model.reserve(id, "pending", CAPACITY, async () => [
-        "legacy-a",
-        "legacy-b",
-      ]),
-    ).toBe(true);
-    expect(
-      await model.reserve(id, "overflow", CAPACITY, async () => [
-        "legacy-a",
-        "legacy-b",
-      ]),
-    ).toBe(false);
-    expect(
-      await model.reserve(id, "replacement", CAPACITY, async () => [
-        "legacy-b",
-      ]),
-    ).toBe(true);
-    expect(
-      (await model.get(id))?.allocations.map((entry) => entry.tenantId).sort(),
-    ).toEqual(["legacy-b", "pending", "replacement"]);
   });
 });
 

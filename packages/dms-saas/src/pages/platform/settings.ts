@@ -34,12 +34,6 @@ const billingForm = Form({
       type: new DefaultDataTypes.NumberType({ min: 0 }),
     },
     {
-      id: "maxFreeWorkspacesPerCard",
-      label: "$saas.settings.billing.max_free_workspaces_per_card",
-      description: "$saas.settings.billing.max_free_workspaces_per_card_desc",
-      type: new DefaultDataTypes.NumberType({ min: 0 }),
-    },
-    {
       id: "stripeTaxCode",
       label: "$saas.settings.billing.stripe_tax_code",
       description: "$saas.settings.billing.stripe_tax_code_desc",

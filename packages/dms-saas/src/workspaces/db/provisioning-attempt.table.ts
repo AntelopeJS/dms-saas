@@ -26,9 +26,6 @@ export class ProvisioningAttempt extends Table {
   declare revision: string;
 
   @Field("string")
-  declare capacityId: string | null;
-
-  @Field("string")
   declare planId: string;
 
   @Field("string")

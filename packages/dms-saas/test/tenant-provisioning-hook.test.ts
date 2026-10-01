@@ -221,11 +221,6 @@ const modelFakes: Record<string, (tenantId?: string) => unknown> = {
       if (row && row.status !== "succeeded") row.status = "failed";
     },
   }),
-  CardCapacityModel: () => ({
-    reserve: async () => true,
-    confirm: async () => undefined,
-    releaseCancelled: async () => undefined,
-  }),
   BillingSettingsModel: () => ({ get: async () => undefined }),
   PlanModel: () => ({
     get: async () => PLAN,

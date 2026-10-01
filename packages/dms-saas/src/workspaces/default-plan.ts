@@ -10,7 +10,7 @@ import {
   PlanModel,
   TenantSubscriptionModel,
 } from "../db";
-import { isFreePlan } from "./free-workspace-guard";
+import { isFreePlan } from "./free-plan";
 
 const LOG_PREFIX = "[dms-saas:default-plan]";
 const ACTIVE_STATUS = "active" as const;

@@ -35,7 +35,7 @@ import {
 } from "../stripe";
 import { hashEmail, insertOrUpdateById, stripeSecondsToDate } from "../utils";
 import { resolveDefaultPlan } from "./default-plan";
-import { isFreePlan } from "./free-workspace-guard";
+import { isFreePlan } from "./free-plan";
 import { buildSubscriptionCreateParams } from "./subscription-create-params";
 import {
   beginProvisioningAttempt,
@@ -194,8 +194,8 @@ const CARDLESS_BILLING: ProvisionedBilling = {
 };
 
 /**
- * Read once by the caller: both the free-workspace cap and the inherited
- * billing address need it before provisioning starts. Without a card there is
+ * Read once by the caller: the inherited billing address and the trial
+ * identity need it before provisioning starts. Without a card there is
  * nothing to read, and Stripe is not called.
  */
 export async function resolveCardDetails(
@@ -487,7 +487,7 @@ async function createOwnedTenant(
   });
 }
 
-/** Reserve durable capacity before provider effects; ambiguous attempts retain their allocations. */
+/** Record the provisioning attempt before provider effects; ambiguous attempts are preserved for reconciliation. */
 export async function provisionWorkspace(
   input: WorkspaceProvisioningInput,
 ): Promise<ProvisionedWorkspace> {
