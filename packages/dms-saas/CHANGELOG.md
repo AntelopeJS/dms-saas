@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.13
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.12...v0.3.13)
+
+### 🩹 Fixes
+
+- **workspaces:** Make the card optional for free plans ([#74](https://github.com/AntelopeJS/dms-saas/pull/74))
+
+### 🏡 Chore
+
+- **playground:** Open module source ranges ([#73](https://github.com/AntelopeJS/dms-saas/pull/73))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.12
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.11...v0.3.12)
