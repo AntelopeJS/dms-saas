@@ -1,38 +1,25 @@
 import { randomUUID } from "node:crypto";
-import { assert } from "@antelopejs/interface-api-util";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { Plan } from "../db";
-import { CardCapacityModel, cardCapacityId } from "./db/card-capacity.model";
 import { ProvisioningAttemptModel } from "./db/provisioning-attempt.model";
 import type { ProvisioningAttemptState } from "./db/provisioning-attempt.table";
 import { TrialIdentityModel, trialIdentityId } from "./db/trial-identity.model";
-import {
-  findFreeWorkspaceIdsBackedByCard,
-  isFreePlan,
-  resolveMaxFreeWorkspacesPerCard,
-} from "./free-workspace-guard";
 import type {
   WorkspaceProvisioningHandles,
   WorkspaceProvisioningInput,
 } from "./provisioning";
 
-const HTTP_CONFLICT = 409;
-
-/** Persist recovery identity before any capacity or payment-provider mutation. */
+/** Persist recovery identity before any payment-provider mutation. */
 export async function beginProvisioningAttempt(
   input: WorkspaceProvisioningInput,
   plan: Plan,
 ): Promise<void> {
   const tenantId = randomUUID();
-  const fingerprint = input.card.fingerprint;
-  const capacityId =
-    fingerprint && isFreePlan(plan) ? cardCapacityId(fingerprint) : null;
   input.handles.tenantId = tenantId;
   input.handles.mustPreserveWorkspace = true;
   await GetModel(ProvisioningAttemptModel).insert({
     _id: tenantId,
     revision: randomUUID(),
-    capacityId,
     planId: plan._id,
     userId: input.userId,
     state: "preparing",
@@ -42,19 +29,6 @@ export async function beginProvisioningAttempt(
     trialIdentityIds: [],
     lastError: null,
   });
-  if (capacityId && fingerprint) {
-    const admitted = await GetModel(CardCapacityModel).reserve(
-      capacityId,
-      tenantId,
-      await resolveMaxFreeWorkspacesPerCard(),
-      () => findFreeWorkspaceIdsBackedByCard(fingerprint),
-    );
-    if (!admitted) {
-      await recordProvisioningState(input.handles, "cancelled");
-      input.handles.mustPreserveWorkspace = false;
-    }
-    assert(admitted, HTTP_CONFLICT, "saas.errors.workspace.free_limit_reached");
-  }
   input.handles.mustPreserveWorkspace = false;
 }
 
@@ -74,14 +48,7 @@ export async function recordProvisioningState(
     trialConsumptionId: handles.trialConsumptionId ?? null,
     trialIdentityIds: handles.trialIdentityIds ?? [],
   });
-  if (state === "committed" && current.capacityId)
-    await GetModel(CardCapacityModel).confirm(current.capacityId, current._id);
   if (state === "cancelled") {
-    if (current.capacityId)
-      await GetModel(CardCapacityModel).releaseCancelled(
-        current.capacityId,
-        current._id,
-      );
     for (const id of current.trialIdentityIds)
       await GetModel(TrialIdentityModel).releaseUnused(id, current._id);
   }

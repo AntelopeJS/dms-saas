@@ -1,7 +1,7 @@
 import type { Plan, TenantSubscription } from "../db";
 import { isStripeConfigured } from "../stripe/client";
 import { isComplimentarySubscription } from "../workspaces/complimentary";
-import { isFreePlan } from "../workspaces/free-workspace-guard";
+import { isFreePlan } from "../workspaces/free-plan";
 import { absent, type PreviewOutcome, unavailable } from "./outcomes";
 
 /** A subscription Stripe can preview the next invoice of. */

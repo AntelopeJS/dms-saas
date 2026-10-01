@@ -55,7 +55,6 @@
         "access_blocked": "Access to this workspace is restricted by its subscription status",
         "already_suspended": "Workspace is already suspended",
         "not_suspended": "Workspace is not suspended",
-        "free_limit_reached": "This card has already reached the free workspace limit.",
         "creation_in_progress": "Another workspace is already being created with this card. Please wait a moment and try again.",
         "name_required": "The workspace name is required.",
         "payment_method_required": "A card is required.",
@@ -575,8 +574,6 @@
           },
           "card": "Card",
           "submit": "Create",
-          "free_taken": "Free workspace limit reached for this card — already used by “{workspace}”.",
-          "free_unavailable": "Free workspace limit reached for this card.",
           "error": {
             "load": "Could not load the creation options.",
             "failed": "Could not create the workspace.",
@@ -903,9 +900,7 @@
         "data_retention_days": "Data retention (days)",
         "data_retention_days_desc": "How long cancelled workspace data is kept before hard delete.",
         "stripe_tax_code": "Stripe tax code (product)",
-        "stripe_tax_code_desc": "Stripe tax category code applied to products on sync (e.g. txcd_10000000). Required for automatic VAT calculation. Re-sync plans to apply it.",
-        "max_free_workspaces_per_card": "Free workspaces per card",
-        "max_free_workspaces_per_card_desc": "How many workspaces on a free plan a single card may back."
+        "stripe_tax_code_desc": "Stripe tax category code applied to products on sync (e.g. txcd_10000000). Required for automatic VAT calculation. Re-sync plans to apply it."
       },
       "refund": {
         "money_back_guarantee": "Money-back guarantee",

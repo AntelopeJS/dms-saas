@@ -41,22 +41,20 @@ import { getSeatUsage } from "../../plans";
 import { buildWorkspaceProjection } from "../../utils";
 import type {
   CardDetails,
-  FreePlanAvailability,
   WorkspaceBillingProfile,
   WorkspaceDeletionResult,
   WorkspaceProvisioningHandles,
 } from "../../workspaces";
 import {
   assertBillingCountry,
-  assertFreePlanAllowedForCard,
   countPendingInvitations,
   ensurePlanIsAvailableForCustomer,
+  isFreePlan,
   provisionWorkspace,
   requestWorkspaceDeletion,
   resolveBillingProfileForNewWorkspace,
   resolveCardDetails,
   resolveDataRetentionDays,
-  resolveFreePlanAvailabilityForUser,
   rollbackWorkspaceProvisioning,
 } from "../../workspaces";
 
@@ -78,10 +76,6 @@ interface MyWorkspaceRow {
   isCurrent: boolean;
 }
 
-interface WorkspaceCreateOptions {
-  freePlan: FreePlanAvailability;
-}
-
 interface WorkspaceCreateBody {
   workspaceName?: string;
   planId: string;
@@ -90,10 +84,31 @@ interface WorkspaceCreateBody {
 
 interface SelfServeCreationInput {
   workspaceName: string;
-  paymentMethodId: string;
+  paymentMethodId?: string;
   planId: string;
   card: CardDetails;
   billingProfile: WorkspaceBillingProfile;
+}
+
+/**
+ * A free plan goes on without a card, and then without a billing address:
+ * nothing is billed, and an upgrade collects both through Stripe Checkout.
+ * A card, even on a free plan, still has to come with a supported country.
+ */
+function assertPaymentReadiness(
+  plan: Plan,
+  paymentMethodId: string | undefined,
+  billingProfile: WorkspaceBillingProfile,
+): void {
+  if (paymentMethodId) {
+    assertBillingCountry(billingProfile.address);
+    return;
+  }
+  assert(
+    isFreePlan(plan),
+    HTTP_BAD_REQUEST,
+    "saas.errors.workspace.payment_method_required",
+  );
 }
 
 interface CreatedWorkspace {
@@ -256,12 +271,10 @@ export class SaasWorkspacesController extends Controller(
     );
   }
 
+  /** Lets the creation form report closed admission before anything is filled in. */
   @Get("/create-options")
-  async createOptions(
-    @AuthRawUser() user: User,
-  ): Promise<WorkspaceCreateOptions> {
+  async createOptions(@AuthRawUser() user: User): Promise<void> {
     assertAdmissionOpen(user.owner);
-    return { freePlan: await resolveFreePlanAvailabilityForUser(user._id) };
   }
 
   @Get("/setup-intent")
@@ -282,23 +295,17 @@ export class SaasWorkspacesController extends Controller(
       HTTP_BAD_REQUEST,
       "saas.errors.workspace.name_required",
     );
-    assert(
-      body.paymentMethodId,
-      HTTP_BAD_REQUEST,
-      "saas.errors.workspace.payment_method_required",
-    );
     const card = await resolveCardDetails(body.paymentMethodId);
     const billingProfile = await resolveBillingProfileForNewWorkspace(
       user._id,
       card,
       getRequestTenantId(ctx),
     );
-    assertBillingCountry(billingProfile.address);
     const plan = await ensurePlanIsAvailableForCustomer(
       body.planId,
       billingProfile.customerType,
     );
-    await assertFreePlanAllowedForCard(plan, card.fingerprint);
+    assertPaymentReadiness(plan, body.paymentMethodId, billingProfile);
     return {
       workspaceName,
       paymentMethodId: body.paymentMethodId,

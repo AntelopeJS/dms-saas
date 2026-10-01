@@ -55,7 +55,6 @@
         "access_blocked": "L'accès à cet espace de travail est restreint par le statut de son abonnement",
         "already_suspended": "Le workspace est déjà suspendu",
         "not_suspended": "Le workspace n'est pas suspendu",
-        "free_limit_reached": "Cette carte a déjà atteint la limite de workspaces Free.",
         "creation_in_progress": "Un autre workspace est déjà en cours de création avec cette carte. Patientez un instant puis réessayez.",
         "name_required": "Le nom du workspace est obligatoire.",
         "payment_method_required": "Une carte bancaire est requise.",
@@ -575,8 +574,6 @@
           },
           "card": "Carte bancaire",
           "submit": "Créer",
-          "free_taken": "Limite de workspaces Free par carte atteinte — déjà utilisée par « {workspace} ».",
-          "free_unavailable": "Limite de workspaces Free par carte atteinte.",
           "error": {
             "load": "Impossible de charger les options de création.",
             "failed": "Impossible de créer le workspace.",
@@ -903,9 +900,7 @@
         "data_retention_days": "Rétention des données (jours)",
         "data_retention_days_desc": "Durée de conservation des données d'un workspace annulé avant suppression définitive.",
         "stripe_tax_code": "Code de taxe Stripe (produit)",
-        "stripe_tax_code_desc": "Code de catégorie fiscale Stripe appliqué aux produits lors de la synchronisation (ex. txcd_10000000). Requis pour le calcul automatique de la TVA. À appliquer en re-synchronisant les plans.",
-        "max_free_workspaces_per_card": "Workspaces Free par carte",
-        "max_free_workspaces_per_card_desc": "Nombre de workspaces sur un plan gratuit qu'une même carte bancaire peut adosser."
+        "stripe_tax_code_desc": "Code de catégorie fiscale Stripe appliqué aux produits lors de la synchronisation (ex. txcd_10000000). Requis pour le calcul automatique de la TVA. À appliquer en re-synchronisant les plans."
       },
       "refund": {
         "money_back_guarantee": "Garantie satisfait ou remboursé",
