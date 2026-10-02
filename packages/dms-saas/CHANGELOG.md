@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.14
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.13...v0.3.14)
+
+### 🩹 Fixes
+
+- **billing:** Hide the upgrade and payment-method prompts on complimentary workspaces ([#75](https://github.com/AntelopeJS/dms-saas/pull/75))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.13
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.12...v0.3.13)
