@@ -1005,7 +1005,10 @@
           "add": "Passer à un plan payant",
           "owner_only": "Le moyen de paiement est géré par le propriétaire du workspace.",
           "update_note": "Le dernier prélèvement sur cette carte a été refusé : mettez-la à jour dans le portail Stripe, puis réglez la facture impayée.",
-          "free_note": "Vérifiée — jamais débitée tant que le workspace reste sur un plan gratuit."
+          "free_note": "Vérifiée — jamais débitée tant que le workspace reste sur un plan gratuit.",
+          "complimentary": "offert",
+          "complimentary_note": "Accès offert : aucune carte n'est nécessaire.",
+          "complimentary_until_note": "Accès offert jusqu'au {date} : aucune carte n'est nécessaire d'ici là."
         },
         "billing_email": {
           "label": "E-mail de facturation",

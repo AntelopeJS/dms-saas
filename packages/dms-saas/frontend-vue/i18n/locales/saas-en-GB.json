@@ -1005,7 +1005,10 @@
           "add": "Upgrade to a paid plan",
           "owner_only": "The payment method is managed by the workspace owner.",
           "update_note": "The last charge on this card was declined: update it in the Stripe portal, then settle the unpaid invoice.",
-          "free_note": "Verified — never charged while the workspace stays on a free plan."
+          "free_note": "Verified — never charged while the workspace stays on a free plan.",
+          "complimentary": "complimentary",
+          "complimentary_note": "Complimentary access: no card is needed.",
+          "complimentary_until_note": "Complimentary access until {date}: no card is needed until then."
         },
         "billing_email": {
           "label": "Billing e-mail",
