@@ -1343,6 +1343,40 @@
       "recheck": "Check again",
       "logout": "Back to login",
       "load_error": "Could not check the workspace status. Please try again."
+    },
+    "automation": {
+      "trigger": {
+        "subscription_started": {
+          "name": "Subscription started",
+          "description": "Fires when a Stripe checkout completes and a workspace subscription becomes active or trialing"
+        },
+        "subscription_cancelled": {
+          "name": "Subscription cancelled",
+          "description": "Fires when a workspace subscription is cancelled in Stripe"
+        },
+        "payment_failed": {
+          "name": "Payment failed",
+          "description": "Fires when an invoice payment fails and the workspace goes past due"
+        },
+        "trial_ending": {
+          "name": "Trial ending",
+          "description": "Fires when a workspace trial is about to end"
+        },
+        "tenant_deleted": {
+          "name": "Workspace deleted",
+          "description": "Fires when a workspace is deleted"
+        }
+      },
+      "action": {
+        "suspend_workspace": {
+          "name": "Suspend workspace",
+          "description": "Suspend a workspace (pause Stripe collection) or reactivate it when suspended is false"
+        },
+        "notify_tenant_owners": {
+          "name": "Notify workspace owners",
+          "description": "Send an in-app notification to all owners of a workspace"
+        }
+      }
     }
   }
 }
