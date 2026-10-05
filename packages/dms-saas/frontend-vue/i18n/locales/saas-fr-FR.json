@@ -1128,6 +1128,16 @@
           "card_title": "Carte bancaire",
           "card_note": "L'étape suivante ouvre la page de paiement sécurisée de Stripe, où la carte est saisie et débitée. Elle n'est jamais stockée chez nous.",
           "confirm": "Continuer vers le paiement"
+        },
+        "downgrade": {
+          "title": "Passer au plan {plan} ?",
+          "description": "Une fois le changement effectif, le workspace sera soumis aux fonctionnalités et aux limites du plan {plan}.",
+          "warning_title": "Ce que vous perdez",
+          "warning_features": "Les fonctionnalités non incluses dans le plan {plan} sont désactivées, et les permissions de rôle qui en dépendent sont retirées.",
+          "warning_limits": "Les membres, ressources et données au-delà des limites du plan {plan} peuvent être restreints, et les données qui les dépassent peuvent être perdues.",
+          "warning_free": "L'abonnement payant prend fin : les fonctionnalités payantes s'arrêtent et le workspace n'est plus facturé.",
+          "cancel": "Conserver mon plan actuel",
+          "confirm": "Passer au plan {plan}"
         }
       },
       "data_export": {
