@@ -7,6 +7,7 @@ import { SAAS_MODULE_ID } from "../../module";
 import { catalogCategory } from "../categories";
 
 const PLANS_PAGE_URL = "/modules/saas/catalog/plans";
+const PLAN_CARDS_DISPLAY_ID = "saas:plan-cards";
 
 const planDeleteModal = CustomComponent("DmsSaasDeletePlanModal");
 
@@ -77,7 +78,7 @@ export class SaasPlansController extends PageController(
     },
     displays: [
       {
-        id: "cards",
+        id: PLAN_CARDS_DISPLAY_ID,
         selfManagedData: true,
         capabilities: {
           columnManagement: false,
@@ -88,6 +89,6 @@ export class SaasPlansController extends PageController(
         },
       },
     ],
-    defaultDisplay: "cards",
+    defaultDisplay: PLAN_CARDS_DISPLAY_ID,
   });
 }
