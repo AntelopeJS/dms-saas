@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.15
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.14...v0.3.15)
+
+### 🩹 Fixes
+
+- Translate billing statuses and automation labels, confirm plan downgrades ([#76](https://github.com/AntelopeJS/dms-saas/pull/76))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.14
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.13...v0.3.14)
