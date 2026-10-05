@@ -29,6 +29,7 @@ import {
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { Invoice, InvoiceModel } from "../../db";
+import { billingDocumentStatusType } from "../../utils";
 import { HiddenStringFilter } from "./hidden-filter";
 import { INVOICE_GUARDS, INVOICE_LIST_OPTIONS } from "./invoice-options";
 
@@ -149,7 +150,7 @@ export class adminUserInvoicesDataAPI extends DataController(
   @Exported()
   @Column({
     name: "$saas.invoices.column.status",
-    type: new DefaultDataTypes.StringType(),
+    type: billingDocumentStatusType(),
     filterable: true,
   })
   @Access(AccessMode.ReadOnly)

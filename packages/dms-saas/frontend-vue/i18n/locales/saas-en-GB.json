@@ -697,6 +697,14 @@
         "invoice": "Invoice",
         "credit_note": "Credit note"
       },
+      "status": {
+        "draft": "Draft",
+        "open": "Open",
+        "paid": "Paid",
+        "void": "Void",
+        "uncollectible": "Uncollectible",
+        "issued": "Issued"
+      },
       "lines": {
         "empty": "No line item."
       }
@@ -712,6 +720,10 @@
         "type": "Type",
         "status": "Status",
         "issued_at": "Issued at"
+      },
+      "status": {
+        "issued": "Issued",
+        "void": "Void"
       },
       "modal": {
         "title": "Issue a credit note",
@@ -1116,6 +1128,16 @@
           "card_title": "Payment card",
           "card_note": "The next step opens Stripe's secure payment page, where the card is entered and charged. It is never stored on our side.",
           "confirm": "Continue to payment"
+        },
+        "downgrade": {
+          "title": "Downgrade to {plan}?",
+          "description": "Once the change takes effect, the workspace is held to the features and limits of {plan}.",
+          "warning_title": "What you lose",
+          "warning_features": "Features not included in {plan} are switched off, and role permissions that rely on them are removed.",
+          "warning_limits": "Members, resources and data beyond the limits of {plan} may be restricted, and data over those limits may be lost.",
+          "warning_free": "The paid subscription ends: paid features stop and the workspace is no longer billed.",
+          "cancel": "Keep my current plan",
+          "confirm": "Downgrade to {plan}"
         }
       },
       "data_export": {
@@ -1321,6 +1343,40 @@
       "recheck": "Check again",
       "logout": "Back to login",
       "load_error": "Could not check the workspace status. Please try again."
+    },
+    "automation": {
+      "trigger": {
+        "subscription_started": {
+          "name": "Subscription started",
+          "description": "Fires when a Stripe checkout completes and a workspace subscription becomes active or trialing"
+        },
+        "subscription_cancelled": {
+          "name": "Subscription cancelled",
+          "description": "Fires when a workspace subscription is cancelled in Stripe"
+        },
+        "payment_failed": {
+          "name": "Payment failed",
+          "description": "Fires when an invoice payment fails and the workspace goes past due"
+        },
+        "trial_ending": {
+          "name": "Trial ending",
+          "description": "Fires when a workspace trial is about to end"
+        },
+        "tenant_deleted": {
+          "name": "Workspace deleted",
+          "description": "Fires when a workspace is deleted"
+        }
+      },
+      "action": {
+        "suspend_workspace": {
+          "name": "Suspend workspace",
+          "description": "Suspend a workspace (pause Stripe collection) or reactivate it when suspended is false"
+        },
+        "notify_tenant_owners": {
+          "name": "Notify workspace owners",
+          "description": "Send an in-app notification to all owners of a workspace"
+        }
+      }
     }
   }
 }

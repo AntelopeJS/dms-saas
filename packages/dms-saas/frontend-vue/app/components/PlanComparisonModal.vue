@@ -28,6 +28,8 @@ const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
 const showDetailRows = ref(false);
 const pendingPlanRequest = ref<string | null>(null);
+const isDowngradeConfirmOpen = ref(false);
+const downgradeTarget = ref<TenantPlanView | null>(null);
 
 /** A feature no compared plan sets would only render a row of dashes. */
 const comparedFeatures = computed(() =>
@@ -80,12 +82,27 @@ function needsUpgradeFlow(plan: TenantPlanView): boolean {
   return !props.isCurrentPaid && plan.price > 0;
 }
 
-async function select(plan: TenantPlanView): Promise<void> {
+function select(plan: TenantPlanView): void {
   if (needsUpgradeFlow(plan)) {
     open.value = false;
     emit("upgrade", plan);
     return;
   }
+  if (isPlanDowngrade(currentPlan.value, plan, !!props.isCurrentPaid)) {
+    downgradeTarget.value = plan;
+    isDowngradeConfirmOpen.value = true;
+    return;
+  }
+  void changeTo(plan);
+}
+
+async function confirmDowngrade(): Promise<void> {
+  if (!downgradeTarget.value) return;
+  await changeTo(downgradeTarget.value);
+  isDowngradeConfirmOpen.value = false;
+}
+
+async function changeTo(plan: TenantPlanView): Promise<void> {
   pendingPlanRequest.value = plan._id;
   try {
     const result = await changePlan(plan._id);
@@ -249,6 +266,79 @@ async function select(plan: TenantPlanView): Promise<void> {
           {{ $t("saas.workspace.plan.comparison.close") }}
         </UButton>
       </div>
+
+      <UModal
+        v-model:open="isDowngradeConfirmOpen"
+        :title="
+          $t('saas.workspace.plan.downgrade.title', {
+            plan: downgradeTarget?.name ?? '',
+          })
+        "
+        :dismissible="pendingPlanRequest === null"
+      >
+        <template #body>
+          <div v-if="downgradeTarget" class="flex flex-col gap-3 text-sm">
+            <p>
+              {{
+                $t("saas.workspace.plan.downgrade.description", {
+                  plan: downgradeTarget.name,
+                })
+              }}
+            </p>
+            <UAlert
+              color="warning"
+              variant="subtle"
+              icon="i-ph-warning"
+              :title="$t('saas.workspace.plan.downgrade.warning_title')"
+            >
+              <template #description>
+                <ul class="list-disc space-y-1 ps-4">
+                  <li>
+                    {{
+                      $t("saas.workspace.plan.downgrade.warning_features", {
+                        plan: downgradeTarget.name,
+                      })
+                    }}
+                  </li>
+                  <li>
+                    {{
+                      $t("saas.workspace.plan.downgrade.warning_limits", {
+                        plan: downgradeTarget.name,
+                      })
+                    }}
+                  </li>
+                  <li v-if="isFreePlan(downgradeTarget)">
+                    {{ $t("saas.workspace.plan.downgrade.warning_free") }}
+                  </li>
+                </ul>
+              </template>
+            </UAlert>
+          </div>
+        </template>
+        <template #footer>
+          <div class="flex w-full justify-end gap-2">
+            <UButton
+              color="neutral"
+              variant="subtle"
+              :disabled="pendingPlanRequest !== null"
+              @click="isDowngradeConfirmOpen = false"
+            >
+              {{ $t("saas.workspace.plan.downgrade.cancel") }}
+            </UButton>
+            <UButton
+              color="warning"
+              :loading="pendingPlanRequest !== null"
+              @click="confirmDowngrade"
+            >
+              {{
+                $t("saas.workspace.plan.downgrade.confirm", {
+                  plan: downgradeTarget?.name ?? "",
+                })
+              }}
+            </UButton>
+          </div>
+        </template>
+      </UModal>
     </template>
   </UModal>
 </template>

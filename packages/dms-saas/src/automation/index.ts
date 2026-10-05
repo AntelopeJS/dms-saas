@@ -117,10 +117,32 @@ const EMPTY_CONFIG_SCHEMA: JsonSchema = { type: "object", properties: {} };
 const TENANT_ID_PROPERTY: JsonSchema = { type: "string" };
 const AT_PROPERTY: JsonSchema = { type: "string" };
 
-interface SaasEventTriggerSpec {
-  event: AutomationEventName;
+const AUTOMATION_LABEL_NAMESPACE = "$saas.automation";
+const NODE_ID_PREFIX = "saas.";
+
+type AutomationNodeKind = "trigger" | "action";
+
+interface AutomationNodeLabels {
   name: string;
   description: string;
+}
+
+/**
+ * Catalog labels as `$`-prefixed locale keys, which the automation frontend
+ * resolves in the reader's language: `saas.trial-ending` reads its name from
+ * `saas.automation.trigger.trial_ending.name`.
+ */
+function automationNodeLabels(
+  kind: AutomationNodeKind,
+  id: string,
+): AutomationNodeLabels {
+  const key = id.slice(NODE_ID_PREFIX.length).replaceAll("-", "_");
+  const prefix = `${AUTOMATION_LABEL_NAMESPACE}.${kind}.${key}`;
+  return { name: `${prefix}.name`, description: `${prefix}.description` };
+}
+
+interface SaasEventTriggerSpec {
+  event: AutomationEventName;
   icon: string;
   outputProperties: Record<string, JsonSchema>;
 }
@@ -128,8 +150,7 @@ interface SaasEventTriggerSpec {
 function createEventTrigger(spec: SaasEventTriggerSpec): TriggerType {
   return {
     id: spec.event,
-    name: spec.name,
-    description: spec.description,
+    ...automationNodeLabels("trigger", spec.event),
     icon: spec.icon,
     cluster: "replicated",
     configSchema: EMPTY_CONFIG_SCHEMA,
@@ -155,9 +176,6 @@ function createEventTrigger(spec: SaasEventTriggerSpec): TriggerType {
 const TRIGGERS: TriggerType[] = [
   createEventTrigger({
     event: "saas.subscription-started",
-    name: "Subscription started",
-    description:
-      "Fires when a Stripe checkout completes and a workspace subscription becomes active or trialing",
     icon: "i-ph-rocket-launch",
     outputProperties: {
       planId: { type: ["string", "null"] },
@@ -168,8 +186,6 @@ const TRIGGERS: TriggerType[] = [
   }),
   createEventTrigger({
     event: "saas.subscription-cancelled",
-    name: "Subscription cancelled",
-    description: "Fires when a workspace subscription is cancelled in Stripe",
     icon: "i-ph-x-circle",
     outputProperties: {
       stripeSubscriptionId: { type: "string" },
@@ -177,9 +193,6 @@ const TRIGGERS: TriggerType[] = [
   }),
   createEventTrigger({
     event: "saas.payment-failed",
-    name: "Payment failed",
-    description:
-      "Fires when an invoice payment fails and the workspace goes past due",
     icon: "i-ph-warning-circle",
     outputProperties: {
       invoiceId: { type: "string" },
@@ -190,8 +203,6 @@ const TRIGGERS: TriggerType[] = [
   }),
   createEventTrigger({
     event: "saas.trial-ending",
-    name: "Trial ending",
-    description: "Fires when a workspace trial is about to end",
     icon: "i-ph-hourglass",
     outputProperties: {
       trialEndsAt: { type: ["string", "null"] },
@@ -199,8 +210,6 @@ const TRIGGERS: TriggerType[] = [
   }),
   createEventTrigger({
     event: "saas.tenant-deleted",
-    name: "Workspace deleted",
-    description: "Fires when a workspace is deleted",
     icon: "i-ph-trash",
     outputProperties: { operationId: { type: "string" } },
   }),
@@ -216,6 +225,9 @@ interface SuspendWorkspaceOutput {
   suspended: boolean;
 }
 
+const SUSPEND_WORKSPACE_ACTION_ID = "saas.suspend-workspace";
+const NOTIFY_TENANT_OWNERS_ACTION_ID = "saas.notify-tenant-owners";
+
 function automationOperationId(runId: string, nodeId: string): string {
   const fingerprint = createHash("sha256")
     .update(`${runId}\u0000${nodeId}`)
@@ -228,10 +240,8 @@ const suspendWorkspaceAction: ActionType<
   SuspendWorkspaceInput,
   SuspendWorkspaceOutput
 > = {
-  id: "saas.suspend-workspace",
-  name: "Suspend workspace",
-  description:
-    "Suspend a workspace (pause Stripe collection) or reactivate it when suspended is false",
+  id: SUSPEND_WORKSPACE_ACTION_ID,
+  ...automationNodeLabels("action", SUSPEND_WORKSPACE_ACTION_ID),
   icon: "i-ph-prohibit",
   inputSchema: {
     type: "object",
@@ -285,9 +295,8 @@ const notifyTenantOwnersAction: ActionType<
   NotifyTenantOwnersInput,
   NotifyTenantOwnersOutput
 > = {
-  id: "saas.notify-tenant-owners",
-  name: "Notify workspace owners",
-  description: "Send an in-app notification to all owners of a workspace",
+  id: NOTIFY_TENANT_OWNERS_ACTION_ID,
+  ...automationNodeLabels("action", NOTIFY_TENANT_OWNERS_ACTION_ID),
   icon: DEFAULT_NOTIFICATION_ICON,
   inputSchema: {
     type: "object",

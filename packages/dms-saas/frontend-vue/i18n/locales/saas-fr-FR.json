@@ -697,6 +697,14 @@
         "invoice": "Facture",
         "credit_note": "Avoir"
       },
+      "status": {
+        "draft": "Brouillon",
+        "open": "À régler",
+        "paid": "Payée",
+        "void": "Annulée",
+        "uncollectible": "Irrécouvrable",
+        "issued": "Émis"
+      },
       "lines": {
         "empty": "Aucune ligne."
       }
@@ -712,6 +720,10 @@
         "type": "Type",
         "status": "Statut",
         "issued_at": "Émise le"
+      },
+      "status": {
+        "issued": "Émis",
+        "void": "Annulé"
       },
       "modal": {
         "title": "Émettre une note de crédit",
@@ -1116,6 +1128,16 @@
           "card_title": "Carte bancaire",
           "card_note": "L'étape suivante ouvre la page de paiement sécurisée de Stripe, où la carte est saisie et débitée. Elle n'est jamais stockée chez nous.",
           "confirm": "Continuer vers le paiement"
+        },
+        "downgrade": {
+          "title": "Passer au plan {plan} ?",
+          "description": "Une fois le changement effectif, le workspace sera soumis aux fonctionnalités et aux limites du plan {plan}.",
+          "warning_title": "Ce que vous perdez",
+          "warning_features": "Les fonctionnalités non incluses dans le plan {plan} sont désactivées, et les permissions de rôle qui en dépendent sont retirées.",
+          "warning_limits": "Les membres, ressources et données au-delà des limites du plan {plan} peuvent être restreints, et les données qui les dépassent peuvent être perdues.",
+          "warning_free": "L'abonnement payant prend fin : les fonctionnalités payantes s'arrêtent et le workspace n'est plus facturé.",
+          "cancel": "Conserver mon plan actuel",
+          "confirm": "Passer au plan {plan}"
         }
       },
       "data_export": {
@@ -1321,6 +1343,40 @@
       "recheck": "Vérifier à nouveau",
       "logout": "Retour à la connexion",
       "load_error": "Impossible de vérifier le statut du workspace. Veuillez réessayer."
+    },
+    "automation": {
+      "trigger": {
+        "subscription_started": {
+          "name": "Abonnement démarré",
+          "description": "Se déclenche quand un paiement Stripe aboutit et que l'abonnement d'un workspace devient actif ou passe en essai"
+        },
+        "subscription_cancelled": {
+          "name": "Abonnement annulé",
+          "description": "Se déclenche quand l'abonnement d'un workspace est annulé dans Stripe"
+        },
+        "payment_failed": {
+          "name": "Échec de paiement",
+          "description": "Se déclenche quand le paiement d'une facture échoue et que le workspace passe en impayé"
+        },
+        "trial_ending": {
+          "name": "Fin d'essai proche",
+          "description": "Se déclenche quand l'essai d'un workspace arrive bientôt à son terme"
+        },
+        "tenant_deleted": {
+          "name": "Workspace supprimé",
+          "description": "Se déclenche quand un workspace est supprimé"
+        }
+      },
+      "action": {
+        "suspend_workspace": {
+          "name": "Suspendre le workspace",
+          "description": "Suspend un workspace (met en pause les prélèvements Stripe) ou le réactive quand suspended vaut false"
+        },
+        "notify_tenant_owners": {
+          "name": "Notifier les propriétaires du workspace",
+          "description": "Envoie une notification dans l'application à tous les propriétaires d'un workspace"
+        }
+      }
     }
   }
 }
