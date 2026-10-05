@@ -24,6 +24,7 @@ import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/defa
 import type { InvoiceLine } from "../../db";
 import { Invoice, InvoiceModel } from "../../db";
 import {
+  billingDocumentStatusType,
   BillingDocumentType,
   BillingPeriodType,
   InvoiceLinesType,
@@ -157,7 +158,7 @@ export class tenantInvoicesDataAPI extends DataController(
   @Exported()
   @Column({
     name: "$saas.invoices.column.status",
-    type: new DefaultDataTypes.StringType(),
+    type: billingDocumentStatusType(),
     filterable: true,
   })
   @Access(AccessMode.ReadOnly)

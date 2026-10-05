@@ -1,3 +1,4 @@
+export * from "./billing-document-status";
 export * from "./billing-document-type";
 export * from "./billing-period-type";
 export * from "./email-hash";

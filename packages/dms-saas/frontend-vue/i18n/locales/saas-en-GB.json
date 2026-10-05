@@ -697,6 +697,14 @@
         "invoice": "Invoice",
         "credit_note": "Credit note"
       },
+      "status": {
+        "draft": "Draft",
+        "open": "Open",
+        "paid": "Paid",
+        "void": "Void",
+        "uncollectible": "Uncollectible",
+        "issued": "Issued"
+      },
       "lines": {
         "empty": "No line item."
       }
@@ -712,6 +720,10 @@
         "type": "Type",
         "status": "Status",
         "issued_at": "Issued at"
+      },
+      "status": {
+        "issued": "Issued",
+        "void": "Void"
       },
       "modal": {
         "title": "Issue a credit note",

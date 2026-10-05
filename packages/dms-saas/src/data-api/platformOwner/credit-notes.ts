@@ -24,6 +24,7 @@ import {
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { CreditNote, CreditNoteModel } from "../../db";
+import { creditNoteStatusType } from "../../utils";
 import { HiddenStringFilter } from "./hidden-filter";
 
 @RegisterDataController()
@@ -109,7 +110,7 @@ export class creditNotesDataAPI extends DataController(
   @Exported()
   @Column({
     name: "$saas.credit_notes.column.status",
-    type: new DefaultDataTypes.StringType(),
+    type: creditNoteStatusType(),
     filterable: true,
   })
   @Access(AccessMode.ReadOnly)

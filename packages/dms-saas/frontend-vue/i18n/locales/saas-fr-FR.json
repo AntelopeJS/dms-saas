@@ -697,6 +697,14 @@
         "invoice": "Facture",
         "credit_note": "Avoir"
       },
+      "status": {
+        "draft": "Brouillon",
+        "open": "À régler",
+        "paid": "Payée",
+        "void": "Annulée",
+        "uncollectible": "Irrécouvrable",
+        "issued": "Émis"
+      },
       "lines": {
         "empty": "Aucune ligne."
       }
@@ -712,6 +720,10 @@
         "type": "Type",
         "status": "Statut",
         "issued_at": "Émise le"
+      },
+      "status": {
+        "issued": "Émis",
+        "void": "Annulé"
       },
       "modal": {
         "title": "Émettre une note de crédit",
