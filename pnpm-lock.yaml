@@ -58,14 +58,14 @@ importers:
         version: 3.24.4
     devDependencies:
       '@antelopejs/core':
-        specifier: 1.13.3
-        version: 1.13.3
+        specifier: 1.13.4
+        version: 1.13.4
       '@antelopejs/dms':
         specifier: '>=0.5.0 <1.0.0'
-        version: 0.5.0(@antelopejs/core@1.13.3)(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.13(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))
+        version: 0.5.0(@antelopejs/core@1.13.4)(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.13(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))
       '@antelopejs/dms-frontend':
         specifier: 0.3.2
-        version: 0.3.2(@antelopejs/core@1.13.3)
+        version: 0.3.2(@antelopejs/core@1.13.4)
       '@antelopejs/mongodb':
         specifier: 1.4.0
         version: 1.4.0(socks@2.8.8)
@@ -164,8 +164,8 @@ packages:
   2fa@0.1.2:
     resolution: {integrity: sha512-PbQttc6USc2TmZwOPE/zlNWTJTySLt50rWhUbZgPkZ5LAOLpgShT3yclbxwHPfHGUXEjfLrTo3Lunyx8onGnXw==}
 
-  '@antelopejs/core@1.13.3':
-    resolution: {integrity: sha512-6xypCf+zUHUC8VdSJtacB+NGYAYVMBjVwHamwSz/GrbwbHGkBtM00b7FSK81AeU8xSpExuHAXcfjk8NTjqQ1bQ==}
+  '@antelopejs/core@1.13.4':
+    resolution: {integrity: sha512-nr28aF/uOLqfZ72HPIxt7cv3YfgAeXEemEZm7mOPCbAr1yXB6CMyBWFHlmlk/vdFChAunnsGwDYqWCDnjTXRnA==}
     engines: {node: '>=20.19'}
     hasBin: true
 
@@ -3239,7 +3239,7 @@ snapshots:
       qr-image: 3.2.0
       thirty-two: 0.0.2
 
-  '@antelopejs/core@1.13.3':
+  '@antelopejs/core@1.13.4':
     dependencies:
       '@antelopejs/interface-core': 0.1.1
       '@clack/prompts': 1.8.1
@@ -3254,7 +3254,7 @@ snapshots:
       semver: 7.7.4
       typescript: 5.9.3
 
-  '@antelopejs/dms-frontend@0.3.2(@antelopejs/core@1.13.3)':
+  '@antelopejs/dms-frontend@0.3.2(@antelopejs/core@1.13.4)':
     dependencies:
       boxen: 5.1.2
       chalk: 4.1.2
@@ -3265,14 +3265,14 @@ snapshots:
       semver: 7.7.4
       unzipper: 0.12.5
     optionalDependencies:
-      '@antelopejs/core': 1.13.3
+      '@antelopejs/core': 1.13.4
       '@oxc-parser/binding-darwin-arm64': 0.95.0
       '@oxc-parser/binding-darwin-x64': 0.95.0
       '@oxc-parser/binding-linux-arm64-gnu': 0.95.0
       '@oxc-parser/binding-linux-x64-gnu': 0.95.0
       '@oxc-parser/binding-win32-x64-msvc': 0.95.0
 
-  '@antelopejs/dms@0.5.0(@antelopejs/core@1.13.3)(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.13(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))':
+  '@antelopejs/dms@0.5.0(@antelopejs/core@1.13.4)(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.13(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))':
     dependencies:
       2fa: 0.1.2
       '@antelopejs/interface-api': 0.0.13(@antelopejs/interface-core@0.1.1)
@@ -3296,7 +3296,7 @@ snapshots:
       ua-parser-js: 2.0.10
       zod: 3.24.4
     optionalDependencies:
-      '@antelopejs/core': 1.13.3
+      '@antelopejs/core': 1.13.4
       '@antelopejs/interface-dms-automation': 0.1.0(@antelopejs/interface-core@0.1.1)
       '@antelopejs/interface-redis': 0.0.8(@antelopejs/interface-core@0.1.1)
     transitivePeerDependencies:
