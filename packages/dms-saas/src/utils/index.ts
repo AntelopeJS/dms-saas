@@ -1,6 +1,7 @@
 export * from "./billing-document-status";
 export * from "./billing-document-type";
 export * from "./billing-period-type";
+export * from "./content-language";
 export * from "./email-hash";
 export * from "./export-dataset-stream";
 export * from "./invoice-lines-type";

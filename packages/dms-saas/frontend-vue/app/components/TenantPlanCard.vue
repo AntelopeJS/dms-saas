@@ -21,7 +21,6 @@ const { data: billingStatus, load: loadBillingStatus } = useBillingStatus();
 const { formatMajorUnits } = useMoneyFormat();
 const { t, locale } = useI18n();
 const { formatFeatureValue } = usePlanFeatureFormat();
-const { featureLabel } = usePlanFeatureLabel();
 const planDescription = usePlanDescription();
 const { workspace, load: loadWorkspace } = useCurrentWorkspace();
 const { isOpen: isComparisonOpen } = usePlanComparison();
@@ -105,7 +104,7 @@ const summary = computed(() => {
     )
     .map(
       (feature) =>
-        `${featureLabel(feature)} ${formatFeatureValue(feature, view.featureValues[feature.featureId], view.currency)}`,
+        `${feature.displayName} ${formatFeatureValue(feature, view.featureValues[feature.featureId], view.currency)}`,
     )
     .join(SUMMARY_SEPARATOR);
 });

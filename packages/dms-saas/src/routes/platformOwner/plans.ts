@@ -24,7 +24,12 @@ import {
   PlanModel,
   TenantSubscriptionModel,
 } from "../../db";
+import { localizeFeature } from "../../plans";
 import { syncPlanStripeRefs } from "../../plans/stripe-sync";
+import {
+  CONTENT_LANGUAGE_HEADER,
+  requestLocale,
+} from "../../utils/content-language";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -306,7 +311,11 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
 
   /** Catalog consumed by the inheritance picker: selectable parents + features. */
   @Get("/catalog")
-  async editCatalog(@AuthOwnerOnly() _user: User): Promise<PlanEditCatalog> {
+  async editCatalog(
+    @AuthOwnerOnly() _user: User,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+  ): Promise<PlanEditCatalog> {
+    const locale = requestLocale(language);
     const [plans, features] = await Promise.all([
       this.planModel.findNotDeleted(),
       this.featureModel.getAll(),
@@ -324,11 +333,13 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     );
     return {
       plans: resolvedPlans,
-      features: features.map((feature) => ({
-        _id: feature._id,
-        displayName: feature.displayName,
-        valueType: feature.valueType,
-      })),
+      features: features
+        .map((feature) => localizeFeature(feature, locale))
+        .map((feature) => ({
+          _id: feature._id,
+          displayName: feature.displayName,
+          valueType: feature.valueType,
+        })),
     };
   }
 

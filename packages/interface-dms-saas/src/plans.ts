@@ -56,6 +56,25 @@ export function isDowngrade(current: Plan | null, target: Plan): boolean {
   return monthlyPrice(target) < monthlyPrice(current);
 }
 
+/**
+ * Feature fields written once per locale and read in the caller's.
+ */
+export const FEATURE_LOCALIZED_FIELDS: Array<keyof Feature> = [
+  "displayName",
+  "tooltip",
+];
+
+/**
+ * Unlocks a feature's localized texts in one locale, falling back to
+ * the feature table's fallback locale where that one has no value.
+ *
+ * @param feature Feature read from the catalog
+ * @param locale Reader's locale, e.g. `fr`
+ */
+export function localizeFeature(feature: Feature, locale: string): Feature {
+  return feature.localize(locale, FEATURE_LOCALIZED_FIELDS);
+}
+
 function toPlanFeature(feature: Feature): TenantPlanFeature {
   return {
     featureId: feature._id,
@@ -94,12 +113,18 @@ async function toPlanView(
 /**
  * Comparison-table payload: one column per plan with its inherited feature
  * values already resolved, and the feature catalogue carrying the display
- * metadata the table renders rows from.
+ * metadata the table renders rows from, worded in the reader's locale.
+ *
+ * @param planModel Plan catalog
+ * @param featureModel Feature catalog
+ * @param plans Plans to compare
+ * @param locale Locale the feature labels and tooltips are read in
  */
 export async function buildTenantPlanCatalog(
   planModel: PlanModel,
   featureModel: FeatureModel,
   plans: Plan[],
+  locale: string,
 ): Promise<TenantPlanCatalog> {
   const features = await featureModel.getAll();
   const knownFeatureIds = new Set(features.map((feature) => feature._id));
@@ -109,7 +134,7 @@ export async function buildTenantPlanCatalog(
   return {
     plans: views.sort((left, right) => left.order - right.order),
     features: features
-      .map(toPlanFeature)
+      .map((feature) => toPlanFeature(localizeFeature(feature, locale)))
       .sort((left, right) => left.order - right.order),
   };
 }

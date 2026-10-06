@@ -1,17 +1,13 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   formatPlanFeatureValue,
   type FormattableFeature,
   type PlanFeatureFormatContext,
   registerPlanFeatureUnit,
 } from "../frontend-vue/app/composables/usePlanFeatureFormat";
-import {
-  type LabelledFeature,
-  usePlanFeatureLabel,
-} from "../frontend-vue/app/composables/usePlanFeatureLabel";
 
 type LocaleTree = { [key: string]: string | LocaleTree };
 
@@ -275,61 +271,5 @@ describe("registered plan feature units", () => {
         priceScale: { label: "cloud.units.pod", size: 1 },
       }),
     ).toThrow("Invalid plan feature unit rule");
-  });
-});
-
-describe("plan feature labels", () => {
-  const MESSAGES: Record<string, string> = {
-    "cloud.plan_features.egress.label": "Egress included",
-    "cloud.plan_features.egress.tooltip": "Outbound traffic",
-  };
-
-  /** vue-i18n echoes a key it cannot resolve in any locale. */
-  function t(key: string): string {
-    return MESSAGES[key] ?? key;
-  }
-
-  function labels() {
-    vi.stubGlobal("useI18n", () => ({ t }));
-    vi.stubGlobal("useTranslation", () => ({
-      processI18n: (key: string) => dmsTranslation.resolveI18nKey(t, key),
-    }));
-    vi.stubGlobal(
-      "resolveOptionalI18nKey",
-      dmsTranslation.resolveOptionalI18nKey,
-    );
-    return usePlanFeatureLabel();
-  }
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("translates `$` keys through the declaring module's locales", () => {
-    const feature: LabelledFeature = {
-      displayName: "$cloud.plan_features.egress.label",
-      tooltip: "$cloud.plan_features.egress.tooltip",
-    };
-    const { featureLabel, featureTooltip } = labels();
-    expect(featureLabel(feature)).toBe("Egress included");
-    expect(featureTooltip(feature)).toBe("Outbound traffic");
-  });
-
-  it("shows plain stored text as written", () => {
-    const feature: LabelledFeature = {
-      displayName: "Egress",
-      tooltip: "Stored tooltip",
-    };
-    const { featureLabel, featureTooltip } = labels();
-    expect(featureLabel(feature)).toBe("Egress");
-    expect(featureTooltip(feature)).toBe("Stored tooltip");
-  });
-
-  it("hides a missing or untranslated tooltip", () => {
-    const { featureTooltip } = labels();
-    expect(featureTooltip({ displayName: "Egress", tooltip: null })).toBeNull();
-    expect(
-      featureTooltip({ displayName: "Egress", tooltip: "$cloud.missing" }),
-    ).toBeNull();
   });
 });

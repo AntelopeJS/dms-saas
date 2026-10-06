@@ -1,4 +1,4 @@
-import { Controller } from "@antelopejs/interface-api";
+import { Controller, Parameter } from "@antelopejs/interface-api";
 import {
   DataController,
   RegisterDataController,
@@ -9,9 +9,13 @@ import {
   Listable,
   Mandatory,
   ModelReference,
+  ModifierKey,
   Sortable,
 } from "@antelopejs/interface-data-api/metadata";
-import { Model } from "@antelopejs/interface-database-decorators";
+import {
+  LocalizationModifier,
+  Model,
+} from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import {
   Column,
@@ -22,6 +26,7 @@ import {
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { FEATURE_VALUE_TYPES, Feature, FeatureModel } from "../../db";
+import { CONTENT_LANGUAGE_HEADER } from "../../utils/content-language";
 
 const VALUE_TYPE_OPTIONS = FEATURE_VALUE_TYPES.map((value) => ({
   label: value,
@@ -38,6 +43,10 @@ export class featuresDataAPI extends DataController(
   @ModelReference()
   @Model(FeatureModel)
   declare model: FeatureModel;
+
+  @Parameter(CONTENT_LANGUAGE_HEADER, "header")
+  @ModifierKey(LocalizationModifier)
+  declare language: string;
 
   @Select()
   @Listable()
