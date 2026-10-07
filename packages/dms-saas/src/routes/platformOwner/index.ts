@@ -2,6 +2,8 @@ export * from "./billing-settings";
 export * from "./credit-notes-issue";
 export * from "./dashboard";
 export * from "./plan-deletion";
+export * from "./plan-dialogs";
+export * from "./plan-migrations";
 export * from "./plans";
 export * from "./platform-notes";
 export * from "./platform-owners";

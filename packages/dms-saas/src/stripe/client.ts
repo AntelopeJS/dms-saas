@@ -16,6 +16,11 @@ const PLACEHOLDER_MARKER = "placeholder";
 let stripeClient: Stripe | null = null;
 let stripeWebhookSecret: string | null = null;
 let stripeConfigured = false;
+let stripeTestMode = false;
+
+const TEST_SECRET_KEY_PREFIX = "sk_test_";
+const STRIPE_DASHBOARD_URL = "https://dashboard.stripe.com";
+const STRIPE_DASHBOARD_TEST_PATH = "/test";
 
 function isUsableSecretKey(key: string): boolean {
   return (
@@ -31,6 +36,7 @@ export function initStripeClient(config: DmsSaasStripeConfig): void {
   });
   stripeWebhookSecret = config.webhookSecret;
   stripeConfigured = isUsableSecretKey(config.secretKey);
+  stripeTestMode = config.secretKey.startsWith(TEST_SECRET_KEY_PREFIX);
 }
 
 export function isStripeConfigured(): boolean {
@@ -44,6 +50,17 @@ export function getStripeClient(): Stripe {
     );
   }
   return stripeClient;
+}
+
+/**
+ * Link to a Stripe object in the Stripe Dashboard, in the mode (test or
+ * live) of the configured key: `stripeDashboardUrl("products/prod_1")`.
+ *
+ * @param path Dashboard path of the object, without a leading slash
+ */
+export function stripeDashboardUrl(path: string): string {
+  const mode = stripeTestMode ? STRIPE_DASHBOARD_TEST_PATH : "";
+  return `${STRIPE_DASHBOARD_URL}${mode}/${path}`;
 }
 
 export function getStripeWebhookSecret(): string {
