@@ -381,3 +381,45 @@ module in the browser.
   honestly.
 - **A second price per plan** (monthly and yearly of the same plan): a plan has one interval;
   the toggle filters plans by interval.
+
+## 11. Where the implementation departed from an answer
+
+Recorded after the build and the browser pass, so the answers above stay as they were decided.
+
+- **Q13, blocks fed by a route:** a `StatGroup`, `NavCardGrid` or `KeyValueList` block cannot put
+  parameters into its texts on the client, and `fetchUrl` / `badgesUrl` do not read the page's
+  route parameters in DMS 0.6. Routes therefore word their items server-side in the request's
+  language (`src/i18n/server-messages.ts`), and detail pages wrap the blocks in
+  `DmsSaasRouteScopedBlock`, which fills `{id}` from the URL. Headline figures that need
+  parameters are small custom components built on `DmsStatGroup`.
+- **Q21, disabled row actions:** DMS row actions have no per-row disabled reason. "Issue credit
+  note…" is greyed out by a rule, the reason is in the table's footer hint and in the dialog, and
+  the server refuses anyway. Open invoices get a third mode, "Reduce the amount due", the only
+  credit Stripe allows on them.
+- **Q23, dashboard periods:** 30 days, 90 days and year to date (the DMS has no "12 months"
+  preset). Churn approximates the MRR at the start of the period as today's MRR plus the MRR lost.
+- **Q27, owner pays:** the server requires a paid plan synced with Stripe; the owner meets the
+  first-payment checkout from the access-restricted screen and Billing.
+- **Q34, retiring a plan:** the plan is closed to sign-ups and its workspaces migrated; it is not
+  deleted automatically (an existing rule keeps it), "Delete plan" appears once it is empty. The
+  owner notice is the in-app notification, sent to workspace owners.
+- **Q35, price change:** the `Form` block cannot intercept a submit, so the consequence is stated
+  in the live preview before saving and in a notice after.
+- **Q37, migration tabs:** a stored `stage` (running, needs attention, done) backs the tabs, since
+  a select column cannot be filtered on several values.
+- **Q40, timeline:** no "final reminder" step and no fixed retry days: the module sends no final
+  reminder and cannot read Stripe's retry schedule.
+- **Q43, upgrades:** an owner's upgrade charges the prorated difference at once
+  (`always_invoice`), which is what makes "Upgrade and pay €212.40" true; a declined card changes
+  nothing. Up- and downgrades compare what each plan costs for the seats in use.
+- **Q45, General:** the DMS tenant has neither a logo nor a URL slug; the page shows the workspace
+  id instead. Deleting a workspace goes through `POST /api/saas/workspaces/current/delete` with the
+  typed name, which replaces `DELETE /current`.
+- **Q46, Data export:** the DMS export API has no cancel and no archive size, and keeps an archive
+  24 hours; the page shows the real expiry date.
+- **Q51, suspended screen:** data is deleted only for cancelled workspaces, so a suspended one reads
+  "nothing has been deleted"; the invoice timeline has no attempt count (the mirror does not store
+  one).
+- **Form rows that need the full width** (the plan feature matrix, the segment rules): a DMS form
+  row gives its control a 240px column when the field has no label; `frontend-vue/app/assets/css/saas.css`
+  lets such an editor span the row. Worth fixing in the DMS's `FieldRow`.
