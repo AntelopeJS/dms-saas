@@ -17,6 +17,11 @@ const InvoiceLinesDisplay = defineComponent({
   },
 });
 
+function rowCurrency(row: unknown): string | null {
+  const currency = (row as { currency?: unknown } | undefined)?.currency;
+  return typeof currency === "string" && currency ? currency : null;
+}
+
 const PERIOD_FORMAT: Intl.DateTimeFormatOptions = {
   month: "long",
   year: "numeric",
@@ -43,12 +48,18 @@ export default defineDmsPlugin(() => {
   });
   registerDataType({
     id: "money_cents",
-    // The row currency is not part of a data-type formatter's contract, so the
-    // table falls back to the platform currency; per-row currencies are only
-    // rendered where the block reads the row itself.
+    // A table hands the formatter its row: an amount reads in the row's own
+    // `currency` when the row lists one, the platform currency otherwise.
     formatter: {
-      default: (value: unknown, locale: string) =>
-        typeof value === "number" ? formatMinorUnits(value, null, locale) : value,
+      default: (
+        value: unknown,
+        locale: string,
+        _options?: unknown,
+        row?: unknown,
+      ) =>
+        typeof value === "number"
+          ? formatMinorUnits(value, rowCurrency(row), locale)
+          : value,
     },
   });
   registerDataType({

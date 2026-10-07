@@ -27,10 +27,11 @@ import {
   it,
   vi,
 } from "vitest";
-import { adminUserInvoicesDataAPI } from "../src/data-api/platformOwner/admin-user-invoices";
 import { invoicesDataAPI } from "../src/data-api/platformOwner/invoices";
 
-const CONTROLLERS = [invoicesDataAPI, adminUserInvoicesDataAPI];
+// The user page's billing table lists credit notes too: only the invoices
+// table is scoped to invoices.
+const CONTROLLERS = [invoicesDataAPI];
 const LIST_ROUTES = ["list", "select", "count"];
 const OWNER = { _id: "owner", name: "Owner" };
 const PRESENCE_ACQUIRE = "1";
