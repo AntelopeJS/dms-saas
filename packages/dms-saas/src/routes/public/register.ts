@@ -31,8 +31,12 @@ import {
   assertRegistrationCardAccepted,
   resolveRegistrationPaymentMethodId,
 } from "../../config";
-import type { Plan } from "../../db";
+import { type Plan, PlanModel } from "../../db";
 import { createCardSetupIntent } from "../../stripe";
+import {
+  CONTENT_LANGUAGE_HEADER,
+  requestLocale,
+} from "../../utils/content-language";
 import type {
   WorkspaceBillingProfile,
   WorkspaceProvisioningHandles,
@@ -45,6 +49,14 @@ import {
   resolveRegistrationPlan,
   rollbackWorkspaceProvisioning,
 } from "../../workspaces";
+import {
+  findPlanByReference,
+  loadPublicBillingRules,
+  loadPublicPlanCatalog,
+  type PublicBillingRules,
+  type PublicPlan,
+} from "./public-plan-catalog";
+import type { TenantPlanFeature } from "../../plans";
 
 const HTTP_BAD_REQUEST = 400;
 const AUTH_KEY_BYTES = 32;
@@ -113,6 +125,18 @@ interface SetupIntentResponse {
 interface RegisterResult {
   userId: string;
   tenantId: string;
+}
+
+/**
+ * What the sign-up screens show about the plan: the one the workspace opens
+ * on, and the paid plan the visitor picked on the pricing page, reviewed on
+ * Billing right after.
+ */
+interface RegistrationPlanSummary {
+  plan: PublicPlan;
+  requestedPlan: PublicPlan | null;
+  features: TenantPlanFeature[];
+  rules: PublicBillingRules;
 }
 
 function generateAuthKey(): string {
@@ -190,6 +214,9 @@ export class SaasRegisterApiController extends Controller(
   @Model(SessionModel)
   declare sessionModel: SessionModel;
 
+  @Model(PlanModel)
+  declare planModel: PlanModel;
+
   @Parameter("user-agent", "header")
   declare userAgent: string;
 
@@ -255,6 +282,38 @@ export class SaasRegisterApiController extends Controller(
       expires_in: accessTokenData.expiresIn,
       refresh_token: refreshTokenData.token,
       user: await sanitizeUser(user),
+    };
+  }
+
+  /**
+   * The plan a registration opens the workspace on, plus the one the visitor
+   * chose on the pricing page when it is another public plan. Display only:
+   * registration still lands on the default plan whatever is asked for.
+   *
+   * @param reference Slug or id of the chosen plan, from `?plan=`
+   * @param language Reader's locale, for the feature labels
+   */
+  @Get("/plan")
+  async describeRegistrationPlan(
+    @Parameter("plan", "query") reference: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+  ): Promise<RegistrationPlanSummary> {
+    assertAdmissionOpen();
+    const [plan, publicPlans, rules] = await Promise.all([
+      resolveRegistrationPlan(),
+      this.planModel.findPubliclyVisible(),
+      loadPublicBillingRules(),
+    ]);
+    const requested = findPlanByReference(publicPlans, reference);
+    const isAnotherPlan = !!requested && requested._id !== plan._id;
+    const shown = isAnotherPlan && requested ? [plan, requested] : [plan];
+    const catalog = await loadPublicPlanCatalog(shown, requestLocale(language));
+    const byId = new Map(catalog.plans.map((entry) => [entry._id, entry]));
+    return {
+      plan: byId.get(plan._id) ?? catalog.plans[0]!,
+      requestedPlan: isAnotherPlan ? (byId.get(requested._id) ?? null) : null,
+      features: catalog.features,
+      rules,
     };
   }
 

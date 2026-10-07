@@ -13,8 +13,8 @@ import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
 export class SaasRegisterController extends PageController(
   "register",
   {
-    displayName: "$saas.register.title",
-    description: "$saas.register.page_description",
+    displayName: "$saas.public.register.page_title",
+    description: "$saas.public.register.page_description",
     category: pagesCategory,
     publicAccess: true,
     hidden: true,
@@ -22,7 +22,8 @@ export class SaasRegisterController extends PageController(
   EmptyLayout(),
 ) {
   static registerComponent = CustomComponent("DmsSaasRegister").meta({
-    name: "$saas.register.title",
+    name: "$saas.permissions.public.register",
+    description: "$saas.permissions.public.register_description",
     icon: "i-ph-user-plus",
   });
 }

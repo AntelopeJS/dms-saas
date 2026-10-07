@@ -8,3 +8,4 @@ export * from "./tenant-plan-checkout-recovery";
 export * from "./tenant-plan-ops";
 export * from "./tenant-seats";
 export * from "./workspaces";
+export * from "./workspace-access";

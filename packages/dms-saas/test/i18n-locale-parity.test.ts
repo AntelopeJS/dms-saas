@@ -11,7 +11,7 @@ interface LocaleFile {
 }
 
 const REFERENCE_LOCALE = "en-GB";
-const OAUTH_REGISTRATION_PREFIX = "saas.oauth_registration.";
+const NO_WORKSPACE_IDENTITY_PREFIX = "saas.public.no_workspace.identity.";
 const EXPORT_HISTORY_PREFIX = "saas.workspace.data_export.history.";
 
 /** `ExportStatus` of dms-base, which the history rows label one key each. */
@@ -53,20 +53,18 @@ describe("saas locale files", () => {
   });
 
   it.each(LOCALE_FILES)(
-    "$code carries the OAuth-entry registration namespace",
+    "$code names the identity that will own the first workspace",
     (file) => {
       const entries = locales.get(file.code) as Map<string, string>;
       const namespaced = [...entries.keys()].filter((key) =>
-        key.startsWith(OAUTH_REGISTRATION_PREFIX),
+        key.startsWith(NO_WORKSPACE_IDENTITY_PREFIX),
       );
 
       expect(namespaced.sort()).toEqual([
-        "saas.oauth_registration.entry_note",
-        "saas.oauth_registration.error.entry_action",
-        "saas.oauth_registration.error.entry_failed",
-        "saas.oauth_registration.identity.hint",
-        "saas.oauth_registration.identity.password",
-        "saas.oauth_registration.identity.provider",
+        `${NO_WORKSPACE_IDENTITY_PREFIX}hint`,
+        `${NO_WORKSPACE_IDENTITY_PREFIX}not_you`,
+        `${NO_WORKSPACE_IDENTITY_PREFIX}password`,
+        `${NO_WORKSPACE_IDENTITY_PREFIX}provider`,
       ]);
     },
   );

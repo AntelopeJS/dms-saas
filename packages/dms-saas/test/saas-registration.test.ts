@@ -39,7 +39,7 @@ describe("firstMissingRegistrationRequirement", () => {
     };
 
     expect(firstMissingRegistrationRequirement(requirements)).toBe(
-      "saas.register.error.no_payment",
+      "saas.public.register.error.card_required",
     );
   });
 
@@ -61,7 +61,7 @@ describe("firstMissingRegistrationRequirement", () => {
     };
 
     expect(firstMissingRegistrationRequirement(requirements)).toBe(
-      "saas.register.error.legal_required",
+      "saas.public.register.error.legal_required",
     );
   });
 });
@@ -141,7 +141,7 @@ describe("registration copy", () => {
     (file) => {
       const pattern = lookup(
         readLocale(file),
-        "saas.register.default_workspace_name",
+        "saas.public.register.default_workspace_name",
       );
 
       expect(pattern).toEqual(expect.stringContaining("{name}"));

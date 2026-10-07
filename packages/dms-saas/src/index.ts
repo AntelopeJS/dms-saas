@@ -28,7 +28,7 @@ import * as billingImplementation from "./implementations/dms-saas/billing";
 import * as invoiceLineItemsImplementation from "./implementations/dms-saas/invoice-line-items";
 import * as pagesImplementation from "./implementations/dms-saas/pages";
 import * as workspaceLifecycleImplementation from "./implementations/dms-saas/workspace-lifecycle";
-import { registerPublicScreens } from "./pages";
+import { registerPublicScreens, resolvePublicScreensToRegister } from "./pages";
 import { registerSeatHooks } from "./plans";
 import { initStripeClient } from "./stripe";
 import type { DmsSaasConfig } from "./types";
@@ -77,6 +77,8 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
         stripePublishableKey: config.stripe.publishableKey,
         admissionMode: config.admissionMode ?? "open",
         registrationPaymentMethod: getRegistrationPaymentMethodPolicy(),
+        // Sign-in only links to the bundled screens the deployment serves.
+        publicScreens: resolvePublicScreensToRegister(config),
       },
     },
   });
