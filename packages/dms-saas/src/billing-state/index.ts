@@ -7,8 +7,12 @@ import {
   TenantSubscriptionModel,
 } from "../db";
 
+import { registerPastDueBanners } from "./past-due-banner";
+import { registerTrialEndingBanners } from "./trial-ending-banner";
+
 export * from "./past-due-banner";
 export * from "./recovery";
+export * from "./trial-ending-banner";
 
 const ACTIVE_STATUS = "active";
 const FREE_STATE: BillingState = "free";
@@ -59,4 +63,10 @@ export async function recomputeAllTenantBillingStates(): Promise<void> {
     if (!tenant._id) continue;
     await recomputeTenantBillingState(tenant._id);
   }
+}
+
+/** The billing strips of the dashboard layout: past due, trial ending. */
+export function registerBillingLayoutBanners(): void {
+  registerPastDueBanners();
+  registerTrialEndingBanners();
 }

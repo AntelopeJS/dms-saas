@@ -1,0 +1,399 @@
+{
+  "saas": {
+    "tenant_billing": {
+      "page": {
+        "title": "Billing",
+        "description": "What the workspace pays, when, and why: plan, next invoice, payment method and every invoice in one place."
+      },
+      "next_invoice": {
+        "title": "Next invoice",
+        "description": "Preview from Stripe",
+        "empty_title": "No invoice scheduled",
+        "empty_description": "Nothing is billed: the workspace is on a free plan or complimentary access.",
+        "line": "Line",
+        "tax": "VAT",
+        "reverse_charge": "VAT (reverse charge)",
+        "total": "Total due",
+        "charged_to": "Charged to",
+        "sent_to": "Sent to",
+        "last_payment": "Last payment"
+      },
+      "invoices": {
+        "caption": "Invoices & credit notes",
+        "tabs": {
+          "all": "All",
+          "invoices": "Invoices",
+          "credit_notes": "Credit notes"
+        },
+        "empty_title": "No invoice yet",
+        "empty_description": "Invoices and credit notes appear here as soon as Stripe issues them.",
+        "error_title": "Invoices couldn't load",
+        "error_description": "Stripe is slow to answer. Your invoices are safe."
+      },
+      "pay": {
+        "action": "Pay invoice",
+        "title": "Pay {invoice}",
+        "description": "Paying now restores the normal renewal. Stripe stops the retries.",
+        "member": "Only the workspace owner can pay this invoice.",
+        "member_named": "Only {owner}, the workspace owner, can pay this invoice.",
+        "declined_on": "Declined {date}: retry only if the card can now be charged",
+        "other_card": "Use another card",
+        "other_card_hint": "Entered on Stripe's secure payment page",
+        "confirm_card": "Pay {amount}",
+        "confirm_stripe": "Pay {amount} on Stripe",
+        "paid": "Payment received. Access updates in a moment.",
+        "processing": "Payment sent to Stripe. The workspace updates once Stripe confirms it.",
+        "error": "The payment could not be made",
+        "error_hint": "Nothing was charged. Pay with another card on Stripe, or update the card in Stripe first.",
+        "not_now": "Not now",
+        "missing": "This invoice can no longer be read. Refresh the table."
+      },
+      "portal": {
+        "open": "Manage in Stripe",
+        "error": "Couldn't open the Stripe portal",
+        "error_hint": "Stripe didn't answer in time. Nothing changed."
+      },
+      "past_due": {
+        "title": "Payment failed",
+        "suspended_title": "Workspace suspended",
+        "summary": "Invoice {invoice} of {amount} is unpaid.",
+        "summary_with_date": "Invoice {invoice} of {amount} couldn't be charged on {date}.",
+        "next_retry": "Stripe retries {date}.",
+        "suspend_warning": "Without payment, the workspace is suspended on {date}; data is kept.",
+        "suspended_summary": "Invoice {invoice} of {amount} is still unpaid. Paying it restores access immediately.",
+        "load_failed": "Couldn't check the billing status of this workspace.",
+        "member": "The workspace has an unpaid invoice. The workspace owner must pay it to keep access.",
+        "member_named": "The workspace has an unpaid invoice. {owner} (workspace owner) must pay it to keep access.",
+        "update_card": "Update card",
+        "pay": "Pay invoice",
+        "timeline": {
+          "label": "Payment timeline",
+          "declined": "Charge declined",
+          "declined_card": "Charge declined · {card}",
+          "today": "Today",
+          "pay_now": "Pay now to stop the reminders",
+          "retry": "Stripe retries automatically",
+          "suspend": "Workspace suspended, data kept"
+        },
+        "strip": {
+          "owner_generic": "Payment failed. An invoice is unpaid: pay it to keep the workspace active.",
+          "owner": "Payment failed. Invoice {invoice} of {amount} is unpaid.",
+          "owner_deadline": "Payment failed. Invoice {invoice} of {amount} is unpaid. Pay it before {date} to keep {workspace} active.",
+          "member": "{workspace} has an unpaid invoice. The workspace owner must pay it, or the workspace is suspended.",
+          "member_named": "{workspace} has an unpaid invoice. {owner} (workspace owner) must pay it, or the workspace is suspended.",
+          "email_owner": "Email {owner}"
+        }
+      },
+      "complimentary": {
+        "indefinite_title": "Complimentary access",
+        "indefinite_description": "{workspace} is on a complimentary {plan} plan with no end date. Nothing is charged.",
+        "ending_title": "Complimentary access ends {date}",
+        "ending_description": "{days} day left. Pick a paid plan before then to keep access; your data stays either way. | {days} days left. Pick a paid plan before then to keep access; your data stays either way.",
+        "expired_title": "Complimentary access expired",
+        "expired_title_on": "Complimentary access expired {date}",
+        "expired_description": "Members can't open the workspace until a paid plan is chosen. Your data is kept.",
+        "choose_plan": "Choose a plan"
+      },
+      "trial": {
+        "ends": "Your {plan} trial ends {date} · {days} day left | Your {plan} trial ends {date} · {days} days left",
+        "charge": "Then {amount} (incl. VAT) is charged, and again every {interval}",
+        "charge_card": "Then {amount} (incl. VAT) is charged to {card}, and again every {interval}",
+        "compare": "Compare plans"
+      },
+      "payment_method": {
+        "title": "Payment method",
+        "needs_update": "Needs updating",
+        "default": "Default",
+        "load_failed": "Couldn't load the payment method",
+        "owner_only": "The payment method is managed by the workspace owner.",
+        "owner_only_named": "The payment method is managed by {owner}, the workspace owner.",
+        "complimentary_title": "No card needed",
+        "complimentary_description": "The workspace is on complimentary access: nothing is charged.",
+        "expires": "Expires {detail}",
+        "declined_on": "Declined {date}",
+        "update_note": "The last charge on this card was declined. Update it in Stripe, then pay the invoice, or pay once with another card.",
+        "pay_another_card": "Pay once with another card",
+        "none_title": "No card on file",
+        "none": "You'll enter a card on Stripe's payment page when you choose a paid plan.",
+        "none_with_portal": "Add a card in Stripe; it pays the next invoices.",
+        "choose_plan": "Choose a plan",
+        "stripe_note": "Card details stay with Stripe, never on our servers."
+      },
+      "money_back": {
+        "title": "Money-back guarantee",
+        "days_left": "{days} day left | {days} days left",
+        "ended_on": "Ended {date}",
+        "refunded_pill": "Refunded",
+        "load_failed": "Couldn't check the money-back guarantee",
+        "until": "Until {date}",
+        "day_of": "day {day} of {window}",
+        "description": "Not convinced by {plan}? Get {amount} back (your first payment on {paidOn}) and the subscription stops immediately. Your data is kept for {retention} days.",
+        "once": "One refund per workspace",
+        "request": "Request refund",
+        "ended_description": "The {window}-day window after your first payment ({paidOn}) ended on {date}. You can still cancel at the end of any period.",
+        "refunded_description": "The workspace already used its refund: one per workspace.",
+        "refunded_description_on": "Refunded on {refundedOn}. One refund per workspace.",
+        "not_started_description": "Starts with your first payment: for {window} days after it, you can get it back.",
+        "blocked_description": "Not available while the workspace is blocked. Pay the unpaid invoice first.",
+        "confirm_title": "Refund {amount} and cancel {plan}?",
+        "confirm_description": "This can't be undone. You can subscribe again later, but not refund again.",
+        "confirm_action": "Refund and cancel",
+        "keep": "Keep {plan}",
+        "impact_refunded_to": "Refunded to {card}",
+        "impact_refunded": "Refunded",
+        "impact_ends": "Subscription ends",
+        "impact_now": "Now",
+        "impact_members": "Members losing access",
+        "impact_data": "Projects and data",
+        "impact_data_kept": "Kept {retention} days",
+        "success": "Refund issued and subscription cancelled.",
+        "error": "The refund could not be requested"
+      },
+      "billing_info": {
+        "title": "Billing information",
+        "description": "Printed on every invoice and synced to your Stripe customer. VAT is computed from the country and number.",
+        "to_complete": "To complete",
+        "saved_on": "Saved {date}",
+        "load_failed": "Couldn't load the billing information",
+        "save": "Save billing information",
+        "saved": "Billing information saved",
+        "save_error": "The billing information could not be saved",
+        "incomplete_toast": "Fill in the highlighted fields.",
+        "owner_only": "Only the workspace owner can change the billing information.",
+        "customer_type": "Customer type",
+        "customer_types": {
+          "business": {
+            "label": "Business",
+            "hint": "Invoiced to a company, with its VAT number."
+          },
+          "individual": {
+            "label": "Individual",
+            "hint": "Invoiced in your own name."
+          }
+        },
+        "company_name": "Company name",
+        "vat_number": "VAT number",
+        "optional": "Optional",
+        "vat": {
+          "verified": "Verified (VIES)",
+          "pending": "Verification in progress",
+          "unverified": "Not verified"
+        },
+        "address_line1": "Address",
+        "postal_code": "Postal code",
+        "city": "City",
+        "country": "Country",
+        "country_placeholder": "Select a country",
+        "billing_email": "Billing email",
+        "billing_email_hint": "Receives invoices and payment reminders.",
+        "sections": {
+          "customer_type": {
+            "title": "Customer type",
+            "description": "Decides whether a company name and VAT number appear on invoices."
+          },
+          "company": {
+            "title": "Company",
+            "description": "Legal name and intra-EU VAT number."
+          },
+          "address": {
+            "title": "Billing address",
+            "description": "The country sets the VAT rate."
+          },
+          "email": {
+            "title": "Billing email",
+            "description": "Receives invoices and payment reminders."
+          }
+        },
+        "field_labels": {
+          "customerType": "Customer type",
+          "companyName": "Company name",
+          "vatNumber": "VAT number",
+          "line1": "Address",
+          "postalCode": "Postal code",
+          "city": "City",
+          "country": "Country",
+          "billingEmail": "Billing email"
+        },
+        "errors": {
+          "customerType": "Choose a customer type.",
+          "companyName": "The company name is required.",
+          "country": "Choose the billing country.",
+          "line1": "The address is required.",
+          "postalCode": "The postal code is required.",
+          "city": "The city is required.",
+          "billingEmail": "Enter a valid email address."
+        }
+      },
+      "plan": {
+        "title": "Current plan",
+        "change": "Change plan",
+        "go_paid": "Upgrade",
+        "more": "More plan actions",
+        "load_failed": "Couldn't load the plan",
+        "none_title": "No plan yet",
+        "none_description": "The workspace has no plan in force. Choose one to start.",
+        "price_seat": "{price} / seat / {interval}",
+        "price_flat": "{price} / {interval}",
+        "per_seat": "{unit} per seat",
+        "seats_billed": "{seats} seat billed | {seats} seats billed",
+        "total_excl_tax": "{total} per {interval}, excl. VAT",
+        "seats": "Seats",
+        "seats_hint": "{used} in use · {free} free",
+        "seats_unlimited": "{used} seats in use · no limit",
+        "members": "{count} member | {count} members",
+        "invites": "{count} pending invite | {count} pending invites",
+        "manage_members": "Manage members",
+        "billing": "Billing",
+        "interval": {
+          "month": "Monthly",
+          "year": "Yearly"
+        },
+        "interval_since": {
+          "month": "Monthly · since {date}",
+          "year": "Yearly · since {date}"
+        },
+        "trial_until": "Trial until",
+        "next_renewal": "Next renewal",
+        "downgrades_paused": "Downgrades are paused until the unpaid invoice is paid. Upgrades stay available.",
+        "downgrades_paused_invoice": "Downgrades are paused until invoice {invoice} is paid. Upgrades stay available.",
+        "blocked_hint": "Plan changes resume once the unpaid invoice is paid.",
+        "blocked_hint_inactive": "Plan changes resume once the workspace is active again.",
+        "managed": "Your plan is managed by an administrator during complimentary access.",
+        "owner_changes": "Only the workspace owner can change the plan.",
+        "owner_changes_named": "Only {owner}, the workspace owner, can change the plan.",
+        "manage_seats": "Manage seats",
+        "cancel_subscription": "Cancel subscription",
+        "pending_downgrade": "{plan} from {date}",
+        "cancel_downgrade": "Cancel downgrade",
+        "downgrade_cancelled": "Scheduled downgrade cancelled.",
+        "cancels_on": "{plan} ends on {date}",
+        "cancels_hint": "The subscription is cancelled: no further invoice after that date.",
+        "keep_subscription": "Keep subscription",
+        "export_data": "Export data",
+        "subscription_kept": "The subscription renews again.",
+        "cancel_title": "Cancel the {plan} subscription?",
+        "cancel_description": "{workspace} keeps {plan} until {date}. No further invoices after that.",
+        "cancel_confirm": "Cancel on {date}",
+        "cancel_keep": "Keep subscription",
+        "cancel_access_until": "Access until",
+        "cancel_members": "Members lose access on {date}",
+        "cancel_data": "Data kept after that",
+        "cancel_data_days": "{retention} day | {retention} days",
+        "cancel_note": "Download everything first from Data export. Still within the money-back window? Request a refund instead.",
+        "cancel_scheduled": "The subscription ends on {date}."
+      },
+      "plan_change": {
+        "title": "Change plan",
+        "review_title": "Review plan change",
+        "subtitle": "{workspace} is on {plan} with {seats} seats in use ({members} members, {invites} invites). You review the price and the changes before anything is charged.",
+        "interval": {
+          "month": "Monthly",
+          "year": "Yearly"
+        },
+        "none_title": "No plan to offer",
+        "none_description": "No plan on sale fits this workspace right now.",
+        "for_seats": "For {seats} seats in use",
+        "current": "Current",
+        "price_seat": "{price} / seat / {interval}",
+        "price_flat": "{price} / {interval}",
+        "seat_total": "{total} for {seats} seats",
+        "trial_days": "{days}-day trial",
+        "your_plan": "Your plan",
+        "scheduled": "Scheduled",
+        "choose": "Choose",
+        "review_upgrade": "Review upgrade",
+        "review_downgrade": "Review downgrade",
+        "seats_row": "Seats (members + invites)",
+        "unlimited": "Unlimited",
+        "show_detail": "See full detail · {count} more feature | See full detail · {count} more features",
+        "hide_detail": "Hide detail",
+        "too_small": "{plans} can't hold the {seats} seats in use, so they aren't offered to {workspace}.",
+        "timing": "Upgrades start today, prorated. Downgrades start at renewal, {date}.",
+        "review": {
+          "price_per_seat": "{price} × seats",
+          "price_flat": "{price} / {interval}",
+          "upgrade_title": "Upgrade to {plan}",
+          "upgrade_description": "Starts today. You pay the difference for the rest of this period.",
+          "downgrade_title": "Downgrade to {plan} on {date}",
+          "downgrade_description": "Nothing changes until your renewal. {current} stays active until {date}.",
+          "until": "Until {date}",
+          "now": "Now",
+          "from_date": "From {date}",
+          "from_today": "From today",
+          "gained": "You gain",
+          "lost": "You lose",
+          "was": "(was {value})",
+          "line": "Line",
+          "tax": "VAT {rate} {country}",
+          "subtotal": "Subtotal",
+          "renewal": "Then {amount} excl. VAT on {date}, and every {interval} after.",
+          "confirm_downgrade": "Schedule downgrade",
+          "confirm_trial": "Upgrade · nothing due today",
+          "confirm_upgrade": "Upgrade and pay {amount}",
+          "load_failed": "Couldn't price this change",
+          "scheduled": "Downgrade scheduled for {date}.",
+          "applied": "You're now on {plan}.",
+          "charged_today": "Charged today",
+          "due_today": "Due today",
+          "unpriced": "Stripe couldn't price this change right now. Try again in a moment.",
+          "total_today": "Total due today",
+          "trial": "Your trial continues: the first charge is on {date}.",
+          "cancel_any_time": "Cancel the downgrade any time before {date}.",
+          "back": "Back"
+        },
+        "checkout": {
+          "title": "Upgrade {workspace} to {plan}",
+          "description": "Confirm who is billed, then enter your card on Stripe's secure payment page.",
+          "plan_line": "{plan}, billed every {interval}",
+          "trial_badge": "{days}-day trial",
+          "tax": "VAT {rate} from {country}",
+          "due_today": "Due today",
+          "excl_tax": "{amount} excl. VAT",
+          "first_charge": "First charge {amount} on {date}, then every {interval}. Cancel before {date} and you pay nothing.",
+          "tax_on_stripe": "VAT is computed on Stripe's payment page from the billing country.",
+          "card_note": "Card entered on Stripe's secure payment page, never stored on our side.",
+          "confirm": "Continue to secure payment"
+        }
+      }
+    },
+    "permissions": {
+      "billing_page": {
+        "complimentary_access": "Complimentary access",
+        "complimentary_access_description": "See whether the workspace is on complimentary access and until when",
+        "past_due_alert": "Payment failed alert",
+        "past_due_alert_description": "See an unpaid invoice, its payment timeline and pay it",
+        "plan": "Current plan",
+        "plan_description": "See the plan, seats and renewal; the workspace owner changes or cancels it",
+        "next_invoice": "Next invoice",
+        "next_invoice_description": "See Stripe's preview of the next invoice, its lines and tax",
+        "payment_method": "Payment method",
+        "payment_method_description": "See and replace the card that pays invoices",
+        "money_back": "Money-back guarantee",
+        "money_back_description": "See the refund window and request the refund of the first payment",
+        "billing_information": "Billing information",
+        "billing_information_description": "See and edit who is invoiced: company, VAT number, address, billing email",
+        "invoices": "Invoices & credit notes",
+        "invoices_description": "List the workspace's invoices and credit notes and download them",
+        "pay_invoice": "Pay invoice",
+        "pay_invoice_description": "Pay an unpaid invoice with the card on file or another card"
+      }
+    },
+    "workspace": {
+      "plan": {
+        "change_applied": "Plan changed.",
+        "change_error": "Failed to change plan",
+        "checkout_pending": {
+          "title": "A payment is already open",
+          "description": "You opened the secure Stripe payment page without completing it. Resume that payment, or cancel it and start over.",
+          "description_paid": "Your payment has been received and is being confirmed. Your plan will update in a moment.",
+          "description_opening": "A payment page is still being opened for this workspace. Try again in a few minutes.",
+          "resume": "Resume payment",
+          "restart": "Cancel and start over",
+          "close": "Close",
+          "cancelled": "Payment cancelled. Nothing was charged and your plan is unchanged.",
+          "restart_error": "The pending payment could not be cancelled. Try again in a moment."
+        }
+      }
+    }
+  }
+}

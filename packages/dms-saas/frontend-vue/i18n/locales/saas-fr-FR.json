@@ -43,7 +43,10 @@
         "no_free_plan": "Aucun plan gratuit n'est disponible pour l'inscription pour le moment.",
         "checkout_in_progress": "Un paiement de changement de plan est déjà ouvert. Terminez-le, ou attendez son expiration, avant de choisir un autre plan.",
         "checkout_already_paid": "Ce paiement a déjà été effectué et est en cours de confirmation. Votre plan sera mis à jour dans un instant.",
-        "change_in_progress": "Un changement de plan est déjà en cours. Réessayez dans quelques minutes."
+        "change_in_progress": "Un changement de plan est déjà en cours. Réessayez dans quelques minutes.",
+        "upgrade_payment_declined": "La carte a été refusée, l'offre n'a donc pas changé. Mettez la carte à jour dans Stripe et réessayez.",
+        "already_current": "L'espace de travail est déjà sur cette offre.",
+        "unpaid_invoice_blocks_cancellation": "Une facture est impayée. Payez-la avant de résilier l'abonnement."
       },
       "workspace": {
         "not_found": "Espace introuvable",
@@ -87,7 +90,8 @@
       "invoice": {
         "not_found": "Facture introuvable",
         "invalid_amount": "Montant invalide",
-        "no_paid_found": "Aucune facture payée trouvée"
+        "no_paid_found": "Aucune facture payée trouvée",
+        "not_payable": "Cette facture ne peut plus être payée : elle a été réglée ou annulée entre-temps."
       },
       "refund": {
         "not_enabled": "Garantie satisfait ou remboursé non activée",
@@ -101,7 +105,10 @@
         "invalid_return_url": "URL de retour invalide",
         "identity_incomplete": "Des champs de facturation obligatoires sont manquants ou invalides.",
         "checkout_rejected": "Le prestataire de paiement n'a pas pu ouvrir la page de paiement. Rien n'a été débité et votre plan est inchangé. Réessayez plus tard ou contactez le support.",
-        "checkout_unavailable": "Le prestataire de paiement n'a pas répondu. Rien n'a été débité. Réessayez dans 15 minutes."
+        "checkout_unavailable": "Le prestataire de paiement n'a pas répondu. Rien n'a été débité. Réessayez dans 15 minutes.",
+        "payment_declined": "La carte a été refusée. Rien n'a été débité.",
+        "payment_unavailable": "Stripe n'a pas répondu. Rien n'a été débité ; réessayez dans un moment.",
+        "preview_unavailable": "Stripe n'a pas pu prévisualiser la prochaine facture pour l'instant."
       },
       "migration": {
         "already_pending": "Une migration est déjà en attente pour ce plan"
@@ -864,112 +871,7 @@
       "settings": {
         "title": "Paramètres du workspace"
       },
-      "free_access": {
-        "banner_title": "Accès offert",
-        "banner_description": "Votre accès gratuit expire le {date}. Sélectionnez un plan payant avant cette date pour conserver l'accès.",
-        "expired_title": "Accès offert expiré",
-        "expired_description": "L'accès gratuit accordé à votre workspace a expiré. Sélectionnez un plan payant pour rétablir l'accès.",
-        "indefinite_title": "Accès offert",
-        "indefinite_description": "Votre workspace bénéficie d'un accès offert sans date d'expiration."
-      },
-      "billing": {
-        "title": "Facturation",
-        "description": "Gérez votre plan, votre abonnement, votre moyen de paiement et vos factures.",
-        "manage": "Gérer la facturation",
-        "invoices_caption": "Vos factures",
-        "info_title": "Informations de facturation",
-        "info_description": "Mettez à jour vos coordonnées de facturation et votre numéro de TVA.",
-        "info_save": "Enregistrer",
-        "info_saved": "Informations de facturation mises à jour",
-        "info_save_error": "Échec de la mise à jour des informations de facturation",
-        "refund": {
-          "title": "Garantie satisfait ou remboursé",
-          "description": "Vous êtes encore dans la fenêtre de remboursement. Demander le remboursement vous rendra {amount} et annulera votre abonnement.",
-          "button": "Demander le remboursement",
-          "confirm_title": "Confirmer le remboursement",
-          "confirm_message": "Vous serez remboursé de {amount} et votre abonnement sera immédiatement annulé. Cette action est irréversible.",
-          "confirm_action": "Confirmer le remboursement",
-          "success": "Remboursement effectué et abonnement annulé.",
-          "error": "Échec de la demande de remboursement"
-        },
-        "past_due": {
-          "title": "Action requise",
-          "badge": "paiement échoué",
-          "suspended_title": "Workspace suspendu",
-          "suspended_badge": "facture impayée",
-          "summary": "La facture {invoice} de {amount} est impayée.",
-          "summary_with_date": "La facture {invoice} de {amount} n'a pas pu être prélevée le {date}.",
-          "next_retry": "Nouvelle tentative automatique le {date}.",
-          "suspend_warning": "Sans régularisation, le workspace est suspendu le {date} — données et volumes préservés.",
-          "suspended_summary": "La facture {invoice} de {amount} reste impayée. Le règlement rétablit l'accès immédiatement.",
-          "settle": "Régler sur Stripe",
-          "load_failed": "Impossible de vérifier l'état de facturation de ce workspace.",
-          "banner": {
-            "generic": "Paiement échoué — ce workspace a une facture impayée. Le propriétaire du workspace doit la régler pour éviter la suspension.",
-            "generic_owner": "Paiement échoué — ce workspace a une facture impayée. Réglez-la depuis la page de facturation pour éviter la suspension.",
-            "open_billing": "Ouvrir la facturation",
-            "summary": "Paiement échoué — la facture {invoice} de {amount} est impayée.",
-            "with_deadline": "Paiement échoué — la facture {invoice} de {amount} est impayée. Régularisez avant le {date} pour éviter la suspension.",
-            "settle": "Régulariser"
-          }
-        },
-        "payment_method": {
-          "title": "Moyen de paiement",
-          "active": "actif",
-          "needs_update": "à mettre à jour",
-          "missing": "aucune carte",
-          "declined": "refusée",
-          "default": "par défaut",
-          "expires": "exp. {date}",
-          "none": "Pas encore de carte — elle vous sera demandée au passage à un plan payant.",
-          "none_with_portal": "Aucune carte enregistrée — ajoutez-en une depuis le portail Stripe ci-dessous.",
-          "portal_hint": "Changement de carte, reçus, historique : tout se passe dans le portail Stripe ; la carte n'est jamais stockée chez nous.",
-          "verified": "vérifiée",
-          "never_charged": "jamais débitée",
-          "add": "Passer à un plan payant",
-          "owner_only": "Le moyen de paiement est géré par le propriétaire du workspace.",
-          "update_note": "Le dernier prélèvement sur cette carte a été refusé : mettez-la à jour dans le portail Stripe, puis réglez la facture impayée.",
-          "free_note": "Vérifiée — jamais débitée tant que le workspace reste sur un plan gratuit.",
-          "complimentary": "offert",
-          "complimentary_note": "Accès offert : aucune carte n'est nécessaire.",
-          "complimentary_until_note": "Accès offert jusqu'au {date} : aucune carte n'est nécessaire d'ici là."
-        },
-        "billing_email": {
-          "label": "E-mail de facturation",
-          "hint": "Reçoit les factures et les relances, synchronisé sur le client Stripe."
-        },
-        "vat": {
-          "verified": "vérifiée (VIES)",
-          "pending": "vérification en cours",
-          "unverified": "non vérifiée"
-        },
-        "identity": {
-          "to_complete": "à compléter",
-          "incomplete_toast": "Complétez les champs signalés.",
-          "optional": "facultatif",
-          "country_placeholder": "Choisir un pays",
-          "customer_type_hint": {
-            "business": "Facture au nom d'une société, avec son n° de TVA.",
-            "individual": "Facture à votre nom."
-          },
-          "errors": {
-            "customerType": "Choisissez un type de client.",
-            "companyName": "La raison sociale est obligatoire.",
-            "country": "Choisissez le pays de facturation.",
-            "line1": "L'adresse est obligatoire.",
-            "postalCode": "Le code postal est obligatoire.",
-            "city": "La ville est obligatoire.",
-            "billingEmail": "Saisissez une adresse e-mail valide."
-          }
-        }
-      },
       "plan": {
-        "current": "Plan actuel",
-        "change": "Changer de plan",
-        "go_paid": "Passer en payant",
-        "blocked_hint": "Le changement de plan redevient possible une fois la facture réglée.",
-        "blocked_hint_inactive": "Le changement de plan redevient possible une fois l’espace de travail réactivé.",
-        "next_renewal": "Prochain renouvellement le {date}.",
         "unlimited": "illimité",
         "units": {
           "byte": {
@@ -997,59 +899,9 @@
             "price": "{price} / minute"
           }
         },
-        "pending_downgrade": "Downgrade vers {plan} au prochain cycle",
-        "pending_downgrade_on": "Downgrade vers {plan} le {date}",
-        "cancel_downgrade": "Annuler le downgrade",
-        "downgrade_cancelled": "Downgrade programmé annulé.",
-        "change_applied": "Plan modifié.",
-        "change_scheduled": "Downgrade programmé pour la fin du cycle en cours.",
-        "change_error": "Échec du changement de plan",
-        "checkout_pending": {
-          "title": "Un paiement est déjà en cours",
-          "description": "Vous avez ouvert la page de paiement sécurisée de Stripe sans la terminer. Reprenez ce paiement, ou annulez-le pour recommencer.",
-          "description_paid": "Votre paiement a été reçu et est en cours de confirmation. Votre plan sera mis à jour dans un instant.",
-          "description_opening": "Une page de paiement est encore en cours d'ouverture pour cet espace de travail. Réessayez dans quelques minutes.",
-          "resume": "Reprendre le paiement",
-          "restart": "Annuler et recommencer",
-          "close": "Fermer",
-          "cancelled": "Paiement annulé. Rien n'a été débité et votre plan est inchangé.",
-          "restart_error": "Le paiement en cours n'a pas pu être annulé. Réessayez dans un instant."
-        },
         "interval": {
           "month": "mois",
           "year": "an"
-        },
-        "comparison": {
-          "title": "Changer de plan",
-          "subtitle": "Espace de travail {workspace} — plan actuel : {plan}. Le passage à un plan supérieur s'applique immédiatement, au prorata ; le passage à un plan inférieur prend effet au prochain cycle de facturation.",
-          "subtitle_no_plan": "Le passage à un plan supérieur s'applique immédiatement, au prorata ; le passage à un plan inférieur prend effet au prochain cycle de facturation.",
-          "current": "actuel",
-          "scheduled": "programmé",
-          "choose": "Choisir",
-          "show_detail": "Voir tout le détail",
-          "hide_detail": "Masquer le détail",
-          "close": "Fermer"
-        },
-        "upgrade": {
-          "title": "Passer en {plan}",
-          "description": "Confirmez l'identité facturée, puis saisissez votre carte sur la page de paiement sécurisée de Stripe.",
-          "subscription": "Abonnement {plan}",
-          "due_today": "Prélevé aujourd'hui",
-          "excl_tax": "{amount} HT",
-          "tax_note": "TVA calculée selon le pays de facturation ci-dessous.",
-          "card_title": "Carte bancaire",
-          "card_note": "L'étape suivante ouvre la page de paiement sécurisée de Stripe, où la carte est saisie et débitée. Elle n'est jamais stockée chez nous.",
-          "confirm": "Continuer vers le paiement"
-        },
-        "downgrade": {
-          "title": "Passer au plan {plan} ?",
-          "description": "Une fois le changement effectif, le workspace sera soumis aux fonctionnalités et aux limites du plan {plan}.",
-          "warning_title": "Ce que vous perdez",
-          "warning_features": "Les fonctionnalités non incluses dans le plan {plan} sont désactivées, et les permissions de rôle qui en dépendent sont retirées.",
-          "warning_limits": "Les membres, ressources et données au-delà des limites du plan {plan} peuvent être restreints, et les données qui les dépassent peuvent être perdues.",
-          "warning_free": "L'abonnement payant prend fin : les fonctionnalités payantes s'arrêtent et le workspace n'est plus facturé.",
-          "cancel": "Conserver mon plan actuel",
-          "confirm": "Passer au plan {plan}"
         }
       }
     },

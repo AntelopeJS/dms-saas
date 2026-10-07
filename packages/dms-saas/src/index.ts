@@ -16,7 +16,7 @@ import {
   registerAutomationNodes,
   unregisterAutomationNodes,
 } from "./automation";
-import { registerPastDueBanner } from "./billing-state";
+import { registerBillingLayoutBanners } from "./billing-state";
 import {
   getRegistrationPaymentMethodPolicy,
   resolveDevMode,
@@ -51,7 +51,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
   registerPlanPermissionsResolver();
   registerSubscriptionAccessGate();
   registerSeatHooks();
-  registerPastDueBanner();
+  registerBillingLayoutBanners();
   ImplementInterface(billingInterface, billingImplementation);
   ImplementInterface(invoiceLineItemsInterface, invoiceLineItemsImplementation);
   ImplementInterface(pagesInterface, pagesImplementation);

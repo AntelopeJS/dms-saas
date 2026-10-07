@@ -60,7 +60,7 @@ const REASON_TO_ERROR: Record<string, RefundErrorMapping> = {
   },
 };
 
-interface EligibleInvoice {
+export interface EligibleInvoice {
   id: string;
   amountPaid: number;
   created: number;
@@ -69,21 +69,29 @@ interface EligibleInvoice {
   currency: string | null;
 }
 
-interface RefundEligibility {
+export interface RefundEligibility {
   eligible: boolean;
   reason: string | null;
   windowDays: number;
   mode: string | null;
+  /** The first paid invoice, also when its window is over. */
   invoice: EligibleInvoice | null;
 }
 
-interface RefundEligibilityResponse {
+/** What the money-back guarantee card shows, eligible or not. */
+export interface RefundEligibilityResponse {
   eligible: boolean;
   reason: string | null;
   windowDays: number;
   mode: string | null;
   refundAmount: number | null;
   currency: string | null;
+  /** When the first payment the guarantee covers was made. */
+  firstPaymentAt: Date | null;
+  /** When the window closes (or closed), counted from the first payment. */
+  windowEndsAt: Date | null;
+  /** When the workspace's one refund was requested. */
+  refundedAt: Date | null;
 }
 
 async function getFirstPaidInvoice(
@@ -126,9 +134,12 @@ function toEligibleInvoice(invoice: Stripe.Invoice): EligibleInvoice {
   };
 }
 
+function windowEndOf(invoiceCreated: number, windowDays: number): Date {
+  return new Date(invoiceCreated * MS_PER_SECOND + windowDays * MS_PER_DAY);
+}
+
 function isWithinWindow(invoiceCreated: number, windowDays: number): boolean {
-  const cutoff = Date.now() - windowDays * MS_PER_DAY;
-  return invoiceCreated * MS_PER_SECOND >= cutoff;
+  return windowEndOf(invoiceCreated, windowDays).getTime() >= Date.now();
 }
 
 function computeRefundAmount(invoice: EligibleInvoice, mode: string): number {
@@ -165,9 +176,35 @@ async function resolveRefundEligibility(
   }
   const invoice = toEligibleInvoice(stripeInvoice);
   if (!isWithinWindow(invoice.created, windowDays)) {
-    return { eligible: false, reason: REASON_WINDOW_EXPIRED, ...base };
+    return { ...base, eligible: false, reason: REASON_WINDOW_EXPIRED, invoice };
   }
   return { eligible: true, reason: null, windowDays, mode, invoice };
+}
+
+/**
+ * The guarantee as the owner reads it: the amount only while it can still be
+ * claimed, the window's dates whenever a first payment is known.
+ */
+export function toEligibilityResponse(
+  eligibility: RefundEligibility,
+  refundedAt: Date | null,
+): RefundEligibilityResponse {
+  const { invoice, windowDays } = eligibility;
+  const refundAmount =
+    eligibility.eligible && invoice
+      ? computeRefundAmount(invoice, eligibility.mode ?? FULL_REFUND_MODE)
+      : null;
+  return {
+    eligible: eligibility.eligible,
+    reason: eligibility.reason,
+    windowDays,
+    mode: eligibility.mode,
+    refundAmount,
+    currency: invoice?.currency ?? null,
+    firstPaymentAt: invoice ? new Date(invoice.created * MS_PER_SECOND) : null,
+    windowEndsAt: invoice ? windowEndOf(invoice.created, windowDays) : null,
+    refundedAt,
+  };
 }
 
 async function issueRefundAndCancel(
@@ -211,20 +248,10 @@ export class SaasBillingSelfRefundController extends Controller(
     );
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
-    const refundAmount = eligibility.invoice
-      ? computeRefundAmount(
-          eligibility.invoice,
-          eligibility.mode ?? FULL_REFUND_MODE,
-        )
-      : null;
-    return {
-      eligible: eligibility.eligible,
-      reason: eligibility.reason,
-      windowDays: eligibility.windowDays,
-      mode: eligibility.mode,
-      refundAmount,
-      currency: eligibility.invoice?.currency ?? null,
-    };
+    return toEligibilityResponse(
+      eligibility,
+      subscription?.refundRequestedAt ?? null,
+    );
   }
 
   @Post("/refund-self")

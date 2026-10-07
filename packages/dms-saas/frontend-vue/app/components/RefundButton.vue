@@ -1,135 +1,275 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from 'vue'
 
+/** `GET /api/saas/billing/refund-eligibility`. */
 interface RefundEligibility {
-  eligible: boolean;
-  reason: string | null;
-  windowDays: number;
-  mode: string | null;
-  refundAmount: number | null;
-  currency: string | null;
+	eligible: boolean
+	reason: string | null
+	windowDays: number
+	mode: string | null
+	refundAmount: number | null
+	currency: string | null
+	firstPaymentAt: string | null
+	windowEndsAt: string | null
+	refundedAt: string | null
 }
 
-const ELIGIBILITY_ENDPOINT = "/api/saas/billing/refund-eligibility";
-const REFUND_ENDPOINT = "/api/saas/billing/refund-self";
-const CENTS_PER_UNIT = 100;
+type GuaranteeState = 'open' | 'ended' | 'refunded' | 'not_started' | 'blocked'
 
-const REFRESH_SCOPE = "tenant-billing";
+const ELIGIBILITY_ENDPOINT = '/api/saas/billing/refund-eligibility'
+const REFUND_ENDPOINT = '/api/saas/billing/refund-self'
+const REFRESH_SCOPE = 'tenant-billing'
+const KEY_PREFIX = 'saas.tenant_billing.money_back'
+const DAY_FORMAT: Intl.DateTimeFormatOptions = {
+	day: 'numeric',
+	month: 'short',
+	year: 'numeric',
+}
+// No guarantee to show: switched off by the platform, or nothing paid on Stripe.
+const HIDDEN_REASONS = new Set(['not_enabled', 'no_subscription'])
+const STATE_BY_REASON: Record<string, GuaranteeState> = {
+	window_expired: 'ended',
+	already_processed: 'refunded',
+	no_invoice: 'not_started',
+}
 
-const { $authFetch } = useAuthFetch();
-const nuxtApp = useDmsApp();
-const toast = useToast();
-const { resolveApiError } = useApiErrorMessage();
-const { trigger } = useDetailRefresh(REFRESH_SCOPE);
+const { $authFetch } = useAuthFetch()
+const toast = useToast()
+const { t, locale } = useI18n()
+const { confirm } = useConfirm()
+const { resolveApiError } = useApiErrorMessage()
+const { formatMinorUnits } = useMoneyFormat()
+const { trigger } = useDetailRefresh(REFRESH_SCOPE)
+const billingStatus = useBillingStatus()
+const tenantPlan = useTenantPlan()
+const { workspace, load: loadWorkspace } = useCurrentWorkspace()
 
-const eligibility = ref<RefundEligibility | null>(null);
-const isModalOpen = ref(false);
-const isSubmitting = ref(false);
+const eligibility = ref<RefundEligibility | null>(null)
+const isOwner = ref(false)
+const isBlocked = ref(false)
+const isLoading = ref(true)
+const loadFailed = ref(false)
 
-const isEligible = computed(() => eligibility.value?.eligible === true);
+const state = computed<GuaranteeState | null>(() => {
+	if (isBlocked.value) return 'blocked'
+	const current = eligibility.value
+	if (!current) return null
+	if (current.eligible) return 'open'
+	if (HIDDEN_REASONS.has(current.reason ?? '')) return null
+	return STATE_BY_REASON[current.reason ?? ''] ?? null
+})
 
-const formattedAmount = computed(() => {
-  const amount = eligibility.value?.refundAmount;
-  if (amount == null) return "";
-  const currency = (eligibility.value?.currency ?? "").toUpperCase();
-  return `${(amount / CENTS_PER_UNIT).toFixed(2)} ${currency}`.trim();
-});
+function day(value: string | null | undefined): string {
+	return formatDate(value, locale.value, DAY_FORMAT) ?? ''
+}
+
+const amountLabel = computed(() =>
+	formatMinorUnits(
+		eligibility.value?.refundAmount,
+		eligibility.value?.currency,
+	),
+)
+const planName = computed(() => tenantPlan.data.value?.current?.name ?? '')
+const daysLeft = computed(() =>
+	eligibility.value?.windowEndsAt
+		? countDaysUntil(eligibility.value.windowEndsAt, new Date())
+		: 0,
+)
+const dayOfWindow = computed(() => {
+	const window = eligibility.value
+	if (!window?.firstPaymentAt) return 0
+	const elapsed = countDaysBetween(window.firstPaymentAt, new Date()) + 1
+	return Math.min(Math.max(elapsed, 1), window.windowDays)
+})
+
+const params = computed(() => ({
+	amount: amountLabel.value,
+	plan: planName.value,
+	date: day(eligibility.value?.windowEndsAt),
+	paidOn: day(eligibility.value?.firstPaymentAt),
+	refundedOn: day(eligibility.value?.refundedAt),
+	window: eligibility.value?.windowDays ?? 0,
+	days: daysLeft.value,
+	day: dayOfWindow.value,
+	retention: workspace.value?.retentionDays ?? 0,
+}))
+
+const pill = computed(() => {
+	if (state.value === 'open') {
+		return {
+			tone: 'success',
+			label: t(`${KEY_PREFIX}.days_left`, params.value, daysLeft.value),
+		}
+	}
+	if (state.value === 'ended') {
+		return { tone: 'neutral', label: t(`${KEY_PREFIX}.ended_on`, params.value) }
+	}
+	if (state.value === 'refunded') {
+		return { tone: 'info', label: t(`${KEY_PREFIX}.refunded_pill`) }
+	}
+	return null
+})
 
 async function loadEligibility(): Promise<void> {
-  try {
-    eligibility.value =
-      await $authFetch<RefundEligibility>(ELIGIBILITY_ENDPOINT);
-  } catch {
-    eligibility.value = null;
-  }
+	isLoading.value = true
+	loadFailed.value = false
+	try {
+		eligibility.value =
+			await $authFetch<RefundEligibility>(ELIGIBILITY_ENDPOINT)
+	} catch {
+		loadFailed.value = true
+	} finally {
+		isLoading.value = false
+	}
 }
 
-async function confirmRefund(): Promise<void> {
-  isSubmitting.value = true;
-  try {
-    await $authFetch(REFUND_ENDPOINT, { method: "POST" });
-    toast.add({
-      title: nuxtApp.$i18n.t("saas.workspace.billing.refund.success"),
-      color: "success",
-      icon: "i-ph-check-circle",
-    });
-    isModalOpen.value = false;
-    await loadEligibility();
-    trigger();
-  } catch (error) {
-    toast.add({
-      title: resolveApiError(error, "saas.workspace.billing.refund.error"),
-      color: "error",
-      icon: "i-ph-warning-circle",
-    });
-  } finally {
-    isSubmitting.value = false;
-  }
-}
-
-/** The eligibility read is owner-only and, like the refund itself, closed
- * while the access gate blocks the workspace: the card has nothing to offer
- * then, so it skips the request instead of collecting a 403. */
+/** The eligibility read is owner-only and closed while the access gate
+ * blocks the workspace: the card says so instead of collecting a 403. */
 async function loadIfOffered(): Promise<void> {
-  const access = await loadWorkspaceAccess();
-  if (access && (access.blocked || !access.isTenantOwner)) return;
-  await loadEligibility();
+	const access = await loadWorkspaceAccess()
+	isOwner.value = !!access?.isTenantOwner
+	isBlocked.value = !!access?.blocked
+	if (!isOwner.value || isBlocked.value) {
+		isLoading.value = false
+		return
+	}
+	void loadWorkspace().catch(() => undefined)
+	void tenantPlan.load()
+	await loadEligibility()
 }
 
-onMounted(loadIfOffered);
+async function submitRefund(): Promise<void> {
+	await $authFetch(REFUND_ENDPOINT, { method: 'POST' })
+	toast.add({
+		title: t(`${KEY_PREFIX}.success`),
+		color: 'success',
+		icon: 'i-ph-check-circle',
+	})
+	await Promise.all([
+		loadEligibility(),
+		tenantPlan.refresh(),
+		billingStatus.refresh(),
+	])
+	trigger()
+}
+
+async function requestRefund(): Promise<void> {
+	await billingStatus.load()
+	const card = billingStatus.data.value?.paymentMethod
+	const members = tenantPlan.data.value?.seats.members ?? 0
+	await confirm({
+		title: t(`${KEY_PREFIX}.confirm_title`, params.value),
+		description: t(`${KEY_PREFIX}.confirm_description`),
+		color: 'error',
+		icon: 'i-ph-arrow-counter-clockwise',
+		initialFocus: 'cancel',
+		confirmLabel: t(`${KEY_PREFIX}.confirm_action`),
+		cancelLabel: t(`${KEY_PREFIX}.keep`, params.value),
+		impact: [
+			{
+				icon: 'i-ph-credit-card',
+				label: card
+					? t(`${KEY_PREFIX}.impact_refunded_to`, {
+							card: formatCardLabel(card),
+						})
+					: t(`${KEY_PREFIX}.impact_refunded`),
+				count: amountLabel.value,
+			},
+			{
+				icon: 'i-ph-calendar-x',
+				label: t(`${KEY_PREFIX}.impact_ends`),
+				count: t(`${KEY_PREFIX}.impact_now`),
+			},
+			{
+				icon: 'i-ph-users-three',
+				label: t(`${KEY_PREFIX}.impact_members`),
+				count: members,
+			},
+			{
+				icon: 'i-ph-database',
+				label: t(`${KEY_PREFIX}.impact_data`),
+				count: t(`${KEY_PREFIX}.impact_data_kept`, params.value),
+			},
+		],
+		onConfirm: async () => {
+			try {
+				await submitRefund()
+			} catch (error) {
+				throw new Error(resolveApiError(error, `${KEY_PREFIX}.error`))
+			}
+		},
+	})
+}
+
+onMounted(loadIfOffered)
 </script>
 
 <template>
-  <UCard v-if="isEligible">
-    <template #header>
-      <h3 class="font-semibold">
-        {{ $t("saas.workspace.billing.refund.title") }}
-      </h3>
-    </template>
-    <div class="flex flex-col gap-4">
-      <p class="text-muted text-sm">
-        {{
-          $t("saas.workspace.billing.refund.description", {
-            amount: formattedAmount,
-          })
-        }}
-      </p>
-      <div class="flex justify-end">
-        <UButton
-          color="error"
-          variant="soft"
-          icon="i-ph-arrow-counter-clockwise"
-          @click="isModalOpen = true"
-        >
-          {{ $t("saas.workspace.billing.refund.button") }}
-        </UButton>
-      </div>
-    </div>
+	<DmsCard
+		v-if="isOwner && (isLoading || loadFailed || state)"
+		:title="$t(`${KEY_PREFIX}.title`)"
+	>
+		<template v-if="pill" #actions>
+			<DmsStatusPill :tone="pill.tone" :label="pill.label" />
+		</template>
 
-    <UModal
-      :open="isModalOpen"
-      :title="$t('saas.workspace.billing.refund.confirm_title')"
-      @update:open="isModalOpen = $event"
-    >
-      <template #body>
-        <p>
-          {{
-            $t("saas.workspace.billing.refund.confirm_message", {
-              amount: formattedAmount,
-            })
-          }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton variant="ghost" @click="isModalOpen = false">
-            {{ $t("common.cancel") }}
-          </UButton>
-          <UButton color="error" :loading="isSubmitting" @click="confirmRefund">
-            {{ $t("saas.workspace.billing.refund.confirm_action") }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
-  </UCard>
+		<div v-if="isLoading" class="flex flex-col gap-3">
+			<USkeleton class="h-4 w-1/3" />
+			<USkeleton class="h-2 w-full" />
+			<USkeleton class="h-4 w-full" />
+		</div>
+
+		<DmsSaasLoadFailure
+			v-else-if="loadFailed"
+			:title="$t(`${KEY_PREFIX}.load_failed`)"
+			@retry="loadEligibility"
+		/>
+
+		<div v-else-if="state === 'open'" class="flex flex-col gap-4">
+			<DmsMeter
+				:label="$t(`${KEY_PREFIX}.until`, params)"
+				:value="dayOfWindow"
+				:max="eligibility?.windowDays ?? 0"
+				format="none"
+				:hint="$t(`${KEY_PREFIX}.day_of`, params)"
+				:warn-at="75"
+				size="sm"
+			/>
+			<p class="text-sm">{{ $t(`${KEY_PREFIX}.description`, params) }}</p>
+			<div class="flex flex-wrap items-center gap-3">
+				<p class="text-muted grow text-xs">
+					<UIcon name="i-ph-info" class="me-1 align-middle" />
+					{{ $t(`${KEY_PREFIX}.once`) }}
+				</p>
+				<UButton
+					color="error"
+					variant="soft"
+					icon="i-ph-arrow-counter-clockwise"
+					@click="requestRefund"
+				>
+					{{ $t(`${KEY_PREFIX}.request`) }}
+				</UButton>
+			</div>
+		</div>
+
+		<p v-else-if="state === 'ended'" class="text-muted text-sm">
+			{{ $t(`${KEY_PREFIX}.ended_description`, params) }}
+		</p>
+
+		<p v-else-if="state === 'refunded'" class="text-muted text-sm">
+			{{
+				eligibility?.refundedAt
+					? $t(`${KEY_PREFIX}.refunded_description_on`, params)
+					: $t(`${KEY_PREFIX}.refunded_description`)
+			}}
+		</p>
+
+		<p v-else-if="state === 'not_started'" class="text-muted text-sm">
+			{{ $t(`${KEY_PREFIX}.not_started_description`, params) }}
+		</p>
+
+		<p v-else-if="state === 'blocked'" class="text-muted text-sm">
+			{{ $t(`${KEY_PREFIX}.blocked_description`) }}
+		</p>
+	</DmsCard>
 </template>
