@@ -1,6 +1,4 @@
 import { Controller, type RequestContext } from "@antelopejs/interface-api";
-import { assert } from "@antelopejs/interface-api-util";
-import { Logging } from "@antelopejs/interface-core/logging";
 import {
   DataController,
   type DataControllerCallback,
@@ -10,7 +8,6 @@ import {
   Access,
   AccessMode,
   Listable,
-  Mandatory,
   ModelReference,
   Sortable,
 } from "@antelopejs/interface-data-api/metadata";
@@ -18,6 +15,7 @@ import { GetModel, Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import {
   Column,
+  DefaultDisplays,
   Exported,
   Searchable,
   Select,
@@ -26,197 +24,60 @@ import {
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import {
   Segment,
-  type SegmentCondition,
   type SegmentConditionGroup,
+  type SegmentCountPoint,
   SegmentModel,
-  type SegmentWorkspaceRef,
   UserSegmentModel,
 } from "../../db";
 import {
-  findSegmentField,
+  CountChangeDisplay,
   invalidateSegmentNamesCache,
-  recomputeSegmentsByIds,
+  MS_PER_DAY,
   SegmentConditionsType,
-  type SegmentFieldCatalog,
 } from "../../utils";
 
-const HTTP_BAD_REQUEST = 400;
-/**
- * Must cover the deepest tree the UI builder can produce, counted in
- * validator levels (root group = 1, each nested group/condition/workspaceRef
- * = +1). The builder nests groups down to UI depth 5 (root = 0); the deepest
- * leaf sits inside a workspaceRef added at UI depth 4: root(1) → group(2) →
- * group(3) → group(4) → group(5) → ref(6) → inner group(7) → condition(8).
- */
-const MAX_CONDITION_DEPTH = 8;
 const SEGMENTS_API_BASE = "/api/saas/segments";
+const CHANGE_WINDOW_DAYS = 7;
+const ISO_DAY_LENGTH = 10;
+const RULES_COLUMN_SIZE = 420;
+const NAME_COLUMN_SIZE = 240;
 
 interface DeleteParams {
   id: string | string[];
 }
 
-type SegmentNode =
-  | SegmentCondition
-  | SegmentConditionGroup
-  | SegmentWorkspaceRef;
-
-function validateWorkspaceRefNode(
-  node: SegmentWorkspaceRef,
-  depth: number,
-  catalog: SegmentFieldCatalog,
-): void {
-  assert(
-    catalog === "user",
-    HTTP_BAD_REQUEST,
-    "saas.errors.segments.invalid_conditions",
-  );
-  assert(
-    node.quantifier === "any" || node.quantifier === "all",
-    HTTP_BAD_REQUEST,
-    "saas.errors.segments.invalid_quantifier",
-  );
-  assert(
-    node.role === undefined || node.role === "member" || node.role === "owner",
-    HTTP_BAD_REQUEST,
-    "saas.errors.segments.invalid_role",
-  );
-  // The nested tree is evaluated against workspace projections, so it is
-  // validated against the workspace catalog (and cannot nest another ref).
-  validateConditionNode(node.conditions, depth + 1, "workspace");
+interface SegmentRowInstance {
+  table: Pick<Segment, "countHistory" | "estimatedCount">;
 }
 
-function validateGroupNode(
-  node: SegmentConditionGroup,
-  depth: number,
-  catalog: SegmentFieldCatalog,
-): void {
-  assert(
-    node.logical === "and" || node.logical === "or",
-    HTTP_BAD_REQUEST,
-    "saas.errors.segments.invalid_logical",
-  );
-  assert(
-    Array.isArray(node.conditions),
-    HTTP_BAD_REQUEST,
-    "saas.errors.segments.invalid_conditions",
-  );
-  for (const child of node.conditions) {
-    validateConditionNode(child, depth + 1, catalog);
-  }
+function rowOf(self: unknown): SegmentRowInstance["table"] {
+  return (self as SegmentRowInstance).table;
 }
 
-function validateLeafCondition(
-  condition: SegmentCondition,
-  catalog: SegmentFieldCatalog,
-): void {
-  const field = findSegmentField(condition.field, catalog);
-  assert(field, HTTP_BAD_REQUEST, "saas.errors.segments.unknown_field");
-  assert(
-    field.operators.includes(condition.operator),
-    HTTP_BAD_REQUEST,
-    "saas.errors.segments.invalid_operator",
-  );
-  if (condition.operator === "in" || condition.operator === "nin") {
-    assert(
-      Array.isArray(condition.value),
-      HTTP_BAD_REQUEST,
-      "saas.errors.segments.invalid_value",
-    );
-  }
+function historyOf(self: unknown): SegmentCountPoint[] {
+  return rowOf(self).countHistory ?? [];
 }
 
-function validateConditionNode(
-  node: SegmentNode,
-  depth: number,
-  catalog: SegmentFieldCatalog,
-): void {
-  assert(
-    depth <= MAX_CONDITION_DEPTH,
-    HTTP_BAD_REQUEST,
-    "saas.errors.segments.conditions_too_deep",
-  );
-  if ("kind" in node && node.kind === "workspaceRef") {
-    validateWorkspaceRefNode(node, depth, catalog);
-    return;
-  }
-  if ("logical" in node && node.logical !== undefined) {
-    validateGroupNode(node, depth, catalog);
-    return;
-  }
-  validateLeafCondition(node as SegmentCondition, catalog);
+function dayBefore(days: number, now: Date): string {
+  return new Date(now.getTime() - days * MS_PER_DAY)
+    .toISOString()
+    .slice(0, ISO_DAY_LENGTH);
 }
 
-function parseAndValidateConditions(raw: unknown): SegmentConditionGroup {
-  if (raw === undefined || raw === null || raw === "") {
-    return { logical: "and", conditions: [] };
-  }
-  let parsed: SegmentConditionGroup;
-  if (typeof raw === "string") {
-    try {
-      parsed = JSON.parse(raw) as SegmentConditionGroup;
-    } catch {
-      assert(
-        false,
-        HTTP_BAD_REQUEST,
-        "saas.errors.segments.invalid_conditions",
-      );
-    }
-  } else if (typeof raw === "object") {
-    parsed = raw as SegmentConditionGroup;
-  } else {
-    assert(false, HTTP_BAD_REQUEST, "saas.errors.segments.invalid_conditions");
-  }
-  validateConditionNode(parsed, 1, "user");
-  return parsed;
-}
-
-function affectedSegmentIds(params: unknown, result: unknown): string[] {
-  const editId = (params as { id?: unknown })?.id;
-  if (typeof editId === "string" && editId.length > 0) return [editId];
-  if (Array.isArray(result)) {
-    return result.filter((x): x is string => typeof x === "string");
-  }
-  return [];
-}
-
-function wrapWithConditionsValidation(
-  base: DataControllerCallback,
-): DataControllerCallback {
-  return {
-    ...base,
-    func: async function (
-      this: unknown,
-      ctx: RequestContext,
-      params: unknown,
-      body: Buffer | string,
-      ...rest: unknown[]
-    ) {
-      const raw = typeof body === "string" ? body : body.toString();
-      let parsed: Record<string, unknown>;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        return base.func.call(this, ctx, params, body, ...rest);
-      }
-      if (parsed.conditions !== undefined) {
-        parsed.conditions = parseAndValidateConditions(parsed.conditions);
-      }
-      const newBody = Buffer.from(JSON.stringify(parsed));
-      const result = await base.func.call(this, ctx, params, newBody, ...rest);
-      invalidateSegmentNamesCache();
-
-      const ids = affectedSegmentIds(params, result);
-      if (ids.length > 0) {
-        void recomputeSegmentsByIds(ids).catch((error: unknown) => {
-          Logging.Error(
-            "[dms-saas] segment recompute after save failed",
-            error,
-          );
-        });
-      }
-      return result;
-    },
-  };
+/**
+ * The change of the count over the last week: the current count minus the
+ * last one recorded a week ago or earlier, or the oldest one when the
+ * history is shorter. Zero without any history.
+ */
+export function weeklyCountChange(
+  history: readonly SegmentCountPoint[],
+  currentCount: number,
+  now: Date = new Date(),
+): number {
+  const cutoff = dayBefore(CHANGE_WINDOW_DAYS, now);
+  const reference =
+    history.filter((point) => point.day <= cutoff).at(-1) ?? history[0];
+  return reference ? currentCount - reference.count : 0;
 }
 
 function wrapDeleteWithCascade(
@@ -244,11 +105,16 @@ function wrapDeleteWithCascade(
   };
 }
 
+// Segments are written by the editor's own routes (`/api/saas/segments`),
+// which validate the rules and re-evaluate on save: the table only reads,
+// exports and deletes.
 const segmentsRoutes = {
-  ...TableViewRoutes.All,
-  new: wrapWithConditionsValidation(TableViewRoutes.All.new),
-  edit: wrapWithConditionsValidation(TableViewRoutes.All.edit),
-  delete: wrapDeleteWithCascade(TableViewRoutes.All.delete),
+  get: TableViewRoutes.Get,
+  list: TableViewRoutes.List,
+  select: TableViewRoutes.Select,
+  count: TableViewRoutes.Count,
+  delete: wrapDeleteWithCascade(TableViewRoutes.Delete),
+  ...TableViewRoutes.ExportRoutes,
 };
 
 @RegisterDataController()
@@ -273,36 +139,40 @@ export class segmentsDataAPI extends DataController(
   @Searchable()
   @Sortable()
   @Exported()
-  @Mandatory("new", "edit")
   @Column({
     name: "$saas.segments.column.name",
-    description: "$saas.segments.column.name_description",
-    type: new DefaultDataTypes.StringType({
-      placeholder: "$saas.segments.placeholder.name",
-    }),
+    type: new DefaultDataTypes.StringType(),
     filterable: true,
+    size: NAME_COLUMN_SIZE,
+    display: new DefaultDisplays.IdentityDisplay({
+      icon: "i-ph-funnel",
+      subtitleField: "description",
+    }),
   })
   @Access(AccessMode.ReadWrite)
   declare name: string;
 
   @Select()
+  @Listable()
   @Searchable()
   @Exported()
   @Column({
     name: "$saas.segments.column.description",
-    description: "$saas.segments.column.description_description",
-    type: new DefaultDataTypes.StringType({ textarea: true, rows: 3 }),
+    type: new DefaultDataTypes.StringType({ textarea: true }),
+    isVisible: false,
   })
   @Access(AccessMode.ReadWrite)
   declare description: string;
 
   @Select()
+  @Listable()
   @Column({
-    name: "$saas.segments.field.conditions",
-    description: "$saas.segments.field.conditions_description",
+    name: "$saas.segments.column.rules",
     type: new SegmentConditionsType({
       fieldsCatalogUrl: `${SEGMENTS_API_BASE}/fields`,
     }),
+    cellWrap: true,
+    size: RULES_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadWrite)
   declare conditions: SegmentConditionGroup;
@@ -314,9 +184,34 @@ export class segmentsDataAPI extends DataController(
   @Column({
     name: "$saas.segments.column.estimated_count",
     type: new DefaultDataTypes.NumberType(),
+    display: new CountChangeDisplay({
+      changeField: "weeklyChange",
+      changeLabel: "$saas.segments.change_this_week",
+    }),
   })
   @Access(AccessMode.ReadOnly)
   declare estimatedCount: number;
+
+  @Select()
+  @Access(AccessMode.ReadOnly)
+  declare countHistory: SegmentCountPoint[];
+
+  @Listable(["countHistory", "estimatedCount"])
+  @Access(AccessMode.ReadOnly)
+  get weeklyChange(): number {
+    return weeklyCountChange(historyOf(this), rowOf(this).estimatedCount ?? 0);
+  }
+
+  @Listable(["countHistory"])
+  @Column({
+    name: "$saas.segments.column.trend",
+    type: new DefaultDataTypes.StringType(),
+    display: new DefaultDisplays.SparklineDisplay({ field: "countTrend" }),
+  })
+  @Access(AccessMode.ReadOnly)
+  get countTrend(): number[] {
+    return historyOf(this).map((point) => point.count);
+  }
 
   @Select()
   @Listable()
@@ -325,7 +220,23 @@ export class segmentsDataAPI extends DataController(
   @Column({
     name: "$saas.segments.column.last_evaluated_at",
     type: new DefaultDataTypes.DateType(),
+    display: new DefaultDisplays.RelativeDateDisplay({
+      emptyLabel: "$saas.segments.never_evaluated",
+      emptyTone: "warning",
+    }),
   })
   @Access(AccessMode.ReadOnly)
   declare lastEvaluatedAt: Date | null;
+
+  @Select()
+  @Listable()
+  @Exported()
+  @Column({
+    name: "$saas.segments.column.evaluation_time",
+    type: new DefaultDataTypes.NumberType(),
+    display: new DefaultDisplays.DurationDisplay({ unit: "ms" }),
+    isVisible: false,
+  })
+  @Access(AccessMode.ReadOnly)
+  declare lastEvaluationMs: number | null;
 }

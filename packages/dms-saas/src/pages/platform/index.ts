@@ -7,6 +7,7 @@ export * from "./plans";
 export * from "./plans/edit";
 export * from "./plans/migrations";
 export * from "./segments";
+export * from "./segments/edit";
 export * from "./settings";
 export * from "./users";
 export * from "./users/detail";

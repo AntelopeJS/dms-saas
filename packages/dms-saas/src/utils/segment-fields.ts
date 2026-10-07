@@ -1,8 +1,10 @@
+import type { Tone } from "@antelopejs/interface-dms/base";
 import {
+  BILLING_STATES,
   type SEGMENT_OPERATORS,
   TENANT_CUSTOMER_TYPES,
-  TENANT_SUBSCRIPTION_STATUSES,
 } from "../db";
+import { STATUS_TONES } from "./status-vocabulary";
 
 /**
  * Which field catalog a condition is validated against: "user" at the root
@@ -20,6 +22,25 @@ export type SegmentFieldType =
 
 export type SegmentValueKind = "string" | "number" | "boolean" | "date";
 
+/** The heading a field is listed under in the builder's field picker. */
+export type SegmentFieldGroup =
+  | "identity"
+  | "activity"
+  | "memberships"
+  | "workspace"
+  | "billing";
+
+/** One value of an enum field, named for people. */
+export interface SegmentEnumOption {
+  value: string;
+  /** i18n key of the label (no `$` prefix). */
+  labelKey: string;
+  /** Tone of the value's pill, when the value is a status. */
+  tone?: Tone;
+}
+
+type SegmentOperatorId = (typeof SEGMENT_OPERATORS)[number];
+
 export interface SegmentFieldDefinition {
   id: string;
   type: SegmentFieldType;
@@ -28,211 +49,266 @@ export interface SegmentFieldDefinition {
   labelKey: string;
   /** i18n key for the short description. */
   descriptionKey: string;
-  operators: readonly (typeof SEGMENT_OPERATORS)[number][];
-  /** Static enum values when type === "enum". */
-  enumValues?: readonly string[];
-  /** Optional display unit hint for the builder UI. */
+  operators: readonly SegmentOperatorId[];
+  /** Heading of the field in the picker. */
+  group: SegmentFieldGroup;
+  /** Icon of the field in the picker and in the rule. */
+  icon: string;
+  /** The values of an `enum` field, with their labels. */
+  enumOptions?: readonly SegmentEnumOption[];
+  /**
+   * Display unit hint for the builder UI. Currency amounts are stored in
+   * minor units, as the projections compute them.
+   */
   unit?: "currency" | "days" | "count";
 }
 
-const NUMBER_OPERATORS = ["eq", "neq", "gt", "gte", "lt", "lte"] as const;
-const STRING_OPERATORS = ["eq", "neq", "contains"] as const;
-const ENUM_OPERATORS = ["eq", "neq", "in", "nin"] as const;
+const NUMBER_OPERATORS = ["gt", "gte", "lt", "lte", "eq", "neq"] as const;
+const STRING_OPERATORS = ["contains", "eq", "neq"] as const;
+const ENUM_OPERATORS = ["in", "nin", "eq", "neq"] as const;
 const BOOLEAN_OPERATORS = ["eq"] as const;
 const DATE_OPERATORS = ["gt", "gte", "lt", "lte"] as const;
 
-export const SEGMENT_FIELDS: readonly SegmentFieldDefinition[] = [
+const OPERATORS_BY_KIND: Record<
+  SegmentValueKind,
+  readonly SegmentOperatorId[]
+> = {
+  string: STRING_OPERATORS,
+  number: NUMBER_OPERATORS,
+  boolean: BOOLEAN_OPERATORS,
+  date: DATE_OPERATORS,
+};
+
+const FIELD_KEY_PREFIX = "saas.segments.fields";
+
+interface FieldSpec {
+  id: string;
+  /** Segment of the i18n keys under `saas.segments.fields`. */
+  key: string;
+  type: SegmentFieldType;
+  group: SegmentFieldGroup;
+  icon: string;
+  unit?: SegmentFieldDefinition["unit"];
+  enumOptions?: readonly SegmentEnumOption[];
+}
+
+const VALUE_KIND_BY_TYPE: Record<SegmentFieldType, SegmentValueKind> = {
+  string: "string",
+  number: "number",
+  boolean: "boolean",
+  date: "date",
+  enum: "string",
+  "enum:plan": "string",
+};
+
+function defineField(spec: FieldSpec): SegmentFieldDefinition {
+  const valueKind = VALUE_KIND_BY_TYPE[spec.type];
+  const isEnum = spec.type === "enum" || spec.type === "enum:plan";
+  return {
+    id: spec.id,
+    type: spec.type,
+    valueKind,
+    labelKey: `${FIELD_KEY_PREFIX}.${spec.key}.label`,
+    descriptionKey: `${FIELD_KEY_PREFIX}.${spec.key}.description`,
+    operators: isEnum ? ENUM_OPERATORS : OPERATORS_BY_KIND[valueKind],
+    group: spec.group,
+    icon: spec.icon,
+    unit: spec.unit,
+    enumOptions: spec.enumOptions,
+  };
+}
+
+const BILLING_STATE_OPTIONS: readonly SegmentEnumOption[] = BILLING_STATES.map(
+  (state) => ({
+    value: state,
+    labelKey: `saas.status.workspace.${state}`,
+    tone: STATUS_TONES.workspace[state],
+  }),
+);
+
+const CUSTOMER_TYPE_OPTIONS: readonly SegmentEnumOption[] =
+  TENANT_CUSTOMER_TYPES.map((type) => ({
+    value: type,
+    labelKey: `saas.segments.enum.customer_type.${type}`,
+  }));
+
+const WORKSPACE_FIELD_SPECS: FieldSpec[] = [
   {
     id: "name",
+    key: "name",
     type: "string",
-    valueKind: "string",
-    labelKey: "saas.segments.fields.name.label",
-    descriptionKey: "saas.segments.fields.name.description",
-    operators: STRING_OPERATORS,
+    group: "workspace",
+    icon: "i-ph-buildings",
   },
   {
     id: "createdAt",
+    key: "created_at",
     type: "date",
-    valueKind: "date",
-    labelKey: "saas.segments.fields.created_at.label",
-    descriptionKey: "saas.segments.fields.created_at.description",
-    operators: DATE_OPERATORS,
+    group: "workspace",
+    icon: "i-ph-calendar-blank",
   },
   {
     id: "ageInDays",
+    key: "age_in_days",
     type: "number",
-    valueKind: "number",
-    labelKey: "saas.segments.fields.age_in_days.label",
-    descriptionKey: "saas.segments.fields.age_in_days.description",
-    operators: NUMBER_OPERATORS,
+    group: "workspace",
+    icon: "i-ph-hourglass",
     unit: "days",
   },
   {
-    id: "planId",
-    type: "enum:plan",
-    valueKind: "string",
-    labelKey: "saas.segments.fields.plan_id.label",
-    descriptionKey: "saas.segments.fields.plan_id.description",
-    operators: ENUM_OPERATORS,
-  },
-  {
-    id: "mrr",
-    type: "number",
-    valueKind: "number",
-    labelKey: "saas.segments.fields.mrr.label",
-    descriptionKey: "saas.segments.fields.mrr.description",
-    operators: NUMBER_OPERATORS,
-    unit: "currency",
-  },
-  {
-    id: "isPaying",
-    type: "boolean",
-    valueKind: "boolean",
-    labelKey: "saas.segments.fields.is_paying.label",
-    descriptionKey: "saas.segments.fields.is_paying.description",
-    operators: BOOLEAN_OPERATORS,
-  },
-  {
-    id: "status",
-    type: "enum",
-    valueKind: "string",
-    labelKey: "saas.segments.fields.status.label",
-    descriptionKey: "saas.segments.fields.status.description",
-    operators: ENUM_OPERATORS,
-    enumValues: TENANT_SUBSCRIPTION_STATUSES,
-  },
-  {
-    id: "hasStripeCustomer",
-    type: "boolean",
-    valueKind: "boolean",
-    labelKey: "saas.segments.fields.has_stripe_customer.label",
-    descriptionKey: "saas.segments.fields.has_stripe_customer.description",
-    operators: BOOLEAN_OPERATORS,
-  },
-  {
-    id: "isOnTrial",
-    type: "boolean",
-    valueKind: "boolean",
-    labelKey: "saas.segments.fields.is_on_trial.label",
-    descriptionKey: "saas.segments.fields.is_on_trial.description",
-    operators: BOOLEAN_OPERATORS,
-  },
-  {
-    id: "customerType",
-    type: "enum",
-    valueKind: "string",
-    labelKey: "saas.segments.fields.customer_type.label",
-    descriptionKey: "saas.segments.fields.customer_type.description",
-    operators: ENUM_OPERATORS,
-    enumValues: TENANT_CUSTOMER_TYPES,
-  },
-  {
     id: "membersCount",
+    key: "members_count",
     type: "number",
-    valueKind: "number",
-    labelKey: "saas.segments.fields.members_count.label",
-    descriptionKey: "saas.segments.fields.members_count.description",
-    operators: NUMBER_OPERATORS,
+    group: "workspace",
+    icon: "i-ph-users",
     unit: "count",
   },
   {
-    id: "totalRevenue",
+    id: "status",
+    key: "status",
+    type: "enum",
+    group: "billing",
+    icon: "i-ph-pulse",
+    enumOptions: BILLING_STATE_OPTIONS,
+  },
+  {
+    id: "planId",
+    key: "plan_id",
+    type: "enum:plan",
+    group: "billing",
+    icon: "i-ph-package",
+  },
+  {
+    id: "isPaying",
+    key: "is_paying",
+    type: "boolean",
+    group: "billing",
+    icon: "i-ph-currency-circle-dollar",
+  },
+  {
+    id: "isOnTrial",
+    key: "is_on_trial",
+    type: "boolean",
+    group: "billing",
+    icon: "i-ph-hourglass-medium",
+  },
+  {
+    id: "mrr",
+    key: "mrr",
     type: "number",
-    valueKind: "number",
-    labelKey: "saas.segments.fields.total_revenue.label",
-    descriptionKey: "saas.segments.fields.total_revenue.description",
-    operators: NUMBER_OPERATORS,
+    group: "billing",
+    icon: "i-ph-chart-line-up",
+    unit: "currency",
+  },
+  {
+    id: "totalRevenue",
+    key: "total_revenue",
+    type: "number",
+    group: "billing",
+    icon: "i-ph-coins",
     unit: "currency",
   },
   {
     id: "daysSinceLastInvoice",
+    key: "days_since_last_invoice",
     type: "number",
-    valueKind: "number",
-    labelKey: "saas.segments.fields.days_since_last_invoice.label",
-    descriptionKey: "saas.segments.fields.days_since_last_invoice.description",
-    operators: NUMBER_OPERATORS,
+    group: "billing",
+    icon: "i-ph-receipt",
     unit: "days",
   },
-] as const;
+  {
+    id: "hasStripeCustomer",
+    key: "has_stripe_customer",
+    type: "boolean",
+    group: "billing",
+    icon: "i-ph-credit-card",
+  },
+  {
+    id: "customerType",
+    key: "customer_type",
+    type: "enum",
+    group: "billing",
+    icon: "i-ph-identification-card",
+    enumOptions: CUSTOMER_TYPE_OPTIONS,
+  },
+];
 
-export const USER_SEGMENT_FIELDS: readonly SegmentFieldDefinition[] = [
+const USER_FIELD_SPECS: FieldSpec[] = [
   {
     id: "email",
+    key: "user_email",
     type: "string",
-    valueKind: "string",
-    labelKey: "saas.segments.fields.user_email.label",
-    descriptionKey: "saas.segments.fields.user_email.description",
-    operators: STRING_OPERATORS,
+    group: "identity",
+    icon: "i-ph-envelope-simple",
   },
   {
     id: "name",
+    key: "user_name",
     type: "string",
-    valueKind: "string",
-    labelKey: "saas.segments.fields.user_name.label",
-    descriptionKey: "saas.segments.fields.user_name.description",
-    operators: STRING_OPERATORS,
+    group: "identity",
+    icon: "i-ph-user",
   },
   {
     id: "language",
+    key: "user_language",
     type: "string",
-    valueKind: "string",
-    labelKey: "saas.segments.fields.user_language.label",
-    descriptionKey: "saas.segments.fields.user_language.description",
-    operators: STRING_OPERATORS,
-  },
-  {
-    id: "createdAt",
-    type: "date",
-    valueKind: "date",
-    labelKey: "saas.segments.fields.user_created_at.label",
-    descriptionKey: "saas.segments.fields.user_created_at.description",
-    operators: DATE_OPERATORS,
-  },
-  {
-    id: "ageInDays",
-    type: "number",
-    valueKind: "number",
-    labelKey: "saas.segments.fields.user_age_in_days.label",
-    descriptionKey: "saas.segments.fields.user_age_in_days.description",
-    operators: NUMBER_OPERATORS,
-    unit: "days",
+    group: "identity",
+    icon: "i-ph-translate",
   },
   {
     id: "isValidated",
+    key: "user_is_validated",
     type: "boolean",
-    valueKind: "boolean",
-    labelKey: "saas.segments.fields.user_is_validated.label",
-    descriptionKey: "saas.segments.fields.user_is_validated.description",
-    operators: BOOLEAN_OPERATORS,
+    group: "identity",
+    icon: "i-ph-seal-check",
+  },
+  {
+    id: "createdAt",
+    key: "user_created_at",
+    type: "date",
+    group: "activity",
+    icon: "i-ph-calendar-blank",
+  },
+  {
+    id: "ageInDays",
+    key: "user_age_in_days",
+    type: "number",
+    group: "activity",
+    icon: "i-ph-hourglass",
+    unit: "days",
   },
   {
     id: "daysSinceLastActive",
+    key: "days_since_last_active",
     type: "number",
-    valueKind: "number",
-    labelKey: "saas.segments.fields.days_since_last_active.label",
-    descriptionKey: "saas.segments.fields.days_since_last_active.description",
-    operators: NUMBER_OPERATORS,
+    group: "activity",
+    icon: "i-ph-clock",
     unit: "days",
   },
   {
     id: "workspacesCount",
+    key: "workspaces_count",
     type: "number",
-    valueKind: "number",
-    labelKey: "saas.segments.fields.workspaces_count.label",
-    descriptionKey: "saas.segments.fields.workspaces_count.description",
-    operators: NUMBER_OPERATORS,
+    group: "memberships",
+    icon: "i-ph-buildings",
     unit: "count",
   },
   {
     id: "isOwnerOfAnyWorkspace",
+    key: "is_owner_of_any_workspace",
     type: "boolean",
-    valueKind: "boolean",
-    labelKey: "saas.segments.fields.is_owner_of_any_workspace.label",
-    descriptionKey:
-      "saas.segments.fields.is_owner_of_any_workspace.description",
-    operators: BOOLEAN_OPERATORS,
+    group: "memberships",
+    icon: "i-ph-crown-simple",
   },
-] as const;
+];
+
+/** Fields of a workspace, read inside a "user's workspaces" condition. */
+export const SEGMENT_FIELDS: readonly SegmentFieldDefinition[] =
+  WORKSPACE_FIELD_SPECS.map(defineField);
+
+/** Fields of a user, read at the root of a segment. */
+export const USER_SEGMENT_FIELDS: readonly SegmentFieldDefinition[] =
+  USER_FIELD_SPECS.map(defineField);
 
 export function getSegmentFields(
   catalog: SegmentFieldCatalog,

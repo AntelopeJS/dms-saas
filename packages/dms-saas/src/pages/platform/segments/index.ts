@@ -5,6 +5,10 @@ import { segmentsDataAPI } from "../../../data-api";
 import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
 
+const SEGMENTS_API = "/api/saas/segments/{_id}";
+/** Where the segment pages live, for links built before the page registers. */
+export const SEGMENTS_PAGE_URL = "/modules/saas/customers/segments";
+
 @RegisterPage()
 export class SaasSegmentsController extends PageController(
   "segments",
@@ -20,21 +24,52 @@ export class SaasSegmentsController extends PageController(
 ) {
   static table = TableView(segmentsDataAPI, {
     caption: "$saas.segments.caption",
+    labelKey: "name",
+    defaultSort: { field: "name" },
+    footer: {
+      countLabel: "$saas.segments.footer_count",
+      hint: "$saas.segments.footer_hint",
+    },
+    emptyStates: {
+      firstRun: {
+        title: "$saas.segments.empty.title",
+        description: "$saas.segments.empty.description",
+        icon: "i-ph-funnel",
+      },
+    },
     rowActions: {
-      add: { isEnabled: true, isVisible: true },
-      copyLink: true,
-      delete: { isEnabled: true, isVisible: true },
-      details: { isEnabled: true, isVisible: true },
+      add: {
+        isEnabled: true,
+        placement: "header",
+        label: "$saas.segments.actions.new",
+      },
+      copyLink: false,
+      details: false,
       duplicate: false,
-      edit: { isEnabled: true, isVisible: true },
+      edit: {
+        isEnabled: true,
+        isVisible: false,
+        label: "$saas.segments.actions.edit",
+      },
+      delete: {
+        isEnabled: true,
+        successMessage: "$saas.segments.deleted",
+        confirm: {
+          title: "$saas.segments.delete_confirm.title",
+          description: "$saas.segments.delete_confirm.description",
+          icon: "i-ph-trash",
+          color: "error",
+          confirmLabel: "$saas.segments.delete_confirm.confirm",
+        },
+      },
       hasSelection: true,
       custom: [
         {
-          label: "$saas.segments.actions.export_owners",
-          icon: "i-ph-download-simple",
+          label: "$saas.segments.actions.export_users",
+          icon: "i-ph-file-csv",
           target: {
             type: "exportJob",
-            url: "/api/saas/segments/{_id}/owners-export/start",
+            url: `${SEGMENTS_API}/owners-export/start`,
             method: "POST",
             labels: {
               title: "$saas.segments.export.title",
@@ -42,10 +77,38 @@ export class SaasSegmentsController extends PageController(
               successTitle: "$saas.segments.export.success_title",
               successMessage: "$saas.segments.export.done_message",
               errorTitle: "$saas.segments.export.error_title",
+              retry: "$saas.segments.export.retry",
             },
           },
         },
+        {
+          label: "$saas.segments.actions.evaluate",
+          icon: "i-ph-arrows-clockwise",
+          target: {
+            type: "api",
+            url: `${SEGMENTS_API}/evaluate`,
+            method: "POST",
+            successMessage: "$saas.segments.evaluated",
+          },
+        },
+        {
+          label: "$saas.segments.actions.duplicate",
+          icon: "i-ph-copy",
+          target: {
+            type: "api",
+            url: `${SEGMENTS_API}/duplicate`,
+            method: "POST",
+            successMessage: "$saas.segments.duplicated",
+          },
+        },
       ],
+    },
+    formContainer: {
+      type: "page",
+      pages: {
+        new: { urlSlug: "new", customPage: true },
+        edit: { urlSlug: ":id/edit", customPage: true },
+      },
     },
   });
 }
