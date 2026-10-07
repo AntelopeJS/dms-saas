@@ -4,6 +4,7 @@ import {
   type BillingState,
   TenantBillingState,
   tenantBillingStateTableName,
+  type WorkspaceDirectoryFields,
 } from "../tables/tenantBillingState.table";
 
 const DELETE_ATTEMPTS = 3;
@@ -19,14 +20,18 @@ export class TenantBillingStateModel extends BasicDataModel(
     return this.get(tenantId);
   }
 
-  /** Publishes against the snapshot read before deriving the billing state. */
+  /**
+   * Publishes against the snapshot read before deriving the billing state,
+   * with the directory fields derived alongside it.
+   */
   async upsertForTenant(
     tenantId: string,
     billingState: BillingState,
     existing: TenantBillingState | undefined,
+    directory?: WorkspaceDirectoryFields,
   ): Promise<boolean> {
     if (existing?.deletedAt) return true;
-    return this.publish(tenantId, existing, billingState, null);
+    return this.publish(tenantId, existing, billingState, null, directory);
   }
 
   private async publish(
@@ -34,9 +39,16 @@ export class TenantBillingStateModel extends BasicDataModel(
     existing: TenantBillingState | undefined,
     billingState: BillingState,
     deletedAt: Date | null,
+    directory?: WorkspaceDirectoryFields,
   ): Promise<boolean> {
     const revision = randomUUID();
-    const patch = { tenantId, billingState, updatedAt: new Date(), deletedAt };
+    const patch = {
+      ...directory,
+      tenantId,
+      billingState,
+      updatedAt: new Date(),
+      deletedAt,
+    };
     if (!existing)
       return this.insertPublication({ _id: tenantId, ...patch, revision });
     const outcome = await this.table
