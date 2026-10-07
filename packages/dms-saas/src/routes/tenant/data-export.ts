@@ -6,7 +6,9 @@ import {
   Post,
   type RequestContext,
 } from "@antelopejs/interface-api";
+import { assert } from "@antelopejs/interface-api-util";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
+import { ExportStatus } from "@antelopejs/interface-dms/base/types";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import {
@@ -48,6 +50,23 @@ interface ExportHistoryPage extends Page<ExportJobSummary> {
 
 const dataExportAccess: ExportJobAccessOptions = { scope: DATA_EXPORT_SCOPE };
 
+const HTTP_CONFLICT = 409;
+/** Only the newest jobs can still be running: they are listed newest first. */
+const RUNNING_EXPORT_LOOKUP_LIMIT = 5;
+/**
+ * A job still pending after this long was orphaned by a restart: it must not
+ * keep the owner from ever exporting again.
+ */
+const STALE_PENDING_EXPORT_MS = 60 * 60 * 1000;
+
+/** Whether a job is an export still being built. */
+function isRunning(job: ExportJobSummary, nowMs: number): boolean {
+  return (
+    job.status === ExportStatus.pending &&
+    nowMs - new Date(job.createdAt).getTime() < STALE_PENDING_EXPORT_MS
+  );
+}
+
 type ExportDeliveryOptions = Pick<
   StartTenantExportJobOptions,
   "delivery" | "deliveryPath"
@@ -66,12 +85,25 @@ function resolveDelivery(): ExportDeliveryOptions {
 export class SaasDataExportController extends Controller(
   "/api/saas/data-export",
 ) {
+  /**
+   * One export at a time: a second one would rebuild the same archive while
+   * the first still runs, and the page disables its button for that reason.
+   */
   @Post("/start")
   async start(
     @AuthTenantOwner() user: User,
     @Context() ctx: RequestContext,
   ): Promise<ExportJobTicket> {
     const tenantId = getRequestTenantId(ctx);
+    const recent = await listExportJobs(ctx, user, {
+      scope: DATA_EXPORT_SCOPE,
+      limit: RUNNING_EXPORT_LOOKUP_LIMIT,
+    });
+    assert(
+      !recent.some((job) => isRunning(job, Date.now())),
+      HTTP_CONFLICT,
+      "saas.errors.data_export.already_running",
+    );
     return startTenantExportJob({
       ctx,
       user,
