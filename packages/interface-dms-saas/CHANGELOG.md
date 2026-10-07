@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.3.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.2.7...v0.3.0)
+
+### 🚀 Enhancements
+
+- **saas:** ⚠️  Store feature display names and tooltips as localized fields ([#79](https://github.com/AntelopeJS/dms-saas/pull/79))
+
+### 🩹 Fixes
+
+- **workspaces:** Make the card optional for free plans ([#74](https://github.com/AntelopeJS/dms-saas/pull/74))
+- **billing:** Hide the upgrade and payment-method prompts on complimentary workspaces ([#75](https://github.com/AntelopeJS/dms-saas/pull/75))
+- Translate billing statuses and automation labels, confirm plan downgrades ([#76](https://github.com/AntelopeJS/dms-saas/pull/76))
+
+### 💅 Refactors
+
+- **saas:** Namespace the plan cards display id ([#78](https://github.com/AntelopeJS/dms-saas/pull/78))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.3.12 ([5adb5a9](https://github.com/AntelopeJS/dms-saas/commit/5adb5a9))
+- **playground:** Open module source ranges ([#73](https://github.com/AntelopeJS/dms-saas/pull/73))
+- **release:** @antelopejs/dms-saas v0.3.13 ([13b6457](https://github.com/AntelopeJS/dms-saas/commit/13b6457))
+- **release:** @antelopejs/dms-saas v0.3.14 ([ff98697](https://github.com/AntelopeJS/dms-saas/commit/ff98697))
+- **release:** @antelopejs/dms-saas v0.3.15 ([9382d09](https://github.com/AntelopeJS/dms-saas/commit/9382d09))
+
+#### ⚠️ Breaking Changes
+
+- **saas:** ⚠️  Store feature display names and tooltips as localized fields ([#79](https://github.com/AntelopeJS/dms-saas/pull/79))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.2.7
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.2.6...v0.2.7)
