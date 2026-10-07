@@ -111,6 +111,10 @@ describe("plan feature value formatting", () => {
       "Upgrade required",
     ],
     [{ valueType: "string", unit: "support" }, "24/7", "24/7 support"],
+    // Q36: one meaning everywhere, 0 is off, -1 unlimited, n ≥ 1 a limit.
+    [numeric(null), 0, "—"],
+    [numeric("projects"), 0, "—"],
+    [numeric("projects"), 1, "1 projects"],
   ])("renders %o with value %o as %s", (feature, value, expected) => {
     expect(formatPlanFeatureValue(feature, value, context("en-GB"))).toBe(
       expected,

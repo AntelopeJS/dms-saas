@@ -46,7 +46,10 @@
         "change_in_progress": "A plan change is already being processed. Try again in a few minutes.",
         "upgrade_payment_declined": "The card was declined, so the plan didn't change. Update the card in Stripe and try again.",
         "already_current": "The workspace is already on this plan.",
-        "unpaid_invoice_blocks_cancellation": "An invoice is unpaid. Pay it before cancelling the subscription."
+        "unpaid_invoice_blocks_cancellation": "An invoice is unpaid. Pay it before cancelling the subscription.",
+        "invalid_feature_value": "A feature value doesn’t fit its feature: a limit must be at least 1, Off is 0 and Unlimited is −1.",
+        "invalid_member_cap": "The member cap must be at least 1, or unlimited.",
+        "retire_confirm_mismatch": "Type the plan’s key exactly as shown to confirm."
       },
       "workspace": {
         "not_found": "Workspace not found",
@@ -110,7 +113,18 @@
         "preview_unavailable": "Stripe couldn't preview the next invoice right now."
       },
       "migration": {
-        "already_pending": "A migration is already pending for this plan"
+        "already_pending": "A migration is already pending for this plan",
+        "not_found": "Migration not found",
+        "still_running": "The migration is still running. Wait for it to finish.",
+        "workspace_not_uncertain": "This workspace is not waiting to be settled.",
+        "subscription_missing": "The workspace has no subscription any more.",
+        "snapshot_missing": "The migration has no captured target plan.",
+        "workspace_changed": "The workspace’s plan changed since the migration. Reload and check it again.",
+        "changed": "The migration changed in the meantime. Reload and try again.",
+        "uncertain_workspaces": "Settle the uncertain workspaces first.",
+        "invalid_resolution": "Unknown way to settle the workspace.",
+        "nothing_to_retry": "No failed workspace can be retried now.",
+        "note_required": "Write a note for the audit log."
       },
       "platform_owner": {
         "already_owner": "This user is already a platform admin",
@@ -181,6 +195,11 @@
         "refund_window_days": "Enter a whole number of days from 1 to 365.",
         "tax_code": "A Stripe tax category reads txcd_ followed by 8 digits.",
         "legal_text_too_long": "This document is too long to be saved."
+      },
+      "feature": {
+        "not_found": "Feature not found",
+        "value_type_locked": "Plans store a value for this feature: its value type can’t change.",
+        "in_use": "Plans still use this feature. Switch it off on each plan first."
       }
     },
     "dashboard": {
@@ -232,131 +251,10 @@
       "description": "Plans, workspaces, billing and customer lifecycle."
     },
     "plans": {
-      "title": "Plans",
-      "description": "Subscription plans, pricing, features and trial settings.",
-      "create": "Create plan",
-      "caption": "Subscription plans, pricing, features and trial settings.",
-      "column": {
-        "workspaces": "Workspaces"
-      },
-      "display": {
-        "cards": "Cards"
-      },
-      "new_title": "New plan",
-      "new_description": "Create a new subscription plan. Stripe product and price are synced after creation.",
-      "edit_title": "Edit plan",
-      "edit_description": "Update an existing plan. Pricing changes are propagated to Stripe.",
-      "reorder_failed": "Failed to reorder plans.",
       "trial_days": "{days} days free trial",
-      "delete": {
-        "action_title": "Delete plan",
-        "success": "Plan deleted.",
-        "migration_title": "Migrate workspaces from {name}?",
-        "migration_started": "Migration requested. The source plan is retained.",
-        "migrate_intro": "{count} workspaces currently use this plan. Migration covers only the captured workspace list; later arrivals are excluded. The source plan is retained, even when migration completes. Retiring it later requires a separate procedure that stops all writers.",
-        "target_label": "Migrate workspaces to",
-        "target_placeholder": "Select a target plan",
-        "notify_members": "Notify affected members",
-        "computing_diff": "Computing impact…",
-        "affected_count": "{count} workspaces will be affected",
-        "permissions_removed": "Permissions that will be removed",
-        "confirm": "Start snapshot migration",
-        "failed": "Plan deletion failed",
-        "no_target": "Please select a target plan",
-        "simple_title": "Delete plan {name}?",
-        "simple_warning": "No workspaces are affected. This action cannot be undone.",
-        "simple_confirm": "Delete"
-      },
-      "deactivate": {
-        "title": "Deactivate plan {name}?",
-        "warning": "{count} workspaces will remain on this plan until manually migrated.",
-        "public_removal": "The plan disappears from the public catalogue and can no longer be subscribed to.",
-        "confirm": "Deactivate"
-      },
-      "action": {
-        "delete": "Delete",
-        "edit": "Edit"
-      },
-      "migrations": {
-        "title": "Plan migrations",
-        "description": "Ongoing and historical plan migrations.",
-        "caption": "Plan migration jobs",
-        "column": {
-          "from": "From",
-          "to": "To",
-          "status": "Status",
-          "processed": "Processed",
-          "total": "Total",
-          "created_at": "Created",
-          "completed_at": "Completed"
-        }
-      },
-      "inheritance": {
-        "toggle": "Inherit permissions and features from another plan",
-        "select_plan": "Select source plan",
-        "loading": "Loading permissions and features…",
-        "snapshot_hint": "The parent plan's permissions and features are copied (snapshot) when saving.",
-        "no_features": "No features defined.",
-        "inherited": "Inherited",
-        "permissions_tooltip": "Permissions granted by this plan. Inheriting copies those of the parent plan as a starting point.",
-        "features_tooltip": "Feature values for this plan. Toggle on/off or set the quantity per feature."
-      },
-      "field": {
-        "name": "Name",
-        "description": "Description",
-        "audience": "Audience",
-        "price": "Price (excl. tax)",
-        "currency": "Currency",
-        "interval": "Interval",
-        "billing_mode": "Billing mode",
-        "trial_days": "Trial days",
-        "permissions": "Permissions",
-        "features": "Features",
-        "border_color": "Border color",
-        "border_label": "Border label",
-        "order": "Display order",
-        "is_active": "Active",
-        "inheritance": "Permissions and features",
-        "inheritance_description": "Set the plan's permissions and features, optionally inherited from a parent plan.",
-        "max_members": "Maximum members",
-        "max_members_description": "Set -1 for unlimited members.",
-        "is_public": "Public",
-        "is_public_description": "Visible on the registration and plan selection pages.",
-        "is_deleted": "Deleted",
-        "order_description": "Lower = shown first.",
-        "name_description": "Commercial name of the plan shown to customers.",
-        "description_description": "Pitch shown on public pages and the plan card.",
-        "audience_description": "Who this plan is offered to (everyone, individuals, businesses).",
-        "price_description": "Base price excluding tax for the selected billing period.",
-        "currency_description": "Currency used for pricing and billing.",
-        "interval_description": "Recurring billing frequency (monthly or yearly).",
-        "billing_mode_description": "Flat-rate billing or per-user (seat) billing.",
-        "trial_days_description": "Number of free trial days before the first charge (0 = none).",
-        "is_active_description": "If disabled, the plan stays visible to admins but cannot be subscribed to.",
-        "border_color_description": "Accent color used for the highlight badge and ring on the card.",
-        "border_label_description": "Text of the floating badge shown at the top of the card (e.g. Popular, Recommended)."
-      },
-      "audience": {
-        "any": "Anyone",
-        "individual": "Individuals only",
-        "business": "Businesses only"
-      },
-      "billing_mode": {
-        "flat": "Flat rate",
-        "seat": "Per seat"
-      },
-      "interval": {
-        "month": "Monthly",
-        "year": "Yearly"
-      },
       "cycle": {
         "month": "month",
         "year": "year"
-      },
-      "card": {
-        "members": "{count} members max",
-        "members_unlimited": "Unlimited members",
-        "subscriptions": "{count} active subscriptions"
       },
       "seat_limit": {
         "invite_unavailable": "All the seats of your plan are taken. Upgrade your plan to invite more members."
@@ -651,32 +549,6 @@
           "month": "month",
           "year": "year"
         }
-      }
-    },
-    "features": {
-      "title": "Features",
-      "description": "Feature flags exposed to plans and consumed by workspaces.",
-      "caption": "All features",
-      "column": {
-        "display_name": "Display name",
-        "description": "Description",
-        "value_type": "Value type",
-        "display_name_description": "Label shown to administrators and customers.",
-        "description_description": "Detailed description of what the feature does.",
-        "value_type_description": "Type of value carried by the feature (boolean, number, string).",
-        "tooltip": "Tooltip",
-        "tooltip_description": "Short hint shown next to the feature in the plan comparison table.",
-        "unit": "Unit",
-        "unit_description": "Suffix appended to numeric values, for example GB or h/month.",
-        "is_detail_row": "Detail row",
-        "is_detail_row_description": "Hidden behind the comparison table's see-full-detail toggle.",
-        "order": "Order",
-        "order_description": "Row position in the plan comparison table."
-      },
-      "placeholder": {
-        "display_name": "Display name",
-        "tooltip": "Deducted from your usage by the minute",
-        "unit": "GB"
       }
     },
     "common": {

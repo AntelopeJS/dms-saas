@@ -42,11 +42,12 @@ export function initStripeClient(config: DmsSaasStripeConfig): void {
  * A page of the Stripe Dashboard for the account the module talks to, in test
  * mode when the configured key is a test key.
  *
- * @param path Dashboard path, e.g. `/invoices/in_123`
+ * @param path Dashboard path, e.g. `/invoices/in_123` (the leading slash is optional)
  */
 export function stripeDashboardUrl(path: string): string {
   const mode = stripeTestMode ? TEST_MODE_DASHBOARD_PATH : "";
-  return `${STRIPE_DASHBOARD_URL}${mode}${path}`;
+  const separator = path.startsWith("/") ? "" : "/";
+  return `${STRIPE_DASHBOARD_URL}${mode}${separator}${path}`;
 }
 
 export function isStripeConfigured(): boolean {
