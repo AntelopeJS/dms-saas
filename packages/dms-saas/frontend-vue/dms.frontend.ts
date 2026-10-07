@@ -40,10 +40,7 @@ function registerComponents(sdk: DmsFrontendSdk): void {
 				.split('/')
 				.at(-1)!
 				.replace(/\.vue$/, '')
-			sdk.registerComponent(
-				`DmsSaas${pascalCase(name)}`,
-				defineAsyncComponent(loader),
-			)
+			sdk.registerComponent(pascalCase(name), defineAsyncComponent(loader))
 		})
 	Object.entries(pages)
 		.sort()
@@ -51,11 +48,12 @@ function registerComponents(sdk: DmsFrontendSdk): void {
 			const name = path.replace('./app/custom-pages/', '').replace(/\.vue$/, '')
 			const component = defineAsyncComponent(loader)
 			sdk.registerPage(name, component, loader)
-			sdk.registerComponent(`Dms${pascalCase(name)}`, component)
+			sdk.registerComponent(pascalCase(name), component)
 		})
 }
 
 const frontendModule: DmsFrontendModule = {
+	componentPrefix: 'DmsSaas',
 	setup(sdk) {
 		registerComponents(sdk)
 		sdk.registerPlugin(authLinks)

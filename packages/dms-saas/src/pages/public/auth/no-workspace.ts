@@ -25,5 +25,5 @@ export class SaasNoWorkspacePage extends PageController(
   },
   EmptyLayout(),
 ) {
-  static content = CustomComponent("DmsAuthNoWorkspace");
+  static content = CustomComponent("DmsSaasAuthNoWorkspace");
 }

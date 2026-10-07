@@ -11,7 +11,7 @@ import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
  * The target page is named by its id and the anchor by the component key the
  * page declares it under, so nothing is imported from the DMS runtime.
  */
-@RegisterPageExtension("settings.user.members")
+@RegisterPageExtension("settings.workspace.members")
 export class MembersSeatQuotaExtension {
   static seatQuota = CustomComponent("DmsSaasSeatQuotaBanner")
     .meta({

@@ -1,22 +1,9 @@
-import type {
-  MenuOptions,
-  ModuleInfo,
-  PageInfo,
-} from "@antelopejs/interface-dms/page";
+import type { ModuleInfo, PageInfo } from "@antelopejs/interface-dms/page";
 
 interface SaasModuleDefinition {
   fullId: string;
   fullSlug: string;
   registration: ModuleInfo;
-}
-
-interface WorkspaceSettingsCategoryDefinition extends Omit<
-  MenuOptions,
-  "category" | "module"
-> {
-  id: string;
-  fullId: string;
-  fullSlug: string;
 }
 
 export const MODULES_ROOT_DEFINITION: PageInfo = {
@@ -69,14 +56,3 @@ export const SAAS_MODULE_DEFINITION: SaasModuleDefinition = {
     landingPage: "dashboard",
   },
 };
-
-export const WORKSPACE_SETTINGS_CATEGORY_DEFINITION: WorkspaceSettingsCategoryDefinition =
-  {
-    id: "workspace",
-    fullId: `${SETTINGS_ROOT_DEFINITION.fullId}.workspace`,
-    fullSlug: `${SETTINGS_ROOT_DEFINITION.fullSlug}/workspace`,
-    displayName: "$saas.workspace.settings.title",
-    urlSlug: "workspace",
-    icon: "i-ph-buildings",
-    order: 2,
-  };

@@ -16,7 +16,6 @@ import {
 } from "@antelopejs/interface-dms/permissions";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import type { FormComponents } from "@antelopejs/interface-dms/base/form-schema";
 import type { Plan } from "../../db";
 import {
   FeatureModel,
@@ -215,6 +214,14 @@ interface PlanEditCatalog {
   features: PlanFeatureCatalogItem[];
 }
 
+/** One node of the permission tree the plan editor offers. */
+interface PlanPermissionNode {
+  id: string;
+  label: string;
+  icon?: string;
+  children?: PlanPermissionNode[];
+}
+
 interface PlanReorderItem {
   id: string;
   order: number;
@@ -230,7 +237,7 @@ interface PlanReorderResult {
 
 function mapPermissionTreeToNodes(
   tree: Record<string, PermissionTree>,
-): FormComponents.PermissionsTreeNode[] {
+): PlanPermissionNode[] {
   return Object.values(tree)
     .filter((node) => node.data && !node.data.defaultGranted)
     .map((node) => ({
@@ -347,7 +354,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   @Get("/permissions-tree")
   async permissionsTree(
     @AuthOwnerOnly() _user: User,
-  ): Promise<FormComponents.PermissionsTreeNode[]> {
+  ): Promise<PlanPermissionNode[]> {
     return mapPermissionTreeToNodes(await GetPermissions());
   }
 

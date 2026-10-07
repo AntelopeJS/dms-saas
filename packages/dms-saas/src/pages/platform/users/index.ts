@@ -36,11 +36,11 @@ export class SaasUsersListController extends PageController(
             url: "/api/saas/platform-owners/{_id}/promote",
             method: "POST",
             successMessage: "$saas.platform_owners.promoted",
-            confirm: {
-              title: "$saas.platform_owners.confirm_promote.title",
-              description: "$saas.platform_owners.confirm_promote.description",
-              confirmColor: "primary",
-            },
+          },
+          confirm: {
+            title: "$saas.platform_owners.confirm_promote.title",
+            description: "$saas.platform_owners.confirm_promote.description",
+            color: "primary",
           },
         },
         {
@@ -52,18 +52,18 @@ export class SaasUsersListController extends PageController(
             url: "/api/saas/platform-owners/{_id}/demote",
             method: "POST",
             successMessage: "$saas.platform_owners.demoted",
-            confirm: {
-              title: "$saas.platform_owners.confirm_demote.title",
-              description: "$saas.platform_owners.confirm_demote.description",
-              confirmColor: "error",
-            },
+          },
+          confirm: {
+            title: "$saas.platform_owners.confirm_demote.title",
+            description: "$saas.platform_owners.confirm_demote.description",
+            color: "error",
           },
         },
       ],
     },
     formContainer: {
       type: "page",
-      pages: { view: { urlSlug: ":id", customPage: true } },
+      pages: { details: { urlSlug: ":id", customPage: true } },
     },
   });
 }

@@ -43,7 +43,7 @@ const STATUS_TAB_IDS = ["active", "free", "past_due", "suspended"];
 const STATUS_TABS = STATUS_TAB_IDS.map((id) => ({
   id,
   label: `$saas.workspaces.billing_state.${id}`,
-  filters: [{ accessorKey: STATUS_TAB_FILTER_KEY, value: id, mode: "is" }],
+  filter: { accessorKey: STATUS_TAB_FILTER_KEY, value: id, mode: "is" },
 }));
 
 // A custom form rather than the generic one: the generic form always reports
@@ -267,7 +267,7 @@ export class SaasWorkspacesListController extends PageController(
     ],
     formContainer: {
       type: "page",
-      pages: { view: { urlSlug: ":id", customPage: true } },
+      pages: { details: { urlSlug: ":id", customPage: true } },
     },
   });
 

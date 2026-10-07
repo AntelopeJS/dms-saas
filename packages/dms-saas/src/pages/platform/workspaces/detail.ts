@@ -47,12 +47,12 @@ const invitationTable = TableView(invitationsDataAPI, {
           url: `${INVITATION_ACTIONS_URL}/resend`,
           method: "POST",
           successMessage: "$saas.workspaces.invitations.action.resend_success",
-          confirm: {
-            title: "$saas.workspaces.invitations.action.resend_confirm_title",
-            description:
-              "$saas.workspaces.invitations.action.resend_confirm_description",
-            confirmColor: "primary",
-          },
+        },
+        confirm: {
+          title: "$saas.workspaces.invitations.action.resend_confirm_title",
+          description:
+            "$saas.workspaces.invitations.action.resend_confirm_description",
+          color: "primary",
         },
       },
       {

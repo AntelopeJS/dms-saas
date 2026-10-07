@@ -73,7 +73,7 @@ export class SaasPlansController extends PageController(
       pages: {
         new: { urlSlug: "new", customPage: true },
         edit: { urlSlug: ":id/edit", customPage: true },
-        view: { urlSlug: ":id/view", customPage: true },
+        details: { urlSlug: ":id/view", customPage: true },
       },
     },
     displays: [

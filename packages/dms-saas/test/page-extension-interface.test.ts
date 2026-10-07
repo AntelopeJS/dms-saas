@@ -27,7 +27,6 @@ import {
   RegisterPlatformWorkspaceDetailPageExtension,
   RegisterTenantBillingPageExtension,
   tenantBillingPage,
-  workspaceSettingsCategory,
 } from "@antelopejs/interface-dms-saas/pages";
 
 const COMPONENT = {} as Component;
@@ -38,42 +37,6 @@ beforeEach(() => {
 });
 
 describe("tenant billing page extension interface", () => {
-  it("publishes a pure workspace settings descriptor", () => {
-    expect(pageRegistration.Category).not.toHaveBeenCalled();
-    expect(workspaceSettingsCategory).toEqual({
-      id: "workspace",
-      fullId: "settings.workspace",
-      fullSlug: "/settings/workspace",
-      displayName: "$saas.workspace.settings.title",
-      urlSlug: "workspace",
-      icon: "i-ph-buildings",
-      order: 2,
-      category: {
-        id: "settings",
-        fullId: "settings",
-        fullSlug: "/settings",
-        layoutUrl: "/settings/pagelayout",
-        category: undefined,
-        displayName: "$page.settings.title",
-        description: "$page.settings.intro",
-        urlSlug: "/settings",
-        icon: "i-ph-gear",
-        order: 3,
-        noComponentPermissions: true,
-        hidden: undefined,
-        publicAccess: undefined,
-        authOnly: undefined,
-        bypassTenantAccessGate: undefined,
-      },
-      urlTransparent: false,
-      hidden: undefined,
-      bypassTenantAccessGate: undefined,
-    });
-    expect(Object.getPrototypeOf(workspaceSettingsCategory)).toBe(
-      Object.prototype,
-    );
-  });
-
   it("publishes stable page and anchor identifiers", () => {
     expect(tenantBillingPage).toMatchObject({
       fullId: "settings.workspace.billing",

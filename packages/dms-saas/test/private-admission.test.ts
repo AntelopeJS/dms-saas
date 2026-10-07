@@ -168,7 +168,7 @@ async function oauthLogin(
       providerId: "google",
       body: { code: "test", state, state_cookie: state, invite },
       userAgent: "test",
-      ip: "127.0.0.1",
+      origin: { ip: "127.0.0.1" },
     });
   } finally {
     vi.unstubAllGlobals();
