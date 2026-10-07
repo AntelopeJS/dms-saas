@@ -152,7 +152,8 @@ export class SaasUserDetailController extends PageController(
     icon: "i-ph-user",
     hidden: true,
   },
-  DefaultLayout({ fullWidth: true }),
+  // The identity header names the user: the generic page title would repeat it.
+  DefaultLayout({ fullWidth: true, hideHeader: true }),
 ) {
   static layout = VStack({ spacing: SPACING, alignment: "stretch" })
     .child("summary", summary)

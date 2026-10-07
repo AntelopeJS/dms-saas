@@ -10,7 +10,7 @@ import type {
 } from "@antelopejs/interface-dms/base";
 import { fetchDefaultPaymentMethod } from "../../billing-state";
 import { getReportingCurrency } from "../../config";
-import { type Invoice, InvoiceModel } from "../../db";
+import { CreditNoteModel, type Invoice, InvoiceModel } from "../../db";
 import { serverMessages } from "../../i18n/server-messages";
 import { buildActivityFeed, parseActivityKind } from "../../metrics/activity";
 import { loadActivitySources } from "../../metrics/activity-sources";
@@ -208,15 +208,17 @@ export class SaasWorkspaceDetailController extends Controller(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
   ): Promise<Record<string, string | number>> {
-    const [view, documents] = await Promise.all([
+    // The invoice mirror's `getAllInvoices` leaves the credit notes out:
+    // they are counted from their own table.
+    const [view, invoices, creditNotes] = await Promise.all([
       loadWorkspaceOperatorView(tenantId),
       loadDocuments(tenantId),
+      GetModel(CreditNoteModel, tenantId).getAll(),
     ]);
-    const invoices = documents.filter(isInvoiceDocument).length;
     const { members, pendingInvites } = view.seats;
     return {
-      invoices,
-      creditNotes: documents.length - invoices,
+      invoices: invoices.filter(isInvoiceDocument).length,
+      creditNotes: creditNotes.length,
       members: pendingInvites > 0 ? `${members} + ${pendingInvites}` : members,
     };
   }

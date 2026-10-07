@@ -201,7 +201,7 @@ onMounted(load)
 </script>
 
 <template>
-	<div class="flex flex-col gap-4">
+	<div class="dms-saas-wide-field flex flex-col gap-4">
 		<div v-if="isLoading" class="flex flex-col gap-2">
 			<USkeleton v-for="index in 4" :key="index" class="h-10 w-full" />
 		</div>
@@ -233,13 +233,14 @@ onMounted(load)
 				</p>
 			</div>
 
-			<div class="border-default overflow-hidden rounded-lg border">
+			<!-- The editor sits in a form column: it lays out from its own width. -->
+			<div class="border-default @container overflow-hidden rounded-lg border">
 				<div
-					class="bg-elevated/50 text-muted grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-3 py-2 text-xs font-medium uppercase sm:grid-cols-[minmax(0,1fr)_auto_10rem]"
+					class="bg-elevated/50 text-muted @lg:grid @lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)_9rem] hidden gap-3 px-3 py-2 text-xs font-medium uppercase"
 				>
 					<span>{{ $t('saas.catalog.editor.access.feature') }}</span>
 					<span>{{ $t('saas.catalog.editor.access.value') }}</span>
-					<span class="hidden sm:block">
+					<span>
 						{{ $t('saas.catalog.editor.access.source') }}
 					</span>
 				</div>
@@ -252,7 +253,7 @@ onMounted(load)
 				<div
 					v-for="feature in catalog.features"
 					:key="feature._id"
-					class="border-default grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto_10rem]"
+					class="border-default @lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)_9rem] @lg:gap-3 grid grid-cols-1 items-center gap-2 border-t px-3 py-2.5"
 				>
 					<div class="min-w-0">
 						<p class="text-highlighted truncate text-sm font-medium">
@@ -269,9 +270,7 @@ onMounted(load)
 						:disabled="disabled"
 						@update:model-value="(value: unknown) => setFeature(feature, value)"
 					/>
-					<div
-						class="col-span-2 flex items-center gap-1.5 text-xs sm:col-span-1"
-					>
+					<div class="flex items-center gap-1.5 text-xs">
 						<UBadge
 							v-if="sourceOf(feature) === 'inherited'"
 							size="sm"

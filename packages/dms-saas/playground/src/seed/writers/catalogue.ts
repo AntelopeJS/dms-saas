@@ -11,7 +11,7 @@ import {
   type PermissionTree,
 } from "@antelopejs/interface-dms/permissions";
 import { PLANS } from "../data/catalogue";
-import type { SeedFeature, SeedPlan } from "../data/types";
+import type { LocalizedText, SeedFeature, SeedPlan } from "../data/types";
 import { dayFrom, insertMissing, type SeedRow } from "./rows";
 
 /** Every locale of a localized field is written at once. */
@@ -32,9 +32,13 @@ export async function readGrantablePermissions(): Promise<string[]> {
   return [...new Set(collectPermissionIds(await GetPermissions()))];
 }
 
+// A feature without a tooltip holds one empty text per language, as the DMS
+// form writes it: the data API cannot localize a null.
+const NO_TOOLTIP: LocalizedText = { en: "", fr: "" };
+
 function toFeatureRow(feature: SeedFeature): SeedRow {
   const { id, ...fields } = feature;
-  return { ...fields, _id: id };
+  return { ...fields, tooltip: fields.tooltip ?? NO_TOOLTIP, _id: id };
 }
 
 function localizeAll(feature: Feature): Feature {

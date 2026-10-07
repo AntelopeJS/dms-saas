@@ -178,18 +178,19 @@ export default defineDmsPlugin(() => {
 		plural === undefined
 			? nuxtApp.$i18n.t(key, params ?? {})
 			: nuxtApp.$i18n.t(key, params ?? {}, plural as number)
+	// Also for an empty value: the owner of a workspace whose owner never
+	// joined has no name, and the cell reads the invitation instead.
+	const formatCell = (
+		_value: unknown,
+		locale: string,
+		options?: unknown,
+		row?: unknown,
+	) => {
+		const kind = (options as CellOptions | undefined)?.kind ?? 'plan'
+		return renderLines(LINES[kind]((row ?? {}) as WorkspaceRow, t, locale))
+	}
 	registerDataType({
 		id: 'saas:workspace_cell',
-		formatter: {
-			default: (
-				_value: unknown,
-				locale: string,
-				options?: unknown,
-				row?: unknown,
-			) => {
-				const kind = (options as CellOptions | undefined)?.kind ?? 'plan'
-				return renderLines(LINES[kind]((row ?? {}) as WorkspaceRow, t, locale))
-			},
-		},
+		formatter: { default: formatCell, empty: formatCell },
 	})
 })

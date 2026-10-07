@@ -46,6 +46,7 @@ export class tenantInvoicesDataAPI extends DataController(
     list: TableViewRoutes.List,
     select: TableViewRoutes.Select,
     count: TableViewRoutes.Count,
+    countBatch: TableViewRoutes.CountBatch,
   },
   Controller("/api/saas/tenant/tables/invoices"),
 ) {

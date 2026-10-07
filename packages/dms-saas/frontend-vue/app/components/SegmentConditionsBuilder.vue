@@ -62,7 +62,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<div class="flex flex-col gap-3">
+	<div class="dms-saas-wide-field flex flex-col gap-3">
 		<div v-if="catalog.isLoading.value" class="flex flex-col gap-2">
 			<USkeleton class="h-5 w-72" />
 			<USkeleton v-for="row in 3" :key="row" class="h-8 w-full" />

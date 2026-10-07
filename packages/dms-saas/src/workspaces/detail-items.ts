@@ -277,6 +277,8 @@ export function upcomingTimelineItems(
         },
         meta: [priceTimesSeats(messages, view)],
         date: preview.billingDate,
+        // A coming date reads as the day, not as a time relative to now.
+        time: messages.day(new Date(preview.billingDate)),
       },
     ];
   }
@@ -289,6 +291,7 @@ export function upcomingTimelineItems(
       tone: "info",
       title: `$${D}.timeline.${renewalKind}`,
       date: renewsAt.toISOString(),
+      time: messages.day(renewsAt),
     },
   ];
 }

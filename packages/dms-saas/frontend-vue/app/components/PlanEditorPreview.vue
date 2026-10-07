@@ -221,7 +221,7 @@ onBeforeUnmount(() =>
 	<div class="flex flex-col gap-4 lg:sticky lg:top-4">
 		<DmsCard>
 			<template #header>
-				<div class="flex items-center justify-between">
+				<div class="flex w-full items-center justify-between gap-2">
 					<span class="text-highlighted text-sm font-semibold">
 						{{ $t('saas.catalog.editor.preview.title') }}
 					</span>

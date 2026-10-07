@@ -109,7 +109,7 @@ export class SaasPlanMigrationDetailController extends PageController(
     icon: "i-ph-arrows-clockwise",
     hidden: true,
   },
-  DefaultLayout({ fullWidth: true }),
+  DefaultLayout({ fullWidth: true, hideHeader: true }),
 ) {
   // The figures, the workspaces to settle and the operator actions all read
   // the migration of the route: blocks fetch fixed URLs, so one component

@@ -10,6 +10,7 @@ import {
   type PlanMigrationTenantOutcome,
   PlatformNoteModel,
   SegmentModel,
+  planMigrationStageOf,
 } from "@antelopejs/interface-dms-saas/db";
 import { PLANS } from "../data/catalogue";
 import type { SeedBillingSettings, SeedLegalDocuments } from "../data/platform";
@@ -32,6 +33,21 @@ export async function writeBillingSettings(
   ]);
 }
 
+const FIRST_LEGAL_VERSION = 1;
+
+/** Each seeded document as published once, now. */
+function firstVersions(
+  documents: SeedLegalDocuments,
+): Record<string, { version: number; publishedAt: Date }> {
+  const publishedAt = new Date();
+  return Object.fromEntries(
+    Object.keys(documents).map((key) => [
+      key,
+      { version: FIRST_LEGAL_VERSION, publishedAt },
+    ]),
+  );
+}
+
 /**
  * dms-saas creates the legal documents empty on start: they are filled in
  * when still blank, so an operator's own text is never replaced.
@@ -41,9 +57,10 @@ export async function writeLegalDocuments(
 ): Promise<void> {
   const model = GetModel(LegalDocumentsModel);
   const existing = await model.get(LEGAL_DOCUMENTS_SINGLETON_ID);
+  const published = { ...documents, versions: firstVersions(documents) };
   if (!existing) {
     await insertMissing(LegalDocumentsModel, [
-      { _id: LEGAL_DOCUMENTS_SINGLETON_ID, ...documents },
+      { _id: LEGAL_DOCUMENTS_SINGLETON_ID, ...published },
     ]);
     return;
   }
@@ -51,7 +68,7 @@ export async function writeLegalDocuments(
     !existing.termsOfUse &&
     !existing.termsAndConditions &&
     !existing.privacyPolicy;
-  if (isBlank) await model.update(LEGAL_DOCUMENTS_SINGLETON_ID, documents);
+  if (isBlank) await model.update(LEGAL_DOCUMENTS_SINGLETON_ID, published);
 }
 
 export async function writeSegments(segments: SeedSegment[]): Promise<void> {
@@ -142,6 +159,7 @@ function toMigrationRow(
     fromPlanId: migration.fromPlanId,
     toPlanId: migration.toPlanId,
     status: migration.status,
+    stage: planMigrationStageOf(migration.status),
     notifyMembers: true,
     snapshot: {
       tenantIds: migration.tenantIds,

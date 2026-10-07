@@ -72,7 +72,19 @@ export const FEATURE_LOCALIZED_FIELDS: Array<keyof Feature> = [
  * @param locale Reader's locale, e.g. `fr`
  */
 export function localizeFeature(feature: Feature, locale: string): Feature {
-  return feature.localize(locale, FEATURE_LOCALIZED_FIELDS);
+  // An optional localized text (a tooltip) may be stored as null, which
+  // `localize` cannot read: it is localized without it and stays null.
+  const missing = FEATURE_LOCALIZED_FIELDS.filter(
+    (field) => feature[field] === null || feature[field] === undefined,
+  );
+  const fields = FEATURE_LOCALIZED_FIELDS.filter(
+    (field) => !missing.includes(field),
+  );
+  const localized = feature.localize(locale, fields);
+  for (const field of missing) {
+    Object.assign(localized, { [field]: null });
+  }
+  return localized;
 }
 
 function toPlanFeature(feature: Feature): TenantPlanFeature {
