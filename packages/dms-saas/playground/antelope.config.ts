@@ -27,8 +27,14 @@ export default defineConfig({
         type: "local",
         path: ".",
         // Not a workspace package: without `--ignore-workspace`, pnpm
-        // installs the root workspace instead of this lockfile.
-        installCommand: ["pnpm install --ignore-workspace", "pnpm build"],
+        // installs the root workspace instead of this lockfile. Transpiled
+        // without type checking: dms-saas rebuilds the interface package's
+        // types at the same moment, and checking against them half-written
+        // fails at random. `pnpm build` keeps the type check.
+        installCommand: [
+          "pnpm install --ignore-workspace",
+          "pnpm build:transpile",
+        ],
       },
     },
     "dms-saas": {

@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "ajs project run -w",
     "build": "rimraf dist && tsc",
+    "build:transpile": "rimraf dist && tsc --noCheck",
     "frontend:dev": "ajs dms dev"
   },
   "dependencies": {
@@ -16,7 +17,9 @@
     "@antelopejs/interface-core": ">=0.1.1 <1.0.0",
     "@antelopejs/interface-data-api": ">=0.2.0 <1.0.0",
     "@antelopejs/interface-database": ">=0.1.8 <1.0.0",
-    "@antelopejs/interface-database-decorators": ">=0.1.7 <1.0.0"
+    "@antelopejs/interface-database-decorators": ">=0.1.7 <1.0.0",
+    "@antelopejs/interface-dms": ">=0.4.0 <1.0.0",
+    "@antelopejs/interface-dms-saas": "link:../../interface-dms-saas"
   },
   "devDependencies": {
     "@antelopejs/core": "1.13.5",
