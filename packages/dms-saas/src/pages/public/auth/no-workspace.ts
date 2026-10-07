@@ -17,7 +17,8 @@ import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
 export class SaasNoWorkspacePage extends PageController(
   "auth-no-workspace",
   {
-    displayName: "$saas.no_workspace.title",
+    displayName: "$saas.public.no_workspace.page_title",
+    description: "$saas.public.no_workspace.page_description",
     urlSlug: "auth/no-workspace",
     publicAccess: true,
     hidden: true,
@@ -25,5 +26,9 @@ export class SaasNoWorkspacePage extends PageController(
   },
   EmptyLayout(),
 ) {
-  static content = CustomComponent("DmsSaasAuthNoWorkspace");
+  static content = CustomComponent("DmsSaasAuthNoWorkspace").meta({
+    name: "$saas.permissions.public.no_workspace",
+    description: "$saas.permissions.public.no_workspace_description",
+    icon: "i-ph-buildings",
+  });
 }

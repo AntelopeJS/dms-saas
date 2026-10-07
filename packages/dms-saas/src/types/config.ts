@@ -11,6 +11,8 @@ export interface DmsSaasStripeConfig {
  */
 export interface DmsSaasPublicScreensConfig {
   register?: boolean;
+  /** The public plan catalogue on `/pricing`, linked from sign-in. */
+  pricing?: boolean;
 }
 
 export type PublicScreenId = keyof DmsSaasPublicScreensConfig;
