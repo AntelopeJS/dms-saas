@@ -35,6 +35,32 @@ dispatches through the core CLI as `ajs dms dev`. The playground connects to
 MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, either in the
 environment or in `playground/.env`.
 
+### Playground data set
+
+On its first start against an empty database, the playground writes a data set
+to review every screen with: sign in as `admin@example.com` with the password
+`Playground-Admin-1!` (a platform admin who also owns the `acme` workspace).
+Every other seeded account, platform admins `hugo@antelope.io` and
+`sofia@antelope.io` and the workspace owners and members, uses the same
+password.
+
+It holds the feature and plan catalogue (Free, Starter, Pro, Team, Business
+per seat, Enterprise yearly and hidden, Growth 2024 retired), thirteen
+workspaces in every billing state (active, trialing, free, complimentary with
+and without an end date, past due, pending payment, suspended, cancelled) with
+their members and pending invitations, invoices in every status, credit notes,
+plan migrations, segments, internal notes, billing rules and legal documents.
+Dates are relative to the first start, and Stripe ids are fake: nothing calls
+Stripe for them.
+
+The seed lives in `playground/src/seed` and runs once: the platform admin
+account, written last, marks it complete. Drop the database to start over. On
+each later start it only adds newly registered permissions to the seeded plans,
+so pages added to the module stay visible to workspace owners. Segment counts
+appear after the first segment recompute (every 15 minutes), and the running
+plan migration turns to "reconciliation required" on the next restart, as an
+interrupted migration does.
+
 ## Completing a registration that entered without a workspace
 
 An account can reach the product before it owns anything to log into: an OAuth
