@@ -22,7 +22,6 @@ const { resolveApiError } = useApiErrorMessage();
 const { changePlan } = useTenantPlan();
 const { offerFor: offerPendingCheckout } = usePendingCheckout();
 const { formatFeatureValue } = usePlanFeatureFormat();
-const { featureLabel, featureTooltip } = usePlanFeatureLabel();
 const { formatMajorUnits } = useMoneyFormat();
 const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
 
@@ -51,8 +50,8 @@ const visibleRows = computed<FeatureRow[]>(() =>
     .filter((feature) => showDetailRows.value || !feature.isDetailRow)
     .map((feature) => ({
       feature,
-      label: featureLabel(feature),
-      tooltip: featureTooltip(feature),
+      label: feature.displayName,
+      tooltip: feature.tooltip || null,
     })),
 );
 

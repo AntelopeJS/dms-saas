@@ -40,6 +40,10 @@ import {
   isComplimentaryPlanLocked,
   isComplimentarySubscription,
 } from "../../workspaces/complimentary";
+import {
+  CONTENT_LANGUAGE_HEADER,
+  requestLocale,
+} from "../../utils/content-language";
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
 
 import {
@@ -111,7 +115,7 @@ export class SaasTenantPlanController extends Controller(
   @Model(FeatureModel)
   declare featureModel: FeatureModel;
 
-  private async buildCatalog(current: Plan | null) {
+  private async buildCatalog(current: Plan | null, locale: string) {
     const publicPlans = await this.planModel.findPubliclyVisible();
     const withCurrent =
       current && !publicPlans.some((plan) => plan._id === current._id)
@@ -121,7 +125,12 @@ export class SaasTenantPlanController extends Controller(
     const offered = await Promise.all(
       withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
-    return buildTenantPlanCatalog(this.planModel, this.featureModel, offered);
+    return buildTenantPlanCatalog(
+      this.planModel,
+      this.featureModel,
+      offered,
+      locale,
+    );
   }
 
   /**
@@ -153,6 +162,7 @@ export class SaasTenantPlanController extends Controller(
     @Context() ctx: any,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<CurrentPlanResult> {
     const tenantId = getRequestTenantId(ctx);
     const tenant = await this.tenantModel.get(tenantId);
@@ -167,7 +177,7 @@ export class SaasTenantPlanController extends Controller(
     const pending = subscription?.pendingPlanId
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
-    const catalog = await this.buildCatalog(current);
+    const catalog = await this.buildCatalog(current, requestLocale(language));
     return {
       current,
       available: catalog.plans,

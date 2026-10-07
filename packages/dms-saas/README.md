@@ -282,22 +282,29 @@ pass.
 
 ## Plan feature labels and values
 
-A feature row stores one display name and one tooltip. The tenant plan pages
-(the plan card summary and the plan comparison table) render both through the
-DMS display string convention: a value starting with `$` is an i18n key,
-anything else is shown as written. A module declaring features either stores
-plain text or stores `$<key>` and ships that key in its own frontend locale
-files (`frontend-vue/i18n/locales/<name>-<locale>.json`):
+A feature's `displayName` and `tooltip` are localized fields
+(`@Localized`, falling back to `en`): the row stores one value per locale and
+every reader gets the text in the viewer's language, taken from the
+`x-content-language` header the DMS frontend sends. The tenant plan pages and
+the plan admin pages show it as written; the features table in the platform
+admin edits it one language at a time.
+
+A module declaring features writes every locale at once through
+`localize("*")`, never i18n keys:
 
 ```ts
-{
-  displayName: "$cloud.plan_features.egress.label",
-  tooltip: "$cloud.plan_features.egress.tooltip",
-}
+const row = FeatureModel.fromPlainData({
+  _id: "cloud.plan.egress",
+  displayName: { en: "Included egress", fr: "Trafic sortant inclus" },
+  tooltip: { en: "Outbound traffic", fr: "Trafic sortant" },
+  // ...
+}).localize("*");
+await GetModel(FeatureModel).insert(row);
 ```
 
-A key missing in the viewer's locale falls back to the fallback locale; a
-tooltip key missing everywhere hides the tooltip.
+Read a row with `localizeFeature(feature, locale)` from
+`@antelopejs/interface-dms-saas/plans`. A row without a value in the viewer's
+locale or in `en` has no tooltip.
 
 Values are formatted from the feature's `valueType` and `unit`: `-1` reads as
 unlimited, booleans as ✓/—, numbers are grouped in the viewer's locale. A
@@ -949,6 +956,11 @@ Billing no longer infers state from rows that predate the current fields. Rows
 imported from the pre-DMS codebase or written by earlier builds must be fixed
 in the database, with writers stopped, before upgrading:
 
+- **`features.displayName` and `features.tooltip`** are localized. Rows
+  written by earlier builds hold a plain string (often a `$` i18n key) that
+  the localized readers cannot use. Drop the `features` table and let the
+  declaring modules write it again on startup, then re-enter any feature
+  created by hand.
 - **`tenant_subscriptions.isComplimentary`** is required. Only
   `isComplimentary: true` makes a subscription complimentary; a missing value
   is read as not complimentary. Set `isComplimentary: true` on admin gifts that
