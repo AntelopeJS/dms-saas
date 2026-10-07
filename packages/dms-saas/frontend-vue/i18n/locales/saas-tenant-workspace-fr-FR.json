@@ -1,0 +1,250 @@
+{
+  "saas": {
+    "permissions": {
+      "workspace": {
+        "identity": "Identité de l'espace",
+        "identity_description": "Voir le nom et l'identifiant de l'espace, et le renommer",
+        "glance": "En un coup d'œil",
+        "glance_description": "Voir les membres et les places, le forfait et son état, et les propriétaires de l'espace",
+        "danger_zone": "Supprimer l'espace",
+        "danger_zone_description": "Supprimer l'espace : les membres perdent l'accès et ses données sont détruites après la période de conservation",
+        "data_export_request": "Demander un export des données",
+        "data_export_request_description": "Demander une archive complète de l'espace et suivre sa préparation",
+        "data_export_history": "Exports précédents",
+        "data_export_history_description": "Voir les exports passés et télécharger les archives encore disponibles",
+        "seats": "Places",
+        "seats_description": "Voir combien de places occupent les membres et les invitations en attente, et qui assiste l'espace"
+      }
+    },
+    "workspace": {
+      "plan_price": {
+        "free": "Gratuit",
+        "flat_month": "{price} / mois",
+        "flat_year": "{price} / an",
+        "seat_month": "{price} / place / mois",
+        "seat_year": "{price} / place / an"
+      },
+      "general": {
+        "title": "Général",
+        "description": "L'identité de l'espace, qui en fait partie, et comment le supprimer.",
+        "identity_title": "Espace de travail",
+        "identity_intro": "L'identité de votre espace, visible par tous les membres et sur les factures.",
+        "name": "Nom de l'espace",
+        "name_hint": "Visible par tous les membres, dans le sélecteur et sur les factures.",
+        "workspace_id": "Identifiant de l'espace",
+        "workspace_id_hint": "Fixé à la création de l'espace. Communiquez-le au support quand vous le contactez.",
+        "renamed": "Espace renommé.",
+        "error": {
+          "rename": "Impossible de renommer l'espace. Votre modification est conservée : enregistrez à nouveau pour réessayer.",
+          "delete": "Impossible de supprimer l'espace. Rien n'a été supprimé."
+        },
+        "glance": {
+          "title": "En un coup d'œil",
+          "description": "Membres, forfait et propriété. Chaque élément mène à l'endroit où le gérer.",
+          "load_failed": "Impossible de charger l'espace. Vérifiez votre connexion, puis réessayez.",
+          "members": "Membres",
+          "seats_of": "{occupied} / {max} places",
+          "seats_unlimited": "{occupied} places",
+          "seats_detail": "{members} · {invites}",
+          "members_count": "aucun membre | 1 membre | {count} membres",
+          "invites_count": "aucune invitation en attente | 1 invitation en attente | {count} invitations en attente",
+          "plan": "Forfait",
+          "no_plan": "Aucun forfait",
+          "complimentary": "Offert",
+          "renews": "renouvelé le {date}",
+          "owner": "Propriétaire de l'espace",
+          "you": "Vous",
+          "created": "a créé {name} le {date}",
+          "more_owners": "+{count} autre | +{count} autre | +{count} autres"
+        },
+        "danger_zone_title": "Zone de danger",
+        "export": {
+          "title": "Exporter vos données",
+          "description": "Téléchargez une copie complète de {name} avant de le supprimer.",
+          "action": "Aller à l'export des données"
+        },
+        "delete": {
+          "title": "Supprimer l'espace",
+          "description": "L'accès est retiré immédiatement pour {members} ; {invites}. Les données sont détruites après une période de conservation de {days} jours.",
+          "members_count": "aucun membre | 1 membre | les {count} membres",
+          "invites_count": "aucune invitation en attente à annuler | 1 invitation en attente est annulée | {count} invitations en attente sont annulées",
+          "invoices_kept": "Les factures restent archivées, comme la loi l'exige.",
+          "subscription_stops": "L'abonnement {plan} s'arrête.",
+          "subscription_stops_unpaid": "L'abonnement {plan} s'arrête ; la facture impayée {invoice} reste due.",
+          "action": "Supprimer l'espace",
+          "confirm_title": "Supprimer l'espace {name} ?",
+          "confirm_description": "L'accès est retiré immédiatement. Les données sont détruites après {days} jours, le {date}.",
+          "impact_members": "Membres qui perdent l'accès maintenant",
+          "impact_invites": "Invitations en attente annulées",
+          "impact_data": "Données détruites le",
+          "impact_invoices": "Factures conservées, archivées",
+          "impact_subscription": "Abonnement {plan}",
+          "impact_subscription_stops": "S'arrête",
+          "export_hint": "Pas encore exporté ? Annulez et demandez d'abord un export des données.",
+          "next_workspace": "Après la suppression, vous arrivez dans {name}, votre espace suivant.",
+          "no_next_workspace": "Après la suppression, vous n'avez plus d'autre espace : vous pourrez en créer un depuis le sélecteur.",
+          "submit": "Supprimer définitivement",
+          "deleted": "L'espace {name} a été supprimé."
+        }
+      },
+      "data_export": {
+        "title": "Export des données",
+        "description": "Une copie complète de ce que stocke cet espace, prête à être téléchargée ou déplacée ailleurs.",
+        "gdpr": "RGPD · article 20 · droit à la portabilité",
+        "intro": "Nous préparons l'archive en arrière-plan et envoyons un lien de téléchargement à {email}. Le lien et l'archive expirent à la date indiquée dans l'historique ci-dessous. Les exports sont gratuits et vous pouvez en demander un à tout moment.",
+        "request": "Demander un export",
+        "request_unavailable": "De nouveau disponible quand l'export en cours sera terminé.",
+        "scope": "Données de l'espace",
+        "error": {
+          "start": "Impossible de lancer l'export. Réessayez dans un instant.",
+          "download": "Impossible de télécharger cet export. Réessayez dans un instant."
+        },
+        "expired_link": {
+          "title": "Ce lien de téléchargement a expiré",
+          "description": "L'archive vers laquelle il pointait a été supprimée de nos serveurs. Demandez un nouvel export pour obtenir un nouveau lien.",
+          "action": "Demander un nouvel export"
+        },
+        "in_progress": {
+          "title": "En cours",
+          "requested": "Demandé le {day} à {time}. Nous vous enverrons un e-mail quand il sera prêt ; vous pouvez quitter cette page."
+        },
+        "finished": {
+          "title": "Export prêt",
+          "description": "Vos données ont été exportées. Un lien de téléchargement a aussi été envoyé à {email}. Disponible jusqu'au {date}.",
+          "partial_description": "Vos données ont été exportées, mais certaines parties n'ont pas pu être incluses : l'historique ci-dessous indique lesquelles. Un lien de téléchargement a aussi été envoyé à {email}. Disponible jusqu'au {date}.",
+          "failed_title": "L'export a échoué",
+          "failed_description": "L'archive n'a pas pu être préparée et rien n'a été envoyé. Réessayez."
+        },
+        "included": {
+          "title": "Ce qui est inclus",
+          "modules": "Données de l'espace",
+          "modules_format": "Un fichier JSON par module",
+          "billing": "Historique de facturation",
+          "billing_format": "Factures, avoirs et remboursements",
+          "manifest": "Manifeste",
+          "manifest_format": "Ce que contient chaque partie, et ce qui n'a pas pu être exporté"
+        },
+        "history": {
+          "title": "Exports précédents",
+          "description": "Les liens de téléchargement fonctionnent jusqu'à la date indiquée. Les archives expirées sont supprimées de nos serveurs.",
+          "status": {
+            "ready": "Prêt",
+            "partial": "Incomplet",
+            "expired": "Expiré",
+            "failed": "Échoué",
+            "pending": "En cours"
+          },
+          "available_until": "Disponible jusqu'au {date}",
+          "expired_since": "Lien expiré · était disponible jusqu'au {date}",
+          "failed_detail": "L'archive n'a pas pu être préparée. Rien n'a été envoyé.",
+          "pending_detail": "Préparation · {progress} %",
+          "partial_detail": "Données de l'espace · 1 partie n'a pas pu être exportée | Données de l'espace · 1 partie n'a pas pu être exportée | Données de l'espace · {count} parties n'ont pas pu être exportées",
+          "empty_title": "Aucun export pour l'instant",
+          "empty_description": "Demandez-en un pour obtenir les données de chaque module et l'historique de facturation de cet espace dans une archive ZIP.",
+          "error_load": "Impossible de charger les exports précédents",
+          "error_load_description": "Vos archives sont en sécurité. Réessayez dans un instant.",
+          "download": "Télécharger",
+          "request_new": "En demander un nouveau",
+          "retry": "Réessayer",
+          "previous": "Précédent",
+          "next": "Suivant",
+          "page": "Page {page}"
+        }
+      },
+      "seats": {
+        "title": "Places",
+        "description": "Les membres et les invitations en attente occupent chacun une place. Les invitations expirées et le support de la plateforme n'en occupent pas.",
+        "meter_label": "Places",
+        "plan": "Forfait {plan}",
+        "unlimited": "Places illimitées",
+        "seats_left": "aucune place restante | 1 place restante | {count} places restantes",
+        "no_seat_left": "Aucune place restante",
+        "value_unlimited": "{occupied} / illimité",
+        "members_count": "aucun membre | 1 membre | {count} membres",
+        "invites_count": "aucune invitation en attente | 1 invitation en attente | {count} invitations en attente",
+        "seats_count": "aucune place | 1 place | {count} places",
+        "manage": "Gérer les places",
+        "upgrade": "Changer de forfait",
+        "review_invites": "Voir les invitations",
+        "load_failed": "Impossible de charger les places. La liste des membres ci-dessus n'est pas concernée.",
+        "full": {
+          "title": "Limite de places atteinte",
+          "owner_upgrade": "Passez au forfait {plan}, ou révoquez une invitation en attente ou retirez un membre pour ajouter quelqu'un.",
+          "owner_free": "Révoquez une invitation en attente ou retirez un membre pour ajouter quelqu'un.",
+          "member": "Demandez à {owner}, propriétaire de l'espace, de changer de forfait.",
+          "an_owner": "un propriétaire de l'espace",
+          "email_owner": "Écrire à {owner}"
+        },
+        "over": {
+          "title": "{occupied} places utilisées, {plan} en autorise {max}",
+          "description": "{members} et {invites}. Les membres gardent l'accès ; les invitations sont suspendues jusqu'à ce que vous libériez {excess} ou changiez de forfait.",
+          "review_members": "Voir les membres"
+        },
+        "platform_support": {
+          "title": "Support de la plateforme · sans place",
+          "description": "Ces membres de l'équipe de la plateforme peuvent accéder à cet espace pour vous aider. Ils n'ont pas de rôle et n'occupent pas de place.",
+          "badge": "Support de la plateforme"
+        }
+      },
+      "switcher": {
+        "title": "Changer d'espace",
+        "caption": "Espace",
+        "none": "Aucun espace",
+        "no_plan": "Aucun forfait",
+        "payment_failed": "paiement échoué",
+        "search": "Rechercher par nom ou propriétaire",
+        "load_failed": "Impossible de charger vos espaces.",
+        "no_match": "Aucun espace ne correspond à « {query} ».",
+        "clear_search": "Effacer la recherche",
+        "create": "Créer un espace",
+        "switch_failed": "Impossible de passer à {name}",
+        "still_in": "Vous êtes toujours dans {name}.",
+        "complimentary": "offert",
+        "owner_prefix": "propriétaire",
+        "members_count": "aucun membre | 1 membre | {count} membres",
+        "switching": "Changement en cours",
+        "current": "Espace actuel"
+      },
+      "create": {
+        "title": "Créer un espace",
+        "description": "Un espace isolé avec ses propres projets, son équipe et sa facturation.",
+        "name": "Nom de l'espace",
+        "name_placeholder": "Acme SAS",
+        "plan": "Forfait",
+        "plan_hint": "Modifiable à tout moment",
+        "interval": {
+          "month": "mois",
+          "year": "année"
+        },
+        "trial": "essai de {days} jours",
+        "free_per_card_used": "Espaces gratuits : {limit} par carte, utilisée par {workspaces} | Espaces gratuits : {limit} par carte, utilisée par {workspaces} | Espaces gratuits : {limit} par carte, utilisée par {workspaces}",
+        "card": {
+          "label": "Carte",
+          "verification_only": "Vérification uniquement",
+          "required_for": "Requise pour {plan}",
+          "why_free": "Pourquoi une carte pour un espace gratuit ? Chaque carte ouvre droit à un espace gratuit, pour que les forfaits gratuits le restent. Elle n'est jamais débitée. | Pourquoi une carte pour un espace gratuit ? Chaque carte ouvre droit à un espace gratuit, pour que les forfaits gratuits le restent. Elle n'est jamais débitée. | Pourquoi une carte pour un espace gratuit ? Chaque carte ouvre droit à {limit} espaces gratuits, pour que les forfaits gratuits le restent. Elle n'est jamais débitée.",
+          "never_charged": "Jamais débitée sur un forfait gratuit. Sécurisé par Stripe.",
+          "secured": "Sécurisé par Stripe."
+        },
+        "charge": {
+          "today": "{price} aujourd'hui, puis chaque {interval}. La TVA s'ajoute le cas échéant.",
+          "after_trial": "{zero} aujourd'hui. Premier prélèvement de {price} le {date}, après l'essai. La TVA s'ajoute le cas échéant."
+        },
+        "submit": "Créer l'espace",
+        "submit_named": "Créer {name} avec {plan}",
+        "no_plan": {
+          "title": "Aucun forfait n'est disponible pour le moment",
+          "description": "Contactez le support pour créer un espace. Vos autres espaces ne sont pas concernés."
+        },
+        "error": {
+          "load": "Impossible de charger les forfaits",
+          "load_description": "Rien n'a été créé. Réessayez dans un instant.",
+          "name": "Donnez un nom à l'espace : les membres le voient partout.",
+          "card": "La carte n'a pas pu être confirmée. Vérifiez-la, puis réessayez.",
+          "card_setup": "Le formulaire de carte n'a pas pu se charger. Réessayez dans un instant.",
+          "failed": "Impossible de créer l'espace. Votre saisie est conservée : réessayez."
+        }
+      }
+    }
+  }
+}

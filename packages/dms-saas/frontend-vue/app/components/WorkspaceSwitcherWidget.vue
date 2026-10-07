@@ -1,13 +1,31 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { HOME_PATH } from '../build/workspace-paths'
+import WorkspaceSwitcherRow from '../build/WorkspaceSwitcherRow.vue'
 
 const props = defineProps<{
 	collapsed?: boolean
 }>()
 
+const KEYS = 'saas.workspace.switcher'
+const SEARCH_THRESHOLD = 6
+const PAST_DUE_STATUS = 'past_due'
+/** Window event a DMS form dispatches once it saved (`FormEvents.SUBMIT_SUCCESS`). */
+const FORM_SUBMIT_SUCCESS_EVENT = 'DmsComponent.Form.SubmitSuccess'
+/** The General page's rename form, which changes what the trigger shows. */
+const RENAME_SUBMIT_URL = '/api/saas/workspaces/current'
+
+interface FormSubmitPayload {
+	submitUrl?: string
+}
+
+interface FormSubmitDetail {
+	data?: FormSubmitPayload
+}
+
 const toast = useToast()
 const { t } = useI18n()
-const { resolveApiError } = useApiErrorMessage()
+const { statusView } = useSaasStatus()
 
 // Platform owners are not tenant members by default, so an owner can legitimately
 // have no workspace at all — the switcher must still offer them a way in.
@@ -20,40 +38,43 @@ const canCreateWorkspace = computed(
 			?.admissionMode !== 'invitation-only',
 )
 
-const SEARCH_THRESHOLD = 6
-const HOME_ROUTE = '/'
-
-const { workspaces, refresh } = useMyWorkspaces()
-const isLoading = ref(true)
+const { workspaces, isLoaded, refresh } = useMyWorkspaces()
+const hasFailed = ref(false)
 const isOpen = ref(false)
 const isCreateOpen = ref(false)
 const searchQuery = ref('')
 const switchingId = ref<string | null>(null)
 
-const current = computed<MyWorkspace | undefined>(
-	() => workspaces.value.find((w) => w.isCurrent) ?? workspaces.value[0],
+const current = computed<MyWorkspace | undefined>(() =>
+	workspaces.value.find((workspace) => workspace.isCurrent),
 )
-
+const isPastDue = computed(() => current.value?.status === PAST_DUE_STATUS)
 const showSearch = computed(() => workspaces.value.length >= SEARCH_THRESHOLD)
-
-const isVisible = computed(() => !!current.value || isOwner.value)
-
-const triggerLabel = computed(
-	() => current.value?.name ?? t('saas.workspaces.none'),
+const isVisible = computed(
+	() => workspaces.value.length > 0 || isOwner.value || hasFailed.value,
 )
 
+const triggerLabel = computed(() => current.value?.name ?? t(`${KEYS}.none`))
 const triggerCaption = computed(
-	() => current.value?.planName ?? t('saas.workspaces.current_label'),
+	() => current.value?.planName ?? t(`${KEYS}.caption`),
 )
+
+const tooltip = computed(() => {
+	const workspace = current.value
+	if (!workspace) return triggerLabel.value
+	const parts = [workspace.name, workspace.planName ?? t(`${KEYS}.no_plan`)]
+	if (isPastDue.value) parts.push(t(`${KEYS}.payment_failed`))
+	return parts.join(' · ')
+})
 
 const filtered = computed<MyWorkspace[]>(() => {
 	const needle = searchQuery.value.trim().toLowerCase()
 	if (!needle) return workspaces.value
-	return workspaces.value.filter((w) => w.name.toLowerCase().includes(needle))
-})
-
-watch(isOpen, (open) => {
-	if (!open) searchQuery.value = ''
+	return workspaces.value.filter((workspace) =>
+		[workspace.name, workspace.ownerName ?? ''].some((text) =>
+			text.toLowerCase().includes(needle),
+		),
+	)
 })
 
 const popoverPlacement = computed(() =>
@@ -62,6 +83,10 @@ const popoverPlacement = computed(() =>
 		: { side: 'bottom' as const, align: 'start' as const, sideOffset: 6 },
 )
 
+watch(isOpen, (open) => {
+	if (!open && !switchingId.value) searchQuery.value = ''
+})
+
 function initialOf(name: string): string {
 	return (name.trim()[0] ?? '?').toUpperCase()
 }
@@ -69,27 +94,33 @@ function initialOf(name: string): string {
 async function load(): Promise<void> {
 	try {
 		await refresh()
+		hasFailed.value = false
 	} catch {
-		// Errors are swallowed on purpose: useMyWorkspaces already decides what the
-		// list becomes, and the sidebar is no place for an error card.
-	} finally {
-		isLoading.value = false
+		hasFailed.value = true
 	}
 }
 
+function reportSwitchFailure(target: MyWorkspace | string): void {
+	const name = typeof target === 'string' ? target : target.name
+	toast.add({
+		title: t(`${KEYS}.switch_failed`, { name }),
+		description: current.value
+			? t(`${KEYS}.still_in`, { name: current.value.name })
+			: undefined,
+		color: 'error',
+		icon: 'i-ph-warning-circle',
+	})
+}
+
+/** The popover stays open until the page reloads into the new workspace. */
 async function selectWorkspace(workspace: MyWorkspace): Promise<void> {
 	if (workspace.isCurrent || switchingId.value) return
 	switchingId.value = workspace._id
 	try {
-		// Reloads the page on success, so the switching state never resets.
 		await useTenantSwitch(workspace._id)
-	} catch (error) {
+	} catch {
 		switchingId.value = null
-		toast.add({
-			title: resolveApiError(error, 'saas.workspaces.switch_error'),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
+		reportSwitchFailure(workspace)
 	}
 }
 
@@ -102,28 +133,39 @@ function closeCreateModal(): void {
 	isCreateOpen.value = false
 }
 
-async function onWorkspaceCreated(tenantId: string): Promise<void> {
+async function onWorkspaceCreated(
+	tenantId: string,
+	name: string,
+): Promise<void> {
 	isCreateOpen.value = false
 	try {
-		// Lands on the DMS homepage rather than reloading the settings screen the
-		// creation was started from — that screen belongs to the previous tenant.
-		await useTenantSwitch(tenantId, HOME_ROUTE)
-	} catch (error) {
-		toast.add({
-			title: resolveApiError(error, 'saas.workspaces.switch_error'),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
-		load()
+		// Lands on the homepage rather than reloading the screen the creation
+		// was started from — that screen belongs to the previous workspace.
+		await useTenantSwitch(tenantId, HOME_PATH)
+	} catch {
+		reportSwitchFailure(name)
+		await load()
 	}
 }
 
-onMounted(load)
+function onFormSaved(event: Event): void {
+	const detail = (event as CustomEvent<FormSubmitDetail>).detail
+	if (detail?.data?.submitUrl === RENAME_SUBMIT_URL) void load()
+}
+
+onMounted(() => {
+	if (!isLoaded.value) void load()
+	window.addEventListener(FORM_SUBMIT_SUCCESS_EVENT, onFormSaved)
+})
+
+onBeforeUnmount(() => {
+	window.removeEventListener(FORM_SUBMIT_SUCCESS_EVENT, onFormSaved)
+})
 </script>
 
 <template>
 	<USkeleton
-		v-if="isLoading"
+		v-if="!isLoaded && !hasFailed"
 		:class="
 			collapsed ? 'mx-auto size-9 rounded-md' : 'h-[46px] w-full rounded-md'
 		"
@@ -132,42 +174,31 @@ onMounted(load)
 		v-else-if="isVisible"
 		v-model:open="isOpen"
 		:content="popoverPlacement"
-		:ui="{
-			content: 'rounded-none border-0 bg-transparent p-0 shadow-none ring-0',
-		}"
 	>
 		<UTooltip
-			:text="triggerLabel"
+			:text="tooltip"
 			:disabled="!collapsed"
 			:content="{ side: 'right' }"
 		>
 			<button
 				type="button"
-				class="border-default bg-elevated text-highlighted hover:border-accented flex items-center gap-2.5 rounded-md border text-left transition-colors duration-150"
+				class="border-default bg-elevated text-highlighted hover:border-accented relative flex items-center gap-2.5 rounded-md border text-left transition-colors duration-150"
 				:class="
 					collapsed ? 'size-9 justify-center p-1' : 'w-full px-2.5 py-[9px]'
 				"
-				:aria-label="$t('saas.workspaces.switcher_title')"
+				:aria-label="$t(`${KEYS}.title`)"
 			>
 				<span
-					class="from-primary-500 to-primary-600 bg-linear-to-br inline-flex size-[26px] shrink-0 items-center justify-center rounded-md text-[13px] font-bold text-white"
+					class="from-primary-500 to-primary-600 bg-linear-to-br relative inline-flex size-[26px] shrink-0 items-center justify-center rounded-md text-[13px] font-bold text-white"
 				>
 					<template v-if="current">{{ initialOf(current.name) }}</template>
-					<svg
-						v-if="!current"
-						class="size-4"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.8"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-					>
-						<path
-							d="M3 21h18M5 21V5l7-3 7 3v16M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01"
-						/>
-					</svg>
+					<UIcon v-else name="i-ph-buildings" class="size-4" />
+					<span
+						v-if="isPastDue"
+						class="bg-error ring-default absolute -right-1 -top-1 size-2.5 rounded-full ring-2"
+						:aria-label="$t(`${KEYS}.payment_failed`)"
+						role="img"
+					/>
 				</span>
 				<template v-if="!collapsed">
 					<span class="flex min-w-0 flex-1 flex-col leading-[1.25]">
@@ -177,127 +208,101 @@ onMounted(load)
 							{{ triggerCaption }}
 						</span>
 						<span
-							class="text-highlighted overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-semibold tracking-[-0.01em]"
+							class="text-highlighted truncate text-[13.5px] font-semibold tracking-[-0.01em]"
 						>
 							{{ triggerLabel }}
 						</span>
 					</span>
-					<span
-						class="text-dimmed ml-auto inline-flex size-4 shrink-0"
-						aria-hidden="true"
-					>
-						<svg
-							class="h-full w-full"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.8"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						>
-							<path d="m7 15 5 5 5-5" />
-							<path d="m7 9 5-5 5 5" />
-						</svg>
-					</span>
+					<UIcon
+						name="i-ph-caret-up-down"
+						class="text-dimmed ml-auto size-4 shrink-0"
+					/>
 				</template>
 			</button>
 		</UTooltip>
 
 		<template #content>
-			<div
-				class="border-accented bg-elevated flex w-56 flex-col gap-0.5 rounded-lg border p-[5px] shadow-lg"
-			>
-				<p class="text-dimmed m-0 px-[9px] pb-[3px] pt-[5px] text-[10.5px]">
-					{{ $t('saas.workspaces.switcher_title') }}
+			<div class="flex w-72 flex-col gap-1 p-1.5">
+				<p
+					class="text-dimmed flex items-center gap-1.5 px-2 pb-0.5 pt-1 text-[11px]"
+				>
+					{{ $t(`${KEYS}.title`) }}
+					<UBadge
+						v-if="showSearch"
+						:label="String(workspaces.length)"
+						color="neutral"
+						variant="soft"
+						size="sm"
+						class="font-mono"
+					/>
 				</p>
-				<input
+				<UInput
 					v-if="showSearch"
 					v-model="searchQuery"
-					class="border-accented bg-default text-highlighted w-full rounded-md border px-2 py-1.5 text-xs"
-					type="search"
-					:placeholder="$t('saas.workspaces.select')"
+					size="sm"
+					icon="i-ph-magnifying-glass"
+					:placeholder="$t(`${KEYS}.search`)"
+					:aria-label="$t(`${KEYS}.search`)"
+					autofocus
+				/>
+				<DmsSaasLoadFailure
+					v-if="hasFailed && !workspaces.length"
+					:title="$t(`${KEYS}.load_failed`)"
+					@retry="load"
 				/>
 				<ul
-					v-if="filtered.length"
-					class="m-0 max-h-64 list-none overflow-y-auto p-0"
+					v-else-if="filtered.length"
+					class="m-0 flex max-h-72 list-none flex-col gap-0.5 overflow-y-auto p-0"
 				>
 					<li v-for="workspace in filtered" :key="workspace._id">
-						<button
-							type="button"
-							class="hover:bg-accented hover:text-highlighted flex w-full items-center gap-[9px] rounded-md border-0 px-[9px] py-2 text-left text-[13px]"
-							:class="[
-								workspace.isCurrent
-									? 'bg-primary/12 text-highlighted'
-									: 'text-muted bg-transparent',
-								{ 'cursor-default': workspace.isCurrent || !!switchingId },
-							]"
-							@click="selectWorkspace(workspace)"
-						>
-							<span
-								class="from-primary-500 to-primary-600 bg-linear-to-br inline-flex size-[22px] shrink-0 items-center justify-center rounded-[5px] text-[11px] font-bold text-white"
-							>
-								{{ initialOf(workspace.name) }}
-							</span>
-							<span
-								class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-								:class="{ 'text-highlighted': workspace.isCurrent }"
-							>
-								{{ workspace.name }}
-							</span>
-							<span
-								v-if="workspace.planName"
-								class="text-primary shrink-0 whitespace-nowrap font-mono text-[9.5px] uppercase tracking-[0.08em]"
-							>
-								{{ workspace.planName }}
-							</span>
-							<span
-								v-if="switchingId === workspace._id"
-								class="border-(--ui-text-dimmed) border-t-primary size-3.5 shrink-0 animate-spin rounded-full border-2 [animation-duration:700ms]"
-								aria-hidden="true"
-							/>
-							<span
-								v-else-if="workspace.isCurrent"
-								class="text-primary inline-flex size-4 shrink-0"
-								aria-hidden="true"
-							>
-								<svg
-									class="h-full w-full"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.8"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								>
-									<path d="m4 12 5 5L20 6" />
-								</svg>
-							</span>
-						</button>
+						<WorkspaceSwitcherRow
+							:workspace="workspace"
+							:query="searchQuery"
+							:is-switching="switchingId === workspace._id"
+							:is-disabled="!!switchingId"
+							@select="selectWorkspace"
+						/>
 					</li>
 				</ul>
-				<p
+				<div
 					v-else-if="workspaces.length"
-					class="text-dimmed m-0 px-[9px] py-2 text-[13px]"
+					class="flex flex-col items-start gap-1 px-2 py-2"
 				>
-					{{ $t('saas.workspaces.no_results') }}
-				</p>
-				<div v-if="workspaces.length" class="bg-border mx-0.5 my-1 h-px" />
-				<button
-					v-if="canCreateWorkspace"
-					type="button"
-					class="text-primary w-full justify-start border-0 bg-transparent px-[9px] py-2 text-left text-[13px]"
-					@click="openCreateModal"
-				>
-					＋ {{ $t('saas.workspaces.create.button') }}
-				</button>
+					<p class="text-muted text-[13px]">
+						{{ $t(`${KEYS}.no_match`, { query: searchQuery.trim() }) }}
+					</p>
+					<UButton
+						color="neutral"
+						variant="link"
+						size="xs"
+						class="px-0"
+						@click="searchQuery = ''"
+					>
+						{{ $t(`${KEYS}.clear_search`) }}
+					</UButton>
+				</div>
+				<template v-if="canCreateWorkspace">
+					<USeparator class="my-0.5" />
+					<UButton
+						color="primary"
+						variant="ghost"
+						size="sm"
+						icon="i-ph-plus"
+						class="justify-start"
+						:disabled="!!switchingId"
+						@click="openCreateModal"
+					>
+						{{ $t(`${KEYS}.create`) }}
+					</UButton>
+				</template>
 			</div>
 		</template>
 	</UPopover>
 
 	<UModal
 		v-model:open="isCreateOpen"
-		:title="$t('saas.workspaces.create.title')"
-		:description="$t('saas.workspaces.create.self_serve.description')"
+		:title="$t('saas.workspace.create.title')"
+		:description="$t('saas.workspace.create.description')"
 	>
 		<template #body>
 			<DmsSaasWorkspaceCreateModal

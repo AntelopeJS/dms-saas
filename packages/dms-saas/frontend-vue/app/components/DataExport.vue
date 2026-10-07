@@ -1,300 +1,276 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-const START_ENDPOINT = "/api/saas/data-export/start";
-/** Query parameter a delivered export link carries, set by dms-base. */
-const EXPORT_JOB_QUERY_PARAM = "exportJob";
-
-const HISTORY_ERROR_DOWNLOAD_KEY =
-  "saas.workspace.data_export.history.error_download";
-const HISTORY_ERROR_EXPIRED_KEY =
-  "saas.workspace.data_export.history.error_expired";
-
+/** Query parameter a delivered export link carries, set by the DMS. */
+const EXPORT_JOB_QUERY_PARAM = 'exportJob'
+const KEYS = 'saas.workspace.data_export'
+const POLL_INTERVAL_MS = 2000
+const FULL_PROGRESS = 100
 /** Statuses saying the archive is gone for good, not momentarily unreachable. */
-const GONE_STATUSES = new Set([404, 410]);
-
-const STATUS_COLORS: Record<string, SemanticColor> = {
-  completed: "success",
-  failed: "error",
-  pending: "info",
-};
-
-const DATE_FORMAT: Intl.DateTimeFormatOptions = {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-};
-
-const { runJob } = useExportJob();
-const {
-  entries,
-  isLoading: isHistoryLoading,
-  hasFailed,
-  page,
-  hasMore,
-  load,
-  goToPage,
-  download,
-} = useExportHistory();
-const { resolveApiError } = useApiErrorMessage();
-const { t, locale } = useI18n();
-const route = useDmsRoute();
-const router = useDmsRouter();
-const toast = useToast();
-
-const isStarting = ref(false);
-const downloadingJobId = ref<string | null>(null);
-
-function statusColor(entry: ExportHistoryEntry): SemanticColor {
-  return STATUS_COLORS[entry.status] ?? "neutral";
+const GONE_STATUSES = new Set([404, 410])
+const DAY_FORMAT: Intl.DateTimeFormatOptions = {
+	day: 'numeric',
+	month: 'short',
+}
+const TIME_FORMAT: Intl.DateTimeFormatOptions = {
+	hour: '2-digit',
+	minute: '2-digit',
 }
 
-function statusLabel(entry: ExportHistoryEntry): string {
-  if (entry.status === "completed" && entry.result?.partial) {
-    return t("saas.workspace.data_export.history.status_partial");
-  }
-  return t(`saas.workspace.data_export.history.status_${entry.status}`);
+const { t, locale } = useI18n()
+const { user } = useCurrentUser()
+const { resolveApiError } = useApiErrorMessage()
+const route = useDmsRoute()
+const router = useDmsRouter()
+const toast = useToast()
+const { state, running, load, refresh, start, readStatus, download } =
+	useExportHistory()
+
+/** The export this visit watched finish, shown until the page is left. */
+const finished = ref<ExportHistoryEntry | null>(null)
+/** The e-mailed link this visit came from, once the server said it is gone. */
+const expiredLinkJobId = ref<string | null>(null)
+const isDownloading = ref(false)
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+const email = computed(() => user.value?.email ?? '')
+const progress = computed(() =>
+	Math.min(FULL_PROGRESS, Math.round(running.value?.progress ?? 0)),
+)
+const isFinishedPartial = computed(() => !!finished.value?.result?.partial)
+
+function formatDay(value: string | undefined): string {
+	return formatDate(value, locale.value, DAY_FORMAT) ?? '—'
 }
 
-function formatMoment(value?: string): string {
-  return formatDateTime(value, locale.value, DATE_FORMAT) ?? "—";
-}
-
-function isExpired(entry: ExportHistoryEntry): boolean {
-  return !!entry.expiresAt && new Date(entry.expiresAt).getTime() <= Date.now();
-}
-
-function isDownloadable(entry: ExportHistoryEntry): boolean {
-  return entry.status === "completed" && !isExpired(entry);
-}
-
-/** One archive at a time, and the other rows say so rather than ignoring a click. */
-function isDownloadBlocked(entry: ExportHistoryEntry): boolean {
-  return (
-    downloadingJobId.value !== null && downloadingJobId.value !== entry.jobId
-  );
-}
-
-async function startExport(): Promise<void> {
-  if (isStarting.value) return;
-  isStarting.value = true;
-  try {
-    await runJob({
-      startUrl: START_ENDPOINT,
-      startMethod: "POST",
-      labels: {
-        title: t("saas.workspace.data_export.title"),
-        successTitle: t("saas.workspace.data_export.success_title"),
-        successMessage: t("saas.workspace.data_export.success_message"),
-        errorTitle: t("saas.workspace.data_export.error_title"),
-      },
-    });
-  } finally {
-    isStarting.value = false;
-    await load();
-  }
-}
-
-interface DownloadOutcome {
-  ok: boolean;
-  /** HTTP status of the failure, when the server sent one. */
-  status?: number;
+function formatTime(value: string | undefined): string {
+	return formatDate(value, locale.value, TIME_FORMAT) ?? '—'
 }
 
 interface HttpErrorLike {
-  statusCode?: unknown;
-  status?: unknown;
+	statusCode?: unknown
+	status?: unknown
 }
 
 function errorStatus(error: unknown): number | undefined {
-  const candidate = error as HttpErrorLike | null;
-  const status = candidate?.statusCode ?? candidate?.status;
-  return typeof status === "number" ? status : undefined;
+	const candidate = error as HttpErrorLike | null
+	const status = candidate?.statusCode ?? candidate?.status
+	return typeof status === 'number' ? status : undefined
 }
 
-function isGone(status?: number): boolean {
-  return status !== undefined && GONE_STATUSES.has(status);
+function notifyError(error: unknown, fallbackKey: string): void {
+	toast.add({
+		title: resolveApiError(error, fallbackKey),
+		color: 'error',
+		icon: 'i-ph-warning-circle',
+	})
 }
 
-async function runDownload(
-  jobId: string,
-  errorKey: (status?: number) => string,
-  naming?: ExportDownloadNaming,
-): Promise<DownloadOutcome> {
-  if (downloadingJobId.value) return { ok: false };
-  downloadingJobId.value = jobId;
-  try {
-    await download(jobId, naming);
-    return { ok: true };
-  } catch (error) {
-    const status = errorStatus(error);
-    toast.add({
-      title: resolveApiError(error, errorKey(status)),
-      color: "error",
-      icon: "i-ph-warning-circle",
-    });
-    return { ok: false, status };
-  } finally {
-    downloadingJobId.value = null;
-  }
+async function requestExport(): Promise<void> {
+	finished.value = null
+	expiredLinkJobId.value = null
+	await start().catch((error) => notifyError(error, `${KEYS}.error.start`))
 }
 
-function downloadEntry(entry: ExportHistoryEntry): Promise<DownloadOutcome> {
-  return runDownload(entry.jobId, () => HISTORY_ERROR_DOWNLOAD_KEY, entry);
+async function downloadFinished(): Promise<void> {
+	if (!finished.value || isDownloading.value) return
+	isDownloading.value = true
+	await download(finished.value.jobId, finished.value)
+		.catch((error) => notifyError(error, `${KEYS}.error.download`))
+		.finally(() => {
+			isDownloading.value = false
+		})
 }
 
-/**
- * "Expired" is only claimed when the server said the archive is gone; a
- * network failure or a 500 gets the generic download error instead.
- */
-function deliveredLinkErrorKey(status?: number): string {
-  return isGone(status)
-    ? HISTORY_ERROR_EXPIRED_KEY
-    : HISTORY_ERROR_DOWNLOAD_KEY;
+async function pollRunning(): Promise<void> {
+	const entry = running.value
+	if (!entry) return
+	const status = await readStatus(entry.jobId).catch(() => null)
+	if (!status) return
+	if (status.status === EXPORT_STATUS.pending) {
+		entry.progress = status.progress
+		return
+	}
+	finished.value = { ...entry, ...status }
+	await load()
 }
+
+function stopPolling(): void {
+	if (pollTimer) clearInterval(pollTimer)
+	pollTimer = null
+}
+
+/** One timer at most, following the export being built, if any. */
+function syncPolling(): void {
+	stopPolling()
+	if (running.value) pollTimer = setInterval(pollRunning, POLL_INTERVAL_MS)
+}
+
+watch(() => running.value?.jobId, syncPolling)
 
 async function clearDeliveredLink(): Promise<void> {
-  const { [EXPORT_JOB_QUERY_PARAM]: _consumed, ...query } = route.query;
-  await router.replace({ query });
+	const { [EXPORT_JOB_QUERY_PARAM]: _consumed, ...query } = route.query
+	await router.replace({ query })
 }
 
 /**
- * The link mailed on completion lands here carrying its job id. The archive is
- * behind an authenticated route, so the page downloads it on the visitor's
- * behalf rather than the link resolving to the file directly.
- *
- * The query parameter is what makes the link retryable: it is dropped once the
- * download succeeded or the archive is gone for good, and kept on a transient
- * failure so reloading the page tries the download again.
+ * The link mailed on completion lands here carrying its job id: the archive
+ * sits behind an authenticated route, so the page downloads it for the
+ * visitor. The parameter is dropped once the download succeeded or the
+ * archive is gone for good, and kept on a transient failure so a reload
+ * tries again.
  */
 async function consumeDeliveredLink(): Promise<void> {
-  const jobId = route.query[EXPORT_JOB_QUERY_PARAM];
-  if (typeof jobId !== "string" || !jobId) return;
-
-  const outcome = await runDownload(
-    jobId,
-    deliveredLinkErrorKey,
-    entries.value.find((candidate) => candidate.jobId === jobId),
-  );
-  if (outcome.ok || isGone(outcome.status)) await clearDeliveredLink();
+	const jobId = route.query[EXPORT_JOB_QUERY_PARAM]
+	if (typeof jobId !== 'string' || !jobId) return
+	const entry = state.value.entries.find((item) => item.jobId === jobId)
+	try {
+		await download(jobId, entry)
+		await clearDeliveredLink()
+	} catch (error) {
+		const isGone = GONE_STATUSES.has(errorStatus(error) ?? 0)
+		if (!isGone) return notifyError(error, `${KEYS}.error.download`)
+		expiredLinkJobId.value = jobId
+		await clearDeliveredLink()
+	}
 }
 
 onMounted(async () => {
-  await load();
-  await consumeDeliveredLink();
-});
+	await refresh()
+	syncPolling()
+	await consumeDeliveredLink()
+})
+
+onBeforeUnmount(stopPolling)
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <div class="flex flex-col gap-3">
-      <p class="text-sm text-muted">
-        {{ $t("saas.workspace.data_export.intro") }}
-      </p>
-      <div>
-        <UButton
-          color="primary"
-          icon="i-ph-download-simple"
-          :loading="isStarting"
-          @click="startExport"
-        >
-          {{ $t("saas.workspace.data_export.download") }}
-        </UButton>
-      </div>
-    </div>
+	<div class="flex flex-col gap-4">
+		<DmsBanner
+			v-if="expiredLinkJobId"
+			tone="warning"
+			icon="i-ph-link-break"
+			:title="$t(`${KEYS}.expired_link.title`)"
+			:description="$t(`${KEYS}.expired_link.description`)"
+		>
+			<template #actions>
+				<UButton
+					color="neutral"
+					variant="outline"
+					size="sm"
+					:loading="state.isStarting"
+					:disabled="!!running"
+					@click="requestExport"
+				>
+					{{ $t(`${KEYS}.expired_link.action`) }}
+				</UButton>
+			</template>
+		</DmsBanner>
 
-    <div class="flex flex-col gap-3">
-      <h3 class="text-sm font-semibold">
-        {{ $t("saas.workspace.data_export.history.title") }}
-      </h3>
+		<DmsCard>
+			<div class="flex flex-col gap-3">
+				<DmsStatusPill
+					tone="info"
+					icon="i-ph-scales"
+					:label="$t(`${KEYS}.gdpr`)"
+					class="self-start"
+				/>
+				<p class="text-muted text-sm">
+					{{ $t(`${KEYS}.intro`, { email }) }}
+				</p>
+				<div class="flex flex-wrap items-center gap-3">
+					<UButton
+						color="primary"
+						icon="i-ph-download-simple"
+						:loading="state.isStarting"
+						:disabled="!!running"
+						@click="requestExport"
+					>
+						{{ $t(`${KEYS}.request`) }}
+					</UButton>
+					<span v-if="running" class="text-muted text-xs">
+						{{ $t(`${KEYS}.request_unavailable`) }}
+					</span>
+				</div>
+			</div>
+		</DmsCard>
 
-      <USkeleton v-if="isHistoryLoading" class="h-20 w-full" />
+		<DmsCard v-if="running" :title="$t(`${KEYS}.in_progress.title`)">
+			<div class="flex flex-col gap-2" aria-live="polite">
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="text-highlighted text-sm font-medium">
+						{{ $t(`${KEYS}.scope`) }}
+					</span>
+					<DmsStatusPill
+						tone="info"
+						dot="live"
+						:label="$t(`${KEYS}.history.status.pending`)"
+					/>
+				</div>
+				<p class="text-muted text-xs">
+					{{
+						$t(`${KEYS}.in_progress.requested`, {
+							time: formatTime(running.createdAt),
+							day: formatDay(running.createdAt),
+						})
+					}}
+				</p>
+				<div class="flex items-center gap-3">
+					<UProgress :model-value="progress" class="grow" />
+					<span class="text-muted font-mono text-xs tabular-nums">
+						{{ progress }}%
+					</span>
+				</div>
+			</div>
+		</DmsCard>
 
-      <UAlert
-        v-else-if="hasFailed"
-        color="error"
-        variant="subtle"
-        icon="i-ph-warning-circle"
-        :title="$t('saas.workspace.data_export.history.error_load')"
-      />
-
-      <p v-else-if="!entries.length" class="text-muted text-sm">
-        {{ $t("saas.workspace.data_export.history.empty") }}
-      </p>
-
-      <div
-        v-else
-        class="border-default divide-default divide-y rounded-lg border"
-      >
-        <div
-          v-for="entry in entries"
-          :key="entry.jobId"
-          class="flex flex-wrap items-center gap-3 p-3 text-sm"
-        >
-          <div class="min-w-40 grow">
-            <p class="tabular-nums">{{ formatMoment(entry.createdAt) }}</p>
-            <p class="text-muted text-xs">
-              {{ $t("saas.workspace.data_export.history.scope") }}
-            </p>
-          </div>
-          <UBadge :color="statusColor(entry)" variant="subtle" size="sm">
-            {{ statusLabel(entry) }}
-          </UBadge>
-          <span class="text-muted min-w-40 text-xs">
-            {{
-              isExpired(entry)
-                ? $t("saas.workspace.data_export.history.expired")
-                : $t("saas.workspace.data_export.history.expires_at", {
-                    date: formatMoment(entry.expiresAt),
-                  })
-            }}
-          </span>
-          <UButton
-            v-if="isDownloadable(entry)"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-ph-download-simple"
-            :loading="downloadingJobId === entry.jobId"
-            :disabled="isDownloadBlocked(entry)"
-            @click="downloadEntry(entry)"
-          >
-            {{ $t("saas.workspace.data_export.history.download") }}
-          </UButton>
-        </div>
-      </div>
-
-      <div
-        v-if="!isHistoryLoading && !hasFailed && (page > 1 || hasMore)"
-        class="flex items-center justify-between gap-3"
-      >
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          icon="i-ph-caret-left"
-          :disabled="page <= 1"
-          @click="goToPage(page - 1)"
-        >
-          {{ $t("saas.workspace.data_export.history.previous") }}
-        </UButton>
-        <span class="text-muted text-xs tabular-nums">
-          {{ $t("saas.workspace.data_export.history.page", { page }) }}
-        </span>
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          icon="i-ph-caret-right"
-          trailing
-          :disabled="!hasMore"
-          @click="goToPage(page + 1)"
-        >
-          {{ $t("saas.workspace.data_export.history.next") }}
-        </UButton>
-      </div>
-    </div>
-  </div>
+		<DmsBanner
+			v-else-if="finished"
+			:tone="finished.status === EXPORT_STATUS.failed ? 'error' : 'success'"
+			:icon="
+				finished.status === EXPORT_STATUS.failed
+					? 'i-ph-warning-circle'
+					: 'i-ph-check-circle'
+			"
+			:title="
+				finished.status === EXPORT_STATUS.failed
+					? $t(`${KEYS}.finished.failed_title`)
+					: $t(`${KEYS}.finished.title`)
+			"
+			:description="
+				finished.status === EXPORT_STATUS.failed
+					? $t(`${KEYS}.finished.failed_description`)
+					: $t(
+							isFinishedPartial
+								? `${KEYS}.finished.partial_description`
+								: `${KEYS}.finished.description`,
+							{ email, date: formatDay(finished.expiresAt) },
+						)
+			"
+		>
+			<template #actions>
+				<UButton
+					v-if="finished.status === EXPORT_STATUS.failed"
+					color="neutral"
+					variant="outline"
+					size="sm"
+					icon="i-ph-arrow-clockwise"
+					:loading="state.isStarting"
+					@click="requestExport"
+				>
+					{{ $t(`${KEYS}.history.retry`) }}
+				</UButton>
+				<UButton
+					v-else
+					color="primary"
+					size="sm"
+					icon="i-ph-download-simple"
+					:loading="isDownloading"
+					@click="downloadFinished"
+				>
+					{{ $t(`${KEYS}.history.download`) }}
+				</UButton>
+			</template>
+		</DmsBanner>
+	</div>
 </template>

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { assert } from "@antelopejs/interface-api-util";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
+import { UserInviteModel } from "@antelopejs/interface-dms/db";
 import { recomputeTenantBillingState } from "../billing-state";
 import type { TenantSubscription, TenantSubscriptionStatus } from "../db";
 import {
@@ -107,6 +108,9 @@ async function runAfterCancellation(tenantId: string): Promise<number> {
   await bestEffort(tenantId, "recompute billing state", () =>
     recomputeTenantBillingState(tenantId),
   );
+  await bestEffort(tenantId, "cancel pending invitations", () =>
+    cancelPendingInvitations(tenantId),
+  );
   await bestEffort(tenantId, "notify owners", () =>
     notifyTenantOwners(tenantId, subscriptionCancelledSubject, {
       icon: NOTIF_ICON,
@@ -115,6 +119,17 @@ async function runAfterCancellation(tenantId: string): Promise<number> {
     }),
   );
   return resolveDataRetentionDays().catch(() => DEFAULT_DATA_RETENTION_DAYS);
+}
+
+/**
+ * An invitation accepted after the deletion would only lead to the
+ * access-restricted screen, so the deletion withdraws them, as the
+ * confirmation dialog announces.
+ */
+async function cancelPendingInvitations(tenantId: string): Promise<void> {
+  const model = GetModel(UserInviteModel, tenantId);
+  const invites = await model.getAll();
+  await Promise.all(invites.map((invite) => model.delete(invite._id)));
 }
 
 async function bestEffort(
