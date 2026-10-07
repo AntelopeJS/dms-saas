@@ -15,7 +15,8 @@ import {
 } from "../db";
 import { getStripeClient } from "./client";
 
-const PRICE_MULTIPLIER = 100;
+/** Minor units per major unit of a plan price, as its Stripe price is created. */
+export const PRICE_MULTIPLIER = 100;
 const SEAT_USAGE_TYPE = "licensed" as const;
 const PRICE_TAX_BEHAVIOR = "exclusive" as const;
 const IDEMPOTENCY_KEY_PREFIX = "dms-saas:plan-sync";

@@ -3,6 +3,7 @@
 // directly by the operator actions, which is why they stay exported.
 
 import { randomUUID } from "node:crypto";
+import { HTTPResult } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import type { User } from "@antelopejs/interface-dms/auth/db";
@@ -29,6 +30,7 @@ import {
   type TenantPlanFeature,
   type TenantPlanView,
 } from "../../plans";
+import Stripe from "stripe";
 import { getStripeClient } from "../../stripe/client";
 import { applyPlanDowngradeCleanup } from "../../workers";
 
@@ -37,13 +39,44 @@ export const HTTP_BAD_REQUEST = 400;
 const HTTP_PAYMENT_REQUIRED = 402;
 export const HTTP_CONFLICT = 409;
 export const PAST_DUE_STATUS: TenantSubscriptionStatus = "past_due";
-const PRORATION_BEHAVIOR = "create_prorations" as const;
 const ACTIVE_STATUS = "active" as const;
+const SEAT_BILLING_MODE = "seat";
+const FLAT_QUANTITY = 1;
+// An immediate change the owner pays for is refused whole by Stripe when the
+// card fails, instead of landing the plan with an unpaid invoice behind it.
+const PAID_UPGRADE_PAYMENT_BEHAVIOR = "error_if_incomplete" as const;
 
 export interface ChangePlanBody {
   planId: string;
   successUrl?: string;
   cancelUrl?: string;
+  /**
+   * Stripe seconds the owner's reviewed preview was priced at, so the
+   * prorated charge matches the amount the confirm button named.
+   */
+  prorationDate?: number;
+}
+
+/** How an immediate change bills the difference with the plan it leaves. */
+export interface ImmediateChangeBilling {
+  /**
+   * `create_prorations` adds the difference to the next invoice (operator
+   * changes); `always_invoice` charges it at once (an owner's upgrade).
+   */
+  prorationBehavior: "create_prorations" | "always_invoice";
+  prorationDate?: number;
+}
+
+/** Operator changes: the difference waits for the next invoice. */
+export const DEFERRED_PRORATION_BILLING: ImmediateChangeBilling = {
+  prorationBehavior: "create_prorations",
+};
+
+interface StripePlanChange {
+  subscription: TenantSubscription;
+  newPlan: Plan;
+  operationId: string;
+  billing: ImmediateChangeBilling;
 }
 
 export interface ChangePlanResult {
@@ -54,9 +87,26 @@ export interface ChangePlanResult {
   checkoutUrl: string | null;
 }
 
+/** A plan of the comparison, with what the owner needs to choose it. */
+export interface OfferedPlanView extends TenantPlanView {
+  description: string;
+  billingMode: Plan["billingMode"];
+  /** Seat cap of the plan; 0 for no cap. */
+  maxMembers: number;
+  trialDays: number;
+}
+
+/** Seats the workspace holds: members and pending invitations each take one. */
+export interface SeatsInUse {
+  members: number;
+  pendingInvites: number;
+  occupied: number;
+}
+
 export interface CurrentPlanResult {
   current: Plan | null;
-  available: TenantPlanView[];
+  seats: SeatsInUse;
+  available: OfferedPlanView[];
   features: TenantPlanFeature[];
   status: string | null;
   freeUntil: Date | null;
@@ -86,6 +136,50 @@ export const UNCHANGED_RESULT_BASE = {
 } as const;
 
 /**
+ * The plan exists, is on sale and is billed on a Stripe price that matches
+ * it: what any path that selects a plan, or prices one, starts from.
+ */
+export async function loadSellablePlan(
+  planModel: PlanModel,
+  planId: string,
+): Promise<Plan> {
+  const storedPlan = await planModel.get(planId);
+  assert(
+    storedPlan && !storedPlan.isDeleted && storedPlan.isActive,
+    HTTP_BAD_REQUEST,
+    "saas.errors.plan.invalid",
+  );
+  // Whatever wrote the plan, it is billed on a price that matches it.
+  const newPlan = await ensurePlanStripeRefs(storedPlan, planModel);
+  // A priced plan with no Stripe price must not be selectable: isPaidPlan
+  // keys off the Stripe ref, so an unsynced paid plan would be parked as a
+  // free downgrade and land active without ever being billed.
+  assert(
+    newPlan.price <= 0 || !!newPlan.paymentProviderRefs?.stripePriceId,
+    HTTP_BAD_REQUEST,
+    "saas.errors.plan.not_synced_with_stripe",
+  );
+  return newPlan;
+}
+
+/** A plan reserved to one customer type is not sold to the other. */
+export function assertPlanAudience(
+  plan: Plan,
+  customerType: string | null | undefined,
+): void {
+  assert(
+    customerType,
+    HTTP_BAD_REQUEST,
+    "saas.errors.plan.customer_type_unknown",
+  );
+  assert(
+    plan.audience === "any" || plan.audience === customerType,
+    HTTP_BAD_REQUEST,
+    "saas.errors.plan.not_available_for_customer_type",
+  );
+}
+
+/**
  * Guards every path that selects a plan, self-serve or platform-owner acting
  * on the tenant's behalf, so no caller can reach a deleted, mistargeted or
  * unbilled plan.
@@ -101,27 +195,8 @@ export async function loadAndValidateTargetPlan(
     HTTP_BAD_REQUEST,
     "saas.errors.plan.invalid",
   );
-  assert(
-    customerType,
-    HTTP_BAD_REQUEST,
-    "saas.errors.plan.customer_type_unknown",
-  );
-  assert(
-    storedPlan.audience === "any" || storedPlan.audience === customerType,
-    HTTP_BAD_REQUEST,
-    "saas.errors.plan.not_available_for_customer_type",
-  );
-  // Whatever wrote the plan, it is billed on a price that matches it.
-  const newPlan = await ensurePlanStripeRefs(storedPlan, planModel);
-  // A priced plan with no Stripe price must not be selectable: isPaidPlan
-  // keys off the Stripe ref, so an unsynced paid plan would be parked as a
-  // free downgrade and land active without ever being billed.
-  assert(
-    newPlan.price <= 0 || !!newPlan.paymentProviderRefs?.stripePriceId,
-    HTTP_BAD_REQUEST,
-    "saas.errors.plan.not_synced_with_stripe",
-  );
-  return newPlan;
+  assertPlanAudience(storedPlan, customerType);
+  return loadSellablePlan(planModel, planId);
 }
 
 /**
@@ -142,18 +217,15 @@ export async function assertSeatLimit(
 }
 
 async function applyPlanChange(
-  subscription: TenantSubscription,
-  newPlan: Plan,
-  newPlanId: string,
+  change: StripePlanChange,
   tenantSubscriptionModel: TenantSubscriptionModel,
-  operationId: string,
 ): Promise<void> {
-  await syncStripePlanChange(subscription, newPlan, operationId);
+  await syncStripePlanChange(change);
   await tenantSubscriptionModel.updateDuringTransition(
-    subscription._id,
-    operationId,
+    change.subscription._id,
+    change.operationId,
     {
-      planId: newPlanId,
+      planId: change.newPlan._id,
       updatedAt: new Date(),
     },
   );
@@ -175,11 +247,34 @@ export async function finalizeImmediateChange(
   await recomputeTenantBillingState(tenantId);
 }
 
-async function syncStripePlanChange(
-  subscription: TenantSubscription,
-  newPlan: Plan,
-  operationId: string,
-): Promise<void> {
+/**
+ * What the subscription item is billed for on the new plan: a seat plan
+ * bills the occupied seats, a flat plan one unit — set with the price, or a
+ * move from a seat plan would keep billing the flat price once per seat.
+ */
+export async function planQuantity(
+  tenantId: string,
+  plan: Plan,
+): Promise<number> {
+  if (plan.billingMode !== SEAT_BILLING_MODE) return FLAT_QUANTITY;
+  return countOccupiedSeats(tenantId);
+}
+
+function toChargeParams(
+  billing: ImmediateChangeBilling,
+): Stripe.SubscriptionUpdateParams {
+  if (billing.prorationBehavior !== "always_invoice") {
+    return { proration_behavior: billing.prorationBehavior };
+  }
+  return {
+    proration_behavior: billing.prorationBehavior,
+    proration_date: billing.prorationDate,
+    payment_behavior: PAID_UPGRADE_PAYMENT_BEHAVIOR,
+  };
+}
+
+async function syncStripePlanChange(change: StripePlanChange): Promise<void> {
+  const { subscription, newPlan, operationId, billing } = change;
   if (!subscription.stripeSubscriptionId) return;
   const stripePriceId = newPlan.paymentProviderRefs?.stripePriceId;
   assert(stripePriceId, HTTP_BAD_REQUEST, "saas.errors.plan.no_stripe_price");
@@ -189,11 +284,12 @@ async function syncStripePlanChange(
   );
   const itemId = stripeSubscription.items.data[0]?.id;
   assert(itemId, HTTP_BAD_REQUEST, "saas.errors.stripe.subscription_no_item");
+  const quantity = await planQuantity(subscription._id, newPlan);
   await stripe.subscriptions.update(
     subscription.stripeSubscriptionId,
     {
-      items: [{ id: itemId, price: stripePriceId }],
-      proration_behavior: PRORATION_BEHAVIOR,
+      items: [{ id: itemId, price: stripePriceId, quantity }],
+      ...toChargeParams(billing),
       automatic_tax: { enabled: true },
     },
     {
@@ -273,6 +369,37 @@ export async function dropPendingChange(
   };
 }
 
+/** Where an immediate change is admitted and recorded. */
+interface ImmediateChangeAdmission {
+  tenantId: string;
+  intent: SubscriptionTransition;
+  model: TenantSubscriptionModel;
+}
+
+function newChangeIntent(newPlan: Plan): SubscriptionTransition {
+  return {
+    operationId: randomUUID(),
+    kind: "change_plan",
+    targetPlanId: newPlan._id,
+    requestedAt: new Date(),
+  };
+}
+
+async function runImmediateChange(
+  change: StripePlanChange,
+  admission: ImmediateChangeAdmission,
+): Promise<void> {
+  const { tenantId, intent, model } = admission;
+  await model.beginTransition(change.subscription, intent);
+  await clearPendingPlanChange(
+    tenantId,
+    change.subscription,
+    intent.operationId,
+  );
+  await applyPlanChange(change, model);
+  await finalizeImmediateChange(tenantId, change.subscription, change.newPlan);
+}
+
 /**
  * The immediate, prorated plan change: drops any parked downgrade, syncs
  * Stripe, then recomputes the derived billing state. The platform back-office
@@ -285,29 +412,75 @@ export async function applyImmediateChange(
   tenantSubscriptionModel: TenantSubscriptionModel,
   operatorIntent?: SubscriptionTransition,
 ): Promise<ChangePlanResult> {
-  const intent =
-    operatorIntent ??
-    ({
-      operationId: randomUUID(),
-      kind: "change_plan",
-      targetPlanId: newPlan._id,
-      requestedAt: new Date(),
-    } satisfies SubscriptionTransition);
-  await tenantSubscriptionModel.beginTransition(subscription, intent);
-  await clearPendingPlanChange(tenantId, subscription, intent.operationId);
-  await applyPlanChange(
+  const intent = operatorIntent ?? newChangeIntent(newPlan);
+  const change: StripePlanChange = {
     subscription,
     newPlan,
-    newPlan._id,
-    tenantSubscriptionModel,
-    intent.operationId,
-  );
-  await finalizeImmediateChange(tenantId, subscription, newPlan);
+    operationId: intent.operationId,
+    billing: DEFERRED_PRORATION_BILLING,
+  };
+  await runImmediateChange(change, {
+    tenantId,
+    intent,
+    model: tenantSubscriptionModel,
+  });
   if (!operatorIntent)
     await tenantSubscriptionModel.completeTransition(
       subscription._id,
       intent.operationId,
       {},
     );
+  return { ...UNCHANGED_RESULT_BASE, changed: true, planId: newPlan._id };
+}
+
+/**
+ * Stripe refused the whole update because the card was declined: nothing
+ * changed on its side, so the admission is released and the owner told.
+ */
+async function releaseDeclinedUpgrade(
+  error: unknown,
+  admission: ImmediateChangeAdmission,
+  subscriptionId: string,
+): Promise<never> {
+  if (!(error instanceof Stripe.errors.StripeCardError)) throw error;
+  await admission.model.completeTransition(
+    subscriptionId,
+    admission.intent.operationId,
+    {},
+  );
+  throw new HTTPResult(
+    HTTP_PAYMENT_REQUIRED,
+    "saas.errors.plan.upgrade_payment_declined",
+  );
+}
+
+/**
+ * The owner's own upgrade: the prorated difference is charged at once on the
+ * card on file, at the date the reviewed preview was priced, and a declined
+ * card leaves the plan as it was.
+ */
+export async function applyOwnerUpgrade(
+  tenantId: string,
+  subscription: TenantSubscription,
+  newPlan: Plan,
+  tenantSubscriptionModel: TenantSubscriptionModel,
+  prorationDate: number | undefined,
+): Promise<ChangePlanResult> {
+  const intent = newChangeIntent(newPlan);
+  const admission = { tenantId, intent, model: tenantSubscriptionModel };
+  const change: StripePlanChange = {
+    subscription,
+    newPlan,
+    operationId: intent.operationId,
+    billing: { prorationBehavior: "always_invoice", prorationDate },
+  };
+  await runImmediateChange(change, admission).catch((error: unknown) =>
+    releaseDeclinedUpgrade(error, admission, subscription._id),
+  );
+  await tenantSubscriptionModel.completeTransition(
+    subscription._id,
+    intent.operationId,
+    {},
+  );
   return { ...UNCHANGED_RESULT_BASE, changed: true, planId: newPlan._id };
 }

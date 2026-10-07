@@ -107,6 +107,7 @@ describe("tenant billing information", () => {
         "city",
         "billingEmail",
       ],
+      updatedAt: null,
     });
   });
 

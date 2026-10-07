@@ -8,7 +8,7 @@ import {
   Put,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
-import { Model } from "@antelopejs/interface-database-decorators";
+import { GetModel, Model } from "@antelopejs/interface-database-decorators";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import {
   AuthTenantMember,
@@ -32,7 +32,9 @@ import { toPendingPlanChange } from "../../plan-changes";
 import {
   buildTenantPlanCatalog,
   ensurePlanStripeRefs,
+  getSeatUsage,
   isDowngrade,
+  type TenantPlanView,
 } from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
 import {
@@ -47,7 +49,8 @@ import {
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
 
 import {
-  applyImmediateChange,
+  applyOwnerUpgrade,
+  assertPlanAudience,
   HTTP_BAD_REQUEST,
   HTTP_CONFLICT,
   HTTP_NOT_FOUND,
@@ -61,9 +64,15 @@ import {
   insertFreeSubscription,
   isPaidPlan,
   loadAndValidateTargetPlan,
+  loadSellablePlan,
+  type OfferedPlanView,
   type PlanChangeRequest,
   scheduleDowngrade,
 } from "./tenant-plan-ops";
+import {
+  type PlanChangePreview,
+  previewPlanChange,
+} from "./tenant-plan-preview";
 import { startPaidCheckout } from "./tenant-plan-checkout";
 import {
   type CancelCheckoutResult,
@@ -72,6 +81,40 @@ import {
   describePendingCheckout,
   type PendingCheckoutResult,
 } from "./tenant-plan-checkout-recovery";
+
+const PRORATION_DATE_MAX_AGE_SECONDS = 3600;
+const MS_PER_SECOND = 1000;
+
+/**
+ * The proration date of the preview the owner reviewed, kept only while
+ * recent: an old one would bill a difference that no longer matches.
+ */
+export function acceptedProrationDate(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
+  const ageSeconds = Date.now() / MS_PER_SECOND - value;
+  const isRecent =
+    ageSeconds >= 0 && ageSeconds <= PRORATION_DATE_MAX_AGE_SECONDS;
+  return isRecent ? value : undefined;
+}
+
+function asQueryString(value: unknown): string | null {
+  return typeof value === "string" && value ? value : null;
+}
+
+/** The customer-facing facts of a plan the comparison needs beside its features. */
+function toOfferedPlanView(
+  view: TenantPlanView,
+  plans: Plan[],
+): OfferedPlanView {
+  const plan = plans.find((candidate) => candidate._id === view._id);
+  return {
+    ...view,
+    description: plan?.description ?? "",
+    billingMode: plan?.billingMode ?? "flat",
+    maxMembers: plan?.maxMembers ?? 0,
+    trialDays: plan?.trialDays ?? 0,
+  };
+}
 
 /** A paid target without a live Stripe subscription goes through Checkout. */
 function startsPaidCheckout(
@@ -125,12 +168,16 @@ export class SaasTenantPlanController extends Controller(
     const offered = await Promise.all(
       withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
-    return buildTenantPlanCatalog(
+    const catalog = await buildTenantPlanCatalog(
       this.planModel,
       this.featureModel,
       offered,
       locale,
     );
+    return {
+      features: catalog.features,
+      plans: catalog.plans.map((view) => toOfferedPlanView(view, offered)),
+    };
   }
 
   /**
@@ -177,9 +224,17 @@ export class SaasTenantPlanController extends Controller(
     const pending = subscription?.pendingPlanId
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
-    const catalog = await this.buildCatalog(current, requestLocale(language));
+    const [catalog, seatUsage] = await Promise.all([
+      this.buildCatalog(current, requestLocale(language)),
+      getSeatUsage(tenantId),
+    ]);
     return {
       current,
+      seats: {
+        members: seatUsage.members,
+        pendingInvites: seatUsage.pendingInvites,
+        occupied: seatUsage.occupied,
+      },
       available: catalog.plans,
       features: catalog.features,
       status: subscription?.status ?? null,
@@ -248,6 +303,55 @@ export class SaasTenantPlanController extends Controller(
         typeof operationId === "string" && operationId ? operationId : null,
       ),
     );
+  }
+
+  /**
+   * What changing to `planId` would cost, priced by Stripe without changing
+   * anything: the review step of the plan change dialog. Same guards as the
+   * change itself, except the customer type, which the upgrade dialog may
+   * still be filling in.
+   */
+  @Get("/preview")
+  async previewChange(
+    @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
+    @Parameter("planId", "query") planId: unknown,
+    @Parameter("country", "query") country: unknown,
+    @Context() ctx: any,
+    @TenantScopedModel(TenantBillingInfoModel)
+    tenantBillingInfoModel: TenantBillingInfoModel,
+  ): Promise<PlanChangePreview> {
+    const tenantId = getRequestTenantId(ctx);
+    const subscription = await GetModel(
+      TenantSubscriptionModel,
+      tenantId,
+    ).findOne();
+    this.assertPlanChangeAllowed(subscription, user);
+    const targetPlanId = asQueryString(planId);
+    assert(targetPlanId, HTTP_BAD_REQUEST, "saas.errors.plan.invalid");
+    assert(
+      subscription?.planId !== targetPlanId ||
+        canRecoverComplimentarySubscription(subscription),
+      HTTP_CONFLICT,
+      "saas.errors.plan.already_current",
+    );
+    const billingInfo = await tenantBillingInfoModel.findOne();
+    const target = await loadSellablePlan(this.planModel, targetPlanId);
+    if (billingInfo?.customerType) {
+      assertPlanAudience(target, billingInfo.customerType);
+    }
+    await assertSeatLimit(tenantId, target);
+    const currentPlan = subscription?.planId
+      ? ((await this.planModel.get(subscription.planId)) ?? null)
+      : null;
+    return previewPlanChange({
+      tenantId,
+      subscription,
+      currentPlan,
+      target,
+      billingInfo,
+      ownerEmail: user.email,
+      country: asQueryString(country),
+    });
   }
 
   @Put("/")
@@ -368,11 +472,12 @@ export class SaasTenantPlanController extends Controller(
       );
       return scheduleDowngrade(tenantId, subscription, newPlan);
     }
-    return applyImmediateChange(
+    return applyOwnerUpgrade(
       tenantId,
       subscription,
       newPlan,
       tenantSubscriptionModel,
+      acceptedProrationDate(request.body.prorationDate),
     );
   }
 }

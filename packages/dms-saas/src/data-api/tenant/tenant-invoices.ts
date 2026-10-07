@@ -24,17 +24,18 @@ import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/defa
 import type { InvoiceLine } from "../../db";
 import { Invoice, InvoiceModel } from "../../db";
 import {
-  billingDocumentStatusType,
   BillingDocumentType,
   BillingPeriodType,
   InvoiceLinesType,
   MoneyCentsType,
+  statusPillDisplay,
+  statusType,
 } from "../../utils";
 
 /**
- * Only the six columns a customer reads an invoice by are listed; the rest
- * (document type, tax split, line items, credit-note details) stay readable
- * on the invoice's detail page, which reads every field.
+ * The columns a customer reads an invoice by — document, period, amounts
+ * before and after tax, status — are listed; line items and credit-note
+ * details stay readable on the invoice's detail page, which reads every field.
  */
 @RegisterDataController()
 @AuthUser()
@@ -119,6 +120,7 @@ export class tenantInvoicesDataAPI extends DataController(
   declare subtotal: number;
 
   @Select()
+  @Listable()
   @Exported()
   @Column({
     name: "$saas.invoices.column.tax",
@@ -158,7 +160,8 @@ export class tenantInvoicesDataAPI extends DataController(
   @Exported()
   @Column({
     name: "$saas.invoices.column.status",
-    type: billingDocumentStatusType(),
+    type: statusType("invoice"),
+    display: statusPillDisplay("invoice"),
     filterable: true,
   })
   @Access(AccessMode.ReadOnly)

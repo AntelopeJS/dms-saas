@@ -4,6 +4,7 @@ export * from "./customer-billing";
 export * from "./payload-shapes";
 export * from "./plan-schedule";
 export * from "./proration";
+export * from "./subscription-cancellation";
 export * from "./sync-plan";
 export * from "./webhook-dispatch";
 export * from "./webhook-checkout";
