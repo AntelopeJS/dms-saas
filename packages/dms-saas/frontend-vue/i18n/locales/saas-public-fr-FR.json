@@ -1,0 +1,292 @@
+{
+	"saas": {
+		"permissions": {
+			"public": {
+				"pricing": "Tarifs",
+				"pricing_description": "Voir les offres en vente, leurs prix et leur comparaison",
+				"register": "Créer votre compte",
+				"register_description": "S'inscrire et ouvrir un premier espace de travail sur l'offre gratuite",
+				"no_workspace": "Créer votre premier espace de travail",
+				"no_workspace_description": "Ouvrir un premier espace de travail après s'être connecté avec un compte qui n'en a aucun",
+				"workspace_suspended": "Accès à l'espace de travail restreint",
+				"workspace_suspended_description": "Voir pourquoi un espace de travail est fermé et comment le rouvrir, ou en ouvrir un autre",
+				"legal_document_description": "Lire ce document légal, publié dans Règles de facturation et mentions légales"
+			}
+		},
+		"public": {
+			"common": {
+				"retry": "Réessayer"
+			},
+			"auth_links": {
+				"create_account": "Pas encore de compte ? Inscrivez-vous",
+				"pricing": "Voir les offres et les tarifs"
+			},
+			"plan": {
+				"price": {
+					"flat": "{price} / {interval}",
+					"seat": "{price} / membre / {interval}"
+				},
+				"interval": {
+					"month": "mois",
+					"year": "an"
+				},
+				"seat_example": "{seats} membres = {total} par {interval}",
+				"trial": "Essai gratuit de {days} jours",
+				"free_forever": "Gratuit, sans limite de durée"
+			},
+			"plan_card": {
+				"eyebrow": "Vous vous inscrivez à",
+				"change": "Changer",
+				"requested": "Vous avez choisi {requested}. Votre espace de travail s'ouvre sur {plan}, puis vous vérifiez {requested} et son paiement dans Facturation juste après.",
+				"load_error": "Impossible de charger le détail de l'offre"
+			},
+			"card": {
+				"label": "Carte",
+				"required": "Obligatoire",
+				"optional": "Facultative sur {plan}",
+				"free_plan": "l'offre gratuite",
+				"reason": "Enregistrée de façon sécurisée par Stripe. Rien n'est débité sur l'offre gratuite : la carte confirme une personne derrière chaque espace gratuit ({count} par carte).",
+				"later": "Ajouter une carte plus tard",
+				"later_hint": "Elle vous sera demandée avant de passer à une offre payante."
+			},
+			"pricing": {
+				"page_title": "Tarifs",
+				"page_description": "Catalogue public des offres en vente, avec une comparaison et les questions de facturation.",
+				"nav": "Compte",
+				"sign_in": "Se connecter",
+				"create_account": "Créer un compte",
+				"eyebrow": "Tarifs",
+				"title": "Des offres qui grandissent avec votre espace de travail",
+				"subtitle": "Commencez gratuitement, ajoutez des membres quand votre équipe grandit. Les prix sont hors TVA et vous pouvez changer d'offre à tout moment.",
+				"interval": {
+					"label": "Périodicité de facturation",
+					"month": "Mensuel",
+					"year": "Annuel"
+				},
+				"load_error": "Impossible de charger les offres",
+				"empty_title": "Aucune offre n'est encore en vente",
+				"empty_description": "Revenez bientôt, ou connectez-vous si vous avez déjà un compte.",
+				"card": {
+					"cta_free": "Commencer gratuitement",
+					"cta_trial": "Essayer {days} jours",
+					"cta_paid": "Choisir {plan}",
+					"includes": "Comprend",
+					"includes_parent": "Tout {plan}, plus"
+				},
+				"reassurance": {
+					"currency": "Prix en {currency}, hors TVA",
+					"vat": "Prix hors TVA",
+					"money_back": "Satisfait ou remboursé {days} jours",
+					"cancel": "Changez d'offre ou repassez en gratuit à tout moment",
+					"stripe": "Paiements sécurisés par Stripe"
+				},
+				"compare": {
+					"title": "Comparer les offres",
+					"description": "Toutes les limites, côte à côte. Les valeurs « Illimité » n'ont pas de plafond.",
+					"features": "Fonctionnalités",
+					"choose": "Choisir",
+					"members": "Membres",
+					"billed_per_member": "facturé par membre",
+					"trial": "Essai gratuit",
+					"money_back": "Satisfait ou remboursé",
+					"money_back_tooltip": "Demandez un remboursement depuis Facturation dans les {days} jours suivant votre premier paiement.",
+					"days": "{days} jours",
+					"footnote": "Prix hors TVA. Les offres facturées par membre facturent chaque membre ; les membres ajoutés en cours de période sont facturés au prorata.",
+					"show_detail": "Voir tout le détail · {count} lignes de plus",
+					"show_less": "Afficher moins"
+				},
+				"faq": {
+					"title": "Questions sur la facturation",
+					"billing": {
+						"question": "Comment fonctionne la facturation ?",
+						"renewal": "Les offres payantes se renouvellent chaque mois ou chaque année à partir du jour de la souscription.",
+						"seats": "Les offres facturées par membre facturent chaque membre ; un membre ajouté en cours de période est facturé au prorata sur la facture suivante.",
+						"invoices": "Les factures se trouvent dans Paramètres › Facturation."
+					},
+					"vat": {
+						"question": "La TVA est-elle incluse ?",
+						"answer": "Non, les prix sont hors TVA. Elle est ajoutée à chaque facture selon votre pays de facturation."
+					},
+					"cancel": {
+						"question": "Puis-je changer d'offre ou arrêter de payer à tout moment ?",
+						"answer": "Oui. Passez à une autre offre ou à l'offre gratuite depuis Facturation : une offre moins chère démarre à la fin de la période payée, et vos données restent. Si vous supprimez l'espace de travail, ses données sont conservées {days} jours, puis supprimées."
+					},
+					"money_back": {
+						"question": "Existe-t-il une garantie satisfait ou remboursé ?",
+						"window": "Les offres payantes bénéficient d'une garantie satisfait ou remboursé de {days} jours, comptés à partir de votre premier paiement. Demandez-la depuis Facturation : l'abonnement prend fin immédiatement.",
+						"full": "Vous êtes remboursé intégralement.",
+						"prorated": "Vous êtes remboursé de la partie non utilisée de la période."
+					}
+				},
+				"closing": {
+					"title": "Vous hésitez entre plusieurs offres ?",
+					"description": "Commencez avec {plan} et passez à une offre supérieure depuis Facturation quand vous en avez besoin. Vos données vous suivent."
+				}
+			},
+			"register": {
+				"page_title": "Créer votre compte",
+				"page_description": "Créer un compte et ouvrir votre premier espace de travail sur l'offre gratuite.",
+				"title": "Créer votre compte",
+				"subtitle": "Un espace de travail, gratuit aussi longtemps que vous le souhaitez. Passez à une offre supérieure à tout moment depuis Facturation.",
+				"subtitle_plan": "Votre espace de travail s'ouvre sur {plan}, gratuit aussi longtemps que vous le souhaitez. Passez à une offre supérieure à tout moment depuis Facturation.",
+				"oauth_note": "S'inscrire avec un fournisseur demande quand même d'accepter les conditions à l'étape suivante.",
+				"field": {
+					"full_name": "Nom complet",
+					"email": "E-mail",
+					"password": "Mot de passe"
+				},
+				"show_password": "Afficher le mot de passe",
+				"hide_password": "Masquer le mot de passe",
+				"email_taken_hint": "{sign_in} ou réinitialisez votre mot de passe.",
+				"sign_in_instead": "Connectez-vous plutôt",
+				"legal_acceptance": "J'accepte les {terms_and_conditions} et la {privacy_policy}",
+				"submit": "Créer mon compte",
+				"has_account": "Vous avez déjà un compte ?",
+				"sign_in": "Se connecter",
+				"default_workspace_name": "Espace de travail de {name}",
+				"summary": {
+					"title": "Impossible de créer votre compte",
+					"description": "Corrigez le champ ci-dessous et réessayez. Rien n'a été débité. | Corrigez les {count} champs ci-dessous et réessayez. Rien n'a été débité."
+				},
+				"error": {
+					"name_required": "Saisissez votre nom complet.",
+					"email_invalid": "Saisissez une adresse e-mail valide.",
+					"card_required": "Saisissez une carte pour continuer.",
+					"legal_required": "Vous devez accepter les conditions générales et la politique de confidentialité.",
+					"failed": "L'inscription a échoué. Rien n'a été débité ; réessayez dans un instant.",
+					"load": "Impossible de préparer le champ de carte. Rechargez la page pour réessayer."
+				}
+			},
+			"registration_closed": {
+				"title": "Les inscriptions sont fermées",
+				"description": "Les nouveaux comptes sont ouverts sur invitation uniquement. Si vous avez reçu une invitation, utilisez le lien de votre e-mail.",
+				"sign_in": "Se connecter",
+				"invitation_title": "Vous avez une invitation ?",
+				"invitation_description": "Ouvrez le lien de votre e-mail : il crée votre compte et vous ajoute à l'espace de travail. S'il a expiré, demandez-en un nouveau à la personne qui vous a invité."
+			},
+			"no_workspace": {
+				"page_title": "Créer votre premier espace de travail",
+				"page_description": "Là où arrive un compte sans espace de travail après la connexion, pour ouvrir son premier espace.",
+				"eyebrow": "Presque terminé · plus qu'une étape",
+				"title": "Créer votre premier espace de travail",
+				"subtitle": "Vous êtes connecté, mais vous n'appartenez encore à aucun espace de travail. Créez-en un sur l'offre gratuite pour commencer ; vous pourrez le renommer et changer d'offre plus tard.",
+				"identity": {
+					"provider": "Connecté avec {provider} en tant que {email}",
+					"password": "Connecté en tant que {email}",
+					"hint": "Ce compte sera propriétaire de l'espace de travail et de son abonnement.",
+					"not_you": "Ce n'est pas vous ?"
+				},
+				"workspace_name": "Nom de l'espace de travail",
+				"workspace_name_hint": "Visible des membres et sur les factures. Vous pourrez le renommer dans Paramètres › Espace de travail.",
+				"compare_plans": "Comparer les offres",
+				"sign_out": "Se déconnecter",
+				"submit": "Créer l'espace de travail",
+				"submitting": "Création de votre espace de travail…",
+				"sign_in_again": "Se reconnecter",
+				"session": {
+					"title": "Votre session de connexion est absente ou a expiré",
+					"description": "Reconnectez-vous pour continuer."
+				},
+				"entry_failed": {
+					"title": "Impossible de confirmer le compte avec lequel vous vous êtes connecté",
+					"action": "Aller à la connexion"
+				},
+				"already": {
+					"title": "Vous avez déjà un espace de travail",
+					"description": "Un espace de travail a été créé pour ce compte, peut-être depuis un autre onglet.",
+					"open": "Ouvrir mon espace de travail"
+				},
+				"error": {
+					"name_required": "Saisissez un nom pour l'espace de travail.",
+					"failed_title": "Impossible de créer l'espace de travail"
+				}
+			},
+			"suspended": {
+				"page_title": "Accès à l'espace de travail restreint",
+				"page_description": "Affiché à la place d'un espace de travail dont l'abonnement bloque l'accès.",
+				"title": "Accès à l'espace de travail restreint",
+				"members": "{count} membre | {count} membres",
+				"you_own": "vous êtes propriétaire de l'espace",
+				"reason": {
+					"unpaid_invoice": "La facture {invoice} de {amount} n'a pas pu être débitée. L'espace de travail est fermé, mais ses données et sa configuration sont intégralement conservées. La régler rétablit l'accès immédiatement.",
+					"suspended": "Cet espace de travail a été suspendu à cause d'un problème de facturation. Ses données et sa configuration sont conservées jusqu'à ce que la situation soit réglée.",
+					"pending_payment": "Cet espace de travail attend son premier paiement. L'accès s'ouvre dès qu'il est effectué.",
+					"cancelled": "L'abonnement de cet espace de travail a été résilié, l'accès est donc fermé.",
+					"complimentary_expired": "L'accès offert à cet espace de travail a pris fin. Choisissez une offre pour le rouvrir ; ses données sont conservées."
+				},
+				"timeline": {
+					"invoice_issued": "Facture {invoice} émise · {amount}",
+					"payment_failed": "Échec du paiement",
+					"complimentary_ended": "Fin de l'accès offert",
+					"suspended": "Espace de travail suspendu après le délai de grâce",
+					"awaiting_payment": "Espace de travail créé, en attente de son premier paiement",
+					"cancelled": "Abonnement résilié",
+					"data_deleted": "Données supprimées après la durée de conservation",
+					"days_left": "{days} jour restant | {days} jours restants"
+				},
+				"retention": {
+					"kept": "Rien n'a été supprimé : les données et la configuration sont conservées tant que l'accès est restreint.",
+					"until": "Les données sont conservées jusqu'au {date}, puis supprimées. Demandez un export au support avant cette date."
+				},
+				"owner": {
+					"title": "Rétablir l'accès",
+					"pay": "Régler la facture {amount}",
+					"view_billing": "Voir la facturation",
+					"action": {
+						"pending_payment": "Finaliser le paiement",
+						"complimentary_expired": "Choisir une offre"
+					},
+					"manage_in_stripe": "Gérer dans Stripe",
+					"portal_failed": "Impossible d'ouvrir Stripe",
+					"portal_failed_hint": "Réessayez, ou réglez la facture depuis Facturation."
+				},
+				"member": {
+					"title": "Seul le propriétaire de l'espace peut rétablir l'accès",
+					"ask": "Demandez à {owner} (propriétaire de l'espace) de rétablir l'accès",
+					"email": "Écrire à {owner}",
+					"mail_subject": "L'accès à {workspace} est restreint",
+					"no_owner": "Cet espace de travail n'a aucun propriétaire à contacter. Adressez-vous au support de votre plateforme."
+				},
+				"others": {
+					"title": "Vos autres espaces de travail",
+					"owner": "propriétaire de l'espace",
+					"member": "membre",
+					"open": "Ouvrir",
+					"switch_failed": "Impossible d'ouvrir {name}",
+					"switch_failed_hint": "Réessayez dans un instant."
+				},
+				"signed_in_as": "Connecté en tant que {email}",
+				"check_again": "Vérifier à nouveau",
+				"sign_out": "Se déconnecter",
+				"load_error": "Impossible de vérifier l'état de l'espace de travail"
+			},
+			"legal": {
+				"terms_of_use_page_description": "Conditions d'utilisation publiques, affichées aux visiteurs et exigées à l'inscription.",
+				"terms_and_conditions_page_description": "Conditions générales publiques, affichées aux visiteurs et exigées à l'inscription.",
+				"privacy_policy_page_description": "Politique de confidentialité publique, affichée aux visiteurs et exigée à l'inscription.",
+				"summary": {
+					"terms_of_use": "Utilisation acceptable du service",
+					"terms_and_conditions": "Abonnements, facturation et responsabilité",
+					"privacy_policy": "Traitement des données personnelles"
+				},
+				"eyebrow": "Mentions légales · {document}",
+				"eyebrow_short": "Mentions légales",
+				"back": "Retour",
+				"print": "Imprimer",
+				"last_updated": "Mis à jour le {date}",
+				"updated_on": "Mis à jour le {date}",
+				"version": "Version {version}",
+				"reading_time": "{minutes} min de lecture",
+				"effective": "Version {version} · en vigueur le {date}",
+				"contents": "Sur cette page",
+				"related": "Documents liés",
+				"other_documents": "Autres documents :",
+				"load_error": "Impossible de charger ce document",
+				"unavailable": {
+					"title": "Contenu indisponible",
+					"description": "Ce document n'a pas encore été publié. Revenez plus tard."
+				}
+			}
+		}
+	}
+}

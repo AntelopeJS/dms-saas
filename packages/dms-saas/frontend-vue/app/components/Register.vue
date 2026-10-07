@@ -2,130 +2,226 @@
 /**
  * Reference implementation of the public registration flow.
  *
- * Deliberately plain: every SaaS wants its own funnel, so this screen exists
- * to work out of the box, not to be the design anyone ships. Replace it by
- * turning the bundled page off (`publicScreens.register: false` in the
- * dms-saas config) and registering your own page on the `register` slug, then
- * build the markup you want on `useSaasRegistration()`, which owns the card
- * policy, the Stripe orchestration, the validation order and the provisioning
- * call.
+ * Replace it by turning the bundled page off (`publicScreens.register: false`
+ * in the dms-saas config) and registering your own page on the `register`
+ * slug, then build the markup you want on `useSaasRegistration()`, which owns
+ * the card policy, the Stripe orchestration, the validation order and the
+ * provisioning call.
  */
+import { computed, ref } from 'vue'
+import LegalAcceptance from '../build/public/LegalAcceptance.vue'
+import PublicStage from '../build/public/PublicStage.vue'
+import RegistrationCardField from '../build/public/RegistrationCardField.vue'
+import RegistrationPlanCard from '../build/public/RegistrationPlanCard.vue'
+import {
+	isPublicScreenServed,
+	LOGIN_PATH,
+	PRICING_PATH,
+} from '../build/public/routes'
+
+const EMAIL_IN_USE_KEY = 'saas.errors.user.email_in_use'
+
+const { t, te } = useI18n()
+const config = useDmsRuntimeConfig()
+const saasConfig = config.public.dmsSaas as
+	| DmsSaasPublicRuntimeConfig
+	| undefined
+
 const {
-  form,
-  paymentElementId,
-  canSkipPaymentMethod,
-  isPaymentStepVisible,
-  passwordStrength,
-  isRegistrationClosed,
-  errorMessage,
-  isSubmitting,
-  submit,
-} = useSaasRegistration();
-const { strength, score, color } = passwordStrength;
+	form,
+	paymentElementId,
+	paymentMethodPolicy,
+	isPaymentStepVisible,
+	isRegistrationClosed,
+	errorMessage,
+	fieldErrors,
+	fieldErrorCount,
+	clearServerError,
+	isSubmitting,
+	submit,
+	planSummary,
+	isPlanLoading,
+	planLoadError,
+	reloadPlan,
+} = useSaasRegistration()
+
+const isPasswordShown = ref(false)
+const changePlanTo = isPublicScreenServed(saasConfig, 'pricing')
+	? PRICING_PATH
+	: null
+
+const isEmailTaken = computed(
+	() => fieldErrors.value.email === EMAIL_IN_USE_KEY,
+)
+
+const subtitle = computed(() => {
+	const plan = planSummary.value?.plan
+	return plan
+		? t('saas.public.register.subtitle_plan', { plan: plan.name })
+		: t('saas.public.register.subtitle')
+})
+
+/** A field error is a translation key, or Stripe's own words for the card. */
+function errorText(message: string | undefined): string | undefined {
+	if (!message) return undefined
+	return te(message) ? t(message) : message
+}
 </script>
 
 <template>
-  <DmsSaasRegistrationClosed v-if="isRegistrationClosed" />
-  <div v-else class="mx-auto w-full max-w-xl px-4 pb-16">
-    <UCard>
-      <template #header>
-        <h2 class="text-xl font-semibold">{{ $t("saas.register.title") }}</h2>
-      </template>
+	<DmsSaasRegistrationClosed v-if="isRegistrationClosed" />
+	<PublicStage
+		v-else
+		width="wide"
+		:title="$t('saas.public.register.title')"
+		:description="subtitle"
+	>
+		<template #eyebrow>
+			<RegistrationPlanCard
+				class="mb-5"
+				:summary="planSummary"
+				:is-loading="isPlanLoading"
+				:load-error="planLoadError"
+				:change-to="changePlanTo"
+				@retry="reloadPlan"
+			/>
+		</template>
 
-      <DmsOAuthButtons :note="$t('saas.oauth_registration.entry_note')" />
+		<DmsOAuthButtons :note="$t('saas.public.register.oauth_note')" />
 
-      <form class="flex flex-col gap-4" @submit.prevent="submit">
-        <UFormField :label="$t('saas.register.field.full_name')">
-          <UInput
-            v-model="form.name"
-            autocomplete="name"
-            class="w-full"
-            required
-          />
-        </UFormField>
+		<form class="mt-5 flex flex-col gap-4" novalidate @submit.prevent="submit">
+			<DmsBanner
+				v-if="fieldErrorCount > 0"
+				tone="error"
+				icon="i-ph-warning-circle"
+				:title="$t('saas.public.register.summary.title')"
+				:description="
+					$t(
+						'saas.public.register.summary.description',
+						{ count: fieldErrorCount },
+						fieldErrorCount,
+					)
+				"
+				role="alert"
+			/>
+			<DmsBanner
+				v-else-if="errorMessage"
+				tone="error"
+				icon="i-ph-warning-circle"
+				:title="$t('saas.public.register.summary.title')"
+				:description="errorMessage"
+				role="alert"
+			/>
 
-        <UFormField :label="$t('saas.register.field.email')">
-          <UInput
-            v-model="form.email"
-            type="email"
-            autocomplete="email"
-            class="w-full"
-            required
-          />
-        </UFormField>
+			<UFormField
+				:label="$t('saas.public.register.field.full_name')"
+				name="name"
+				:error="errorText(fieldErrors.name)"
+			>
+				<UInput
+					v-model="form.name"
+					autocomplete="name"
+					size="lg"
+					class="w-full"
+				/>
+			</UFormField>
 
-        <UFormField :label="$t('saas.register.field.password')">
-          <UInput
-            v-model="form.password"
-            type="password"
-            autocomplete="new-password"
-            :color="color"
-            aria-describedby="password-strength"
-            class="w-full"
-            required
-          />
-        </UFormField>
+			<UFormField
+				:label="$t('saas.public.register.field.email')"
+				name="email"
+				:error="errorText(fieldErrors.email)"
+			>
+				<UInput
+					v-model="form.email"
+					type="email"
+					autocomplete="email"
+					size="lg"
+					class="w-full"
+					@update:model-value="clearServerError('email')"
+				/>
+				<template v-if="isEmailTaken" #help>
+					<i18n-t
+						keypath="saas.public.register.email_taken_hint"
+						tag="span"
+						scope="global"
+					>
+						<template #sign_in>
+							<DmsLink :to="LOGIN_PATH" class="text-primary underline">
+								{{ $t('saas.public.register.sign_in_instead') }}
+							</DmsLink>
+						</template>
+					</i18n-t>
+				</template>
+			</UFormField>
 
-        <DmsPasswordStrength
-          :color="color"
-          :score="score"
-          :strength="strength"
-        />
+			<UFormField
+				:label="$t('saas.public.register.field.password')"
+				name="password"
+				:error="errorText(fieldErrors.password)"
+			>
+				<UInput
+					v-model="form.password"
+					:type="isPasswordShown ? 'text' : 'password'"
+					autocomplete="new-password"
+					size="lg"
+					class="w-full"
+					aria-describedby="register-password-rules"
+					:ui="{ trailing: 'pe-1' }"
+				>
+					<template #trailing>
+						<UButton
+							color="neutral"
+							variant="link"
+							size="sm"
+							:icon="isPasswordShown ? 'i-ph-eye-slash' : 'i-ph-eye'"
+							:aria-label="
+								isPasswordShown
+									? $t('saas.public.register.hide_password')
+									: $t('saas.public.register.show_password')
+							"
+							:aria-pressed="isPasswordShown"
+							@click="isPasswordShown = !isPasswordShown"
+						/>
+					</template>
+				</UInput>
+			</UFormField>
+			<DmsPasswordRules
+				:password="form.password"
+				list-id="register-password-rules"
+			/>
 
-        <UCheckbox
-          v-if="canSkipPaymentMethod"
-          v-model="form.skipsPaymentMethod"
-          :label="$t('saas.register.skip_payment_method')"
-        />
+			<RegistrationCardField
+				v-model:skips="form.skipsPaymentMethod"
+				:element-id="paymentElementId"
+				:policy="paymentMethodPolicy"
+				:is-visible="isPaymentStepVisible"
+				:plan-name="planSummary?.plan.name ?? null"
+				:max-free-workspaces-per-card="
+					planSummary?.rules.maxFreeWorkspacesPerCard ?? null
+				"
+				:error="errorText(fieldErrors.card)"
+			/>
 
-        <!-- v-show keeps the Stripe element mounted while the step is hidden. -->
-        <UFormField
-          v-show="isPaymentStepVisible"
-          :label="$t('saas.register.field.card')"
-          :hint="$t('saas.register.hint.card')"
-        >
-          <div
-            :id="paymentElementId"
-            class="border-default rounded-md border p-4"
-          />
-        </UFormField>
+			<LegalAcceptance
+				v-model="form.hasAcceptedLegal"
+				:error="errorText(fieldErrors.legal)"
+			/>
 
-        <UCheckbox v-model="form.hasAcceptedLegal" required>
-          <template #label>
-            <i18n-t keypath="saas.register.legal_acceptance" tag="span">
-              <template #terms_and_conditions>
-                <DmsLink
-                  to="/terms-and-conditions"
-                  target="_blank"
-                  class="underline"
-                >
-                  {{ $t("saas.legal.terms_and_conditions") }}
-                </DmsLink>
-              </template>
-              <template #privacy_policy>
-                <DmsLink
-                  to="/privacy-policy"
-                  target="_blank"
-                  class="underline"
-                >
-                  {{ $t("saas.legal.privacy_policy") }}
-                </DmsLink>
-              </template>
-            </i18n-t>
-          </template>
-        </UCheckbox>
+			<UButton
+				type="submit"
+				:loading="isSubmitting"
+				:label="$t('saas.public.register.submit')"
+				size="lg"
+				class="justify-center"
+				block
+			/>
+		</form>
 
-        <UAlert
-          v-if="errorMessage"
-          color="error"
-          variant="subtle"
-          :description="errorMessage"
-        />
-
-        <UButton type="submit" :loading="isSubmitting" color="primary" block>
-          {{ $t("saas.register.submit") }}
-        </UButton>
-      </form>
-    </UCard>
-  </div>
+		<p class="text-muted mt-5 text-center text-[13px]">
+			{{ $t('saas.public.register.has_account') }}
+			<DmsLink :to="LOGIN_PATH" class="text-primary font-medium">
+				{{ $t('saas.public.register.sign_in') }}
+			</DmsLink>
+		</p>
+	</PublicStage>
 </template>

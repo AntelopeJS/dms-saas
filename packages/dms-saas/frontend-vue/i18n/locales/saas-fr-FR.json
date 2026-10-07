@@ -5,9 +5,6 @@
   },
   "saas": {
     "admission": {
-      "title": "Les inscriptions sont fermées",
-      "description": "Les nouveaux comptes sont accessibles uniquement sur invitation. Si vous avez reçu une invitation, utilisez le lien dans votre e-mail.",
-      "login": "Se connecter",
       "complimentary_reduction": "Accès offert (100 %)",
       "total": "Total",
       "plan_managed": "Votre offre est gérée par un administrateur pendant l’accès offert."
@@ -170,26 +167,14 @@
         "invoices_open": "Factures ouvertes"
       }
     },
-    "auth": {
-      "login": {
-        "create_account": "Pas encore de compte ? Inscrivez-vous"
-      }
-    },
     "register": {
-      "title": "Inscription",
-      "page_description": "Créer un compte et ouvrir votre premier workspace sur le plan gratuit.",
-      "submit": "Créer mon compte",
       "field": {
-        "email": "Email",
-        "password": "Mot de passe",
-        "full_name": "Nom complet",
         "company_name": "Raison sociale",
         "vat_number": "Numéro de TVA",
         "country": "Pays",
         "address_line1": "Adresse",
         "postal_code": "Code postal",
-        "city": "Ville",
-        "card": "Carte bancaire"
+        "city": "Ville"
       },
       "billing_address": "Adresse de facturation",
       "customer_type": {
@@ -198,54 +183,13 @@
         "business": "Professionnel"
       },
       "error": {
-        "no_payment": "Méthode de paiement requise",
-        "legal_required": "Vous devez accepter les conditions générales et la politique de confidentialité",
-        "failed": "Échec de l'inscription",
-        "load": "Impossible de charger les options d'inscription"
-      },
-      "legal_acceptance": "J'accepte les {terms_and_conditions} et la {privacy_policy}",
-      "hint": {
-        "card": "Enregistrée en toute sécurité via Stripe. Aucun débit sur le plan gratuit."
-      },
-      "skip_payment_method": "Ajouter une carte plus tard",
-      "default_workspace_name": "Workspace de {name}"
-    },
-    "no_workspace": {
-      "title": "Configurez votre premier workspace",
-      "subtitle": "Vous êtes connecté, mais vous n'appartenez encore à aucun workspace. Créez-en un sur le plan gratuit pour commencer — vous pourrez le renommer et changer de plan plus tard.",
-      "logout": "Se déconnecter",
-      "submit": "Créer le workspace",
-      "submitting": "Création de votre workspace…",
-      "section": {
-        "payment": "Méthode de paiement",
-        "payment_hint": "Stockée en toute sécurité via Stripe."
-      },
-      "error": {
-        "missing_token": "Votre session de finalisation est manquante ou expirée",
-        "relogin": "Reconnectez-vous pour continuer."
-      }
-    },
-    "oauth_registration": {
-      "entry_note": "S'inscrire via un fournisseur vous demande quand même d'accepter les conditions à l'étape suivante.",
-      "identity": {
-        "provider": "Connecté avec {provider} en tant que {email}",
-        "password": "Connecté en tant que {email}",
-        "hint": "Ce compte sera propriétaire du workspace et de son abonnement."
-      },
-      "error": {
-        "entry_failed": "Impossible de confirmer le compte utilisé pour vous connecter",
-        "entry_action": "Aller à la connexion"
+        "no_payment": "Méthode de paiement requise"
       }
     },
     "legal": {
       "terms_of_use": "Conditions d'utilisation",
-      "terms_of_use_page_description": "Conditions d'utilisation publiques affichées aux visiteurs et requises lors de l'inscription.",
       "terms_and_conditions": "Conditions générales de vente",
-      "terms_and_conditions_page_description": "Conditions générales publiques affichées aux visiteurs et requises lors de l'inscription.",
-      "privacy_policy": "Politique de confidentialité",
-      "privacy_policy_page_description": "Politique de confidentialité publique affichée aux visiteurs et requise lors de l'inscription.",
-      "no_content_title": "Contenu indisponible",
-      "no_content_message": "Ce document n'a pas encore été publié."
+      "privacy_policy": "Politique de confidentialité"
     },
     "module": {
       "title": "SaaS",
@@ -267,7 +211,6 @@
       "edit_title": "Modifier le plan",
       "edit_description": "Mettre à jour un plan existant. Les changements de tarif sont propagés à Stripe.",
       "reorder_failed": "Échec du réordonnancement des plans.",
-      "choose": "Choisir ce plan",
       "trial_days": "{days} jours d'essai gratuit",
       "delete": {
         "action_title": "Supprimer le plan",
@@ -1325,24 +1268,6 @@
         "label": "SaaS",
         "description": "Notifications de facturation, d'abonnement et de workspace"
       }
-    },
-    "workspace_suspended": {
-      "title": "Accès au workspace restreint",
-      "description": "L'abonnement de ce workspace bloque l'accès",
-      "status": {
-        "pending_payment": "Ce workspace attend son premier paiement. L'accès est restreint jusqu'à la finalisation du paiement.",
-        "suspended": "Ce workspace a été suspendu suite à un problème de facturation. L'accès est restreint jusqu'à la régularisation.",
-        "cancelled": "L'abonnement de ce workspace a été annulé. L'accès est restreint.",
-        "default": "L'abonnement de ce workspace bloque l'accès. L'accès est restreint jusqu'à la régularisation."
-      },
-      "unpaid_invoice": "La facture {invoice} de {amount} n'a pas pu être prélevée malgré plusieurs tentatives. Les apps sont en veille — données, volumes et configuration intégralement préservés. Le règlement rétablit l'accès immédiatement.",
-      "retention_note": "Sans régularisation, les données sont conservées selon la période de rétention puis supprimées — un export reste possible via le support.",
-      "contact_owner": "Contactez le propriétaire du workspace pour rétablir l'accès.",
-      "settle": "Régler la facture",
-      "open_billing": "Voir la facturation",
-      "recheck": "Vérifier à nouveau",
-      "logout": "Retour à la connexion",
-      "load_error": "Impossible de vérifier le statut du workspace. Veuillez réessayer."
     },
     "automation": {
       "trigger": {

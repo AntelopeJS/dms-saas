@@ -5,9 +5,6 @@
   },
   "saas": {
     "admission": {
-      "title": "Registration is closed",
-      "description": "New accounts are available by invitation only. If you received an invitation, use the link in your email.",
-      "login": "Sign in",
       "complimentary_reduction": "Complimentary access (100%)",
       "total": "Total",
       "plan_managed": "Your plan is managed by an administrator during complimentary access."
@@ -170,26 +167,14 @@
         "invoices_open": "Open invoices"
       }
     },
-    "auth": {
-      "login": {
-        "create_account": "Don't have an account? Sign up"
-      }
-    },
     "register": {
-      "title": "Sign up",
-      "page_description": "Create an account and open your first workspace on the free plan.",
-      "submit": "Create my account",
       "field": {
-        "email": "Email",
-        "password": "Password",
-        "full_name": "Full name",
         "company_name": "Company name",
         "vat_number": "VAT number",
         "country": "Country",
         "address_line1": "Address",
         "postal_code": "Postal code",
-        "city": "City",
-        "card": "Card"
+        "city": "City"
       },
       "billing_address": "Billing address",
       "customer_type": {
@@ -198,54 +183,13 @@
         "business": "Business"
       },
       "error": {
-        "no_payment": "Payment method required",
-        "legal_required": "You must accept the terms and conditions and privacy policy",
-        "failed": "Registration failed",
-        "load": "Could not load the registration options"
-      },
-      "legal_acceptance": "I accept the {terms_and_conditions} and the {privacy_policy}",
-      "hint": {
-        "card": "Saved securely via Stripe. You are not charged on the free plan."
-      },
-      "skip_payment_method": "Add a card later",
-      "default_workspace_name": "{name}'s workspace"
-    },
-    "no_workspace": {
-      "title": "Set up your first workspace",
-      "subtitle": "You're signed in, but you don't belong to any workspace yet. Create one on the free plan to get started — you can rename it and upgrade later.",
-      "logout": "Sign out",
-      "submit": "Create workspace",
-      "submitting": "Creating your workspace…",
-      "section": {
-        "payment": "Payment method",
-        "payment_hint": "Saved securely via Stripe."
-      },
-      "error": {
-        "missing_token": "Your assignment session is missing or expired",
-        "relogin": "Please sign in again to continue."
-      }
-    },
-    "oauth_registration": {
-      "entry_note": "Signing up with a provider still asks you to accept the terms on the next step.",
-      "identity": {
-        "provider": "Signed in with {provider} as {email}",
-        "password": "Signed in as {email}",
-        "hint": "This account will own the workspace and its subscription."
-      },
-      "error": {
-        "entry_failed": "We could not confirm the account you signed in with",
-        "entry_action": "Go to sign-in"
+        "no_payment": "Payment method required"
       }
     },
     "legal": {
       "terms_of_use": "Terms of use",
-      "terms_of_use_page_description": "Public terms of use shown to visitors and required during signup.",
       "terms_and_conditions": "Terms and conditions",
-      "terms_and_conditions_page_description": "Public terms and conditions shown to visitors and required during signup.",
-      "privacy_policy": "Privacy policy",
-      "privacy_policy_page_description": "Public privacy policy shown to visitors and required during signup.",
-      "no_content_title": "Content unavailable",
-      "no_content_message": "This document has not been published yet."
+      "privacy_policy": "Privacy policy"
     },
     "module": {
       "title": "SaaS",
@@ -267,7 +211,6 @@
       "edit_title": "Edit plan",
       "edit_description": "Update an existing plan. Pricing changes are propagated to Stripe.",
       "reorder_failed": "Failed to reorder plans.",
-      "choose": "Choose this plan",
       "trial_days": "{days} days free trial",
       "delete": {
         "action_title": "Delete plan",
@@ -1325,24 +1268,6 @@
         "label": "SaaS",
         "description": "Billing, subscription and workspace notifications"
       }
-    },
-    "workspace_suspended": {
-      "title": "Workspace access restricted",
-      "description": "This workspace's subscription is blocking access",
-      "status": {
-        "pending_payment": "This workspace is waiting for its first payment. Access is restricted until the payment is completed.",
-        "suspended": "This workspace has been suspended because of a billing issue. Access is restricted until the situation is resolved.",
-        "cancelled": "This workspace's subscription has been cancelled. Access is restricted.",
-        "default": "This workspace's subscription is blocking access. Access is restricted until the situation is resolved."
-      },
-      "unpaid_invoice": "Invoice {invoice} of {amount} could not be charged despite several attempts. The apps are asleep — data, volumes and configuration are fully preserved. Settling it restores access immediately.",
-      "retention_note": "Without settlement, data is kept for the retention period and then deleted — an export stays possible through support.",
-      "contact_owner": "Please contact the workspace owner to restore access.",
-      "settle": "Settle the invoice",
-      "open_billing": "View billing",
-      "recheck": "Check again",
-      "logout": "Back to login",
-      "load_error": "Could not check the workspace status. Please try again."
     },
     "automation": {
       "trigger": {
