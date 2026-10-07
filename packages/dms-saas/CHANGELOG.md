@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.4.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.15...v0.4.0)
+
+### 🚀 Enhancements
+
+- **saas:** ⚠️  Store feature display names and tooltips as localized fields ([#79](https://github.com/AntelopeJS/dms-saas/pull/79))
+
+### 💅 Refactors
+
+- **saas:** Namespace the plan cards display id ([#78](https://github.com/AntelopeJS/dms-saas/pull/78))
+
+### 📦 Build
+
+- **saas:** Require @antelopejs/interface-dms-saas 0.3 ([#80](https://github.com/AntelopeJS/dms-saas/pull/80))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.3.0 ([04aa817](https://github.com/AntelopeJS/dms-saas/commit/04aa817))
+
+#### ⚠️ Breaking Changes
+
+- **saas:** ⚠️  Store feature display names and tooltips as localized fields ([#79](https://github.com/AntelopeJS/dms-saas/pull/79))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.3.15
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.14...v0.3.15)
