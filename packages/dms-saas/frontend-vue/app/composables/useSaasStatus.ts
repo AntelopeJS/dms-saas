@@ -49,6 +49,12 @@ export const SAAS_STATUS_TONES = {
 		partially_failed: 'warning',
 		reconciliation_required: 'error',
 	},
+	owner: {
+		joined: 'success',
+		invited: 'warning',
+		expired: 'error',
+		none: 'neutral',
+	},
 } as const satisfies Record<string, Record<string, SaasTone>>
 
 export type SaasStatusFamily = keyof typeof SAAS_STATUS_TONES
