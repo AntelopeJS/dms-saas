@@ -86,7 +86,6 @@
       },
       "invoice": {
         "not_found": "Facture introuvable",
-        "invalid_amount": "Montant invalide",
         "no_paid_found": "Aucune facture payée trouvée"
       },
       "refund": {
@@ -135,7 +134,8 @@
         "invalid_quantifier": "Quantificateur invalide"
       },
       "stripe": {
-        "subscription_no_item": "L'abonnement Stripe n'a aucune ligne facturable"
+        "subscription_no_item": "L'abonnement Stripe n'a aucune ligne facturable",
+        "not_configured": "Stripe n’est pas configuré sur cette plateforme."
       },
       "registration": {
         "extras_invalid": "Les champs d'inscription supplémentaires ne sont pas dans un format accepté",
@@ -148,6 +148,26 @@
       "invitations": {
         "not_found": "Cette invitation n'existe plus.",
         "email_not_sent": "L'invitation a été renouvelée mais l'e-mail n'a pas pu être envoyé. Copiez le lien d'invitation et envoyez-le vous-même."
+      },
+      "credit_note": {
+        "amount_positive": "Saisissez un montant supérieur à zéro.",
+        "memo_too_long": "La note interne est limitée à 500 caractères.",
+        "mode_not_allowed": "Cette facture ne peut pas être créditée de cette façon.",
+        "above_creditable": "Le montant dépasse ce qui reste à créditer sur cette facture.",
+        "blocked": {
+          "draft": "Un brouillon peut encore être modifié : créditez la facture une fois finalisée par Stripe.",
+          "void": "Une facture annulée n’a jamais été débitée : il n’y a rien à créditer.",
+          "uncollectible": "Cette facture est passée en perte : rien n’a été encaissé à créditer.",
+          "fully_credited": "Cette facture a déjà été entièrement créditée."
+        }
+      },
+      "billing_rules": {
+        "suspension_days": "Saisissez un nombre entier de jours entre 1 et 365.",
+        "retention_days": "Saisissez un nombre entier de jours entre 0 et 3650.",
+        "free_workspaces_per_card": "Saisissez un nombre entier entre 0 et 100.",
+        "refund_window_days": "Saisissez un nombre entier de jours entre 1 et 365.",
+        "tax_code": "Une catégorie fiscale Stripe s’écrit txcd_ suivi de 8 chiffres.",
+        "legal_text_too_long": "Ce document est trop long pour être enregistré."
       }
     },
     "dashboard": {
@@ -666,8 +686,6 @@
     },
     "invoices": {
       "title": "Factures",
-      "description": "Factures émises via Stripe sur tous les workspaces.",
-      "caption": "Toutes les factures",
       "column": {
         "number": "Numéro",
         "type": "Type",
@@ -690,8 +708,7 @@
       },
       "actions": {
         "download_pdf": "Télécharger PDF",
-        "open_on_stripe": "Ouvrir sur Stripe",
-        "issue_credit_note": "Émettre note de crédit"
+        "open_on_stripe": "Ouvrir sur Stripe"
       },
       "type": {
         "invoice": "Facture",
@@ -710,35 +727,7 @@
       }
     },
     "credit_notes": {
-      "title": "Notes de crédit",
-      "description": "Avoirs et remboursements Stripe émis aux clients.",
-      "caption": "Toutes les notes de crédit",
-      "column": {
-        "number": "Numéro",
-        "workspace": "Workspace",
-        "amount": "Montant",
-        "type": "Type",
-        "status": "Statut",
-        "issued_at": "Émise le"
-      },
-      "status": {
-        "issued": "Émis",
-        "void": "Annulé"
-      },
-      "modal": {
-        "title": "Émettre une note de crédit",
-        "description": "Facture {number} (montant max remboursable : {max}). Saisissez un montant en centimes, choisissez le mode et indiquez un motif.",
-        "amount": "Montant (centimes)",
-        "mode_label": "Mode",
-        "mode": {
-          "credit_to_balance": "Crédit sur solde",
-          "refund": "Remboursement"
-        },
-        "reason": "Motif",
-        "submit": "Émettre",
-        "success": "Note de crédit émise",
-        "error": "Échec de l'émission de la note de crédit"
-      }
+      "title": "Notes de crédit"
     },
     "segments": {
       "title": "Segments",
@@ -894,44 +883,6 @@
       "quantifier": {
         "any": "Au moins un workspace",
         "all": "Tous les workspaces"
-      }
-    },
-    "settings": {
-      "title": "Paramètres",
-      "description": "Règles de facturation, politique de remboursement et documents légaux.",
-      "tabs": {
-        "billing": "Facturation",
-        "refund": "Politique de remboursement",
-        "legal": "Documents légaux"
-      },
-      "billing": {
-        "auto_suspend_enabled": "Auto-suspendre les workspaces past-due",
-        "auto_suspend_enabled_desc": "Suspendre automatiquement les workspaces dont l'abonnement est past_due.",
-        "auto_suspend_delay_days": "Délai d'auto-suspension (jours)",
-        "auto_suspend_delay_days_desc": "Délai de grâce avant qu'un abonnement past_due ne soit suspendu.",
-        "data_retention_days": "Rétention des données (jours)",
-        "data_retention_days_desc": "Durée de conservation des données d'un workspace annulé avant suppression définitive.",
-        "stripe_tax_code": "Code de taxe Stripe (produit)",
-        "stripe_tax_code_desc": "Code de catégorie fiscale Stripe appliqué aux produits lors de la synchronisation (ex. txcd_10000000). Requis pour le calcul automatique de la TVA. À appliquer en re-synchronisant les plans."
-      },
-      "refund": {
-        "money_back_guarantee": "Garantie satisfait ou remboursé",
-        "money_back_guarantee_desc": "Permettre aux propriétaires de workspace de demander un remboursement en self-service pendant la fenêtre.",
-        "money_back_window_days": "Fenêtre de remboursement (jours)",
-        "money_back_window_days_desc": "Nombre de jours après la première facture payée pendant lesquels un remboursement peut être demandé.",
-        "money_back_mode": "Mode de remboursement (satisfait ou remboursé)",
-        "money_back_mode_desc": "S'applique uniquement aux demandes volontaires « satisfait ou remboursé » : intégral rembourse la totalité, prorata uniquement la portion non consommée.",
-        "mode": {
-          "full": "Intégral",
-          "prorated": "Prorata"
-        },
-        "auto_prorata_on_cancel": "Prorata auto à l'annulation mid-cycle",
-        "auto_prorata_on_cancel_desc": "Distinct de la garantie satisfait ou remboursé ci-dessus : lorsqu'un workspace annule en cours de cycle sans demande manuelle, rembourse automatiquement la portion non consommée (au prorata)."
-      },
-      "legal": {
-        "terms_of_use_desc": "Conditions d'utilisation publiques, servies à /terms-of-use. Texte enrichi.",
-        "terms_and_conditions_desc": "Conditions générales publiques, servies à /terms-and-conditions. Texte enrichi.",
-        "privacy_policy_desc": "Politique de confidentialité publique, servie à /privacy-policy. Texte enrichi."
       }
     },
     "workspace": {

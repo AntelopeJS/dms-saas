@@ -86,7 +86,6 @@
       },
       "invoice": {
         "not_found": "Invoice not found",
-        "invalid_amount": "Invalid amount",
         "no_paid_found": "No paid invoice found"
       },
       "refund": {
@@ -135,7 +134,8 @@
         "invalid_quantifier": "Invalid quantifier"
       },
       "stripe": {
-        "subscription_no_item": "Stripe subscription has no billable item"
+        "subscription_no_item": "Stripe subscription has no billable item",
+        "not_configured": "Stripe is not configured on this platform."
       },
       "registration": {
         "extras_invalid": "The additional registration fields are not in a supported format",
@@ -148,6 +148,26 @@
       "invitations": {
         "not_found": "This invitation no longer exists.",
         "email_not_sent": "The invitation was renewed but the email could not be sent. Copy the invitation link and send it yourself."
+      },
+      "credit_note": {
+        "amount_positive": "Enter an amount above zero.",
+        "memo_too_long": "The internal memo is limited to 500 characters.",
+        "mode_not_allowed": "This invoice cannot be credited that way.",
+        "above_creditable": "The amount is above what is left to credit on this invoice.",
+        "blocked": {
+          "draft": "Drafts can still be edited: credit the invoice once Stripe finalises it.",
+          "void": "Void invoices were never charged, so there is nothing to credit.",
+          "uncollectible": "This invoice was written off: nothing was collected to credit.",
+          "fully_credited": "This invoice has already been credited in full."
+        }
+      },
+      "billing_rules": {
+        "suspension_days": "Enter a whole number of days from 1 to 365.",
+        "retention_days": "Enter a whole number of days from 0 to 3650.",
+        "free_workspaces_per_card": "Enter a whole number from 0 to 100.",
+        "refund_window_days": "Enter a whole number of days from 1 to 365.",
+        "tax_code": "A Stripe tax category reads txcd_ followed by 8 digits.",
+        "legal_text_too_long": "This document is too long to be saved."
       }
     },
     "dashboard": {
@@ -666,8 +686,6 @@
     },
     "invoices": {
       "title": "Invoices",
-      "description": "Invoices issued via Stripe across all workspaces.",
-      "caption": "All invoices",
       "column": {
         "number": "Number",
         "type": "Type",
@@ -690,8 +708,7 @@
       },
       "actions": {
         "download_pdf": "Download PDF",
-        "open_on_stripe": "Open on Stripe",
-        "issue_credit_note": "Issue credit note"
+        "open_on_stripe": "Open on Stripe"
       },
       "type": {
         "invoice": "Invoice",
@@ -710,35 +727,7 @@
       }
     },
     "credit_notes": {
-      "title": "Credit notes",
-      "description": "Credit notes and Stripe refunds issued to customers.",
-      "caption": "All credit notes",
-      "column": {
-        "number": "Number",
-        "workspace": "Workspace",
-        "amount": "Amount",
-        "type": "Type",
-        "status": "Status",
-        "issued_at": "Issued at"
-      },
-      "status": {
-        "issued": "Issued",
-        "void": "Void"
-      },
-      "modal": {
-        "title": "Issue a credit note",
-        "description": "Invoice {number} (max refundable: {max}). Enter an amount in cents, pick a mode and provide a reason.",
-        "amount": "Amount (cents)",
-        "mode_label": "Mode",
-        "mode": {
-          "credit_to_balance": "Credit to balance",
-          "refund": "Refund"
-        },
-        "reason": "Reason",
-        "submit": "Issue",
-        "success": "Credit note issued",
-        "error": "Failed to issue credit note"
-      }
+      "title": "Credit notes"
     },
     "segments": {
       "title": "Segments",
@@ -894,44 +883,6 @@
       "quantifier": {
         "any": "At least one workspace",
         "all": "All workspaces"
-      }
-    },
-    "settings": {
-      "title": "Settings",
-      "description": "Billing rules, refund policy and legal documents.",
-      "tabs": {
-        "billing": "Billing",
-        "refund": "Refund policy",
-        "legal": "Legal documents"
-      },
-      "billing": {
-        "auto_suspend_enabled": "Auto-suspend past-due workspaces",
-        "auto_suspend_enabled_desc": "Automatically suspend workspaces whose subscription is past_due.",
-        "auto_suspend_delay_days": "Auto-suspend delay (days)",
-        "auto_suspend_delay_days_desc": "Grace period before a past_due subscription is suspended.",
-        "data_retention_days": "Data retention (days)",
-        "data_retention_days_desc": "How long cancelled workspace data is kept before hard delete.",
-        "stripe_tax_code": "Stripe tax code (product)",
-        "stripe_tax_code_desc": "Stripe tax category code applied to products on sync (e.g. txcd_10000000). Required for automatic VAT calculation. Re-sync plans to apply it."
-      },
-      "refund": {
-        "money_back_guarantee": "Money-back guarantee",
-        "money_back_guarantee_desc": "Allow workspace owners to request a self-service refund within the window.",
-        "money_back_window_days": "Refund window (days)",
-        "money_back_window_days_desc": "Number of days after the first paid invoice during which a refund can be requested.",
-        "money_back_mode": "Money-back refund mode",
-        "money_back_mode_desc": "Applies only to voluntary money-back-guarantee requests: full refunds the entire amount, prorated only the unused portion.",
-        "mode": {
-          "full": "Full",
-          "prorated": "Prorated"
-        },
-        "auto_prorata_on_cancel": "Auto-prorata on mid-cycle cancellation",
-        "auto_prorata_on_cancel_desc": "Separate from the money-back guarantee above: when a workspace cancels mid-cycle without a manual request, automatically refund the unused (prorated) portion."
-      },
-      "legal": {
-        "terms_of_use_desc": "Public Terms of use, served at /terms-of-use. Rich text.",
-        "terms_and_conditions_desc": "Public Terms and conditions, served at /terms-and-conditions. Rich text.",
-        "privacy_policy_desc": "Public Privacy policy, served at /privacy-policy. Rich text."
       }
     },
     "workspace": {

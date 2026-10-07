@@ -1,73 +1,61 @@
-import { Controller, Get, JSONBody, Put } from "@antelopejs/interface-api";
+import {
+  Controller,
+  Get,
+  JSONBody,
+  Post,
+  Put,
+} from "@antelopejs/interface-api";
+import { assert, assertValidation } from "@antelopejs/interface-api-util";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import type { ZodError } from "zod";
 import {
   BILLING_SETTINGS_SINGLETON_ID,
+  type BillingSettings,
   BillingSettingsModel,
-  DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
-  DEFAULT_DATA_RETENTION_DAYS,
   DEFAULT_STRIPE_TAX_CODE,
-  type RefundProrataMode,
+  LegalDocumentsModel,
+  PlanModel,
 } from "../../db";
+import {
+  type BillingRulesBody,
+  billingRulesBodySchema,
+  computePlanTaxSync,
+  defaultBillingSettings,
+  legalDocumentReleases,
+  type PlanTaxSyncStatus,
+  pickBillingRules,
+  pickLegalTexts,
+  pickSettingsUpdate,
+  readLegalDocuments,
+  saveLegalDocuments,
+} from "../../operator-billing";
+import {
+  reconcilePlansWithStripe,
+  startPlanReconciliation,
+} from "../../plans/stripe-sync";
+import { isStripeConfigured } from "../../stripe/client";
 
-const DEFAULT_MONEY_BACK_WINDOW_DAYS = 14;
-const DEFAULT_REFUND_MODE: RefundProrataMode = "full";
+const HTTP_CONFLICT = 409;
 
-interface BillingSettingsBody {
-  autoSuspendEnabled?: boolean;
-  autoSuspendDelayDays?: number;
-  dataRetentionDaysAfterCancellation?: number;
-  moneyBackGuaranteeEnabled?: boolean;
-  moneyBackGuaranteeWindowDays?: number;
-  moneyBackGuaranteeMode?: RefundProrataMode;
-  autoProrataOnCancelEnabled?: boolean;
-  stripeTaxCode?: string | null;
-}
+/**
+ * Everything the Billing rules & legal page loads: the settings, the legal
+ * texts, and the read-only panels shown beside them (the customer timeline,
+ * the refund example, the plans' tax sync, each document's release).
+ */
+export type BillingRulesPayload = Record<string, unknown>;
 
-function pickBillingSettingsUpdate(body: BillingSettingsBody) {
-  const out: Record<string, unknown> = {};
-  if (body.autoSuspendEnabled !== undefined)
-    out.autoSuspendEnabled = body.autoSuspendEnabled;
-  if (body.autoSuspendDelayDays !== undefined)
-    out.autoSuspendDelayDays = body.autoSuspendDelayDays;
-  if (body.dataRetentionDaysAfterCancellation !== undefined)
-    out.dataRetentionDaysAfterCancellation =
-      body.dataRetentionDaysAfterCancellation;
-  if (body.moneyBackGuaranteeEnabled !== undefined)
-    out.moneyBackGuaranteeEnabled = body.moneyBackGuaranteeEnabled;
-  if (body.moneyBackGuaranteeWindowDays !== undefined)
-    out.moneyBackGuaranteeWindowDays = body.moneyBackGuaranteeWindowDays;
-  if (body.moneyBackGuaranteeMode !== undefined)
-    out.moneyBackGuaranteeMode = body.moneyBackGuaranteeMode;
-  if (body.autoProrataOnCancelEnabled !== undefined)
-    out.autoProrataOnCancelEnabled = body.autoProrataOnCancelEnabled;
-  if (body.stripeTaxCode !== undefined)
-    out.stripeTaxCode = body.stripeTaxCode || null;
-  return out;
-}
-
-async function getOrCreateBillingSettings(
-  billingSettingsModel: BillingSettingsModel,
-) {
-  const existing = await billingSettingsModel.get(
-    BILLING_SETTINGS_SINGLETON_ID,
+function parseBody(body: unknown): BillingRulesBody {
+  return assertValidation(
+    body,
+    (value) => billingRulesBodySchema.parse(value),
+    (error) => (error as ZodError).issues,
   );
-  if (existing) return existing;
-  const fresh = {
-    _id: BILLING_SETTINGS_SINGLETON_ID,
-    autoSuspendEnabled: true,
-    autoSuspendDelayDays: DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
-    dataRetentionDaysAfterCancellation: DEFAULT_DATA_RETENTION_DAYS,
-    moneyBackGuaranteeEnabled: false,
-    moneyBackGuaranteeWindowDays: DEFAULT_MONEY_BACK_WINDOW_DAYS,
-    moneyBackGuaranteeMode: DEFAULT_REFUND_MODE,
-    autoProrataOnCancelEnabled: false,
-    stripeTaxCode: DEFAULT_STRIPE_TAX_CODE,
-    updatedAt: new Date(),
-  };
-  await billingSettingsModel.insert([fresh]);
-  return fresh;
+}
+
+function taxCodeOf(settings: Pick<BillingSettings, "stripeTaxCode">): string {
+  return settings.stripeTaxCode || DEFAULT_STRIPE_TAX_CODE;
 }
 
 export class SaasBillingSettingsController extends Controller(
@@ -76,21 +64,106 @@ export class SaasBillingSettingsController extends Controller(
   @Model(BillingSettingsModel)
   declare billingSettingsModel: BillingSettingsModel;
 
-  @Get("/")
-  get(@AuthOwnerOnly() _user: User) {
-    return getOrCreateBillingSettings(this.billingSettingsModel);
+  @Model(LegalDocumentsModel)
+  declare legalDocumentsModel: LegalDocumentsModel;
+
+  @Model(PlanModel)
+  declare planModel: PlanModel;
+
+  private async loadSettings(): Promise<BillingSettings> {
+    const existing = await this.billingSettingsModel.get(
+      BILLING_SETTINGS_SINGLETON_ID,
+    );
+    if (existing)
+      return Object.assign(defaultBillingSettings(new Date()), existing);
+    const fresh = defaultBillingSettings(new Date());
+    await this.billingSettingsModel.insert([fresh]);
+    return fresh;
   }
 
+  private async planTaxSync(
+    settings: BillingSettings,
+  ): Promise<PlanTaxSyncStatus> {
+    const plans = await this.planModel.findActiveNotDeleted();
+    return computePlanTaxSync(
+      plans,
+      taxCodeOf(settings),
+      settings.plansSyncedAt ?? null,
+      isStripeConfigured(),
+    );
+  }
+
+  private async payload(): Promise<BillingRulesPayload> {
+    const settings = await this.loadSettings();
+    const [legal, planTaxSync] = await Promise.all([
+      readLegalDocuments(this.legalDocumentsModel),
+      this.planTaxSync(settings),
+    ]);
+    const { versions, updatedAt: _legalUpdatedAt, ...texts } = legal;
+    return {
+      ...pickBillingRules(settings),
+      ...texts,
+      ...legalDocumentReleases(versions),
+      customerTimeline: {
+        autoSuspendEnabled: settings.autoSuspendEnabled,
+        autoSuspendDelayDays: settings.autoSuspendDelayDays,
+        dataRetentionDaysAfterCancellation:
+          settings.dataRetentionDaysAfterCancellation,
+      },
+      refundExample: {
+        moneyBackGuaranteeMode: settings.moneyBackGuaranteeMode,
+      },
+      planTaxSync,
+    };
+  }
+
+  @Get("/")
+  get(@AuthOwnerOnly() _user: User): Promise<BillingRulesPayload> {
+    return this.payload();
+  }
+
+  /**
+   * Saves the page in one go: the settings, then the legal texts, each
+   * changed text published as its document's next version. A new tax
+   * category is carried to the plans' Stripe products in the background.
+   */
   @Put("/")
   async update(
     @AuthOwnerOnly() _user: User,
-    @JSONBody() body: BillingSettingsBody,
-  ) {
-    await getOrCreateBillingSettings(this.billingSettingsModel);
+    @JSONBody() rawBody: unknown,
+  ): Promise<BillingRulesPayload> {
+    const body = parseBody(rawBody);
+    const before = await this.loadSettings();
+    const now = new Date();
     await this.billingSettingsModel.update(BILLING_SETTINGS_SINGLETON_ID, {
-      ...pickBillingSettingsUpdate(body),
-      updatedAt: new Date(),
+      ...pickSettingsUpdate(body),
+      updatedAt: now,
     });
-    return getOrCreateBillingSettings(this.billingSettingsModel);
+    await saveLegalDocuments(
+      this.legalDocumentsModel,
+      pickLegalTexts(body),
+      now,
+    );
+    const isTaxCodeChanged =
+      body.stripeTaxCode !== undefined &&
+      body.stripeTaxCode !== taxCodeOf(before);
+    if (isTaxCodeChanged && isStripeConfigured()) startPlanReconciliation();
+    return this.payload();
+  }
+
+  /** Brings every plan's Stripe product and price in line, now. */
+  @Post("/resync-plans")
+  async resyncPlans(@AuthOwnerOnly() _user: User): Promise<PlanTaxSyncStatus> {
+    assert(
+      isStripeConfigured(),
+      HTTP_CONFLICT,
+      "saas.errors.stripe.not_configured",
+    );
+    await this.loadSettings();
+    await reconcilePlansWithStripe();
+    await this.billingSettingsModel.update(BILLING_SETTINGS_SINGLETON_ID, {
+      plansSyncedAt: new Date(),
+    });
+    return this.planTaxSync(await this.loadSettings());
   }
 }
