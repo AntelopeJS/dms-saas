@@ -73,7 +73,8 @@ const TRIAL_ENDING_ICON = "i-ph-hourglass";
 const TRIAL_ENDED_BLOCKED_ICON = "i-ph-prohibit";
 
 const SINGLE_INVOICE_FETCH_LIMIT = 1;
-const AUTO_PRORATA_METADATA_KEY = "saasAutoProrataOf";
+/** Marks the credit note a cancellation's prorated refund issued, by subscription. */
+export const AUTO_PRORATA_METADATA_KEY = "saasAutoProrataOf";
 
 const TRIAL_BLOCKED_STRIPE_STATUSES = new Set<string>([
   "past_due",

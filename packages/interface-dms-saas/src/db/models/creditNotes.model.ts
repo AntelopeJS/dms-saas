@@ -21,6 +21,17 @@ export class CreditNoteModel extends BasicDataModel(
     return hasSelectedRow(result);
   }
 
+  /** The credit notes issued against one invoice row, oldest first. */
+  async findByInvoice(invoiceId: string): Promise<CreditNote[]> {
+    const rows = await this.table
+      .getAll(invoiceId, "invoiceId")
+      .orderBy("issuedAt")
+      .run();
+    return rows
+      .map((row) => CreditNoteModel.fromDatabase(row))
+      .filter((row): row is CreditNote => row !== undefined);
+  }
+
   async findOneByStripeCreditNote(
     stripeCreditNoteId: string,
   ): Promise<CreditNote | undefined> {

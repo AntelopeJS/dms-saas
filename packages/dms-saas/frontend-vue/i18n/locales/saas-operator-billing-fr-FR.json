@@ -1,0 +1,278 @@
+{
+	"saas": {
+		"operator_billing": {
+			"invoices": {
+				"title": "Factures",
+				"description": "Factures émises par Stripe pour tous les espaces de travail. Chaque montant est affiché dans la devise de sa facture.",
+				"caption": "Toutes les factures",
+				"search": "Rechercher un numéro ou un espace de travail",
+				"count": "{count} facture | {count} factures",
+				"credit_hint": "Les avoirs s’émettent sur les factures payées ou ouvertes : une facture annulée n’a jamais été débitée, un brouillon peut encore être modifié.",
+				"open_stripe": "Ouvrir Stripe",
+				"empty": {
+					"title": "Aucune facture pour l’instant",
+					"description": "Les factures apparaissent ici dès que Stripe les émet pour un espace de travail."
+				},
+				"column": {
+					"number": "Numéro",
+					"workspace": "Espace de travail",
+					"amount": "Montant",
+					"status": "Statut",
+					"due_at": "Échéance",
+					"period": "Période",
+					"issued_at": "Émise le",
+					"credited": "Crédité",
+					"lines": "Lignes",
+					"subtotal": "Sous-total",
+					"tax": "Taxes",
+					"paid_at": "Payée le"
+				},
+				"actions": {
+					"view_details": "Voir le détail",
+					"download_pdf": "Télécharger le PDF",
+					"open_in_stripe": "Ouvrir dans Stripe",
+					"issue_credit_note": "Émettre un avoir…"
+				},
+				"sub_state": {
+					"retry": "Échec du paiement · nouvel essai le {date}",
+					"retries_over": "Échec du paiement · plus de nouvel essai",
+					"due": "Échéance le {date}",
+					"finalises": "Finalisée le {date}",
+					"replaced_by": "Remplacée par {number}",
+					"written_off": "Passée en perte"
+				}
+			},
+			"credit_notes": {
+				"title": "Avoirs",
+				"description": "Crédits et remboursements Stripe accordés aux clients. Pour en émettre un, ouvrez la facture qu’il corrige.",
+				"caption": "Tous les avoirs",
+				"search": "Rechercher un avoir",
+				"count": "{count} avoir | {count} avoirs",
+				"legend": "Le crédit sur le solde réduit la prochaine facture · Le remboursement sur la carte renvoie l’argent · Avant ou après paiement corrige une facture émise par Stripe",
+				"to_invoices": "Factures",
+				"automatic": "Automatique",
+				"empty": {
+					"title": "Aucun avoir pour l’instant",
+					"description": "Un avoir s’émet depuis la facture qu’il corrige."
+				},
+				"column": {
+					"number": "Numéro · facture",
+					"workspace": "Espace de travail",
+					"amount": "Montant",
+					"type": "Type",
+					"status": "Statut",
+					"reason": "Motif",
+					"issued_by": "Émis par",
+					"issued_at": "Date"
+				},
+				"actions": {
+					"view_details": "Voir le détail",
+					"download_pdf": "Télécharger le PDF"
+				}
+			},
+			"credit_reasons": {
+				"service_issue": "Problème de service",
+				"billing_error": "Erreur de facturation",
+				"duplicate": "Paiement en double",
+				"goodwill": "Geste commercial",
+				"fraudulent": "Paiement frauduleux",
+				"other": "Autre",
+				"money_back_guarantee": "Garantie satisfait ou remboursé",
+				"prorated_cancellation": "Remboursement au prorata · résiliation en cours de période",
+				"order_change": "Modification de commande"
+			},
+			"cells": {
+				"plan_seats": "{plan} · {seats} sièges"
+			},
+			"stats": {
+				"label": "Chiffres de facturation",
+				"load_failed": "Les chiffres n’ont pas pu être chargés. La liste ci-dessous reste disponible.",
+				"other_currencies": "+ {amounts} · {detail}",
+				"awaiting_payment": "En attente de paiement",
+				"awaiting_payment_detail": "{count} facture ouverte · {retries} avec un nouvel essai prévu | {count} factures ouvertes · {retries} avec un nouvel essai prévu",
+				"collected_this_month": "Encaissé ce mois-ci",
+				"collected_this_month_detail": "{count} facture payée | {count} factures payées",
+				"credited_this_month": "Crédité ce mois-ci",
+				"credited_this_month_detail": "{count} avoir · {refunded} remboursés | {count} avoirs · {refunded} remboursés",
+				"written_off_this_year": "Passé en perte cette année",
+				"written_off_this_year_detail": "{count} facture irrécouvrable | {count} factures irrécouvrables",
+				"credit_split_detail": "{balance} sur le solde · {refunded} remboursés",
+				"refunded_to_cards": "Remboursé sur les cartes",
+				"refunded_to_cards_detail": "{count} remboursement · {automatic} automatiques | {count} remboursements · {automatic} automatiques",
+				"credit_notes_this_month": "Avoirs ce mois-ci",
+				"credit_notes_this_month_detail": "{void} annulés"
+			},
+			"credit_modal": {
+				"title": "Émettre un avoir",
+				"subtitle_paid": "{number} · {workspace} · payée le {date} par {card}",
+				"subtitle_unpaid": "{number} · {workspace} · en attente de paiement",
+				"card_unknown": "la carte enregistrée",
+				"next_invoice": "la prochaine facture",
+				"next_invoice_on": "la prochaine facture, le {date}",
+				"tax": "Taxes",
+				"paid": "Payé",
+				"total": "Total",
+				"already_credited": "Déjà crédité",
+				"still_creditable": "Reste à créditer",
+				"mode_label": "Comment le client le reçoit",
+				"mode": {
+					"credit_to_balance": "Crédit sur le solde",
+					"credit_to_balance_description": "Déduit de {nextInvoice}",
+					"refund": "Remboursement sur la carte",
+					"refund_description": "Retour sur {card} sous 5 à 10 jours",
+					"reduce_amount_due": "Réduire le montant dû",
+					"reduce_amount_due_description": "La facture ouverte demande moins ; rien n’est remboursé"
+				},
+				"amount": "Montant",
+				"amount_help": "Jusqu’à {max}",
+				"use_max": "Créditer la totalité, {max}",
+				"above_ceiling": "Au plus {max}.",
+				"above_ceiling_credited": "Au plus {max} : {credited} ont déjà été crédités par {numbers}.",
+				"reason": "Motif",
+				"reason_placeholder": "Choisir un motif",
+				"memo": "Note interne",
+				"memo_hint": "Jamais montrée au client",
+				"memo_too_long": "La note est limitée à {max} caractères.",
+				"outcome": {
+					"empty": "Saisissez un montant pour voir ce que reçoit le client.",
+					"credit_to_balance": "{workspace} reçoit {amount} de crédit sur son solde, déduit de {nextInvoice}.",
+					"refund": "{amount} retournent sur {card} ; le client les voit sous 5 à 10 jours.",
+					"reduce_amount_due": "{number} demande alors {remaining} au lieu de {before}.",
+					"total": "{number} est alors crédité de {credited} sur {total} au total."
+				},
+				"creates": "Crée un avoir dans Stripe.",
+				"cancel": "Annuler",
+				"submit": {
+					"credit_to_balance": "Créditer {amount}",
+					"refund": "Continuer vers le remboursement…",
+					"reduce_amount_due": "Réduire de {amount}"
+				},
+				"refund_confirm": {
+					"title": "Rembourser {amount} sur {card} ?",
+					"description": "Impossible d’annuler ensuite. Le client le voit sous 5 à 10 jours.",
+					"confirm": "Rembourser {amount}",
+					"back": "Retour",
+					"credited_in_total": "{number} crédité au total"
+				},
+				"success": "Avoir {number} émis",
+				"success_description": "Il apparaît dans les listes dès que Stripe le confirme, en quelques secondes.",
+				"error": "L’avoir n’a pas pu être émis.",
+				"load_failed": "La facture n’a pas pu être chargée.",
+				"blocked": {
+					"draft": "Un brouillon peut encore être modifié. Un avoir devient possible une fois la facture finalisée par Stripe.",
+					"void": "Une facture annulée n’a jamais été débitée : il n’y a rien à créditer.",
+					"uncollectible": "Cette facture est passée en perte : rien n’a été encaissé à créditer.",
+					"fully_credited": "Cette facture a déjà été entièrement créditée."
+				}
+			},
+			"billing_rules": {
+				"title": "Règles de facturation et mentions légales",
+				"description": "Ce qui se passe quand un paiement échoue, qui peut être remboursé, et les documents que les clients acceptent. Les changements s’appliquent à tous les espaces de travail dès le prochain événement de facturation.",
+				"save": "Enregistrer",
+				"saved": "Règles de facturation enregistrées",
+				"unpaid": {
+					"title": "Factures impayées",
+					"description": "Quand un renouvellement ne peut pas être débité, Stripe retente la carte. Si l’échec persiste, l’espace de travail est suspendu.",
+					"suspend": "Suspendre les espaces de travail qui restent impayés",
+					"suspend_description": "Les membres perdent l’accès ; les données et fichiers sont conservés. Payer la facture rétablit l’accès immédiatement.",
+					"suspend_days": "Jours avant la suspension",
+					"suspend_days_description": "Comptés à partir du premier paiement échoué.",
+					"suspend_days_hint": "De 1 à 365 jours.",
+					"retention_days": "Conserver les données après résiliation",
+					"retention_days_description": "Un espace de travail résilié peut encore exporter pendant ce délai. Ensuite tout est supprimé définitivement ; les factures restent archivées.",
+					"retention_days_hint": "En jours, de 0 à 3650.",
+					"timeline": "Ce que vit le client",
+					"steps": {
+						"failed": "Le paiement échoue",
+						"failed_when": "Jour 0",
+						"failed_effect": "Propriétaire de l’espace prévenu par e-mail, bandeau dans l’application",
+						"retries": "Stripe retente",
+						"retries_when": "Selon Stripe",
+						"retries_effect": "Accès inchangé ; les essais suivent vos réglages Stripe",
+						"suspended": "Suspendu",
+						"suspended_when": "Jour {days}",
+						"suspended_effect": "Les membres perdent l’accès, les données sont conservées",
+						"not_suspended": "Jamais suspendu",
+						"not_suspended_when": "—",
+						"not_suspended_effect": "L’accès continue tant que la facture reste impayée",
+						"deleted": "Supprimé",
+						"deleted_when": "{days} jours après la résiliation",
+						"deleted_effect": "Seulement si le propriétaire de l’espace résilie ; les factures restent archivées"
+					}
+				},
+				"free": {
+					"title": "Espaces de travail gratuits",
+					"description": "Limite les abus du plan gratuit en rattachant chaque espace gratuit à une carte de paiement.",
+					"per_card": "Espaces gratuits par carte",
+					"per_card_description": "Quand une carte couvre déjà ce nombre d’espaces gratuits, un nouvel espace avec la même carte demande un plan payant.",
+					"per_card_hint": "De 0 à 100. 0 désactive la règle."
+				},
+				"tax": {
+					"title": "Taxes",
+					"description": "Stripe calcule la TVA selon le pays du client et la catégorie fiscale du produit.",
+					"code": "Catégorie fiscale Stripe",
+					"code_description": "Appliquée à chaque plan lors de sa synchronisation avec Stripe.",
+					"code_hint": "txcd_ suivi de 8 chiffres. txcd_10000000 correspond à « Général – services fournis par voie électronique ».",
+					"plans": "Plans dans Stripe",
+					"plans_summary": "{synced} plans sur {total} portent cette catégorie",
+					"plans_summary_synced": "{synced} plans sur {total} portent cette catégorie · dernière synchronisation le {date}",
+					"plans_not_configured": "Stripe n’est pas configuré : les plans ne sont pas synchronisés.",
+					"unsaved_code": "Enregistrez d’abord : la nouvelle catégorie atteint les plans une fois enregistrée.",
+					"resync": "Resynchroniser les plans",
+					"resync_done": "Plans synchronisés avec Stripe",
+					"resync_failed": "Les plans n’ont pas pu être synchronisés avec Stripe."
+				},
+				"refunds": {
+					"title": "Politique de remboursement",
+					"description": "Deux règles distinctes : les remboursements demandés par les propriétaires d’espace, et les remboursements automatiques lors d’une résiliation en cours de période.",
+					"guarantee": "Garantie satisfait ou remboursé",
+					"guarantee_description": "Les propriétaires d’espace voient un bouton « Demander un remboursement » dans Facturation tant que le délai court.",
+					"window": "Délai de remboursement",
+					"window_description": "Compté à partir de la première facture payée.",
+					"window_hint": "De 1 à 365 jours.",
+					"amount": "Montant remboursé",
+					"amount_description": "Uniquement pour les demandes au titre de la garantie.",
+					"mode": {
+						"full": "Montant total",
+						"full_description": "Tout ce qui a été payé sur la première facture",
+						"prorated": "Au prorata",
+						"prorated_description": "Seulement les jours pas encore utilisés"
+					},
+					"example": "Exemple chiffré",
+					"worked_example": {
+						"scenario": "Un plan à {price} / mois. Le propriétaire de l’espace demande un remboursement au jour {day} sur {days}.",
+						"full": "Montant total",
+						"prorated": "Au prorata · {days} jours non utilisés"
+					},
+					"on_cancel": "Rembourser le temps non utilisé à la résiliation",
+					"on_cancel_description": "Indépendant de la garantie : quand un propriétaire d’espace résilie en cours de période, les jours non utilisés sont remboursés automatiquement, sans demande."
+				},
+				"legal": {
+					"title": "Documents légaux",
+					"description": "Publiés sur des pages publiques et liés depuis l’inscription et le pied de chaque e-mail.",
+					"terms_of_use": "Conditions d’utilisation",
+					"terms_and_conditions": "Conditions générales",
+					"privacy_policy": "Politique de confidentialité",
+					"status_published": "Publié",
+					"status_draft": "Non publié",
+					"published": "Version {version} · publiée le {date}",
+					"never_published": "Jamais publié",
+					"next_version": "Enregistrer un changement publie la version {version}",
+					"view_public_page": "Voir la page publique"
+				}
+			}
+		},
+		"permissions": {
+			"billing": {
+				"issue_credit_note": "Facturation · Émettre un avoir",
+				"issue_credit_note_description": "Créditer une facture sur le solde du client ou la rembourser sur sa carte",
+				"invoice_stats": "Facturation · Chiffres des factures",
+				"invoice_stats_description": "Voir ce qui attend un paiement, ce qui a été encaissé, crédité et passé en perte",
+				"credit_note_stats": "Facturation · Chiffres des avoirs",
+				"credit_note_stats_description": "Voir ce qui a été crédité et remboursé ce mois-ci",
+				"billing_rules": "Configuration · Règles de facturation et mentions légales",
+				"billing_rules_description": "Modifier les règles d’impayés, d’espaces gratuits, de taxes et de remboursement, et publier les documents légaux"
+			}
+		}
+	}
+}

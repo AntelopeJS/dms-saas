@@ -1,4 +1,5 @@
 export * from "./billing-settings";
+export * from "./billing-stats";
 export * from "./credit-notes-issue";
 export * from "./dashboard";
 export * from "./plan-deletion";
@@ -6,6 +7,7 @@ export * from "./plans";
 export * from "./platform-notes";
 export * from "./platform-owners";
 export * from "./segments";
+export * from "./stripe-dashboard";
 export * from "./users-detail";
 export * from "./workspace-invitations";
 export * from "./workspace-operator-actions";

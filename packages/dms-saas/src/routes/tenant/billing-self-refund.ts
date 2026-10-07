@@ -16,8 +16,10 @@ import {
   getStripeClient,
   nowInStripeSeconds,
 } from "../../stripe";
+import { CREDIT_NOTE_METADATA } from "../../operator-billing/credit-note-request";
 import { MS_PER_DAY } from "../../utils/time";
 
+const MONEY_BACK_REASON = "money_back_guarantee";
 const HTTP_FORBIDDEN = 403;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
@@ -228,6 +230,7 @@ async function issueRefundAndCancel(
       refund_amount: refundAmount,
       memo: "Money-back guarantee self-service refund",
       reason: "order_change",
+      metadata: { [CREDIT_NOTE_METADATA.reason]: MONEY_BACK_REASON },
     },
     { idempotencyKey: `refund-self:${subscriptionId}` },
   );
