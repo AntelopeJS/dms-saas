@@ -1377,6 +1377,54 @@
           "description": "Envoie une notification dans l'application à tous les propriétaires d'un workspace"
         }
       }
+    },
+    "status": {
+      "workspace": {
+        "free": "Gratuit",
+        "active": "Actif",
+        "trialing": "Essai",
+        "past_due": "Impayé",
+        "suspended": "Suspendu",
+        "cancelled": "Résilié",
+        "pending_payment": "Paiement en attente"
+      },
+      "invoice": {
+        "draft": "Brouillon",
+        "open": "À régler",
+        "paid": "Payée",
+        "void": "Annulée",
+        "uncollectible": "Irrécouvrable",
+        "issued": "Émis"
+      },
+      "credit_note": {
+        "issued": "Émis",
+        "void": "Annulé"
+      },
+      "credit_note_type": {
+        "pre_payment": "Avant paiement",
+        "post_payment": "Après paiement",
+        "credit_to_balance": "Crédit sur le solde",
+        "refund": "Remboursement sur la carte",
+        "mixed": "Mixte"
+      },
+      "migration": {
+        "pending": "En attente",
+        "running": "En cours",
+        "completed": "Terminée",
+        "failed": "Échouée",
+        "partially_failed": "Partiellement échouée",
+        "reconciliation_required": "À réconcilier"
+      },
+      "platform_role": {
+        "admin": "Admin plateforme",
+        "none": "—"
+      },
+      "owner": {
+        "joined": "A rejoint",
+        "invited": "Invitation en attente",
+        "expired": "Invitation expirée",
+        "none": "Aucun propriétaire"
+      }
     }
   }
 }

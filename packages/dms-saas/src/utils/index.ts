@@ -16,3 +16,4 @@ export * from "./segment-fields";
 export * from "./segment-matching";
 export * from "./segment-name-cache";
 export * from "./time";
+export * from "./status-vocabulary";

@@ -1377,6 +1377,54 @@
           "description": "Send an in-app notification to all owners of a workspace"
         }
       }
+    },
+    "status": {
+      "workspace": {
+        "free": "Free",
+        "active": "Active",
+        "trialing": "Trialing",
+        "past_due": "Past due",
+        "suspended": "Suspended",
+        "cancelled": "Cancelled",
+        "pending_payment": "Pending payment"
+      },
+      "invoice": {
+        "draft": "Draft",
+        "open": "Open",
+        "paid": "Paid",
+        "void": "Void",
+        "uncollectible": "Uncollectible",
+        "issued": "Issued"
+      },
+      "credit_note": {
+        "issued": "Issued",
+        "void": "Void"
+      },
+      "credit_note_type": {
+        "pre_payment": "Before payment",
+        "post_payment": "After payment",
+        "credit_to_balance": "Credit to balance",
+        "refund": "Refund to card",
+        "mixed": "Mixed"
+      },
+      "migration": {
+        "pending": "Pending",
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed",
+        "partially_failed": "Partially failed",
+        "reconciliation_required": "Reconciliation required"
+      },
+      "platform_role": {
+        "admin": "Platform admin",
+        "none": "—"
+      },
+      "owner": {
+        "joined": "Joined",
+        "invited": "Invitation pending",
+        "expired": "Invitation expired",
+        "none": "No owner"
+      }
     }
   }
 }

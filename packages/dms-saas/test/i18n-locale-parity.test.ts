@@ -1,12 +1,14 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+  duplicatedLocaleKeys,
+  flattenLocale,
+  readLocale,
+} from "./helpers/locales";
 
 interface LocaleFile {
   code: string;
   path: string;
 }
-
-type LocaleTree = Record<string, unknown>;
 
 const REFERENCE_LOCALE = "en-GB";
 const OAUTH_REGISTRATION_PREFIX = "saas.oauth_registration.";
@@ -20,31 +22,12 @@ const LOCALE_FILES: LocaleFile[] = [
   { code: "fr-FR", path: "saas-fr-FR.json" },
 ];
 
-function flatten(tree: LocaleTree, prefix = ""): Map<string, string> {
-  const entries = new Map<string, string>();
-  for (const [key, value] of Object.entries(tree)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    if (value !== null && typeof value === "object") {
-      for (const [nested, leaf] of flatten(value as LocaleTree, path)) {
-        entries.set(nested, leaf);
-      }
-      continue;
-    }
-    entries.set(path, String(value));
-  }
-  return entries;
-}
-
-function readLocale(file: LocaleFile): Map<string, string> {
-  const url = new URL(
-    `../frontend-vue/i18n/locales/${file.path}`,
-    import.meta.url,
-  );
-  return flatten(JSON.parse(readFileSync(url, "utf-8")) as LocaleTree);
+function readLocaleEntries(file: LocaleFile): Map<string, string> {
+  return flattenLocale(readLocale(file.code));
 }
 
 const locales = new Map(
-  LOCALE_FILES.map((file) => [file.code, readLocale(file)] as const),
+  LOCALE_FILES.map((file) => [file.code, readLocaleEntries(file)] as const),
 );
 const reference = locales.get(REFERENCE_LOCALE) as Map<string, string>;
 const translated = LOCALE_FILES.filter(
@@ -52,6 +35,10 @@ const translated = LOCALE_FILES.filter(
 );
 
 describe("saas locale files", () => {
+  it.each(LOCALE_FILES)("$code declares each key in one file only", (file) => {
+    expect(duplicatedLocaleKeys(file.code)).toEqual([]);
+  });
+
   it.each(translated)("$code declares exactly the reference keys", (file) => {
     const entries = locales.get(file.code) as Map<string, string>;
 

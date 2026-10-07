@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readLocale } from "./helpers/locales";
 import { describe, expect, it } from "vitest";
 import { CREDIT_NOTE_STATUSES, INVOICE_STATUSES } from "../src/db";
 import {
@@ -10,11 +10,6 @@ type LocaleTree = Record<string, unknown>;
 
 const LOCALE_PATHS = ["saas-en-GB.json", "saas-fr-FR.json"];
 const LABEL_PREFIX = "$";
-
-function readLocale(path: string): LocaleTree {
-  const url = new URL(`../frontend-vue/i18n/locales/${path}`, import.meta.url);
-  return JSON.parse(readFileSync(url, "utf-8")) as LocaleTree;
-}
 
 function translate(locale: LocaleTree, label: string): unknown {
   return label

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readLocale } from "./helpers/locales";
 import { describe, expect, it } from "vitest";
 import {
   firstMissingRegistrationRequirement,
@@ -16,11 +16,6 @@ const MET_REQUIREMENTS: RegistrationRequirements = {
   isPaymentReady: true,
   hasAcceptedLegal: true,
 };
-
-function readLocale(file: string): LocaleTree {
-  const url = new URL(`../frontend-vue/i18n/locales/${file}`, import.meta.url);
-  return JSON.parse(readFileSync(url, "utf-8")) as LocaleTree;
-}
 
 function lookup(tree: LocaleTree, key: string): unknown {
   return key
