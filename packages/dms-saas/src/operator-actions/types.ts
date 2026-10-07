@@ -4,7 +4,8 @@ export type WorkspaceOperatorAction =
   | "subscription.upgrade"
   | "customer_balance.credit"
   | "invitation.resend"
-  | "invitation.link_copy";
+  | "invitation.link_copy"
+  | "invitation.revoke";
 
 export type OperatorActionStatus =
   | "pending"

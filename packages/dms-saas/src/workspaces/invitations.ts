@@ -14,6 +14,8 @@ import {
 } from "@antelopejs/interface-dms/db";
 import {
   assertInviteReady,
+  completeInviteResolution,
+  decideInvite,
   loadInviteForAction,
 } from "@antelopejs/interface-dms/invite-resolution";
 import {
@@ -23,6 +25,8 @@ import {
 
 const HTTP_NOT_FOUND = 404;
 const SIGNUP_PATH = "/auth/signup";
+// The DMS's own reason when a workspace admin cancels an invitation.
+const REVOKED_REASON = "cancelled";
 
 export type InvitationEmailDelivery = "sent" | "failed";
 
@@ -117,17 +121,6 @@ export async function deliverInvitationEmail(
   }
 }
 
-/** Invitations of the workspace its invitees can still redeem. */
-export async function countPendingInvitations(
-  tenantId: string,
-  now: Date = new Date(),
-): Promise<number> {
-  const invites = await GetModel(UserInviteModel, tenantId).getAll();
-  return invites.filter(
-    (invite) => invitationStatusOf(invite, now) === "pending",
-  ).length;
-}
-
 /** Oldest unaccepted invitation that would make its invitee a workspace owner. */
 export async function findPendingOwnerInvite(
   tenantId: string,
@@ -214,4 +207,22 @@ export async function resolveInvitationLink(
     link: await buildInvitationLink(invite),
     expiresAt: invite.expiresAt,
   };
+}
+
+/**
+ * Withdraws an invitation the way a workspace admin cancels one in the DMS:
+ * its token stops working and the seat it held is released.
+ */
+export async function revokeInvitation(
+  tenantId: string,
+  inviteId: string,
+): Promise<UserInvite> {
+  const invite = await loadActionableInvite(tenantId, inviteId);
+  const resolution = await decideInvite({
+    tenantId,
+    invite,
+    reason: REVOKED_REASON,
+  });
+  await completeInviteResolution(resolution);
+  return invite;
 }

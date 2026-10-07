@@ -1,6 +1,5 @@
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { monthlyPrice } from "@antelopejs/interface-dms-saas/plans";
 import {
   type Plan,
   type TenantSubscription,
@@ -8,6 +7,10 @@ import {
   PlanModel,
   TenantSubscriptionModel,
 } from "../db";
+import {
+  monthlyAmountMinor,
+  planUnitAmountMinor,
+} from "../metrics/normalised-mrr";
 import { getRowInstance } from "../utils/row-instance";
 import { getSeatUsage } from "./seat-capacity";
 
@@ -17,7 +20,6 @@ const BILLED_STATUSES: ReadonlySet<TenantSubscriptionStatus> = new Set([
   "past_due",
 ]);
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
-const SEAT_BILLING_MODE = "seat";
 const CENTS_PRECISION = 100;
 /** How long one read of every subscription serves the plan rows of a page. */
 const USAGE_CACHE_TTL_MS = 5_000;
@@ -81,9 +83,16 @@ export function isBilledSubscription(subscription: MrrSubscription): boolean {
  * per-seat price times the seats billed.
  */
 export function normalisedMonthlyAmount(plan: MrrPlan, seats: number): number {
-  const perPeriod =
-    plan.billingMode === SEAT_BILLING_MODE ? plan.price * seats : plan.price;
-  return monthlyPrice({ ...plan, price: perPeriod } as Plan);
+  return (
+    monthlyAmountMinor(
+      {
+        unitAmountMinor: planUnitAmountMinor(plan),
+        interval: plan.interval,
+        billingMode: plan.billingMode,
+      },
+      seats,
+    ) / CENTS_PRECISION
+  );
 }
 
 function emptyUsage(): PlanUsage {

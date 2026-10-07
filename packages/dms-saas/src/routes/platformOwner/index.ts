@@ -12,6 +12,7 @@ export * from "./segments";
 export * from "./segments-export";
 export * from "./stripe-dashboard";
 export * from "./users-detail";
+export * from "./workspace-detail";
 export * from "./workspace-invitations";
 export * from "./workspace-operator-actions";
 export * from "./workspaces-admin";

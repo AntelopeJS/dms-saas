@@ -124,3 +124,35 @@ export async function previewStripeUpcomingInvoice(
     ),
   });
 }
+
+/** A subscription moved to another price, as a preview asks it. */
+export interface PriceChangePreviewRequest {
+  customerId: string;
+  subscriptionId: string;
+  itemId: string;
+  priceId: string;
+  /** The moment the proration is computed at, shared with the change itself. */
+  prorationDate: Date;
+}
+
+/**
+ * Ask Stripe what moving the subscription to another price bills, prorated
+ * the way the immediate plan change prorates it. When the interval changes,
+ * Stripe resets the cycle and the preview is the invoice issued at once;
+ * otherwise it is the next invoice, prorations included.
+ */
+export async function previewStripePriceChange(
+  request: PriceChangePreviewRequest,
+): Promise<PricedUpcomingInvoice> {
+  const invoice = await getStripeClient().invoices.createPreview({
+    customer: request.customerId,
+    subscription: request.subscriptionId,
+    subscription_details: {
+      items: [{ id: request.itemId, price: request.priceId }],
+      proration_behavior: "create_prorations",
+      proration_date: toStripeSeconds(request.prorationDate),
+    },
+  });
+  const taxRates = await retrieveTaxRates(collectTaxRateIds(invoice));
+  return { invoice, taxRates };
+}

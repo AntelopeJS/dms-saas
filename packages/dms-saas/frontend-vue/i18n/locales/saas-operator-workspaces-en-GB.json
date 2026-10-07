@@ -1,0 +1,597 @@
+{
+  "saas": {
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Recurring revenue, workspace health and billing issues across every customer.",
+      "other_currencies": "{amounts} in other currencies not counted",
+      "headline": {
+        "label": "Recurring revenue and workspaces",
+        "mrr": "MRR · normalised",
+        "arr": "ARR {arr}",
+        "paying": "Paying workspaces",
+        "paying_value": "{paying} / {total}",
+        "paying_detail": "{free} free · {trialing} in trial",
+        "trials": "Trials",
+        "trials_detail": "None end in the next 14 days | 1 ends in the next 14 days | {count} end in the next 14 days"
+      },
+      "churn": {
+        "title": "Revenue churn",
+        "description": "MRR lost to cancellations over the period"
+      },
+      "attention": {
+        "title": "Needs attention",
+        "description": "Queues an operator should look at today.",
+        "empty_title": "All clear",
+        "empty_description": "No workspace is past due, no complimentary access ends this week, no migration or invoice is waiting.",
+        "past_due": "No workspace past due | 1 workspace past due | {count} workspaces past due",
+        "complimentary_ending": "No complimentary access ending | 1 complimentary access ending | {count} complimentary accesses ending",
+        "named_ending": "{name} on {date}",
+        "migrations": "No migration to reconcile | 1 migration needs reconciliation | {count} migrations need reconciliation",
+        "migrations_detail": "{from} → {to} · {failed} of {total} workspaces failed",
+        "open_invoices": "No open invoice | 1 open invoice | {count} open invoices",
+        "open_invoices_detail": "{amount} awaiting payment"
+      },
+      "paid_invoices": {
+        "title": "Paid invoices",
+        "description": "Collected and credited, in the reporting currency",
+        "collected": "Collected",
+        "credited": "Credited / refunded"
+      },
+      "by_status": {
+        "title": "Workspaces by status",
+        "description": "One colour per status across the module",
+        "open_list": "Open list"
+      },
+      "plans": {
+        "title": "Plans by MRR",
+        "subtitle": "Normalised MRR each plan brings",
+        "description": "No workspace · {price} | 1 workspace · {price} | {count} workspaces · {price}",
+        "empty": "No plan brings recurring revenue yet."
+      },
+      "activity": {
+        "title": "Recent activity",
+        "empty": "Nothing happened yet.",
+        "tabs": {
+          "all": "All",
+          "billing": "Billing",
+          "lifecycle": "Lifecycle"
+        }
+      }
+    },
+    "activity": {
+      "by_operator": "by {operator}",
+      "platform": {
+        "invoice_paid": "Invoice {number} paid by {workspace}",
+        "invoice_open": "Invoice {number} awaiting payment from {workspace}",
+        "invoice_uncollectible": "Invoice {number} of {workspace} written off",
+        "credit_note_issued": "Credit note {number} issued to {workspace}",
+        "workspace_suspended": "{workspace} suspended",
+        "workspace_reactivated": "{workspace} reactivated",
+        "subscription_upgraded": "{workspace} upgraded {from} → {to}",
+        "balance_credited": "Stripe credit granted to {workspace}",
+        "invitation_resent": "Invitation to {workspace} sent again",
+        "workspace_created": "Workspace {workspace} created"
+      },
+      "workspace": {
+        "invoice_paid": "Invoice {number} paid",
+        "invoice_open": "Invoice {number} awaiting payment",
+        "invoice_uncollectible": "Invoice {number} written off",
+        "credit_note_issued": "Credit note {number} issued",
+        "workspace_suspended": "Workspace suspended",
+        "workspace_reactivated": "Workspace reactivated",
+        "subscription_upgraded": "Upgraded {from} → {to}",
+        "balance_credited": "Stripe credit granted",
+        "invitation_resent": "Invitation sent again",
+        "workspace_created": "Workspace created"
+      }
+    },
+    "workspaces": {
+      "title": "Workspaces",
+      "description": "All customer workspaces and their subscriptions.",
+      "caption": "All workspaces",
+      "search_placeholder": "Search name, owner or e-mail",
+      "footer_count": "No workspace | 1 workspace | {count} workspaces",
+      "headline": {
+        "label": "Revenue and workspaces to act on",
+        "mrr_detail": "No paying workspace | 1 paying | {count} paying",
+        "past_due": "Past due",
+        "past_due_detail": "{amount} at risk · first suspension {date}",
+        "past_due_detail_no_suspension": "{amount} at risk",
+        "complimentary_ending": "Complimentary access ending",
+        "named_ending": "{name} {date}",
+        "none_this_week": "None this week",
+        "trials_ending": "Trials ending",
+        "trials_ending_detail": "Next 14 days · {amount} MRR"
+      },
+      "views": {
+        "complimentary_ending": "Complimentary access ending this week",
+        "past_due_7_days": "Past due for more than 7 days",
+        "trials_ending": "Trials ending in 14 days",
+        "owner_never_joined": "Owner never joined",
+        "mrr_over_500": "MRR over 500"
+      },
+      "empty": {
+        "first_run_title": "No workspace yet",
+        "first_run_description": "Workspaces appear here once customers sign up, or once you create one for them.",
+        "filtered_title": "No workspace matches",
+        "filtered_description": "Search looks at names, owner names and owner e-mails. Clear the search or the filters to see every workspace."
+      },
+      "row_actions": {
+        "open": "Open workspace",
+        "grant_free_access": "Grant free access…",
+        "join": "Join as member…",
+        "suspend": "Suspend now…"
+      },
+      "column": {
+        "workspace": "Workspace",
+        "status": "Status",
+        "plan": "Plan",
+        "mrr": "MRR",
+        "owner": "Workspace owner",
+        "owner_email": "Owner e-mail",
+        "owner_status": "Owner status",
+        "owner_never_joined": "Owner never joined",
+        "renews": "Renews / ends",
+        "renewal_kind": "Next date",
+        "state_since": "In this status since",
+        "complimentary": "Complimentary access"
+      },
+      "interval": {
+        "month": "month",
+        "year": "year"
+      },
+      "plan_cell": {
+        "complimentary": "Complimentary",
+        "price_per_seat": "{price} / seat / {interval}",
+        "price_flat": "{price} / {interval}",
+        "price_times_seats": "{price} × {seats} seats / {interval}"
+      },
+      "mrr_cell": {
+        "at_risk": "at risk",
+        "billing_paused": "billing paused",
+        "trial": "then {amount}",
+        "yearly": "yearly ÷ 12"
+      },
+      "renewal_kind": {
+        "renews": "Renews",
+        "trial_ends": "Trial ends",
+        "free_until": "Free until",
+        "suspends": "Suspends",
+        "suspended": "Suspended",
+        "awaiting_payment": "Awaiting first payment",
+        "deletes": "Data deleted"
+      },
+      "renewal": {
+        "renews": "Renews",
+        "trial_ends": "Trial ends",
+        "free_until": "Free until · today | Free until · 1 day | Free until · {days} days",
+        "suspends": "Suspends today | Suspends in 1 day | Suspends in {days} days",
+        "suspended": "Suspended",
+        "awaiting_payment": "Awaiting first payment since",
+        "deletes": "Data deleted on"
+      },
+      "operator_create": {
+        "button": "Create workspace",
+        "title": "Create workspace",
+        "description": "Provision a new workspace and assign its owner.",
+        "name": "Workspace name",
+        "name_help": "Can be renamed later.",
+        "name_placeholder": "Massive Dynamic",
+        "plan": "Plan",
+        "plan_placeholder": "Select a plan",
+        "owner_email": "Owner e-mail",
+        "owner_email_placeholder": "nina.sharp{'@'}massivedynamic.com",
+        "owner_existing": "{name} already has an account · member of no workspace | {name} already has an account · member of 1 workspace | {name} already has an account · member of {count} workspaces",
+        "owner_new": "No account yet · an invitation is sent, valid {days} days",
+        "optional": "Optional",
+        "free_until": "Complimentary until",
+        "free_until_empty": "Leave empty for no end date.",
+        "free_until_days": "Ends today | 1 day | {count} days",
+        "access": {
+          "label": "Access",
+          "complimentary": "Complimentary access",
+          "complimentary_description": "No charge and no Stripe subscription. The owner picks a paid plan before it ends.",
+          "owner_pays": "Owner pays on first sign-in",
+          "owner_pays_description": "The workspace waits for payment: the owner enters a card at first sign-in, then Stripe bills {price}. Status: Pending payment until the first invoice is paid.",
+          "owner_pays_unavailable": "Only a paid plan synced with Stripe can be paid by its owner."
+        },
+        "what_happens": {
+          "title": "What happens",
+          "complimentary": "{name} is created on {plan} with complimentary access and no end date. No card is asked and nothing is billed.",
+          "complimentary_until": "{name} is created on {plan} with complimentary access until {date}. No card is asked and nothing is billed; after that date the workspace moves to Past due unless a paid plan is picked.",
+          "owner_pays": "{name} is created on {plan} as Pending payment: access opens once its owner pays {price}.",
+          "owner_existing": "{owner} becomes workspace owner and gets an e-mail.",
+          "owner_new": "An invitation goes to {email}, valid {days} days."
+        },
+        "submit": "Create workspace",
+        "submit_invite": "Create and invite",
+        "success": "Workspace created.",
+        "open_workspace": "Open workspace",
+        "error": "Could not create the workspace.",
+        "load_error": "Could not load the plans.",
+        "email_failed": {
+          "title": "Workspace created, but the invitation e-mail could not be sent",
+          "description": "The owner has not been notified. Copy the invitation link and send it to them yourself.",
+          "copy_link": "Copy invitation link"
+        }
+      }
+    },
+    "workspace_detail": {
+      "title": "Workspace",
+      "description": "Subscription, billing, members and activity of one workspace.",
+      "retry": "Retry",
+      "error": {
+        "prepare": "Could not prepare this action. Nothing was changed."
+      },
+      "header": {
+        "no_owner": "No owner",
+        "workspace_owner": "Workspace owner",
+        "created": "Created {date}",
+        "joined_as_support": "You joined as platform support · {date}",
+        "complimentary": "Complimentary",
+        "change_plan": "Change plan",
+        "grant_free_access": "Grant free access",
+        "immediate_upgrade": "Immediate upgrade…",
+        "grant_credit": "Grant Stripe credit…",
+        "join": "Join as member…",
+        "joined": "Joined",
+        "open_in_stripe": "Open customer in Stripe",
+        "copy_link": "Copy workspace link",
+        "link_copied": "Workspace link copied.",
+        "suspend": "Suspend workspace…",
+        "reactivate": "Reactivate workspace…",
+        "more_actions": "More actions",
+        "open_workspace": "Open workspace",
+        "open_error": "The workspace could not be opened.",
+        "load_error": "Couldn't load this workspace",
+        "load_error_description": "The rest of the page may still load. Retry in a moment."
+      },
+      "facts": {
+        "label": "Workspace facts",
+        "mrr": "MRR",
+        "no_plan": "No plan",
+        "complimentary": "Complimentary · nothing billed",
+        "trial_then": "Trial · then {amount}",
+        "billing_paused": "Billing paused",
+        "price_times_seats": "{price} × {seats} seats · per {interval}",
+        "flat_price": "{price} · per {interval}",
+        "seats": "Seats",
+        "seats_of": "{used} / {max}",
+        "pending_invitations": "No pending invitation | +1 pending invitation | +{count} pending invitations",
+        "next_invoice": "Next invoice",
+        "next_invoice_total": "{amount} incl. tax",
+        "nothing_billed": "Nothing billed",
+        "preview_unavailable": "Stripe preview unavailable",
+        "stripe_customer": "Stripe customer",
+        "no_stripe_customer": "No Stripe customer yet",
+        "open_in_stripe": "Open in Stripe",
+        "card": "{brand} •••• {last4}",
+        "lifetime_revenue": "Lifetime revenue",
+        "lifetime_detail": "No paid invoice | 1 invoice · since {since} | {count} invoices · since {since}",
+        "no_paid_invoice": "No paid invoice yet"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "invoices": "Invoices",
+        "credit_notes": "Credit notes",
+        "members": "Members",
+        "activity": "Activity"
+      },
+      "tables": {
+        "this_workspace": "This workspace"
+      },
+      "billing": {
+        "title": "Billing information",
+        "empty": "No billing information yet",
+        "customer_type": "Customer type",
+        "customer_types": {
+          "individual": "Individual",
+          "business": "Business customer"
+        },
+        "company_name": "Company name",
+        "vat_number": "VAT number",
+        "vat_status": {
+          "pending": "verification pending",
+          "verified": "verified",
+          "unverified": "not verified"
+        },
+        "billing_email": "Billing e-mail",
+        "address": "Address"
+      },
+      "timeline": {
+        "title": "Subscription",
+        "empty": "No subscription event yet",
+        "next_invoice": "Next invoice · {amount}",
+        "renews": "Renews",
+        "trial_ends": "Trial ends",
+        "free_until": "Complimentary access ends",
+        "suspends": "Suspends if still unpaid",
+        "suspended": "Suspended",
+        "awaiting_payment": "Waiting for the first payment",
+        "deletes": "Data is deleted"
+      },
+      "invoices": {
+        "title": "Invoices",
+        "latest": "Latest invoices",
+        "download_pdf": "Download PDF",
+        "open_in_stripe": "Open in Stripe",
+        "issue_credit_note": "Issue credit note…"
+      },
+      "credit_notes": {
+        "title": "Credit notes"
+      },
+      "members": {
+        "title": "Members",
+        "you": "You",
+        "active_now": "Active now",
+        "never": "Never",
+        "column": {
+          "member": "Member",
+          "email": "E-mail",
+          "role": "Role",
+          "joined": "Joined",
+          "last_active": "Last active"
+        },
+        "role": {
+          "workspace_owner": "Workspace owner",
+          "member": "Member",
+          "platform_support": "Platform support"
+        }
+      },
+      "invitations": {
+        "title": "Pending invitations",
+        "empty": "No pending invitation. Each pending invitation holds a seat.",
+        "resend": "Resend",
+        "resend_success": "Invitation sent again.",
+        "resend_title": "Resend this invitation?",
+        "resend_description": "A new link valid for 7 days is e-mailed to the invitee. The previous link stops working.",
+        "copy_link": "Copy link",
+        "link_title": "Invitation link",
+        "revoke": "Revoke",
+        "revoke_success": "Invitation revoked.",
+        "revoke_title": "Revoke the invitation of {email}?",
+        "revoke_description": "Their link stops working and the seat it held is freed.",
+        "column": {
+          "email": "E-mail",
+          "role": "Role",
+          "status": "Status",
+          "sent_at": "Sent",
+          "expires_at": "Expires"
+        },
+        "link": {
+          "lead": "Send this link to {email} so they can create their account and join the workspace.",
+          "label": "Signup link",
+          "expires": "Valid until {date} · expires today | Valid until {date} · 1 day left | Valid until {date} · {count} days left",
+          "copy": "Copy",
+          "copied": "Invitation link copied.",
+          "copy_failed": "Could not copy the link. Copy it manually:",
+          "error": "Could not retrieve the invitation link.",
+          "warning": "Anyone with this link can join the workspace as the invitee. Share it only with them.",
+          "close": "Close"
+        }
+      },
+      "activity": {
+        "title": "Activity",
+        "recent": "Recent activity",
+        "empty": "Nothing happened in this workspace yet."
+      },
+      "operator": {
+        "title": "Operator actions",
+        "load_error": "Couldn't load the operator actions",
+        "upgrade": "Immediate upgrade",
+        "upgrade_description": "Change plan now, Stripe prorates the difference",
+        "upgrade_unavailable": "Needs a paid Stripe subscription",
+        "credit": "Grant Stripe credit",
+        "credit_description": "Deducted from the next invoices",
+        "credit_unavailable": "Needs a Stripe customer",
+        "join": "Join as member",
+        "joined": "Joined as platform support",
+        "join_description": "Platform support · no seat used"
+      },
+      "credit": {
+        "title": "Grant Stripe credit",
+        "description": "Added to the customer balance and used on the next invoices.",
+        "available": "Available credit",
+        "empty": "No Stripe customer: there is no balance to credit yet.",
+        "amount": "Amount",
+        "ceiling": "Up to {amount}: one year of this workspace's subscription.",
+        "over_ceiling": "Above the most one grant may credit.",
+        "use_max": "Use max",
+        "balance": "Current balance {before} → {after}",
+        "reason": "Reason",
+        "reason_placeholder": "Goodwill for the export outage (ticket #4812).",
+        "reason_help": "{count} / {max} · shown on the Stripe balance transaction",
+        "outcome": "{name} receives {amount} as balance credit.",
+        "outcome_invoice": "The {date} invoice drops to {amount}.",
+        "submit": "Grant credit",
+        "submit_amount": "Grant {amount} credit",
+        "success": "{amount} credited to the Stripe balance.",
+        "error": "The credit could not be granted.",
+        "load_error": "Couldn't load the balance",
+        "unavailable_title": "Nothing to credit",
+        "unavailable_description": "This workspace is billed nothing: complimentary, free or without a plan."
+      },
+      "upgrade": {
+        "title": "Upgrade subscription now",
+        "description": "Preview from Stripe: nothing is charged until you confirm.",
+        "target": "Target plan",
+        "current": "Current",
+        "new": "Target",
+        "subtotal": "Subtotal",
+        "tax": "Tax",
+        "tax_rate": "Tax {rate}% {country}",
+        "tax_reverse_charge": "Tax · reverse charge",
+        "due_today": "Due today",
+        "due_on": "Added to the invoice of {date}",
+        "then": "Then {amount} + tax per {interval} · MRR {before} → {after}",
+        "submit": "Upgrade",
+        "submit_now": "Upgrade and charge {amount}",
+        "submit_next_invoice": "Upgrade · prorated on {date}",
+        "success": "Subscription upgraded to {plan}.",
+        "error": "The upgrade could not be completed.",
+        "load_error": "Couldn't load the eligible plans",
+        "preview_error": "Stripe could not price this upgrade",
+        "unavailable_title": "No immediate upgrade",
+        "unavailable_no_plan": "No higher plan fits this workspace's customer type and seats.",
+        "unavailable_no_subscription": "Only a workspace with a paid Stripe subscription can be upgraded here."
+      },
+      "complimentary": {
+        "title": "Grant complimentary access",
+        "description": "The workspace stops paying and keeps using the plan below.",
+        "lead": "{name} keeps working on the plan below without being billed.",
+        "plan": "Plan",
+        "fits": "{seats} seats in use fit ({max} seats).",
+        "fits_unlimited": "{seats} seats in use · no member limit.",
+        "exceeds": "{seats} seats in use exceed this plan's {max}: existing members are kept.",
+        "expires": "Expires on",
+        "optional": "Optional",
+        "no_end": "Leave empty for no end date.",
+        "expires_help": "Ends today; then the workspace goes Past due until a paid plan is picked. | 1 day; then the workspace goes Past due until a paid plan is picked. | {count} days; then the workspace goes Past due until a paid plan is picked.",
+        "cancellation_title": "The Stripe subscription will be cancelled",
+        "cancellation": "{id} is cancelled now — {mrr}/month stops. The invoice of {date} is not issued. Subscribing again later needs the owner to pick a plan and pay.",
+        "acknowledge": "I understand the paid subscription ends today and cannot be restored from here.",
+        "owner_emailed": "{owner} (workspace owner) is e-mailed “Complimentary access granted”.",
+        "submit": "Grant complimentary access",
+        "submit_update": "Update complimentary access",
+        "submit_cancel": "Cancel subscription and grant access",
+        "success": "Complimentary access granted.",
+        "error": "Complimentary access could not be granted.",
+        "load_error": "Couldn't load the plans"
+      },
+      "join": {
+        "title": "Join {name} as platform support?",
+        "description": "You can open the workspace to help its team.",
+        "confirm": "Join workspace",
+        "impact_seat": "No seat is used: still {seats} / {max}.",
+        "impact_visible": "The workspace owner sees you in Members as “Platform support”.",
+        "impact_leave": "Leave at any time from the workspace's members.",
+        "already_title": "You already belong to {name}",
+        "already_description": "Open the workspace from the workspace switcher.",
+        "success": "You joined this workspace as platform support."
+      },
+      "suspend": {
+        "title": "Suspend {name}?",
+        "description": "Access is blocked right away. Data, volumes and configuration are kept; you can reactivate at any time.",
+        "impact_members": "No member loses access | 1 member loses access | {count} members lose access",
+        "impact_subscription": "Stripe subscription {id} paused",
+        "impact_invoice": "Invoice of {date} not charged ({amount}) · resumes on reactivation",
+        "impact_owner": "{owner} (workspace owner) is e-mailed",
+        "confirm": "Suspend workspace",
+        "success": "Workspace suspended."
+      },
+      "reactivate": {
+        "title": "Reactivate {name}?",
+        "description": "Access is restored right away.",
+        "suspended_since": "Suspended since {date} by {by}.",
+        "automatically": "the unpaid-invoice rule",
+        "impact_members": "No member gets access back | 1 member gets access back immediately | {count} members get access back immediately",
+        "impact_billing": "Stripe billing resumes · next invoice {date}, {amount}",
+        "impact_billing_plain": "Stripe billing resumes",
+        "confirm": "Reactivate",
+        "success": "Workspace reactivated."
+      },
+      "danger": {
+        "title": "Danger zone",
+        "suspend_label": "Suspend workspace",
+        "suspend_description": "Blocks every member and pauses Stripe billing. Reversible.",
+        "suspend": "Suspend…",
+        "reactivate": "Reactivate…"
+      }
+    },
+    "notes": {
+      "title": "Internal notes",
+      "operators_only": "Operators only",
+      "placeholder": "Write an internal note…",
+      "never_shown": "Never shown to the customer",
+      "add": "Add note",
+      "delete": "Delete",
+      "empty": "No note yet",
+      "empty_description": "Notes keep context for the next operator: a promise, a quote, an incident.",
+      "show_all": "Show 1 older note | Show {count} older notes",
+      "delete_confirm": {
+        "title": "Delete this note?",
+        "description": "The note is removed for every operator.",
+        "confirm": "Delete note"
+      },
+      "error": {
+        "load": "Couldn't load the notes",
+        "create": "The note could not be added.",
+        "delete": "The note could not be deleted."
+      }
+    },
+    "permissions": {
+      "workspaces": {
+        "create": "Create workspace",
+        "create_description": "Create a workspace for a customer and choose how it is paid",
+        "period": "Dashboard period",
+        "period_description": "Choose the period the dashboard figures cover",
+        "attention": "Needs attention",
+        "attention_description": "See the queues to act on: past due, complimentary access ending, migrations, open invoices",
+        "headline": "Revenue headline",
+        "headline_description": "See normalised MRR, paying workspaces and trials",
+        "figures": "Revenue figures",
+        "figures_description": "See the revenue figures of the dashboard",
+        "figures_row": "Revenue figures row",
+        "figures_row_description": "See the row of revenue figures",
+        "charts": "Revenue charts",
+        "charts_description": "See paid invoices and workspaces by status",
+        "charts_row": "Revenue charts row",
+        "charts_row_description": "See the row of revenue charts",
+        "by_status_list": "Workspaces by status",
+        "by_status_list_description": "See how many workspaces are in each status",
+        "lists": "Plans and activity",
+        "lists_description": "See plans by MRR and recent activity",
+        "lists_row": "Plans and activity row",
+        "lists_row_description": "See the row of plans and activity",
+        "activity_tabs": "Activity tabs",
+        "activity_tabs_description": "Switch between all, billing and lifecycle activity",
+        "activity_all": "All activity",
+        "activity_all_description": "See every recent billing and lifecycle event",
+        "activity_billing": "Billing activity",
+        "activity_billing_description": "See recent invoices, credit notes and credits",
+        "activity_lifecycle": "Lifecycle activity",
+        "activity_lifecycle_description": "See recent workspace creations, suspensions and reactivations",
+        "list_headline": "Workspace headline",
+        "list_headline_description": "See MRR, past-due workspaces and the endings to act on",
+        "header": "Workspace header",
+        "header_description": "See who the workspace is and reach its operator actions",
+        "facts": "Workspace facts",
+        "facts_description": "See MRR, seats, next invoice, Stripe customer and lifetime revenue",
+        "tabs": "Workspace tabs",
+        "tabs_description": "Switch between the overview, invoices, credit notes, members and activity",
+        "overview": "Workspace overview",
+        "overview_description": "See billing information, the subscription, latest invoices and activity",
+        "billing_info": "Billing information",
+        "billing_info_description": "See the customer's billing identity and address",
+        "subscription_timeline": "Subscription timeline",
+        "subscription_timeline_description": "See the next invoice and the latest subscription events",
+        "recent_activity": "Recent workspace activity",
+        "recent_activity_description": "See the latest events of the workspace",
+        "members": "Members and invitations",
+        "members_description": "See the workspace's members and pending invitations",
+        "invitation_link": "Invitation link",
+        "invitation_link_description": "Reveal and copy an invitation's signup link",
+        "issue_credit_note": "Issue credit note",
+        "issue_credit_note_description": "Credit a paid or open invoice of the workspace",
+        "activity": "Workspace activity",
+        "activity_description": "See every billing and lifecycle event of the workspace",
+        "operator_actions": "Operator actions",
+        "operator_actions_description": "Upgrade the plan now, grant Stripe credit, join as platform support",
+        "available_credit": "Available Stripe credit",
+        "available_credit_description": "See the credit on the customer's Stripe balance",
+        "notes": "Internal notes",
+        "notes_description": "Read and write notes operators keep on the workspace",
+        "suspend_row": "Suspend workspace",
+        "suspend_row_description": "See the danger zone of the workspace",
+        "suspend_button": "Suspend or reactivate",
+        "suspend_button_description": "Suspend the workspace, or reactivate it",
+        "sidebar": "Workspace sidebar",
+        "sidebar_description": "See the operator actions, credit, notes and danger zone",
+        "body": "Workspace body",
+        "body_description": "See the workspace's tabs and sidebar",
+        "body_row": "Workspace body row",
+        "body_row_description": "See the row holding the tabs and the sidebar"
+      }
+    }
+  }
+}

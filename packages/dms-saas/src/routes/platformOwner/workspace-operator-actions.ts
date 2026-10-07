@@ -17,15 +17,35 @@ import {
   operatorActorOf,
   reactivateWorkspaceCommand,
   suspendWorkspaceCommand,
+  type WorkspaceOperatorOptions,
 } from "../../operator-actions";
 import { OperatorActionModel } from "../../operator-actions/db/operator-action.model";
+import {
+  assertBalanceCreditWithinCeiling,
+  balanceCreditCeilingMinor,
+  loadSuspensionImpact,
+  type NextInvoiceRef,
+  nextInvoiceOf,
+  safeUpcomingInvoice,
+  type SuspensionImpact,
+} from "../../operator-actions/previews";
+import {
+  previewManualUpgrade,
+  type UpgradePreview,
+} from "../../operator-actions/upgrade-preview";
 import { ProvisioningAttemptModel } from "../../workspaces/db/provisioning-attempt.model";
+import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
 
 interface OperationBody {
   operationId?: unknown;
+}
+
+interface SuspendBody extends OperationBody {
+  /** The workspace name, typed by the operator to confirm. */
+  confirmName?: unknown;
 }
 
 interface ManualUpgradeBody extends OperationBody {
@@ -40,6 +60,12 @@ interface BalanceCreditBody extends OperationBody {
 interface ValidatedCreditInput {
   amountCents: number;
   reason: string;
+}
+
+/** The operator options, with the credit ceiling and the next invoice. */
+interface OperatorOptionsResponse extends WorkspaceOperatorOptions {
+  creditCeilingMinor: number;
+  nextInvoice: NextInvoiceRef | null;
 }
 
 function requireString(value: unknown, errorCode: string): string {
@@ -76,9 +102,10 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
   @Model(TenantModel)
   declare tenantModel: TenantModel;
 
-  private async assertTenantExists(tenantId: string): Promise<void> {
+  private async assertTenantExists(tenantId: string): Promise<string> {
     const tenant = await this.tenantModel.get(tenantId);
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
+    return tenant.name;
   }
 
   /** List bounded recovery evidence, including attempts that never created a core tenant. */
@@ -131,18 +158,42 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
   async getOptions(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
-  ) {
-    await this.assertTenantExists(tenantId);
-    return getWorkspaceOperatorOptions(tenantId);
+  ): Promise<OperatorOptionsResponse> {
+    const view = await loadWorkspaceOperatorView(tenantId);
+    const [options, preview] = await Promise.all([
+      getWorkspaceOperatorOptions(tenantId),
+      safeUpcomingInvoice(tenantId),
+    ]);
+    return {
+      ...options,
+      creditCeilingMinor: balanceCreditCeilingMinor(view),
+      nextInvoice: nextInvoiceOf(preview),
+    };
   }
 
+  /** What suspending or reactivating changes, for the confirmation dialog. */
+  @Get("/:tenantId/suspension-impact")
+  async getSuspensionImpact(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("tenantId", "param") tenantId: string,
+  ): Promise<SuspensionImpact> {
+    return loadSuspensionImpact(tenantId);
+  }
+
+  /** Suspends once the operator typed the workspace name, as the dialog asks. */
   @Post("/:tenantId/suspend")
   async suspend(
     @AuthOwnerOnly() user: User,
     @Parameter("tenantId", "param") tenantId: string,
-    @JSONBody() body: OperationBody,
+    @JSONBody() body: SuspendBody,
   ) {
-    await this.assertTenantExists(tenantId);
+    const name = await this.assertTenantExists(tenantId);
+    assert(
+      typeof body.confirmName === "string" &&
+        body.confirmName.trim() === name.trim(),
+      HTTP_BAD_REQUEST,
+      "saas.errors.workspace.confirmation_mismatch",
+    );
     return suspendWorkspaceCommand({
       tenantId,
       operationId: operationIdOf(body),
@@ -164,6 +215,19 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     });
   }
 
+  /** Stripe's prorated preview of an immediate upgrade, before it runs. */
+  @Get("/:tenantId/upgrade-preview")
+  async getUpgradePreview(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("tenantId", "param") tenantId: string,
+    @Parameter("planId", "query") planId: unknown,
+  ): Promise<UpgradePreview> {
+    return previewManualUpgrade(
+      tenantId,
+      requireString(planId, "saas.errors.operator.target_plan_required"),
+    );
+  }
+
   @Post("/:tenantId/upgrade")
   async upgrade(
     @AuthOwnerOnly() user: User,
@@ -182,14 +246,16 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     });
   }
 
+  /** Credits the Stripe balance, within a year of what the plan bills. */
   @Post("/:tenantId/balance-credit")
   async grantCredit(
     @AuthOwnerOnly() user: User,
     @Parameter("tenantId", "param") tenantId: string,
     @JSONBody() body: BalanceCreditBody,
   ) {
-    await this.assertTenantExists(tenantId);
     const credit = creditInputOf(body);
+    const view = await loadWorkspaceOperatorView(tenantId);
+    assertBalanceCreditWithinCeiling(view, credit.amountCents);
     return grantBalanceCreditCommand({
       tenantId,
       operationId: operationIdOf(body),

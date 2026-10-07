@@ -6,10 +6,12 @@ import {
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../db";
+import { loadWorkspaceDirectoryFields } from "./directory";
 
 import { registerPastDueBanners } from "./past-due-banner";
 import { registerTrialEndingBanners } from "./trial-ending-banner";
 
+export * from "./directory";
 export * from "./past-due-banner";
 export * from "./recovery";
 export * from "./trial-ending-banner";
@@ -31,6 +33,10 @@ export function deriveBillingState(
   return subscription.status;
 }
 
+/**
+ * Publishes the tenant's billing state and its workspace directory row (plan,
+ * seats, MRR, renewal, owner), derived from the records as they are now.
+ */
 export async function recomputeTenantBillingState(
   tenantId: string,
 ): Promise<void> {
@@ -43,12 +49,15 @@ export async function recomputeTenantBillingState(
       tenantId,
     ).findOne();
     if (subscription?.deletionStartedAt) return;
+    const billingState = deriveBillingState(subscription);
+    const directory = await loadWorkspaceDirectoryFields(
+      tenantId,
+      billingState,
+      subscription,
+      existing,
+    );
     if (
-      await model.upsertForTenant(
-        tenantId,
-        deriveBillingState(subscription),
-        existing,
-      )
+      await model.upsertForTenant(tenantId, billingState, existing, directory)
     )
       return;
   }

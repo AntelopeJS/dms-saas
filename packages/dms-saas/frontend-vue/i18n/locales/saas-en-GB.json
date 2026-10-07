@@ -64,7 +64,10 @@
         "is_cancelled": "This workspace is cancelled.",
         "name_too_long": "The workspace name is too long: 60 characters at most.",
         "free_card_limit_reached": "This card already backs as many free workspaces as allowed. Pick a paid plan or use another card.",
-        "delete_confirmation_mismatch": "The name you typed doesn't match the workspace name."
+        "delete_confirmation_mismatch": "The name you typed doesn't match the workspace name.",
+        "confirmation_mismatch": "Type the workspace name exactly to confirm.",
+        "cancellation_not_acknowledged": "Confirm that the paid Stripe subscription ends before granting complimentary access.",
+        "already_member": "You already belong to this workspace."
       },
       "operator": {
         "external_effect_failed": "The result could not be confirmed. Verify the workspace and billing state before submitting another operation.",
@@ -76,10 +79,13 @@
         "plan_already_applied": "This plan is already applied.",
         "paid_plan_required": "Select a paid plan synchronized with Stripe.",
         "upgrade_only": "Only immediate upgrades are allowed here.",
-        "invalid_credit_amount": "Enter a positive credit amount in cents.",
+        "invalid_credit_amount": "Enter a positive amount.",
         "invalid_credit_reason": "Enter a reason of up to 500 characters.",
         "target_plan_required": "Select a target plan.",
-        "reconciliation_required": "The original Stripe credit result is uncertain and can no longer be retried safely. Reconcile it in Stripe before taking another action."
+        "reconciliation_required": "The original Stripe credit result is uncertain and can no longer be retried safely. Reconcile it in Stripe before taking another action.",
+        "credit_not_billed": "This workspace is billed nothing: there is no subscription to credit.",
+        "credit_over_ceiling": "The credit is above one year of this workspace's subscription.",
+        "upgrade_not_eligible": "This plan is not an immediate upgrade this workspace can take."
       },
       "lifecycle": {
         "consumer_failed": "A required workspace service did not accept the lifecycle change.",
@@ -200,26 +206,14 @@
         "not_found": "Feature not found",
         "value_type_locked": "Plans store a value for this feature: its value type can’t change.",
         "in_use": "Plans still use this feature. Switch it off on each plan first."
-      }
-    },
-    "dashboard": {
-      "title": "Dashboard",
-      "description": "Key metrics across all workspaces: MRR, workspaces, active subscriptions and revenue.",
-      "top_plans": "Top plans",
-      "chart_revenue": "Revenue (last 12 months)",
-      "subscriptions_title": "Subscriptions",
-      "subscriptions_description": "By status",
-      "recent_activity": "Recent activity",
-      "activity": {
-        "workspace_created": "Workspace created",
-        "invoice_paid": "Invoice paid",
-        "empty": "No recent activity"
       },
-      "kpi": {
-        "workspaces": "Workspaces",
-        "mrr": "Monthly recurring revenue",
-        "active_subscriptions": "Active subscriptions",
-        "invoices_open": "Open invoices"
+      "workspace_create": {
+        "name": "Enter the workspace name.",
+        "plan": "Choose a plan.",
+        "owner_email": "Enter the owner's e-mail.",
+        "access": "Choose how the workspace is paid for.",
+        "free_until_past": "The end date of complimentary access must be in the future.",
+        "owner_pays_needs_paid_plan": "Only a paid plan synced with Stripe can be paid by its owner."
       }
     },
     "register": {
@@ -261,165 +255,9 @@
       }
     },
     "workspaces": {
-      "admin": {
-        "suspend": "Suspend",
-        "unsuspend": "Reactivate",
-        "suspended": "Workspace suspended",
-        "unsuspended": "Workspace reactivated",
-        "action_error": "Workspace action failed",
-        "confirm_suspend": {
-          "title": "Suspend this workspace",
-          "description_with_pause": "The workspace will be blocked for its users and Stripe billing paused. Confirm?",
-          "description_local": "The workspace will be blocked for its users (no Stripe subscription to pause). Confirm?"
-        },
-        "confirm_unsuspend": {
-          "title": "Reactivate this workspace",
-          "description": "Access will be restored and Stripe billing will resume. Confirm?"
-        },
-        "comp": {
-          "title": "Complimentary access",
-          "grant": "Grant free access",
-          "update": "Update free access",
-          "modal_title": "Grant complimentary access",
-          "modal_description": "Switches the workspace to free access on the selected plan. Any active Stripe subscription will be cancelled.",
-          "plan": "Plan",
-          "free_until": "Expires on (optional)",
-          "free_until_hint": "Leave empty for unlimited access. On expiry, the workspace moves to past_due then gets suspended.",
-          "hint_members_preserved": "Existing members are kept even if they exceed the new plan's limit.",
-          "hint_will_unsuspend": "The workspace is currently suspended: this action will also reactivate it.",
-          "submit": "Apply",
-          "success": "Complimentary access granted",
-          "error": "Failed to grant complimentary access"
-        },
-        "create": {
-          "button": "Create workspace",
-          "title": "Create workspace",
-          "description": "Provision a new workspace and assign its owner.",
-          "success": "Workspace created.",
-          "error": {
-            "name": "Name is required.",
-            "plan": "Plan is required.",
-            "owner_email": "Owner email is required.",
-            "free_until_past": "The expiration date must be in the future.",
-            "load": "Could not load the plans.",
-            "failed": "Could not create the workspace."
-          },
-          "field": {
-            "name": "Workspace name",
-            "plan": "Plan",
-            "plan_description": "Initial subscription plan for the workspace.",
-            "owner_email": "Owner email",
-            "owner_email_description": "If the email matches an existing user, they are added as owner. Otherwise an invite is sent.",
-            "name_description": "Internal workspace name (can be renamed later).",
-            "free_until": "Free until",
-            "free_until_description": "Optional. Date when the comp expires. Leave empty for indefinite. After that date the workspace is flagged past_due and access is blocked until a paid plan is picked."
-          },
-          "placeholder": {
-            "name": "Acme Corp",
-            "plan": "Select a plan",
-            "owner_email": "owner{'@'}example.com"
-          },
-          "submit": "Create workspace",
-          "email_failed": {
-            "title": "Workspace created, but the invitation email could not be sent",
-            "description": "The owner has not been notified. Copy the invitation link and send it to them yourself."
-          }
-        }
-      },
-      "operator": {
-        "title": "Owner operations",
-        "description": "Immediate Stripe billing actions for this workspace.",
-        "upgrade": {
-          "button": "Immediate upgrade",
-          "title": "Upgrade subscription now",
-          "plan_label": "Eligible target plan",
-          "confirm": "Change {current} to {target} at {price}. Stripe will prorate this immediately.",
-          "success": "Subscription upgraded.",
-          "unavailable": "No eligible immediate upgrade is available for this workspace."
-        },
-        "credit": {
-          "button": "Grant Stripe credit",
-          "title": "Grant customer-balance credit",
-          "amount_label": "Amount in cents",
-          "reason_label": "Reason",
-          "confirm": "Grant {amount} of Stripe customer credit for: {reason}",
-          "available": "Available Stripe credit: {amount}",
-          "success": "Customer credit granted.",
-          "unavailable": "This workspace has no Stripe customer balance."
-        },
-        "confirm": {
-          "title": "Confirm submitted values",
-          "submit": "Confirm operation"
-        },
-        "error": {
-          "load": "Unable to load owner operations.",
-          "action": "The operation could not be completed."
-        }
-      },
-      "title": "Workspaces",
-      "description": "All customer workspaces and their subscriptions.",
-      "caption": "All workspaces",
-      "detail": "Workspace detail",
-      "detail_description": "Subscription, billing info and ownership details for a single workspace.",
-      "billing_section": "Billing",
       "column": {
         "name": "Name",
-        "status": "Status",
-        "plan": "Plan",
-        "stripe_customer": "Stripe customer",
-        "created_at": "Created",
-        "company_name": "Company name",
-        "customer_type": "Customer type",
-        "vat_number": "VAT number",
-        "owner": "Owner",
-        "owner_status": "Owner status"
-      },
-      "status": {
-        "active": "Active",
-        "trialing": "Trial",
-        "past_due": "Past due",
-        "suspended": "Suspended",
-        "cancelled": "Cancelled",
-        "pending_payment": "Pending payment"
-      },
-      "join": {
-        "button": "Join as member",
-        "success": "You joined this workspace.",
-        "error": "Could not join this workspace.",
-        "already_member": "You are already a member of this workspace."
-      },
-      "kpi": {
-        "workspaces": "Workspaces",
-        "active": "Active",
-        "free": "Free / comped",
-        "past_due": "Past due"
-      },
-      "billing_state": {
-        "free": "Free",
-        "active": "Active",
-        "trialing": "Trialing",
-        "past_due": "Past due",
-        "suspended": "Suspended",
-        "cancelled": "Cancelled",
-        "pending_payment": "Pending payment"
-      },
-      "owner_status": {
-        "joined": "Joined",
-        "invitation_pending": "Invitation pending",
-        "invitation_expired": "Invitation expired",
-        "none": "No owner"
-      },
-      "summary": {
-        "title": "Workspace summary",
-        "members": "{count} member | {count} members",
-        "platform_support": "{count} platform support | {count} platform support",
-        "per_month": "/mo",
-        "pending_invitations": "{count} pending invitation | {count} pending invitations"
-      },
-      "tabs": {
-        "invoices": "Invoices",
-        "credit_notes": "Credit notes",
-        "members": "Members"
+        "created_at": "Created"
       },
       "create": {
         "button": "Create workspace",
@@ -434,37 +272,6 @@
         },
         "placeholder": {
           "name": "Acme Corp"
-        }
-      },
-      "invitations": {
-        "caption": "Pending invitations",
-        "column": {
-          "status": "Status",
-          "sent_at": "Sent",
-          "expires_at": "Expires"
-        },
-        "status": {
-          "pending": "Pending",
-          "expired": "Expired"
-        },
-        "action": {
-          "resend": "Resend",
-          "resend_success": "Invitation sent again.",
-          "resend_confirm_title": "Resend this invitation?",
-          "resend_confirm_description": "A new link valid for 7 days is emailed to the invitee. The previous link stops working.",
-          "copy_link": "Copy invitation link"
-        },
-        "link": {
-          "title": "Invitation link",
-          "description": "Send this link to the invitee so they can create their account and join the workspace.",
-          "label": "Signup link",
-          "expires": "Valid until {date}.",
-          "copy": "Copy",
-          "copied": "Invitation link copied.",
-          "copy_failed": "Could not copy the link. Copy it manually:",
-          "error": "Could not retrieve the invitation link.",
-          "warning": "Anyone with this link can join the workspace as the invitee. Share it only with them.",
-          "close": "Close"
         }
       }
     },
@@ -556,23 +363,6 @@
       "no": "No",
       "load_failed": "Failed to load this section.",
       "retry": "Retry"
-    },
-    "notes": {
-      "title": "Internal notes",
-      "placeholder": "Write an internal note…",
-      "add": "Add",
-      "delete": "Delete",
-      "delete_confirm": {
-        "title": "Delete this note?",
-        "description": "This note will be permanently removed.",
-        "confirm": "Delete"
-      },
-      "empty": "No notes yet.",
-      "error": {
-        "load": "Unable to load notes",
-        "create": "Unable to add the note",
-        "delete": "Unable to delete the note"
-      }
     },
     "notifications": {
       "subjects": {

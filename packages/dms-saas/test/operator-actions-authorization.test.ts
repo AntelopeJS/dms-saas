@@ -41,6 +41,8 @@ describe("platform-owner operation authorization", () => {
       "getOptions",
       "getProvisioningAttempt",
       "getProvisioningAttempts",
+      "getSuspensionImpact",
+      "getUpgradePreview",
       "grantCredit",
       "suspend",
       "unsuspend",
