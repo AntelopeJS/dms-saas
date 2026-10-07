@@ -7,6 +7,7 @@ export * from "./platform-notes";
 export * from "./platform-owners";
 export * from "./segments";
 export * from "./users-detail";
+export * from "./workspace-detail";
 export * from "./workspace-invitations";
 export * from "./workspace-operator-actions";
 export * from "./workspaces-admin";

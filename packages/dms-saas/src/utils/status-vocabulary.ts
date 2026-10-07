@@ -8,6 +8,7 @@ import {
   CREDIT_NOTE_TYPES,
   INVOICE_STATUSES,
   PLAN_MIGRATION_STATUSES,
+  WORKSPACE_OWNER_STATUSES,
 } from "../db";
 
 /**
@@ -52,6 +53,12 @@ export const STATUS_TONES = {
     partially_failed: "warning",
     reconciliation_required: "error",
   },
+  owner: {
+    joined: "success",
+    invited: "warning",
+    expired: "error",
+    none: "neutral",
+  },
 } as const satisfies Record<string, Record<string, Tone>>;
 
 /** A family of statuses sharing one vocabulary and one tone table. */
@@ -63,6 +70,7 @@ const STATUS_VALUES: Record<StatusFamily, readonly string[]> = {
   credit_note: CREDIT_NOTE_STATUSES,
   credit_note_type: CREDIT_NOTE_TYPES,
   migration: PLAN_MIGRATION_STATUSES,
+  owner: WORKSPACE_OWNER_STATUSES,
 };
 
 /** The i18n key of one status label. */

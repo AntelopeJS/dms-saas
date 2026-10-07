@@ -35,8 +35,8 @@ import {
   isDowngrade,
 } from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
+import { canStartFirstPaidSubscription } from "../../workspaces/first-payment";
 import {
-  canRecoverComplimentarySubscription,
   isComplimentaryPlanLocked,
   isComplimentarySubscription,
 } from "../../workspaces/complimentary";
@@ -186,8 +186,7 @@ export class SaasTenantPlanController extends Controller(
       freeUntil: subscription?.freeUntil ?? null,
       isComplimentary: isComplimentarySubscription(subscription),
       isPlanChangeLocked: isComplimentaryPlanLocked(subscription),
-      canRecoverComplimentary:
-        canRecoverComplimentarySubscription(subscription),
+      canRecoverComplimentary: canStartFirstPaidSubscription(subscription),
       paidUsageStartedAt: subscription?.paidUsageStartedAt ?? null,
       paidUsagePeriods: subscription?.paidUsagePeriods ?? null,
       currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
@@ -265,7 +264,7 @@ export class SaasTenantPlanController extends Controller(
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
     const subscription = await tenantSubscriptionModel.findOne();
     this.assertPlanChangeAllowed(subscription, user);
-    const isRecovery = canRecoverComplimentarySubscription(subscription);
+    const isRecovery = canStartFirstPaidSubscription(subscription);
     if (!isRecovery) await AssertTenantAccess(user._id, tenantId);
     const billingInfo = await tenantBillingInfoModel.findOne();
     const newPlan = await loadAndValidateTargetPlan(

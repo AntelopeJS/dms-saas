@@ -11,11 +11,13 @@ import type { DmsSaasStripeConfig } from "../types";
 export const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2026-08-26.dahlia";
 
 const SECRET_KEY_PREFIX = "sk_";
+const TEST_SECRET_KEY_PREFIX = "sk_test_";
 const PLACEHOLDER_MARKER = "placeholder";
 
 let stripeClient: Stripe | null = null;
 let stripeWebhookSecret: string | null = null;
 let stripeConfigured = false;
+let stripeTestMode = false;
 
 function isUsableSecretKey(key: string): boolean {
   return (
@@ -31,6 +33,12 @@ export function initStripeClient(config: DmsSaasStripeConfig): void {
   });
   stripeWebhookSecret = config.webhookSecret;
   stripeConfigured = isUsableSecretKey(config.secretKey);
+  stripeTestMode = config.secretKey.startsWith(TEST_SECRET_KEY_PREFIX);
+}
+
+/** Whether the configured key is a test key: dashboard links then open test data. */
+export function isStripeTestMode(): boolean {
+  return stripeTestMode;
 }
 
 export function isStripeConfigured(): boolean {

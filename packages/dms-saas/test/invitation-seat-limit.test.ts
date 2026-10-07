@@ -38,14 +38,15 @@ import {
 import { setRuntimeConfig } from "../src/config";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import { getSeatUsage, registerSeatHooks } from "../src/plans";
-import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
-import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
+import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
+import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
 import {
   resendInvitation,
   resolveInvitationLink,
 } from "../src/workspaces/invitations";
 
-vi.mock("../src/billing-state", () => ({
+vi.mock("../src/billing-state", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/billing-state")>()),
   recomputeTenantBillingState: async () => undefined,
 }));
 vi.mock("../src/stripe/client", async (importOriginal) => ({
@@ -146,13 +147,11 @@ async function insertSingleSeatPlan(): Promise<string> {
 }
 
 async function createFreeWorkspaceFor(ownerEmail: string) {
-  const controller = new SaasWorkspacesListController();
-  controller.planModel = GetModel(PlanModel);
-  controller.tenantModel = GetModel(TenantModel);
-  return controller.createWorkspace(operator, {
+  return new SaasWorkspacesAdminController().createWorkspace(operator, {
     name: "Free workspace",
     ownerEmail,
     planId: await insertSingleSeatPlan(),
+    access: "complimentary",
   });
 }
 
@@ -191,7 +190,7 @@ async function insertPlatformOwner(): Promise<User> {
 }
 
 async function joinAsMember(platformOwner: User, tenantId: string) {
-  const controller = new SaasWorkspacesController();
+  const controller = new SaasWorkspacesAdminController();
   controller.tenantModel = GetModel(TenantModel);
   controller.userModel = GetModel(UserModel);
   return controller.joinAsMember(platformOwner, tenantId);
@@ -340,19 +339,17 @@ describe("platform owners supporting a full workspace", () => {
     const { email, tenantId } = await createFreeWorkspace();
     await acceptPendingInvite(tenantId, await insertUser(email));
     await joinAsMember(await insertPlatformOwner(), tenantId);
-    const controller = new SaasWorkspacesController();
-    controller.tenantModel = GetModel(TenantModel);
-    controller.userModel = GetModel(UserModel);
-    controller.planModel = GetModel(PlanModel);
+    const overview = await new SaasWorkspaceDetailController().overview(
+      operator,
+      tenantId,
+    );
 
-    const detail = await controller.getDetail(operator, tenantId);
-
-    expect(detail).toMatchObject({
-      membersCount: 1,
-      platformSupportCount: 1,
-      pendingInvitationsCount: 0,
+    expect(overview).toMatchObject({
+      members: 1,
+      platformSupport: 1,
+      pendingInvitations: 0,
+      seats: 1,
     });
-    expect(detail.members).toHaveLength(2);
   });
 
   it("lets one platform owner support several workspaces", async () => {

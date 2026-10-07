@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   JSONBody,
-  Parameter,
   Post,
   Put,
   type RequestContext,
@@ -12,33 +11,19 @@ import {
 import { assert } from "@antelopejs/interface-api-util";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel, Model } from "@antelopejs/interface-database-decorators";
-import {
-  type TenantMember,
-  TenantMemberModel,
-  TenantModel,
-} from "@antelopejs/interface-dms/db";
+import { TenantMemberModel, TenantModel } from "@antelopejs/interface-dms/db";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
-import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
-import { AuthOwnerOnly, AuthRawUser } from "@antelopejs/interface-dms/auth";
+import { AuthRawUser } from "@antelopejs/interface-dms/auth";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
 import {
-  type CreditNote,
-  CreditNoteModel,
-  type Invoice,
-  InvoiceModel,
   type Plan,
   PlanModel,
-  type TenantBillingInfo,
-  TenantBillingInfoModel,
-  type TenantSubscription,
   TenantSubscriptionModel,
   type TenantSubscriptionStatus,
 } from "../../db";
 import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
-import { getSeatUsage } from "../../plans";
-import { buildWorkspaceProjection } from "../../utils";
 import type {
   CardDetails,
   WorkspaceBillingProfile,
@@ -47,7 +32,6 @@ import type {
 } from "../../workspaces";
 import {
   assertBillingCountry,
-  countPendingInvitations,
   ensurePlanIsAvailableForCustomer,
   isFreePlan,
   provisionWorkspace,
@@ -59,7 +43,6 @@ import {
 } from "../../workspaces";
 
 const HTTP_NOT_FOUND = 404;
-const HTTP_CONFLICT = 409;
 const HTTP_BAD_REQUEST = 400;
 
 const CANCELLED_STATUS: TenantSubscriptionStatus = "cancelled";
@@ -128,72 +111,6 @@ interface WorkspaceRenameBody {
 interface RenamedWorkspace {
   _id: string;
   name: string;
-}
-
-interface WorkspaceMemberRow {
-  _id: string;
-  userId: string;
-  email: string;
-  name: string | null;
-  isTenantOwner: boolean;
-  joinedAt: Date;
-}
-
-async function buildMemberRows(
-  members: TenantMember[],
-  userModel: UserModel,
-): Promise<WorkspaceMemberRow[]> {
-  const memberUsers = await Promise.all(
-    members.map((m) => userModel.get(m.userId)),
-  );
-  return members.map((m, i) => ({
-    _id: m._id,
-    userId: m.userId,
-    email: memberUsers[i]?.email ?? m.userId,
-    name: memberUsers[i]?.name ?? null,
-    isTenantOwner: m.isTenantOwner,
-    joinedAt: m.joinedAt,
-  }));
-}
-
-function sortByIssuedAtDesc<T extends { issuedAt: Date | string }>(
-  items: readonly T[],
-): T[] {
-  return items
-    .slice()
-    .sort((a, b) => +new Date(b.issuedAt) - +new Date(a.issuedAt));
-}
-
-interface WorkspaceRelations {
-  subscription: TenantSubscription | undefined;
-  billingInfo: TenantBillingInfo | undefined;
-  members: TenantMember[];
-  invoices: Invoice[];
-  creditNotes: CreditNote[];
-  plan: Plan | null;
-}
-
-async function loadWorkspaceRelations(
-  tenantId: string,
-  planModel: PlanModel,
-): Promise<WorkspaceRelations> {
-  const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
-  const tenantBillingInfoModel = GetModel(TenantBillingInfoModel, tenantId);
-  const memberModel = GetModel(TenantMemberModel, tenantId);
-  const invoiceModel = GetModel(InvoiceModel, tenantId);
-  const creditNoteModel = GetModel(CreditNoteModel, tenantId);
-  const [subscription, billingInfo, members, invoices, creditNotes] =
-    await Promise.all([
-      tenantSubscriptionModel.findOne(),
-      tenantBillingInfoModel.findOne(),
-      memberModel.listAll(),
-      invoiceModel.getAllInvoices(),
-      creditNoteModel.getAll(),
-    ]);
-  const plan = subscription?.planId
-    ? ((await planModel.get(subscription.planId)) ?? null)
-    : null;
-  return { subscription, billingInfo, members, invoices, creditNotes, plan };
 }
 
 export class SaasWorkspacesController extends Controller(
@@ -386,68 +303,5 @@ export class SaasWorkspacesController extends Controller(
     @Context() ctx: RequestContext,
   ): Promise<WorkspaceDeletionResult> {
     return requestWorkspaceDeletion(getRequestTenantId(ctx));
-  }
-
-  @Get("/:id")
-  async getDetail(@AuthOwnerOnly() _user: User, @Parameter("id") id: string) {
-    const tenant = await this.tenantModel.get(id);
-    assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
-
-    const { subscription, billingInfo, members, invoices, creditNotes, plan } =
-      await loadWorkspaceRelations(id, this.planModel);
-    const [memberRows, pendingInvitationsCount, seats] = await Promise.all([
-      buildMemberRows(members, this.userModel),
-      countPendingInvitations(id),
-      getSeatUsage(id),
-    ]);
-
-    const projection = buildWorkspaceProjection({
-      tenant,
-      subscription,
-      billingInfo,
-      plan,
-      membersCount: members.length,
-      invoices,
-      now: new Date(),
-    });
-
-    return {
-      _id: projection._id,
-      name: projection.name,
-      createdAt: projection.createdAt,
-      status: projection.status,
-      planId: projection.planId,
-      planName: projection.planName,
-      currency: projection.currency,
-      mrr: projection.mrr,
-      // Counted as the customer's seats count them: platform support is
-      // announced apart, so the two numbers match the members page.
-      membersCount: seats.members,
-      platformSupportCount: seats.platformSupport.length,
-      // Shown beside the member count: a workspace created for an owner who
-      // has not signed up yet has no member, only this invitation.
-      pendingInvitationsCount,
-      subscription: subscription ?? null,
-      billingInfo: billingInfo ?? null,
-      members: memberRows,
-      invoices: sortByIssuedAtDesc(invoices),
-      creditNotes: sortByIssuedAtDesc(creditNotes),
-    };
-  }
-
-  @Post("/:id/join")
-  async joinAsMember(@AuthOwnerOnly() user: User, @Parameter("id") id: string) {
-    const tenant = await this.tenantModel.get(id);
-    assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
-
-    const memberModel = GetModel(TenantMemberModel, id);
-    const existing = await memberModel.getByUser(user._id);
-    assert(!existing, HTTP_CONFLICT, "saas.workspaces.join.already_member");
-
-    await applyTenantOwnership(this.userModel, user._id, id, {
-      roleIds: [],
-      isTenantOwner: false,
-    });
-    return { joined: true };
   }
 }

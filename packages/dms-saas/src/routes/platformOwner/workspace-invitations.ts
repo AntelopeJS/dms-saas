@@ -8,11 +8,16 @@ import {
   copyInvitationLinkCommand,
   operatorActorOf,
   resendInvitationCommand,
+  revokeInvitationCommand,
 } from "../../operator-actions";
 import { inviterNameOf } from "../../workspaces/invitations";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_GATEWAY = 502;
+
+interface RevokedInvitation {
+  revoked: true;
+}
 
 /** Back-office handling of a workspace's pending invitations. */
 export class SaasWorkspaceInvitationsController extends Controller(
@@ -64,5 +69,21 @@ export class SaasWorkspaceInvitationsController extends Controller(
       inviteId,
       actor: operatorActorOf(user),
     });
+  }
+
+  /** Withdraws the invitation: its link stops working, its seat is freed. */
+  @Post("/:tenantId/invitations/:inviteId/revoke")
+  async revoke(
+    @AuthOwnerOnly() user: User,
+    @Parameter("tenantId", "param") tenantId: string,
+    @Parameter("inviteId", "param") inviteId: string,
+  ): Promise<RevokedInvitation> {
+    await this.assertTenantExists(tenantId);
+    await revokeInvitationCommand({
+      tenantId,
+      inviteId,
+      actor: operatorActorOf(user),
+    });
+    return { revoked: true };
   }
 }

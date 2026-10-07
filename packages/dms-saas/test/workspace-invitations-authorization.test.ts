@@ -31,11 +31,12 @@ vi.mock("../src/operator-actions", () => ({
 import { SaasWorkspaceInvitationsController } from "../src/routes/platformOwner/workspace-invitations";
 
 describe("back-office invitation authorization", () => {
-  it("restricts copying and resending invitation links to platform owners", () => {
+  it("restricts copying, resending and revoking invitations to platform owners", () => {
     expect(SaasWorkspaceInvitationsController).toBeTypeOf("function");
     expect([...new Set(ownerAuthorization.methods)].sort()).toEqual([
       "copyLink",
       "resend",
+      "revoke",
     ]);
   });
 });
