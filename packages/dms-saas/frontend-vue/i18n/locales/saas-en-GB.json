@@ -107,10 +107,10 @@
         "already_pending": "A migration is already pending for this plan"
       },
       "platform_owner": {
-        "already_owner": "User is already a platform owner",
-        "not_owner": "User is not a platform owner",
-        "cannot_demote_self": "Cannot demote yourself",
-        "cannot_demote_last_owner": "Cannot demote the last platform owner"
+        "already_owner": "This user is already a platform admin",
+        "not_owner": "This user is not a platform admin",
+        "cannot_demote_self": "You can't demote yourself. Ask another platform admin.",
+        "cannot_demote_last_owner": "The platform needs at least one platform admin"
       },
       "webhook": {
         "invalid_signature": "Invalid webhook signature"
@@ -132,7 +132,10 @@
         "unknown_field": "Unknown field",
         "conditions_too_deep": "Conditions nested too deeply",
         "invalid_role": "Invalid membership role",
-        "invalid_quantifier": "Invalid quantifier"
+        "invalid_quantifier": "Invalid quantifier",
+        "edit_conflict": "This segment changed since you opened it. Reload it, then save again.",
+        "name_required": "Give the segment a name.",
+        "too_long": "This text is too long."
       },
       "stripe": {
         "subscription_no_item": "Stripe subscription has no billable item"
@@ -614,56 +617,6 @@
         }
       }
     },
-    "users": {
-      "title": "Users",
-      "description": "All platform users and their workspace memberships.",
-      "caption": "All users",
-      "detail": "User detail",
-      "detail_description": "User profile, workspace memberships and pending invites.",
-      "platform_owner_badge": "Platform owner",
-      "workspace_owner_badge": "Owner",
-      "workspaces_section": "Workspaces",
-      "column": {
-        "email": "Email",
-        "name": "Name",
-        "platform_owner": "Platform owner",
-        "created_at": "Created",
-        "segments": "Segments"
-      },
-      "summary": {
-        "title": "User profile",
-        "workspaces": "{count} workspace(s) · {owned} owned, {member} member"
-      },
-      "tabs": {
-        "workspaces": "Workspaces",
-        "invoices": "Billing"
-      },
-      "invoices_section": "Billing across their workspaces",
-      "info": {
-        "language": "Language",
-        "last_active": "Last active",
-        "two_factor": "2FA enabled",
-        "email_verified": "Email verified",
-        "email_not_verified": "Email not verified",
-        "segments": "Segments"
-      }
-    },
-    "platform_owners": {
-      "actions": {
-        "promote": "Promote to owner",
-        "demote": "Demote"
-      },
-      "confirm_promote": {
-        "title": "Promote to platform owner",
-        "description": "This user will gain full admin access across all workspaces. Confirm?"
-      },
-      "confirm_demote": {
-        "title": "Demote this platform owner",
-        "description": "This user will lose all platform admin rights. Confirm?"
-      },
-      "promoted": "User promoted to platform owner",
-      "demoted": "Platform owner demoted"
-    },
     "invoices": {
       "title": "Invoices",
       "description": "Invoices issued via Stripe across all workspaces.",
@@ -738,162 +691,6 @@
         "submit": "Issue",
         "success": "Credit note issued",
         "error": "Failed to issue credit note"
-      }
-    },
-    "segments": {
-      "title": "Segments",
-      "description": "User segments built from rule-based conditions.",
-      "caption": "All segments",
-      "column": {
-        "name": "Name",
-        "description": "Description",
-        "estimated_count": "Matches",
-        "last_evaluated_at": "Last evaluated",
-        "name_description": "Segment name shown in lists and filters.",
-        "description_description": "Optional description of what this segment represents."
-      },
-      "field": {
-        "conditions": "Conditions",
-        "conditions_description": "Rules that determine which users belong to this segment."
-      },
-      "placeholder": {
-        "name": "Segment name"
-      },
-      "actions": {
-        "export_owners": "Export users (CSV)"
-      },
-      "conditions": {
-        "and": "AND",
-        "or": "OR",
-        "add": "Add condition",
-        "add_group": "Add group",
-        "logical_label": "Logical",
-        "add_workspace_ref": "Add a workspace condition",
-        "workspace_ref_label": "User's workspaces"
-      },
-      "operators": {
-        "eq": "Equals",
-        "neq": "Not equals",
-        "gt": "Greater than",
-        "gte": "Greater or equal",
-        "lt": "Less than",
-        "lte": "Less or equal",
-        "contains": "Contains",
-        "in": "In",
-        "nin": "Not in"
-      },
-      "boolean": {
-        "true": "Yes",
-        "false": "No"
-      },
-      "units": {
-        "days": "days",
-        "count": "units"
-      },
-      "fields": {
-        "name": {
-          "label": "Workspace name",
-          "description": "Display name of the workspace."
-        },
-        "created_at": {
-          "label": "Created at",
-          "description": "Date the workspace was created."
-        },
-        "age_in_days": {
-          "label": "Age (days)",
-          "description": "Number of days since the workspace was created."
-        },
-        "plan_id": {
-          "label": "Plan",
-          "description": "Plan the workspace is subscribed to."
-        },
-        "mrr": {
-          "label": "MRR",
-          "description": "Monthly recurring revenue of the workspace."
-        },
-        "is_paying": {
-          "label": "Paying",
-          "description": "Workspace generates MRR > 0."
-        },
-        "status": {
-          "label": "Subscription status",
-          "description": "Subscription status of the workspace."
-        },
-        "has_stripe_customer": {
-          "label": "Stripe customer",
-          "description": "Workspace has a Stripe customer id."
-        },
-        "is_on_trial": {
-          "label": "On trial",
-          "description": "Workspace is in trial period."
-        },
-        "customer_type": {
-          "label": "Customer type",
-          "description": "Individual or business."
-        },
-        "members_count": {
-          "label": "Members count",
-          "description": "Total number of members."
-        },
-        "total_revenue": {
-          "label": "Total revenue",
-          "description": "Sum of paid invoices."
-        },
-        "days_since_last_invoice": {
-          "label": "Days since last invoice",
-          "description": "Days elapsed since the most recent invoice."
-        },
-        "user_email": {
-          "label": "Email",
-          "description": "The user's email address."
-        },
-        "user_name": {
-          "label": "Name",
-          "description": "The user's display name."
-        },
-        "user_language": {
-          "label": "Language",
-          "description": "The user's language code (e.g. fr, en)."
-        },
-        "user_created_at": {
-          "label": "Sign-up date",
-          "description": "Date the user signed up."
-        },
-        "user_age_in_days": {
-          "label": "Account age (days)",
-          "description": "Number of days since the user signed up."
-        },
-        "user_is_validated": {
-          "label": "Email verified",
-          "description": "The user has verified their email address."
-        },
-        "days_since_last_active": {
-          "label": "Days since last active",
-          "description": "Number of days since the user's last active session."
-        },
-        "workspaces_count": {
-          "label": "Workspace count",
-          "description": "Number of workspaces the user is a member of."
-        },
-        "is_owner_of_any_workspace": {
-          "label": "Owns a workspace",
-          "description": "The user owns at least one workspace."
-        }
-      },
-      "export": {
-        "title": "Segment export",
-        "preparing": "Preparing the download…",
-        "done_message": "The CSV file has been downloaded.",
-        "success_title": "Export downloaded",
-        "error_title": "Export failed"
-      },
-      "role": {
-        "any": "Any role in",
-        "owner": "Owner of"
-      },
-      "quantifier": {
-        "any": "At least one workspace",
-        "all": "All workspaces"
       }
     },
     "settings": {
