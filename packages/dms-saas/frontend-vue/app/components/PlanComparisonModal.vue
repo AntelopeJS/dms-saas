@@ -93,7 +93,12 @@ function isCurrent(plan: OfferedPlanView): boolean {
 }
 
 function isDowngradeTarget(plan: OfferedPlanView): boolean {
-	return isPlanDowngrade(currentPlan.value, plan, !!props.isCurrentPaid)
+	return isPlanDowngrade(
+		currentPlan.value,
+		plan,
+		!!props.isCurrentPaid,
+		props.seats.occupied,
+	)
 }
 
 function priceLine(plan: OfferedPlanView): string {

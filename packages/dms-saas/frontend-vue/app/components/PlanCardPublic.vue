@@ -120,10 +120,10 @@ const accentStyle = computed(() =>
 						class="text-success mt-0.5 size-4 shrink-0"
 					/>
 					<span>
-						<span v-if="item.value" class="text-highlighted font-medium">
-							{{ item.value }}
-						</span>
 						{{ item.name }}
+						<span v-if="item.value" class="text-highlighted font-medium">
+							· {{ item.value }}
+						</span>
 					</span>
 				</li>
 			</ul>

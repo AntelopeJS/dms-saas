@@ -1,9 +1,8 @@
-/** How a plan bills: one price for the workspace, or a price per seat. */
-export type PlanBillingMode = 'flat' | 'seat'
+import type { PlanBillingMode } from './useTenantPlan'
 
 /** The price fields a plan label is written from. */
 export interface PricedPlan {
-	/** Minor units, as stored. */
+	/** Major units, as plans store it (49 for €49). */
 	price: number
 	currency: string
 	interval: PlanInterval
@@ -19,11 +18,11 @@ const FREE_PRICE = 0
  */
 export function usePlanPriceLabel(): (plan: PricedPlan) => string {
 	const { t } = useI18n()
-	const { formatMinorUnits } = useMoneyFormat()
+	const { formatMajorUnits } = useMoneyFormat()
 	return (plan) => {
 		if (plan.price <= FREE_PRICE) return t(`${KEY_PREFIX}.free`)
 		return t(`${KEY_PREFIX}.${plan.billingMode}_${plan.interval}`, {
-			price: formatMinorUnits(plan.price, plan.currency),
+			price: formatMajorUnits(plan.price, plan.currency),
 		})
 	}
 }

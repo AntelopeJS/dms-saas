@@ -40,6 +40,7 @@ vi.mock("../src/db", () => ({
 vi.mock("../src/plans", () => ({ isDowngrade: vi.fn(() => false) }));
 vi.mock("../src/plans/seat-capacity", () => ({
   countOccupiedSeats: vi.fn(async () => 1),
+  countSeatsToCompare: vi.fn(async () => 1),
   fitsWithinSeatLimit: vi.fn(() => true),
 }));
 vi.mock("../src/routes/tenant/tenant-plan-ops", () => ({

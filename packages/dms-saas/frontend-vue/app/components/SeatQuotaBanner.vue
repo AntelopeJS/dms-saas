@@ -139,8 +139,8 @@ onMounted(refresh)
 					:value-label="valueLabel"
 					format="fraction"
 					legend
-					:warn-at="WARN_AT_PERCENT"
-					:error-at="ERROR_AT_PERCENT"
+					:warn-at="seatState === 'unlimited' ? undefined : WARN_AT_PERCENT"
+					:error-at="seatState === 'unlimited' ? undefined : ERROR_AT_PERCENT"
 				>
 					<template v-if="quota.isTenantOwner" #legend-end>
 						<UButton

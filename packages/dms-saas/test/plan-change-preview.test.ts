@@ -30,6 +30,7 @@ vi.mock("../src/stripe/client", () => ({
 vi.mock("../src/plans", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/plans")>()),
   countOccupiedSeats: async () => harness.occupiedSeats,
+  countSeatsToCompare: async () => harness.occupiedSeats,
 }));
 vi.mock("../src/routes/tenant/tenant-plan-checkout", () => ({
   isCheckoutTrialAvailable: async () => harness.isTrialAvailable,

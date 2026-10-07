@@ -64,7 +64,7 @@ const CARD_ERROR_KEYS = new Set([
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
 const { resolveApiError } = useApiErrorMessage()
-const { formatMinorUnits } = useMoneyFormat()
+const { formatMajorUnits } = useMoneyFormat()
 const planPriceLabel = usePlanPriceLabel()
 const planIntervalLabel = usePlanIntervalLabel(`${KEYS}.interval`)
 const planDescription = usePlanDescription()
@@ -115,7 +115,7 @@ const cardBadge = computed(() =>
 const chargeSentence = computed(() => {
 	const plan = selectedPlan.value
 	if (!plan || requirement.value !== 'payment') return null
-	const price = formatMinorUnits(plan.price, plan.currency)
+	const price = formatMajorUnits(plan.price, plan.currency)
 	if (plan.trialDays <= 0) {
 		return t(`${KEYS}.charge.today`, {
 			price,
@@ -124,7 +124,7 @@ const chargeSentence = computed(() => {
 	}
 	const firstCharge = new Date(Date.now() + plan.trialDays * MS_PER_DAY)
 	return t(`${KEYS}.charge.after_trial`, {
-		zero: formatMinorUnits(0, plan.currency),
+		zero: formatMajorUnits(0, plan.currency),
 		price,
 		date: formatDate(firstCharge, locale.value, DATE_FORMAT),
 	})
@@ -309,7 +309,7 @@ onMounted(load)
 			/>
 		</UFormField>
 
-		<fieldset class="flex flex-col gap-2">
+		<fieldset class="flex min-w-0 flex-col gap-2">
 			<legend
 				class="mb-2 flex w-full items-baseline justify-between text-sm font-medium"
 			>

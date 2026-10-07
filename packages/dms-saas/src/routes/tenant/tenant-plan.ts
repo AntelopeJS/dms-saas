@@ -31,6 +31,7 @@ import {
 import { toPendingPlanChange } from "../../plan-changes";
 import {
   buildTenantPlanCatalog,
+  countSeatsToCompare,
   ensurePlanStripeRefs,
   getSeatUsage,
   isDowngrade,
@@ -457,7 +458,12 @@ export class SaasTenantPlanController extends Controller(
     // waits for the cycle the customer already paid for to run out.
     const isDeferred =
       !!subscription.stripeSubscriptionId &&
-      (!isPaidPlan(newPlan) || isDowngrade(currentPlan, newPlan));
+      (!isPaidPlan(newPlan) ||
+        isDowngrade(
+          currentPlan,
+          newPlan,
+          await countSeatsToCompare(tenantId, [currentPlan, newPlan]),
+        ));
     if (isDeferred) {
       // The access gate only blocks suspended workspaces; past_due is still a
       // dunning episode over an unpaid invoice, and parking a downgrade — a

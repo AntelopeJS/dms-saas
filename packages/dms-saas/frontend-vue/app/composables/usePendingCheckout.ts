@@ -1,3 +1,7 @@
+// Imported by path: the auto-import transform misses a name used only as a
+// computed key, as this file uses it.
+import { CHECKOUT_OPERATION_PARAM } from './useTenantPlan'
+
 const CHECKOUT_IN_PROGRESS_KEY = 'saas.errors.plan.checkout_in_progress'
 const PROMPT_STATE_KEY = 'saas-pending-checkout-prompt'
 const CHECKOUT_CANCELLED_PARAM = 'checkout'

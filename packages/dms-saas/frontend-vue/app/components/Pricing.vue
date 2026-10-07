@@ -194,10 +194,11 @@ onMounted(loadPricing)
 		</DmsCard>
 
 		<template v-else-if="pricing">
-			<div
-				class="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]"
-			>
+			<!-- Wrapped and centred: a catalogue of five does not leave one card
+			alone on the left of a second row. -->
+			<div class="flex flex-wrap items-stretch justify-center gap-4">
 				<DmsSaasPlanCardPublic
+					class="min-w-[15rem] max-w-sm flex-[1_1_15rem]"
 					v-for="plan in shownPlans"
 					:key="plan._id"
 					:plan="plan"

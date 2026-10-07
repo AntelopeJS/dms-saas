@@ -11,7 +11,7 @@ import {
   type TenantBillingInfo,
   type TenantSubscription,
 } from "../../db";
-import { isDowngrade } from "../../plans";
+import { countSeatsToCompare, isDowngrade } from "../../plans";
 import { getStripeClient } from "../../stripe/client";
 import {
   readStripeId,
@@ -96,12 +96,13 @@ export function resolvePlanChangeKind(
   subscription: TenantSubscription | undefined,
   currentPlan: Plan | null,
   target: Plan,
+  seats?: number,
 ): PlanChangeKind {
   const stripeSubscriptionId = subscription?.stripeSubscriptionId;
   if (isPaidPlan(target) && !stripeSubscriptionId) return "checkout";
   const isDeferred =
     !!stripeSubscriptionId &&
-    (!isPaidPlan(target) || isDowngrade(currentPlan, target));
+    (!isPaidPlan(target) || isDowngrade(currentPlan, target, seats));
   return isDeferred ? "downgrade" : "upgrade";
 }
 
@@ -332,10 +333,15 @@ const PREVIEWS_BY_KIND: Record<
 export async function previewPlanChange(
   input: PlanChangePreviewInput,
 ): Promise<PlanChangePreview> {
+  const seats = await countSeatsToCompare(input.tenantId, [
+    input.currentPlan,
+    input.target,
+  ]);
   const kind = resolvePlanChangeKind(
     input.subscription,
     input.currentPlan,
     input.target,
+    seats,
   );
   const quantity = await planQuantity(input.tenantId, input.target);
   return PREVIEWS_BY_KIND[kind]({ input, quantity, now: new Date() });

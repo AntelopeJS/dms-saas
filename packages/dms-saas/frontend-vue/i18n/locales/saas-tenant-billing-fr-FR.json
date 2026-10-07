@@ -285,7 +285,7 @@
       "plan_change": {
         "title": "Changer d'offre",
         "review_title": "Vérifier le changement d'offre",
-        "subtitle": "{workspace} est sur {plan} avec {seats} sièges utilisés ({members} membres, {invites} invitations). Vous vérifiez le prix et les changements avant tout débit.",
+        "subtitle": "{workspace} est sur {plan} avec {seats} sièges utilisés, membres et invitations en attente comprises. Vous vérifiez le prix et les changements avant tout débit.",
         "interval": {
           "month": "Mensuel",
           "year": "Annuel"
@@ -308,7 +308,7 @@
         "show_detail": "Voir tout le détail · {count} fonctionnalité de plus | Voir tout le détail · {count} fonctionnalités de plus",
         "hide_detail": "Masquer le détail",
         "too_small": "{plans} ne peuvent pas accueillir les {seats} sièges utilisés : elles ne sont pas proposées à {workspace}.",
-        "timing": "Les montées en gamme démarrent aujourd'hui, au prorata. Les changements vers une offre inférieure démarrent au renouvellement, le {date}.",
+        "timing": "Les montées en gamme démarrent aujourd'hui, au prorata. Les changements vers une offre inférieure démarrent au renouvellement : {date}",
         "review": {
           "price_per_seat": "{price} × sièges",
           "price_flat": "{price} / {interval}",

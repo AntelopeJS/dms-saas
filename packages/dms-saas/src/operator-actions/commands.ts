@@ -11,6 +11,7 @@ import {
 import { isDowngrade } from "../plans";
 import {
   countOccupiedSeats,
+  countSeatsToCompare,
   fitsWithinSeatLimit,
 } from "../plans/seat-capacity";
 import {
@@ -171,7 +172,7 @@ export function isEligibleManualUpgradeTarget(
     target.price > 0 &&
     isPaidPlan(target) &&
     hasAudience &&
-    !isDowngrade(current, target) &&
+    !isDowngrade(current, target, occupiedSeats) &&
     fitsWithinSeatLimit(target.maxMembers, occupiedSeats)
   );
 }
@@ -222,7 +223,10 @@ async function executeManualUpgradeEffect(
   };
 }
 
-function assertManualUpgrade(context: UpgradeContext): void {
+function assertManualUpgrade(
+  context: UpgradeContext,
+  occupiedSeats: number,
+): void {
   assert(
     context.subscription.planId !== context.targetPlan._id,
     HTTP_CONFLICT,
@@ -234,7 +238,7 @@ function assertManualUpgrade(context: UpgradeContext): void {
     "saas.errors.operator.paid_plan_required",
   );
   assert(
-    !isDowngrade(context.currentPlan, context.targetPlan),
+    !isDowngrade(context.currentPlan, context.targetPlan, occupiedSeats),
     HTTP_BAD_REQUEST,
     "saas.errors.operator.upgrade_only",
   );
@@ -245,7 +249,13 @@ async function applyManualUpgrade(
   action: OperatorAction,
   context: UpgradeContext,
 ): Promise<void> {
-  assertManualUpgrade(context);
+  assertManualUpgrade(
+    context,
+    await countSeatsToCompare(input.tenantId, [
+      context.currentPlan,
+      context.targetPlan,
+    ]),
+  );
   await assertSeatLimit(input.tenantId, context.targetPlan);
   await checkpointOperatorActionDetails(action, {
     previousPlanId: context.currentPlan._id,

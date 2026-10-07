@@ -285,7 +285,7 @@
       "plan_change": {
         "title": "Change plan",
         "review_title": "Review plan change",
-        "subtitle": "{workspace} is on {plan} with {seats} seats in use ({members} members, {invites} invites). You review the price and the changes before anything is charged.",
+        "subtitle": "{workspace} is on {plan} with {seats} seats in use, members and pending invitations. You review the price and the changes before anything is charged.",
         "interval": {
           "month": "Monthly",
           "year": "Yearly"
@@ -308,7 +308,7 @@
         "show_detail": "See full detail · {count} more feature | See full detail · {count} more features",
         "hide_detail": "Hide detail",
         "too_small": "{plans} can't hold the {seats} seats in use, so they aren't offered to {workspace}.",
-        "timing": "Upgrades start today, prorated. Downgrades start at renewal, {date}.",
+        "timing": "Upgrades start today, prorated. Downgrades start at renewal: {date}",
         "review": {
           "price_per_seat": "{price} × seats",
           "price_flat": "{price} / {interval}",
