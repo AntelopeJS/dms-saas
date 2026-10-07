@@ -1,0 +1,495 @@
+{
+  "saas": {
+    "users": {
+      "title": "Users",
+      "description": "All platform users and their workspace memberships.",
+      "caption": "All users",
+      "detail": "User",
+      "detail_description": "Profile, workspaces, billing, segments and platform role of a user.",
+      "search_placeholder": "Search name or email",
+      "footer_count": "{count} user | {count} users",
+      "load_failed": "Couldn't load this user.",
+      "you": "You",
+      "unverified": "Unverified",
+      "no_segment": "—",
+      "no_workspace": "No workspace",
+      "workspaces_owned": "{count} owned | {count} owned",
+      "workspaces_member": "{count} member | {count} member",
+      "active_now": "Active now",
+      "never_active": "Never",
+      "owner_of": "Workspace owner of {workspaces}",
+      "no_platform_role": "No platform role",
+      "workspace_owner_badge": "Workspace owner",
+      "empty": {
+        "title": "No user yet",
+        "description": "Users appear here once they sign up or are invited to a workspace."
+      },
+      "column": {
+        "user": "User",
+        "email": "Email",
+        "platform_role": "Platform role",
+        "email_verified": "Email verified",
+        "workspaces": "Workspaces",
+        "segments": "Segments",
+        "last_active": "Last active",
+        "created_at": "Created"
+      },
+      "tabs": {
+        "all": "All",
+        "platform_admins": "Platform admins",
+        "unverified": "Unverified",
+        "workspaces": "Workspaces",
+        "billing": "Billing",
+        "segments": "Segments"
+      },
+      "actions": {
+        "open": "Open profile",
+        "promote": "Promote to platform admin…",
+        "demote": "Demote…"
+      },
+      "badges": {
+        "email_verified": "Email verified",
+        "email_unverified": "Email not verified",
+        "two_factor_on": "2FA on",
+        "two_factor_off": "2FA off"
+      },
+      "detail_facts": {
+        "label": "User facts",
+        "workspaces": "Workspaces",
+        "workspaces_detail": "Owner of {owned} · member of {member}",
+        "language": "Language",
+        "no_language": "Not set",
+        "last_active": "Last active",
+        "created": "Created",
+        "billed": "Billed as owner",
+        "billed_detail": "Lifetime · {count} workspace owned | Lifetime · {count} workspaces owned"
+      },
+      "security": {
+        "title": "Security & sign-in",
+        "sign_in_methods": "Sign-in methods",
+        "no_method": "None yet",
+        "two_factor": "Two-factor",
+        "off": "Off",
+        "backup_codes_left": "{count} backup code left | {count} backup codes left",
+        "active_sessions": "Active sessions",
+        "no_session": "None",
+        "email_verified": "Email verified",
+        "yes": "Yes",
+        "not_yet": "Not yet",
+        "verification_requested": "Asked {date}",
+        "method": {
+          "password": "Email and password"
+        },
+        "two_factor_method": {
+          "totp": "Authenticator app",
+          "email": "Email code"
+        }
+      },
+      "platform_role": {
+        "title": "Platform role",
+        "not_admin": "Not a platform admin",
+        "explanation": "Platform admins manage every workspace, plan and invoice.",
+        "promote_action": "Promote…",
+        "demote_action": "Demote…",
+        "self_demote_reason": "You can't demote yourself. Ask another platform admin.",
+        "confirm_failed": "Couldn't prepare the confirmation. Try again.",
+        "promoted": "Promoted to platform admin",
+        "demoted": "Platform admin role removed",
+        "promote_title": "Make {name} a platform admin?",
+        "promote_description": "Platform admins run the whole SaaS. {name} will be able to do what is listed below. Their workspace roles do not change, and the other platform admins are notified.",
+        "promote_confirm": "Make platform admin",
+        "grants_workspaces": "See and change every workspace",
+        "grants_billing": "Issue credit notes, refunds and Stripe credit",
+        "grants_catalog": "Edit plans, prices and features",
+        "grants_admins": "Promote or demote other platform admins",
+        "frees_seats": "Stops taking a seat in the workspaces they don't own",
+        "demote_title": "Remove {name}'s platform admin role?",
+        "demote_description": "{name} loses the SaaS module on the next page load and keeps their workspace memberships and roles.",
+        "demote_confirm": "Remove admin role",
+        "removes_access": "No more access to workspaces, billing or plans",
+        "takes_seats": "Now takes a seat in the workspaces they don't own",
+        "admins_remaining": "Platform admins remaining",
+        "demote_blocked_self_title": "You can't demote yourself",
+        "demote_blocked_self_description": "Ask another platform admin to remove your platform admin role.",
+        "demote_blocked_last_title": "{name} is the last platform admin",
+        "demote_blocked_last_description": "Promote someone else first: the platform always needs a platform admin.",
+        "close": "Close"
+      },
+      "workspaces": {
+        "open": "Open workspace",
+        "empty_title": "No workspace",
+        "empty_description": "This user doesn't belong to any workspace.",
+        "column": {
+          "workspace": "Workspace",
+          "role": "Their role",
+          "status": "Status",
+          "plan": "Plan",
+          "joined_at": "Joined"
+        },
+        "role": {
+          "owner": "Workspace owner",
+          "member": "Member"
+        }
+      },
+      "billing": {
+        "hint": "Workspaces they own only: a workspace they belong to is billed to its own owner.",
+        "open_invoice": "Open in Stripe",
+        "download_pdf": "Download PDF",
+        "empty_title": "Nothing billed",
+        "empty_description": "No invoice or credit note in the workspaces this user owns.",
+        "column": {
+          "workspace": "Workspace",
+          "number": "Number",
+          "type": "Type",
+          "period": "Period",
+          "status": "Status",
+          "total": "Total",
+          "issued_at": "Issued"
+        }
+      },
+      "segments": {
+        "load_failed": "Couldn't load the segments of this user.",
+        "empty_title": "In no segment",
+        "empty_description": "This user matches none of the segments, as last evaluated.",
+        "open_segments": "See segments",
+        "no_longer_matches": "No longer matches · updated at the next evaluation",
+        "column": {
+          "segment": "Segment",
+          "why": "Why they match",
+          "evaluated": "Evaluated"
+        }
+      }
+    },
+    "segments": {
+      "title": "Segments",
+      "description": "User segments built from rule-based conditions.",
+      "caption": "All segments",
+      "footer_count": "{count} segment | {count} segments",
+      "footer_hint": "Re-evaluated every 15 minutes and on save",
+      "change_this_week": "{change} this week",
+      "never_evaluated": "Not evaluated yet",
+      "deleted": "Segment deleted | {count} segments deleted",
+      "evaluated": "Segment re-evaluated",
+      "duplicated": "Segment duplicated",
+      "unknown_plan": "Deleted plan",
+      "unknown_field": "Unknown field",
+      "no_value": "nothing",
+      "empty": {
+        "title": "Group users by what they do and what they pay",
+        "description": "A segment is a saved set of rules, like “owners of a past-due workspace”. Use it to export a list or target emails."
+      },
+      "column": {
+        "name": "Segment",
+        "description": "Description",
+        "rules": "Rules",
+        "estimated_count": "Matches",
+        "trend": "30 days",
+        "last_evaluated_at": "Last evaluated",
+        "evaluation_time": "Evaluation time"
+      },
+      "actions": {
+        "new": "New segment",
+        "edit": "Edit rules",
+        "export_users": "Export users (CSV)",
+        "evaluate": "Re-evaluate now",
+        "duplicate": "Duplicate"
+      },
+      "delete_confirm": {
+        "title": "Delete {name}?",
+        "description": "The segment and its list of members are deleted. Exports already downloaded are kept.",
+        "confirm": "Delete segment"
+      },
+      "export": {
+        "title": "Segment export",
+        "preparing": "Preparing the download…",
+        "done_message": "The CSV file has been downloaded: email, name, workspaces, owned MRR.",
+        "success_title": "Export downloaded",
+        "error_title": "Export failed",
+        "retry": "Try again"
+      },
+      "editor": {
+        "new_title": "New segment",
+        "new_description": "Group users with rules, previewed live before you save.",
+        "edit_title": "Edit segment",
+        "edit_description": "Re-evaluated every 15 minutes and on save.",
+        "details": "Details",
+        "name": "Name",
+        "name_hint": "Shown in lists and filters.",
+        "name_placeholder": "At-risk paying owners",
+        "description": "Description",
+        "description_hint": "What this segment is for.",
+        "description_placeholder": "Owners of paying workspaces that are slipping",
+        "conditions": "Conditions",
+        "conditions_description": "Rules that determine which users belong to this segment.",
+        "save": "Save and re-evaluate",
+        "created": "Segment created and evaluated",
+        "saved": "Segment saved and re-evaluated"
+      },
+      "conditions": {
+        "where": "Where",
+        "and": "And",
+        "or": "Or",
+        "add": "Add condition",
+        "add_group": "Add group",
+        "add_workspace_ref": "Add a workspace condition",
+        "workspace_ref_label": "User's workspaces"
+      },
+      "builder": {
+        "lead_before": "Include users who match",
+        "lead_after": "of these conditions",
+        "of_these_conditions": "of these conditions",
+        "logical": {
+          "and": "ALL",
+          "or": "ANY"
+        },
+        "load_failed": "Couldn't load the fields a rule can read.",
+        "field": "Field",
+        "operator": "Comparison",
+        "search_fields": "Search a field",
+        "no_field": "No field matches",
+        "search": "Search",
+        "pick_values": "Pick values",
+        "type_value": "Type a value",
+        "remove_condition": "Remove condition",
+        "remove_group": "Remove group",
+        "remove_block": "Remove block",
+        "duplicate_block": "Duplicate block",
+        "count_users": "{count} user | {count} users",
+        "count_owners": "{count} user | {count} users",
+        "empty_rules": "No condition yet: the segment matches nobody.",
+        "empty_workspace_rules": "Add a condition on the workspace."
+      },
+      "rules": {
+        "none": "No rule · matches nobody",
+        "load_failed": "Rules unavailable · retry",
+        "where": "where",
+        "role": {
+          "owner": "Owner of",
+          "member": "Member of"
+        },
+        "quantifier": {
+          "any": "at least one workspace",
+          "all": "every workspace"
+        },
+        "group": {
+          "and": "all of {count} condition | all of {count} conditions",
+          "or": "any of {count} condition | any of {count} conditions"
+        }
+      },
+      "sentence": {
+        "lead": "Users where",
+        "and": "and",
+        "or": "or",
+        "empty": "No condition yet: this segment matches nobody.",
+        "ref": {
+          "owner": {
+            "any": "they own at least one workspace where",
+            "all": "every workspace they own has"
+          },
+          "member": {
+            "any": "they belong to at least one workspace where",
+            "all": "every workspace they belong to has"
+          }
+        }
+      },
+      "preview": {
+        "title": "Live preview",
+        "live": "Live",
+        "recounting": "Recounting…",
+        "empty_title": "Add a condition",
+        "empty_description": "The users your rules match show up here as you edit, before you save.",
+        "failed": "Couldn't count the matches of these rules.",
+        "stale": "Showing the last count: the latest edit couldn't be counted.",
+        "match_count": "{count} user matches | {count} users match",
+        "vs_saved": "vs saved version ({saved})",
+        "share": "{share}% of {total} users",
+        "breakdown": "{kept} already in · {added} added · {removed} removed by your edits",
+        "recounted": "Recounted {when} · {duration} ms",
+        "everyone_title": "Every user matches",
+        "everyone_rule": "is true for everyone. Check the value.",
+        "everyone_description": "These rules no longer narrow anything. Check the values.",
+        "signals": "Which signal matched",
+        "nested_rules": "A nested group of conditions",
+        "sample": "Sample matches",
+        "sample_count": "{shown} of {total}",
+        "no_match": "Nobody matches these rules.",
+        "added": "Added",
+        "saved_evaluated": "Saved version evaluated {date}"
+      },
+      "operators": {
+        "string": {
+          "contains": "contains",
+          "eq": "is",
+          "neq": "is not"
+        },
+        "number": {
+          "gt": "is more than",
+          "gte": "is at least",
+          "lt": "is less than",
+          "lte": "is at most",
+          "eq": "is",
+          "neq": "is not"
+        },
+        "date": {
+          "gt": "is after",
+          "gte": "is on or after",
+          "lt": "is before",
+          "lte": "is on or before"
+        },
+        "enum": {
+          "in": "is any of",
+          "nin": "is none of",
+          "eq": "is",
+          "neq": "is not"
+        },
+        "boolean": {
+          "eq": "is"
+        }
+      },
+      "boolean": {
+        "true": "Yes",
+        "false": "No"
+      },
+      "units": {
+        "days": "{count} day | {count} days",
+        "days_unit": "days",
+        "kind": {
+          "currency": "€",
+          "days": "days",
+          "count": "count"
+        }
+      },
+      "field_types": {
+        "string": "text",
+        "number": "number",
+        "boolean": "yes / no",
+        "date": "date",
+        "enum": "list",
+        "enum_plan": "plan"
+      },
+      "field_groups": {
+        "identity": "User",
+        "activity": "Activity",
+        "memberships": "Workspaces",
+        "workspace": "Workspace",
+        "billing": "Billing"
+      },
+      "enum": {
+        "customer_type": {
+          "individual": "Individual",
+          "business": "Business"
+        }
+      },
+      "fields": {
+        "name": {
+          "label": "Workspace name",
+          "description": "Display name of the workspace."
+        },
+        "created_at": {
+          "label": "Created on",
+          "description": "Date the workspace was created."
+        },
+        "age_in_days": {
+          "label": "Age",
+          "description": "Days since the workspace was created."
+        },
+        "members_count": {
+          "label": "Members count",
+          "description": "Members of the workspace, owners included."
+        },
+        "status": {
+          "label": "Status",
+          "description": "Status of the workspace: active, trialing, past due…"
+        },
+        "plan_id": {
+          "label": "Plan",
+          "description": "Plan the workspace is subscribed to."
+        },
+        "is_paying": {
+          "label": "Paying",
+          "description": "The workspace brings recurring revenue."
+        },
+        "is_on_trial": {
+          "label": "On trial",
+          "description": "The workspace is in its trial period."
+        },
+        "mrr": {
+          "label": "MRR",
+          "description": "Monthly recurring revenue of the workspace."
+        },
+        "total_revenue": {
+          "label": "Total revenue",
+          "description": "Sum of the paid invoices."
+        },
+        "days_since_last_invoice": {
+          "label": "Days since last invoice",
+          "description": "Days elapsed since the most recent invoice. Workspaces never invoiced don't match."
+        },
+        "has_stripe_customer": {
+          "label": "Stripe customer",
+          "description": "The workspace has a Stripe customer."
+        },
+        "customer_type": {
+          "label": "Customer type",
+          "description": "Individual or business."
+        },
+        "user_email": {
+          "label": "Email",
+          "description": "The user's email address."
+        },
+        "user_name": {
+          "label": "Name",
+          "description": "The user's display name."
+        },
+        "user_language": {
+          "label": "Language",
+          "description": "The user's language code (fr, en…)."
+        },
+        "user_is_validated": {
+          "label": "Email verified",
+          "description": "The user has verified their email address."
+        },
+        "user_created_at": {
+          "label": "Sign-up date",
+          "description": "Date the user signed up."
+        },
+        "user_age_in_days": {
+          "label": "Account age",
+          "description": "Days since the user signed up."
+        },
+        "days_since_last_active": {
+          "label": "Days since last active",
+          "description": "Days since the user was last active. Users never active don't match."
+        },
+        "workspaces_count": {
+          "label": "Workspace count",
+          "description": "Workspaces the user belongs to."
+        },
+        "is_owner_of_any_workspace": {
+          "label": "Owns a workspace",
+          "description": "The user owns at least one workspace."
+        }
+      }
+    },
+    "permissions": {
+      "users": {
+        "profile": "User profile",
+        "profile_description": "See who a user is: identity, workspaces, language, activity and what they are billed",
+        "workspaces": "User's workspaces",
+        "workspaces_description": "See the workspaces a user belongs to and their role in each",
+        "billing": "User's billing",
+        "billing_description": "See the invoices and credit notes of the workspaces a user owns",
+        "segments": "User's segments",
+        "segments_description": "See the segments a user belongs to and why they match",
+        "security": "Security & sign-in",
+        "security_description": "See how a user signs in: methods, two-factor, sessions and email verification",
+        "notes": "Internal notes on a user",
+        "notes_description": "Read and write the notes operators keep about a user",
+        "platform_role": "Platform role",
+        "platform_role_description": "See whether a user is a platform admin, and promote or demote them",
+        "segment_preview": "Segment live preview",
+        "segment_preview_description": "See who the rules being edited match, before saving them"
+      }
+    }
+  }
+}

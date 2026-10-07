@@ -5,7 +5,39 @@ import {
   triggerEvent,
   type ValidateOptions,
 } from "@antelopejs/interface-database-decorators";
-import { Segment, segmentsTableName } from "../tables/segments.table";
+import {
+  Segment,
+  type SegmentCountPoint,
+  segmentsTableName,
+} from "../tables/segments.table";
+
+/** Days of counts a segment keeps for its trend. */
+export const SEGMENT_COUNT_HISTORY_DAYS = 30;
+
+const ISO_DAY_LENGTH = 10;
+
+/** What an evaluation measured besides the members it found. */
+export interface SegmentEvaluationStats {
+  /** How long the evaluation took, in milliseconds. */
+  durationMs?: number;
+}
+
+/**
+ * The count history with the evaluation of `evaluatedAt` recorded: one point
+ * per UTC day (the latest evaluation of a day wins), the last
+ * {@link SEGMENT_COUNT_HISTORY_DAYS} days kept.
+ */
+export function appendSegmentCountPoint(
+  history: readonly SegmentCountPoint[] | undefined,
+  count: number,
+  evaluatedAt: Date,
+): SegmentCountPoint[] {
+  const day = evaluatedAt.toISOString().slice(0, ISO_DAY_LENGTH);
+  const kept = (history ?? []).filter((point) => point.day !== day);
+  return [...kept, { day, count }]
+    .sort((a, b) => a.day.localeCompare(b.day))
+    .slice(-SEGMENT_COUNT_HISTORY_DAYS);
+}
 
 /** Data access for reusable audience segments. */
 export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
@@ -75,6 +107,7 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
     generation: string,
     count: number,
     evaluatedAt: Date,
+    stats: SegmentEvaluationStats = {},
   ): Promise<boolean> {
     const outcome = await this.table
       .atomicMutation(segment._id, {
@@ -86,7 +119,12 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
           membershipGeneration: generation,
           estimatedCount: count,
           lastEvaluatedAt: evaluatedAt,
-          updatedAt: evaluatedAt,
+          lastEvaluationMs: stats.durationMs ?? null,
+          countHistory: appendSegmentCountPoint(
+            segment.countHistory,
+            count,
+            evaluatedAt,
+          ),
         },
       })
       .run();
