@@ -46,7 +46,10 @@
         "no_free_plan": "Aucun plan gratuit n'est disponible pour l'inscription pour le moment.",
         "checkout_in_progress": "Un paiement de changement de plan est déjà ouvert. Terminez-le, ou attendez son expiration, avant de choisir un autre plan.",
         "checkout_already_paid": "Ce paiement a déjà été effectué et est en cours de confirmation. Votre plan sera mis à jour dans un instant.",
-        "change_in_progress": "Un changement de plan est déjà en cours. Réessayez dans quelques minutes."
+        "change_in_progress": "Un changement de plan est déjà en cours. Réessayez dans quelques minutes.",
+        "invalid_feature_value": "Une valeur ne correspond pas à sa fonctionnalité : une limite vaut au moins 1, Désactivée vaut 0 et Illimitée −1.",
+        "invalid_member_cap": "La limite de membres doit être d’au moins 1, ou illimitée.",
+        "retire_confirm_mismatch": "Saisissez la clé de l’offre exactement comme affichée pour confirmer."
       },
       "workspace": {
         "not_found": "Espace introuvable",
@@ -104,7 +107,18 @@
         "checkout_unavailable": "Le prestataire de paiement n'a pas répondu. Rien n'a été débité. Réessayez dans 15 minutes."
       },
       "migration": {
-        "already_pending": "Une migration est déjà en attente pour ce plan"
+        "already_pending": "Une migration est déjà en attente pour ce plan",
+        "not_found": "Migration introuvable",
+        "still_running": "La migration est encore en cours. Attendez qu’elle se termine.",
+        "workspace_not_uncertain": "Cet espace de travail n’attend pas d’être traité.",
+        "subscription_missing": "L’espace de travail n’a plus d’abonnement.",
+        "snapshot_missing": "La migration n’a pas d’offre cible figée.",
+        "workspace_changed": "L’offre de l’espace de travail a changé depuis la migration. Rechargez et vérifiez à nouveau.",
+        "changed": "La migration a changé entre-temps. Rechargez et réessayez.",
+        "uncertain_workspaces": "Traitez d’abord les espaces de travail incertains.",
+        "invalid_resolution": "Façon de traiter l’espace de travail inconnue.",
+        "nothing_to_retry": "Aucun espace de travail en échec ne peut être relancé maintenant.",
+        "note_required": "Écrivez une note pour le journal d’audit."
       },
       "platform_owner": {
         "already_owner": "L'utilisateur est déjà propriétaire de la plateforme",
@@ -148,6 +162,11 @@
       "invitations": {
         "not_found": "Cette invitation n'existe plus.",
         "email_not_sent": "L'invitation a été renouvelée mais l'e-mail n'a pas pu être envoyé. Copiez le lien d'invitation et envoyez-le vous-même."
+      },
+      "feature": {
+        "not_found": "Fonctionnalité introuvable",
+        "value_type_locked": "Des offres stockent une valeur pour cette fonctionnalité : son type de valeur ne peut pas changer.",
+        "in_use": "Des offres utilisent encore cette fonctionnalité. Désactivez-la d’abord sur chaque offre."
       }
     },
     "dashboard": {
@@ -252,132 +271,11 @@
       "description": "Plans, workspaces, facturation et cycle de vie client."
     },
     "plans": {
-      "title": "Plans",
-      "description": "Plans d'abonnement, tarifs, fonctionnalités et essais gratuits.",
-      "create": "Créer un plan",
-      "caption": "Plans d'abonnement, tarifs, fonctionnalités et essais gratuits.",
-      "column": {
-        "workspaces": "Workspaces"
-      },
-      "display": {
-        "cards": "Cartes"
-      },
-      "new_title": "Nouveau plan",
-      "new_description": "Créer un nouveau plan d'abonnement. Le produit et prix Stripe sont synchronisés après création.",
-      "edit_title": "Modifier le plan",
-      "edit_description": "Mettre à jour un plan existant. Les changements de tarif sont propagés à Stripe.",
-      "reorder_failed": "Échec du réordonnancement des plans.",
       "choose": "Choisir ce plan",
       "trial_days": "{days} jours d'essai gratuit",
-      "delete": {
-        "action_title": "Supprimer le plan",
-        "success": "Plan supprimé.",
-        "migration_title": "Migrer les espaces du plan {name} ?",
-        "migration_started": "Migration demandée. Le plan source est conservé.",
-        "migrate_intro": "{count} espaces utilisent actuellement ce plan. La migration couvre uniquement la liste capturée ; les arrivées ultérieures sont exclues. Le plan source est conservé, même après la migration. Son retrait exige une procédure distincte qui arrête tous les processus d'écriture.",
-        "target_label": "Migrer les espaces vers",
-        "target_placeholder": "Sélectionner un plan cible",
-        "notify_members": "Notifier les membres concernés",
-        "computing_diff": "Calcul de l'impact…",
-        "affected_count": "{count} workspaces seront affectés",
-        "permissions_removed": "Permissions qui seront retirées",
-        "confirm": "Lancer la migration du snapshot",
-        "failed": "Échec de la suppression du plan",
-        "no_target": "Veuillez sélectionner un plan cible",
-        "simple_title": "Supprimer le plan {name} ?",
-        "simple_warning": "Aucun workspace n'est concerné. Cette action est irréversible.",
-        "simple_confirm": "Supprimer"
-      },
-      "deactivate": {
-        "title": "Désactiver le plan {name} ?",
-        "warning": "{count} workspaces continueront sur ce plan jusqu'à leur migration manuelle.",
-        "public_removal": "Le plan disparaît du catalogue public et n'est plus souscriptible.",
-        "confirm": "Désactiver"
-      },
-      "action": {
-        "delete": "Supprimer",
-        "edit": "Modifier"
-      },
-      "migrations": {
-        "title": "Migrations de plan",
-        "description": "Migrations en cours et historiques.",
-        "caption": "Jobs de migration",
-        "column": {
-          "from": "Depuis",
-          "to": "Vers",
-          "status": "Statut",
-          "processed": "Traités",
-          "total": "Total",
-          "created_at": "Créé le",
-          "completed_at": "Terminé le"
-        }
-      },
-      "inheritance": {
-        "toggle": "Hériter des permissions et fonctionnalités d'un autre plan",
-        "select_plan": "Choisir le plan source",
-        "loading": "Chargement des permissions et fonctionnalités…",
-        "snapshot_hint": "Les permissions et fonctionnalités du plan parent sont copiées (instantané) au moment de l'enregistrement.",
-        "no_features": "Aucune fonctionnalité définie.",
-        "inherited": "Hérité",
-        "permissions_tooltip": "Permissions accordées par ce plan. L'héritage copie celles du plan parent comme point de départ.",
-        "features_tooltip": "Valeurs des fonctionnalités pour ce plan. Active/désactive ou définit la quantité par feature."
-      },
-      "field": {
-        "name": "Nom",
-        "description": "Description",
-        "audience": "Cible",
-        "price": "Prix (HT)",
-        "currency": "Devise",
-        "interval": "Intervalle",
-        "billing_mode": "Mode de facturation",
-        "trial_days": "Jours d'essai",
-        "permissions": "Permissions",
-        "features": "Fonctionnalités",
-        "border_color": "Couleur de bordure",
-        "border_label": "Label de bordure",
-        "order": "Ordre d'affichage",
-        "is_active": "Actif",
-        "inheritance": "Permissions et fonctionnalités",
-        "inheritance_description": "Définissez les permissions et fonctionnalités du plan, éventuellement héritées d'un plan parent.",
-        "max_members": "Membres maximum",
-        "max_members_description": "Mettre -1 pour un nombre illimité de membres.",
-        "is_public": "Public",
-        "is_public_description": "Visible sur la page d'inscription et de sélection de plan.",
-        "is_deleted": "Supprimé",
-        "order_description": "Plus petit = affiché en premier.",
-        "name_description": "Nom commercial du plan affiché aux clients.",
-        "description_description": "Argumentaire affiché sur les pages publiques et la card du plan.",
-        "audience_description": "Détermine à qui ce plan est proposé (tout public, particuliers, professionnels).",
-        "price_description": "Prix de base hors taxes pour la période de facturation choisie.",
-        "currency_description": "Devise utilisée pour le prix et la facturation.",
-        "interval_description": "Fréquence de facturation récurrente (mensuelle ou annuelle).",
-        "billing_mode_description": "Facturation forfaitaire ou par utilisateur (siège).",
-        "trial_days_description": "Nombre de jours d'essai gratuit avant le premier prélèvement (0 = aucun).",
-        "is_active_description": "Si désactivé, le plan reste visible côté admin mais n'est plus souscriptible.",
-        "border_color_description": "Couleur d'accentuation utilisée pour le badge et le ring de mise en avant sur la card.",
-        "border_label_description": "Texte du badge flottant affiché en haut de la card (ex. Populaire, Recommandé)."
-      },
-      "audience": {
-        "any": "Tout le monde",
-        "individual": "Particuliers uniquement",
-        "business": "Professionnels uniquement"
-      },
-      "billing_mode": {
-        "flat": "Forfait",
-        "seat": "Par utilisateur"
-      },
-      "interval": {
-        "month": "Mensuel",
-        "year": "Annuel"
-      },
       "cycle": {
         "month": "mois",
         "year": "an"
-      },
-      "card": {
-        "members": "{count} membres max",
-        "members_unlimited": "Membres illimités",
-        "subscriptions": "{count} abonnements actifs"
       },
       "seat_limit": {
         "invite_unavailable": "Tous les sièges de votre plan sont occupés. Passez à un plan supérieur pour inviter d'autres membres."
@@ -1189,32 +1087,6 @@
           "rename": "Impossible de renommer le workspace.",
           "delete": "Impossible de supprimer le workspace."
         }
-      }
-    },
-    "features": {
-      "title": "Fonctionnalités",
-      "description": "Feature flags exposés aux plans et consommés par les workspaces.",
-      "caption": "Toutes les fonctionnalités",
-      "column": {
-        "display_name": "Nom affiché",
-        "description": "Description",
-        "value_type": "Type de valeur",
-        "display_name_description": "Libellé affiché aux administrateurs et aux clients.",
-        "description_description": "Description détaillée de ce que la fonctionnalité fait.",
-        "value_type_description": "Type de valeur portée par la fonctionnalité (booléen, numérique, chaîne).",
-        "tooltip": "Info-bulle",
-        "tooltip_description": "Courte précision affichée à côté de la feature dans le tableau de comparaison des plans.",
-        "unit": "Unité",
-        "unit_description": "Suffixe ajouté aux valeurs numériques, par exemple Go ou h/mois.",
-        "is_detail_row": "Ligne de détail",
-        "is_detail_row_description": "Masquée derrière le bouton « Voir tout le détail » du tableau de comparaison.",
-        "order": "Ordre",
-        "order_description": "Position de la ligne dans le tableau de comparaison des plans."
-      },
-      "placeholder": {
-        "display_name": "Nom affiché",
-        "tooltip": "Déduit de votre consommation à la minute",
-        "unit": "Go"
       }
     },
     "common": {
