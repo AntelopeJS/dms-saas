@@ -5,7 +5,25 @@ import {
   emptyBillingIdentityDraft,
   findMissingBillingFields,
 } from "../frontend-vue/app/composables/useBillingIdentity";
-import { resolvePastDueBannerAction } from "../frontend-vue/app/composables/usePastDueBannerAction";
+import {
+  formatCardExpiry,
+  formatCardLabel,
+} from "../frontend-vue/app/composables/useBillingStatus";
+import {
+  countDaysBetween,
+  countDaysUntil,
+} from "../frontend-vue/app/composables/useDaysLeft";
+import { isInvoiceSettled } from "../frontend-vue/app/composables/usePayInvoice";
+import {
+  diffPlanFeatures,
+  featureRank,
+  readUpgradeParam,
+  splitOfferedPlans,
+} from "../frontend-vue/app/composables/usePlanChangeReview";
+import type {
+  OfferedPlanView,
+  TenantPlanFeature,
+} from "../frontend-vue/app/composables/useTenantPlan";
 
 const COMPLETE_INDIVIDUAL: BillingIdentityDraft = {
   customerType: "individual",
@@ -69,42 +87,119 @@ describe("billing countries", () => {
   });
 });
 
-describe("past-due banner action", () => {
-  const UNPAID_INVOICE = {
-    number: "INV-0001",
-    amount: 1200,
-    currency: "eur",
-    hostedInvoiceUrl: "https://invoice.stripe.test/i/1",
-    failedAt: null,
-    nextRetryAt: null,
-    suspendAt: null,
+function offeredPlan(overrides: Partial<OfferedPlanView>): OfferedPlanView {
+  return {
+    _id: "plan",
+    name: "Plan",
+    price: 29,
+    currency: "EUR",
+    interval: "month",
+    order: 0,
+    checkoutAvailable: true,
+    featureValues: {},
+    description: "",
+    billingMode: "flat",
+    maxMembers: 0,
+    trialDays: 0,
+    ...overrides,
   };
+}
 
-  it("offers the invoice payment page when Stripe provides one", () => {
-    expect(
-      resolvePastDueBannerAction({
-        isTenantOwner: true,
-        unpaidInvoice: UNPAID_INVOICE,
-      }),
-    ).toBe("settle");
+function feature(featureId: string): TenantPlanFeature {
+  return {
+    featureId,
+    displayName: featureId,
+    tooltip: null,
+    unit: null,
+    valueType: "number",
+    isDetailRow: false,
+    order: 0,
+  };
+}
+
+describe("upgrade arrival link", () => {
+  it("reads the plan id of ?upgrade=", () => {
+    expect(readUpgradeParam({ upgrade: "pro" })).toBe("pro");
+    expect(readUpgradeParam({ upgrade: "  pro " })).toBe("pro");
+    expect(readUpgradeParam({ upgrade: ["", "team"] })).toBe("team");
   });
 
-  it("sends the owner to the billing page without invoice details", () => {
-    expect(
-      resolvePastDueBannerAction({ isTenantOwner: true, unpaidInvoice: null }),
-    ).toBe("open_billing");
-    expect(
-      resolvePastDueBannerAction({
-        isTenantOwner: true,
-        unpaidInvoice: { ...UNPAID_INVOICE, hostedInvoiceUrl: null },
-      }),
-    ).toBe("open_billing");
+  it("ignores a missing or empty parameter", () => {
+    expect(readUpgradeParam({})).toBeNull();
+    expect(readUpgradeParam({ upgrade: "" })).toBeNull();
+    expect(readUpgradeParam({ upgrade: null })).toBeNull();
+    expect(readUpgradeParam(undefined)).toBeNull();
+  });
+});
+
+describe("plan comparison", () => {
+  const seats = { members: 6, pendingInvites: 2, occupied: 8 };
+
+  it("offers the plans the seats in use fit, and names the others", () => {
+    const solo = offeredPlan({ _id: "solo", maxMembers: 1 });
+    const team = offeredPlan({ _id: "team", maxMembers: 25 });
+    const unlimited = offeredPlan({ _id: "enterprise", maxMembers: 0 });
+
+    const split = splitOfferedPlans([solo, team, unlimited], seats, null);
+
+    expect(split.offered.map((plan) => plan._id)).toEqual([
+      "team",
+      "enterprise",
+    ]);
+    expect(split.tooSmall.map((plan) => plan._id)).toEqual(["solo"]);
   });
 
-  it("offers a member nothing to act on", () => {
-    expect(
-      resolvePastDueBannerAction({ isTenantOwner: false, unpaidInvoice: null }),
-    ).toBe("none");
-    expect(resolvePastDueBannerAction(null)).toBe("none");
+  it("always keeps the current plan, even over its cap", () => {
+    const pro = offeredPlan({ _id: "pro", maxMembers: 5 });
+    expect(splitOfferedPlans([pro], seats, "pro").offered).toEqual([pro]);
+  });
+
+  it("ranks off, limits and unlimited", () => {
+    expect(featureRank(false)).toBe(0);
+    expect(featureRank(0)).toBe(0);
+    expect(featureRank(undefined)).toBe(0);
+    expect(featureRank(true)).toBe(1);
+    expect(featureRank(50)).toBe(50);
+    expect(featureRank(-1)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("lists the features gained and lost", () => {
+    const features = [feature("storage"), feature("sso"), feature("audit")];
+    const from = offeredPlan({
+      featureValues: { storage: 1000, sso: true, audit: 30 },
+    });
+    const to = offeredPlan({
+      featureValues: { storage: -1, sso: false, audit: 30 },
+    });
+
+    const diff = diffPlanFeatures(features, from, to);
+
+    expect(diff.gained.map((change) => change.feature.featureId)).toEqual([
+      "storage",
+    ]);
+    expect(diff.lost.map((change) => change.feature.featureId)).toEqual([
+      "sso",
+    ]);
+  });
+});
+
+describe("billing formatting", () => {
+  const card = { brand: "visa", last4: "4242", expMonth: 4, expYear: 2027 };
+
+  it("names a card and its expiry", () => {
+    expect(formatCardLabel(card)).toBe("Visa •••• 4242");
+    expect(formatCardExpiry(card)).toBe("04/27");
+  });
+
+  it("counts the days left, a started day as one", () => {
+    const now = new Date("2026-09-29T12:00:00Z");
+    expect(countDaysUntil("2026-10-07T00:00:00Z", now)).toBe(8);
+    expect(countDaysUntil("2026-09-20T00:00:00Z", now)).toBe(0);
+    expect(countDaysBetween("2026-09-07T00:00:00Z", now)).toBe(22);
+  });
+
+  it("tells a settled payment from one Stripe is still processing", () => {
+    expect(isInvoiceSettled({ status: "paid" })).toBe(true);
+    expect(isInvoiceSettled({ status: "open" })).toBe(false);
   });
 });

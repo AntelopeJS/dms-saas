@@ -68,7 +68,7 @@ export interface ImmediateChangeBilling {
 }
 
 /** Operator changes: the difference waits for the next invoice. */
-export const DEFERRED_PRORATION_BILLING: ImmediateChangeBilling = {
+const DEFERRED_PRORATION_BILLING: ImmediateChangeBilling = {
   prorationBehavior: "create_prorations",
 };
 

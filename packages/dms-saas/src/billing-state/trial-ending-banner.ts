@@ -68,7 +68,7 @@ function isInWindow(reminder: TrialReminder, daysLeft: number): boolean {
 }
 
 /** Whether one reminder shows: to an owner, in its window of the trial. */
-export function trialReminderVisibility(reminder: TrialReminder) {
+function trialReminderVisibility(reminder: TrialReminder) {
   return async (context: LayoutBannerContext): Promise<boolean> => {
     if (!(await isWorkspaceOwnerRequest(context))) return false;
     const daysLeft = await readTrialDaysLeft(context.tenantId);

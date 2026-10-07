@@ -46,7 +46,10 @@
         "no_free_plan": "No free plan is available for sign-up right now.",
         "checkout_in_progress": "A payment for a plan change is already open. Complete it, or wait for it to expire, before choosing another plan.",
         "checkout_already_paid": "This payment has already been made and is being confirmed. Your plan will update in a moment.",
-        "change_in_progress": "A plan change is already being processed. Try again in a few minutes."
+        "change_in_progress": "A plan change is already being processed. Try again in a few minutes.",
+        "upgrade_payment_declined": "The card was declined, so the plan didn't change. Update the card in Stripe and try again.",
+        "already_current": "The workspace is already on this plan.",
+        "unpaid_invoice_blocks_cancellation": "An invoice is unpaid. Pay it before cancelling the subscription."
       },
       "workspace": {
         "not_found": "Workspace not found",
@@ -87,7 +90,8 @@
       "invoice": {
         "not_found": "Invoice not found",
         "invalid_amount": "Invalid amount",
-        "no_paid_found": "No paid invoice found"
+        "no_paid_found": "No paid invoice found",
+        "not_payable": "This invoice can no longer be paid: it was paid or voided meanwhile."
       },
       "refund": {
         "not_enabled": "Money-back guarantee not enabled",
@@ -101,7 +105,10 @@
         "invalid_return_url": "Invalid return URL",
         "identity_incomplete": "Some required billing fields are missing or invalid.",
         "checkout_rejected": "The payment provider could not open the payment page. Nothing was charged and your plan is unchanged. Try again later or contact support.",
-        "checkout_unavailable": "The payment provider did not respond. Nothing was charged. Try again in 15 minutes."
+        "checkout_unavailable": "The payment provider did not respond. Nothing was charged. Try again in 15 minutes.",
+        "payment_declined": "The card was declined. Nothing was charged.",
+        "payment_unavailable": "Stripe didn't answer. Nothing was charged; try again in a moment.",
+        "preview_unavailable": "Stripe couldn't preview the next invoice right now."
       },
       "migration": {
         "already_pending": "A migration is already pending for this plan"
@@ -952,112 +959,7 @@
           "description": "These platform team members have access to this workspace to support you. They are listed in the members table without a role and do not use a seat."
         }
       },
-      "free_access": {
-        "banner_title": "Complimentary access",
-        "banner_description": "Your free access expires on {date}. Pick a paid plan before then to keep access.",
-        "expired_title": "Complimentary access expired",
-        "expired_description": "The free access granted to your workspace has expired. Pick a paid plan to restore access.",
-        "indefinite_title": "Complimentary access",
-        "indefinite_description": "Your workspace is on a complimentary plan with no expiration."
-      },
-      "billing": {
-        "title": "Billing",
-        "description": "Manage your plan, subscription, payment method and invoices.",
-        "manage": "Manage billing",
-        "invoices_caption": "Your invoices",
-        "info_title": "Billing information",
-        "info_description": "Update your billing details and VAT number.",
-        "info_save": "Save",
-        "info_saved": "Billing information updated",
-        "info_save_error": "Failed to update billing information",
-        "refund": {
-          "title": "Money-back guarantee",
-          "description": "You are still within the refund window. Requesting a refund will return {amount} and cancel your subscription.",
-          "button": "Request refund",
-          "confirm_title": "Confirm refund",
-          "confirm_message": "You will be refunded {amount} and your subscription will be cancelled immediately. This cannot be undone.",
-          "confirm_action": "Confirm refund",
-          "success": "Refund issued and subscription cancelled.",
-          "error": "Failed to request refund"
-        },
-        "past_due": {
-          "title": "Action required",
-          "badge": "payment failed",
-          "suspended_title": "Workspace suspended",
-          "suspended_badge": "unpaid invoice",
-          "summary": "Invoice {invoice} of {amount} is unpaid.",
-          "summary_with_date": "Invoice {invoice} of {amount} could not be charged on {date}.",
-          "next_retry": "Stripe retries automatically on {date}.",
-          "suspend_warning": "Without settlement the workspace is suspended on {date} — data and volumes are preserved.",
-          "suspended_summary": "Invoice {invoice} of {amount} is still unpaid. Settling it restores access immediately.",
-          "settle": "Settle on Stripe",
-          "load_failed": "Could not check the billing status of this workspace.",
-          "banner": {
-            "generic": "Payment failed — this workspace has an unpaid invoice. The workspace owner must settle it to avoid suspension.",
-            "generic_owner": "Payment failed — this workspace has an unpaid invoice. Settle it from the billing page to avoid suspension.",
-            "open_billing": "Open billing",
-            "summary": "Payment failed — invoice {invoice} of {amount} is unpaid.",
-            "with_deadline": "Payment failed — invoice {invoice} of {amount} is unpaid. Settle it before {date} to avoid suspension.",
-            "settle": "Settle"
-          }
-        },
-        "payment_method": {
-          "title": "Payment method",
-          "active": "active",
-          "needs_update": "needs updating",
-          "missing": "no card",
-          "declined": "declined",
-          "default": "default",
-          "expires": "exp. {date}",
-          "none": "No card yet — you'll be asked for one when you move to a paid plan.",
-          "none_with_portal": "No card on file — add one from the Stripe portal below.",
-          "portal_hint": "Card changes, receipts and history all happen in the Stripe portal; the card is never stored on our side.",
-          "verified": "verified",
-          "never_charged": "never charged",
-          "add": "Upgrade to a paid plan",
-          "owner_only": "The payment method is managed by the workspace owner.",
-          "update_note": "The last charge on this card was declined: update it in the Stripe portal, then settle the unpaid invoice.",
-          "free_note": "Verified — never charged while the workspace stays on a free plan.",
-          "complimentary": "complimentary",
-          "complimentary_note": "Complimentary access: no card is needed.",
-          "complimentary_until_note": "Complimentary access until {date}: no card is needed until then."
-        },
-        "billing_email": {
-          "label": "Billing e-mail",
-          "hint": "Receives invoices and payment reminders, synced to the Stripe customer."
-        },
-        "vat": {
-          "verified": "verified (VIES)",
-          "pending": "verification in progress",
-          "unverified": "not verified"
-        },
-        "identity": {
-          "to_complete": "to complete",
-          "incomplete_toast": "Fill in the highlighted fields.",
-          "optional": "optional",
-          "country_placeholder": "Select a country",
-          "customer_type_hint": {
-            "business": "Invoiced to a company, with its VAT number.",
-            "individual": "Invoiced in your own name."
-          },
-          "errors": {
-            "customerType": "Choose a customer type.",
-            "companyName": "The company name is required.",
-            "country": "Choose the billing country.",
-            "line1": "The address is required.",
-            "postalCode": "The postal code is required.",
-            "city": "The city is required.",
-            "billingEmail": "Enter a valid e-mail address."
-          }
-        }
-      },
       "plan": {
-        "current": "Current plan",
-        "change": "Change plan",
-        "go_paid": "Upgrade to a paid plan",
-        "blocked_hint": "Plan changes resume once the unpaid invoice is settled.",
-        "blocked_hint_inactive": "Plan changes resume once the workspace is active again.",
-        "next_renewal": "Next renewal on {date}.",
         "unlimited": "unlimited",
         "units": {
           "byte": {
@@ -1085,59 +987,9 @@
             "price": "{price} / minute"
           }
         },
-        "pending_downgrade": "Downgrade to {plan} at next cycle",
-        "pending_downgrade_on": "Downgrade to {plan} on {date}",
-        "cancel_downgrade": "Cancel downgrade",
-        "downgrade_cancelled": "Scheduled downgrade cancelled.",
-        "change_applied": "Plan changed.",
-        "change_scheduled": "Downgrade scheduled for the end of the current cycle.",
-        "change_error": "Failed to change plan",
-        "checkout_pending": {
-          "title": "A payment is already open",
-          "description": "You opened the secure Stripe payment page without completing it. Resume that payment, or cancel it and start over.",
-          "description_paid": "Your payment has been received and is being confirmed. Your plan will update in a moment.",
-          "description_opening": "A payment page is still being opened for this workspace. Try again in a few minutes.",
-          "resume": "Resume payment",
-          "restart": "Cancel and start over",
-          "close": "Close",
-          "cancelled": "Payment cancelled. Nothing was charged and your plan is unchanged.",
-          "restart_error": "The pending payment could not be cancelled. Try again in a moment."
-        },
         "interval": {
           "month": "month",
           "year": "year"
-        },
-        "comparison": {
-          "title": "Change plan",
-          "subtitle": "Workspace {workspace} — currently on {plan}. Upgrades apply immediately and are prorated; downgrades take effect at the next cycle.",
-          "subtitle_no_plan": "Upgrades apply immediately and are prorated; downgrades take effect at the next cycle.",
-          "current": "current",
-          "scheduled": "scheduled",
-          "choose": "Choose",
-          "show_detail": "See full detail",
-          "hide_detail": "Hide detail",
-          "close": "Close"
-        },
-        "upgrade": {
-          "title": "Upgrade to {plan}",
-          "description": "Confirm who is billed, then enter your card on Stripe's secure payment page.",
-          "subscription": "{plan} subscription",
-          "due_today": "Due today",
-          "excl_tax": "{amount} excl. tax",
-          "tax_note": "Tax is computed from the billing country below.",
-          "card_title": "Payment card",
-          "card_note": "The next step opens Stripe's secure payment page, where the card is entered and charged. It is never stored on our side.",
-          "confirm": "Continue to payment"
-        },
-        "downgrade": {
-          "title": "Downgrade to {plan}?",
-          "description": "Once the change takes effect, the workspace is held to the features and limits of {plan}.",
-          "warning_title": "What you lose",
-          "warning_features": "Features not included in {plan} are switched off, and role permissions that rely on them are removed.",
-          "warning_limits": "Members, resources and data beyond the limits of {plan} may be restricted, and data over those limits may be lost.",
-          "warning_free": "The paid subscription ends: paid features stop and the workspace is no longer billed.",
-          "cancel": "Keep my current plan",
-          "confirm": "Downgrade to {plan}"
         }
       },
       "data_export": {

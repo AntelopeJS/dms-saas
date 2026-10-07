@@ -12,7 +12,7 @@ const PAST_DUE_STATE: BillingState = "past_due";
 const BANNER_COMPONENT = "DmsSaasPastDueBanner";
 
 /** Who a past-due banner speaks to: the owner pays, a member is told who. */
-export type PastDueAudience = "owner" | "member";
+type PastDueAudience = "owner" | "member";
 
 /** Whether the request comes from an owner of the workspace. */
 export async function isWorkspaceOwnerRequest({

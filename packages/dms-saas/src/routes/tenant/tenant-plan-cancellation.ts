@@ -44,7 +44,7 @@ type StripeBilledSubscription = TenantSubscription & {
 };
 
 /** A paid subscription on Stripe, not a gift. */
-export function assertStripeBilled(
+function assertStripeBilled(
   subscription: TenantSubscription | undefined,
 ): asserts subscription is StripeBilledSubscription {
   assert(
@@ -59,7 +59,7 @@ export function assertStripeBilled(
  * Like a downgrade, cancelling waits for an unpaid invoice to be settled, or
  * the workspace would walk away from it at cycle end.
  */
-export function assertNothingUnpaid(subscription: TenantSubscription): void {
+function assertNothingUnpaid(subscription: TenantSubscription): void {
   assert(
     subscription.status !== PAST_DUE_STATUS,
     HTTP_CONFLICT,
