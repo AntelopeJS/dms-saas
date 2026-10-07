@@ -46,7 +46,9 @@
         "error": "Le paiement n'a pas pu être effectué",
         "error_hint": "Rien n'a été débité. Payez avec une autre carte sur Stripe, ou mettez d'abord la carte à jour dans Stripe.",
         "not_now": "Plus tard",
-        "missing": "Cette facture ne peut plus être lue. Actualisez le tableau."
+        "missing": "Cette facture ne peut plus être lue. Actualisez le tableau.",
+        "no_method": "Aucune carte enregistrée et pas encore de page de paiement Stripe pour cette facture. Ajoutez une carte avec « Mettre à jour la carte », puis payez.",
+        "status_error": "Les informations de paiement n'ont pas pu être chargées. Votre facture n'a pas changé."
       },
       "portal": {
         "open": "Gérer dans Stripe",

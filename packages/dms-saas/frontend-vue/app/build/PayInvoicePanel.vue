@@ -149,6 +149,10 @@ onMounted(() => {
 				</DmsCard>
 			</div>
 
+			<p v-if="!card && !canPayOnStripe" class="text-muted text-sm">
+				{{ $t(`${KEY_PREFIX}.no_method`) }}
+			</p>
+
 			<UAlert
 				v-if="failure"
 				color="error"
@@ -158,6 +162,22 @@ onMounted(() => {
 				:description="$t(`${KEY_PREFIX}.error_hint`)"
 			/>
 		</template>
+
+		<UAlert
+			v-else-if="billingStatus.error.value"
+			color="error"
+			variant="subtle"
+			icon="i-ph-warning-circle"
+			:title="$t(`${KEY_PREFIX}.status_error`)"
+			:actions="[
+				{
+					label: $t('saas.common.retry'),
+					color: 'error',
+					variant: 'soft',
+					onClick: () => billingStatus.refresh(),
+				},
+			]"
+		/>
 
 		<USkeleton v-else class="h-24 w-full" />
 

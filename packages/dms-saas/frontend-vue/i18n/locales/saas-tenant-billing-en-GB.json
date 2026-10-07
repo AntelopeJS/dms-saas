@@ -46,7 +46,9 @@
         "error": "The payment could not be made",
         "error_hint": "Nothing was charged. Pay with another card on Stripe, or update the card in Stripe first.",
         "not_now": "Not now",
-        "missing": "This invoice can no longer be read. Refresh the table."
+        "missing": "This invoice can no longer be read. Refresh the table.",
+        "no_method": "There is no card on file and no Stripe payment page for this invoice yet. Add a card with Update card, then pay.",
+        "status_error": "The payment details couldn't load. Your invoice is unchanged."
       },
       "portal": {
         "open": "Manage in Stripe",
