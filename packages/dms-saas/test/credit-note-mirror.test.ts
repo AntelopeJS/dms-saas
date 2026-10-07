@@ -246,7 +246,7 @@ describe("Stripe credit note mirror", () => {
       total: -3_600,
       status: "issued",
       creditNoteReason: "order_change",
-      creditNoteType: "post_payment",
+      creditNoteType: "refund",
       memo: "Prorated cancellation",
       invoicePdfUrl: "https://invoice.stripe.test/cn_123.pdf",
     });
@@ -257,8 +257,9 @@ describe("Stripe credit note mirror", () => {
   it("mirrors a credit note type the local schema does not know as mixed", async () => {
     currentCreditNote = {
       ...creditNoteFixture(),
+      refunds: [],
       type: "future_settlement",
-    } as Stripe.CreditNote;
+    } as unknown as Stripe.CreditNote;
     await handleCreditNoteCreated(
       event("credit_note.created", currentCreditNote),
     );
@@ -266,6 +267,30 @@ describe("Stripe credit note mirror", () => {
     expect(creditNotes[0]?.type).toBe("mixed");
     expect(invoices[1]?.creditNoteType).toBe("mixed");
   });
+
+  it.each([
+    { refunds: [], balance: "cbtxn_1", type: "credit_to_balance" },
+    {
+      refunds: [{ amount_refunded: 100, refund: "re_1" }],
+      balance: "cbtxn_1",
+      type: "mixed",
+    },
+    { refunds: [], balance: null, type: "post_payment" },
+  ])(
+    "names how the credit reached the customer: $type",
+    async ({ refunds, balance, type }) => {
+      currentCreditNote = {
+        ...creditNoteFixture(),
+        refunds,
+        customer_balance_transaction: balance,
+      } as unknown as Stripe.CreditNote;
+      await handleCreditNoteCreated(
+        event("credit_note.created", currentCreditNote),
+      );
+
+      expect(creditNotes[0]?.type).toBe(type);
+    },
+  );
 
   it("upserts rather than duplicating a replayed credit note", async () => {
     const replay = event("credit_note.created", creditNoteFixture());
@@ -387,7 +412,7 @@ describe("Stripe credit note mirror", () => {
     expect(invoices[1]).toMatchObject({
       subtotal: -3_400,
       tax: -600,
-      creditNoteType: "post_payment",
+      creditNoteType: "refund",
       issuedAt: new Date((CREATED_SECONDS + 60) * 1_000),
     });
   });
