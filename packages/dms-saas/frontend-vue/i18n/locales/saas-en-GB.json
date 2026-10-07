@@ -58,7 +58,10 @@
         "creation_in_progress": "Another workspace is already being created with this card. Please wait a moment and try again.",
         "name_required": "The workspace name is required.",
         "payment_method_required": "A card is required.",
-        "is_cancelled": "This workspace is cancelled."
+        "is_cancelled": "This workspace is cancelled.",
+        "name_too_long": "The workspace name is too long: 60 characters at most.",
+        "free_card_limit_reached": "This card already backs as many free workspaces as allowed. Pick a paid plan or use another card.",
+        "delete_confirmation_mismatch": "The name you typed doesn't match the workspace name."
       },
       "operator": {
         "external_effect_failed": "The result could not be confirmed. Verify the workspace and billing state before submitting another operation.",
@@ -148,6 +151,9 @@
       "invitations": {
         "not_found": "This invitation no longer exists.",
         "email_not_sent": "The invitation was renewed but the email could not be sent. Copy the invitation link and send it yourself."
+      },
+      "data_export": {
+        "already_running": "An export is already being built. Wait for it to finish before requesting another one."
       }
     },
     "dashboard": {
@@ -484,12 +490,6 @@
       "caption": "All workspaces",
       "detail": "Workspace detail",
       "detail_description": "Subscription, billing info and ownership details for a single workspace.",
-      "switcher_title": "Switch workspace",
-      "current_label": "Workspace",
-      "none": "No workspace",
-      "select": "Select a workspace",
-      "no_results": "No matching workspace",
-      "switch_error": "Failed to switch workspace",
       "billing_section": "Billing",
       "column": {
         "name": "Name",
@@ -563,23 +563,6 @@
         },
         "placeholder": {
           "name": "Acme Corp"
-        },
-        "self_serve": {
-          "description": "An isolated space with its own projects, team and billing.",
-          "plan_hint": "(changeable at any time)",
-          "price": "{price}/{interval}",
-          "interval": {
-            "month": "month",
-            "year": "year"
-          },
-          "card": "Card",
-          "submit": "Create",
-          "error": {
-            "load": "Could not load the creation options.",
-            "failed": "Could not create the workspace.",
-            "card": "Could not initialise card payment."
-          },
-          "no_plans": "No plan is available right now. Please contact support to create a workspace."
         }
       },
       "invitations": {
@@ -938,20 +921,6 @@
       "settings": {
         "title": "Workspace settings"
       },
-      "seats": {
-        "title": "Seats",
-        "badge_unlimited": "{occupied} / unlimited",
-        "description": "Members and pending invites each take a seat: {members} member(s), {invites} pending invite(s).",
-        "limit_reached_owner": "Your plan's seat limit is reached. Upgrade to add more members.",
-        "limit_reached_member": "Your plan's seat limit is reached. Ask a workspace owner to upgrade the plan.",
-        "upgrade": "Upgrade",
-        "load_failed": "Seat usage could not be loaded",
-        "platform_support": {
-          "title": "Platform support",
-          "badge": "Platform support",
-          "description": "These platform team members have access to this workspace to support you. They are listed in the members table without a role and do not use a seat."
-        }
-      },
       "free_access": {
         "banner_title": "Complimentary access",
         "banner_description": "Your free access expires on {date}. Pick a paid plan before then to keep access.",
@@ -1138,56 +1107,6 @@
           "warning_free": "The paid subscription ends: paid features stop and the workspace is no longer billed.",
           "cancel": "Keep my current plan",
           "confirm": "Downgrade to {plan}"
-        }
-      },
-      "data_export": {
-        "title": "Data export",
-        "description": "Download a copy of your workspace data.",
-        "intro": "Request a complete copy of the data associated with this workspace. The archive is built in the background and a download link is e-mailed to you; the link and the archive both expire on the date shown in the history below. Provided in compliance with your right to data portability (GDPR article 20).",
-        "download": "Request an export",
-        "error_title": "Export failed",
-        "success_title": "Export ready",
-        "success_message": "Your data has been exported. A download link has also been e-mailed to you.",
-        "history": {
-          "title": "Previous exports",
-          "empty": "You have not requested any export for this workspace yet.",
-          "scope": "Workspace data",
-          "download": "Download",
-          "expires_at": "Available until {date}",
-          "expired": "Link expired",
-          "status_pending": "In progress",
-          "status_completed": "Ready",
-          "status_partial": "Incomplete",
-          "status_failed": "Failed",
-          "error_load": "Previous exports could not be loaded.",
-          "error_download": "This export could not be downloaded.",
-          "error_expired": "This export is no longer available — its download link has expired. Request a new one.",
-          "previous": "Previous",
-          "next": "Next",
-          "page": "Page {page}"
-        }
-      },
-      "general": {
-        "title": "General",
-        "description": "The workspace name and its deletion.",
-        "identity_title": "Workspace",
-        "identity_intro": "Your workspace identity.",
-        "name": "Workspace name",
-        "name_hint": "Visible to every member.",
-        "reset": "Reset",
-        "save": "Save changes",
-        "renamed": "Workspace renamed.",
-        "danger_zone_title": "Danger zone",
-        "delete_intro": "Deletes the workspace: projects, services and data are destroyed after a {days}-day retention period. A data export is still possible before then.",
-        "delete_action": "Delete workspace",
-        "delete_warning": "“{name}” — access is revoked immediately and data is destroyed after {days} days. Invoices stay archived (legal requirement).",
-        "delete_confirm_label": "Type the workspace name to confirm",
-        "delete_submit": "Delete permanently",
-        "cancel": "Cancel",
-        "error": {
-          "load": "Could not load the workspace.",
-          "rename": "Could not rename the workspace.",
-          "delete": "Could not delete the workspace."
         }
       }
     },

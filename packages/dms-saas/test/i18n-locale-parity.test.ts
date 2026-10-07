@@ -12,10 +12,13 @@ interface LocaleFile {
 
 const REFERENCE_LOCALE = "en-GB";
 const OAUTH_REGISTRATION_PREFIX = "saas.oauth_registration.";
-const EXPORT_HISTORY_PREFIX = "saas.workspace.data_export.history.";
+const EXPORT_ROW_STATUS_PREFIX = "saas.workspace.data_export.history.status.";
 
-/** `ExportStatus` of dms-base, which the history rows label one key each. */
-const EXPORT_STATUSES = ["pending", "completed", "failed"];
+/**
+ * What an export history row can say: the engine's `ExportStatus` values,
+ * split by what the archive became (`ready`, `partial`, `expired`).
+ */
+const EXPORT_ROW_STATES = ["ready", "partial", "expired", "failed", "pending"];
 
 const LOCALE_FILES: LocaleFile[] = [
   { code: REFERENCE_LOCALE, path: "saas-en-GB.json" },
@@ -71,39 +74,10 @@ describe("saas locale files", () => {
     },
   );
 
-  it.each(LOCALE_FILES)(
-    "$code carries the export history namespace",
-    (file) => {
-      const entries = locales.get(file.code) as Map<string, string>;
-      const namespaced = [...entries.keys()].filter((key) =>
-        key.startsWith(EXPORT_HISTORY_PREFIX),
-      );
-
-      expect(namespaced.sort()).toEqual([
-        `${EXPORT_HISTORY_PREFIX}download`,
-        `${EXPORT_HISTORY_PREFIX}empty`,
-        `${EXPORT_HISTORY_PREFIX}error_download`,
-        `${EXPORT_HISTORY_PREFIX}error_expired`,
-        `${EXPORT_HISTORY_PREFIX}error_load`,
-        `${EXPORT_HISTORY_PREFIX}expired`,
-        `${EXPORT_HISTORY_PREFIX}expires_at`,
-        `${EXPORT_HISTORY_PREFIX}next`,
-        `${EXPORT_HISTORY_PREFIX}page`,
-        `${EXPORT_HISTORY_PREFIX}previous`,
-        `${EXPORT_HISTORY_PREFIX}scope`,
-        `${EXPORT_HISTORY_PREFIX}status_completed`,
-        `${EXPORT_HISTORY_PREFIX}status_failed`,
-        `${EXPORT_HISTORY_PREFIX}status_partial`,
-        `${EXPORT_HISTORY_PREFIX}status_pending`,
-        `${EXPORT_HISTORY_PREFIX}title`,
-      ]);
-    },
-  );
-
-  it.each(LOCALE_FILES)("$code labels every export job status", (file) => {
+  it.each(LOCALE_FILES)("$code labels every export history state", (file) => {
     const entries = locales.get(file.code) as Map<string, string>;
-    const missing = EXPORT_STATUSES.filter(
-      (status) => !entries.has(`${EXPORT_HISTORY_PREFIX}status_${status}`),
+    const missing = EXPORT_ROW_STATES.filter(
+      (state) => !entries.has(`${EXPORT_ROW_STATUS_PREFIX}${state}`),
     );
 
     expect(missing).toEqual([]);

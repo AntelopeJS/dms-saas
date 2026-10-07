@@ -58,7 +58,10 @@
         "creation_in_progress": "Un autre workspace est déjà en cours de création avec cette carte. Patientez un instant puis réessayez.",
         "name_required": "Le nom du workspace est obligatoire.",
         "payment_method_required": "Une carte bancaire est requise.",
-        "is_cancelled": "Ce workspace est annulé."
+        "is_cancelled": "Ce workspace est annulé.",
+        "name_too_long": "Le nom de l'espace est trop long : 60 caractères au maximum.",
+        "free_card_limit_reached": "Cette carte couvre déjà autant d'espaces gratuits que permis. Choisissez un forfait payant ou une autre carte.",
+        "delete_confirmation_mismatch": "Le nom saisi ne correspond pas au nom de l'espace."
       },
       "operator": {
         "external_effect_failed": "Le résultat n'a pas pu être confirmé. Vérifiez l'état du workspace et de la facturation avant d'envoyer une autre opération.",
@@ -148,6 +151,9 @@
       "invitations": {
         "not_found": "Cette invitation n'existe plus.",
         "email_not_sent": "L'invitation a été renouvelée mais l'e-mail n'a pas pu être envoyé. Copiez le lien d'invitation et envoyez-le vous-même."
+      },
+      "data_export": {
+        "already_running": "Un export est déjà en préparation. Attendez qu'il se termine avant d'en demander un autre."
       }
     },
     "dashboard": {
@@ -484,12 +490,6 @@
       "caption": "Tous les workspaces",
       "detail": "Détail du workspace",
       "detail_description": "Abonnement, infos de facturation et propriétaires d'un workspace.",
-      "switcher_title": "Changer de workspace",
-      "current_label": "Workspace",
-      "none": "Aucun workspace",
-      "select": "Sélectionnez un workspace",
-      "no_results": "Aucun workspace correspondant",
-      "switch_error": "Échec du changement de workspace",
       "billing_section": "Facturation",
       "column": {
         "name": "Nom",
@@ -563,23 +563,6 @@
         },
         "placeholder": {
           "name": "Acme Corp"
-        },
-        "self_serve": {
-          "description": "Un espace isolé avec ses projets, son équipe et sa facturation.",
-          "plan_hint": "(modifiable à tout moment)",
-          "price": "{price}/{interval}",
-          "interval": {
-            "month": "mois",
-            "year": "an"
-          },
-          "card": "Carte bancaire",
-          "submit": "Créer",
-          "error": {
-            "load": "Impossible de charger les options de création.",
-            "failed": "Impossible de créer le workspace.",
-            "card": "Impossible d'initialiser le paiement par carte."
-          },
-          "no_plans": "Aucun plan n'est disponible pour le moment. Contactez le support pour créer un workspace."
         }
       },
       "invitations": {
@@ -938,20 +921,6 @@
       "settings": {
         "title": "Paramètres du workspace"
       },
-      "seats": {
-        "title": "Sièges",
-        "badge_unlimited": "{occupied} / illimité",
-        "description": "Les membres et les invitations en attente occupent chacun un siège : {members} membre(s), {invites} invitation(s) en attente.",
-        "limit_reached_owner": "La limite de sièges de votre plan est atteinte. Passez à un plan supérieur pour ajouter des membres.",
-        "limit_reached_member": "La limite de sièges de votre plan est atteinte. Demandez à un propriétaire du workspace de changer de plan.",
-        "upgrade": "Changer de plan",
-        "load_failed": "Impossible de charger l'utilisation des sièges",
-        "platform_support": {
-          "title": "Support de la plateforme",
-          "badge": "Support plateforme",
-          "description": "Ces membres de l'équipe de la plateforme ont accès à ce workspace pour vous accompagner. Ils apparaissent sans rôle dans la liste des membres et n'occupent aucun siège."
-        }
-      },
       "free_access": {
         "banner_title": "Accès offert",
         "banner_description": "Votre accès gratuit expire le {date}. Sélectionnez un plan payant avant cette date pour conserver l'accès.",
@@ -1138,56 +1107,6 @@
           "warning_free": "L'abonnement payant prend fin : les fonctionnalités payantes s'arrêtent et le workspace n'est plus facturé.",
           "cancel": "Conserver mon plan actuel",
           "confirm": "Passer au plan {plan}"
-        }
-      },
-      "data_export": {
-        "title": "Export des données",
-        "description": "Télécharger une copie des données de votre workspace.",
-        "intro": "Demandez une copie complète des données associées à ce workspace. L'archive est construite en arrière-plan et un lien de téléchargement vous est envoyé par e-mail ; le lien et l'archive expirent à la date indiquée dans l'historique ci-dessous. Conforme à votre droit à la portabilité des données (RGPD article 20).",
-        "download": "Demander un export",
-        "error_title": "Échec de l'export",
-        "success_title": "Export prêt",
-        "success_message": "Vos données ont été exportées. Un lien de téléchargement vous a également été envoyé par e-mail.",
-        "history": {
-          "title": "Exports précédents",
-          "empty": "Vous n'avez encore demandé aucun export pour ce workspace.",
-          "scope": "Données du workspace",
-          "download": "Télécharger",
-          "expires_at": "Disponible jusqu'au {date}",
-          "expired": "Lien expiré",
-          "status_pending": "En cours",
-          "status_completed": "Prêt",
-          "status_partial": "Incomplet",
-          "status_failed": "Échec",
-          "error_load": "Les exports précédents n'ont pas pu être chargés.",
-          "error_download": "Cet export n'a pas pu être téléchargé.",
-          "error_expired": "Cet export n'est plus disponible — son lien de téléchargement a expiré. Demandez-en un nouveau.",
-          "previous": "Précédent",
-          "next": "Suivant",
-          "page": "Page {page}"
-        }
-      },
-      "general": {
-        "title": "Général",
-        "description": "Le nom du workspace et sa suppression.",
-        "identity_title": "Workspace",
-        "identity_intro": "L'identité de votre workspace.",
-        "name": "Nom du workspace",
-        "name_hint": "Visible par tous les membres.",
-        "reset": "Réinitialiser",
-        "save": "Enregistrer les modifications",
-        "renamed": "Workspace renommé.",
-        "danger_zone_title": "Zone de danger",
-        "delete_intro": "Supprime le workspace : projets, services et données sont détruits après une période de rétention de {days} jours. Un export des données reste possible avant.",
-        "delete_action": "Supprimer le workspace",
-        "delete_warning": "« {name} » — l'accès est révoqué immédiatement et les données sont détruites après {days} jours. Les factures restent archivées (obligation légale).",
-        "delete_confirm_label": "Tapez le nom du workspace pour confirmer",
-        "delete_submit": "Supprimer définitivement",
-        "cancel": "Annuler",
-        "error": {
-          "load": "Impossible de charger le workspace.",
-          "rename": "Impossible de renommer le workspace.",
-          "delete": "Impossible de supprimer le workspace."
         }
       }
     },
