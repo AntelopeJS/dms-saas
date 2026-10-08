@@ -211,7 +211,7 @@
 					"unpaid_invoice": "Invoice {invoice} of {amount} could not be charged. The workspace is closed, but its data and configuration are fully preserved. Paying it restores access immediately.",
 					"suspended": "This workspace was suspended because of a billing issue. Its data and configuration are preserved until the situation is resolved.",
 					"pending_payment": "This workspace is waiting for its first payment. Access opens as soon as it is completed.",
-					"cancelled": "This workspace's subscription was cancelled, so access is closed.",
+					"cancelled": "This workspace's subscription was cancelled, so access is closed. Its data is kept for now: choosing a plan again reopens it.",
 					"complimentary_expired": "The complimentary access of this workspace has ended. Choose a plan to reopen it; its data is preserved."
 				},
 				"timeline": {
@@ -234,6 +234,7 @@
 					"view_billing": "View billing",
 					"action": {
 						"pending_payment": "Complete payment",
+						"cancelled": "Choose a plan",
 						"complimentary_expired": "Choose a plan"
 					},
 					"manage_in_stripe": "Manage in Stripe",

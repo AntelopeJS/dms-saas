@@ -21,6 +21,7 @@ import { PRICE_MULTIPLIER } from "../../stripe/sync-plan";
 import { previewStripeInvoice } from "../../stripe/upcoming-invoice";
 import { toAvailablePreview } from "../../upcoming-invoice/mapping";
 import { MS_PER_DAY, stripeSecondsToDate } from "../../utils/time";
+import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
 import { isCheckoutTrialAvailable } from "./tenant-plan-checkout";
 import { isPaidPlan, planQuantity } from "./tenant-plan-ops";
 
@@ -38,9 +39,10 @@ const MONTHS_PER_INTERVAL: Record<PlanInterval, number> = {
 /**
  * `upgrade`: applied today, the difference charged at once; `downgrade`:
  * parked until the renewal; `checkout`: a first paid subscription, paid on
- * Stripe's payment page.
+ * Stripe's payment page; `free`: a free plan with no Stripe subscription to
+ * leave, applied today with nothing billed.
  */
-export type PlanChangeKind = "upgrade" | "downgrade" | "checkout";
+export type PlanChangeKind = "upgrade" | "downgrade" | "checkout" | "free";
 
 /** The recurring charge once the change is in force. */
 export interface PlanChangeRenewal {
@@ -98,11 +100,10 @@ export function resolvePlanChangeKind(
   target: Plan,
   seats?: number,
 ): PlanChangeKind {
-  const stripeSubscriptionId = subscription?.stripeSubscriptionId;
-  if (isPaidPlan(target) && !stripeSubscriptionId) return "checkout";
+  if (!liveStripeSubscriptionId(subscription))
+    return isPaidPlan(target) ? "checkout" : "free";
   const isDeferred =
-    !!stripeSubscriptionId &&
-    (!isPaidPlan(target) || isDowngrade(currentPlan, target, seats));
+    !isPaidPlan(target) || isDowngrade(currentPlan, target, seats);
   return isDeferred ? "downgrade" : "upgrade";
 }
 
@@ -324,6 +325,7 @@ const PREVIEWS_BY_KIND: Record<
   upgrade: previewUpgrade,
   downgrade: previewDowngrade,
   checkout: previewCheckout,
+  free: (base) => basePreview(base, "free"),
 };
 
 /**

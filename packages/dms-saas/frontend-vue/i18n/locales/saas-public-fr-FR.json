@@ -211,7 +211,7 @@
 					"unpaid_invoice": "La facture {invoice} de {amount} n'a pas pu être débitée. L'espace de travail est fermé, mais ses données et sa configuration sont intégralement conservées. La régler rétablit l'accès immédiatement.",
 					"suspended": "Cet espace de travail a été suspendu à cause d'un problème de facturation. Ses données et sa configuration sont conservées jusqu'à ce que la situation soit réglée.",
 					"pending_payment": "Cet espace de travail attend son premier paiement. L'accès s'ouvre dès qu'il est effectué.",
-					"cancelled": "L'abonnement de cet espace de travail a été résilié, l'accès est donc fermé.",
+					"cancelled": "L'abonnement de cet espace de travail a été résilié, l'accès est donc fermé. Ses données sont conservées pour l'instant : choisir à nouveau une offre le rouvre.",
 					"complimentary_expired": "L'accès offert à cet espace de travail a pris fin. Choisissez une offre pour le rouvrir ; ses données sont conservées."
 				},
 				"timeline": {
@@ -234,6 +234,7 @@
 					"view_billing": "Voir la facturation",
 					"action": {
 						"pending_payment": "Finaliser le paiement",
+						"cancelled": "Choisir une offre",
 						"complimentary_expired": "Choisir une offre"
 					},
 					"manage_in_stripe": "Gérer dans Stripe",

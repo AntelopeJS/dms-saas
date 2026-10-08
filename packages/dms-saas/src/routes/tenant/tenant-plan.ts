@@ -38,7 +38,10 @@ import {
   type TenantPlanView,
 } from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
-import { canStartFirstPaidSubscription } from "../../workspaces/first-payment";
+import {
+  canResubscribe,
+  canStartFirstPaidSubscription,
+} from "../../workspaces/first-payment";
 import {
   isComplimentaryPlanLocked,
   isComplimentarySubscription,
@@ -86,6 +89,7 @@ import {
   describePendingCheckout,
   type PendingCheckoutResult,
 } from "./tenant-plan-checkout-recovery";
+import { resubscribeOnFreePlan } from "./tenant-plan-resubscription";
 
 const PRORATION_DATE_MAX_AGE_SECONDS = 3600;
 const MS_PER_SECOND = 1000;
@@ -259,6 +263,7 @@ export class SaasTenantPlanController extends Controller(
       isComplimentary: isComplimentarySubscription(subscription),
       isPlanChangeLocked: isComplimentaryPlanLocked(subscription),
       canRecoverComplimentary: canStartFirstPaidSubscription(subscription),
+      canResubscribe: canResubscribe(subscription),
       paidUsageStartedAt: subscription?.paidUsageStartedAt ?? null,
       paidUsagePeriods: subscription?.paidUsagePeriods ?? null,
       currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
@@ -346,7 +351,8 @@ export class SaasTenantPlanController extends Controller(
     assert(targetPlanId, HTTP_BAD_REQUEST, "saas.errors.plan.invalid");
     assert(
       subscription?.planId !== targetPlanId ||
-        canStartFirstPaidSubscription(subscription),
+        canStartFirstPaidSubscription(subscription) ||
+        canResubscribe(subscription),
       HTTP_CONFLICT,
       "saas.errors.plan.already_current",
     );
@@ -386,7 +392,10 @@ export class SaasTenantPlanController extends Controller(
     const subscription = await tenantSubscriptionModel.findOne();
     this.assertPlanChangeAllowed(subscription, user);
     const isRecovery = canStartFirstPaidSubscription(subscription);
-    if (!isRecovery) await AssertTenantAccess(user._id, tenantId);
+    // A cancelled workspace is blocked too; choosing a plan is how its owner
+    // brings it back, on any plan, the one it was cancelled on included.
+    const choosesAnew = isRecovery || canResubscribe(subscription);
+    if (!choosesAnew) await AssertTenantAccess(user._id, tenantId);
     const billingInfo = await tenantBillingInfoModel.findOne();
     const newPlan = await loadAndValidateTargetPlan(
       this.planModel,
@@ -399,7 +408,7 @@ export class SaasTenantPlanController extends Controller(
       HTTP_CONFLICT,
       "saas.errors.plan.paid_recovery_required",
     );
-    if (subscription?.planId === body.planId && !isRecovery) {
+    if (subscription?.planId === body.planId && !choosesAnew) {
       return this.resolveSamePlanRequest(tenantId, subscription);
     }
     if (!isRecovery && startsPaidCheckout(newPlan, subscription)) {
@@ -449,6 +458,9 @@ export class SaasTenantPlanController extends Controller(
 
     if (startsPaidCheckout(newPlan, subscription)) {
       return startPaidCheckout(request);
+    }
+    if (canResubscribe(subscription)) {
+      return resubscribeOnFreePlan(request);
     }
     if (!subscription) {
       return insertFreeSubscription(

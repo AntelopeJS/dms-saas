@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useWorkspaceName } from '../build/useWorkspaceName'
 import { UPGRADE_QUERY_PARAM } from '../composables/usePlanChangeReview'
+import { BILLING_CHOOSE_PLAN_PARAM } from '../build/public/routes'
 
 const KEY_PREFIX = 'saas.tenant_billing.plan'
 const MEMBERS_PATH = '/settings/workspace/members'
@@ -53,11 +54,13 @@ const isSeatPlan = computed(() => current.value?.billingMode === 'seat')
 const cancellationAt = computed(
 	() => status.value?.scheduledCancellationAt ?? null,
 )
+const canResubscribe = computed(() => !!data.value?.canResubscribe)
 const isStripeBilled = computed(
 	() =>
 		!!status.value?.hasStripeCustomer &&
 		isPaid.value &&
-		!data.value?.isComplimentary,
+		!data.value?.isComplimentary &&
+		!canResubscribe.value,
 )
 
 /** The card is readable on a blocked workspace's billing page, but plan
@@ -65,7 +68,8 @@ const isStripeBilled = computed(
 const isAccessBlocked = computed(
 	() =>
 		isBlockingSubscriptionStatus(data.value?.status) &&
-		!data.value?.canRecoverComplimentary,
+		!data.value?.canRecoverComplimentary &&
+		!canResubscribe.value,
 )
 const canChangePlan = computed(
 	() =>
@@ -384,11 +388,20 @@ async function consumeUpgradeParam(): Promise<void> {
 	comparison.openReview(plan._id)
 }
 
+/** `?choose-plan` (sent by the access-restricted screen) opens Compare. */
+async function consumeChoosePlanParam(): Promise<void> {
+	if (route.query[BILLING_CHOOSE_PLAN_PARAM] === undefined) return
+	const { [BILLING_CHOOSE_PLAN_PARAM]: _choosePlan, ...query } = route.query
+	await router.replace({ query })
+	if (canChangePlan.value) comparison.open()
+}
+
 onMounted(async () => {
 	await releaseCancelledCheckout()
 	await Promise.all([tenantPlan.load(), billingStatus.load()])
 	isLoading.value = false
 	await consumeUpgradeParam()
+	await consumeChoosePlanParam()
 })
 </script>
 
@@ -396,6 +409,16 @@ onMounted(async () => {
 	<DmsCard :title="$t(`${KEY_PREFIX}.title`)">
 		<template v-if="canChangePlan && current" #actions>
 			<UButton
+				v-if="canResubscribe"
+				size="sm"
+				color="primary"
+				icon="i-ph-stack"
+				@click="comparison.open()"
+			>
+				{{ $t(`${KEY_PREFIX}.resubscribe`) }}
+			</UButton>
+			<UButton
+				v-else
 				size="sm"
 				:color="isPaid ? 'neutral' : 'primary'"
 				:variant="isPaid ? 'subtle' : 'solid'"
@@ -558,7 +581,12 @@ onMounted(async () => {
 				<UIcon name="i-ph-info" class="me-1 align-middle" />
 				{{ pastDueNote }}
 			</p>
-			<p v-if="isAccessBlocked" class="text-muted text-sm">{{ blockedHint }}</p>
+			<p v-if="canResubscribe && isTenantOwner" class="text-muted text-sm">
+				{{ $t(`${KEY_PREFIX}.resubscribe_hint`) }}
+			</p>
+			<p v-else-if="isAccessBlocked" class="text-muted text-sm">
+				{{ blockedHint }}
+			</p>
 			<p v-else-if="data.isPlanChangeLocked" class="text-muted text-sm">
 				{{ $t(`${KEY_PREFIX}.managed`) }}
 			</p>
@@ -583,7 +611,8 @@ onMounted(async () => {
 			:pending-plan-id="pendingPlan?.planId ?? null"
 			:renewal-date="data.currentPeriodEnd"
 			:is-recovery="data.canRecoverComplimentary"
-			:is-current-paid="isPaid && !!status?.hasStripeCustomer"
+			:is-resubscription="canResubscribe"
+			:is-current-paid="isPaid && !!status?.hasStripeCustomer && !canResubscribe"
 			:workspace-name="workspaceName"
 			@changed="refresh"
 			@upgrade="openUpgrade"

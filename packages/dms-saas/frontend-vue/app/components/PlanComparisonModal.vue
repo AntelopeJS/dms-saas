@@ -12,6 +12,11 @@ const props = defineProps<{
 	pendingPlanId: string | null
 	renewalDate: string | null
 	isRecovery?: boolean
+	/**
+	 * A cancelled workspace choosing a plan again: every plan is offered, the
+	 * one it was cancelled on included, free plans as well.
+	 */
+	isResubscription?: boolean
 	/** A paid plan chosen from a free one goes through the upgrade flow. */
 	isCurrentPaid?: boolean
 	workspaceName?: string | null
@@ -88,8 +93,12 @@ const subtitle = computed(() =>
 	}),
 )
 
+const isChoosingAnew = computed(
+	() => !!props.isRecovery || !!props.isResubscription,
+)
+
 function isCurrent(plan: OfferedPlanView): boolean {
-	return plan._id === props.currentPlanId && !props.isRecovery
+	return plan._id === props.currentPlanId && !isChoosingAnew.value
 }
 
 function isDowngradeTarget(plan: OfferedPlanView): boolean {
@@ -124,7 +133,8 @@ function seatsCell(plan: OfferedPlanView): string {
 }
 
 function actionLabel(plan: OfferedPlanView): string {
-	if (props.isRecovery || !props.isCurrentPaid) return t(`${KEY_PREFIX}.choose`)
+	if (isChoosingAnew.value || !props.isCurrentPaid)
+		return t(`${KEY_PREFIX}.choose`)
 	return isDowngradeTarget(plan)
 		? t(`${KEY_PREFIX}.review_downgrade`)
 		: t(`${KEY_PREFIX}.review_upgrade`)

@@ -6,6 +6,7 @@ import type {
   TenantBillingAddress,
   TenantBillingInfo,
   TenantCustomerType,
+  TenantSubscription,
   TenantSubscriptionStatus,
   VatVerificationStatus,
 } from "../db";
@@ -184,6 +185,20 @@ export async function handleInvoicePaymentFailed(
   });
 }
 
+/**
+ * Whether the money-back refund already settled this subscription. The
+ * refund is recorded once per workspace, so one claimed before a cancelled
+ * workspace subscribed again concerns the subscription Stripe ended then.
+ */
+function wasRefundedOnSubscription(
+  local: TenantSubscription | undefined,
+  subscription: Stripe.Subscription,
+): boolean {
+  if (!local?.refundRequestedAt) return false;
+  const startedAt = optionalStripeDate(subscription.start_date);
+  return !startedAt || new Date(local.refundRequestedAt) >= startedAt;
+}
+
 async function applyAutoProrataIfEnabled(
   customerId: string,
   tenantId: string,
@@ -196,7 +211,7 @@ async function applyAutoProrataIfEnabled(
   if (!settings?.autoProrataOnCancelEnabled) return;
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const localSubscription = await tenantSubscriptionModel.findOne();
-  if (localSubscription?.refundRequestedAt) return;
+  if (wasRefundedOnSubscription(localSubscription, subscription)) return;
   const stripe = getStripeClient();
   const invoices = await stripe.invoices.list({
     customer: customerId,

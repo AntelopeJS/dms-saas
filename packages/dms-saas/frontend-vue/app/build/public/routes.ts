@@ -15,6 +15,12 @@ export const BILLING_PATH = '/settings/workspace/billing'
  */
 export const BILLING_UPGRADE_PARAM = 'upgrade'
 
+/**
+ * Query parameter of the Billing page asking it to open the plan comparison:
+ * how the access-restricted screen sends the owner to choose a plan.
+ */
+export const BILLING_CHOOSE_PLAN_PARAM = 'choose-plan'
+
 /** Query parameter of Register naming the plan chosen on Pricing. */
 export const REGISTER_PLAN_PARAM = 'plan'
 
@@ -78,6 +84,9 @@ export function isPublicScreenServed(
 export function billingUpgradePath(planId: string): string {
 	return `${BILLING_PATH}?${BILLING_UPGRADE_PARAM}=${encodeURIComponent(planId)}`
 }
+
+/** The Billing page with its plan comparison open. */
+export const BILLING_CHOOSE_PLAN_PATH = `${BILLING_PATH}?${BILLING_CHOOSE_PLAN_PARAM}=1`
 
 /** Sign-up link carrying the plan chosen on Pricing. */
 export function registerPathFor(planReference: string): string {

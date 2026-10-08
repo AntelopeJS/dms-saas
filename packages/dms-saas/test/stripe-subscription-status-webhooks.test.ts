@@ -10,13 +10,14 @@ const harness = vi.hoisted(() => ({
   updateStatus: vi.fn(async () => undefined),
   notifyOwners: vi.fn(async () => undefined),
   retrieveSubscription: vi.fn(),
+  settings: undefined as object | undefined,
 }));
-
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => ({
-    subscriptions: { retrieve: harness.retrieveSubscription },
-  }),
+const stripe = vi.hoisted(() => ({
+  subscriptions: { retrieve: harness.retrieveSubscription },
+  invoices: { list: vi.fn() },
+  creditNotes: { list: vi.fn(), create: vi.fn() },
 }));
+vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
 
 vi.mock(
   "@antelopejs/interface-database-decorators",
@@ -27,7 +28,7 @@ vi.mock(
     GetModel: (model: { name: string }) =>
       ({
         TenantSubscriptionModel: { findOne: async () => harness.local },
-        BillingSettingsModel: { get: async () => undefined },
+        BillingSettingsModel: { get: async () => harness.settings },
       })[model.name],
   }),
 );
@@ -61,6 +62,7 @@ function deletion(): Stripe.Event {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  harness.settings = undefined;
 });
 
 describe("customer.subscription.deleted", () => {
@@ -84,6 +86,63 @@ describe("customer.subscription.deleted", () => {
 
     expect(harness.updateStatus).not.toHaveBeenCalled();
     expect(harness.notifyOwners).not.toHaveBeenCalled();
+  });
+});
+
+describe("automatic prorated refund on cancellation", () => {
+  const SUBSCRIPTION_START = 1_800_000_000;
+  const PERIOD_END = SUBSCRIPTION_START + 30 * 86_400;
+
+  function deletionOfSubscriptionStartedAt(): Stripe.Event {
+    return {
+      type: "customer.subscription.deleted",
+      data: {
+        object: {
+          id: DELETED_SUBSCRIPTION_ID,
+          customer: "cus_comp",
+          start_date: SUBSCRIPTION_START,
+          ended_at: SUBSCRIPTION_START + 86_400,
+          items: {
+            data: [
+              {
+                current_period_start: SUBSCRIPTION_START,
+                current_period_end: PERIOD_END,
+              },
+            ],
+          },
+        },
+      },
+    } as Stripe.Event;
+  }
+
+  beforeEach(() => {
+    harness.settings = { autoProrataOnCancelEnabled: true };
+    stripe.invoices.list.mockResolvedValue({
+      data: [{ id: "in_paid", amount_paid: 3000 }],
+    });
+    stripe.creditNotes.list.mockResolvedValue({ data: [] });
+  });
+
+  it("is skipped for the subscription the money-back refund already settled", async () => {
+    harness.local = {
+      stripeSubscriptionId: DELETED_SUBSCRIPTION_ID,
+      refundRequestedAt: new Date((SUBSCRIPTION_START + 3600) * 1000),
+    };
+
+    await handleSubscriptionDeleted(deletionOfSubscriptionStartedAt());
+
+    expect(stripe.creditNotes.create).not.toHaveBeenCalled();
+  });
+
+  it("still applies to a subscription started after an earlier refund", async () => {
+    harness.local = {
+      stripeSubscriptionId: DELETED_SUBSCRIPTION_ID,
+      refundRequestedAt: new Date((SUBSCRIPTION_START - 86_400) * 1000),
+    };
+
+    await handleSubscriptionDeleted(deletionOfSubscriptionStartedAt());
+
+    expect(stripe.creditNotes.create).toHaveBeenCalledOnce();
   });
 });
 

@@ -78,6 +78,8 @@ export interface TenantPlanResponse {
 	isComplimentary: boolean
 	isPlanChangeLocked: boolean
 	canRecoverComplimentary: boolean
+	/** A cancelled workspace whose owner may choose a plan again to reopen it. */
+	canResubscribe: boolean
 	paidUsageStartedAt: string | null
 	paidUsagePeriods: PaidUsagePeriod[] | null
 	currentPeriodEnd: string | null
@@ -105,8 +107,11 @@ export interface ChangePlanResult {
 	authentication: UpgradeAuthentication | null
 }
 
-/** `upgrade` applies today, `downgrade` at renewal, `checkout` on Stripe. */
-export type PlanChangeKind = 'upgrade' | 'downgrade' | 'checkout'
+/**
+ * `upgrade` applies today, `downgrade` at renewal, `checkout` on Stripe,
+ * `free` today with nothing billed.
+ */
+export type PlanChangeKind = 'upgrade' | 'downgrade' | 'checkout' | 'free'
 
 export interface PlanChangeLine {
 	description: string | null

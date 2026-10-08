@@ -41,6 +41,7 @@ const isSubmitting = ref(false)
 const submitFailure = ref<string | null>(null)
 
 const isDowngrade = computed(() => preview.value?.kind === 'downgrade')
+const isFreeSwitch = computed(() => preview.value?.kind === 'free')
 const charge = computed(() => preview.value?.charge ?? null)
 const currency = computed(() => preview.value?.currency ?? props.plan.currency)
 const card = computed(() => billingStatus.value?.paymentMethod ?? null)
@@ -82,6 +83,11 @@ const heading = computed(() => {
 		current: props.currentPlanName ?? '',
 		date: day(preview.value?.effectiveAt),
 	}
+	if (isFreeSwitch.value)
+		return {
+			title: t(`${KEY_PREFIX}.free_title`, params),
+			description: t(`${KEY_PREFIX}.free_description`, params),
+		}
 	return isDowngrade.value
 		? {
 				title: t(`${KEY_PREFIX}.downgrade_title`, params),
@@ -132,6 +138,8 @@ const renewalSentence = computed(() => {
 
 const confirmLabel = computed(() => {
 	if (isDowngrade.value) return t(`${KEY_PREFIX}.confirm_downgrade`)
+	if (isFreeSwitch.value)
+		return t(`${KEY_PREFIX}.confirm_free`, { plan: props.plan.name })
 	if (preview.value?.isTrial) return t(`${KEY_PREFIX}.confirm_trial`)
 	return t(`${KEY_PREFIX}.confirm_upgrade`, { amount: money(dueToday.value) })
 })
@@ -300,7 +308,7 @@ onMounted(() => {
 			</template>
 		</UAlert>
 
-		<div v-else-if="preview" class="flex flex-col gap-2 text-sm">
+		<div v-else-if="preview && !isFreeSwitch" class="flex flex-col gap-2 text-sm">
 			<p class="text-muted text-xs font-semibold uppercase">
 				{{
 					isDowngrade

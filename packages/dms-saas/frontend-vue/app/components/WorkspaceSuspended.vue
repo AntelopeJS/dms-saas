@@ -12,10 +12,18 @@ import {
 } from '../build/public/access'
 import AccessTimeline from '../build/public/AccessTimeline.vue'
 import OtherWorkspaces from '../build/public/OtherWorkspaces.vue'
-import { BILLING_PATH, HOME_PATH, LOGIN_PATH } from '../build/public/routes'
+import {
+	BILLING_CHOOSE_PLAN_PATH,
+	BILLING_PATH,
+	HOME_PATH,
+	LOGIN_PATH,
+} from '../build/public/routes'
 
 const ACCESS_ENDPOINT = '/api/saas/workspace-access'
 const PORTAL_ENDPOINT = '/api/saas/billing/portal-session'
+
+/** Reasons the owner settles by choosing a plan, on the comparison itself. */
+const PLAN_CHOICE_REASONS = new Set(['cancelled', 'complimentary_expired'])
 
 interface PortalSession {
 	url: string
@@ -88,9 +96,15 @@ const retentionLine = computed(() => {
 
 /** The workspace owner's primary way back in, by reason. */
 const ownerActionLabel = computed(() =>
-	reason.value === 'suspended' || reason.value === 'cancelled'
+	reason.value === 'suspended'
 		? t('saas.public.suspended.owner.view_billing')
 		: t(`saas.public.suspended.owner.action.${reason.value}`),
+)
+
+const ownerActionPath = computed(() =>
+	reason.value && PLAN_CHOICE_REASONS.has(reason.value)
+		? BILLING_CHOOSE_PLAN_PATH
+		: BILLING_PATH,
 )
 
 const mailtoOwner = computed(() =>
@@ -262,7 +276,7 @@ onMounted(loadAccess)
 							@click="payInvoice"
 						/>
 						<UButton
-							:to="BILLING_PATH"
+							:to="ownerActionPath"
 							icon="i-ph-credit-card"
 							:color="invoice?.hostedInvoiceUrl ? 'neutral' : 'primary'"
 							:variant="invoice?.hostedInvoiceUrl ? 'outline' : 'solid'"

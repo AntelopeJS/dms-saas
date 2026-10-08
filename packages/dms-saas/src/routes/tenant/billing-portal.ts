@@ -28,6 +28,7 @@ import { isAllowedRedirectUrl } from "../../config";
 import type { TenantSubscription, TenantSubscriptionStatus } from "../../db";
 import { TenantSubscriptionModel } from "../../db";
 import { fetchScheduledCancellation, getStripeClient } from "../../stripe";
+import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
 import { isComplimentarySubscription } from "../../workspaces/complimentary";
 import {
   findWorkspaceOwnerContact,
@@ -67,10 +68,13 @@ const NO_OWNER_DETAILS: OwnerBillingDetails = {
 
 /**
  * A parked downgrade to a free plan is carried by Stripe as a cycle-end
- * cancellation too; only one without a parked plan is the owner leaving.
+ * cancellation too; only one without a parked plan is the owner leaving. A
+ * cancelled workspace has nothing left to schedule.
  */
 function readsCancellation(subscription: TenantSubscription): boolean {
-  return !!subscription.stripeSubscriptionId && !subscription.pendingPlanId;
+  return (
+    !!liveStripeSubscriptionId(subscription) && !subscription.pendingPlanId
+  );
 }
 
 async function loadOwnerDetails(

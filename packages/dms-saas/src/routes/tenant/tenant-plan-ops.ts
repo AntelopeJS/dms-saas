@@ -37,6 +37,7 @@ import {
   readPendingChallengeSecret,
 } from "../../stripe/pending-update";
 import { applyPlanDowngradeCleanup } from "../../workers";
+import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
 
 export const HTTP_NOT_FOUND = 404;
 export const HTTP_BAD_REQUEST = 400;
@@ -130,6 +131,8 @@ export interface CurrentPlanResult {
   isComplimentary: boolean;
   isPlanChangeLocked: boolean;
   canRecoverComplimentary: boolean;
+  /** A cancelled workspace whose owner may choose a plan again to reopen it. */
+  canResubscribe: boolean;
   paidUsageStartedAt: Date | null;
   paidUsagePeriods: PaidUsagePeriod[] | null;
   currentPeriodEnd: Date | null;
@@ -334,12 +337,15 @@ export function isPaidPlan(plan: Plan): boolean {
   return !!plan.paymentProviderRefs?.stripePriceId;
 }
 
-/** A paid target without a live Stripe subscription goes through Checkout. */
+/**
+ * A paid target without a live Stripe subscription goes through Checkout,
+ * a cancelled workspace's included: the subscription Stripe ended is not one.
+ */
 export function startsPaidCheckout(
   newPlan: Plan,
   subscription: TenantSubscription | undefined,
 ): boolean {
-  return isPaidPlan(newPlan) && !subscription?.stripeSubscriptionId;
+  return isPaidPlan(newPlan) && !liveStripeSubscriptionId(subscription);
 }
 
 export async function insertFreeSubscription(

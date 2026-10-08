@@ -33,3 +33,30 @@ export function canStartFirstPaidSubscription(
     awaitsFirstPayment(subscription)
   );
 }
+
+const CANCELLED_STATUS = "cancelled";
+
+/**
+ * Whether the owner of a cancelled workspace may bring it back by choosing a
+ * plan again: its data is kept until the retention cron admits its deletion,
+ * and so is its Stripe customer, which the new subscription reuses.
+ */
+export function canResubscribe(
+  subscription: TenantSubscription | null | undefined,
+): boolean {
+  return (
+    subscription?.status === CANCELLED_STATUS && !subscription.deletionStartedAt
+  );
+}
+
+/**
+ * The Stripe subscription the workspace still bills on. A cancelled
+ * workspace keeps the id of the subscription Stripe ended, which nothing may
+ * change, renew or price any more.
+ */
+export function liveStripeSubscriptionId(
+  subscription: TenantSubscription | null | undefined,
+): string | null {
+  if (subscription?.status === CANCELLED_STATUS) return null;
+  return subscription?.stripeSubscriptionId ?? null;
+}
