@@ -432,7 +432,13 @@ describe("plans offered to a cancelled workspace", () => {
     controller.planModel = GetModel(PlanModel);
     controller.featureModel = { getAll: async () => [] } as never;
 
-    const current = await controller.getCurrentPlan(owner(), {}, model, "en");
+    const current = await controller.getCurrentPlan(
+      owner(),
+      {},
+      model,
+      { findOne: async () => undefined } as unknown as TenantBillingInfoModel,
+      "en",
+    );
 
     expect(current).toMatchObject({
       status: "cancelled",

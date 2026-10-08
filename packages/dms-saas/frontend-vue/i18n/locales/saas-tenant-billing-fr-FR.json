@@ -312,6 +312,10 @@
         "show_detail": "Voir tout le détail · {count} fonctionnalité de plus | Voir tout le détail · {count} fonctionnalités de plus",
         "hide_detail": "Masquer le détail",
         "too_small": "{plans} ne peuvent pas accueillir les {seats} sièges utilisés : elles ne sont pas proposées à {workspace}.",
+        "for_other_customer_type": {
+          "business": "{plans} : réservé aux clients professionnels. Pour le choisir, passez le type de client à Entreprise dans les informations de facturation.",
+          "individual": "{plans} : réservé aux particuliers. Pour le choisir, passez le type de client à Particulier dans les informations de facturation."
+        },
         "timing": "Les montées en gamme démarrent aujourd'hui, au prorata. Les changements vers une offre inférieure démarrent au renouvellement : {date}",
         "review": {
           "price_per_seat": "{price} × sièges",

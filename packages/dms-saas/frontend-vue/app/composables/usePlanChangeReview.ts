@@ -23,9 +23,13 @@ export interface PlanFeatureDiff {
 	lost: PlanFeatureChange[]
 }
 
-/** Plans the workspace may move to, and those its seats rule out. */
+/**
+ * Plans the workspace may move to, those reserved to the other customer type,
+ * and those its seats rule out.
+ */
 export interface OfferedPlans {
 	offered: OfferedPlanView[]
+	forOtherCustomerType: OfferedPlanView[]
 	tooSmall: OfferedPlanView[]
 }
 
@@ -51,19 +55,27 @@ export function fitsSeats(plan: OfferedPlanView, seats: SeatsInUse): boolean {
 }
 
 /**
- * The plans offered in the comparison: those the seats in use fit, the
- * current one always; the rest are named apart, with why they are not offered.
+ * The plans offered in the comparison: those sold to the customer type that
+ * the seats in use fit, the current one always; the rest are named apart,
+ * with why they are not offered. The plan change refuses them anyway.
  */
 export function splitOfferedPlans(
 	plans: OfferedPlanView[],
 	seats: SeatsInUse,
 	currentPlanId: string | null,
 ): OfferedPlans {
-	const isOffered = (plan: OfferedPlanView) =>
-		plan._id === currentPlanId || fitsSeats(plan, seats)
+	const others = plans.filter((plan) => plan._id !== currentPlanId)
+	const forOtherCustomerType = others.filter(
+		(plan) => !plan.isOfferedToCustomerType,
+	)
+	const tooSmall = others.filter(
+		(plan) => plan.isOfferedToCustomerType && !fitsSeats(plan, seats),
+	)
+	const excluded = new Set([...forOtherCustomerType, ...tooSmall])
 	return {
-		offered: plans.filter(isOffered),
-		tooSmall: plans.filter((plan) => !isOffered(plan)),
+		offered: plans.filter((plan) => !excluded.has(plan)),
+		forOtherCustomerType,
+		tooSmall,
 	}
 }
 

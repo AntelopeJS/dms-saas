@@ -83,6 +83,14 @@ const tooSmallNote = computed(() => {
 	})
 })
 
+const otherCustomerTypeNote = computed(() => {
+	const plans = split.value.forOtherCustomerType
+	if (!plans.length) return null
+	return t(`${KEY_PREFIX}.for_other_customer_type.${plans[0]!.audience}`, {
+		plans: plans.map((plan) => plan.name).join(', '),
+	})
+})
+
 const subtitle = computed(() =>
 	t(`${KEY_PREFIX}.subtitle`, {
 		workspace: props.workspaceName ?? '',
@@ -370,6 +378,10 @@ watch(open, (isOpen) => {
 					}}
 				</UButton>
 
+				<p v-if="otherCustomerTypeNote" class="text-muted text-sm">
+					<UIcon name="i-ph-identification-card" class="me-1 align-middle" />
+					{{ otherCustomerTypeNote }}
+				</p>
 				<p v-if="tooSmallNote" class="text-muted text-sm">
 					<UIcon name="i-ph-info" class="me-1 align-middle" />
 					{{ tooSmallNote }}

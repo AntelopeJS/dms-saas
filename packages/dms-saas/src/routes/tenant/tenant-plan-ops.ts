@@ -112,6 +112,12 @@ export interface OfferedPlanView extends TenantPlanView {
    * subscription opened through Checkout does, for an owner who never had one.
    */
   isTrialOffered: boolean;
+  audience: Plan["audience"];
+  /**
+   * Whether the plan is sold to the workspace's customer type; true while the
+   * type is not known yet. The plan change refuses the others.
+   */
+  isOfferedToCustomerType: boolean;
 }
 
 /** Seats the workspace holds: members and pending invitations each take one. */
@@ -183,6 +189,17 @@ export async function loadSellablePlan(
   return newPlan;
 }
 
+/** The audience of a plan sold to every customer type. */
+export const ANY_PLAN_AUDIENCE = "any";
+
+/** Whether a plan is sold to a customer type: its own, or any type. */
+export function isPlanForCustomerType(
+  plan: Pick<Plan, "audience">,
+  customerType: string,
+): boolean {
+  return plan.audience === ANY_PLAN_AUDIENCE || plan.audience === customerType;
+}
+
 /** A plan reserved to one customer type is not sold to the other. */
 export function assertPlanAudience(
   plan: Plan,
@@ -194,7 +211,7 @@ export function assertPlanAudience(
     "saas.errors.plan.customer_type_unknown",
   );
   assert(
-    plan.audience === "any" || plan.audience === customerType,
+    isPlanForCustomerType(plan, customerType),
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );

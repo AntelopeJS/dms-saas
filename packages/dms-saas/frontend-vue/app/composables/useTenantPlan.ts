@@ -11,6 +11,8 @@ export const CHECKOUT_OPERATION_PARAM = 'checkoutOperation'
 
 export type PlanBillingMode = 'flat' | 'seat'
 
+export type PlanAudience = 'any' | 'individual' | 'business'
+
 export interface TenantPlanFeature {
 	featureId: string
 	displayName: string
@@ -41,6 +43,9 @@ export interface OfferedPlanView extends TenantPlanView {
 	trialDays: number
 	/** Whether choosing the plan now starts its trial. */
 	isTrialOffered: boolean
+	audience: PlanAudience
+	/** Whether the plan is sold to the workspace's customer type. */
+	isOfferedToCustomerType: boolean
 }
 
 export interface CurrentPlan {

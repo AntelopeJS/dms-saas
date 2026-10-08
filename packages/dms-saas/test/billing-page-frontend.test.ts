@@ -102,6 +102,8 @@ function offeredPlan(overrides: Partial<OfferedPlanView>): OfferedPlanView {
     maxMembers: -1,
     trialDays: 0,
     isTrialOffered: false,
+    audience: "any",
+    isOfferedToCustomerType: true,
     ...overrides,
   };
 }
@@ -148,6 +150,22 @@ describe("plan comparison", () => {
       "enterprise",
     ]);
     expect(split.tooSmall.map((plan) => plan._id)).toEqual(["solo"]);
+  });
+
+  it("names apart the plans sold to the other customer type", () => {
+    const pro = offeredPlan({ _id: "pro", maxMembers: 10 });
+    const team = offeredPlan({
+      _id: "team",
+      maxMembers: 25,
+      audience: "business",
+      isOfferedToCustomerType: false,
+    });
+
+    const split = splitOfferedPlans([pro, team], seats, "pro");
+
+    expect(split.offered).toEqual([pro]);
+    expect(split.forOtherCustomerType).toEqual([team]);
+    expect(split.tooSmall).toEqual([]);
   });
 
   it("always keeps the current plan, even over its cap", () => {

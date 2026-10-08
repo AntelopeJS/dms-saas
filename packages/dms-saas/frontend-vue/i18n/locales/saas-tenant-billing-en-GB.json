@@ -312,6 +312,10 @@
         "show_detail": "See full detail · {count} more feature | See full detail · {count} more features",
         "hide_detail": "Hide detail",
         "too_small": "{plans} can't hold the {seats} seats in use, so they aren't offered to {workspace}.",
+        "for_other_customer_type": {
+          "business": "{plans}: for business customers only. To choose one, set the customer type to Business in the billing information.",
+          "individual": "{plans}: for individual customers only. To choose one, set the customer type to Individual in the billing information."
+        },
         "timing": "Upgrades start today, prorated. Downgrades start at renewal: {date}",
         "review": {
           "price_per_seat": "{price} × seats",

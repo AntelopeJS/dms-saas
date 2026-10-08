@@ -62,11 +62,13 @@ import {
   UNCHANGED_RESULT_BASE,
   assertSeatLimit,
   type ChangePlanBody,
+  ANY_PLAN_AUDIENCE,
   type ChangePlanResult,
   type CurrentPlanResult,
   dropPendingChange,
   insertFreeSubscription,
   isPaidPlan,
+  isPlanForCustomerType,
   loadAndValidateTargetPlan,
   loadSellablePlan,
   type OfferedPlanView,
@@ -114,6 +116,7 @@ function asQueryString(value: unknown): string | null {
 interface CatalogReader {
   subscription: TenantSubscription | undefined;
   email: string;
+  customerType: string | null;
 }
 
 /** The customer-facing facts of a plan the comparison needs beside its features. */
@@ -133,6 +136,11 @@ async function toOfferedPlanView(
     maxMembers: plan?.maxMembers ?? 0,
     trialDays: plan?.trialDays ?? 0,
     isTrialOffered,
+    audience: plan?.audience ?? ANY_PLAN_AUDIENCE,
+    isOfferedToCustomerType:
+      !plan ||
+      !reader.customerType ||
+      isPlanForCustomerType(plan, reader.customerType),
   };
 }
 
@@ -227,6 +235,8 @@ export class SaasTenantPlanController extends Controller(
     @Context() ctx: any,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
+    @TenantScopedModel(TenantBillingInfoModel)
+    tenantBillingInfoModel: TenantBillingInfoModel,
     @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<CurrentPlanResult> {
     const tenantId = getRequestTenantId(ctx);
@@ -242,10 +252,12 @@ export class SaasTenantPlanController extends Controller(
     const pending = subscription?.pendingPlanId
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
+    const billingInfo = await tenantBillingInfoModel.findOne();
     const [catalog, seatUsage] = await Promise.all([
       this.buildCatalog(current, requestLocale(language), {
         subscription,
         email: user.email,
+        customerType: billingInfo?.customerType ?? null,
       }),
       getSeatUsage(tenantId),
     ]);
