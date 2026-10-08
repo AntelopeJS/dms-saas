@@ -61,8 +61,8 @@ importers:
         specifier: 1.13.5
         version: 1.13.5
       '@antelopejs/dms':
-        specifier: '>=0.6.0 <0.7.0'
-        version: 0.6.0(@antelopejs/core@1.13.5)(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))
+        specifier: '>=0.6.1 <0.7.0'
+        version: 0.6.1(@antelopejs/core@1.13.5)(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))
       '@antelopejs/dms-frontend':
         specifier: 0.5.0
         version: 0.5.0(@antelopejs/core@1.13.5)
@@ -176,8 +176,8 @@ packages:
     peerDependencies:
       '@antelopejs/core': '>=1.13.2 <2'
 
-  '@antelopejs/dms@0.6.0':
-    resolution: {integrity: sha512-vL7y0u57hluHxEWFBZLv5KU5fG+eVez90KieMvb6AaWKkKtxZA2F92aDCYfjSf0dIWLoGMScCBRB4VWO7ctupQ==}
+  '@antelopejs/dms@0.6.1':
+    resolution: {integrity: sha512-RzrXYaWrS2+JPlsbKxXmnfjpklbsoNg7IdZvdpyQwVRMAc8FdVsAO6FbE8oKnU2t7CQ9Ed0wiJsAVGjA32q+Rw==}
     peerDependencies:
       '@antelopejs/core': '>=1.13.2 <2'
     peerDependenciesMeta:
@@ -3242,7 +3242,7 @@ snapshots:
       '@oxc-parser/binding-linux-x64-gnu': 0.95.0
       '@oxc-parser/binding-win32-x64-msvc': 0.95.0
 
-  '@antelopejs/dms@0.6.0(@antelopejs/core@1.13.5)(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))':
+  '@antelopejs/dms@0.6.1(@antelopejs/core@1.13.5)(@antelopejs/interface-auth@0.0.6(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))':
     dependencies:
       2fa: 0.1.2
       '@antelopejs/interface-api': 0.0.14(@antelopejs/interface-core@0.1.1)
