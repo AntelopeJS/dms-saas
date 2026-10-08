@@ -66,6 +66,14 @@ const REACTIVATABLE_STATUSES = new Set<TenantSubscriptionStatus>([
   PAST_DUE_STATUS,
   SUSPENDED_STATUS,
 ]);
+/**
+ * States a failed charge must not move back to past_due: only a payment
+ * reopens a suspended workspace, and nothing reopens a cancelled one.
+ */
+const STATUSES_KEPT_ON_PAYMENT_FAILURE = new Set<TenantSubscriptionStatus>([
+  CANCELLED_STATUS,
+  SUSPENDED_STATUS,
+]);
 const PAYMENT_FAILED_ICON = "i-ph-x-circle";
 const REFUND_ICON = "i-ph-arrow-counter-clockwise";
 const SUBSCRIPTION_CANCELLED_ICON = "i-ph-x";
@@ -141,12 +149,18 @@ export async function handleInvoicePaymentFailed(
   // The final dunning failure and the cancellation race with no ordering
   // guarantee: a late payment_failed must not resurrect a cancelled mirror
   // into past_due — the retention cron would never find the tenant again and
-  // the auto-suspend cron would park it suspended for good.
+  // the auto-suspend cron would park it suspended for good. Stripe keeps
+  // retrying after the grace period suspended the workspace, and a failed
+  // retry must not lift the suspension either.
   const localSubscription = await GetModel(
     TenantSubscriptionModel,
     tenant._id,
   ).findOne();
-  if (localSubscription?.status === CANCELLED_STATUS) return;
+  if (
+    localSubscription &&
+    STATUSES_KEPT_ON_PAYMENT_FAILURE.has(localSubscription.status)
+  )
+    return;
   await updateSubscriptionStatus(tenant._id, PAST_DUE_STATUS);
   const invoiceId = requireInvoiceId(invoice);
   emitAutomationEvent("saas.payment-failed", {

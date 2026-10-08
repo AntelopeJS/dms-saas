@@ -28,6 +28,7 @@ vi.mock("../src/stripe/webhook-shared", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/stripe/webhook-shared")>()),
   findTenantByCustomerId: async () => ({ _id: TENANT_ID }),
   updateSubscriptionStatus: harness.updateStatus,
+  upsertInvoice: async () => undefined,
 }));
 vi.mock("../src/plan-changes", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/plan-changes")>()),
@@ -39,7 +40,10 @@ vi.mock("../src/notifications", async (importOriginal) => ({
 }));
 vi.mock("../src/automation", () => ({ emitAutomationEvent: vi.fn() }));
 
-import { handleSubscriptionDeleted } from "../src/stripe/webhook-handlers";
+import {
+  handleInvoicePaymentFailed,
+  handleSubscriptionDeleted,
+} from "../src/stripe/webhook-handlers";
 
 function deletion(): Stripe.Event {
   return {
@@ -74,4 +78,39 @@ describe("customer.subscription.deleted", () => {
     expect(harness.updateStatus).not.toHaveBeenCalled();
     expect(harness.notifyOwners).not.toHaveBeenCalled();
   });
+});
+
+describe("invoice.payment_failed", () => {
+  function failure(): Stripe.Event {
+    return {
+      type: "invoice.payment_failed",
+      data: {
+        object: {
+          id: "in_retry",
+          customer: "cus_comp",
+          amount_due: 2900,
+          currency: "eur",
+        },
+      },
+    } as Stripe.Event;
+  }
+
+  it("moves an active workspace to past due", async () => {
+    harness.local = { status: "active" };
+
+    await handleInvoicePaymentFailed(failure());
+
+    expect(harness.updateStatus).toHaveBeenCalledWith(TENANT_ID, "past_due");
+  });
+
+  it.each(["suspended", "cancelled"] as const)(
+    "keeps a %s workspace as it is when a retry fails",
+    async (status) => {
+      harness.local = { status };
+
+      await handleInvoicePaymentFailed(failure());
+
+      expect(harness.updateStatus).not.toHaveBeenCalled();
+    },
+  );
 });
