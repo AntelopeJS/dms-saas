@@ -60,7 +60,10 @@ import {
   SaasBillingPayInvoiceController,
   toPaymentFailure,
 } from "../src/routes/tenant/billing-pay-invoice";
-import { toEligibilityResponse } from "../src/routes/tenant/billing-self-refund";
+import {
+  firstChargedInvoice,
+  toEligibilityResponse,
+} from "../src/routes/tenant/billing-self-refund";
 import { applyOwnerUpgrade } from "../src/routes/tenant/tenant-plan-ops";
 import { SaasTenantPlanCancellationController } from "../src/routes/tenant/tenant-plan-cancellation";
 import {
@@ -404,6 +407,21 @@ describe("money-back guarantee", () => {
       windowEndsAt: new Date("2026-10-07T00:00:00.000Z"),
       refundedAt: null,
     });
+  });
+
+  it("starts from the first invoice that took money, not a trial's", () => {
+    const paid = (id: string, created: string, amountPaid: number) =>
+      ({
+        id,
+        created: seconds(new Date(created)),
+        amount_paid: amountPaid,
+      }) as Stripe.Invoice;
+    const trial = paid("in_trial", "2026-09-01T00:00:00.000Z", 0);
+    const first = paid("in_first", "2026-09-15T00:00:00.000Z", 2900);
+    const renewal = paid("in_renewal", "2026-10-15T00:00:00.000Z", 2900);
+
+    expect(firstChargedInvoice([renewal, first, trial])?.id).toBe("in_first");
+    expect(firstChargedInvoice([trial])).toBeNull();
   });
 
   it("says when the window ended, without offering an amount", () => {

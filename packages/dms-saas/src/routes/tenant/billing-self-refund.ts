@@ -96,6 +96,26 @@ export interface RefundEligibilityResponse {
   refundedAt: Date | null;
 }
 
+/**
+ * The oldest of `invoices` that took money. A trial opens with a paid invoice
+ * of zero, which is no payment: the guarantee covers the first real charge.
+ *
+ * @param invoices Paid invoices, in any order
+ */
+export function firstChargedInvoice(
+  invoices: Stripe.Invoice[],
+): Stripe.Invoice | null {
+  return invoices
+    .filter((invoice) => invoice.amount_paid > 0)
+    .reduce<Stripe.Invoice | null>(
+      (oldest, invoice) =>
+        !oldest || (invoice.created ?? 0) < (oldest.created ?? 0)
+          ? invoice
+          : oldest,
+      null,
+    );
+}
+
 async function getFirstPaidInvoice(
   stripeCustomerId: string,
 ): Promise<Stripe.Invoice | null> {
@@ -112,11 +132,7 @@ async function getFirstPaidInvoice(
       limit: STRIPE_INVOICES_FETCH_LIMIT,
       starting_after: startingAfter,
     });
-    for (const invoice of page.data) {
-      if (!oldest || (invoice.created ?? 0) < (oldest.created ?? 0)) {
-        oldest = invoice;
-      }
-    }
+    oldest = firstChargedInvoice(oldest ? [oldest, ...page.data] : page.data);
     const lastId = page.data[page.data.length - 1]?.id;
     if (!page.has_more || !lastId) break;
     startingAfter = lastId;
