@@ -182,6 +182,21 @@ describe("plan comparison", () => {
       "sso",
     ]);
   });
+
+  it("leaves out a feature unlimited on both plans", () => {
+    const features = [feature("projects"), feature("storage")];
+    const business = offeredPlan({
+      featureValues: { projects: -1, storage: 1000 },
+    });
+    const team = offeredPlan({ featureValues: { projects: -1, storage: 250 } });
+
+    const diff = diffPlanFeatures(features, business, team);
+
+    expect(diff.gained).toEqual([]);
+    expect(diff.lost.map((change) => change.feature.featureId)).toEqual([
+      "storage",
+    ]);
+  });
 });
 
 describe("billing formatting", () => {

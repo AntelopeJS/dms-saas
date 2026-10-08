@@ -91,10 +91,13 @@ export function diffPlanFeatures(
 	for (const feature of features) {
 		const before = from?.featureValues[feature.featureId]
 		const after = to.featureValues[feature.featureId]
-		const delta = featureRank(after) - featureRank(before)
-		if (delta === 0) continue
+		// Ranks are compared, not subtracted: two unlimited values are both
+		// Infinity, and Infinity - Infinity is NaN, which read as a loss.
+		const rankBefore = featureRank(before)
+		const rankAfter = featureRank(after)
+		if (rankAfter === rankBefore) continue
 		const change = { feature, from: before, to: after }
-		;(delta > 0 ? diff.gained : diff.lost).push(change)
+		;(rankAfter > rankBefore ? diff.gained : diff.lost).push(change)
 	}
 	return diff
 }
