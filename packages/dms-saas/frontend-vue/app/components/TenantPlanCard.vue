@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useWorkspaceName } from '../build/useWorkspaceName'
+import { UPGRADE_QUERY_PARAM } from '../composables/usePlanChangeReview'
 
 const KEY_PREFIX = 'saas.tenant_billing.plan'
 const MEMBERS_PATH = '/settings/workspace/members'
