@@ -101,6 +101,7 @@ function offeredPlan(overrides: Partial<OfferedPlanView>): OfferedPlanView {
     billingMode: "flat",
     maxMembers: -1,
     trialDays: 0,
+    isTrialOffered: false,
     ...overrides,
   };
 }

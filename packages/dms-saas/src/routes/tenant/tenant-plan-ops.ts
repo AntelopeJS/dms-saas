@@ -94,6 +94,11 @@ export interface OfferedPlanView extends TenantPlanView {
   /** Seat cap of the plan; negative (-1) for no cap. */
   maxMembers: number;
   trialDays: number;
+  /**
+   * Whether choosing the plan now starts its trial: only a first paid
+   * subscription opened through Checkout does, for an owner who never had one.
+   */
+  isTrialOffered: boolean;
 }
 
 /** Seats the workspace holds: members and pending invitations each take one. */
@@ -304,6 +309,14 @@ async function syncStripePlanChange(change: StripePlanChange): Promise<void> {
  */
 export function isPaidPlan(plan: Plan): boolean {
   return !!plan.paymentProviderRefs?.stripePriceId;
+}
+
+/** A paid target without a live Stripe subscription goes through Checkout. */
+export function startsPaidCheckout(
+  newPlan: Plan,
+  subscription: TenantSubscription | undefined,
+): boolean {
+  return isPaidPlan(newPlan) && !subscription?.stripeSubscriptionId;
 }
 
 export async function insertFreeSubscription(

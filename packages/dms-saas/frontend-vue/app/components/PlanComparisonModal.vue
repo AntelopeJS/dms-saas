@@ -250,7 +250,7 @@ watch(open, (isOpen) => {
 											{{ seatTotal(plan) }}
 										</span>
 										<UBadge
-											v-if="plan.trialDays > 0 && !isCurrent(plan)"
+											v-if="plan.isTrialOffered && !isCurrent(plan)"
 											color="info"
 											variant="subtle"
 											size="sm"

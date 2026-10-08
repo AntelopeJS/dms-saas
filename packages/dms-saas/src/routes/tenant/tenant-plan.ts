@@ -69,12 +69,16 @@ import {
   type OfferedPlanView,
   type PlanChangeRequest,
   scheduleDowngrade,
+  startsPaidCheckout,
 } from "./tenant-plan-ops";
 import {
   type PlanChangePreview,
   previewPlanChange,
 } from "./tenant-plan-preview";
-import { startPaidCheckout } from "./tenant-plan-checkout";
+import {
+  isTrialOfferedOnChange,
+  startPaidCheckout,
+} from "./tenant-plan-checkout";
 import {
   type CancelCheckoutResult,
   CHECKOUT_OPERATION_PARAM,
@@ -102,27 +106,30 @@ function asQueryString(value: unknown): string | null {
   return typeof value === "string" && value ? value : null;
 }
 
+/** Who the comparison is read for: the trial a plan offers depends on it. */
+interface CatalogReader {
+  subscription: TenantSubscription | undefined;
+  email: string;
+}
+
 /** The customer-facing facts of a plan the comparison needs beside its features. */
-function toOfferedPlanView(
+async function toOfferedPlanView(
   view: TenantPlanView,
   plans: Plan[],
-): OfferedPlanView {
+  reader: CatalogReader,
+): Promise<OfferedPlanView> {
   const plan = plans.find((candidate) => candidate._id === view._id);
+  const isTrialOffered =
+    !!plan &&
+    (await isTrialOfferedOnChange(plan, reader.subscription, reader.email));
   return {
     ...view,
     description: plan?.description ?? "",
     billingMode: plan?.billingMode ?? "flat",
     maxMembers: plan?.maxMembers ?? 0,
     trialDays: plan?.trialDays ?? 0,
+    isTrialOffered,
   };
-}
-
-/** A paid target without a live Stripe subscription goes through Checkout. */
-function startsPaidCheckout(
-  newPlan: Plan,
-  subscription: TenantSubscription | undefined,
-): boolean {
-  return isPaidPlan(newPlan) && !subscription?.stripeSubscriptionId;
 }
 
 /**
@@ -159,7 +166,11 @@ export class SaasTenantPlanController extends Controller(
   @Model(FeatureModel)
   declare featureModel: FeatureModel;
 
-  private async buildCatalog(current: Plan | null, locale: string) {
+  private async buildCatalog(
+    current: Plan | null,
+    locale: string,
+    reader: CatalogReader,
+  ) {
     const publicPlans = await this.planModel.findPubliclyVisible();
     const withCurrent =
       current && !publicPlans.some((plan) => plan._id === current._id)
@@ -177,7 +188,9 @@ export class SaasTenantPlanController extends Controller(
     );
     return {
       features: catalog.features,
-      plans: catalog.plans.map((view) => toOfferedPlanView(view, offered)),
+      plans: await Promise.all(
+        catalog.plans.map((view) => toOfferedPlanView(view, offered, reader)),
+      ),
     };
   }
 
@@ -206,7 +219,7 @@ export class SaasTenantPlanController extends Controller(
    */
   @Get("/")
   async getCurrentPlan(
-    @AuthTenantMember({ bypassTenantAccessGate: true }) _user: User,
+    @AuthTenantMember({ bypassTenantAccessGate: true }) user: User,
     @Context() ctx: any,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
@@ -226,7 +239,10 @@ export class SaasTenantPlanController extends Controller(
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
     const [catalog, seatUsage] = await Promise.all([
-      this.buildCatalog(current, requestLocale(language)),
+      this.buildCatalog(current, requestLocale(language), {
+        subscription,
+        email: user.email,
+      }),
       getSeatUsage(tenantId),
     ]);
     return {

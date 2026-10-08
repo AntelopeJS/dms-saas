@@ -39,6 +39,8 @@ export interface OfferedPlanView extends TenantPlanView {
 	/** Seat cap; negative (-1) for no cap, as the plan stores it. */
 	maxMembers: number
 	trialDays: number
+	/** Whether choosing the plan now starts its trial. */
+	isTrialOffered: boolean
 }
 
 export interface CurrentPlan {

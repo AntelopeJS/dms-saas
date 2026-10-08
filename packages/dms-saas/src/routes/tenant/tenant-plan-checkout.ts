@@ -44,6 +44,7 @@ import {
   HTTP_BAD_REQUEST,
   HTTP_CONFLICT,
   type PlanChangeRequest,
+  startsPaidCheckout,
   UNCHANGED_RESULT_BASE,
 } from "./tenant-plan-ops";
 import {
@@ -131,6 +132,23 @@ export async function isCheckoutTrialAvailable(
     trialIdentityId("email", emailHash),
   );
   return !identity?.tenantId;
+}
+
+/**
+ * Whether choosing `plan` would start a trial. Only a Checkout opens one: a
+ * change on a live Stripe subscription keeps whatever trial it already has.
+ *
+ * @param plan Plan offered in the comparison
+ * @param subscription The workspace's subscription, if any
+ * @param ownerEmail E-mail of the owner who would choose it
+ */
+export async function isTrialOfferedOnChange(
+  plan: Plan,
+  subscription: TenantSubscription | undefined,
+  ownerEmail: string,
+): Promise<boolean> {
+  if (!startsPaidCheckout(plan, subscription)) return false;
+  return isCheckoutTrialAvailable(plan, ownerEmail);
 }
 
 async function resolveCheckoutTrial(
