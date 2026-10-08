@@ -32,6 +32,10 @@ import {
 } from "../../plans";
 import Stripe from "stripe";
 import { getStripeClient } from "../../stripe/client";
+import {
+  discardPendingUpdate,
+  readPendingChallengeSecret,
+} from "../../stripe/pending-update";
 import { applyPlanDowngradeCleanup } from "../../workers";
 
 export const HTTP_NOT_FOUND = 404;
@@ -42,9 +46,10 @@ export const PAST_DUE_STATUS: TenantSubscriptionStatus = "past_due";
 const ACTIVE_STATUS = "active" as const;
 const SEAT_BILLING_MODE = "seat";
 const FLAT_QUANTITY = 1;
-// An immediate change the owner pays for is refused whole by Stripe when the
-// card fails, instead of landing the plan with an unpaid invoice behind it.
-const PAID_UPGRADE_PAYMENT_BEHAVIOR = "error_if_incomplete" as const;
+// An immediate change the owner pays for only lands on Stripe once its invoice
+// is paid: a card that needs 3D Secure leaves it pending for the owner to
+// authenticate, where `error_if_incomplete` would refuse it as declined.
+const PAID_UPGRADE_PAYMENT_BEHAVIOR = "pending_if_incomplete" as const;
 
 export interface ChangePlanBody {
   planId: string;
@@ -79,12 +84,19 @@ interface StripePlanChange {
   billing: ImmediateChangeBilling;
 }
 
+/** The payment the owner must authenticate before an upgrade applies. */
+export interface UpgradeAuthentication {
+  clientSecret: string;
+}
+
 export interface ChangePlanResult {
   changed: boolean;
   scheduled: boolean;
   planId: string;
   effectiveAt: Date | null;
   checkoutUrl: string | null;
+  /** Set when the upgrade waits on a 3D Secure challenge. */
+  authentication: UpgradeAuthentication | null;
 }
 
 /** A plan of the comparison, with what the owner needs to choose it. */
@@ -138,6 +150,7 @@ export const UNCHANGED_RESULT_BASE = {
   scheduled: false,
   effectiveAt: null,
   checkoutUrl: null,
+  authentication: null,
 } as const;
 
 /**
@@ -221,16 +234,18 @@ export async function assertSeatLimit(
   );
 }
 
-async function applyPlanChange(
-  change: StripePlanChange,
+/** Points the workspace at the plan Stripe now bills, under the admitted intent. */
+export async function recordPlanChange(
+  subscription: TenantSubscription,
+  newPlan: Plan,
+  operationId: string,
   tenantSubscriptionModel: TenantSubscriptionModel,
 ): Promise<void> {
-  await syncStripePlanChange(change);
   await tenantSubscriptionModel.updateDuringTransition(
-    change.subscription._id,
-    change.operationId,
+    subscription._id,
+    operationId,
     {
-      planId: change.newPlan._id,
+      planId: newPlan._id,
       updatedAt: new Date(),
     },
   );
@@ -265,11 +280,18 @@ export async function planQuantity(
   return countOccupiedSeats(tenantId);
 }
 
+/**
+ * A pending update accepts no `automatic_tax`; the subscription has carried
+ * it since it was created, so only the deferred path restates it.
+ */
 function toChargeParams(
   billing: ImmediateChangeBilling,
 ): Stripe.SubscriptionUpdateParams {
   if (billing.prorationBehavior !== "always_invoice") {
-    return { proration_behavior: billing.prorationBehavior };
+    return {
+      proration_behavior: billing.prorationBehavior,
+      automatic_tax: { enabled: true },
+    };
   }
   return {
     proration_behavior: billing.prorationBehavior,
@@ -278,9 +300,11 @@ function toChargeParams(
   };
 }
 
-async function syncStripePlanChange(change: StripePlanChange): Promise<void> {
+async function syncStripePlanChange(
+  change: StripePlanChange,
+): Promise<Stripe.Subscription | null> {
   const { subscription, newPlan, operationId, billing } = change;
-  if (!subscription.stripeSubscriptionId) return;
+  if (!subscription.stripeSubscriptionId) return null;
   const stripePriceId = newPlan.paymentProviderRefs?.stripePriceId;
   assert(stripePriceId, HTTP_BAD_REQUEST, "saas.errors.plan.no_stripe_price");
   const stripe = getStripeClient();
@@ -290,12 +314,11 @@ async function syncStripePlanChange(change: StripePlanChange): Promise<void> {
   const itemId = stripeSubscription.items.data[0]?.id;
   assert(itemId, HTTP_BAD_REQUEST, "saas.errors.stripe.subscription_no_item");
   const quantity = await planQuantity(subscription._id, newPlan);
-  await stripe.subscriptions.update(
+  return stripe.subscriptions.update(
     subscription.stripeSubscriptionId,
     {
       items: [{ id: itemId, price: stripePriceId, quantity }],
       ...toChargeParams(billing),
-      automatic_tax: { enabled: true },
     },
     {
       idempotencyKey: `change-plan:${operationId}`,
@@ -389,7 +412,7 @@ interface ImmediateChangeAdmission {
   model: TenantSubscriptionModel;
 }
 
-function newChangeIntent(newPlan: Plan): SubscriptionTransition {
+export function newChangeIntent(newPlan: Plan): SubscriptionTransition {
   return {
     operationId: randomUUID(),
     kind: "change_plan",
@@ -398,10 +421,15 @@ function newChangeIntent(newPlan: Plan): SubscriptionTransition {
   };
 }
 
+/**
+ * Returns the updated Stripe subscription. One still carrying a
+ * `pending_update` has not moved: its invoice awaits payment, so the
+ * workspace keeps its plan until that payment lands.
+ */
 async function runImmediateChange(
   change: StripePlanChange,
   admission: ImmediateChangeAdmission,
-): Promise<void> {
+): Promise<Stripe.Subscription | null> {
   const { tenantId, intent, model } = admission;
   await model.beginTransition(change.subscription, intent);
   await clearPendingPlanChange(
@@ -409,8 +437,16 @@ async function runImmediateChange(
     change.subscription,
     intent.operationId,
   );
-  await applyPlanChange(change, model);
+  const updated = await syncStripePlanChange(change);
+  if (updated?.pending_update) return updated;
+  await recordPlanChange(
+    change.subscription,
+    change.newPlan,
+    intent.operationId,
+    model,
+  );
   await finalizeImmediateChange(tenantId, change.subscription, change.newPlan);
+  return updated;
 }
 
 /**
@@ -468,9 +504,27 @@ async function releaseDeclinedUpgrade(
 }
 
 /**
+ * The challenge of an upgrade Stripe left pending. Anything but a payment
+ * waiting on authentication is a declined card: the update is dropped, so the
+ * plan stays as it was and no unpaid invoice lingers.
+ */
+async function requestUpgradeAuthentication(
+  stripeSubscription: Stripe.Subscription,
+): Promise<UpgradeAuthentication> {
+  const clientSecret = await readPendingChallengeSecret(stripeSubscription);
+  if (clientSecret) return { clientSecret };
+  await discardPendingUpdate(stripeSubscription);
+  throw new HTTPResult(
+    HTTP_PAYMENT_REQUIRED,
+    "saas.errors.plan.upgrade_payment_declined",
+  );
+}
+
+/**
  * The owner's own upgrade: the prorated difference is charged at once on the
  * card on file, at the date the reviewed preview was priced, and a declined
- * card leaves the plan as it was.
+ * card leaves the plan as it was. A card that asks for 3D Secure returns the
+ * challenge instead; the plan applies once the owner passes it.
  */
 export async function applyOwnerUpgrade(
   tenantId: string,
@@ -487,13 +541,21 @@ export async function applyOwnerUpgrade(
     operationId: intent.operationId,
     billing: { prorationBehavior: "always_invoice", prorationDate },
   };
-  await runImmediateChange(change, admission).catch((error: unknown) =>
-    releaseDeclinedUpgrade(error, admission, subscription._id),
+  const updated = await runImmediateChange(change, admission).catch(
+    (error: unknown) =>
+      releaseDeclinedUpgrade(error, admission, subscription._id),
   );
   await tenantSubscriptionModel.completeTransition(
     subscription._id,
     intent.operationId,
     {},
   );
+  if (updated?.pending_update) {
+    return {
+      ...UNCHANGED_RESULT_BASE,
+      planId: newPlan._id,
+      authentication: await requestUpgradeAuthentication(updated),
+    };
+  }
   return { ...UNCHANGED_RESULT_BASE, changed: true, planId: newPlan._id };
 }

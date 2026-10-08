@@ -14,6 +14,8 @@ const harness = vi.hoisted(() => ({
   retrieveSubscription: vi.fn(),
   updateSubscription: vi.fn(),
   payInvoice: vi.fn(),
+  retrieveInvoice: vi.fn(),
+  voidInvoice: vi.fn(),
   clearPending: vi.fn(),
   setCancelAtPeriodEnd: vi.fn(),
   recompute: vi.fn(),
@@ -50,7 +52,11 @@ vi.mock("../src/stripe/client", () => ({
       retrieve: (...args: unknown[]) => harness.retrieveSubscription(...args),
       update: (...args: unknown[]) => harness.updateSubscription(...args),
     },
-    invoices: { pay: (...args: unknown[]) => harness.payInvoice(...args) },
+    invoices: {
+      pay: (...args: unknown[]) => harness.payInvoice(...args),
+      retrieve: (...args: unknown[]) => harness.retrieveInvoice(...args),
+      voidInvoice: (...args: unknown[]) => harness.voidInvoice(...args),
+    },
   }),
 }));
 
@@ -136,7 +142,7 @@ beforeEach(() => {
 });
 
 describe("owner upgrade", () => {
-  it("charges the difference at once, at the reviewed date, all or nothing", async () => {
+  it("charges the difference at once, at the reviewed date, applied once paid", async () => {
     const model = subscriptionModel();
     await applyOwnerUpgrade(
       "tenant-a",
@@ -152,11 +158,82 @@ describe("owner upgrade", () => {
         items: [{ id: "si_a", price: "price_enterprise", quantity: 6 }],
         proration_behavior: "always_invoice",
         proration_date: 1_790_000_000,
-        payment_behavior: "error_if_incomplete",
-        automatic_tax: { enabled: true },
+        payment_behavior: "pending_if_incomplete",
       },
       expect.anything(),
     );
+    expect(model.updateDuringTransition).toHaveBeenCalledWith(
+      "tenant-a",
+      expect.any(String),
+      expect.objectContaining({ planId: "enterprise" }),
+    );
+    expect(model.completeTransition).toHaveBeenCalledTimes(1);
+  });
+
+  function pendingUpgrade(intentStatus: string) {
+    harness.updateSubscription.mockResolvedValue({
+      pending_update: { expires_at: 1_790_080_000 },
+      latest_invoice: "in_upgrade",
+    });
+    harness.retrieveInvoice.mockResolvedValue({
+      payments: {
+        data: [
+          {
+            payment: {
+              payment_intent: {
+                status: intentStatus,
+                client_secret: "pi_upgrade_secret",
+              },
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  it("returns the 3D Secure challenge and keeps the plan until it is passed", async () => {
+    pendingUpgrade("requires_action");
+    const model = subscriptionModel();
+
+    const result = await applyOwnerUpgrade(
+      "tenant-a",
+      SUBSCRIPTION,
+      ENTERPRISE,
+      model as unknown as TenantSubscriptionModel,
+      undefined,
+    );
+
+    expect(result).toMatchObject({
+      changed: false,
+      planId: "enterprise",
+      authentication: { clientSecret: "pi_upgrade_secret" },
+    });
+    expect(harness.retrieveInvoice).toHaveBeenCalledWith("in_upgrade", {
+      expand: ["payments.data.payment.payment_intent"],
+    });
+    expect(model.updateDuringTransition).not.toHaveBeenCalled();
+    expect(model.completeTransition).toHaveBeenCalledTimes(1);
+    expect(harness.voidInvoice).not.toHaveBeenCalled();
+  });
+
+  it("drops a pending upgrade whose card was declined", async () => {
+    pendingUpgrade("requires_payment_method");
+    const model = subscriptionModel();
+
+    await expect(
+      applyOwnerUpgrade(
+        "tenant-a",
+        SUBSCRIPTION,
+        ENTERPRISE,
+        model as unknown as TenantSubscriptionModel,
+        undefined,
+      ),
+    ).rejects.toMatchObject({
+      status: 402,
+      body: "saas.errors.plan.upgrade_payment_declined",
+    });
+    expect(harness.voidInvoice).toHaveBeenCalledWith("in_upgrade");
+    expect(model.updateDuringTransition).not.toHaveBeenCalled();
     expect(model.completeTransition).toHaveBeenCalledTimes(1);
   });
 

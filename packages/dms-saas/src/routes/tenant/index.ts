@@ -4,6 +4,7 @@ export * from "./billing-self-refund";
 export * from "./data-export";
 export * from "./tenant-billing";
 export * from "./tenant-plan";
+export * from "./tenant-plan-authentication";
 export * from "./tenant-plan-cancellation";
 export * from "./tenant-plan-checkout";
 export * from "./tenant-plan-checkout-recovery";

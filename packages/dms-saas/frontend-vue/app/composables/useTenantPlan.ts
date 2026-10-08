@@ -90,12 +90,19 @@ export interface PaidUsagePeriod {
 	end: string | null
 }
 
+/** The payment the owner must authenticate before an upgrade applies. */
+export interface UpgradeAuthentication {
+	clientSecret: string
+}
+
 export interface ChangePlanResult {
 	changed: boolean
 	scheduled: boolean
 	planId: string
 	effectiveAt: string | null
 	checkoutUrl: string | null
+	/** Set when the upgrade waits on a 3D Secure challenge. */
+	authentication: UpgradeAuthentication | null
 }
 
 /** `upgrade` applies today, `downgrade` at renewal, `checkout` on Stripe. */
@@ -180,17 +187,21 @@ function currentPageUrl(): string {
  * features catalogue, so the plan card and the free-access banner share it. */
 export function useTenantPlan() {
 	const { $authFetch } = useAuthFetch()
+	const { authenticateUpgrade } = useUpgradeAuthentication()
 	const shared = useSharedRequest(TENANT_PLAN_STATE_KEY, () =>
 		$authFetch<TenantPlanResponse>(TENANT_PLAN_ENDPOINT),
 	)
 
-	/** `prorationDate` is the reviewed preview's, so the charge matches it. */
-	function changePlan(
+	/**
+	 * `prorationDate` is the reviewed preview's, so the charge matches it. A
+	 * card that asks for 3D Secure is challenged before this resolves.
+	 */
+	async function changePlan(
 		planId: string,
 		prorationDate?: number | null,
 	): Promise<ChangePlanResult> {
 		const returnUrl = currentPageUrl()
-		return $authFetch<ChangePlanResult>(TENANT_PLAN_ENDPOINT, {
+		const result = await $authFetch<ChangePlanResult>(TENANT_PLAN_ENDPOINT, {
 			method: 'PUT',
 			body: {
 				planId,
@@ -199,6 +210,9 @@ export function useTenantPlan() {
 				prorationDate: prorationDate ?? undefined,
 			},
 		})
+		return result.authentication
+			? authenticateUpgrade(planId, result.authentication)
+			: result
 	}
 
 	/** `country` prices a first subscription before the identity is saved. */

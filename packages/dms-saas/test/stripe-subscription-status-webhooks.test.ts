@@ -9,6 +9,13 @@ const harness = vi.hoisted(() => ({
   local: undefined as Partial<TenantSubscription> | undefined,
   updateStatus: vi.fn(async () => undefined),
   notifyOwners: vi.fn(async () => undefined),
+  retrieveSubscription: vi.fn(),
+}));
+
+vi.mock("../src/stripe/client", () => ({
+  getStripeClient: () => ({
+    subscriptions: { retrieve: harness.retrieveSubscription },
+  }),
 }));
 
 vi.mock(
@@ -81,7 +88,7 @@ describe("customer.subscription.deleted", () => {
 });
 
 describe("invoice.payment_failed", () => {
-  function failure(): Stripe.Event {
+  function failure(billingReason = "subscription_cycle"): Stripe.Event {
     return {
       type: "invoice.payment_failed",
       data: {
@@ -90,10 +97,52 @@ describe("invoice.payment_failed", () => {
           customer: "cus_comp",
           amount_due: 2900,
           currency: "eur",
+          billing_reason: billingReason,
+          parent: { subscription_details: { subscription: "sub_live" } },
         },
       },
     } as Stripe.Event;
   }
+
+  it("leaves the workspace active while an upgrade awaits 3D Secure", async () => {
+    harness.local = { status: "active" };
+    harness.retrieveSubscription.mockResolvedValue({
+      pending_update: { expires_at: 1 },
+      latest_invoice: { id: "in_retry", status: "open" },
+    });
+
+    await handleInvoicePaymentFailed(failure("subscription_update"));
+
+    expect(harness.retrieveSubscription).toHaveBeenCalledWith("sub_live", {
+      expand: ["latest_invoice"],
+    });
+    expect(harness.updateStatus).not.toHaveBeenCalled();
+    expect(harness.notifyOwners).not.toHaveBeenCalled();
+  });
+
+  it("ignores the failed attempt of an upgrade paid since", async () => {
+    harness.local = { status: "active" };
+    harness.retrieveSubscription.mockResolvedValue({
+      pending_update: null,
+      latest_invoice: { id: "in_retry", status: "paid" },
+    });
+
+    await handleInvoicePaymentFailed(failure("subscription_update"));
+
+    expect(harness.updateStatus).not.toHaveBeenCalled();
+  });
+
+  it("dunns an unpaid subscription update that applied regardless", async () => {
+    harness.local = { status: "active" };
+    harness.retrieveSubscription.mockResolvedValue({
+      pending_update: null,
+      latest_invoice: { id: "in_retry", status: "open" },
+    });
+
+    await handleInvoicePaymentFailed(failure("subscription_update"));
+
+    expect(harness.updateStatus).toHaveBeenCalledWith(TENANT_ID, "past_due");
+  });
 
   it("moves an active workspace to past due", async () => {
     harness.local = { status: "active" };
@@ -101,6 +150,7 @@ describe("invoice.payment_failed", () => {
     await handleInvoicePaymentFailed(failure());
 
     expect(harness.updateStatus).toHaveBeenCalledWith(TENANT_ID, "past_due");
+    expect(harness.retrieveSubscription).not.toHaveBeenCalled();
   });
 
   it.each(["suspended", "cancelled"] as const)(

@@ -47,6 +47,7 @@ import {
   readSubscriptionPeriodEnd,
   requireInvoiceId,
 } from "./payload-shapes";
+import { isPendingUpdatePayment } from "./pending-update";
 import { computeUnusedPortionCents, nowInStripeSeconds } from "./proration";
 import {
   ACTIVE_STATUS,
@@ -146,6 +147,7 @@ export async function handleInvoicePaymentFailed(
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
   await upsertInvoice(invoice, tenant._id);
+  if (await isPendingUpdatePayment(invoice)) return;
   // The final dunning failure and the cancellation race with no ordering
   // guarantee: a late payment_failed must not resurrect a cancelled mirror
   // into past_due — the retention cron would never find the tenant again and
