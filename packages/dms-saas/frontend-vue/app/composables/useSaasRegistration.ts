@@ -176,6 +176,7 @@ const API_ERROR_FIELDS: Record<string, RegistrationField> = {
 	'saas.errors.user.email_in_use': 'email',
 	'saas.errors.registration.password_policy': 'password',
 	'saas.errors.registration.payment_method_required': 'card',
+	'saas.errors.workspace.free_card_limit_reached': 'card',
 }
 
 /**

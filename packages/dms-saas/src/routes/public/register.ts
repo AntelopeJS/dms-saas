@@ -38,14 +38,18 @@ import {
   requestLocale,
 } from "../../utils/content-language";
 import type {
+  CardDetails,
   WorkspaceBillingProfile,
   WorkspaceProvisioningHandles,
   WorkspaceProvisioningInput,
 } from "../../workspaces";
 import {
+  assertCardMayBackFreeWorkspace,
   assertRegistrationExtras,
+  isFreePerCardPolicyActive,
   provisionWorkspace,
   resolveCardDetails,
+  resolveFreeWorkspacesPerCard,
   resolveRegistrationPlan,
   rollbackWorkspaceProvisioning,
 } from "../../workspaces";
@@ -92,6 +96,7 @@ interface FinalizeBody extends RegistrationPayload {
 interface AdmittedRegistration {
   plan: Plan;
   paymentMethodId: string | undefined;
+  card: CardDetails;
 }
 
 interface RegistrationAccount {
@@ -157,8 +162,23 @@ function assertRegistrationPassword(password: unknown): void {
 }
 
 /**
+ * A registration always opens a free workspace, so its card is held to the
+ * billing rules' free workspaces per card, like a workspace created from the
+ * app. A card-less registration has no fingerprint to count.
+ */
+async function assertRegistrationCardMayBackFreeWorkspace(
+  card: CardDetails,
+): Promise<void> {
+  if (!card.fingerprint) return;
+  const limit = await resolveFreeWorkspacesPerCard();
+  if (!isFreePerCardPolicyActive(limit)) return;
+  await assertCardMayBackFreeWorkspace(card.fingerprint, limit);
+}
+
+/**
  * Validate a registration against the deployment before anything is created:
- * the card policy, the extras bounds, and the free plan it will land on.
+ * the card policy and the card's free workspaces, the extras bounds, and the
+ * free plan it will land on.
  */
 async function admitRegistration(
   body: RegistrationPayload,
@@ -167,7 +187,10 @@ async function admitRegistration(
     body.paymentMethodId,
   );
   assertRegistrationExtras(body.extras);
-  return { plan: await resolveRegistrationPlan(), paymentMethodId };
+  const plan = await resolveRegistrationPlan();
+  const card = await resolveCardDetails(paymentMethodId);
+  await assertRegistrationCardMayBackFreeWorkspace(card);
+  return { plan, paymentMethodId, card };
 }
 
 /**
@@ -181,7 +204,7 @@ async function buildRegistrationProvisioning(
   admitted: AdmittedRegistration,
   handles: WorkspaceProvisioningHandles,
 ): Promise<WorkspaceProvisioningInput> {
-  const card = await resolveCardDetails(admitted.paymentMethodId);
+  const { card } = admitted;
   const billingProfile: WorkspaceBillingProfile = {
     customerType: "individual",
     address: card.billingAddress,

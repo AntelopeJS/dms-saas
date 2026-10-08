@@ -229,6 +229,9 @@ describe("registration fields", () => {
     expect(
       registrationFieldOf("saas.errors.registration.payment_method_required"),
     ).toBe("card");
+    expect(
+      registrationFieldOf("saas.errors.workspace.free_card_limit_reached"),
+    ).toBe("card");
     expect(registrationFieldOf("saas.errors.registration_closed")).toBeNull();
     expect(registrationFieldOf(undefined)).toBeNull();
   });

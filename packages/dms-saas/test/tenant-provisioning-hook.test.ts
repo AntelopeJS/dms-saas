@@ -252,6 +252,10 @@ const modelFakes: Record<string, (tenantId?: string) => unknown> = {
   }),
   TenantSubscriptionModel: (tenantId?: string) => ({
     findOne: async () => subscriptions.get(tenantId ?? ""),
+    findByCardFingerprint: async (fingerprint: string) =>
+      [...subscriptions.entries()]
+        .filter(([, row]) => row.cardFingerprint === fingerprint)
+        .map(([instance, row]) => ({ ...row, _instance: instance })),
     beginTransition: async (
       row: TenantSubscription,
       intent: SubscriptionTransition,
@@ -1002,6 +1006,20 @@ describe("registration card policy", () => {
       planId: PLAN._id,
       cardFingerprint: "fp_test",
     });
+  });
+
+  it("refuses a card that already backs as many free workspaces as allowed", async () => {
+    applyPolicy("required");
+    await buildController().register(buildRegisterBody());
+
+    await expect(
+      buildController().register(buildRegisterBody()),
+    ).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.workspace.free_card_limit_reached",
+    });
+    expect(world.users.size).toBe(1);
+    expect(world.stripeCustomers.size).toBe(1);
   });
 
   it("never calls Stripe under `none`, even when a card is sent", async () => {
