@@ -227,6 +227,20 @@ async function applyAutoProrataIfEnabled(
   );
 }
 
+/**
+ * Whether the workspace no longer bills on the deleted subscription: an
+ * operator's complimentary grant or a migration to a free plan cancels it
+ * once the workspace points elsewhere. Its deletion is not the workspace
+ * churning.
+ */
+async function isSubscriptionAlreadyLeft(
+  tenantId: string,
+  stripeSubscriptionId: string,
+): Promise<boolean> {
+  const local = await GetModel(TenantSubscriptionModel, tenantId).findOne();
+  return !!local && local.stripeSubscriptionId !== stripeSubscriptionId;
+}
+
 export async function handleSubscriptionDeleted(
   event: Stripe.Event,
 ): Promise<void> {
@@ -235,6 +249,7 @@ export async function handleSubscriptionDeleted(
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
+  if (await isSubscriptionAlreadyLeft(tenant._id, subscription.id)) return;
   // A cycle-end cancellation parked behind a free plan is a completed
   // downgrade, not a churn: no cancellation status, no prorata, no notice.
   if (await applyPendingFreePlanOnCancellation(tenant._id)) return;
