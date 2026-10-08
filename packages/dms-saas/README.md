@@ -153,7 +153,7 @@ Two module options shape it:
 
 | Value | Behaviour |
 | --- | --- |
-| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer and a free subscription on that card, and the free-workspace-per-card cap applies. |
+| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer holding that card and a free subscription — a local one while the free plan is off Stripe, which the upgrade checkout replaces on that customer — and the free-workspace-per-card cap applies. |
 | `optional` | The card step is shown, and the visitor may choose to add a card later. Without a card the workspace is card-less, as under `none`. |
 | `none` | The card step is never shown, `GET /api/saas/register/setup-intent` answers `400 saas.errors.registration.payment_method_disabled`, and Stripe is never called: the workspace gets a local free subscription with no Stripe customer, which the upgrade checkout creates when the owner first pays. A card sent anyway is ignored. |
 

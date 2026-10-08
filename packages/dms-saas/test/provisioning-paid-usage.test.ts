@@ -158,4 +158,20 @@ describe("initial paid usage coverage of a provisioned workspace", () => {
       }),
     ]);
   });
+
+  it("keeps a carded workspace on an off-Stripe free plan local", async () => {
+    store.plan = { ...store.plan, price: 0, paymentProviderRefs: {} } as Plan;
+    await provision("pm_card");
+    expect(stripe.customers.create).toHaveBeenCalled();
+    expect(stripe.paymentMethods.attach).toHaveBeenCalled();
+    expect(stripe.subscriptions.create).not.toHaveBeenCalled();
+    expect(store.subscriptions).toEqual([
+      expect.objectContaining({
+        stripeCustomerId: "customer",
+        stripeSubscriptionId: null,
+        status: "active",
+        paidUsagePeriods: [],
+      }),
+    ]);
+  });
 });

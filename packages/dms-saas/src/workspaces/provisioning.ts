@@ -111,7 +111,7 @@ export interface ProvisionedWorkspace {
 }
 
 interface CreatedSubscription {
-  /** Null for a card-less workspace, which has no Stripe side at all. */
+  /** Null for a workspace on a local free subscription, card or not. */
   stripeSubscriptionId: string | null;
   /** Null exactly when `stripeSubscriptionId` is. */
   startedAt: Date | null;
@@ -182,16 +182,27 @@ const NO_CARD: CardDetails = { fingerprint: null, billingAddress: undefined };
  * A workspace without a card stays entirely local: the upgrade checkout
  * creates the Stripe customer the day one is needed.
  */
+const LOCAL_SUBSCRIPTION: CreatedSubscription = {
+  stripeSubscriptionId: null,
+  startedAt: null,
+  isTrialing: false,
+  currentPeriodEnd: null,
+  latestInvoiceId: null,
+};
+
 const CARDLESS_BILLING: ProvisionedBilling = {
   stripeCustomerId: null,
-  subscription: {
-    stripeSubscriptionId: null,
-    startedAt: null,
-    isTrialing: false,
-    currentPeriodEnd: null,
-    latestInvoiceId: null,
-  },
+  subscription: LOCAL_SUBSCRIPTION,
 };
+
+/**
+ * A free plan that was never linked to a Stripe price has nothing to
+ * subscribe to on Stripe: its workspaces hold a local free subscription, and
+ * the upgrade checkout opens the Stripe one on the customer created here.
+ */
+function isBilledOffStripe(plan: Plan): boolean {
+  return isFreePlan(plan) && !plan.paymentProviderRefs?.stripePriceId;
+}
 
 /**
  * Read once by the caller: the inherited billing address and the trial
@@ -525,6 +536,9 @@ async function provisionStripeBilling(
     paymentMethodId,
     handles,
   );
+  if (isBilledOffStripe(plan)) {
+    return { stripeCustomerId, subscription: LOCAL_SUBSCRIPTION };
+  }
   const subscription = await createSubscription({
     stripeCustomerId,
     plan,
