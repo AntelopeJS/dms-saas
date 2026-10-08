@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, type Component } from 'vue'
-import { useDetailRefresh } from '../../composables/useDetailRefresh'
 import ComplimentaryDialog from './ComplimentaryDialog.vue'
 import CreditDialog from './CreditDialog.vue'
 import UpgradeDialog from './UpgradeDialog.vue'
@@ -41,7 +40,6 @@ const DIALOGS: Record<WorkspaceDialog, DialogSpec> = {
 	},
 }
 
-const { trigger } = useDetailRefresh(props.tenantId)
 const opened = ref<WorkspaceDialog | null>(null)
 const spec = computed(() => (opened.value ? DIALOGS[opened.value] : null))
 const isOpen = computed({
@@ -57,7 +55,7 @@ function open(dialog: WorkspaceDialog): void {
 
 function finish(): void {
 	opened.value = null
-	trigger()
+	refreshPageBlocks()
 }
 
 defineExpose({ open })

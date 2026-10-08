@@ -389,9 +389,10 @@ Recorded after the build and the browser pass, so the answers above stay as they
 - **Q13, blocks fed by a route:** a `StatGroup`, `NavCardGrid` or `KeyValueList` block cannot put
   parameters into its texts on the client, and `fetchUrl` / `badgesUrl` do not read the page's
   route parameters in DMS 0.6. Routes therefore word their items server-side in the request's
-  language (`src/i18n/server-messages.ts`), and detail pages wrap the blocks in
-  `DmsSaasRouteScopedBlock`, which fills `{id}` from the URL. Headline figures that need
-  parameters are small custom components built on `DmsStatGroup`.
+  language (`src/i18n/server-messages.ts`). Detail pages first wrapped the blocks in a custom
+  `DmsSaasRouteScopedBlock` filling `{id}` from the URL; since DMS 0.6.1 the stock blocks take
+  `{{params.id}}` in their URLs and refetch on `refreshPageBlocks()`, so the wrapper is gone.
+  Headline figures that need parameters are small custom components built on `DmsStatGroup`.
 - **Q21, disabled row actions:** DMS row actions have no per-row disabled reason. "Issue credit
   note…" is greyed out by a rule, the reason is in the table's footer hint and in the dialog, and
   the server refuses anyway. Open invoices get a third mode, "Reduce the amount due", the only

@@ -1,5 +1,4 @@
 import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
-import { useDetailRefresh } from '../../composables/useDetailRefresh'
 import { formatMinorUnits } from '../../composables/useMoneyFormat'
 import type { SuspensionImpact } from './types'
 
@@ -35,7 +34,6 @@ export function useWorkspaceActions(tenantId: string) {
 	const { confirm } = useConfirm()
 	const toast = useToast()
 	const { resolveApiError } = useApiErrorMessage()
-	const { trigger } = useDetailRefresh(tenantId)
 	const base = `/api/saas/workspaces/${tenantId}`
 
 	function translate(
@@ -63,7 +61,7 @@ export function useWorkspaceActions(tenantId: string) {
 				color: 'success',
 				icon: 'i-ph-check-circle',
 			})
-			trigger()
+			refreshPageBlocks()
 		} catch (error) {
 			toast.add({
 				title: resolveApiError(error, `${D}.error.prepare`),

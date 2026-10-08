@@ -1,5 +1,4 @@
-import { onMounted, ref, watch, type Ref } from 'vue'
-import { useDetailRefresh } from '../../composables/useDetailRefresh'
+import { onBeforeUnmount, onMounted, ref, type Ref } from 'vue'
 import type { WorkspaceOverview } from './types'
 
 /** The workspace an operator looks at, refreshed after each action on it. */
@@ -10,10 +9,12 @@ export interface WorkspaceOverviewState {
 	load: () => Promise<void>
 }
 
-/** Reads the header of a workspace's detail page, again on every refresh. */
+/**
+ * Reads the header of a workspace's detail page, again each time the page
+ * refreshes its blocks after an operator action.
+ */
 export function useWorkspaceOverview(tenantId: string): WorkspaceOverviewState {
 	const { $authFetch } = useAuthFetch()
-	const { triggerRef } = useDetailRefresh(tenantId)
 	const overview = ref<WorkspaceOverview | null>(null)
 	const isLoading = ref(true)
 	const hasError = ref(false)
@@ -33,7 +34,11 @@ export function useWorkspaceOverview(tenantId: string): WorkspaceOverviewState {
 		}
 	}
 
-	onMounted(load)
-	watch(triggerRef, load)
+	let stopRefresh: (() => void) | undefined
+	onMounted(() => {
+		void load()
+		stopRefresh = onPageBlocksRefresh(() => void load())
+	})
+	onBeforeUnmount(() => stopRefresh?.())
 	return { overview, isLoading, hasError, load }
 }

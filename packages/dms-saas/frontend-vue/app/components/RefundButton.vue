@@ -18,7 +18,6 @@ type GuaranteeState = 'open' | 'ended' | 'refunded' | 'not_started' | 'blocked'
 
 const ELIGIBILITY_ENDPOINT = '/api/saas/billing/refund-eligibility'
 const REFUND_ENDPOINT = '/api/saas/billing/refund-self'
-const REFRESH_SCOPE = 'tenant-billing'
 const KEY_PREFIX = 'saas.tenant_billing.money_back'
 const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 	day: 'numeric',
@@ -39,7 +38,6 @@ const { t, locale } = useI18n()
 const { confirm } = useConfirm()
 const { resolveApiError } = useApiErrorMessage()
 const { formatMinorUnits } = useMoneyFormat()
-const { trigger } = useDetailRefresh(REFRESH_SCOPE)
 const billingStatus = useBillingStatus()
 const tenantPlan = useTenantPlan()
 const { workspace, load: loadWorkspace } = useCurrentWorkspace()
@@ -150,7 +148,7 @@ async function submitRefund(): Promise<void> {
 		tenantPlan.refresh(),
 		billingStatus.refresh(),
 	])
-	trigger()
+	refreshPageBlocks()
 }
 
 async function requestRefund(): Promise<void> {

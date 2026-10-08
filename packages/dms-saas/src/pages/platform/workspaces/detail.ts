@@ -1,10 +1,14 @@
 import { INVOICE_ROW_ACTIONS } from "../invoices";
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import {
+  ActivityFeed,
   FieldRow,
   Grid,
   GridRow,
+  KeyValueList,
   Section,
+  StatGroup,
+  Tab,
   TableView,
   VStack,
 } from "@antelopejs/interface-dms/base";
@@ -20,7 +24,7 @@ import { SaasWorkspacesListController } from "./index";
 import { permissionMeta } from "./shared";
 
 const D = "$saas.workspace_detail";
-const API = "/api/saas/workspaces/{id}";
+const API = "/api/saas/workspaces/{{params.id}}";
 const INVITATION_API = "/api/saas/workspaces/{_instance}/invitations/{_id}";
 const FACTS = 5;
 const LATEST_INVOICES = 3;
@@ -49,21 +53,6 @@ const WITHOUT_WORKSPACE_COLUMN = {
   defaultView: "workspace",
   layout: "menu" as const,
 };
-
-/**
- * A DMS block whose data route names this workspace: the block reads
- * `{id}` from the page URL, which a block's own `fetchUrl` cannot.
- */
-function scopedBlock(
-  block: string,
-  props: Record<string, unknown>,
-  metaKey: string,
-  icon: string,
-) {
-  return CustomComponent("DmsSaasRouteScopedBlock")
-    .options({ block, props })
-    .meta(permissionMeta(metaKey, icon));
-}
 
 // The same actions as the Invoices page: credit only paid and open invoices.
 const invoiceRowActions = {
@@ -124,30 +113,22 @@ const invitationRowActions = {
 const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
   .child(
     "billingInfo",
-    scopedBlock(
-      "key-value-list",
-      {
-        title: `${D}.billing.title`,
-        fetchUrl: `${API}/billing-info`,
-        columns: 2,
-        empty: { title: `${D}.billing.empty` },
-      },
-      "billing_info",
-      "i-ph-identification-card",
-    ),
+    KeyValueList({
+      title: `${D}.billing.title`,
+      fetchUrl: `${API}/billing-info`,
+      columns: 2,
+      empty: { title: `${D}.billing.empty` },
+    }).meta(permissionMeta("billing_info", "i-ph-identification-card")),
   )
   .child(
     "subscription",
-    scopedBlock(
-      "activity-feed",
-      {
-        title: `${D}.timeline.title`,
-        fetchUrl: `${API}/subscription-timeline`,
-        groupByDay: false,
-        empty: { title: `${D}.timeline.empty` },
-      },
-      "subscription_timeline",
-      "i-ph-clock-counter-clockwise",
+    ActivityFeed({
+      title: `${D}.timeline.title`,
+      fetchUrl: `${API}/subscription-timeline`,
+      groupByDay: false,
+      empty: { title: `${D}.timeline.empty` },
+    }).meta(
+      permissionMeta("subscription_timeline", "i-ph-clock-counter-clockwise"),
     ),
   )
   .child(
@@ -164,17 +145,12 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
   )
   .child(
     "recentActivity",
-    scopedBlock(
-      "activity-feed",
-      {
-        title: `${D}.activity.recent`,
-        fetchUrl: `${API}/activity?limit=short`,
-        groupByDay: false,
-        empty: { title: `${D}.activity.empty` },
-      },
-      "recent_activity",
-      "i-ph-pulse",
-    ),
+    ActivityFeed({
+      title: `${D}.activity.recent`,
+      fetchUrl: `${API}/activity?limit=short`,
+      groupByDay: false,
+      empty: { title: `${D}.activity.empty` },
+    }).meta(permissionMeta("recent_activity", "i-ph-pulse")),
   )
   .meta(permissionMeta("overview", "i-ph-squares-four"));
 
@@ -211,17 +187,13 @@ const TAB_ITEMS = [
   { label: `${D}.tabs.activity`, icon: "i-ph-pulse", slot: "activity" },
 ];
 
-const tabs = scopedBlock(
-  "tab",
-  {
-    items: TAB_ITEMS,
-    badgesUrl: `${API}/tab-counts`,
-    persistState: true,
-    stateKey: "workspace-tab",
-  },
-  "tabs",
-  "i-ph-tabs",
-)
+const tabs = Tab({
+  items: TAB_ITEMS,
+  badgesUrl: `${API}/tab-counts`,
+  persistState: true,
+  stateKey: "workspace-tab",
+})
+  .meta(permissionMeta("tabs", "i-ph-tabs"))
   .child("overview", overview, { slot: "overview" })
   .child(
     "invoiceTable",
@@ -248,16 +220,11 @@ const tabs = scopedBlock(
   .child("members", members, { slot: "members" })
   .child(
     "activity",
-    scopedBlock(
-      "activity-feed",
-      {
-        title: `${D}.activity.title`,
-        fetchUrl: `${API}/activity`,
-        empty: { title: `${D}.activity.empty` },
-      },
-      "activity",
-      "i-ph-pulse",
-    ),
+    ActivityFeed({
+      title: `${D}.activity.title`,
+      fetchUrl: `${API}/activity`,
+      empty: { title: `${D}.activity.empty` },
+    }).meta(permissionMeta("activity", "i-ph-pulse")),
     { slot: "activity" },
   );
 
@@ -270,18 +237,13 @@ const sidebar = VStack({ spacing: "1.5rem", alignment: "stretch" })
   )
   .child(
     "credit",
-    scopedBlock(
-      "key-value-list",
-      {
-        title: `${D}.credit.title`,
-        fetchUrl: `${API}/available-credit`,
-        dense: true,
-        skeletonCount: 1,
-        empty: { title: `${D}.credit.empty` },
-      },
-      "available_credit",
-      "i-ph-coins",
-    ),
+    KeyValueList({
+      title: `${D}.credit.title`,
+      fetchUrl: `${API}/available-credit`,
+      dense: true,
+      skeletonCount: 1,
+      empty: { title: `${D}.credit.empty` },
+    }).meta(permissionMeta("available_credit", "i-ph-coins")),
   )
   .child(
     "notes",
@@ -325,18 +287,13 @@ export class SaasWorkspaceDetailController extends PageController(
     permissionMeta("header", "i-ph-building"),
   );
 
-  static facts = scopedBlock(
-    "stat-group",
-    {
-      layout: "joined",
-      columns: FACTS,
-      skeletonCount: FACTS,
-      label: `${D}.facts.label`,
-      fetchUrl: `${API}/facts`,
-    },
-    "facts",
-    "i-ph-squares-four",
-  );
+  static facts = StatGroup({
+    layout: "joined",
+    columns: FACTS,
+    skeletonCount: FACTS,
+    label: `${D}.facts.label`,
+    fetchUrl: `${API}/facts`,
+  }).meta(permissionMeta("facts", "i-ph-squares-four"));
 
   static body = Grid({ gap: "1.5rem" })
     .child(
