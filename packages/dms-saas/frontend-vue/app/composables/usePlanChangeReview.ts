@@ -8,7 +8,6 @@ import type {
 export const UPGRADE_QUERY_PARAM = 'upgrade'
 
 const UNLIMITED_VALUE = -1
-const NO_SEAT_CAP = 0
 const UNLIMITED_RANK = Number.POSITIVE_INFINITY
 
 /** One feature that differs between two plans. */
@@ -46,9 +45,9 @@ export function readUpgradeParam(
 	return planId?.trim() ?? null
 }
 
-/** Whether a plan's seat cap holds the seats in use (0 means no cap). */
+/** Whether a plan's seat cap holds the seats in use (negative means no cap). */
 export function fitsSeats(plan: OfferedPlanView, seats: SeatsInUse): boolean {
-	return plan.maxMembers === NO_SEAT_CAP || plan.maxMembers >= seats.occupied
+	return plan.maxMembers <= UNLIMITED_VALUE || plan.maxMembers >= seats.occupied
 }
 
 /**

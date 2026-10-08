@@ -91,7 +91,7 @@ export interface ChangePlanResult {
 export interface OfferedPlanView extends TenantPlanView {
   description: string;
   billingMode: Plan["billingMode"];
-  /** Seat cap of the plan; 0 for no cap. */
+  /** Seat cap of the plan; negative (-1) for no cap. */
   maxMembers: number;
   trialDays: number;
 }

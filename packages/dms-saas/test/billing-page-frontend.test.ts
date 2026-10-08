@@ -99,7 +99,7 @@ function offeredPlan(overrides: Partial<OfferedPlanView>): OfferedPlanView {
     featureValues: {},
     description: "",
     billingMode: "flat",
-    maxMembers: 0,
+    maxMembers: -1,
     trialDays: 0,
     ...overrides,
   };
@@ -138,7 +138,7 @@ describe("plan comparison", () => {
   it("offers the plans the seats in use fit, and names the others", () => {
     const solo = offeredPlan({ _id: "solo", maxMembers: 1 });
     const team = offeredPlan({ _id: "team", maxMembers: 25 });
-    const unlimited = offeredPlan({ _id: "enterprise", maxMembers: 0 });
+    const unlimited = offeredPlan({ _id: "enterprise", maxMembers: -1 });
 
     const split = splitOfferedPlans([solo, team, unlimited], seats, null);
 
