@@ -13,6 +13,7 @@ import {
 import {
   fetchDefaultPaymentMethod,
   type PaymentMethodSummary,
+  toCardSummary,
 } from "../billing-state/recovery";
 import { getStripeClient } from "../stripe/client";
 import { asCustomerId } from "../stripe/webhook-shared";
@@ -25,8 +26,9 @@ import {
 
 const HTTP_NOT_FOUND = 404;
 const INVOICE_DOCUMENT_TYPE = "invoice";
-const PAYMENT_METHOD_EXPANSION =
-  "payments.data.payment.payment_intent.payment_method";
+// Stripe expands four levels at most: the payment intent is the deepest it
+// reaches here, and its payment method is read on its own.
+const PAYMENT_INTENT_EXPANSION = "payments.data.payment.payment_intent";
 
 /** A credit note already issued against the invoice, as the dialog lists it. */
 export interface PriorCredit {
@@ -99,7 +101,7 @@ async function readStripeInvoice(
   stripeInvoiceId: string,
 ): Promise<Stripe.Invoice> {
   return getStripeClient().invoices.retrieve(stripeInvoiceId, {
-    expand: [PAYMENT_METHOD_EXPANSION],
+    expand: [PAYMENT_INTENT_EXPANSION],
   });
 }
 
@@ -141,27 +143,32 @@ export async function resolveCreditAllowance(loaded: LoadedInvoice): Promise<{
   return { allowance, priorNotes, stripeInvoice };
 }
 
-function paymentCard(
+/** The payment method that paid the invoice, as an id or an object. */
+function paidWith(
   stripeInvoice: Stripe.Invoice,
-): PaymentMethodSummary | null {
+): Stripe.PaymentIntent["payment_method"] {
   const payment = stripeInvoice.payments?.data.find(
     (entry) => typeof entry.payment.payment_intent === "object",
   )?.payment.payment_intent as Stripe.PaymentIntent | undefined;
-  const card = payment?.payment_method;
-  if (!card || typeof card === "string" || !card.card) return null;
-  return {
-    brand: card.card.brand,
-    last4: card.card.last4,
-    expMonth: card.card.exp_month,
-    expYear: card.card.exp_year,
-    holderName: card.billing_details?.name ?? null,
-  };
+  return payment?.payment_method ?? null;
+}
+
+async function paymentCard(
+  stripeInvoice: Stripe.Invoice,
+): Promise<PaymentMethodSummary | null> {
+  const method = paidWith(stripeInvoice);
+  if (!method) return null;
+  if (typeof method !== "string") return toCardSummary(method);
+  const retrieved = await getStripeClient()
+    .paymentMethods.retrieve(method)
+    .catch(() => null);
+  return toCardSummary(retrieved);
 }
 
 async function resolveCard(
   stripeInvoice: Stripe.Invoice,
 ): Promise<PaymentMethodSummary | null> {
-  const card = paymentCard(stripeInvoice);
+  const card = await paymentCard(stripeInvoice);
   if (card) return card;
   const customerId = asCustomerId(stripeInvoice.customer);
   return customerId ? fetchDefaultPaymentMethod(customerId) : null;

@@ -11,6 +11,7 @@ const harness = vi.hoisted(() => ({
   retrieveInvoice: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   createCreditNote: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   retrieveCustomer: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  retrievePaymentMethod: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }));
 
 vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
@@ -30,6 +31,7 @@ vi.mock("../src/stripe/client", async (importOriginal) => ({
     invoices: { retrieve: harness.retrieveInvoice },
     creditNotes: { create: harness.createCreditNote },
     customers: { retrieve: harness.retrieveCustomer },
+    paymentMethods: { retrieve: harness.retrievePaymentMethod },
   }),
 }));
 
@@ -137,6 +139,33 @@ describe("credit note preview", () => {
       priorCredits: [{ number: "CN-0112", amount: 4_900 }],
     });
     expect(preview.nextInvoiceAt).toEqual(new Date("2026-10-29T00:00:00Z"));
+  });
+
+  it("names the card that paid the invoice, within Stripe's expansion depth", async () => {
+    stripeInvoice.payments = {
+      data: [{ payment: { payment_intent: { payment_method: "pm_paid" } } }],
+    };
+    harness.retrievePaymentMethod.mockResolvedValue({
+      card: {
+        brand: "mastercard",
+        last4: "4444",
+        exp_month: 2,
+        exp_year: 2031,
+      },
+      billing_details: { name: "Ada Lovelace" },
+    });
+
+    const preview = await controller.preview(ADMIN, "in_row", invoiceModel());
+
+    const [, options] = harness.retrieveInvoice.mock.calls[0] as [
+      string,
+      { expand: string[] },
+    ];
+    for (const path of options.expand) {
+      expect(path.split(".").length).toBeLessThanOrEqual(4);
+    }
+    expect(harness.retrievePaymentMethod).toHaveBeenCalledWith("pm_paid");
+    expect(preview.card).toMatchObject({ brand: "mastercard", last4: "4444" });
   });
 
   it("explains why a void invoice cannot be credited", async () => {

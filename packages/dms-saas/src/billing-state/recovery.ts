@@ -35,7 +35,8 @@ export interface UnpaidInvoiceSummary extends UnpaidInvoiceRef {
   suspendAt: Date | null;
 }
 
-function toCardSummary(
+/** Brand, last four digits, expiry and holder of a card payment method. */
+export function toCardSummary(
   paymentMethod: Stripe.PaymentMethod | null,
 ): PaymentMethodSummary | null {
   const card = paymentMethod?.card;
