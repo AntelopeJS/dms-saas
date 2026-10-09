@@ -130,7 +130,6 @@
 				},
 				"stats": {
 					"label": "Le catalogue en bref",
-					"failed": "Impossible de charger les chiffres du catalogue. Les offres ci-dessous ne sont pas concernées.",
 					"on_sale": "Offres en vente",
 					"on_sale_detail": "{public} publiques · {sales} sur devis",
 					"workspaces": "Espaces de travail",

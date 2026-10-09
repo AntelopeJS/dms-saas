@@ -1,4 +1,11 @@
+import type { StatGroupItem } from "@antelopejs/interface-dms/base";
 import type { Plan } from "../db";
+import {
+  composed,
+  dotList,
+  moneyParam,
+  valueText,
+} from "../i18n/composed-text";
 import type { CatalogueUsage, PlanUsage } from "./catalogue-usage";
 
 /** MRR of the plans billed in one currency. */
@@ -82,4 +89,83 @@ export function summariseCatalogue(
     legacyWorkspaces: sumOf(legacy, usage, "workspaces"),
     legacyNames: legacyInUse.map((plan) => plan.name),
   };
+}
+
+const STATS = "saas.catalog.plans.stats";
+const MINOR_UNITS_PER_UNIT = 100;
+const NAMES_SEPARATOR = ", ";
+
+function mrrParam(entry: CurrencyMrr) {
+  return moneyParam(
+    Math.round(entry.mrr * MINOR_UNITS_PER_UNIT),
+    entry.currency,
+  );
+}
+
+function mrrItem(summary: CatalogueSummary): StatGroupItem {
+  const [main, ...rest] = summary.mrr;
+  const others = rest.filter((entry) => entry.mrr > 0).map(mrrParam);
+  const otherList = dotList(others);
+  return {
+    id: "mrr",
+    icon: "i-ph-chart-line-up",
+    eyebrow: `$${STATS}.mrr`,
+    value: main ? valueText(mrrParam(main)) : "—",
+    detail: otherList
+      ? composed(`${STATS}.mrr_detail_other`, { other: otherList })
+      : `$${STATS}.mrr_detail`,
+  };
+}
+
+function legacyItem(summary: CatalogueSummary): StatGroupItem {
+  const hasWorkspaces = summary.legacyWorkspaces > 0;
+  return {
+    id: "legacy",
+    icon: "i-ph-clock-counter-clockwise",
+    tone: hasWorkspaces ? "warning" : undefined,
+    eyebrow: `$${STATS}.legacy`,
+    value: summary.legacy,
+    detail:
+      summary.legacyNames.length === 0
+        ? `$${STATS}.legacy_none`
+        : composed(`${STATS}.legacy_detail`, {
+            names: summary.legacyNames.join(NAMES_SEPARATOR),
+            count: summary.legacyWorkspaces,
+          }),
+    detailTone: hasWorkspaces ? "warning" : undefined,
+  };
+}
+
+/**
+ * The catalogue's figures as a `StatGroup` reads them: plans on sale,
+ * workspaces, normalised MRR, legacy plans still holding workspaces.
+ *
+ * @param summary The catalogue summary
+ */
+export function catalogueStatItems(summary: CatalogueSummary): StatGroupItem[] {
+  return [
+    {
+      id: "on-sale",
+      icon: "i-ph-storefront",
+      eyebrow: `$${STATS}.on_sale`,
+      value: summary.onSale,
+      detail: composed(`${STATS}.on_sale_detail`, {
+        public: summary.publicOnSale,
+        sales: summary.salesLed,
+      }),
+    },
+    {
+      id: "workspaces",
+      icon: "i-ph-buildings",
+      eyebrow: `$${STATS}.workspaces`,
+      value: summary.workspaces,
+      detail: composed(`${STATS}.workspaces_detail`, {
+        paying: summary.paying,
+        free: summary.free,
+        trialing: summary.trialing,
+      }),
+    },
+    mrrItem(summary),
+    legacyItem(summary),
+  ];
 }

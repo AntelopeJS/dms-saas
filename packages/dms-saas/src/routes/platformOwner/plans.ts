@@ -17,6 +17,7 @@ import {
 } from "@antelopejs/interface-dms/permissions";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import type { StatGroupItem } from "@antelopejs/interface-dms/base";
 import type { Plan } from "../../db";
 import {
   FeatureModel,
@@ -26,7 +27,7 @@ import {
 } from "../../db";
 import { localizeFeature } from "../../plans";
 import {
-  type CatalogueSummary,
+  catalogueStatItems,
   summariseCatalogue,
 } from "../../plans/catalogue-summary";
 import { loadCatalogueUsage } from "../../plans/catalogue-usage";
@@ -104,6 +105,11 @@ function fieldRefusal(field: string, message: string): HTTPResult {
 }
 
 type PlanWithWorkspaceCount = Plan & { workspaceCount: number };
+
+/** The figures above the catalogue, as its `StatGroup` reads them. */
+interface CatalogueStats {
+  items: StatGroupItem[];
+}
 
 interface PublicPlan {
   _id: string;
@@ -344,12 +350,12 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
 
   /** The figures above the catalogue: plans on sale, workspaces, MRR, legacy. */
   @Get("/summary")
-  async summary(@AuthOwnerOnly() _user: User): Promise<CatalogueSummary> {
+  async summary(@AuthOwnerOnly() _user: User): Promise<CatalogueStats> {
     const [plans, usage] = await Promise.all([
       this.planModel.findNotDeleted(),
       loadCatalogueUsage(),
     ]);
-    return summariseCatalogue(plans, usage);
+    return { items: catalogueStatItems(summariseCatalogue(plans, usage)) };
   }
 
   /** Plans to build on and features to set, for the plan editor and cards. */

@@ -130,7 +130,6 @@
 				},
 				"stats": {
 					"label": "Catalogue at a glance",
-					"failed": "Couldn’t load the catalogue figures. The plans below are unaffected.",
 					"on_sale": "Plans on sale",
 					"on_sale_detail": "{public} public · {sales} sales-led",
 					"workspaces": "Workspaces",

@@ -1,5 +1,5 @@
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
-import { TableView } from "@antelopejs/interface-dms/base";
+import { StatGroup, TableView } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { ButtonVariant } from "@antelopejs/interface-dms/base/types";
@@ -21,6 +21,7 @@ const PLANS_ENDPOINT = "/api/saas/plans";
 const PLAN_DIALOGS_ENDPOINT = "/api/saas/plan-dialogs";
 const PLAN_CARDS_DISPLAY_ID = "saas:plan-cards";
 const RETIRE_MODAL_SIZE = "3xl";
+const CATALOGUE_STAT_COUNT = 4;
 
 const retirePlanModal = CustomComponent("DmsSaasRetirePlanModal").meta({
   name: `${PERMISSIONS}.retire_plan`,
@@ -175,7 +176,11 @@ export class SaasPlansController extends PageController(
     ],
   }),
 ) {
-  static stats = CustomComponent("DmsSaasPlanCatalogStats").meta({
+  static stats = StatGroup({
+    fetchUrl: `${PLANS_ENDPOINT}/summary`,
+    skeletonCount: CATALOGUE_STAT_COUNT,
+    label: `${TEXTS}.stats.label`,
+  }).meta({
     name: `${PERMISSIONS}.stats`,
     description: `${PERMISSIONS}.stats_description`,
     icon: "i-ph-squares-four",

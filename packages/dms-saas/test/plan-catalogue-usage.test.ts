@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Plan } from "../src/db";
-import { summariseCatalogue } from "../src/plans/catalogue-summary";
+import {
+  catalogueStatItems,
+  summariseCatalogue,
+} from "../src/plans/catalogue-summary";
+import { LOCALES, missingKeys } from "./helpers/composed-text";
 import {
   type PlanUsageRow,
   isBilledSubscription,
@@ -143,5 +147,50 @@ describe("catalogue usage", () => {
       legacyNames: ["Growth 2024"],
       mrr: [{ currency: "EUR", mrr: 29 }],
     });
+  });
+
+  it("serves the figures as stat items, the MRR in minor units", () => {
+    const summary = {
+      onSale: 2,
+      publicOnSale: 1,
+      salesLed: 1,
+      workspaces: 3,
+      paying: 2,
+      free: 1,
+      trialing: 0,
+      mrr: [
+        { currency: "EUR", mrr: 225.5 },
+        { currency: "USD", mrr: 49 },
+      ],
+      legacy: 1,
+      legacyWorkspaces: 1,
+      legacyNames: ["Growth 2024"],
+    };
+    const items = catalogueStatItems(summary);
+
+    expect(items.find((item) => item.id === "mrr")).toMatchObject({
+      value: {
+        params: { value: { type: "money", value: 22550, currency: "EUR" } },
+      },
+      detail: {
+        key: "saas.catalog.plans.stats.mrr_detail_other",
+        params: {
+          other: { params: { value: { value: 4900, currency: "USD" } } },
+        },
+      },
+    });
+    expect(items.find((item) => item.id === "legacy")).toMatchObject({
+      tone: "warning",
+      detailTone: "warning",
+    });
+    for (const code of LOCALES) {
+      expect(missingKeys(items, code)).toEqual([]);
+      expect(
+        missingKeys(
+          catalogueStatItems({ ...summary, mrr: [], legacyNames: [] }),
+          code,
+        ),
+      ).toEqual([]);
+    }
   });
 });
