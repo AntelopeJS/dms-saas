@@ -67,7 +67,7 @@ export interface SaasStatusView {
 const FALLBACK_TONE: SaasTone = 'neutral'
 
 /** The tone of a status, neutral for a value the family does not know. */
-export function saasStatusTone(
+function saasStatusTone(
 	family: SaasStatusFamily,
 	status: string | null | undefined,
 ): SaasTone {
