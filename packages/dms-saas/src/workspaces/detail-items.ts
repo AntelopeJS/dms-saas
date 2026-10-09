@@ -1,11 +1,20 @@
 import type {
   ActivityFeedItem,
+  ComposedText,
   KeyValueListItem,
   StatGroupItem,
 } from "@antelopejs/interface-dms/base";
 import type { UpcomingInvoicePreview } from "@antelopejs/interface-dms-saas/billing";
 import type { PaymentMethodSummary } from "../billing-state/recovery";
 import type { Invoice, TenantBillingInfo } from "../db";
+import {
+  composed,
+  countParam,
+  dateParam,
+  dotList,
+  moneyParam,
+  valueText,
+} from "../i18n/composed-text";
 import type { ServerMessages } from "../i18n/server-messages";
 import { monthlyAmountAfterTrial } from "../metrics/directory-summary";
 import { stripeObjectUrl } from "../stripe/dashboard-links";
@@ -23,73 +32,57 @@ const D = "saas.workspace_detail";
 const UNLIMITED_MEMBERS = -1;
 const PAID_STATUS = "paid";
 const INVOICE_DOCUMENT = "invoice";
-const SEPARATOR = " · ";
-const MONTH_YEAR_FORMAT: Intl.DateTimeFormatOptions = {
-  month: "short",
-  year: "numeric",
-};
+const NO_VALUE = "—";
 
-function priceTimesSeats(
-  messages: ServerMessages,
-  view: WorkspaceOperatorView,
-): string {
+function priceTimesSeats(view: WorkspaceOperatorView): ComposedText {
   const { directory } = view;
-  const price = messages.money(
+  const price = moneyParam(
     directory.planUnitAmountMinor ?? 0,
     directory.currency ?? "",
   );
-  const interval = messages.t(
+  const interval = composed(
     `saas.workspaces.interval.${directory.planInterval ?? "month"}`,
   );
   return directory.planBillingMode === "seat"
-    ? messages.t(`${D}.facts.price_times_seats`, {
+    ? composed(`${D}.facts.price_times_seats`, {
         price,
         seats: directory.seats,
         interval,
       })
-    : messages.t(`${D}.facts.flat_price`, { price, interval });
+    : composed(`${D}.facts.flat_price`, { price, interval });
 }
 
 /** Why a workspace pays nothing, or how its MRR is made up. */
-function mrrDetail(
-  messages: ServerMessages,
-  view: WorkspaceOperatorView,
-): string {
+function mrrDetail(view: WorkspaceOperatorView): ComposedText {
   const { directory, billingState } = view;
-  if (!directory.planName) return messages.t(`${D}.facts.no_plan`);
-  if (directory.isComplimentary) return messages.t(`${D}.facts.complimentary`);
+  if (!directory.planName) return composed(`${D}.facts.no_plan`);
+  if (directory.isComplimentary) return composed(`${D}.facts.complimentary`);
   if (billingState === "trialing") {
     const then = monthlyAmountAfterTrial(view.directory);
-    return messages.t(`${D}.facts.trial_then`, {
-      amount: messages.money(then.amountMinor, then.currency),
+    return composed(`${D}.facts.trial_then`, {
+      amount: moneyParam(then.amountMinor, then.currency),
     });
   }
   if (billingState === "suspended")
-    return messages.t(`${D}.facts.billing_paused`);
-  return priceTimesSeats(messages, view);
+    return composed(`${D}.facts.billing_paused`);
+  return priceTimesSeats(view);
 }
 
-function mrrFact(
-  messages: ServerMessages,
-  view: WorkspaceOperatorView,
-): StatGroupItem {
+function mrrFact(view: WorkspaceOperatorView): StatGroupItem {
   const { directory } = view;
   return {
     id: "mrr",
     icon: "i-ph-currency-circle-dollar",
     eyebrow: `$${D}.facts.mrr`,
     value: directory.currency
-      ? messages.money(directory.mrrMinor, directory.currency)
-      : "—",
-    detail: mrrDetail(messages, view),
+      ? valueText(moneyParam(directory.mrrMinor, directory.currency))
+      : NO_VALUE,
+    detail: mrrDetail(view),
     detailTone: view.billingState === "past_due" ? "error" : undefined,
   };
 }
 
-function seatsFact(
-  messages: ServerMessages,
-  view: WorkspaceOperatorView,
-): StatGroupItem {
+function seatsFact(view: WorkspaceOperatorView): StatGroupItem {
   const maxMembers = view.plan?.maxMembers ?? UNLIMITED_MEMBERS;
   const used = view.seats.occupied;
   return {
@@ -98,16 +91,15 @@ function seatsFact(
     eyebrow: `$${D}.facts.seats`,
     value:
       maxMembers === UNLIMITED_MEMBERS
-        ? String(used)
-        : messages.t(`${D}.facts.seats_of`, { used, max: maxMembers }),
-    detail: messages.t(`${D}.facts.pending_invitations`, {
-      count: view.seats.pendingInvites,
+        ? used
+        : composed(`${D}.facts.seats_of`, { used, max: maxMembers }),
+    detail: composed(`${D}.facts.pending_invitations`, {
+      count: countParam(view.seats.pendingInvites),
     }),
   };
 }
 
 function nextInvoiceFact(
-  messages: ServerMessages,
   preview: UpcomingInvoicePreview | null,
 ): StatGroupItem {
   const base = {
@@ -118,19 +110,18 @@ function nextInvoiceFact(
   if (preview?.status !== "available") {
     const reason =
       preview?.status === "absent" ? "nothing_billed" : "preview_unavailable";
-    return { ...base, value: "—", detail: messages.t(`${D}.facts.${reason}`) };
+    return { ...base, value: NO_VALUE, detail: `$${D}.facts.${reason}` };
   }
   return {
     ...base,
-    value: messages.day(new Date(preview.billingDate)),
-    detail: messages.t(`${D}.facts.next_invoice_total`, {
-      amount: messages.money(preview.totalMinorUnits, preview.currency),
+    value: valueText(dateParam(preview.billingDate, "day")),
+    detail: composed(`${D}.facts.next_invoice_total`, {
+      amount: moneyParam(preview.totalMinorUnits, preview.currency),
     }),
   };
 }
 
 function stripeFact(
-  messages: ServerMessages,
   view: WorkspaceOperatorView,
   card: PaymentMethodSummary | null,
 ): StatGroupItem {
@@ -143,24 +134,24 @@ function stripeFact(
   if (!customerId)
     return {
       ...base,
-      value: "—",
-      detail: messages.t(`${D}.facts.no_stripe_customer`),
+      value: NO_VALUE,
+      detail: `$${D}.facts.no_stripe_customer`,
     };
-  const cardLabel = card
-    ? `${SEPARATOR}${messages.t(`${D}.facts.card`, { brand: card.brand, last4: card.last4 })}`
-    : "";
+  const open = composed(`${D}.facts.open_in_stripe`);
   return {
     ...base,
     value: customerId,
-    detail: `${messages.t(`${D}.facts.open_in_stripe`)}${cardLabel}`,
+    detail: card
+      ? dotList([
+          open,
+          composed(`${D}.facts.card`, { brand: card.brand, last4: card.last4 }),
+        ])!
+      : open,
     to: stripeObjectUrl("customers", customerId),
   };
 }
 
-function lifetimeFact(
-  messages: ServerMessages,
-  invoices: Invoice[],
-): StatGroupItem {
+function lifetimeFact(invoices: Invoice[]): StatGroupItem {
   const paid = invoices.filter(
     (invoice) =>
       invoice.status === PAID_STATUS && invoice.documentType !== "credit_note",
@@ -176,31 +167,24 @@ function lifetimeFact(
     id: "lifetime",
     icon: "i-ph-chart-line-up",
     eyebrow: `$${D}.facts.lifetime_revenue`,
-    value: currency ? messages.money(totalMinor, currency) : "—",
+    value: currency ? valueText(moneyParam(totalMinor, currency)) : NO_VALUE,
     detail: first
-      ? messages.t(`${D}.facts.lifetime_detail`, {
-          count: paid.length,
-          since: new Intl.DateTimeFormat(
-            messages.locale,
-            MONTH_YEAR_FORMAT,
-          ).format(first),
+      ? composed(`${D}.facts.lifetime_detail`, {
+          count: countParam(paid.length),
+          since: dateParam(first),
         })
-      : messages.t(`${D}.facts.no_paid_invoice`),
+      : `$${D}.facts.no_paid_invoice`,
   };
 }
 
 /** The facts strip: MRR, seats, next invoice, Stripe customer, lifetime revenue. */
-export function workspaceFacts(
-  messages: ServerMessages,
-  inputs: WorkspaceFactsInputs,
-): StatGroupItem[] {
+export function workspaceFacts(inputs: WorkspaceFactsInputs): StatGroupItem[] {
   return [
-    mrrFact(messages, inputs.view),
-    seatsFact(messages, inputs.view),
-    nextInvoiceFact(messages, inputs.preview),
-    stripeFact(messages, inputs.view, inputs.card),
+    mrrFact(inputs.view),
+    seatsFact(inputs.view),
+    nextInvoiceFact(inputs.preview),
+    stripeFact(inputs.view, inputs.card),
     lifetimeFact(
-      messages,
       inputs.invoices.filter(
         (invoice) => invoice.documentType !== "credit_note",
       ),
@@ -275,7 +259,7 @@ export function upcomingTimelineItems(
         params: {
           amount: messages.money(preview.totalMinorUnits, preview.currency),
         },
-        meta: [priceTimesSeats(messages, view)],
+        meta: [messages.compose(priceTimesSeats(view))],
         date: preview.billingDate,
         // A coming date reads as the day, not as a time relative to now.
         time: messages.day(new Date(preview.billingDate)),

@@ -138,11 +138,10 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   @Get("/headline")
   async headline(
     @AuthOwnerOnly() _user: User,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ItemsPayload<StatGroupItem>> {
     const { rows, currency } = await this.summary();
     const summary = summariseDirectory(rows, new Date(), currency);
-    return { items: dashboardHeadline(serverMessages(language), summary) };
+    return { items: dashboardHeadline(summary) };
   }
 
   @Get("/attention")

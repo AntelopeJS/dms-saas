@@ -1,10 +1,21 @@
 import type {
+  ComposedText,
+  ComposedTextMoneyParam,
   KeyValueListItem,
   NavCardItem,
   StatGroupItem,
   TopListItem,
 } from "@antelopejs/interface-dms/base";
-import { BILLING_STATES, type PlanInterval } from "../db";
+import { BILLING_STATES } from "../db";
+import {
+  commaList,
+  composed,
+  countParam,
+  dateParam,
+  dotList,
+  moneyParam,
+  valueText,
+} from "../i18n/composed-text";
 import type { ServerMessages } from "../i18n/server-messages";
 import {
   INVOICES_PAGE_PATH,
@@ -57,76 +68,66 @@ const K = "saas.dashboard";
 const W = "saas.workspaces.headline";
 const NAMED_ENDINGS_SHOWN = 2;
 const MONTHS_PER_YEAR = 12;
-const ENDING_SEPARATOR = " · ";
 
-function money(messages: ServerMessages, total: ReportingTotal): string {
-  return messages.money(total.amountMinor, total.currency);
+function money(total: ReportingTotal): ComposedTextMoneyParam {
+  return moneyParam(total.amountMinor, total.currency);
 }
 
-/** "… · $1,200.00 in USD not counted": what the reporting total leaves out. */
-function otherCurrenciesNote(
-  messages: ServerMessages,
-  total: ReportingTotal,
-): string {
-  if (total.otherCurrencies.length === 0) return "";
-  const amounts = total.otherCurrencies
-    .map((other) => messages.money(other.amountMinor, other.currency))
-    .join(", ");
-  return `${ENDING_SEPARATOR}${messages.t(`${K}.other_currencies`, { amounts })}`;
+/** "$1,200.00 in USD not counted": what the reporting total leaves out. */
+function otherCurrenciesNote(total: ReportingTotal): ComposedText | null {
+  const amounts = commaList(
+    total.otherCurrencies.map((other) =>
+      moneyParam(other.amountMinor, other.currency),
+    ),
+  );
+  return amounts ? composed(`${K}.other_currencies`, { amounts }) : null;
 }
 
 function namedEndings(
-  messages: ServerMessages,
   endings: DatedWorkspace[],
   key: string,
-): string {
-  return endings
-    .slice(0, NAMED_ENDINGS_SHOWN)
-    .map((ending) =>
-      messages.t(key, { name: ending.name, date: messages.day(ending.at) }),
-    )
-    .join(ENDING_SEPARATOR);
+): ComposedText | null {
+  return dotList(
+    endings
+      .slice(0, NAMED_ENDINGS_SHOWN)
+      .map((ending) =>
+        composed(key, { name: ending.name, date: dateParam(ending.at, "day") }),
+      ),
+  );
 }
 
 function mrrItem(
-  messages: ServerMessages,
   summary: DirectorySummary,
-  detail: string,
+  detail: ComposedText,
 ): StatGroupItem {
+  const note = otherCurrenciesNote(summary.mrr);
   return {
     id: "mrr",
     icon: "i-ph-currency-circle-dollar",
     tone: "primary",
     eyebrow: `$${K}.headline.mrr`,
-    value: money(messages, summary.mrr),
-    detail: `${detail}${otherCurrenciesNote(messages, summary.mrr)}`,
+    value: valueText(money(summary.mrr)),
+    detail: note ? dotList([detail, note])! : detail,
   };
 }
 
 /** The dashboard's headline figures: MRR, paying workspaces, trials. */
-export function dashboardHeadline(
-  messages: ServerMessages,
-  summary: DirectorySummary,
-): StatGroupItem[] {
+export function dashboardHeadline(summary: DirectorySummary): StatGroupItem[] {
   const arr = {
     ...summary.mrr,
     amountMinor: summary.mrr.amountMinor * MONTHS_PER_YEAR,
   };
   return [
-    mrrItem(
-      messages,
-      summary,
-      messages.t(`${K}.headline.arr`, { arr: money(messages, arr) }),
-    ),
+    mrrItem(summary, composed(`${K}.headline.arr`, { arr: money(arr) })),
     {
       id: "paying",
       icon: "i-ph-buildings",
       eyebrow: `$${K}.headline.paying`,
-      value: messages.t(`${K}.headline.paying_value`, {
+      value: composed(`${K}.headline.paying_value`, {
         paying: summary.paying,
         total: summary.total,
       }),
-      detail: messages.t(`${K}.headline.paying_detail`, {
+      detail: composed(`${K}.headline.paying_detail`, {
         free: summary.byState.free,
         trialing: summary.byState.trialing,
       }),
@@ -138,39 +139,34 @@ export function dashboardHeadline(
       tone: "info",
       eyebrow: `$${K}.headline.trials`,
       value: summary.byState.trialing,
-      detail: messages.t(`${K}.headline.trials_detail`, {
-        count: summary.trialsEnding.count,
+      detail: composed(`${K}.headline.trials_detail`, {
+        count: countParam(summary.trialsEnding.count),
       }),
       to: workspacesViewPath(WORKSPACE_VIEW_IDS.trialsEnding),
     },
   ];
 }
 
-function pastDueDetail(
-  messages: ServerMessages,
-  summary: DirectorySummary,
-): string {
+function pastDueDetail(summary: DirectorySummary): ComposedText {
   const { atRisk, firstSuspension } = summary.pastDue;
-  const amount = money(messages, atRisk);
+  const amount = money(atRisk);
   return firstSuspension
-    ? messages.t(`${W}.past_due_detail`, {
+    ? composed(`${W}.past_due_detail`, {
         amount,
-        date: messages.day(firstSuspension),
+        date: dateParam(firstSuspension, "day"),
       })
-    : messages.t(`${W}.past_due_detail_no_suspension`, { amount });
+    : composed(`${W}.past_due_detail_no_suspension`, { amount });
 }
 
 /** The workspace list's headline: MRR, past due, endings to act on. */
 export function workspacesHeadline(
-  messages: ServerMessages,
   summary: DirectorySummary,
   complimentaryEnding: DatedWorkspace[],
 ): StatGroupItem[] {
   return [
     mrrItem(
-      messages,
       summary,
-      messages.t(`${W}.mrr_detail`, { count: summary.paying }),
+      composed(`${W}.mrr_detail`, { count: countParam(summary.paying) }),
     ),
     {
       id: "past_due",
@@ -178,7 +174,7 @@ export function workspacesHeadline(
       tone: summary.pastDue.count > 0 ? "error" : "muted",
       eyebrow: `$${W}.past_due`,
       value: summary.pastDue.count,
-      detail: pastDueDetail(messages, summary),
+      detail: pastDueDetail(summary),
       detailTone: summary.pastDue.count > 0 ? "error" : undefined,
       to: workspacesTabPath("past_due"),
     },
@@ -189,8 +185,8 @@ export function workspacesHeadline(
       eyebrow: `$${W}.complimentary_ending`,
       value: complimentaryEnding.length,
       detail:
-        namedEndings(messages, complimentaryEnding, `${W}.named_ending`) ||
-        messages.t(`${W}.none_this_week`),
+        namedEndings(complimentaryEnding, `${W}.named_ending`) ??
+        `$${W}.none_this_week`,
       to: workspacesViewPath(WORKSPACE_VIEW_IDS.complimentaryEnding),
     },
     {
@@ -199,8 +195,8 @@ export function workspacesHeadline(
       tone: "info",
       eyebrow: `$${W}.trials_ending`,
       value: summary.trialsEnding.count,
-      detail: messages.t(`${W}.trials_ending_detail`, {
-        amount: money(messages, summary.trialsEnding.thenMrr),
+      detail: composed(`${W}.trials_ending_detail`, {
+        amount: money(summary.trialsEnding.thenMrr),
       }),
       to: workspacesViewPath(WORKSPACE_VIEW_IDS.trialsEnding),
     },
@@ -218,7 +214,7 @@ function pastDueCard(
     title: messages.t(`${K}.attention.past_due`, {
       count: summary.pastDue.count,
     }),
-    description: pastDueDetail(messages, summary),
+    description: messages.compose(pastDueDetail(summary)),
     to: workspacesTabPath("past_due"),
   };
 }
@@ -234,7 +230,9 @@ function complimentaryCard(
     title: messages.t(`${K}.attention.complimentary_ending`, {
       count: endings.length,
     }),
-    description: namedEndings(messages, endings, `${K}.attention.named_ending`),
+    description: messages.compose(
+      namedEndings(endings, `${K}.attention.named_ending`) ?? "",
+    ),
     to: workspacesViewPath(WORKSPACE_VIEW_IDS.complimentaryEnding),
   };
 }
@@ -267,9 +265,11 @@ function openInvoicesCard(
     icon: "i-ph-receipt",
     iconTone: "warning",
     title: messages.t(`${K}.attention.open_invoices`, { count: open.count }),
-    description: messages.t(`${K}.attention.open_invoices_detail`, {
-      amount: money(messages, open.awaiting),
-    }),
+    description: messages.compose(
+      composed(`${K}.attention.open_invoices_detail`, {
+        amount: money(open.awaiting),
+      }),
+    ),
     to: `${INVOICES_PAGE_PATH}?tab=open`,
   };
 }
@@ -336,16 +336,12 @@ function groupByPlan(rows: DirectoryRow[], currency: string): PlanGroup[] {
   return [...groups.values()];
 }
 
-function planPriceLabel(messages: ServerMessages, row: DirectoryRow): string {
-  const price = messages.money(
-    row.planUnitAmountMinor ?? 0,
-    row.currency ?? "",
-  );
-  const interval = messages.t(
-    `saas.workspaces.interval.${row.planInterval as PlanInterval}`,
-  );
+function planPriceLabel(row: DirectoryRow): ComposedText {
   const key = row.planBillingMode === "seat" ? "price_per_seat" : "price_flat";
-  return messages.t(`saas.workspaces.plan_cell.${key}`, { price, interval });
+  return composed(`saas.workspaces.plan_cell.${key}`, {
+    price: moneyParam(row.planUnitAmountMinor ?? 0, row.currency ?? ""),
+    interval: composed(`saas.workspaces.interval.${row.planInterval}`),
+  });
 }
 
 /** Plans ranked by the MRR they bring, in the reporting currency. */
@@ -359,10 +355,12 @@ export function plansByMrrItems(
     .map((group) => ({
       id: group.planId,
       title: group.name,
-      description: messages.t(`${K}.plans.description`, {
-        count: group.workspaces,
-        price: planPriceLabel(messages, group.row),
-      }),
+      description: messages.compose(
+        composed(`${K}.plans.description`, {
+          count: countParam(group.workspaces),
+          price: planPriceLabel(group.row),
+        }),
+      ),
       value: group.mrrMinor / 100,
       to: planEditPath(group.planId),
     }));

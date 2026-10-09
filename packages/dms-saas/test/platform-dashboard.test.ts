@@ -14,6 +14,7 @@ import {
 } from "../src/metrics/headline-items";
 import { churnOver, paidInvoicesChart } from "../src/metrics/revenue";
 import { SaasDashboardController } from "../src/pages/platform/dashboard";
+import { missingKeys } from "./helpers/composed-text";
 
 const DAY_MS = 86_400_000;
 const NOW = new Date("2026-10-07T12:00:00Z");
@@ -120,10 +121,13 @@ describe("dashboard headline and attention queue", () => {
   const summary = summariseDirectory(ROWS, NOW, "EUR");
 
   it("says which currencies MRR leaves out", () => {
-    const [mrr] = dashboardHeadline(messages, summary);
+    const [mrr] = dashboardHeadline(summary);
 
-    expect(mrr?.value).toBe("€1,646.00");
-    expect(mrr?.detail).toContain("$100.00");
+    expect(mrr?.value).toEqual({
+      key: "saas.text.value",
+      params: { value: { type: "money", value: 164_600, currency: "EUR" } },
+    });
+    expect(messages.compose(mrr!.detail!)).toContain("$100.00");
   });
 
   it("shows one card per queue that holds something, in the order of urgency", () => {
@@ -179,7 +183,7 @@ describe("dashboard headline and attention queue", () => {
   });
 
   it("names the workspace list's endings in its own headline", () => {
-    const items = workspacesHeadline(messages, summary, [
+    const items = workspacesHeadline(summary, [
       { tenantId: "e", name: "Globex", at: new Date("2026-10-10T00:00:00Z") },
     ]);
 
@@ -189,7 +193,14 @@ describe("dashboard headline and attention queue", () => {
       "complimentary_ending",
       "trials_ending",
     ]);
-    expect(items[2]).toMatchObject({ value: 1, detail: "Globex 10 Oct" });
+    expect(items[2]).toMatchObject({
+      value: 1,
+      detail: {
+        key: "saas.workspaces.headline.named_ending",
+        params: { name: "Globex", date: { type: "date", format: "day" } },
+      },
+    });
+    expect(messages.compose(items[2]!.detail!)).toBe("Globex 10 Oct");
   });
 
   it("lists every status in its own tone, linking to its tab", () => {
@@ -353,5 +364,22 @@ describe("dashboard page", () => {
     expect(findChild(charts, "paidInvoices")?.options).toMatchObject({
       periodScope: scope,
     });
+  });
+
+  it.each(["en-GB", "fr-FR"])("%s has every key the headlines name", (code) => {
+    const summary = summariseDirectory(ROWS, NOW, "EUR");
+    const endings = [
+      { tenantId: "e", name: "Globex", at: new Date("2026-10-10T00:00:00Z") },
+    ];
+    expect(
+      missingKeys(
+        [
+          dashboardHeadline(summary),
+          workspacesHeadline(summary, endings),
+          workspacesHeadline(summariseDirectory([row({})], NOW, "EUR"), []),
+        ],
+        code,
+      ),
+    ).toEqual([]);
   });
 });

@@ -1,11 +1,19 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import type {
+  BlockText,
+  ComposedText,
+  ComposedTextParam,
+  ComposedTextTypedParam,
+} from "@antelopejs/interface-dms/base";
 
 /**
- * Texts a route words for blocks whose items take no translation parameters
- * (`StatGroup`, `NavCardGrid`, `TopListCard` descriptions): the route reads
- * the module's own frontend catalogs, in the locale the DMS frontend states
- * on each request, and formats amounts and dates for it.
+ * Texts a route words for the blocks that take no composed text (the
+ * `NavCardGrid` cards, the `TopListCard` descriptions, the `ActivityFeed`
+ * meta): the route reads the module's own frontend catalogs, in the locale
+ * the DMS frontend states on each request, and formats amounts and dates for
+ * it. Every block that takes a `ComposedText` gets one instead, written by
+ * the browser.
  */
 export interface ServerMessages {
   locale: string;
@@ -14,6 +22,11 @@ export interface ServerMessages {
   money: (amountMinor: number, currency: string) => string;
   /** A day: "Oct 4", with the year when it is not the current one. */
   day: (date: Date) => string;
+  /**
+   * A composed text written out, for a block that only takes a string: the
+   * texts a `StatGroup` composes in the browser, worded the same here.
+   */
+  compose: (text: BlockText) => string;
 }
 
 export type MessageParams = Record<string, string | number>;
@@ -126,13 +139,91 @@ function interpolate(message: string, params: MessageParams): string {
   );
 }
 
+type Translate = ServerMessages["t"];
+
+interface ComposeContext {
+  t: Translate;
+  money: ServerMessages["money"];
+  day: ServerMessages["day"];
+  locale: string;
+}
+
+const KEY_PREFIX = "$";
+
+function isComposedText(value: unknown): value is ComposedText {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as ComposedText).key === "string"
+  );
+}
+
+// A relative date is written as its day: the server cannot know when the
+// text is read, the browser does it for the blocks that compose.
+const TYPED_PARAMS: Record<
+  ComposedTextTypedParam["type"],
+  (param: ComposedTextTypedParam, context: ComposeContext) => string
+> = {
+  money: (param, { money }) =>
+    param.type === "money" ? money(param.value, param.currency) : "",
+  date: (param, { day }) => day(new Date(param.value)),
+  datetime: (param, { day }) => day(new Date(param.value)),
+  relative: (param, { day }) => day(new Date(param.value)),
+  number: (param, { locale }) =>
+    new Intl.NumberFormat(locale).format(Number(param.value)),
+  count: (param, { locale }) =>
+    new Intl.NumberFormat(locale).format(Number(param.value)),
+};
+
+function writeParam(param: ComposedTextParam, context: ComposeContext): string {
+  if (typeof param === "string") return param;
+  if (typeof param === "number")
+    return new Intl.NumberFormat(context.locale).format(param);
+  if (isComposedText(param)) return composeText(param, context);
+  return TYPED_PARAMS[param.type](param, context);
+}
+
+function pluralCount(text: ComposedText): number | undefined {
+  const params = text.params ?? {};
+  const name =
+    text.plural ??
+    Object.keys(params).find((candidate) => {
+      const param = params[candidate];
+      return (
+        typeof param === "object" && "type" in param && param.type === "count"
+      );
+    });
+  const param = name === undefined ? undefined : params[name];
+  if (typeof param === "number") return param;
+  return typeof param === "object" && "type" in param
+    ? Number(param.value)
+    : undefined;
+}
+
+function composeText(text: ComposedText, context: ComposeContext): string {
+  const params: MessageParams = Object.fromEntries(
+    Object.entries(text.params ?? {}).map(([name, param]) => [
+      name,
+      writeParam(param, context),
+    ]),
+  );
+  const count = pluralCount(text);
+  if (count !== undefined) params.count ??= count;
+  return context.t(text.key.replace(/^\$/, ""), params);
+}
+
+function composeBlockText(text: BlockText, context: ComposeContext): string {
+  if (isComposedText(text)) return composeText(text, context);
+  return text.startsWith(KEY_PREFIX) ? context.t(text.slice(1)) : text;
+}
+
 /** Words messages, amounts and days in the locale a request states. */
 export function serverMessages(requestedLocale: unknown): ServerMessages {
   const locale = resolveMessagesLocale(requestedLocale);
   const catalog = loadCatalog(locale);
   const fallback = loadCatalog(FALLBACK_LOCALE);
   const now = new Date();
-  return {
+  const context: ComposeContext = {
     locale,
     t: (key, params = {}) => {
       const message = lookup(catalog, key) ?? lookup(fallback, key) ?? key;
@@ -151,4 +242,5 @@ export function serverMessages(requestedLocale: unknown): ServerMessages {
           : DAY_WITH_YEAR_FORMAT,
       ).format(date),
   };
+  return { ...context, compose: (text) => composeBlockText(text, context) };
 }

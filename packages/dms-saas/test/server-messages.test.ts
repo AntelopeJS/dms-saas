@@ -55,4 +55,26 @@ describe("messages a route words for the reader", () => {
     expect(fr.money(147_000, "EUR")).toBe("1\u202f470,00\u00a0€");
     expect(en.day(new Date(Date.UTC(2020, 9, 4)))).toBe("4 Oct 2020");
   });
+
+  it("writes a composed text for a block that only takes a string", () => {
+    const { compose } = serverMessages("fr-FR");
+
+    expect(
+      compose({
+        key: "saas.dashboard.plans.description",
+        params: {
+          count: { type: "count", value: 2 },
+          price: {
+            key: "saas.workspaces.plan_cell.price_flat",
+            params: {
+              price: { type: "money", value: 2_900, currency: "EUR" },
+              interval: { key: "saas.workspaces.interval.month" },
+            },
+          },
+        },
+      }),
+    ).toBe("2 espaces · 29,00\u00a0€ / mois");
+    expect(compose("$saas.workspaces.interval.year")).toBe("an");
+    expect(compose("Acme")).toBe("Acme");
+  });
 });

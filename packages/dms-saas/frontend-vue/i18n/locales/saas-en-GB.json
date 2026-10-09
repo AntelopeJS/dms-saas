@@ -537,7 +537,8 @@
 		"text": {
 			"dot_list": "{first} · {rest}",
 			"sum_list": "{first} + {rest}",
-			"value": "{value}"
+			"value": "{value}",
+			"comma_list": "{first}, {rest}"
 		}
 	}
 }

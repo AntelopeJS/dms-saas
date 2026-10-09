@@ -17,6 +17,8 @@ import type {
 
 /** Joins two texts: `"{first} · {rest}"`, nested for longer lists. */
 const DOT_LIST_KEY = "saas.text.dot_list";
+/** Joins two texts: `"{first}, {rest}"`, nested for longer lists. */
+const COMMA_LIST_KEY = "saas.text.comma_list";
 /** Joins two amounts: `"{first} + {rest}"`, nested for longer lists. */
 const SUM_LIST_KEY = "saas.text.sum_list";
 /** A lone value standing as a whole text: `"{value}"`. */
@@ -73,21 +75,24 @@ function joinWith(
   return tail === null ? first : composed(key, { first, rest: tail });
 }
 
-/** Texts listed with " · " between them; null for none. */
-export function dotList(
-  parts: readonly ComposedTextParam[],
-): ComposedText | null {
-  const joined = joinWith(DOT_LIST_KEY, parts);
-  return joined === null ? null : asText(joined);
+/** Lists texts with the separator a joining key writes; null for none. */
+type TextList = (parts: readonly ComposedTextParam[]) => ComposedText | null;
+
+function listJoinedBy(key: string): TextList {
+  return (parts) => {
+    const joined = joinWith(key, parts);
+    return joined === null ? null : asText(joined);
+  };
 }
 
-/** Amounts added with " + " between them; null for none. */
-export function sumList(
-  parts: readonly ComposedTextParam[],
-): ComposedText | null {
-  const joined = joinWith(SUM_LIST_KEY, parts);
-  return joined === null ? null : asText(joined);
-}
+/** Texts listed with " · " between them. */
+export const dotList = listJoinedBy(DOT_LIST_KEY);
+
+/** Texts listed with ", " between them. */
+export const commaList = listJoinedBy(COMMA_LIST_KEY);
+
+/** Amounts added with " + " between them. */
+export const sumList = listJoinedBy(SUM_LIST_KEY);
 
 function isComposedText(value: ComposedTextParam): value is ComposedText {
   return typeof value === "object" && "key" in value;

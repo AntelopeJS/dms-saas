@@ -79,7 +79,6 @@ export class SaasWorkspaceDetailController extends Controller(
   @Get("/directory-headline")
   async directoryHeadline(
     @AuthOwnerOnly() _user: User,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ItemsPayload<StatGroupItem>> {
     const summary = summariseDirectory(
       await loadDirectoryRows(),
@@ -88,7 +87,7 @@ export class SaasWorkspaceDetailController extends Controller(
     );
     const endings = await nameWorkspaces(summary.complimentaryEnding);
     return {
-      items: workspacesHeadline(serverMessages(language), summary, endings),
+      items: workspacesHeadline(summary, endings),
     };
   }
 
@@ -132,7 +131,6 @@ export class SaasWorkspaceDetailController extends Controller(
   async facts(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ItemsPayload<StatGroupItem>> {
     const view = await loadWorkspaceOperatorView(tenantId);
     const customerId = view.subscription?.stripeCustomerId;
@@ -142,12 +140,7 @@ export class SaasWorkspaceDetailController extends Controller(
       loadDocuments(tenantId),
     ]);
     return {
-      items: workspaceFacts(serverMessages(language), {
-        view,
-        preview,
-        card,
-        invoices,
-      }),
+      items: workspaceFacts({ view, preview, card, invoices }),
     };
   }
 
