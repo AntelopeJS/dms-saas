@@ -2,6 +2,8 @@ import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import {
   Grid,
   GridRow,
+  KeyValueList,
+  StatGroup,
   Tab,
   TableView,
   VStack,
@@ -29,6 +31,9 @@ const NO_ROW_ACTIONS = {
 } as const;
 
 const ROUTE_FILTER_USER = { id: { field: "userId" } };
+const USER_API = "/api/saas/users/{{params.id}}";
+const FACT_COUNT = 5;
+const SECURITY_ROW_COUNT = 4;
 
 function described(key: string, icon: string) {
   return {
@@ -41,6 +46,13 @@ function described(key: string, icon: string) {
 const summary = CustomComponent("DmsSaasUserSummaryCard").meta(
   described("profile", "i-ph-identification-card"),
 );
+
+const facts = StatGroup({
+  fetchUrl: `${USER_API}/facts`,
+  columns: FACT_COUNT,
+  skeletonCount: FACT_COUNT,
+  label: "$saas.users.detail_facts.label",
+}).meta(described("facts", "i-ph-squares-four"));
 
 const workspaceTable = TableView(adminUserWorkspacesDataAPI, {
   layout: "compact",
@@ -129,9 +141,12 @@ const tabs = Tab({
   .child("billingTable", billingTable, { slot: "billing" })
   .child("segmentMatches", segmentMatches, { slot: "segments" });
 
-const security = CustomComponent("DmsSaasUserSecurityCard").meta(
-  described("security", "i-ph-lock-key"),
-);
+const security = KeyValueList({
+  title: "$saas.users.security.title",
+  fetchUrl: `${USER_API}/security`,
+  skeletonCount: SECURITY_ROW_COUNT,
+  dense: true,
+}).meta(described("security", "i-ph-lock-key"));
 
 const notes = CustomComponent("DmsSaasPlatformNotes")
   .options({ targetType: "user" })
@@ -157,6 +172,7 @@ export class SaasUserDetailController extends PageController(
 ) {
   static layout = VStack({ spacing: SPACING, alignment: "stretch" })
     .child("summary", summary)
+    .child("facts", facts)
     .child(
       "body",
       Grid({ gap: SPACING }).child(

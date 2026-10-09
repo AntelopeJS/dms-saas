@@ -50,8 +50,8 @@ export interface UserDetailRequest extends SharedRequest<UserDetail> {
 const STATE_KEY = 'saas-user-detail'
 
 /**
- * The user a platform admin's user page shows, fetched once for the header,
- * the security card and the platform role card.
+ * The user a platform admin's user page shows, fetched once for the header
+ * and the platform role card.
  */
 export function useUserDetail(
 	routeParams: () => Record<string, string> | undefined,

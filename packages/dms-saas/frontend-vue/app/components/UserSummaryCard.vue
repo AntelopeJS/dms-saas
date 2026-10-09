@@ -1,24 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { formatRelativeTime } from '../build/users/relative-time'
-import {
-	type UserDetail,
-	userDisplayName,
-	useUserDetail,
-} from '../build/users/useUserDetail'
-import { formatMinorUnits } from '../composables/useMoneyFormat'
+import { userDisplayName, useUserDetail } from '../build/users/useUserDetail'
 
+// The identity header of the user page: who the user is and how their
+// account stands. The figures under it are a StatGroup the page mounts.
 const props = defineProps<{ routeParams?: Record<string, string> }>()
 
-const DAY_FORMAT: Intl.DateTimeFormatOptions = {
-	day: 'numeric',
-	month: 'short',
-	year: 'numeric',
-}
-const FACT_COUNT = 5
-const MONEY_SEPARATOR = ' + '
-
-const { t, locale } = useI18n()
 const detail = useUserDetail(() => props.routeParams)
 const user = computed(() => detail.data.value)
 
@@ -28,87 +15,6 @@ const ownedNames = computed(
 			.filter((workspace) => workspace.isTenantOwner)
 			.map((workspace) => workspace.name) ?? [],
 )
-
-function languageName(code: string | null): string {
-	if (!code) return t('saas.users.detail_facts.no_language')
-	try {
-		return (
-			new Intl.DisplayNames([locale.value], { type: 'language' }).of(code) ??
-			code
-		)
-	} catch {
-		return code
-	}
-}
-
-function billedText(current: UserDetail): string {
-	if (current.billedAsOwner.length === 0) {
-		return formatMinorUnits(0, null, locale.value)
-	}
-	return current.billedAsOwner
-		.map((total) =>
-			formatMinorUnits(total.amount, total.currency, locale.value),
-		)
-		.join(MONEY_SEPARATOR)
-}
-
-function lastActiveDetail(current: UserDetail): string | undefined {
-	const session = current.lastSession
-	if (!session) return undefined
-	return (
-		[session.browser, session.location].filter(Boolean).join(' · ') || undefined
-	)
-}
-
-const facts = computed(() => {
-	const current = user.value
-	if (!current) return []
-	const owned = ownedNames.value.length
-	const member = current.workspaces.length - owned
-	return [
-		{
-			id: 'workspaces',
-			icon: 'i-ph-buildings',
-			eyebrow: t('saas.users.detail_facts.workspaces'),
-			value: current.workspaces.length,
-			detail: t('saas.users.detail_facts.workspaces_detail', { owned, member }),
-		},
-		{
-			id: 'language',
-			icon: 'i-ph-translate',
-			eyebrow: t('saas.users.detail_facts.language'),
-			value: languageName(current.language),
-			detail: current.language ?? undefined,
-		},
-		{
-			id: 'last-active',
-			icon: 'i-ph-clock',
-			eyebrow: t('saas.users.detail_facts.last_active'),
-			value:
-				formatRelativeTime(current.lastActiveAt, locale.value) ??
-				t('saas.users.never_active'),
-			detail: lastActiveDetail(current),
-		},
-		{
-			id: 'created',
-			icon: 'i-ph-calendar-blank',
-			eyebrow: t('saas.users.detail_facts.created'),
-			value: formatDate(current.createdAt, locale.value, DAY_FORMAT) ?? '—',
-			detail: formatRelativeTime(current.createdAt, locale.value) ?? undefined,
-		},
-		{
-			id: 'billed',
-			icon: 'i-ph-coins',
-			eyebrow: t('saas.users.detail_facts.billed'),
-			value: billedText(current),
-			detail: t(
-				'saas.users.detail_facts.billed_detail',
-				{ count: owned },
-				owned,
-			),
-		},
-	]
-})
 
 onMounted(() => void detail.refresh())
 </script>
@@ -199,13 +105,6 @@ onMounted(() => void detail.refresh())
 					</div>
 				</div>
 			</div>
-			<DmsStatGroup
-				:items="facts"
-				:loading="!user"
-				:skeleton-count="FACT_COUNT"
-				:columns="FACT_COUNT"
-				:label="$t('saas.users.detail_facts.label')"
-			/>
 		</template>
 	</div>
 </template>

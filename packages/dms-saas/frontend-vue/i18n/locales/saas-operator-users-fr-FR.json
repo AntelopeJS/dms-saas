@@ -62,7 +62,11 @@
         "last_active": "Dernière activité",
         "created": "Créé le",
         "billed": "Facturé comme propriétaire",
-        "billed_detail": "Depuis le début · {count} workspace possédé | Depuis le début · {count} workspaces possédés"
+        "billed_detail": "Depuis le début · {count} workspace possédé | Depuis le début · {count} workspaces possédés",
+        "languages": {
+          "en": "Anglais",
+          "fr": "Français"
+        }
       },
       "security": {
         "title": "Sécurité et connexion",
@@ -474,7 +478,7 @@
     "permissions": {
       "users": {
         "profile": "Profil utilisateur",
-        "profile_description": "Voir qui est un utilisateur : identité, workspaces, langue, activité et ce qui lui est facturé",
+        "profile_description": "Voir qui est un utilisateur : identité, adresse, vérification, double authentification et rôle plateforme",
         "workspaces": "Workspaces de l'utilisateur",
         "workspaces_description": "Voir les workspaces d'un utilisateur et son rôle dans chacun",
         "billing": "Facturation de l'utilisateur",
@@ -488,7 +492,9 @@
         "platform_role": "Rôle plateforme",
         "platform_role_description": "Voir si un utilisateur est admin plateforme, et le promouvoir ou le rétrograder",
         "segment_preview": "Aperçu en direct du segment",
-        "segment_preview_description": "Voir qui correspond aux règles en cours d'édition, avant de les enregistrer"
+        "segment_preview_description": "Voir qui correspond aux règles en cours d'édition, avant de les enregistrer",
+        "facts": "Chiffres de l'utilisateur",
+        "facts_description": "Voir les workspaces d'un utilisateur, sa langue, son activité et ce qui lui est facturé"
       }
     }
   }
