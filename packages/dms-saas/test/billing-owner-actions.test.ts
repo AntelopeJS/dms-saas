@@ -76,6 +76,7 @@ import {
   latestPaidInvoice,
   toNextInvoiceRows,
 } from "../src/routes/tenant/tenant-upcoming-invoice";
+import { LOCALES, missingKeys } from "./helpers/composed-text";
 
 const OWNER = { _id: "owner", email: "owner@example.test" } as User;
 const PERIOD_END = new Date("2026-10-31T00:00:00.000Z");
@@ -569,7 +570,6 @@ describe("next invoice card", () => {
 
   it("lists the lines, the tax, the total and where the invoice goes", () => {
     const rows = toNextInvoiceRows(preview, {
-      locale: "en-GB",
       paymentMethod: {
         brand: "visa",
         last4: "4242",
@@ -593,7 +593,25 @@ describe("next invoice card", () => {
       ["$saas.tenant_billing.next_invoice.sent_to", "billing@acme.test"],
       ["$saas.tenant_billing.next_invoice.last_payment", 470.4],
     ]);
-    expect(rows.items[1]?.detail).toBe("20% · FR");
+    expect(rows.items[1]?.detail).toEqual({
+      key: "saas.text.dot_list",
+      params: {
+        first: { type: "number", value: 0.2, format: "percent" },
+        rest: "FR",
+      },
+    });
+    expect(rows.items[0]?.detail).toEqual({
+      key: "saas.text.range",
+      params: {
+        from: {
+          type: "date",
+          value: "2026-10-31T00:00:00.000Z",
+          format: "day",
+        },
+        to: { type: "date", value: "2026-11-30T00:00:00.000Z", format: "day" },
+      },
+    });
+    for (const code of LOCALES) expect(missingKeys(rows, code)).toEqual([]);
     expect(rows).toMatchObject({
       totalMinorUnits: 58800,
       currency: "EUR",

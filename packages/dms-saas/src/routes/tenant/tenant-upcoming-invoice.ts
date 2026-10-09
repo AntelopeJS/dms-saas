@@ -6,7 +6,6 @@ import {
   Controller,
   Get,
   HTTPResult,
-  Parameter,
   type RequestContext,
 } from "@antelopejs/interface-api";
 import { GetModel } from "@antelopejs/interface-database-decorators";
@@ -15,7 +14,10 @@ import type {
   UpcomingInvoiceLine,
   UpcomingInvoiceTax,
 } from "@antelopejs/interface-dms-saas/billing";
-import type { KeyValueListItem } from "@antelopejs/interface-dms/base";
+import type {
+  ComposedText,
+  KeyValueListItem,
+} from "@antelopejs/interface-dms/base";
 import { AuthUserWithPermission } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import type { User } from "@antelopejs/interface-dms/auth/db";
@@ -30,28 +32,20 @@ import {
   TenantSubscriptionModel,
 } from "../../db";
 import { SaasTenantBillingController as BillingPage } from "../../pages/tenant/billing";
-import { getUpcomingInvoicePreview } from "../../upcoming-invoice/preview";
 import {
-  CONTENT_LANGUAGE_HEADER,
-  requestLocale,
-} from "../../utils/content-language";
+  composed,
+  dateParam,
+  dotList,
+  valueText,
+} from "../../i18n/composed-text";
+import { getUpcomingInvoicePreview } from "../../upcoming-invoice/preview";
 
 const HTTP_SERVICE_UNAVAILABLE = 503;
 const MINOR_UNITS_PER_MAJOR = 100;
 const PAID_STATUS = "paid";
 const KEY_PREFIX = "$saas.tenant_billing.next_invoice";
-const PERCENT_DIGITS = 2;
-const DAY_FORMAT: Intl.DateTimeFormatOptions = {
-  day: "numeric",
-  month: "short",
-};
-const FULL_DAY_FORMAT: Intl.DateTimeFormatOptions = {
-  ...DAY_FORMAT,
-  year: "numeric",
-};
+const PERCENT = 100;
 const MASKED_DIGITS = "••••";
-const PERIOD_SEPARATOR = " → ";
-const DETAIL_SEPARATOR = " · ";
 
 /**
  * The rows of the card, plus the figures the trial notice reads. An empty
@@ -66,7 +60,6 @@ export interface NextInvoiceRows {
 
 /** What the rows are written from besides the preview itself. */
 interface NextInvoiceContext {
-  locale: string;
   paymentMethod: PaymentMethodSummary | null;
   billingEmail: string | null;
   lastPayment: Invoice | null;
@@ -79,13 +72,10 @@ const NOTHING_TO_INVOICE: NextInvoiceRows = {
   billingDate: null,
 };
 
-function formatDay(
+function fullDay(
   value: string | Date | null | undefined,
-  locale: string,
-  format: Intl.DateTimeFormatOptions = DAY_FORMAT,
-): string {
-  if (!value) return "";
-  return new Intl.DateTimeFormat(locale, format).format(new Date(value));
+): ComposedText | undefined {
+  return value ? valueText(dateParam(value)) : undefined;
 }
 
 function fromMinorUnits(amount: number): number {
@@ -95,12 +85,11 @@ function fromMinorUnits(amount: number): number {
 function lineRow(
   line: UpcomingInvoiceLine,
   currency: string,
-  locale: string,
 ): KeyValueListItem {
-  const period = [
-    formatDay(line.periodStart, locale),
-    formatDay(line.periodEnd, locale),
-  ].join(PERIOD_SEPARATOR);
+  const period = composed("saas.text.range", {
+    from: dateParam(line.periodStart, "day"),
+    to: dateParam(line.periodEnd, "day"),
+  });
   return {
     label: line.description ?? `${KEY_PREFIX}.line`,
     value: fromMinorUnits(line.amountMinorUnits),
@@ -110,12 +99,18 @@ function lineRow(
   };
 }
 
-function taxDetail(tax: UpcomingInvoiceTax): string {
+function taxDetail(tax: UpcomingInvoiceTax): ComposedText | undefined {
   const rate =
     tax.ratePercentage === null
-      ? null
-      : `${Number(tax.ratePercentage.toFixed(PERCENT_DIGITS))}%`;
-  return [rate, tax.country].filter(Boolean).join(DETAIL_SEPARATOR);
+      ? []
+      : [
+          {
+            type: "number" as const,
+            value: tax.ratePercentage / PERCENT,
+            format: "percent" as const,
+          },
+        ];
+  return dotList([...rate, ...(tax.country ? [tax.country] : [])]) ?? undefined;
 }
 
 function taxRow(tax: UpcomingInvoiceTax, currency: string): KeyValueListItem {
@@ -136,7 +131,7 @@ function cardLabel(card: PaymentMethodSummary): string {
 }
 
 function contextRows(context: NextInvoiceContext): KeyValueListItem[] {
-  const { paymentMethod, billingEmail, lastPayment, locale } = context;
+  const { paymentMethod, billingEmail, lastPayment } = context;
   const rows: KeyValueListItem[] = [];
   if (paymentMethod) {
     rows.push({
@@ -153,7 +148,7 @@ function contextRows(context: NextInvoiceContext): KeyValueListItem[] {
       value: fromMinorUnits(lastPayment.total || lastPayment.amount),
       type: "money",
       currency: lastPayment.currency.toUpperCase(),
-      detail: formatDay(lastPayment.paidAt, locale, FULL_DAY_FORMAT),
+      detail: fullDay(lastPayment.paidAt),
     });
   }
   return rows;
@@ -175,11 +170,11 @@ export function toNextInvoiceRows(
     type: "money",
     currency,
     tone: "primary",
-    detail: formatDay(preview.billingDate, context.locale, FULL_DAY_FORMAT),
+    detail: fullDay(preview.billingDate),
   };
   return {
     items: [
-      ...preview.lines.map((line) => lineRow(line, currency, context.locale)),
+      ...preview.lines.map((line) => lineRow(line, currency)),
       ...preview.taxes.map((tax) => taxRow(tax, currency)),
       total,
       ...contextRows(context),
@@ -204,10 +199,7 @@ export function latestPaidInvoice(invoices: Invoice[]): Invoice | null {
     );
 }
 
-async function loadContext(
-  tenantId: string,
-  locale: string,
-): Promise<NextInvoiceContext> {
+async function loadContext(tenantId: string): Promise<NextInvoiceContext> {
   const [subscription, billingInfo, invoices] = await Promise.all([
     GetModel(TenantSubscriptionModel, tenantId).findOne(),
     GetModel(TenantBillingInfoModel, tenantId).findOne(),
@@ -217,7 +209,6 @@ async function loadContext(
     ? await fetchDefaultPaymentMethod(subscription.stripeCustomerId)
     : null;
   return {
-    locale,
     paymentMethod,
     billingEmail: billingInfo?.billingEmail ?? null,
     lastPayment: latestPaidInvoice(invoices),
@@ -236,7 +227,6 @@ export class SaasTenantUpcomingInvoiceController extends Controller(
     })
     _user: User,
     @Context() ctx: RequestContext,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<NextInvoiceRows> {
     const tenantId = getRequestTenantId(ctx);
     const preview = await getUpcomingInvoicePreview(tenantId);
@@ -247,7 +237,7 @@ export class SaasTenantUpcomingInvoiceController extends Controller(
         "saas.errors.billing.preview_unavailable",
       );
     }
-    const context = await loadContext(tenantId, requestLocale(language));
+    const context = await loadContext(tenantId);
     return toNextInvoiceRows(preview, context);
   }
 }

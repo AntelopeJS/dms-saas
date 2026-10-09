@@ -538,7 +538,8 @@
 			"dot_list": "{first} · {rest}",
 			"sum_list": "{first} + {rest}",
 			"value": "{value}",
-			"comma_list": "{first}, {rest}"
+			"comma_list": "{first}, {rest}",
+			"range": "{from} → {to}"
 		}
 	}
 }
