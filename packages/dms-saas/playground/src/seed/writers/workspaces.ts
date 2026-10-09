@@ -78,7 +78,6 @@ function toInvitationRow(
     token: randomBytes(INVITE_TOKEN_BYTES).toString("hex"),
     asTenantOwner: invitation.asTenantOwner,
     expiresAt: dayFrom(invitation.expiresOn),
-    skipEmailValidation: false,
     invitedBy: invitation.invitedBy,
     extensions: null,
     createdAt: dayFrom(invitation.sentOn),

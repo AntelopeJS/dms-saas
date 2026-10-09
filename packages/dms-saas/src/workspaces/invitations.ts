@@ -155,7 +155,6 @@ async function renewInvite(
     language: invite.language,
     roleIds: invite.roles_ids,
     asTenantOwner: invite.asTenantOwner,
-    skipEmailValidation: invite.skipEmailValidation,
     extensions: invite.extensions ?? undefined,
     replacementReason: "resent",
   });
