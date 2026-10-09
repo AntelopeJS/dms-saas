@@ -1,3 +1,16 @@
+import type {
+  ComposedText,
+  ComposedTextParam,
+  IconTone,
+  StatGroupItem,
+} from "@antelopejs/interface-dms/base";
+import {
+  composed,
+  countParam,
+  moneyParam,
+  sumList,
+  valueText,
+} from "../i18n/composed-text";
 import { CREDIT_NOTE_METADATA } from "./credit-note-request";
 
 /** An amount in one currency, in minor units. */
@@ -6,35 +19,26 @@ export interface MoneyFigure {
   currency: string;
 }
 
-/** A parameter of a stat text: a count, or money in each currency. */
-export type StatParam = number | MoneyFigure[];
-
-/** A translated line: an i18n key and what it is interpolated with. */
-export interface StatText {
-  key: string;
-  params?: Record<string, StatParam>;
-}
-
-/** The tones a stat's icon well takes. */
-export type StatTone = "neutral" | "primary" | "success" | "warning" | "error";
-
 /**
- * One headline figure of a billing list. Money is listed per currency, the
- * largest first: the first is the figure, the others are noted beside it.
+ * One headline figure of a billing list, before it is written. Money is
+ * listed per currency, the largest first: the first is the figure, the
+ * others are noted before the detail.
  */
-export interface BillingStat {
+interface BillingFigure {
   id: string;
   icon: string;
-  tone: StatTone;
+  tone: IconTone;
   eyebrow: string;
-  value: StatParam;
-  detail: StatText;
+  value: MoneyFigure[] | number;
+  detail: ComposedText;
 }
 
-/** The figures a billing list shows above itself. */
+/** The figures a billing list shows above itself, as a `StatGroup` reads them. */
 export interface BillingStats {
-  items: BillingStat[];
+  items: StatGroupItem[];
 }
+
+const STATS = "saas.operator_billing.stats";
 
 /** Currency a total with nothing in it is written in. */
 const FALLBACK_STAT_CURRENCY = "eur";
@@ -95,6 +99,39 @@ export function totalsByCurrency(rows: readonly MoneyRow[]): MoneyFigure[] {
     .sort((left, right) => right.amount - left.amount);
 }
 
+/** Amounts in several currencies as one parameter: "€49.00 + $12.00". */
+export function moneyFigures(
+  figures: readonly MoneyFigure[],
+): ComposedTextParam {
+  const amounts = figures.map((figure) =>
+    moneyParam(figure.amount, figure.currency),
+  );
+  return amounts.length === 1 ? amounts[0]! : sumList(amounts)!;
+}
+
+function detailOf(figure: BillingFigure): ComposedText {
+  if (typeof figure.value === "number" || figure.value.length < 2)
+    return figure.detail;
+  return composed(`${STATS}.other_currencies`, {
+    amounts: moneyFigures(figure.value.slice(1)),
+    detail: figure.detail,
+  });
+}
+
+function toStatItem(figure: BillingFigure): StatGroupItem {
+  return {
+    id: figure.id,
+    icon: figure.icon,
+    tone: figure.tone,
+    eyebrow: `$${STATS}.${figure.eyebrow}`,
+    value:
+      typeof figure.value === "number"
+        ? figure.value
+        : valueText(moneyFigures(figure.value.slice(0, 1))),
+    detail: detailOf(figure),
+  };
+}
+
 const issued = (notes: readonly CreditNoteRow[]) =>
   notes.filter((note) => note.status === ISSUED_STATUS);
 
@@ -115,65 +152,65 @@ function collected(row: PaidInvoiceRow): MoneyRow {
   return { amount: row.amountPaid ?? row.amount, currency: row.currency };
 }
 
-function awaitingPayment(open: readonly OpenInvoiceRow[]): BillingStat {
+function awaitingPayment(open: readonly OpenInvoiceRow[]): BillingFigure {
   return {
     id: "awaiting",
     icon: "i-ph-hourglass-medium",
     tone: "warning",
-    eyebrow: "saas.operator_billing.stats.awaiting_payment",
+    eyebrow: "awaiting_payment",
     value: totalsByCurrency(open.map(amountDue)),
     detail: {
-      key: "saas.operator_billing.stats.awaiting_payment_detail",
+      key: `${STATS}.awaiting_payment_detail`,
       params: {
-        count: open.length,
+        count: countParam(open.length),
         retries: open.filter((row) => !!row.nextPaymentAttemptAt).length,
       },
     },
   };
 }
 
-function collectedThisMonth(paid: readonly PaidInvoiceRow[]): BillingStat {
+function collectedThisMonth(paid: readonly PaidInvoiceRow[]): BillingFigure {
   return {
     id: "collected",
     icon: "i-ph-check-circle",
     tone: "success",
-    eyebrow: "saas.operator_billing.stats.collected_this_month",
+    eyebrow: "collected_this_month",
     value: totalsByCurrency(paid.map(collected)),
     detail: {
-      key: "saas.operator_billing.stats.collected_this_month_detail",
-      params: { count: paid.length },
+      key: `${STATS}.collected_this_month_detail`,
+      params: { count: countParam(paid.length) },
     },
   };
 }
 
-function creditedThisMonth(notes: readonly CreditNoteRow[]): BillingStat {
+function creditedThisMonth(notes: readonly CreditNoteRow[]): BillingFigure {
   const issuedNotes = issued(notes);
   return {
     id: "credited",
     icon: "i-ph-receipt-x",
     tone: "primary",
-    eyebrow: "saas.operator_billing.stats.credited_this_month",
+    eyebrow: "credited_this_month",
     value: totalsByCurrency(issuedNotes),
     detail: {
-      key: "saas.operator_billing.stats.credited_this_month_detail",
+      key: `${STATS}.credited_this_month_detail`,
       params: {
-        count: issuedNotes.length,
-        refunded: totalsByCurrency(refunded(notes)),
+        count: countParam(issuedNotes.length),
+        refunded: moneyFigures(totalsByCurrency(refunded(notes))),
       },
     },
   };
 }
 
-function writtenOffThisYear(rows: readonly MoneyRow[]): BillingStat {
+function writtenOffThisYear(rows: readonly MoneyRow[]): BillingFigure {
   return {
     id: "written_off",
     icon: "i-ph-prohibit",
     tone: "error",
-    eyebrow: "saas.operator_billing.stats.written_off_this_year",
+    eyebrow: "written_off_this_year",
     value: totalsByCurrency(rows),
     detail: {
-      key: "saas.operator_billing.stats.written_off_this_year_detail",
-      params: { count: rows.length },
+      key: `${STATS}.written_off_this_year_detail`,
+      params: { count: countParam(rows.length) },
     },
   };
 }
@@ -191,57 +228,59 @@ export function computeInvoiceStats(input: InvoiceStatsInput): BillingStats {
       collectedThisMonth(input.paidThisMonth),
       creditedThisMonth(input.creditNotesThisMonth),
       writtenOffThisYear(input.writtenOffThisYear),
-    ],
+    ].map(toStatItem),
   };
 }
 
-function creditSplit(notes: readonly CreditNoteRow[]): BillingStat {
+function creditSplit(notes: readonly CreditNoteRow[]): BillingFigure {
   const issuedNotes = issued(notes);
   return {
     id: "credited",
     icon: "i-ph-receipt-x",
     tone: "primary",
-    eyebrow: "saas.operator_billing.stats.credited_this_month",
+    eyebrow: "credited_this_month",
     value: totalsByCurrency(issuedNotes),
     detail: {
-      key: "saas.operator_billing.stats.credit_split_detail",
+      key: `${STATS}.credit_split_detail`,
       params: {
-        balance: totalsByCurrency(
-          issuedNotes.filter((note) => note.type === BALANCE_TYPE),
+        balance: moneyFigures(
+          totalsByCurrency(
+            issuedNotes.filter((note) => note.type === BALANCE_TYPE),
+          ),
         ),
-        refunded: totalsByCurrency(refunded(notes)),
+        refunded: moneyFigures(totalsByCurrency(refunded(notes))),
       },
     },
   };
 }
 
-function refundedToCards(notes: readonly CreditNoteRow[]): BillingStat {
+function refundedToCards(notes: readonly CreditNoteRow[]): BillingFigure {
   const refunds = refunded(notes);
   return {
     id: "refunded",
     icon: "i-ph-credit-card",
     tone: "neutral",
-    eyebrow: "saas.operator_billing.stats.refunded_to_cards",
+    eyebrow: "refunded_to_cards",
     value: totalsByCurrency(refunds),
     detail: {
-      key: "saas.operator_billing.stats.refunded_to_cards_detail",
+      key: `${STATS}.refunded_to_cards_detail`,
       params: {
-        count: refunds.length,
+        count: countParam(refunds.length),
         automatic: refunds.filter(isAutomatic).length,
       },
     },
   };
 }
 
-function creditNoteCount(notes: readonly CreditNoteRow[]): BillingStat {
+function creditNoteCount(notes: readonly CreditNoteRow[]): BillingFigure {
   return {
     id: "count",
     icon: "i-ph-files",
     tone: "neutral",
-    eyebrow: "saas.operator_billing.stats.credit_notes_this_month",
+    eyebrow: "credit_notes_this_month",
     value: notes.length,
     detail: {
-      key: "saas.operator_billing.stats.credit_notes_this_month_detail",
+      key: `${STATS}.credit_notes_this_month_detail`,
       params: {
         void: notes.filter((note) => note.status === VOID_STATUS).length,
       },
@@ -259,7 +298,11 @@ export function computeCreditNoteStats(
   notes: readonly CreditNoteRow[],
 ): BillingStats {
   return {
-    items: [creditSplit(notes), refundedToCards(notes), creditNoteCount(notes)],
+    items: [
+      creditSplit(notes),
+      refundedToCards(notes),
+      creditNoteCount(notes),
+    ].map(toStatItem),
   };
 }
 

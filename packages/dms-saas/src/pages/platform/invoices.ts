@@ -1,5 +1,9 @@
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
-import { TableView, type TableViewTab } from "@antelopejs/interface-dms/base";
+import {
+  StatGroup,
+  TableView,
+  type TableViewTab,
+} from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { ButtonVariant } from "@antelopejs/interface-dms/base/types/button";
@@ -93,13 +97,15 @@ export class SaasInvoicesController extends PageController(
     ],
   }),
 ) {
-  static stats = CustomComponent("DmsSaasBillingStats")
-    .options({ fetchUrl: STATS_URL, skeletonCount: STATS_COUNT })
-    .meta({
-      name: `${PERMISSIONS}.invoice_stats`,
-      description: `${PERMISSIONS}.invoice_stats_description`,
-      icon: "i-ph-chart-bar",
-    });
+  static stats = StatGroup({
+    fetchUrl: STATS_URL,
+    skeletonCount: STATS_COUNT,
+    label: "$saas.operator_billing.stats.label",
+  }).meta({
+    name: `${PERMISSIONS}.invoice_stats`,
+    description: `${PERMISSIONS}.invoice_stats_description`,
+    icon: "i-ph-chart-bar",
+  });
 
   static table = TableView(invoicesDataAPI, {
     caption: `${TEXT}.caption`,

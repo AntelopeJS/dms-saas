@@ -86,7 +86,6 @@
 			},
 			"stats": {
 				"label": "Billing figures",
-				"load_failed": "The figures could not be loaded. The list below still works.",
 				"other_currencies": "+ {amounts} · {detail}",
 				"awaiting_payment": "Awaiting payment",
 				"awaiting_payment_detail": "{count} open invoice · {retries} with a retry scheduled | {count} open invoices · {retries} with a retry scheduled",

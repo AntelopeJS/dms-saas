@@ -86,7 +86,6 @@
 			},
 			"stats": {
 				"label": "Chiffres de facturation",
-				"load_failed": "Les chiffres n’ont pas pu être chargés. La liste ci-dessous reste disponible.",
 				"other_currencies": "+ {amounts} · {detail}",
 				"awaiting_payment": "En attente de paiement",
 				"awaiting_payment_detail": "{count} facture ouverte · {retries} avec un nouvel essai prévu | {count} factures ouvertes · {retries} avec un nouvel essai prévu",

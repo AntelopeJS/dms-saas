@@ -1,6 +1,9 @@
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
-import { TableView, type TableViewTab } from "@antelopejs/interface-dms/base";
-import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
+import {
+  StatGroup,
+  TableView,
+  type TableViewTab,
+} from "@antelopejs/interface-dms/base";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { ButtonVariant } from "@antelopejs/interface-dms/base/types/button";
 import { creditNotesDataAPI } from "../../data-api";
@@ -52,13 +55,15 @@ export class SaasCreditNotesController extends PageController(
     ],
   }),
 ) {
-  static stats = CustomComponent("DmsSaasBillingStats")
-    .options({ fetchUrl: STATS_URL, skeletonCount: STATS_COUNT })
-    .meta({
-      name: `${PERMISSIONS}.credit_note_stats`,
-      description: `${PERMISSIONS}.credit_note_stats_description`,
-      icon: "i-ph-chart-bar",
-    });
+  static stats = StatGroup({
+    fetchUrl: STATS_URL,
+    skeletonCount: STATS_COUNT,
+    label: "$saas.operator_billing.stats.label",
+  }).meta({
+    name: `${PERMISSIONS}.credit_note_stats`,
+    description: `${PERMISSIONS}.credit_note_stats_description`,
+    icon: "i-ph-chart-bar",
+  });
 
   static table = TableView(creditNotesDataAPI, {
     caption: `${TEXT}.caption`,
