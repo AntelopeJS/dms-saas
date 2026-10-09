@@ -11,10 +11,11 @@ import {
 import { assert } from "@antelopejs/interface-api-util";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { Model } from "@antelopejs/interface-database-decorators";
+import { GetPermissions } from "@antelopejs/interface-dms/permissions";
 import {
-  GetPermissions,
-  type PermissionTree,
-} from "@antelopejs/interface-dms/permissions";
+  GetRegisteredPageIds,
+  workspaceSettingsCategory,
+} from "@antelopejs/interface-dms/page";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import type { StatGroupItem } from "@antelopejs/interface-dms/base";
@@ -26,6 +27,10 @@ import {
   TenantSubscriptionModel,
 } from "../../db";
 import { localizeFeature } from "../../plans";
+import {
+  mapPlanPermissionTree,
+  type PlanPermissionNode,
+} from "../../plans/plan-permission-tree";
 import {
   catalogueStatItems,
   summariseCatalogue,
@@ -173,15 +178,6 @@ interface PlanEditCatalog {
   features: PlanFeatureCatalogItem[];
 }
 
-/** One node of the permission tree the plan editor offers. */
-interface PlanPermissionNode {
-  id: string;
-  label: string;
-  description?: string;
-  icon?: string;
-  children?: PlanPermissionNode[];
-}
-
 interface PlanReorderItem {
   id: string;
   order: number;
@@ -214,23 +210,6 @@ interface PlanEditorContext {
   syncedInterval: string | null;
   syncState: PlanStripeSyncState;
   updatedAt: Date | null;
-}
-
-function mapPermissionTreeToNodes(
-  tree: Record<string, PermissionTree>,
-): PlanPermissionNode[] {
-  return Object.values(tree)
-    .filter((node) => node.data && !node.data.defaultGranted)
-    .map((node) => ({
-      id: node.data?.id ?? "",
-      label: node.data?.title ?? node.data?.id ?? "",
-      description: node.data?.description,
-      icon: node.data?.icon,
-      children:
-        Object.keys(node.children).length > 0
-          ? mapPermissionTreeToNodes(node.children)
-          : undefined,
-    }));
 }
 
 function toCatalogFeature(
@@ -394,7 +373,10 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   async permissionsTree(
     @AuthOwnerOnly() _user: User,
   ): Promise<PlanPermissionNode[]> {
-    return mapPermissionTreeToNodes(await GetPermissions());
+    return mapPlanPermissionTree(
+      await GetPermissions(),
+      new Set([workspaceSettingsCategory.fullId, ...GetRegisteredPageIds()]),
+    );
   }
 
   /** A plan's values for a new plan duplicating it (the new form loads it). */

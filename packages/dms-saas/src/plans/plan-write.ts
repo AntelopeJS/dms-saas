@@ -1,4 +1,5 @@
 import type { Feature, Plan, PlanFeatureValue } from "../db";
+import { withPermissionAncestors } from "./plan-permission-tree";
 
 /**
  * What a number feature holds (Q36): `0` turns it off, `-1` makes it
@@ -99,7 +100,10 @@ export function toInheritance(plan: Plan): PlanInheritanceInput {
   };
 }
 
-/** Keeps the writable plan fields of a body, `inheritance` expanded. */
+/**
+ * Keeps the writable plan fields of a body, `inheritance` expanded and its
+ * permissions completed with the ids they sit under.
+ */
 export function pickPlanWrite(body: PlanWriteBody): Partial<Plan> {
   const expanded = expandInheritance(body);
   const out: Partial<Plan> = {};
@@ -108,6 +112,8 @@ export function pickPlanWrite(body: PlanWriteBody): Partial<Plan> {
       Object.assign(out, { [field]: expanded[field] });
     }
   }
+  if (out.permissions)
+    out.permissions = withPermissionAncestors(out.permissions);
   return out;
 }
 
