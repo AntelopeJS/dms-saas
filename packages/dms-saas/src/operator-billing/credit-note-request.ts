@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CREDIT_MODES, type CreditMode } from "./credit-allowance";
 
 /** Why an operator credits an invoice, as the credit notes list words it. */
-const CREDIT_REASONS = [
+export const CREDIT_REASONS = [
   "service_issue",
   "billing_error",
   "duplicate",

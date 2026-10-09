@@ -93,16 +93,22 @@ export function statusType(family: StatusFamily): DefaultDataTypes.SelectType {
   return new DefaultDataTypes.SelectType({ items: statusItems(family) });
 }
 
+/** The line a status pill may carry under it, read off the row. */
+export type StatusSubline = Pick<
+  DefaultDisplays.StatusPillDisplayOptions,
+  "subField" | "subTone"
+>;
+
 /**
  * The status as a tinted pill in the family's tone, with an optional line
  * under it read from `subField` ("Payment failed · retry Oct 2").
  */
 export function statusPillDisplay(
   family: StatusFamily,
-  subField?: string,
+  subline: StatusSubline = {},
 ): DefaultDisplays.StatusPillDisplay {
   return new DefaultDisplays.StatusPillDisplay({
     tones: { ...STATUS_TONES[family] },
-    subField,
+    ...subline,
   });
 }

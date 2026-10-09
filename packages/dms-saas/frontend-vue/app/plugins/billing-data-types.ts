@@ -1,21 +1,7 @@
-import { defineAsyncComponent, defineComponent, h, resolveComponent } from 'vue'
+import { defineComponent, h, resolveComponent } from 'vue'
 import { billingDocumentTypeKey } from '../composables/useBillingDocumentType'
 import { parseInvoiceLines } from '../composables/useInvoiceLines'
 import { formatMinorUnits } from '../composables/useMoneyFormat'
-
-// Loaded the first time a table draws one: most pages never need them.
-const CreditReasonCell = defineAsyncComponent(
-	() => import('../build/cells/CreditReasonCell.vue'),
-)
-const InvoiceStatusCell = defineAsyncComponent(
-	() => import('../build/cells/InvoiceStatusCell.vue'),
-)
-const IssuerCell = defineAsyncComponent(
-	() => import('../build/cells/IssuerCell.vue'),
-)
-const WorkspacePlanCell = defineAsyncComponent(
-	() => import('../build/cells/WorkspacePlanCell.vue'),
-)
 
 const InvoiceLinesDisplay = defineComponent({
 	name: 'InvoiceLinesDisplay',
@@ -46,9 +32,6 @@ const RANGE_FORMAT_WITH_YEAR: Intl.DateTimeFormatOptions = {
 const NO_VALUE = '—'
 
 type CellRow = Record<string, unknown> | undefined
-
-/** The display options a cell reads its row fields from. */
-type CellOptions = Record<string, string | undefined> | undefined
 
 /** Where a period cell reads the end of the period. */
 interface PeriodOptions {
@@ -85,42 +68,12 @@ function formatRowMoney(value: unknown, locale: string, row: CellRow) {
 	return formatMinorUnits(value, currency, locale)
 }
 
-function registerOperatorCells(
+function registerPeriodCell(
 	registerDataType: ReturnType<typeof useDataTypes>['registerDataType'],
 ): void {
 	registerDataType({
-		id: 'saas:invoice_status',
-		formatter: {
-			default: (value, _locale, _options, row) =>
-				h(InvoiceStatusCell, { value, row }),
-		},
-	})
-	registerDataType({
-		id: 'saas:workspace_plan',
-		formatter: {
-			default: (value, _locale, options, row) =>
-				h(WorkspacePlanCell, { value, row, options: options as CellOptions }),
-		},
-	})
-	registerDataType({
 		id: 'saas:period',
 		formatter: { default: formatPeriod },
-	})
-	registerDataType({
-		id: 'saas:credit_reason',
-		formatter: {
-			default: (value, _locale, options, row) =>
-				h(CreditReasonCell, { value, row, options: options as CellOptions }),
-			empty: (value, _locale, options, row) =>
-				h(CreditReasonCell, { value, row, options: options as CellOptions }),
-		},
-	})
-	registerDataType({
-		id: 'saas:issuer',
-		formatter: {
-			default: (value) => h(IssuerCell, { value }),
-			empty: (value) => h(IssuerCell, { value }),
-		},
 	})
 }
 
@@ -160,5 +113,5 @@ export default defineDmsPlugin(() => {
 			},
 		},
 	})
-	registerOperatorCells(registerDataType)
+	registerPeriodCell(registerDataType)
 })

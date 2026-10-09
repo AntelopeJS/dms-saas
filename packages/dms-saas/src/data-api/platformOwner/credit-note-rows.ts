@@ -1,6 +1,9 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { type CreditNote, InvoiceModel } from "../../db";
-import { CREDIT_NOTE_METADATA } from "../../operator-billing/credit-note-request";
+import {
+  CREDIT_NOTE_METADATA,
+  CREDIT_REASONS,
+} from "../../operator-billing/credit-note-request";
 import { AUTO_PRORATA_METADATA_KEY } from "../../stripe/webhook-handlers";
 
 /** A credit note row read across workspaces: the workspace rides along. */
@@ -14,6 +17,17 @@ interface CreditNoteRowInstance {
 export function creditNoteRow(self: unknown): CrossInstanceCreditNote {
   return (self as CreditNoteRowInstance).table;
 }
+
+/**
+ * Every reason a credit note can be listed with: the operator's, those of
+ * the automatic flows, and Stripe's own where the module has no word.
+ */
+export const CREDIT_NOTE_REASONS = [
+  ...CREDIT_REASONS,
+  "money_back_guarantee",
+  "prorated_cancellation",
+  "order_change",
+] as const;
 
 /** Stripe's own reasons, worded with the module's reasons where they agree. */
 const STRIPE_REASONS: Record<string, string> = {

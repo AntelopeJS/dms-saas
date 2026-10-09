@@ -8,7 +8,6 @@ import operatorCellDisplays from './app/plugins/operator-cell-displays'
 import planCards from './app/plugins/plan-cards-display'
 import segmentConditions from './app/plugins/segment-conditions-data-type'
 import sidebarWidgets from './app/plugins/sidebar-widgets'
-import workspaceCell from './app/plugins/workspace-cell'
 
 // The tenant access gate's refusal code: the server answers a refused page
 // visit, a reload as much as an Inertia one, with a redirect to the suspended
@@ -63,7 +62,6 @@ const frontendModule: DmsFrontendModule = {
 		sdk.registerPlugin(planCards)
 		sdk.registerPlugin(segmentConditions)
 		sdk.registerPlugin(sidebarWidgets)
-		sdk.registerPlugin(workspaceCell)
 		sdk.registerAccessRedirect(
 			WORKSPACE_ACCESS_BLOCKED_CODE,
 			WORKSPACE_SUSPENDED_PATH,

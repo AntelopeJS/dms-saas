@@ -15,7 +15,9 @@ import { Model } from "@antelopejs/interface-database-decorators";
 import { Tenant, TenantModel } from "@antelopejs/interface-dms/db";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import {
+  type CellSubline,
   Column,
+  type ComposedText,
   DefaultDisplays,
   Exported,
   Searchable,
@@ -26,7 +28,16 @@ import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/defa
 import { TenantBillingState, WORKSPACE_RENEWAL_KINDS } from "../../db";
 import { statusPillDisplay, statusType } from "../../utils/status-vocabulary";
 import { HiddenStringFilter } from "./hidden-filter";
-import { WorkspaceCellDisplay } from "./workspace-cell-display";
+import {
+  type WorkspaceCellRow,
+  workspaceMrrAmount,
+  workspaceMrrNote,
+  workspaceOwnerLabel,
+  workspaceOwnerState,
+  workspacePlanDetail,
+  workspaceRenewalDate,
+  workspaceRenewalSummary,
+} from "./workspace-cells";
 
 const COLUMN = "$saas.workspaces.column";
 
@@ -49,6 +60,11 @@ const RENEWAL_KIND_TYPE = new DefaultDataTypes.SelectType({
     value: kind,
   })),
 });
+
+/** A directory getter's row: the joined fields are read off the instance. */
+function directoryRow(self: unknown): WorkspaceCellRow {
+  return self as WorkspaceCellRow;
+}
 
 /**
  * Every customer workspace with its directory row: status, plan, MRR, owner
@@ -119,7 +135,7 @@ export class workspacesDataAPI extends DataController(
     name: `${COLUMN}.plan`,
     type: new DefaultDataTypes.StringType(),
     filterable: true,
-    display: new WorkspaceCellDisplay({ kind: "plan" }),
+    display: new DefaultDisplays.TwoLineDisplay({ subField: "planDetail" }),
   })
   @directoryField("planName")
   @Access(AccessMode.ReadOnly)
@@ -132,7 +148,10 @@ export class workspacesDataAPI extends DataController(
     name: `${COLUMN}.mrr`,
     type: new DefaultDataTypes.NumberType(),
     filterable: true,
-    display: new WorkspaceCellDisplay({ kind: "mrr" }),
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "mrrAmount",
+      subField: "mrrNote",
+    }),
   })
   @directoryField("mrrMinor")
   @Access(AccessMode.ReadOnly)
@@ -146,7 +165,10 @@ export class workspacesDataAPI extends DataController(
     name: `${COLUMN}.owner`,
     type: new DefaultDataTypes.StringType(),
     filterable: true,
-    display: new WorkspaceCellDisplay({ kind: "owner" }),
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "ownerLabel",
+      subField: "ownerState",
+    }),
   })
   @directoryField("ownerName")
   @Access(AccessMode.ReadOnly)
@@ -195,7 +217,10 @@ export class workspacesDataAPI extends DataController(
     name: `${COLUMN}.renews`,
     type: new DefaultDataTypes.DateType(),
     filterable: true,
-    display: new WorkspaceCellDisplay({ kind: "renewal" }),
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "renewalSummary",
+      subField: "renewalDate",
+    }),
   })
   @directoryField("renewsAt")
   @Access(AccessMode.ReadOnly)
@@ -258,6 +283,50 @@ export class workspacesDataAPI extends DataController(
   @directoryField("seats")
   @Access(AccessMode.ReadOnly)
   declare seats: number;
+
+  // The two-line cells' texts, written from the directory row: the browser
+  // words them in the reader's language.
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get planDetail(): ComposedText | null {
+    return workspacePlanDetail(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get mrrAmount(): ComposedText | null {
+    return workspaceMrrAmount(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get mrrNote(): CellSubline | null {
+    return workspaceMrrNote(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get ownerLabel(): string | null {
+    return workspaceOwnerLabel(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get ownerState(): CellSubline {
+    return workspaceOwnerState(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get renewalSummary(): ComposedText | null {
+    return workspaceRenewalSummary(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get renewalDate(): CellSubline | null {
+    return workspaceRenewalDate(directoryRow(this));
+  }
 
   @Select()
   @Listable()

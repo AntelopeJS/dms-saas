@@ -533,6 +533,11 @@
 				"expired": "Invitation expirée",
 				"none": "Aucun propriétaire"
 			}
+		},
+		"text": {
+			"dot_list": "{first} · {rest}",
+			"sum_list": "{first} + {rest}",
+			"value": "{value}"
 		}
 	}
 }

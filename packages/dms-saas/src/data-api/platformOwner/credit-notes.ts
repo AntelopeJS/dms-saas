@@ -25,14 +25,9 @@ import {
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { CreditNote, CreditNoteModel } from "../../db";
+import { MoneyCentsType, statusPillDisplay, statusType } from "../../utils";
 import {
-  CreditReasonDisplay,
-  IssuerDisplay,
-  MoneyCentsType,
-  statusPillDisplay,
-  statusType,
-} from "../../utils";
-import {
+  CREDIT_NOTE_REASONS,
   creditedInvoiceNumber,
   creditNoteIssuer,
   creditNoteMemo,
@@ -42,6 +37,13 @@ import {
 import { HiddenStringFilter } from "./hidden-filter";
 
 const COLUMN = "$saas.operator_billing.credit_notes.column";
+
+const REASON_TYPE = new DefaultDataTypes.SelectType({
+  items: CREDIT_NOTE_REASONS.map((reason) => ({
+    label: `$saas.operator_billing.credit_reasons.${reason}`,
+    value: reason,
+  })),
+});
 
 /** Every workspace's credit notes, for platform admins. */
 @RegisterDataController()
@@ -183,8 +185,8 @@ export class creditNotesDataAPI extends DataController(
   @Exported()
   @Column({
     name: `${COLUMN}.reason`,
-    type: new DefaultDataTypes.StringType(),
-    display: new CreditReasonDisplay({ memoField: "internalMemo" }),
+    type: REASON_TYPE,
+    display: new DefaultDisplays.TwoLineDisplay({ subField: "internalMemo" }),
     size: 260,
   })
   @Access(AccessMode.ReadOnly)
@@ -204,7 +206,10 @@ export class creditNotesDataAPI extends DataController(
   @Column({
     name: `${COLUMN}.issued_by`,
     type: new DefaultDataTypes.StringType(),
-    display: new IssuerDisplay(),
+    display: new DefaultDisplays.IdentityDisplay({
+      emptyLabel: "$saas.operator_billing.credit_notes.automatic",
+      emptyIcon: "i-ph-robot",
+    }),
     size: 160,
   })
   @Access(AccessMode.ReadOnly)

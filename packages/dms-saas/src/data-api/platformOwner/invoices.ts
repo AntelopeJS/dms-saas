@@ -19,7 +19,9 @@ import { Model } from "@antelopejs/interface-database-decorators";
 import { Tenant } from "@antelopejs/interface-dms/db";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import {
+  type CellSubline,
   Column,
+  type ComposedText,
   DefaultDisplays,
   Exported,
   Searchable,
@@ -39,11 +41,11 @@ import { stripeDashboardUrl } from "../../stripe/client";
 import {
   BillingPeriodDisplay,
   InvoiceLinesType,
-  InvoiceStatusDisplay,
   MoneyCentsType,
+  statusPillDisplay,
   statusType,
-  WorkspacePlanDisplay,
 } from "../../utils";
+import { invoiceStatusDetail, invoiceWorkspaceDetail } from "./invoice-cells";
 import { HiddenStringFilter } from "./hidden-filter";
 import {
   INVOICE_COUNT_BATCH,
@@ -139,10 +141,7 @@ export class invoicesDataAPI extends DataController(
   @Column({
     name: `${COLUMN}.workspace`,
     type: new DefaultDataTypes.StringType(),
-    display: new WorkspacePlanDisplay({
-      planField: "planName",
-      seatsField: "seats",
-    }),
+    display: new DefaultDisplays.TwoLineDisplay({ subField: "planDetail" }),
     filterable: true,
     size: 220,
   })
@@ -157,10 +156,13 @@ export class invoicesDataAPI extends DataController(
     return workspacePlanName(invoiceRow(this)._instance);
   }
 
-  @Listable(["lines"])
+  @Listable(["_instance", "lines"])
   @Access(AccessMode.ReadOnly)
-  get seats(): number | null {
-    return invoiceSeats(invoiceRow(this).lines);
+  get planDetail(): PromiseLike<ComposedText | string | null> {
+    const row = invoiceRow(this);
+    return workspacePlanName(row._instance).then((planName) =>
+      invoiceWorkspaceDetail(planName, invoiceSeats(row.lines)),
+    );
   }
 
   @Select()
@@ -188,27 +190,15 @@ export class invoicesDataAPI extends DataController(
   @Column({
     name: `${COLUMN}.status`,
     type: statusType("invoice"),
-    display: new InvoiceStatusDisplay(),
+    display: statusPillDisplay("invoice", {
+      subField: "statusDetail",
+      subTone: "muted",
+    }),
     filterable: true,
     size: 200,
   })
   @Access(AccessMode.ReadOnly)
   declare status: InvoiceStatus;
-
-  @Select()
-  @Listable()
-  @Access(AccessMode.ReadOnly)
-  declare attemptCount: number | null;
-
-  @Select()
-  @Listable()
-  @Access(AccessMode.ReadOnly)
-  declare nextPaymentAttemptAt: Date | null;
-
-  @Select()
-  @Listable()
-  @Access(AccessMode.ReadOnly)
-  declare autoFinalizesAt: Date | null;
 
   @Select()
   @Listable()
@@ -220,11 +210,22 @@ export class invoicesDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare dueAt: Date | null;
 
-  @Listable(["_instance", "latestRevisionStripeId"])
+  @Listable([
+    "status",
+    "attemptCount",
+    "nextPaymentAttemptAt",
+    "dueAt",
+    "autoFinalizesAt",
+    "_instance",
+    "latestRevisionStripeId",
+  ])
   @Access(AccessMode.ReadOnly)
-  get replacedByNumber(): PromiseLike<string | null> {
+  get statusDetail(): PromiseLike<CellSubline | null> {
     const row = invoiceRow(this);
-    return replacingInvoiceNumber(row._instance, row.latestRevisionStripeId);
+    return replacingInvoiceNumber(
+      row._instance,
+      row.latestRevisionStripeId,
+    ).then((replacedBy) => invoiceStatusDetail(row, replacedBy));
   }
 
   @Select()
