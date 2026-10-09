@@ -1,6 +1,9 @@
 import { appendSegmentCountPoint } from "@antelopejs/interface-dms-saas/db";
 import { describe, expect, it } from "vitest";
-import { weeklyCountChange } from "../src/data-api/platformOwner/segments";
+import {
+  weeklyChangeLine,
+  weeklyCountChange,
+} from "../src/data-api/platformOwner/segments";
 import {
   parseSegmentConditions,
   parseSegmentInput,
@@ -169,5 +172,17 @@ describe("segment count history", () => {
     expect(weeklyCountChange(history, 37, now)).toBe(4);
     expect(weeklyCountChange(history.slice(2), 37, now)).toBe(2);
     expect(weeklyCountChange([], 37, now)).toBe(0);
+  });
+
+  it("tones the weekly change line by its direction", () => {
+    expect(weeklyChangeLine(4)).toEqual({
+      text: { key: "saas.segments.weekly_change.up", params: { change: 4 } },
+      tone: "success",
+    });
+    expect(weeklyChangeLine(-2)).toEqual({
+      text: { key: "saas.segments.weekly_change.down", params: { change: 2 } },
+      tone: "error",
+    });
+    expect(weeklyChangeLine(0).tone).toBe("dimmed");
   });
 });

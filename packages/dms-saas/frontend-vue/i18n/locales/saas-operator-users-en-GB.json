@@ -170,7 +170,11 @@
       "caption": "All segments",
       "footer_count": "{count} segment | {count} segments",
       "footer_hint": "Re-evaluated every 15 minutes and on save",
-      "change_this_week": "{change} this week",
+      "weekly_change": {
+        "up": "▲ +{change} this week",
+        "down": "▼ -{change} this week",
+        "flat": "— 0 this week"
+      },
       "never_evaluated": "Not evaluated yet",
       "deleted": "Segment deleted | {count} segments deleted",
       "evaluated": "Segment re-evaluated",

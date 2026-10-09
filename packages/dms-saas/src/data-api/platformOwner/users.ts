@@ -17,6 +17,7 @@ import { User, UserModel } from "@antelopejs/interface-dms/auth/db";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import {
   Column,
+  type ComposedText,
   DefaultDisplays,
   Exported,
   Searchable,
@@ -25,7 +26,8 @@ import {
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { UserSegmentModel } from "../../db";
-import { getSegmentNamesCached, UserWorkspacesDisplay } from "../../utils";
+import { composed, countParam, dotList } from "../../i18n/composed-text";
+import { getSegmentNamesCached } from "../../utils";
 
 const ACTIVE_NOW_MS = 5 * 60 * 1000;
 const IDENTITY_COLUMN_SIZE = 280;
@@ -56,6 +58,23 @@ async function loadWorkspaceCounts(
   ).listByUserWithTenantIds(userId);
   const owned = memberships.filter((m) => m.member.isTenantOwner).length;
   return { owned, member: memberships.length - owned };
+}
+
+const WORKSPACE_SPLIT_KEYS: Record<keyof UserWorkspaceCounts, string> = {
+  owned: "saas.users.workspaces_owned",
+  member: "saas.users.workspaces_member",
+};
+
+function workspaceSplit(counts: UserWorkspaceCounts): ComposedText | null {
+  return dotList(
+    (Object.keys(WORKSPACE_SPLIT_KEYS) as (keyof UserWorkspaceCounts)[])
+      .filter((kind) => counts[kind] > 0)
+      .map((kind) =>
+        composed(WORKSPACE_SPLIT_KEYS[kind], {
+          count: countParam(counts[kind]),
+        }),
+      ),
+  );
 }
 
 function rowWorkspaceCounts(self: unknown): Promise<UserWorkspaceCounts> {
@@ -175,9 +194,10 @@ export class saasUsersDataAPI extends DataController(
   @Column({
     name: "$saas.users.column.workspaces",
     type: new DefaultDataTypes.NumberType(),
-    display: new UserWorkspacesDisplay({
-      ownedField: "ownedWorkspaces",
-      memberField: "memberWorkspaces",
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "workspacesFigure",
+      subField: "workspacesSplit",
+      emptyLabel: "$saas.users.no_workspace",
     }),
   })
   @Access(AccessMode.ReadOnly)
@@ -185,16 +205,20 @@ export class saasUsersDataAPI extends DataController(
     return rowWorkspaceCounts(this).then(({ owned, member }) => owned + member);
   }
 
+  /** The workspace count, none for a user without a workspace. */
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
-  get ownedWorkspaces(): PromiseLike<number> {
-    return rowWorkspaceCounts(this).then(({ owned }) => owned);
+  get workspacesFigure(): PromiseLike<number | null> {
+    return rowWorkspaceCounts(this).then(
+      ({ owned, member }) => owned + member || null,
+    );
   }
 
+  /** "1 owned · 2 member" under the workspace count. */
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
-  get memberWorkspaces(): PromiseLike<number> {
-    return rowWorkspaceCounts(this).then(({ member }) => member);
+  get workspacesSplit(): PromiseLike<ComposedText | null> {
+    return rowWorkspaceCounts(this).then(workspaceSplit);
   }
 
   @Listable(["_id"])

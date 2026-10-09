@@ -14,6 +14,8 @@ import {
 import { GetModel, Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import {
+  type CellSubline,
+  type CellTone,
   Column,
   DefaultDisplays,
   Exported,
@@ -29,8 +31,8 @@ import {
   SegmentModel,
   UserSegmentModel,
 } from "../../db";
+import { composed } from "../../i18n/composed-text";
 import {
-  CountChangeDisplay,
   invalidateSegmentNamesCache,
   MS_PER_DAY,
   SegmentConditionsType,
@@ -78,6 +80,32 @@ export function weeklyCountChange(
   const reference =
     history.filter((point) => point.day <= cutoff).at(-1) ?? history[0];
   return reference ? currentCount - reference.count : 0;
+}
+
+type ChangeDirection = "up" | "down" | "flat";
+
+const WEEKLY_CHANGE_KEY = "saas.segments.weekly_change";
+const CHANGE_TONES: Record<ChangeDirection, CellTone> = {
+  up: "success",
+  down: "error",
+  flat: "dimmed",
+};
+
+function changeDirection(change: number): ChangeDirection {
+  if (change > 0) return "up";
+  if (change < 0) return "down";
+  return "flat";
+}
+
+/** "▲ +4 this week" in green, "▼ -2 this week" in red, "— 0 this week" dimmed. */
+export function weeklyChangeLine(change: number): CellSubline {
+  const direction = changeDirection(change);
+  return {
+    text: composed(`${WEEKLY_CHANGE_KEY}.${direction}`, {
+      change: Math.abs(change),
+    }),
+    tone: CHANGE_TONES[direction],
+  };
 }
 
 function wrapDeleteWithCascade(
@@ -184,10 +212,7 @@ export class segmentsDataAPI extends DataController(
   @Column({
     name: "$saas.segments.column.estimated_count",
     type: new DefaultDataTypes.NumberType(),
-    display: new CountChangeDisplay({
-      changeField: "weeklyChange",
-      changeLabel: "$saas.segments.change_this_week",
-    }),
+    display: new DefaultDisplays.TwoLineDisplay({ subField: "weeklyChange" }),
   })
   @Access(AccessMode.ReadOnly)
   declare estimatedCount: number;
@@ -198,8 +223,10 @@ export class segmentsDataAPI extends DataController(
 
   @Listable(["countHistory", "estimatedCount"])
   @Access(AccessMode.ReadOnly)
-  get weeklyChange(): number {
-    return weeklyCountChange(historyOf(this), rowOf(this).estimatedCount ?? 0);
+  get weeklyChange(): CellSubline {
+    return weeklyChangeLine(
+      weeklyCountChange(historyOf(this), rowOf(this).estimatedCount ?? 0),
+    );
   }
 
   @Listable(["countHistory"])

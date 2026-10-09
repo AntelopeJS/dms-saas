@@ -4,7 +4,6 @@ import './app/assets/css/saas.css'
 import authLinks from './app/plugins/auth-links'
 import billingDataTypes from './app/plugins/billing-data-types'
 import footerLinks from './app/plugins/footer-links'
-import operatorCellDisplays from './app/plugins/operator-cell-displays'
 import planCards from './app/plugins/plan-cards-display'
 import segmentConditions from './app/plugins/segment-conditions-data-type'
 import sidebarWidgets from './app/plugins/sidebar-widgets'
@@ -58,7 +57,6 @@ const frontendModule: DmsFrontendModule = {
 		sdk.registerPlugin(authLinks)
 		sdk.registerPlugin(billingDataTypes)
 		sdk.registerPlugin(footerLinks)
-		sdk.registerPlugin(operatorCellDisplays)
 		sdk.registerPlugin(planCards)
 		sdk.registerPlugin(segmentConditions)
 		sdk.registerPlugin(sidebarWidgets)
