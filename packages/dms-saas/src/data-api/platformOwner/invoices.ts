@@ -195,7 +195,7 @@ export class invoicesDataAPI extends DataController(
       subTone: "muted",
     }),
     filterable: true,
-    size: 200,
+    size: 240,
   })
   @Access(AccessMode.ReadOnly)
   declare status: InvoiceStatus;
