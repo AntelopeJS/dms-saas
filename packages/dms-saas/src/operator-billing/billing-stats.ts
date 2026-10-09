@@ -100,9 +100,7 @@ export function totalsByCurrency(rows: readonly MoneyRow[]): MoneyFigure[] {
 }
 
 /** Amounts in several currencies as one parameter: "€49.00 + $12.00". */
-export function moneyFigures(
-  figures: readonly MoneyFigure[],
-): ComposedTextParam {
+function moneyFigures(figures: readonly MoneyFigure[]): ComposedTextParam {
   const amounts = figures.map((figure) =>
     moneyParam(figure.amount, figure.currency),
   );

@@ -99,7 +99,7 @@ function isComposedText(value: ComposedTextParam): value is ComposedText {
 }
 
 /** A parameter as a text: a nested text as is, any other value wrapped. */
-export function asText(value: ComposedTextParam): ComposedText {
+function asText(value: ComposedTextParam): ComposedText {
   return isComposedText(value) ? value : valueText(value);
 }
 

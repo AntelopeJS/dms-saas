@@ -13,7 +13,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Every i18n key a route payload names: the keys of its composed texts, nested
  * ones included, and its `$`-prefixed strings.
  */
-export function namedKeys(payload: unknown): string[] {
+function namedKeys(payload: unknown): string[] {
   if (typeof payload === "string") {
     return payload.startsWith(KEY_PREFIX) ? [payload.slice(1)] : [];
   }
