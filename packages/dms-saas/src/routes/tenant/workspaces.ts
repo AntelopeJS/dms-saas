@@ -14,6 +14,7 @@ import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthRawUser } from "@antelopejs/interface-dms/auth";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
+import type { StatGroupItem } from "@antelopejs/interface-dms/base";
 import { PlanModel } from "../../db";
 import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
@@ -43,6 +44,7 @@ import {
   resolveSelfServeCardUse,
   rollbackWorkspaceProvisioning,
   withCardHold,
+  workspaceGlanceItems,
 } from "../../workspaces";
 
 const HTTP_NOT_FOUND = 404;
@@ -68,6 +70,11 @@ interface CurrentWorkspace {
   _id: string;
   name: string;
   retentionDays: number;
+}
+
+/** The "At a glance" cards, as their `StatGroup` reads them. */
+interface WorkspaceGlance {
+  items: StatGroupItem[];
 }
 
 interface WorkspaceRenameBody {
@@ -226,7 +233,20 @@ export class SaasWorkspacesController extends Controller(
     };
   }
 
-  /** Feeds "At a glance" and the danger zone of the General page. */
+  /** Feeds the "At a glance" cards of the General page. */
+  @Get("/current/glance")
+  async getCurrentGlance(
+    @AuthTenantOwner() user: User,
+    @Context() ctx: RequestContext,
+  ): Promise<WorkspaceGlance> {
+    const view = await buildWorkspaceOverview(
+      getRequestTenantId(ctx),
+      user._id,
+    );
+    return { items: workspaceGlanceItems(view) };
+  }
+
+  /** Feeds the danger zone of the General page. */
   @Get("/current/overview")
   async getCurrentOverview(
     @AuthTenantOwner() user: User,

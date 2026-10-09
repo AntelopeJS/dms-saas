@@ -1,5 +1,5 @@
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
-import { Form, Section } from "@antelopejs/interface-dms/base";
+import { Form, Section, StatGroup } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { HttpMethod } from "@antelopejs/interface-dms/base/types/http";
@@ -8,6 +8,8 @@ import { workspaceSettingsCategory } from "../module";
 
 /** Read and renamed here; the switcher refreshes when this form saves. */
 const CURRENT_WORKSPACE_ENDPOINT = "/api/saas/workspaces/current";
+const GLANCE_ENDPOINT = `${CURRENT_WORKSPACE_ENDPOINT}/glance`;
+const GLANCE_ITEMS = 3;
 
 const KEYS = "$saas.workspace.general";
 const PERMISSIONS = "$saas.permissions.workspace";
@@ -66,7 +68,13 @@ export class SaasTenantGeneralController extends PageController("general", {
     card: false,
   }).child(
     "facts",
-    CustomComponent("DmsSaasWorkspaceGlance").meta({
+    StatGroup({
+      fetchUrl: GLANCE_ENDPOINT,
+      layout: "cards",
+      columns: GLANCE_ITEMS,
+      skeletonCount: GLANCE_ITEMS,
+      label: `${KEYS}.glance.title`,
+    }).meta({
       name: `${PERMISSIONS}.glance`,
       description: `${PERMISSIONS}.glance_description`,
       icon: "i-ph-binoculars",

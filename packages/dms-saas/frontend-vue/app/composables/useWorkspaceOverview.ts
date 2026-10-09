@@ -49,10 +49,7 @@ export interface WorkspaceOverview {
 	nextWorkspace: NextWorkspaceRef | null
 }
 
-/**
- * The General page's figures, fetched once for "At a glance" and the danger
- * zone, which mount together.
- */
+/** What the General page's danger zone states about deleting the workspace. */
 export function useWorkspaceOverview(): SharedRequest<WorkspaceOverview> {
 	const { $authFetch } = useAuthFetch()
 	return useSharedRequest(OVERVIEW_STATE_KEY, () =>

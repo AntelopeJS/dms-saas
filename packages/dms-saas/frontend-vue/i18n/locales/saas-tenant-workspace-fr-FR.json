@@ -41,7 +41,6 @@
         "glance": {
           "title": "En un coup d'œil",
           "description": "Membres, forfait et propriété. Chaque élément mène à l'endroit où le gérer.",
-          "load_failed": "Impossible de charger l'espace. Vérifiez votre connexion, puis réessayez.",
           "members": "Membres",
           "seats_of": "{occupied} / {max} places",
           "seats_unlimited": "{occupied} places",
@@ -55,7 +54,8 @@
           "owner": "Propriétaire de l'espace",
           "you": "Vous",
           "created": "a créé {name} le {date}",
-          "more_owners": "+{count} autre | +{count} autre | +{count} autres"
+          "more_owners": "+{count} autre | +{count} autre | +{count} autres",
+          "owner_and_others": "{name} {others}"
         },
         "danger_zone_title": "Zone de danger",
         "export": {

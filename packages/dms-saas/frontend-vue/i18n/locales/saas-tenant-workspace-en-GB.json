@@ -41,7 +41,6 @@
         "glance": {
           "title": "At a glance",
           "description": "Members, plan and ownership. Each links to where you manage it.",
-          "load_failed": "Couldn't load the workspace. Check your connection, then try again.",
           "members": "Members",
           "seats_of": "{occupied} / {max} seats",
           "seats_unlimited": "{occupied} seats",
@@ -55,7 +54,8 @@
           "owner": "Workspace owner",
           "you": "You",
           "created": "created {name} on {date}",
-          "more_owners": "+{count} other | +{count} other | +{count} others"
+          "more_owners": "+{count} other | +{count} other | +{count} others",
+          "owner_and_others": "{name} {others}"
         },
         "danger_zone_title": "Danger zone",
         "export": {
