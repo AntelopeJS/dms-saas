@@ -76,8 +76,7 @@
 					"max_members": "Maximum members",
 					"is_public": "Public",
 					"is_active": "On sale",
-					"order": "Position",
-					"is_deleted": "Deleted"
+					"order": "Position"
 				},
 				"audience": {
 					"any": "Anyone",

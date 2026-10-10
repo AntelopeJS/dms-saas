@@ -190,7 +190,6 @@ export class SaasPlansController extends PageController(
     labelKey: "name",
     searchPlaceholder: `${TEXTS}.search`,
     defaultSort: { field: "order" },
-    defaultFilters: [{ accessorKey: "isDeleted", value: "false", mode: "is" }],
     reorder: { field: "order" },
     tabs: [
       {

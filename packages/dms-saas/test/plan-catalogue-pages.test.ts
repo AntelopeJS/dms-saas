@@ -59,6 +59,14 @@ describe("the plans page", () => {
     );
   });
 
+  // Moving cards by hand is off while a filter narrows the rows: deleted
+  // plans are scoped out by the data API instead of a default filter.
+  it("narrows nothing by default, so the plans move by hand", async () => {
+    const { options } = await SaasPlansController.table.serialize();
+
+    expect(options?.defaultFilters ?? []).toEqual([]);
+  });
+
   it("asks before stopping a sale or deleting, and deletes only unused plans", async () => {
     const { options } = await SaasPlansController.table.serialize();
     const custom = options?.rowActions?.custom as SerializedAction[];

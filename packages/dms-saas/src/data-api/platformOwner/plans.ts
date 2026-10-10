@@ -6,6 +6,7 @@ import {
 import {
   Access,
   AccessMode,
+  Filter,
   Listable,
   ModelReference,
   Sortable,
@@ -35,6 +36,11 @@ import {
   PlanMemberCapDisplay,
   PlanMoneyDisplay,
 } from "../../plans/plan-displays";
+import {
+  type TableScope,
+  scopedCountBatch,
+  withTableScope,
+} from "./table-scope";
 
 const TEXTS = "$saas.catalog.plans";
 
@@ -65,6 +71,17 @@ const SALE_STATUS_ITEMS = PLAN_SALE_STATUSES.map((value) => ({
 const SALE_STATUS_TONES = { on_sale: "success", legacy: "warning" } as const;
 
 const COUNT_COLUMN_SIZE = 120;
+const TRUE_FILTER_VALUE = "true";
+
+/**
+ * The catalogue never lists deleted plans. Scoped on the server rather than
+ * by a default filter: a filter narrows the rows, which turns off moving them
+ * by hand.
+ */
+const PLAN_CATALOGUE_SCOPE = {
+  filters: { isDeleted: ["false", "eq"] },
+} satisfies TableScope;
+const withCatalogueScope = withTableScope(PLAN_CATALOGUE_SCOPE);
 const UNLIMITED_MEMBERS = -1;
 
 interface PlanRowInstance {
@@ -91,12 +108,13 @@ export class plansDataAPI extends DataController(
   Plan,
   {
     get: TableViewRoutes.Get,
-    list: TableViewRoutes.List,
-    select: TableViewRoutes.Select,
-    count: TableViewRoutes.Count,
-    countBatch: TableViewRoutes.CountBatch,
+    list: withCatalogueScope(TableViewRoutes.List),
+    select: withCatalogueScope(TableViewRoutes.Select),
+    count: withCatalogueScope(TableViewRoutes.Count),
+    countBatch: scopedCountBatch(PLAN_CATALOGUE_SCOPE),
     edit: TableViewRoutes.Edit,
     ...TableViewRoutes.ExportRoutes,
+    exportStart: withCatalogueScope(TableViewRoutes.ExportRoutes.exportStart),
   },
   Controller("/api/saas/tables/plans"),
 ) {
@@ -379,12 +397,9 @@ export class plansDataAPI extends DataController(
   declare updatedAt: Date;
 
   @Select()
-  @Column({
-    name: `${TEXTS}.field.is_deleted`,
-    type: new DefaultDataTypes.BooleanType(),
-    filterable: true,
-    isVisible: false,
-  })
+  @Filter((_context, field, _key, value) =>
+    field.eq(value === TRUE_FILTER_VALUE),
+  )
   @Access(AccessMode.ReadOnly)
   declare isDeleted: boolean;
 }
