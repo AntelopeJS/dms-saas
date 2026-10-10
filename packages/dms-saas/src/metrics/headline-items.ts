@@ -16,7 +16,6 @@ import {
   moneyParam,
   valueText,
 } from "../i18n/composed-text";
-import type { ServerMessages } from "../i18n/server-messages";
 import {
   INVOICES_PAGE_PATH,
   PLAN_MIGRATIONS_PAGE_PATH,
@@ -203,50 +202,42 @@ export function workspacesHeadline(
   ];
 }
 
-function pastDueCard(
-  messages: ServerMessages,
-  summary: DirectorySummary,
-): NavCardItem {
+function pastDueCard(summary: DirectorySummary): NavCardItem {
   return {
     id: "past_due",
     icon: "i-ph-warning-circle",
     iconTone: "error",
-    title: messages.t(`${K}.attention.past_due`, {
-      count: summary.pastDue.count,
+    title: composed(`${K}.attention.past_due`, {
+      count: countParam(summary.pastDue.count),
     }),
-    description: messages.compose(pastDueDetail(summary)),
+    description: pastDueDetail(summary),
     to: workspacesTabPath("past_due"),
   };
 }
 
-function complimentaryCard(
-  messages: ServerMessages,
-  endings: DatedWorkspace[],
-): NavCardItem {
+function complimentaryCard(endings: DatedWorkspace[]): NavCardItem {
   return {
     id: "complimentary_ending",
     icon: "i-ph-gift",
     iconTone: "warning",
-    title: messages.t(`${K}.attention.complimentary_ending`, {
-      count: endings.length,
+    title: composed(`${K}.attention.complimentary_ending`, {
+      count: countParam(endings.length),
     }),
-    description: messages.compose(
-      namedEndings(endings, `${K}.attention.named_ending`) ?? "",
-    ),
+    description:
+      namedEndings(endings, `${K}.attention.named_ending`) ?? undefined,
     to: workspacesViewPath(WORKSPACE_VIEW_IDS.complimentaryEnding),
   };
 }
 
-function migrationsCard(
-  messages: ServerMessages,
-  migrations: MigrationAttention,
-): NavCardItem {
+function migrationsCard(migrations: MigrationAttention): NavCardItem {
   return {
     id: "migrations",
     icon: "i-ph-arrows-clockwise",
     iconTone: "error",
-    title: messages.t(`${K}.attention.migrations`, { count: migrations.count }),
-    description: messages.t(`${K}.attention.migrations_detail`, {
+    title: composed(`${K}.attention.migrations`, {
+      count: countParam(migrations.count),
+    }),
+    description: composed(`${K}.attention.migrations_detail`, {
       from: migrations.firstFromPlan,
       to: migrations.firstToPlan,
       failed: migrations.firstFailed,
@@ -256,43 +247,31 @@ function migrationsCard(
   };
 }
 
-function openInvoicesCard(
-  messages: ServerMessages,
-  open: OpenInvoicesAttention,
-): NavCardItem {
+function openInvoicesCard(open: OpenInvoicesAttention): NavCardItem {
   return {
     id: "open_invoices",
     icon: "i-ph-receipt",
     iconTone: "warning",
-    title: messages.t(`${K}.attention.open_invoices`, { count: open.count }),
-    description: messages.compose(
-      composed(`${K}.attention.open_invoices_detail`, {
-        amount: money(open.awaiting),
-      }),
-    ),
+    title: composed(`${K}.attention.open_invoices`, {
+      count: countParam(open.count),
+    }),
+    description: composed(`${K}.attention.open_invoices_detail`, {
+      amount: money(open.awaiting),
+    }),
     to: `${INVOICES_PAGE_PATH}?tab=open`,
   };
 }
 
 /** One card per queue that holds something; an empty queue shows nothing. */
-export function attentionCards(
-  messages: ServerMessages,
-  inputs: AttentionInputs,
-): NavCardItem[] {
+export function attentionCards(inputs: AttentionInputs): NavCardItem[] {
   const queues: Array<[number, () => NavCardItem]> = [
-    [inputs.summary.pastDue.count, () => pastDueCard(messages, inputs.summary)],
+    [inputs.summary.pastDue.count, () => pastDueCard(inputs.summary)],
     [
       inputs.complimentaryEnding.length,
-      () => complimentaryCard(messages, inputs.complimentaryEnding),
+      () => complimentaryCard(inputs.complimentaryEnding),
     ],
-    [
-      inputs.migrations.count,
-      () => migrationsCard(messages, inputs.migrations),
-    ],
-    [
-      inputs.openInvoices.count,
-      () => openInvoicesCard(messages, inputs.openInvoices),
-    ],
+    [inputs.migrations.count, () => migrationsCard(inputs.migrations)],
+    [inputs.openInvoices.count, () => openInvoicesCard(inputs.openInvoices)],
   ];
   return queues.filter(([count]) => count > 0).map(([, card]) => card());
 }
@@ -346,7 +325,6 @@ function planPriceLabel(row: DirectoryRow): ComposedText {
 
 /** Plans ranked by the MRR they bring, in the reporting currency. */
 export function plansByMrrItems(
-  messages: ServerMessages,
   rows: DirectoryRow[],
   currency: string,
 ): TopListItem[] {
@@ -355,12 +333,10 @@ export function plansByMrrItems(
     .map((group) => ({
       id: group.planId,
       title: group.name,
-      description: messages.compose(
-        composed(`${K}.plans.description`, {
-          count: countParam(group.workspaces),
-          price: planPriceLabel(group.row),
-        }),
-      ),
+      description: composed(`${K}.plans.description`, {
+        count: countParam(group.workspaces),
+        price: planPriceLabel(group.row),
+      }),
       value: group.mrrMinor / 100,
       to: planEditPath(group.planId),
     }));

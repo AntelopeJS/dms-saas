@@ -15,7 +15,6 @@ import {
   moneyParam,
   valueText,
 } from "../i18n/composed-text";
-import type { ServerMessages } from "../i18n/server-messages";
 import { monthlyAmountAfterTrial } from "../metrics/directory-summary";
 import { stripeObjectUrl } from "../stripe/dashboard-links";
 import type { WorkspaceOperatorView } from "./operator-view";
@@ -245,7 +244,6 @@ export function billingInfoItems(
 
 /** The coming milestone of the subscription, first on its timeline. */
 export function upcomingTimelineItems(
-  messages: ServerMessages,
   view: WorkspaceOperatorView,
   preview: UpcomingInvoicePreview | null,
 ): ActivityFeedItem[] {
@@ -257,12 +255,12 @@ export function upcomingTimelineItems(
         tone: "primary",
         title: `$${D}.timeline.next_invoice`,
         params: {
-          amount: messages.money(preview.totalMinorUnits, preview.currency),
+          amount: moneyParam(preview.totalMinorUnits, preview.currency),
         },
-        meta: [messages.compose(priceTimesSeats(view))],
+        meta: [priceTimesSeats(view)],
         date: preview.billingDate,
         // A coming date reads as the day, not as a time relative to now.
-        time: messages.day(new Date(preview.billingDate)),
+        time: valueText(dateParam(preview.billingDate, "day")),
       },
     ];
   }
@@ -275,7 +273,7 @@ export function upcomingTimelineItems(
       tone: "info",
       title: `$${D}.timeline.${renewalKind}`,
       date: renewsAt.toISOString(),
-      time: messages.day(renewsAt),
+      time: valueText(dateParam(renewsAt, "day")),
     },
   ];
 }

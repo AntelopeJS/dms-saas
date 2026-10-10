@@ -1,10 +1,9 @@
 import type { UpcomingInvoicePreview } from "@antelopejs/interface-dms-saas/billing";
 import { describe, expect, it } from "vitest";
 import type { Invoice } from "../src/db";
-import { serverMessages } from "../src/i18n/server-messages";
 import { workspaceFacts } from "../src/workspaces/detail-items";
 import type { WorkspaceOperatorView } from "../src/workspaces/operator-view";
-import { LOCALES, missingKeys } from "./helpers/composed-text";
+import { LOCALES, missingKeys, writeText } from "./helpers/composed-text";
 
 const VIEW = {
   billingState: "active",
@@ -58,12 +57,11 @@ describe("workspace facts", () => {
   });
 
   it("reads the same once written on the server", () => {
-    const messages = serverMessages("en-GB");
     const [mrr, seats, next] = facts();
 
-    expect(messages.compose(mrr!.detail!)).toBe("€29.00 × 5 seats · per month");
-    expect(messages.compose(seats!.detail!)).toBe("+2 pending invitations");
-    expect(messages.compose(next!.detail!)).toBe("€174.00 incl. tax");
+    expect(writeText(mrr!.detail!)).toBe("€29.00 × 5 seats · per month");
+    expect(writeText(seats!.detail!)).toBe("+2 pending invitations");
+    expect(writeText(next!.detail!)).toBe("€174.00 incl. tax");
   });
 
   it.each(LOCALES)("%s has every key the facts name", (code) => {

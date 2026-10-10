@@ -1,6 +1,10 @@
-import type { ActivityFeedItem, Tone } from "@antelopejs/interface-dms/base";
+import type {
+  ActivityFeedItem,
+  BlockText,
+  Tone,
+} from "@antelopejs/interface-dms/base";
 import type { Invoice } from "../db";
-import type { ServerMessages } from "../i18n/server-messages";
+import { moneyParam, valueText } from "../i18n/composed-text";
 import type { OperatorAction } from "../operator-actions/db/operator-action.table";
 import type { WorkspaceOperatorAction } from "../operator-actions/types";
 import { getRowInstance } from "../utils/row-instance";
@@ -31,7 +35,6 @@ export interface ActivitySources {
 export interface ActivityOptions {
   kind: ActivityKind;
   limit: number;
-  messages: ServerMessages;
   /** Detail page of a workspace; left out on that page itself. */
   linkOf?: (tenantId: string) => string;
 }
@@ -143,7 +146,7 @@ function documentEntry(
       icon: look.icon,
       tone: look.tone,
       title: titleKey(options, look.title),
-      meta: [options.messages.money(amount, document.currency)],
+      meta: [valueText(moneyParam(amount, document.currency))],
       params: {
         number: document.number ?? "—",
         workspace: sources.names.get(tenantId) ?? "—",
@@ -159,15 +162,12 @@ function detailString(action: OperatorAction, field: string): string {
   return typeof value === "string" ? value : "—";
 }
 
-function actionMeta(
-  action: OperatorAction,
-  options: ActivityOptions,
-): string[] {
+function actionMeta(action: OperatorAction): BlockText[] {
   const amount = action.details?.amountCents;
   const currency = action.details?.currency;
   const money =
     typeof amount === "number" && typeof currency === "string"
-      ? [options.messages.money(amount, currency)]
+      ? [valueText(moneyParam(amount, currency))]
       : [];
   return [...money, key("by_operator")];
 }
@@ -188,7 +188,7 @@ function actionEntry(
       icon: look.icon,
       tone: look.tone,
       title: titleKey(options, look.title),
-      meta: actionMeta(action, options),
+      meta: actionMeta(action),
       params: {
         workspace: sources.names.get(action.tenantId) ?? "—",
         operator: action.actorEmail,

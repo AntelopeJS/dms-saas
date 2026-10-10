@@ -393,6 +393,9 @@ Recorded after the build and the browser pass, so the answers above stay as they
   `DmsSaasRouteScopedBlock` filling `{id}` from the URL; since DMS 0.6.1 the stock blocks take
   `{{params.id}}` in their URLs and refetch on `refreshPageBlocks()`, so the wrapper is gone.
   Headline figures that need parameters are small custom components built on `DmsStatGroup`.
+  Since DMS 0.7.2 every block these routes feed (`ActivityFeed`, `NavCardGrid`, `TopListCard`
+  included) takes composed texts, so the routes answer raw values and the server-side wording is
+  gone.
 - **Q21, disabled row actions:** DMS row actions have no per-row disabled reason. "Issue credit
   note…" is greyed out by a rule, the reason is in the table's footer hint and in the dialog, and
   the server refuses anyway. Open invoices get a third mode, "Reduce the amount due", the only

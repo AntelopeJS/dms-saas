@@ -11,7 +11,6 @@ import type {
 import { fetchDefaultPaymentMethod } from "../../billing-state";
 import { getReportingCurrency } from "../../config";
 import { CreditNoteModel, type Invoice, InvoiceModel } from "../../db";
-import { serverMessages } from "../../i18n/server-messages";
 import { buildActivityFeed, parseActivityKind } from "../../metrics/activity";
 import { loadActivitySources } from "../../metrics/activity-sources";
 import {
@@ -23,7 +22,6 @@ import { workspacesHeadline } from "../../metrics/headline-items";
 import { safeUpcomingInvoice } from "../../operator-actions/previews";
 import { retrieveStripeCustomerBalance } from "../../stripe/customer-balance";
 import { stripeObjectUrl } from "../../stripe/dashboard-links";
-import { CONTENT_LANGUAGE_HEADER } from "../../utils/content-language";
 import {
   billingInfoItems,
   isInvoiceDocument,
@@ -158,9 +156,7 @@ export class SaasWorkspaceDetailController extends Controller(
   async subscriptionTimeline(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
-    const messages = serverMessages(language);
     const [view, preview, sources] = await Promise.all([
       loadWorkspaceOperatorView(tenantId),
       safeUpcomingInvoice(tenantId),
@@ -169,10 +165,9 @@ export class SaasWorkspaceDetailController extends Controller(
     const history = buildActivityFeed(sources, {
       kind: "all",
       limit: TIMELINE_HISTORY_LIMIT,
-      messages,
     });
     return {
-      items: [...upcomingTimelineItems(messages, view, preview), ...history],
+      items: [...upcomingTimelineItems(view, preview), ...history],
     };
   }
 
@@ -182,7 +177,6 @@ export class SaasWorkspaceDetailController extends Controller(
     @Parameter("tenantId", "param") tenantId: string,
     @Parameter("kind", "query") kind: unknown,
     @Parameter("limit", "query") limit: unknown,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
     const cut = limit === "short" ? OVERVIEW_ACTIVITY_LIMIT : ACTIVITY_LIMIT;
     const sources = await loadActivitySources(tenantId, cut);
@@ -190,7 +184,6 @@ export class SaasWorkspaceDetailController extends Controller(
       items: buildActivityFeed(sources, {
         kind: parseActivityKind(kind),
         limit: cut,
-        messages: serverMessages(language),
       }),
     };
   }

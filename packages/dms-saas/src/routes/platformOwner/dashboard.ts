@@ -18,7 +18,6 @@ import {
   PlanMigrationModel,
   PlanModel,
 } from "../../db";
-import { serverMessages } from "../../i18n/server-messages";
 import { buildActivityFeed, parseActivityKind } from "../../metrics/activity";
 import {
   type DirectoryRow,
@@ -43,7 +42,6 @@ import {
   parsePeriod,
 } from "../../metrics/revenue";
 import { workspaceDetailPath } from "../../pages/platform/paths";
-import { CONTENT_LANGUAGE_HEADER } from "../../utils/content-language";
 import { MS_PER_DAY } from "../../utils/time";
 import { loadActivitySources } from "../../metrics/activity-sources";
 
@@ -147,7 +145,6 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   @Get("/attention")
   async attention(
     @AuthOwnerOnly() _user: User,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ItemsPayload<NavCardItem>> {
     const { rows, currency } = await this.summary();
     const summary = summariseDirectory(rows, new Date(), currency);
@@ -157,7 +154,7 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
       loadOpenInvoices(currency),
     ]);
     return {
-      items: attentionCards(serverMessages(language), {
+      items: attentionCards({
         summary,
         complimentaryEnding,
         migrations,
@@ -226,24 +223,21 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   @Get("/plans-by-mrr")
   async plansByMrr(
     @AuthOwnerOnly() _user: User,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ItemsPayload<TopListItem>> {
     const { rows, currency } = await this.summary();
-    return { items: plansByMrrItems(serverMessages(language), rows, currency) };
+    return { items: plansByMrrItems(rows, currency) };
   }
 
   @Get("/activity")
   async activity(
     @AuthOwnerOnly() _user: User,
     @Parameter("kind", "query") kind: unknown,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
     const sources = await loadActivitySources(null, ACTIVITY_LIMIT);
     return {
       items: buildActivityFeed(sources, {
         kind: parseActivityKind(kind),
         limit: ACTIVITY_LIMIT,
-        messages: serverMessages(language),
         linkOf: workspaceDetailPath,
       }),
     };

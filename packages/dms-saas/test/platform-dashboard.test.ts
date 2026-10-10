@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { Invoice } from "../src/db";
-import { serverMessages } from "../src/i18n/server-messages";
 import {
   type DirectoryRow,
   summariseDirectory,
@@ -14,11 +13,10 @@ import {
 } from "../src/metrics/headline-items";
 import { churnOver, paidInvoicesChart } from "../src/metrics/revenue";
 import { SaasDashboardController } from "../src/pages/platform/dashboard";
-import { missingKeys } from "./helpers/composed-text";
+import { missingKeys, writeText } from "./helpers/composed-text";
 
 const DAY_MS = 86_400_000;
 const NOW = new Date("2026-10-07T12:00:00Z");
-const messages = serverMessages("en-GB");
 
 function row(overrides: Partial<DirectoryRow>): DirectoryRow {
   return {
@@ -127,11 +125,11 @@ describe("dashboard headline and attention queue", () => {
       key: "saas.text.value",
       params: { value: { type: "money", value: 164_600, currency: "EUR" } },
     });
-    expect(messages.compose(mrr!.detail!)).toContain("$100.00");
+    expect(writeText(mrr!.detail!)).toContain("$100.00");
   });
 
   it("shows one card per queue that holds something, in the order of urgency", () => {
-    const cards = attentionCards(messages, {
+    const cards = attentionCards({
       summary,
       complimentaryEnding: [
         { tenantId: "e", name: "Globex", at: new Date("2026-10-10T00:00:00Z") },
@@ -154,16 +152,16 @@ describe("dashboard headline and attention queue", () => {
       "complimentary_ending",
       "open_invoices",
     ]);
-    expect(cards[0]?.title).toBe("1 workspace past due");
-    expect(cards[1]?.description).toBe("Globex on 10 Oct");
-    expect(cards[2]?.description).toBe("€321.50 awaiting payment");
+    expect(writeText(cards[0]?.title)).toBe("1 workspace past due");
+    expect(writeText(cards[1]?.description)).toBe("Globex on 10 Oct");
+    expect(writeText(cards[2]?.description)).toBe("€321.50 awaiting payment");
     expect(cards[0]?.to).toBe(
       "/modules/saas/customers/workspaces?tab=past_due",
     );
   });
 
   it("shows nothing when every queue is empty", () => {
-    const cards = attentionCards(messages, {
+    const cards = attentionCards({
       summary: summariseDirectory([row({})], NOW, "EUR"),
       complimentaryEnding: [],
       migrations: {
@@ -200,7 +198,7 @@ describe("dashboard headline and attention queue", () => {
         params: { name: "Globex", date: { type: "date", format: "day" } },
       },
     });
-    expect(messages.compose(items[2]!.detail!)).toBe("Globex 10 Oct");
+    expect(writeText(items[2]!.detail!)).toBe("Globex 10 Oct");
   });
 
   it("lists every status in its own tone, linking to its tab", () => {
@@ -215,13 +213,15 @@ describe("dashboard headline and attention queue", () => {
   });
 
   it("ranks the plans by the MRR they bring", () => {
-    const items = plansByMrrItems(messages, ROWS, "EUR");
+    const items = plansByMrrItems(ROWS, "EUR");
 
     expect(items.map((item) => [item.title, item.value])).toEqual([
       ["Business", 1_127],
       ["Pro", 519],
     ]);
-    expect(items[1]?.description).toBe("2 workspaces · €29.00 / month");
+    expect(writeText(items[1]?.description)).toBe(
+      "2 workspaces · €29.00 / month",
+    );
   });
 });
 

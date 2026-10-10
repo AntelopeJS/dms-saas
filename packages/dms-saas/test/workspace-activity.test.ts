@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { Invoice } from "../src/db";
-import { serverMessages } from "../src/i18n/server-messages";
 import {
   type ActivitySources,
   buildActivityFeed,
@@ -8,7 +7,6 @@ import {
 } from "../src/metrics/activity";
 import type { OperatorAction } from "../src/operator-actions/db/operator-action.table";
 
-const messages = serverMessages("en-GB");
 const linkOf = (tenantId: string): string => `/workspaces/${tenantId}`;
 
 const SOURCES: ActivitySources = {
@@ -72,7 +70,6 @@ describe("activity feed", () => {
     const items = buildActivityFeed(SOURCES, {
       kind: "all",
       limit: 10,
-      messages,
       linkOf,
     });
 
@@ -87,19 +84,29 @@ describe("activity feed", () => {
     const [credit, paid] = buildActivityFeed(SOURCES, {
       kind: "all",
       limit: 10,
-      messages,
       linkOf,
     });
 
     expect(paid).toMatchObject({
       title: "$saas.activity.platform.invoice_paid",
       params: { number: "INV-0941", workspace: "Northwind" },
-      meta: ["€1,352.40"],
+      meta: [
+        {
+          key: "saas.text.value",
+          params: { value: { type: "money", value: 135_240, currency: "EUR" } },
+        },
+      ],
       to: "/workspaces/t1",
     });
     expect(credit).toMatchObject({
       title: "$saas.activity.platform.balance_credited",
-      meta: ["€49.00", "$saas.activity.by_operator"],
+      meta: [
+        {
+          key: "saas.text.value",
+          params: { value: { type: "money", value: 4_900, currency: "EUR" } },
+        },
+        "$saas.activity.by_operator",
+      ],
       params: { operator: "camille@ops.test" },
     });
   });
@@ -108,7 +115,6 @@ describe("activity feed", () => {
     const items = buildActivityFeed(SOURCES, {
       kind: "all",
       limit: 10,
-      messages,
     });
 
     expect(items[1]).toMatchObject({
@@ -121,12 +127,10 @@ describe("activity feed", () => {
     const billing = buildActivityFeed(SOURCES, {
       kind: "billing",
       limit: 10,
-      messages,
     });
     const lifecycle = buildActivityFeed(SOURCES, {
       kind: "lifecycle",
       limit: 10,
-      messages,
     });
 
     expect(billing.map((item) => item.id)).toEqual([
@@ -137,9 +141,9 @@ describe("activity feed", () => {
   });
 
   it("cuts the feed at its limit", () => {
-    expect(
-      buildActivityFeed(SOURCES, { kind: "all", limit: 1, messages }),
-    ).toHaveLength(1);
+    expect(buildActivityFeed(SOURCES, { kind: "all", limit: 1 })).toHaveLength(
+      1,
+    );
   });
 
   it("reads an unknown kind as everything", () => {
