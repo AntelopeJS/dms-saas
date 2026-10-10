@@ -7,77 +7,78 @@ import {
   Post,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
-import { GetModel, Model } from "@antelopejs/interface-database-decorators";
+import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
-import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
-import type { NavCardItem } from "@antelopejs/interface-dms/base";
-import { TenantModel } from "@antelopejs/interface-dms/db";
+import type { User } from "@antelopejs/interface-dms/auth/db";
+import type {
+  ActivityFeedItem,
+  BannerContent,
+  KeyValueListItem,
+  NavCardItem,
+  StatGroupItem,
+} from "@antelopejs/interface-dms/base";
+import type { ConfirmDialogSerialized } from "@antelopejs/interface-dms/base/table-view";
+import { type PlanMigration, PlanMigrationModel } from "../../db";
 import {
-  type PlanMigration,
-  PlanMigrationModel,
-  PlanModel,
-  TenantSubscriptionModel,
-} from "../../db";
-import {
-  type MigrationAbilities,
-  type MigrationTotals,
-  type MigrationWorkspaceView,
   migrationAbilities,
   migrationTotals,
-  migrationWorkspaces,
 } from "../../plans/migration-detail";
-import { getStripeClient, isStripeConfigured } from "../../stripe/client";
+import {
+  migrationChangeItems,
+  migrationHeader,
+  migrationJournalItems,
+  migrationTotalItems,
+} from "../../plans/migration-blocks";
+import {
+  RECONCILE_NOTE_FIELD,
+  reconcileDialog,
+  resolveDialog,
+  retryDialog,
+} from "../../plans/migration-dialogs";
+import {
+  type MigrationWorkspaceRow,
+  filterWorkspaceRows,
+  stripeReadingItems,
+} from "../../plans/migration-workspaces";
+import {
+  CONTENT_LANGUAGE_HEADER,
+  requestLocale,
+} from "../../utils/content-language";
 import {
   type UncertainResolution,
   reconcileMigration,
   resolveUncertainWorkspace,
   retryFailedPlanMigrationWorkspaces,
 } from "../../workers";
+import {
+  loadFeatureNames,
+  loadMigrationContext,
+  loadWorkspaceRows,
+  planRef,
+  readStripe,
+  uncertainView,
+} from "./plan-migration-context";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const NOTE_MAX_LENGTH = 500;
-const NOTE_FIELD = "note";
 const NOTE_REQUIRED = "$saas.errors.migration.note_required";
 const RESOLUTIONS = new Set<UncertainResolution>(["moved", "not_moved"]);
 const MIGRATIONS_PAGE = "/modules/saas/catalog/plan-migrations";
+const MIGRATIONS_API = "/api/saas/plan-migrations";
+const URLS = { api: MIGRATIONS_API, list: MIGRATIONS_PAGE };
 const TEXTS = "$saas.catalog.migrations";
 
-/** A plan a migration moves from or to. */
-interface MigrationPlanRef {
-  _id: string;
-  name: string;
+/** What a list block (`StatGroup`, `KeyValueList`, …) reads from its route. */
+interface ItemsPayload<T> {
+  items: T[];
 }
 
-/** Everything the migration detail shows. */
-interface MigrationDetail {
-  _id: string;
-  status: PlanMigration["status"];
-  reason: string | null;
-  from: MigrationPlanRef;
-  to: MigrationPlanRef;
-  createdAt: Date;
-  completedAt: Date | null;
-  startedBy: string;
-  notifyMembers: boolean;
-  totals: MigrationTotals;
-  abilities: MigrationAbilities;
-  permissions: { added: string[]; removed: string[] };
-  reconciliation: {
-    at: Date;
-    by: string;
-    note: string;
-  } | null;
-  workspaces: MigrationWorkspaceView[];
-}
-
-/** Which plan Stripe bills a workspace on, next to the DMS's. */
-interface StripeReading {
-  stripeSubscriptionId: string | null;
-  stripePlan: "source" | "target" | "other" | "none" | "unavailable";
-  stripePlanName: string | null;
-  dmsPlanName: string | null;
+/** What a source table reads from its route. */
+interface RowsPayload<T> {
+  results: T[];
+  total: number;
 }
 
 interface ResolveBody {
@@ -88,106 +89,22 @@ interface ReconcileBody {
   note?: string;
 }
 
-async function userName(userId: string | null | undefined): Promise<string> {
-  if (!userId) return "";
-  const user = await GetModel(UserModel).get(userId);
-  return user?.name || user?.email || userId;
-}
-
-async function planRef(
-  planId: string,
-  stored: string | null | undefined,
-): Promise<MigrationPlanRef> {
-  if (stored) return { _id: planId, name: stored };
-  const plan = await GetModel(PlanModel).get(planId);
-  return { _id: planId, name: plan?.name ?? planId };
-}
-
-async function workspaceNames(
-  tenantIds: string[],
-): Promise<Map<string, string>> {
-  const tenants = await Promise.all(
-    tenantIds.map((id) => GetModel(TenantModel).get(id)),
+function assertResolution(value: unknown): UncertainResolution {
+  const resolution = value as UncertainResolution;
+  assert(
+    RESOLUTIONS.has(resolution),
+    HTTP_BAD_REQUEST,
+    "saas.errors.migration.invalid_resolution",
   );
-  return new Map(
-    tenantIds.map((id, index) => [id, tenants[index]?.name ?? id]),
-  );
+  return resolution;
 }
 
-async function reconciliationOf(
-  migration: PlanMigration,
-): Promise<MigrationDetail["reconciliation"]> {
-  if (!migration.reconciledAt) return null;
-  return {
-    at: migration.reconciledAt,
-    by: await userName(migration.reconciledBy),
-    note: migration.reconciliationNote ?? "",
-  };
-}
-
-function capturedTenantIds(migration: PlanMigration): string[] {
-  return (
-    migration.snapshot?.tenantIds ??
-    (migration.tenantOutcomes ?? []).map((row) => row.tenantId)
-  );
-}
-
-async function describeMigration(
-  migration: PlanMigration,
-): Promise<MigrationDetail> {
-  const totals = migrationTotals(migration);
-  const [from, to, startedBy, names, reconciliation] = await Promise.all([
-    planRef(migration.fromPlanId, migration.fromPlanName),
-    planRef(migration.toPlanId, migration.toPlanName),
-    userName(migration.initiatedBy),
-    workspaceNames(capturedTenantIds(migration)),
-    reconciliationOf(migration),
-  ]);
-  return {
-    _id: migration._id,
-    status: migration.status,
-    reason: migration.reason ?? null,
-    from,
-    to,
-    createdAt: migration.createdAt,
-    completedAt: migration.completedAt ?? null,
-    startedBy,
-    notifyMembers: migration.notifyMembers,
-    totals,
-    abilities: migrationAbilities(migration, totals),
-    permissions: {
-      added: migration.permissionDiff?.added ?? [],
-      removed: migration.permissionDiff?.removed ?? [],
-    },
-    reconciliation,
-    workspaces: migrationWorkspaces(migration, names),
-  };
-}
-
-async function planByStripePrice(
-  priceId: string,
-): Promise<MigrationPlanRef | null> {
-  const plans = await GetModel(PlanModel).findNotDeleted();
-  const plan = plans.find(
-    (row) => row.paymentProviderRefs?.stripePriceId === priceId,
-  );
-  return plan ? { _id: plan._id, name: plan.name } : null;
-}
-
-function stripeSide(
-  migration: PlanMigration,
-  plan: MigrationPlanRef | null,
-): StripeReading["stripePlan"] {
-  if (!plan) return "other";
-  if (plan._id === migration.toPlanId) return "target";
-  if (plan._id === migration.fromPlanId) return "source";
-  return "other";
-}
-
-/** Settles, retries and closes plan migrations; reads one in full. */
-export class SaasPlanMigrationsController extends Controller(
-  "/api/saas/plan-migrations",
-) {
+/**
+ * Reads, settles, retries and closes plan migrations: every block of a
+ * migration's detail page reads its route here, and every action it offers
+ * posts here.
+ */
+export class SaasPlanMigrationsController extends Controller(MIGRATIONS_API) {
   @Model(PlanMigrationModel)
   declare planMigrationModel: PlanMigrationModel;
 
@@ -197,11 +114,15 @@ export class SaasPlanMigrationsController extends Controller(
     return migration;
   }
 
+  private async context(id: string) {
+    return loadMigrationContext(await this.load(id));
+  }
+
   /** One card per migration waiting for an operator, for the list's head. */
   @Get("/attention")
   async attention(
     @AuthOwnerOnly() _user: User,
-  ): Promise<{ items: NavCardItem[] }> {
+  ): Promise<ItemsPayload<NavCardItem>> {
     const rows = await this.planMigrationModel.table
       .getAll("needs_attention", "stage")
       .run();
@@ -212,37 +133,98 @@ export class SaasPlanMigrationsController extends Controller(
     return { items };
   }
 
-  @Get("/:id")
-  async detail(
+  @Get("/:id/header")
+  async header(
     @AuthOwnerOnly() _user: User,
     @Parameter("id") id: string,
-  ): Promise<MigrationDetail> {
-    return describeMigration(await this.load(id));
+  ): Promise<BannerContent> {
+    return migrationHeader(await this.context(id), URLS);
   }
 
-  /** What Stripe bills an uncertain workspace on, to settle it by hand. */
+  @Get("/:id/totals")
+  async totals(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("id") id: string,
+  ): Promise<ItemsPayload<StatGroupItem>> {
+    return { items: migrationTotalItems(await this.context(id)) };
+  }
+
+  /** The captured workspaces; `filter_group=is:attention` for the tab. */
+  @Get("/:id/workspaces")
+  async workspaces(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("id") id: string,
+    @Parameter("filter_group", "query") group: unknown,
+  ): Promise<RowsPayload<MigrationWorkspaceRow>> {
+    const rows = await loadWorkspaceRows(await this.context(id));
+    const results = filterWorkspaceRows(
+      rows,
+      typeof group === "string" ? group : null,
+    );
+    return { results, total: results.length };
+  }
+
+  @Get("/:id/changes")
+  async changes(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("id") id: string,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+  ): Promise<ItemsPayload<KeyValueListItem>> {
+    const [context, names] = await Promise.all([
+      this.context(id),
+      loadFeatureNames(requestLocale(language)),
+    ]);
+    return { items: migrationChangeItems(context, names) };
+  }
+
+  @Get("/:id/journal")
+  async journal(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("id") id: string,
+  ): Promise<ItemsPayload<ActivityFeedItem>> {
+    return { items: migrationJournalItems(await this.context(id)) };
+  }
+
+  /** What Stripe and the DMS each say about a workspace, read now. */
   @Get("/:id/workspaces/:tenantId/stripe")
   async stripeReading(
     @AuthOwnerOnly() _user: User,
     @Parameter("id") id: string,
     @Parameter("tenantId") tenantId: string,
-  ): Promise<StripeReading> {
-    const migration = await this.load(id);
-    const subscription = await GetModel(
-      TenantSubscriptionModel,
-      tenantId,
-    ).findOne();
-    const dmsPlan = subscription?.planId
-      ? await planRef(subscription.planId, null)
-      : null;
-    const reading: StripeReading = {
-      stripeSubscriptionId: subscription?.stripeSubscriptionId ?? null,
-      stripePlan: "none",
-      stripePlanName: null,
-      dmsPlanName: dmsPlan?.name ?? null,
-    };
-    if (!reading.stripeSubscriptionId) return reading;
-    return readStripePlan(migration, reading);
+  ): Promise<ItemsPayload<KeyValueListItem>> {
+    const reading = await readStripe(await this.load(id), tenantId);
+    return { items: stripeReadingItems(reading) };
+  }
+
+  @Get("/:id/dialogs/retry")
+  async retryConfirmation(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("id") id: string,
+  ): Promise<ConfirmDialogSerialized> {
+    return retryDialog(await this.context(id));
+  }
+
+  @Get("/:id/dialogs/reconcile")
+  async reconcileConfirmation(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("id") id: string,
+  ): Promise<ConfirmDialogSerialized> {
+    return reconcileDialog(await this.context(id));
+  }
+
+  /** "Mark Pied Piper as moved?", with Stripe's reading taken now. */
+  @Get("/:id/workspaces/:tenantId/dialogs/:resolution")
+  async resolveConfirmation(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("id") id: string,
+    @Parameter("tenantId") tenantId: string,
+    @Parameter("resolution") resolution: string,
+  ): Promise<ConfirmDialogSerialized> {
+    const kind = assertResolution(resolution);
+    const context = await this.context(id);
+    const view = uncertainView(context, tenantId);
+    const reading = await readStripe(context.migration, tenantId);
+    return resolveDialog(context, view, kind, reading);
   }
 
   @Post("/:id/workspaces/:tenantId/resolve")
@@ -252,16 +234,10 @@ export class SaasPlanMigrationsController extends Controller(
     @Parameter("tenantId") tenantId: string,
     @JSONBody() body: ResolveBody,
   ): Promise<{ _id: string }> {
-    const resolution = body.resolution as UncertainResolution;
-    assert(
-      RESOLUTIONS.has(resolution),
-      HTTP_BAD_REQUEST,
-      "saas.errors.migration.invalid_resolution",
-    );
     await resolveUncertainWorkspace({
       migrationId: id,
       tenantId,
-      resolution,
+      resolution: assertResolution(body.resolution),
       operatorId: user._id,
     });
     return { _id: id };
@@ -297,34 +273,11 @@ export class SaasPlanMigrationsController extends Controller(
     if (!note || note.length > NOTE_MAX_LENGTH) {
       throw new HTTPResult(HTTP_BAD_REQUEST, {
         message: NOTE_REQUIRED,
-        field: NOTE_FIELD,
+        field: RECONCILE_NOTE_FIELD,
       });
     }
     await reconcileMigration({ migrationId: id, operatorId: user._id, note });
     return { _id: id };
-  }
-}
-
-async function readStripePlan(
-  migration: PlanMigration,
-  reading: StripeReading,
-): Promise<StripeReading> {
-  if (!isStripeConfigured() || !reading.stripeSubscriptionId) {
-    return { ...reading, stripePlan: "unavailable" };
-  }
-  try {
-    const subscription = await getStripeClient().subscriptions.retrieve(
-      reading.stripeSubscriptionId,
-    );
-    const priceId = subscription.items.data[0]?.price.id;
-    const plan = priceId ? await planByStripePrice(priceId) : null;
-    return {
-      ...reading,
-      stripePlan: stripeSide(migration, plan),
-      stripePlanName: plan?.name ?? null,
-    };
-  } catch {
-    return { ...reading, stripePlan: "unavailable" };
   }
 }
 

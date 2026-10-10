@@ -1,7 +1,9 @@
-import type {
-  PlanMigration,
-  PlanMigrationTenantOutcome,
-  PlanMigrationTenantStatus,
+import type { Tone } from "@antelopejs/interface-dms/base";
+import {
+  PLAN_MIGRATION_TENANT_STATUSES,
+  type PlanMigration,
+  type PlanMigrationTenantOutcome,
+  type PlanMigrationTenantStatus,
 } from "../db";
 
 /** Outcomes an operator must settle by reading Stripe. */
@@ -11,15 +13,35 @@ const UNCERTAIN_STATUSES = new Set<PlanMigrationTenantStatus>([
 ]);
 const EXECUTING_STATUSES = new Set(["pending", "running"]);
 
+/** Where a captured workspace stands, `pending` until the run reaches it. */
+export type MigrationWorkspaceStatus = PlanMigrationTenantStatus | "pending";
+
+/** Every state a captured workspace can be listed in. */
+export const MIGRATION_WORKSPACE_STATUSES: readonly MigrationWorkspaceStatus[] =
+  ["pending", ...PLAN_MIGRATION_TENANT_STATUSES];
+
+/** One colour per workspace outcome, in the migration family's spirit. */
+export const MIGRATION_WORKSPACE_TONES: Record<MigrationWorkspaceStatus, Tone> =
+  {
+    pending: "neutral",
+    running: "info",
+    succeeded: "success",
+    reconciliation_required: "error",
+    failed: "warning",
+    kept: "neutral",
+  };
+
 /** One captured workspace, as the migration detail lists it. */
 export interface MigrationWorkspaceView {
   tenantId: string;
   name: string;
-  status: PlanMigrationTenantStatus | "pending";
+  status: MigrationWorkspaceStatus;
   error: string | null;
   attempt: number;
   updatedAt: Date | null;
   isUncertain: boolean;
+  /** Operator who settled an uncertain outcome by hand. */
+  resolvedBy: string | null;
 }
 
 /** The counts heading a migration detail. */
@@ -149,8 +171,7 @@ export function migrationWorkspaces(
   const tenantIds = migration.snapshot?.tenantIds ?? [...outcomes.keys()];
   const rows = tenantIds.map((tenantId) => {
     const outcome = outcomes.get(tenantId);
-    const status: MigrationWorkspaceView["status"] =
-      outcome?.status ?? "pending";
+    const status: MigrationWorkspaceStatus = outcome?.status ?? "pending";
     return {
       tenantId,
       name: names.get(tenantId) ?? tenantId,
@@ -158,6 +179,7 @@ export function migrationWorkspaces(
       error: outcome?.error ?? null,
       attempt: outcome?.attempt ?? 0,
       updatedAt: outcomeTime(migration, outcome),
+      resolvedBy: outcome?.resolvedBy ?? null,
       isUncertain:
         isSettled &&
         UNCERTAIN_STATUSES.has(status as PlanMigrationTenantStatus),
@@ -168,4 +190,37 @@ export function migrationWorkspaces(
       Number(right.isUncertain) - Number(left.isUncertain) ||
       Number(right.status === "failed") - Number(left.status === "failed"),
   );
+}
+
+/** A plan a migration moves from or to, as its detail names and prices it. */
+export interface MigrationPlanRef {
+  _id: string;
+  name: string;
+  /** Price in major units, when the plan still exists. */
+  price: number | null;
+  currency: string | null;
+}
+
+/** Everything the blocks of a migration's detail page are built from. */
+export interface MigrationDetailContext {
+  migration: PlanMigration;
+  from: MigrationPlanRef;
+  to: MigrationPlanRef;
+  totals: MigrationTotals;
+  abilities: MigrationAbilities;
+  workspaces: MigrationWorkspaceView[];
+  /** Names of the operators the migration mentions, by user id. */
+  people: Map<string, string>;
+}
+
+/** The workspaces an operator must look at: uncertain, then failed. */
+export function needsAttention(view: MigrationWorkspaceView): boolean {
+  return view.isUncertain || view.status === "failed";
+}
+
+/** The first workspace still uncertain, which blocks closing the migration. */
+export function firstUncertain(
+  context: MigrationDetailContext,
+): MigrationWorkspaceView | undefined {
+  return context.workspaces.find((view) => view.isUncertain);
 }
