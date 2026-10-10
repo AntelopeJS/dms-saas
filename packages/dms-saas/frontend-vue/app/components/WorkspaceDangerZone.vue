@@ -145,7 +145,7 @@ onMounted(refresh)
 </script>
 
 <template>
-	<div class="divide-default flex flex-col divide-y">
+	<div class="flex flex-col">
 		<DmsFieldRow
 			:label="$t(`${KEYS}.export.title`)"
 			:description="
