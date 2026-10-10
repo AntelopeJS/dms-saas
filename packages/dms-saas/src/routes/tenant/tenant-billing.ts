@@ -32,6 +32,7 @@ import {
   findMissingBillingIdentityFields,
   parseBillingIdentity,
 } from "../../workspaces/billing-identity";
+import { withBillingIdentityLock } from "../../workspaces/billing-identity-lock";
 import { isComplimentarySubscription } from "../../workspaces/complimentary";
 import {
   fetchPrimaryTaxId,
@@ -234,26 +235,24 @@ export class SaasTenantBillingController extends Controller(
     subscriptionModel: TenantSubscriptionModel,
   ): Promise<BillingInfoResponse> {
     const identity = parseBillingIdentity(body);
-    const info = await billingModel.findOne();
-    const subscription = await subscriptionModel.findOne();
-    await assertCustomerTypeFitsPlan(identity.customerType, subscription);
-    const vatVerificationStatus =
-      subscription?.stripeCustomerId &&
-      !isComplimentarySubscription(subscription)
-        ? await this.syncStripe(
-            subscription.stripeCustomerId,
-            user.name,
-            identity,
-          )
-        : null;
-    const values = buildBillingInfoValues(identity, vatVerificationStatus);
-    await persistBillingInfo(
-      billingModel,
-      info,
-      getRequestTenantId(ctx),
-      values,
-    );
-    const updated = await billingModel.findOne();
-    return toResponse(updated ?? values);
+    const tenantId = getRequestTenantId(ctx);
+    return withBillingIdentityLock(tenantId, async () => {
+      const info = await billingModel.findOne();
+      const subscription = await subscriptionModel.findOne();
+      await assertCustomerTypeFitsPlan(identity.customerType, subscription);
+      const vatVerificationStatus =
+        subscription?.stripeCustomerId &&
+        !isComplimentarySubscription(subscription)
+          ? await this.syncStripe(
+              subscription.stripeCustomerId,
+              user.name,
+              identity,
+            )
+          : null;
+      const values = buildBillingInfoValues(identity, vatVerificationStatus);
+      await persistBillingInfo(billingModel, info, tenantId, values);
+      const updated = await billingModel.findOne();
+      return toResponse(updated ?? values);
+    });
   }
 }

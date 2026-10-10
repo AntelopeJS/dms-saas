@@ -37,6 +37,7 @@ import {
   insertOrUpdateById,
   stripeSecondsToDate as optionalStripeDate,
 } from "../utils";
+import { withBillingIdentityLock } from "../workspaces/billing-identity-lock";
 import { getStripeClient } from "./client";
 import {
   fetchPrimaryTaxId,
@@ -392,7 +393,16 @@ export async function handleCustomerUpdated(
   const customer = event.data.object as Stripe.Customer;
   const tenant = await findTenantByCustomerId(customer.id);
   if (!tenant) return;
-  const billingInfoModel = GetModel(TenantBillingInfoModel, tenant._id);
+  await withBillingIdentityLock(tenant._id, () =>
+    mirrorCustomerBilling(tenant._id, customer),
+  );
+}
+
+async function mirrorCustomerBilling(
+  tenantId: string,
+  customer: Stripe.Customer,
+): Promise<void> {
+  const billingInfoModel = GetModel(TenantBillingInfoModel, tenantId);
   const existing = await billingInfoModel.findOne();
   if (!existing) return;
   const isBusiness = existing.customerType === BUSINESS_CUSTOMER_TYPE;
