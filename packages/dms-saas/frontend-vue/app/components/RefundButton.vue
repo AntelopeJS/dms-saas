@@ -26,9 +26,10 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 }
 // No guarantee to show: switched off by the platform, or nothing paid on Stripe.
 const HIDDEN_REASONS = new Set(['not_enabled', 'no_subscription'])
+const REFUNDED_REASON = 'already_processed'
 const STATE_BY_REASON: Record<string, GuaranteeState> = {
 	window_expired: 'ended',
-	already_processed: 'refunded',
+	[REFUNDED_REASON]: 'refunded',
 	no_invoice: 'not_started',
 }
 
@@ -48,9 +49,12 @@ const isBlocked = ref(false)
 const isLoading = ref(true)
 const loadFailed = ref(false)
 
+// A refund blocks the workspace (it cancels the subscription): a refunded
+// guarantee says so before the access gate is mentioned.
 const state = computed<GuaranteeState | null>(() => {
-	if (isBlocked.value) return 'blocked'
 	const current = eligibility.value
+	if (current?.reason === REFUNDED_REASON) return 'refunded'
+	if (isBlocked.value) return 'blocked'
 	if (!current) return null
 	if (current.eligible) return 'open'
 	if (HIDDEN_REASONS.has(current.reason ?? '')) return null
@@ -121,13 +125,13 @@ async function loadEligibility(): Promise<void> {
 	}
 }
 
-/** The eligibility read is owner-only and closed while the access gate
- * blocks the workspace: the card says so instead of collecting a 403. */
+/** The eligibility read is owner-only; it stays open while the access gate
+ * blocks the workspace, so a refunded guarantee is still told apart. */
 async function loadIfOffered(): Promise<void> {
 	const access = await loadWorkspaceAccess()
 	isOwner.value = !!access?.isTenantOwner
 	isBlocked.value = !!access?.blocked
-	if (!isOwner.value || isBlocked.value) {
+	if (!isOwner.value) {
 		isLoading.value = false
 		return
 	}

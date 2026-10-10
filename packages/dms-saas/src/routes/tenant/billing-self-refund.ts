@@ -255,9 +255,14 @@ async function issueRefundAndCancel(
 export class SaasBillingSelfRefundController extends Controller(
   "/api/saas/billing",
 ) {
+  /**
+   * Read under the access gate too: once the refund cancelled the
+   * subscription the workspace is blocked, and the money-back card still has
+   * to say when it was refunded.
+   */
   @Get("/refund-eligibility")
   async getRefundEligibility(
-    @AuthTenantOwner() _user: User,
+    @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Model(BillingSettingsModel) billingSettingsModel: BillingSettingsModel,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
