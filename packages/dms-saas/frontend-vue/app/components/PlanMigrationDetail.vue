@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-	computed,
-	h,
-	onBeforeUnmount,
-	onMounted,
-	ref,
-	resolveComponent,
-} from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
 	attentionWorkspaces,
 	isMigrationLive,
@@ -19,6 +12,7 @@ import {
 const REFRESH_INTERVAL_MS = 4_000
 const ROWS_PREVIEW = 8
 const NOTE_MAX_LENGTH = 500
+const NOTE_FIELD = 'note'
 
 const props = defineProps<{
 	routeParams?: Record<string, string>
@@ -240,10 +234,6 @@ async function retry(): Promise<void> {
 async function reconcile(): Promise<void> {
 	const current = migration.value
 	if (!current) return
-	const note = ref('')
-	const noteError = ref<string | undefined>(undefined)
-	const UFormField = resolveComponent('UFormField')
-	const UTextarea = resolveComponent('UTextarea')
 	await confirm({
 		title: t(
 			'saas.catalog.migrations.reconcile.title',
@@ -256,39 +246,30 @@ async function reconcile(): Promise<void> {
 		color: 'warning',
 		icon: 'i-ph-check-square',
 		confirmLabel: t('saas.catalog.migrations.reconcile.confirm'),
-		body: () =>
-			h(
-				UFormField,
-				{
-					label: t('saas.catalog.migrations.reconcile.note'),
-					required: true,
-					error: noteError.value,
-				},
-				() =>
-					h(UTextarea, {
-						modelValue: note.value,
-						'onUpdate:modelValue': (value: string) => {
-							note.value = value
-							noteError.value = undefined
-						},
+		// A note of blanks passes the dialog's required check: the server
+		// refuses it under the field.
+		fields: [
+			{
+				id: NOTE_FIELD,
+				label: t('saas.catalog.migrations.reconcile.note'),
+				type: 'string',
+				required: true,
+				component: {
+					componentName: 'DmsTextarea',
+					options: {
 						rows: 3,
 						maxlength: NOTE_MAX_LENGTH,
-						class: 'w-full',
 						placeholder: t(
 							'saas.catalog.migrations.reconcile.note_placeholder',
 						),
-					}),
-			),
-		validate: () => {
-			noteError.value = note.value.trim()
-				? undefined
-				: t('saas.catalog.migrations.reconcile.note_required')
-			return !noteError.value
-		},
-		onConfirm: async () => {
+					},
+				},
+			},
+		],
+		onConfirm: async (values) => {
 			await $authFetch(`${base.value}/reconcile`, {
 				method: 'POST',
-				body: { note: note.value.trim() },
+				body: { note: String(values[NOTE_FIELD] ?? '').trim() },
 			})
 			await load()
 		},

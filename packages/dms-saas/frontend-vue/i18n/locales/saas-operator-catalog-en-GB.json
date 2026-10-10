@@ -459,7 +459,6 @@
 					"description": "They stay on {from} and keep being billed as today. {from} can’t be deleted while a workspace uses it.",
 					"note": "Note for the audit log",
 					"note_placeholder": "Why these workspaces stay where they are",
-					"note_required": "Write a note for the audit log.",
 					"confirm": "Mark as reconciled"
 				}
 			},

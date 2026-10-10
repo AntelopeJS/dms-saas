@@ -459,7 +459,6 @@
 					"description": "Ils restent sur {from} et continuent d’être facturés comme aujourd’hui. {from} ne peut pas être supprimée tant qu’un espace de travail l’utilise.",
 					"note": "Note pour le journal d’audit",
 					"note_placeholder": "Pourquoi ces espaces de travail restent où ils sont",
-					"note_required": "Écrivez une note pour le journal d’audit.",
 					"confirm": "Marquer comme rapprochée"
 				}
 			},

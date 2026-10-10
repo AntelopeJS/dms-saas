@@ -8,6 +8,8 @@ import {
 } from '../build/composables/useCreditNoteDraft'
 import { useCreditNoteTexts } from '../build/composables/useCreditNoteTexts'
 import CreditNoteInvoiceSummary from '../build/components/CreditNoteInvoiceSummary.vue'
+import FormFieldRow from '../build/components/FormFieldRow.vue'
+import FormRows from '../build/components/FormRows.vue'
 
 interface InvoiceRowData {
 	_id?: string
@@ -207,83 +209,98 @@ function submit(): Promise<void> | undefined {
 			/>
 
 			<form v-else class="flex flex-col gap-5" @submit.prevent="submit">
-				<UFormField :label="$t(`${TEXT}.mode_label`)">
-					<URadioGroup
-						v-model="mode"
-						variant="card"
-						:items="texts.modeItems.value"
-						class="w-full"
-					/>
-				</UFormField>
+				<FormRows has-required>
+					<FormFieldRow
+						:label="$t(`${TEXT}.mode_label`)"
+						:labels-control="false"
+					>
+						<DmsChoiceCards v-model="mode" :items="texts.modeItems.value" />
+					</FormFieldRow>
 
-				<UFormField
-					:label="$t(`${TEXT}.amount`)"
-					:help="
-						$t(`${TEXT}.amount_help`, {
-							max: texts.money(preview.creditable),
-						})
-					"
-					:error="ceilingError"
-					required
-				>
-					<div class="flex flex-wrap items-center gap-3">
-						<UFieldGroup class="w-56">
-							<UInputNumber
-								v-model="amount"
-								:min="0"
-								:step="0.01"
-								:increment="false"
-								:decrement="false"
-								:format-options="{
-									style: 'currency',
-									currency: draft.currency.value.toUpperCase(),
-								}"
-								class="flex-1"
+					<FormFieldRow
+						:label="$t(`${TEXT}.amount`)"
+						:help="
+							$t(`${TEXT}.amount_help`, {
+								max: texts.money(preview.creditable),
+							})
+						"
+						:error="ceilingError"
+						required
+					>
+						<template #default="{ id }">
+							<div class="flex flex-wrap items-center gap-3">
+								<UFieldGroup class="w-56">
+									<UInputNumber
+										:id="id"
+										v-model="amount"
+										:min="0"
+										:step="0.01"
+										:increment="false"
+										:decrement="false"
+										:format-options="{
+											style: 'currency',
+											currency: draft.currency.value.toUpperCase(),
+										}"
+										class="flex-1"
+									/>
+									<UBadge
+										color="neutral"
+										variant="outline"
+										size="lg"
+										:label="draft.currency.value.toUpperCase()"
+									/>
+								</UFieldGroup>
+								<UButton
+									variant="link"
+									color="primary"
+									size="sm"
+									@click="draft.useMax"
+								>
+									{{
+										$t(`${TEXT}.use_max`, {
+											max: texts.money(preview.creditable),
+										})
+									}}
+								</UButton>
+							</div>
+						</template>
+					</FormFieldRow>
+
+					<FormFieldRow :label="$t(`${TEXT}.reason`)" required>
+						<template #default="{ id }">
+							<DmsSelect
+								:id="id"
+								v-model="reason"
+								:items="reasonItems"
+								:deselectable="false"
+								:placeholder="$t(`${TEXT}.reason_placeholder`)"
+								class="w-full"
 							/>
-							<UBadge
-								color="neutral"
-								variant="outline"
-								size="lg"
-								:label="draft.currency.value.toUpperCase()"
+						</template>
+					</FormFieldRow>
+
+					<FormFieldRow
+						:label="$t(`${TEXT}.memo`)"
+						:description="$t(`${TEXT}.memo_hint`)"
+						:error="
+							draft.isMemoTooLong.value
+								? $t(`${TEXT}.memo_too_long`, {
+										max: INTERNAL_MEMO_MAX_LENGTH,
+									})
+								: undefined
+						"
+					>
+						<template #default="{ id }">
+							<DmsTextarea
+								:id="id"
+								v-model="memo"
+								:rows="3"
+								autoresize
+								class="w-full"
 							/>
-						</UFieldGroup>
-						<UButton
-							variant="link"
-							color="primary"
-							size="sm"
-							@click="draft.useMax"
-						>
-							{{
-								$t(`${TEXT}.use_max`, {
-									max: texts.money(preview.creditable),
-								})
-							}}
-						</UButton>
-					</div>
-				</UFormField>
-
-				<UFormField :label="$t(`${TEXT}.reason`)" required>
-					<USelect
-						v-model="reason"
-						:items="reasonItems"
-						:placeholder="$t(`${TEXT}.reason_placeholder`)"
-						class="w-full"
-					/>
-				</UFormField>
-
-				<UFormField
-					:label="$t(`${TEXT}.memo`)"
-					:hint="$t(`${TEXT}.memo_hint`)"
-					:error="
-						draft.isMemoTooLong.value
-							? $t(`${TEXT}.memo_too_long`, {
-									max: INTERNAL_MEMO_MAX_LENGTH,
-								})
-							: undefined
-					"
-				>
-					<UTextarea v-model="memo" :rows="3" autoresize class="w-full" />
-				</UFormField>
+						</template>
+					</FormFieldRow>
+				</FormRows>
 
 				<UAlert
 					color="primary"

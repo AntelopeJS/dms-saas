@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import FormFieldRow from '../build/components/FormFieldRow.vue'
+import FormRows from '../build/components/FormRows.vue'
 import {
 	type CatalogFeature,
 	formatPlanAmount,
@@ -494,17 +496,27 @@ onMounted(loadImpact)
 			<template v-else-if="step === 2">
 				<div class="grid gap-5 lg:grid-cols-[1fr_280px]">
 					<div class="flex flex-col gap-4">
-						<UFormField :label="$t('saas.catalog.retire.move_to')">
-							<USelect
-								v-model="targetPlanId"
-								:items="targetItems"
-								:placeholder="$t('saas.catalog.retire.move_to_placeholder')"
-								class="w-full"
-							/>
-							<template v-if="preparation" #hint>
-								{{ $t(`saas.catalog.retire.price_${preparation.price.kind}`) }}
-							</template>
-						</UFormField>
+						<FormRows>
+							<FormFieldRow
+								:label="$t('saas.catalog.retire.move_to')"
+								:help="
+									preparation
+										? $t(`saas.catalog.retire.price_${preparation.price.kind}`)
+										: undefined
+								"
+							>
+								<template #default="{ id }">
+									<DmsSelect
+										:id="id"
+										v-model="targetPlanId"
+										:items="targetItems"
+										:deselectable="false"
+										:placeholder="$t('saas.catalog.retire.move_to_placeholder')"
+										class="w-full"
+									/>
+								</template>
+							</FormFieldRow>
+						</FormRows>
 
 						<div v-if="isPreparing" class="flex flex-col gap-2">
 							<USkeleton v-for="index in 3" :key="index" class="h-8 w-full" />
@@ -619,7 +631,7 @@ onMounted(loadImpact)
 					</div>
 
 					<div class="flex flex-col gap-3">
-						<USwitch
+						<DmsSwitch
 							v-model="notifyOwners"
 							:label="$t('saas.catalog.retire.notify')"
 							:description="
@@ -739,21 +751,27 @@ onMounted(loadImpact)
 						$t('saas.catalog.retire.confirm_description', { name: plan.name })
 					}}
 				</p>
-				<UFormField
-					:label="
-						$t('saas.catalog.retire.type_to_confirm', { slug: plan.slug })
-					"
-					:error="typedError ?? undefined"
-				>
-					<UInput
-						v-model="typed"
-						autocomplete="off"
-						spellcheck="false"
-						class="w-full font-mono"
-						:trailing-icon="isTypedMatch ? 'i-ph-check-circle' : undefined"
-						@keydown.enter="retire"
-					/>
-				</UFormField>
+				<FormRows>
+					<FormFieldRow
+						:label="
+							$t('saas.catalog.retire.type_to_confirm', { slug: plan.slug })
+						"
+						:error="typedError"
+					>
+						<template #default="{ id }">
+							<DmsInputText
+								:id="id"
+								v-model="typed"
+								autocomplete="off"
+								spellcheck="false"
+								class="w-full font-mono"
+								:trailing-icon="isTypedMatch ? 'i-ph-check-circle' : undefined"
+								:ui="{ trailingIcon: 'text-success' }"
+								@keydown.enter="retire"
+							/>
+						</template>
+					</FormFieldRow>
+				</FormRows>
 				<UAlert
 					v-if="submitError"
 					color="error"
