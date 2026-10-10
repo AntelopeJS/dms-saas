@@ -93,10 +93,19 @@ function compareRows(a: MyWorkspaceRow, b: MyWorkspaceRow): number {
 }
 
 /**
- * The workspaces a user belongs to, current first, then by name. A cancelled
- * workspace lives on until the retention cron deletes it, but switching to it
- * only reaches the access-restricted screen, so it is left out.
+ * Whether the switcher lists a workspace. A cancelled workspace lives on until
+ * the retention cron deletes it, but switching to it only reaches the
+ * access-restricted screen, so it is left out, unless the caller is in it:
+ * resubscribing happens there, and an empty switcher hid the way out.
  */
+function isListed(fact: WorkspaceFacts, currentTenantId: string): boolean {
+  return (
+    fact.subscription?.status !== CANCELLED_STATUS ||
+    fact.tenant._id === currentTenantId
+  );
+}
+
+/** The workspaces a user belongs to, current first, then by name. */
 export async function listMyWorkspaces(
   userId: string,
   currentTenantId: string,
@@ -110,9 +119,7 @@ export async function listMyWorkspaces(
     memberships.map((membership) => membership.tenantId),
   );
   const facts = await Promise.all(tenants.map(loadFacts));
-  const live = facts.filter(
-    (fact) => fact.subscription?.status !== CANCELLED_STATUS,
-  );
+  const live = facts.filter((fact) => isListed(fact, currentTenantId));
   const rows = await Promise.all(
     live.map((fact) => toRow(fact, userId, currentTenantId)),
   );

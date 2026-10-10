@@ -291,6 +291,16 @@ describe("my workspaces", () => {
     });
     expect(rows[1]).toMatchObject({ status: "free", isOwner: true });
   });
+
+  it("keeps the cancelled workspace the caller is in", async () => {
+    addWorkspace("acme", "acme", [owner("camille")], { planId: FREE._id });
+    addWorkspace("gone", "Gone", [owner("camille")], { status: "cancelled" });
+
+    const rows = await listMyWorkspaces("camille", "gone");
+
+    expect(rows.map((row) => row._id)).toEqual(["gone", "acme"]);
+    expect(rows[0]).toMatchObject({ status: "cancelled", isCurrent: true });
+  });
 });
 
 describe("workspace overview", () => {
