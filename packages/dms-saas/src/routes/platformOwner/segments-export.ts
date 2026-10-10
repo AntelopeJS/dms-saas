@@ -24,11 +24,10 @@ import {
   loadAllUserProjections,
   type UserProjection,
 } from "../../utils";
+import { CSV_BOM, appendCsvRow } from "../../utils/csv-file";
 
 const HTTP_NOT_FOUND = 404;
 const OWNERS_EXPORT_SCOPE = "saas-segment-owners";
-const FORMULA_PREFIXES = new Set(["=", "+", "-", "@"]);
-const CSV_BOM = "﻿";
 const MAX_GENERATE_PROGRESS = 99;
 const DONE_PROGRESS = 100;
 const MINOR_UNITS_PER_UNIT = 100;
@@ -66,18 +65,6 @@ function slugify(value: string): string {
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-function csvEscape(value: string): string {
-  let str = value;
-  const first = str.charAt(0);
-  if (first && FORMULA_PREFIXES.has(first)) str = `'${str}`;
-  if (/[",\r\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
-  return str;
-}
-
-function appendCsvRow(filePath: string, row: string[]): void {
-  fs.appendFileSync(filePath, `${row.map(csvEscape).join(",")}\r\n`);
 }
 
 /** One CSV row of a matching user: who they are and what they own. */
