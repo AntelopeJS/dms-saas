@@ -436,7 +436,8 @@
 					"show_all": "Afficher {count} de plus",
 					"resolve_first": "Traitez {name} pour pouvoir rapprocher",
 					"mark_reconciled": "Marquer comme rapprochée",
-					"retry_failed": "Relancer les échecs ({count})"
+					"retry_failed": "Relancer les échecs ({count})",
+					"back": "Toutes les migrations"
 				},
 				"resolve": {
 					"moved_title": "Marquer {name} comme déplacé ?",

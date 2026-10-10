@@ -115,7 +115,10 @@ export class SaasPlanMigrationDetailController extends PageController(
   // the migration of the route: blocks fetch fixed URLs, so one component
   // built from the DMS's public components draws the page.
   static migration = CustomComponent("DmsSaasPlanMigrationDetail")
-    .options({ endpoint: PLAN_MIGRATIONS_ENDPOINT })
+    .options({
+      endpoint: PLAN_MIGRATIONS_ENDPOINT,
+      listUrl: PLAN_MIGRATIONS_PAGE_URL,
+    })
     .meta({
       name: `${PERMISSIONS}.migration_detail`,
       description: `${PERMISSIONS}.migration_detail_description`,

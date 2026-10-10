@@ -120,6 +120,18 @@ export function migrationAbilities(
 }
 
 /**
+ * When a workspace reached its state. An outcome stored before outcomes were
+ * timed, or one the run never reached, took its state when the run ended.
+ */
+function outcomeTime(
+  migration: PlanMigration,
+  outcome: PlanMigrationTenantOutcome | undefined,
+): Date | null {
+  if (!outcome) return null;
+  return outcome.updatedAt ?? migration.completedAt ?? null;
+}
+
+/**
  * Every captured workspace with its outcome, the ones needing an operator
  * first. A workspace the executor has not reached yet reads `pending`.
  *
@@ -145,7 +157,7 @@ export function migrationWorkspaces(
       status,
       error: outcome?.error ?? null,
       attempt: outcome?.attempt ?? 0,
-      updatedAt: outcome?.updatedAt ?? null,
+      updatedAt: outcomeTime(migration, outcome),
       isUncertain:
         isSettled &&
         UNCERTAIN_STATUSES.has(status as PlanMigrationTenantStatus),

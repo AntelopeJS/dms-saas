@@ -15,6 +15,7 @@ import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import {
   Column,
+  type ComposedText,
   DefaultDisplays,
   Exported,
   Searchable,
@@ -29,24 +30,34 @@ import {
   PlanMigrationModel,
   PlanModel,
 } from "../../db";
+import { composed } from "../../i18n/composed-text";
+import { migrationTotals } from "../../plans/migration-detail";
 import { statusPillDisplay, statusType } from "../../utils/status-vocabulary";
 
 const TEXTS = "$saas.catalog.migrations";
 const ARROW = "→";
 const LIVE_STATUSES = ["pending", "running"];
-const PROGRESS_COLUMN_SIZE = 180;
-const STATUS_COLUMN_SIZE = 200;
+/** What `migrationTotals` reads off a migration. */
+const TOTALS_FIELDS = [
+  "status",
+  "snapshot",
+  "tenantOutcomes",
+  "totalWorkspaces",
+  "notifyMembers",
+];
+const PROGRESS_COLUMN_SIZE = 170;
+const STATUS_COLUMN_SIZE = 230;
+// Retiring a plan is the only way a migration starts: one stored before the
+// reason was recorded was started that way too, as its detail page reads it.
+const DEFAULT_REASON = "plan_retired";
+const REASON_KEY = "saas.catalog.migrations.reason";
+const PERSON_COLUMN_SIZE = 150;
+const TITLE_COLUMN_SIZE = 250;
+const DATE_COLUMN_SIZE = 140;
 
 const REASON_ITEMS = PLAN_MIGRATION_REASONS.map((value) => ({
   value,
   label: `${TEXTS}.reason.${value}`,
-}));
-
-const REASON_BADGES = PLAN_MIGRATION_REASONS.map((value) => ({
-  field: "reason",
-  equals: value,
-  label: `${TEXTS}.reason.${value}`,
-  tone: "neutral" as const,
 }));
 
 const STAGE_ITEMS = PLAN_MIGRATION_STAGES.map((value) => ({
@@ -104,9 +115,9 @@ export class planMigrationsDataAPI extends DataController(
     type: new DefaultDataTypes.StringType(),
     display: new DefaultDisplays.IdentityDisplay({
       icon: "i-ph-arrows-clockwise",
-      badges: REASON_BADGES,
+      subtitleField: "reasonLabel",
     }),
-    size: 280,
+    size: TITLE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   get title(): Promise<string> {
@@ -139,6 +150,14 @@ export class planMigrationsDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare reason: string | null;
 
+  @Listable(["reason"])
+  @Access(AccessMode.ReadOnly)
+  get reasonLabel(): ComposedText {
+    return composed(
+      `${REASON_KEY}.${migrationOf(this).reason ?? DEFAULT_REASON}`,
+    );
+  }
+
   @Select()
   @Listable()
   @Sortable()
@@ -170,7 +189,7 @@ export class planMigrationsDataAPI extends DataController(
     name: `${TEXTS}.column.progress`,
     type: new DefaultDataTypes.NumberType(),
     display: new DefaultDisplays.ProgressDisplay({
-      doneField: "processedWorkspaces",
+      doneField: "reachedCount",
       totalField: "totalWorkspaces",
       errorField: "notMovedCount",
     }),
@@ -185,10 +204,20 @@ export class planMigrationsDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare totalWorkspaces: number;
 
-  @Listable(["failedWorkspaces"])
+  // The bar draws the failed share inside the done one: done counts every
+  // workspace the run reached, moved or not, and the red end the ones that
+  // did not move (uncertain and unreached ones included).
+  @Listable(TOTALS_FIELDS)
+  @Access(AccessMode.ReadOnly)
+  get reachedCount(): number {
+    const totals = migrationTotals(migrationOf(this));
+    return totals.moved + totals.notMoved;
+  }
+
+  @Listable(TOTALS_FIELDS)
   @Access(AccessMode.ReadOnly)
   get notMovedCount(): number {
-    return migrationOf(this).failedWorkspaces?.length ?? 0;
+    return migrationTotals(migrationOf(this)).notMoved;
   }
 
   @Listable(["initiatedBy"])
@@ -196,6 +225,7 @@ export class planMigrationsDataAPI extends DataController(
     name: `${TEXTS}.column.started_by`,
     type: new DefaultDataTypes.StringType(),
     display: new DefaultDisplays.IdentityDisplay({}),
+    size: PERSON_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   get startedBy(): PromiseLike<string> {
@@ -213,6 +243,7 @@ export class planMigrationsDataAPI extends DataController(
     name: `${TEXTS}.column.started`,
     type: new DefaultDataTypes.DateType(),
     display: new DefaultDisplays.RelativeDateDisplay({ style: "day" }),
+    size: DATE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare createdAt: Date;
@@ -229,6 +260,7 @@ export class planMigrationsDataAPI extends DataController(
       emptyLabel: `${TEXTS}.column.not_finished`,
       emptyTone: "muted",
     }),
+    size: DATE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare completedAt: Date | null;

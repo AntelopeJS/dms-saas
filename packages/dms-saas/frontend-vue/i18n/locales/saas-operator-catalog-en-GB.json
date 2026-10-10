@@ -436,7 +436,8 @@
 					"show_all": "Show {count} more",
 					"resolve_first": "Resolve {name} to mark as reconciled",
 					"mark_reconciled": "Mark as reconciled",
-					"retry_failed": "Retry failed ({count})"
+					"retry_failed": "Retry failed ({count})",
+					"back": "All migrations"
 				},
 				"resolve": {
 					"moved_title": "Mark {name} as moved?",

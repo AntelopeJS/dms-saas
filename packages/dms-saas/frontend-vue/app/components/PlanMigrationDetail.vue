@@ -17,6 +17,7 @@ const NOTE_FIELD = 'note'
 const props = defineProps<{
 	routeParams?: Record<string, string>
 	endpoint?: string
+	listUrl?: string
 }>()
 
 const { $authFetch } = useAuthFetch()
@@ -89,6 +90,19 @@ function formatDate(value: string | null): string {
 		dateStyle: 'medium',
 		timeStyle: 'short',
 	})
+}
+
+const TIME_FORMAT: Intl.DateTimeFormatOptions = { timeStyle: 'short' }
+
+/** "14:31" on the day the migration started, the full date on another one. */
+function formatRowTime(value: string | null): string {
+	if (!value || !migration.value) return formatDate(value)
+	const sameDay =
+		new Date(value).toDateString() ===
+		new Date(migration.value.createdAt).toDateString()
+	return sameDay
+		? new Date(value).toLocaleTimeString(locale.value, TIME_FORMAT)
+		: formatDate(value)
 }
 
 function workspaceStatus(row: MigrationWorkspace) {
@@ -309,6 +323,17 @@ onBeforeUnmount(() => {
 		</DmsCard>
 
 		<template v-else-if="migration">
+			<UButton
+				v-if="listUrl"
+				:to="listUrl"
+				class="self-start"
+				size="xs"
+				color="neutral"
+				variant="link"
+				icon="i-ph-arrow-left"
+			>
+				{{ $t('saas.catalog.migrations.detail.back') }}
+			</UButton>
 			<div class="flex flex-wrap items-center gap-3">
 				<DmsIconWell icon="i-ph-arrows-clockwise" tone="primary" />
 				<div class="min-w-0 flex-1">
@@ -494,7 +519,7 @@ onBeforeUnmount(() => {
 							:label="workspaceStatus(row).label"
 						/>
 						<span class="text-dimmed w-36 text-right text-xs tabular-nums">
-							{{ formatDate(row.updatedAt) }}
+							{{ formatRowTime(row.updatedAt) }}
 						</span>
 					</li>
 				</ul>
@@ -540,6 +565,7 @@ onBeforeUnmount(() => {
 					{{ $t('saas.catalog.migrations.detail.mark_reconciled') }}
 				</UButton>
 				<UButton
+					v-if="migration.totals.failed > 0"
 					icon="i-ph-arrows-clockwise"
 					:disabled="!migration.abilities.canRetry"
 					@click="retry"
