@@ -1,5 +1,10 @@
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
-import { Card, KeyValueList, TableView } from "@antelopejs/interface-dms/base";
+import {
+  Banner,
+  Card,
+  KeyValueList,
+  TableView,
+} from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { tenantBillingPage } from "@antelopejs/interface-dms-saas/pages";
@@ -9,6 +14,7 @@ import { workspaceSettingsCategory } from "../module";
 const KEY_PREFIX = "$saas.tenant_billing";
 const PERMISSION_PREFIX = "$saas.permissions.billing_page";
 const NEXT_INVOICE_ENDPOINT = "/api/saas/tenant/upcoming-invoice";
+const COMPLIMENTARY_BANNER_ENDPOINT = "/api/saas/tenant/complimentary-banner";
 const NEXT_INVOICE_SKELETON_ROWS = 6;
 
 /** Name, description and icon of a block as the roles editor lists it. */
@@ -56,9 +62,9 @@ export class SaasTenantBillingController extends PageController(
   },
   DefaultLayout({ fullWidth: true }),
 ) {
-  static freeAccessBanner = CustomComponent("DmsSaasFreeAccessBanner").meta(
-    permissionMeta("complimentary_access", "i-ph-gift"),
-  );
+  static freeAccessBanner = Banner({
+    fetchUrl: COMPLIMENTARY_BANNER_ENDPOINT,
+  }).meta(permissionMeta("complimentary_access", "i-ph-gift"));
 
   static pastDueAlert = CustomComponent("DmsSaasPastDueAlert").meta(
     permissionMeta("past_due_alert", "i-ph-warning-circle"),

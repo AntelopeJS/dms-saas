@@ -3,8 +3,8 @@ const REVIEW_STATE_KEY = 'saas-plan-comparison-review'
 
 /**
  * The plan change dialog hosted by the plan card, shared so other billing
- * blocks (the payment method card, the complimentary banner) can open it:
- * on Compare, or straight on the Review of one plan.
+ * blocks (the payment method card) can open it: on Compare, or straight on
+ * the Review of one plan.
  */
 export function usePlanComparison() {
 	const isOpen = useDmsState<boolean>(OPEN_STATE_KEY, () => false)

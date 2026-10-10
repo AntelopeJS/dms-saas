@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useWorkspaceName } from '../build/useWorkspaceName'
 import { UPGRADE_QUERY_PARAM } from '../composables/usePlanChangeReview'
@@ -8,6 +8,7 @@ import { BILLING_CHOOSE_PLAN_PARAM } from '../build/public/routes'
 const KEY_PREFIX = 'saas.tenant_billing.plan'
 const MEMBERS_PATH = '/settings/workspace/members'
 const DATA_EXPORT_PATH = '/settings/workspace/data-export'
+const CHOOSE_PLAN_LINK_SELECTOR = `a[href="#${BILLING_CHOOSE_PLAN_PARAM}"]`
 const FREE_STATE = 'free'
 const ACTIVE_STATUS = 'active'
 const TRIALING_STATUS = 'trialing'
@@ -241,10 +242,13 @@ function openUpgrade(plan: OfferedPlanView): void {
 	isUpgradeOpen.value = true
 }
 
+// The page's stock blocks (the complimentary banner, the next invoice) read
+// the plan too: they read their routes again once it changed.
 async function refresh(): Promise<void> {
 	isLoading.value = true
 	await Promise.all([tenantPlan.refresh(), billingStatus.refresh()])
 	isLoading.value = false
+	refreshPageBlocks()
 }
 
 async function runAction(
@@ -396,12 +400,31 @@ async function consumeChoosePlanParam(): Promise<void> {
 	if (canChangePlan.value) comparison.open()
 }
 
+/**
+ * A link to `#choose-plan` on the page (the complimentary banner's "Choose a
+ * plan", a stock banner whose actions are links) opens Compare in place. The
+ * click is taken before the link follows it: the router would visit the page
+ * again and remount every block for an anchor.
+ */
+function openChoosePlanLink(event: MouseEvent): void {
+	const target = event.target instanceof Element ? event.target : null
+	if (!target?.closest(CHOOSE_PLAN_LINK_SELECTOR)) return
+	event.preventDefault()
+	event.stopPropagation()
+	if (isTenantOwner.value) comparison.open()
+}
+
 onMounted(async () => {
+	document.addEventListener('click', openChoosePlanLink, true)
 	await releaseCancelledCheckout()
 	await Promise.all([tenantPlan.load(), billingStatus.load()])
 	isLoading.value = false
 	await consumeUpgradeParam()
 	await consumeChoosePlanParam()
+})
+
+onBeforeUnmount(() => {
+	document.removeEventListener('click', openChoosePlanLink, true)
 })
 </script>
 

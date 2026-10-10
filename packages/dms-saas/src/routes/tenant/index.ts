@@ -1,6 +1,7 @@
 export * from "./billing-pay-invoice";
 export * from "./billing-portal";
 export * from "./billing-self-refund";
+export * from "./complimentary-banner";
 export * from "./data-export";
 export * from "./tenant-billing";
 export * from "./tenant-plan";
