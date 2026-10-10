@@ -81,7 +81,9 @@ function fullDay(
 
 // The list draws no pill beside an amount: the state reads in the detail.
 function paidOn(paidAt: Date | null | undefined): ComposedText | undefined {
-  return paidAt ? composed(PAID_ON_KEY, { date: dateParam(paidAt) }) : undefined;
+  return paidAt
+    ? composed(PAID_ON_KEY, { date: dateParam(paidAt) })
+    : undefined;
 }
 
 function fromMinorUnits(amount: number): number {

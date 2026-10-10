@@ -62,6 +62,10 @@ const PAYMENT_STATUS_TYPE = new DefaultDataTypes.SelectType({
   ],
 });
 
+function paymentStatusRowOf(self: unknown): PaymentStatusRow {
+  return (self as PaymentStatusRowInstance).table;
+}
+
 /**
  * An open invoice Stripe already tried to charge reads "Payment failed" to its
  * owner: "Open" says nothing about the declined card behind it.
@@ -225,7 +229,7 @@ export class tenantInvoicesDataAPI extends DataController(
   })
   @Access(AccessMode.ReadOnly)
   get paymentStatus(): string {
-    return invoicePaymentStatus((this as unknown as PaymentStatusRowInstance).table);
+    return invoicePaymentStatus(paymentStatusRowOf(this));
   }
 
   @Select()
