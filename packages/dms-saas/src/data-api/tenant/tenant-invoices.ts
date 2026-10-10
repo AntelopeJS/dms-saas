@@ -28,9 +28,49 @@ import {
   BillingPeriodType,
   InvoiceLinesType,
   MoneyCentsType,
+  PAYMENT_FAILED_STATUS,
+  statusItems,
+  statusLabelKey,
   statusPillDisplay,
   statusType,
 } from "../../utils";
+
+/** The invoice fields its owner's status is read from. */
+type PaymentStatusRow = Pick<Invoice, "status" | "attemptCount">;
+
+interface PaymentStatusRowInstance {
+  table: PaymentStatusRow;
+}
+
+// Sized so the columns and the inline "Pay invoice" fit the settings
+// page without truncating a header or a pill.
+const NUMBER_COLUMN_SIZE = 120;
+const PERIOD_COLUMN_SIZE = 130;
+const AMOUNT_COLUMN_SIZE = 120;
+const TAX_COLUMN_SIZE = 80;
+const STATUS_COLUMN_SIZE = 190;
+const DATE_COLUMN_SIZE = 120;
+const TENANT_COLUMN = "$saas.tenant_billing.invoices.column";
+
+const PAYMENT_STATUS_TYPE = new DefaultDataTypes.SelectType({
+  items: [
+    ...statusItems("invoice"),
+    {
+      label: statusLabelKey("invoice", PAYMENT_FAILED_STATUS),
+      value: PAYMENT_FAILED_STATUS,
+    },
+  ],
+});
+
+/**
+ * An open invoice Stripe already tried to charge reads "Payment failed" to its
+ * owner: "Open" says nothing about the declined card behind it.
+ */
+function invoicePaymentStatus(row: PaymentStatusRow): string {
+  return row.status === "open" && row.attemptCount
+    ? PAYMENT_FAILED_STATUS
+    : row.status;
+}
 
 /**
  * The columns a customer reads an invoice by — document, period, amounts
@@ -61,12 +101,14 @@ export class tenantInvoicesDataAPI extends DataController(
   declare _id: string;
 
   @Select()
+  @Listable()
   @Sortable()
   @Exported()
   @Column({
     name: "$saas.invoices.column.type",
     type: new BillingDocumentType(),
     filterable: true,
+    isVisible: false,
   })
   @Access(AccessMode.ReadOnly)
   declare documentType: string;
@@ -80,6 +122,7 @@ export class tenantInvoicesDataAPI extends DataController(
     name: "$saas.invoices.column.number",
     type: new DefaultDataTypes.StringType(),
     filterable: true,
+    size: NUMBER_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare number: string | null;
@@ -100,6 +143,7 @@ export class tenantInvoicesDataAPI extends DataController(
   @Column({
     name: "$saas.invoices.column.period",
     type: new BillingPeriodType(),
+    size: PERIOD_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare periodStart: Date | null;
@@ -114,8 +158,9 @@ export class tenantInvoicesDataAPI extends DataController(
   @Sortable()
   @Exported()
   @Column({
-    name: "$saas.invoices.column.total_excl_tax",
+    name: `${TENANT_COLUMN}.excl_vat`,
     type: new MoneyCentsType(),
+    size: AMOUNT_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare subtotal: number;
@@ -124,8 +169,9 @@ export class tenantInvoicesDataAPI extends DataController(
   @Listable()
   @Exported()
   @Column({
-    name: "$saas.invoices.column.tax",
+    name: `${TENANT_COLUMN}.vat`,
     type: new MoneyCentsType(),
+    size: TAX_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare tax: number;
@@ -135,8 +181,9 @@ export class tenantInvoicesDataAPI extends DataController(
   @Sortable()
   @Exported()
   @Column({
-    name: "$saas.invoices.column.total_incl_tax",
+    name: `${TENANT_COLUMN}.total`,
     type: new MoneyCentsType(),
+    size: AMOUNT_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare total: number;
@@ -164,9 +211,22 @@ export class tenantInvoicesDataAPI extends DataController(
     type: statusType("invoice"),
     display: statusPillDisplay("invoice"),
     filterable: true,
+    isVisible: false,
   })
   @Access(AccessMode.ReadOnly)
   declare status: string;
+
+  @Listable(["status", "attemptCount"])
+  @Column({
+    name: "$saas.invoices.column.status",
+    type: PAYMENT_STATUS_TYPE,
+    display: statusPillDisplay("invoice"),
+    size: STATUS_COLUMN_SIZE,
+  })
+  @Access(AccessMode.ReadOnly)
+  get paymentStatus(): string {
+    return invoicePaymentStatus((this as unknown as PaymentStatusRowInstance).table);
+  }
 
   @Select()
   @Column({
@@ -202,6 +262,7 @@ export class tenantInvoicesDataAPI extends DataController(
   @Column({
     name: "$saas.invoices.column.issued_at",
     type: new DefaultDataTypes.DateType(),
+    size: DATE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare issuedAt: Date;

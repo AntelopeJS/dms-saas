@@ -28,7 +28,12 @@
         "empty_title": "No invoice yet",
         "empty_description": "Invoices and credit notes appear here as soon as Stripe issues them.",
         "error_title": "Invoices couldn't load",
-        "error_description": "Stripe is slow to answer. Your invoices are safe."
+        "error_description": "Stripe is slow to answer. Your invoices are safe.",
+        "column": {
+          "excl_vat": "Excl. VAT",
+          "vat": "VAT",
+          "total": "Total"
+        }
       },
       "pay": {
         "action": "Pay invoice",

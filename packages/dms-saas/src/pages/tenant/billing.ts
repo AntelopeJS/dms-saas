@@ -130,6 +130,7 @@ export class SaasTenantBillingController extends PageController(
       add: false,
       copyLink: true,
       delete: false,
+      duplicate: false,
       details: { isEnabled: true, isVisible: true },
       edit: false,
       custom: [

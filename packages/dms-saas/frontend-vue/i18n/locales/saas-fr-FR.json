@@ -511,7 +511,8 @@
 				"paid": "Payée",
 				"void": "Annulée",
 				"uncollectible": "Irrécouvrable",
-				"issued": "Émis"
+				"issued": "Émis",
+				"payment_failed": "Échec du paiement"
 			},
 			"credit_note": {
 				"issued": "Émis",

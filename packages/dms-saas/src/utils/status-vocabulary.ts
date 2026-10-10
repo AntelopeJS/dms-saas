@@ -33,6 +33,7 @@ export const STATUS_TONES = {
     void: "neutral",
     uncollectible: "error",
     issued: "success",
+    payment_failed: "error",
   },
   credit_note: {
     issued: "success",
@@ -60,6 +61,12 @@ export const STATUS_TONES = {
     none: "neutral",
   },
 } as const satisfies Record<string, Record<string, Tone>>;
+
+/**
+ * An open invoice whose charge Stripe declined, as its owner reads it. Not a
+ * stored status: operator filters keep listing the stored ones only.
+ */
+export const PAYMENT_FAILED_STATUS = "payment_failed";
 
 /** A family of statuses sharing one vocabulary and one tone table. */
 export type StatusFamily = keyof typeof STATUS_TONES;

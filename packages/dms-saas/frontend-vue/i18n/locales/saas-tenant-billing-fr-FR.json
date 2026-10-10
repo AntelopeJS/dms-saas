@@ -28,7 +28,12 @@
         "empty_title": "Aucune facture pour l'instant",
         "empty_description": "Les factures et avoirs apparaissent ici dès que Stripe les émet.",
         "error_title": "Les factures n'ont pas pu être chargées",
-        "error_description": "Stripe tarde à répondre. Vos factures ne sont pas perdues."
+        "error_description": "Stripe tarde à répondre. Vos factures ne sont pas perdues.",
+        "column": {
+          "excl_vat": "Total HT",
+          "vat": "TVA",
+          "total": "Total TTC"
+        }
       },
       "pay": {
         "action": "Payer la facture",

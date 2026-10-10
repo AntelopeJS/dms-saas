@@ -511,7 +511,8 @@
 				"paid": "Paid",
 				"void": "Void",
 				"uncollectible": "Uncollectible",
-				"issued": "Issued"
+				"issued": "Issued",
+				"payment_failed": "Payment failed"
 			},
 			"credit_note": {
 				"issued": "Issued",

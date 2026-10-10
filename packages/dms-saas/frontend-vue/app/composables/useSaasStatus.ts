@@ -29,6 +29,7 @@ export const SAAS_STATUS_TONES = {
 		void: 'neutral',
 		uncollectible: 'error',
 		issued: 'success',
+		payment_failed: 'error',
 	},
 	credit_note: {
 		issued: 'success',
