@@ -395,11 +395,15 @@ async function consumeUpgradeParam(): Promise<void> {
 		current.value?._id ?? null,
 	)
 	const plan = offered.find((candidate) => candidate._id === planId)
-	if (!plan || plan._id === current.value?._id) {
+	// A workspace waiting for its first payment, or cancelled, pays for its
+	// own plan again through Stripe's payment page.
+	const isChoosingAnew =
+		canResubscribe.value || !!data.value.canRecoverComplimentary
+	if (!plan || (plan._id === current.value?._id && !isChoosingAnew)) {
 		comparison.open()
 		return
 	}
-	if (!isPaid.value && plan.price > 0) {
+	if ((!isPaid.value || isChoosingAnew) && plan.price > 0) {
 		openUpgrade(plan)
 		return
 	}

@@ -280,7 +280,12 @@ describe("GET /api/saas/workspace-access", () => {
       reason: "suspended",
       isTenantOwner: true,
       canManageInStripe: true,
-      workspace: { name: "Initech", planName: "Business", memberCount: 2 },
+      workspace: {
+        name: "Initech",
+        planId: "plan-business",
+        planName: "Business",
+        memberCount: 2,
+      },
       unpaidInvoice: { number: "INV-2026-0911", amount: 49000 },
       dataDeletionAt: null,
     });

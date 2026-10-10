@@ -82,6 +82,8 @@ export interface OtherWorkspace {
 export interface BlockedWorkspaceSummary {
   _id: string;
   name: string;
+  /** The plan the owner pays to reopen a workspace waiting for payment. */
+  planId: string | null;
   planName: string | null;
   memberCount: number;
 }
@@ -398,6 +400,7 @@ export class SaasWorkspaceAccessController extends Controller(
     return {
       _id: tenantId,
       name: tenant?.name ?? "",
+      planId: state.subscription?.planId ?? null,
       planName: await this.loadPlanName(state.subscription),
       memberCount: state.members.length,
     };

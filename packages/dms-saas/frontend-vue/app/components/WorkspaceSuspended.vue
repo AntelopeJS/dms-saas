@@ -14,6 +14,7 @@ import AccessTimeline from '../build/public/AccessTimeline.vue'
 import OtherWorkspaces from '../build/public/OtherWorkspaces.vue'
 import {
 	BILLING_CHOOSE_PLAN_PATH,
+	billingUpgradePath,
 	BILLING_PATH,
 	HOME_PATH,
 	LOGIN_PATH,
@@ -24,6 +25,7 @@ const PORTAL_ENDPOINT = '/api/saas/billing/portal-session'
 
 /** Reasons the owner settles by choosing a plan, on the comparison itself. */
 const PLAN_CHOICE_REASONS = new Set(['cancelled', 'complimentary_expired'])
+const PENDING_PAYMENT_REASON = 'pending_payment'
 
 interface PortalSession {
 	url: string
@@ -101,11 +103,16 @@ const ownerActionLabel = computed(() =>
 		: t(`saas.public.suspended.owner.action.${reason.value}`),
 )
 
-const ownerActionPath = computed(() =>
-	reason.value && PLAN_CHOICE_REASONS.has(reason.value)
+// Waiting for its first payment, the workspace already has its plan: the
+// owner lands on that plan's payment, not on a page with nothing open.
+const ownerActionPath = computed(() => {
+	const planId = access.value?.workspace.planId
+	if (reason.value === PENDING_PAYMENT_REASON && planId)
+		return billingUpgradePath(planId)
+	return reason.value && PLAN_CHOICE_REASONS.has(reason.value)
 		? BILLING_CHOOSE_PLAN_PATH
-		: BILLING_PATH,
-)
+		: BILLING_PATH
+})
 
 const mailtoOwner = computed(() =>
 	owner.value

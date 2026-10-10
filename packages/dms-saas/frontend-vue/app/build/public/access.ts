@@ -42,6 +42,7 @@ export interface UnpaidInvoiceRef {
 export interface BlockedWorkspaceSummary {
 	_id: string
 	name: string
+	planId: string | null
 	planName: string | null
 	memberCount: number
 }
