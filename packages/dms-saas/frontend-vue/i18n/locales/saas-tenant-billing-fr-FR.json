@@ -392,7 +392,13 @@
         "invoices": "Factures et avoirs",
         "invoices_description": "Lister les factures et avoirs de l'espace de travail et les télécharger",
         "pay_invoice": "Payer la facture",
-        "pay_invoice_description": "Payer une facture impayée avec la carte enregistrée ou une autre carte"
+        "pay_invoice_description": "Payer une facture impayée avec la carte enregistrée ou une autre carte",
+        "overview": "Offre et paiement",
+        "overview_description": "La grille qui regroupe les cartes offre, prochaine facture, moyen de paiement et garantie satisfait ou remboursé",
+        "plan_row": "Offre et prochaine facture",
+        "plan_row_description": "La ligne qui regroupe l'offre actuelle et la prochaine facture",
+        "payment_row": "Moyen de paiement et garantie satisfait ou remboursé",
+        "payment_row_description": "La ligne qui regroupe le moyen de paiement et la garantie satisfait ou remboursé"
       }
     },
     "workspace": {

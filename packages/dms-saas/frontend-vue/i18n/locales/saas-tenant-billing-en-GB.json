@@ -392,7 +392,13 @@
         "invoices": "Invoices & credit notes",
         "invoices_description": "List the workspace's invoices and credit notes and download them",
         "pay_invoice": "Pay invoice",
-        "pay_invoice_description": "Pay an unpaid invoice with the card on file or another card"
+        "pay_invoice_description": "Pay an unpaid invoice with the card on file or another card",
+        "overview": "Plan and payment",
+        "overview_description": "The grid holding the plan, next invoice, payment method and money-back cards",
+        "plan_row": "Plan and next invoice",
+        "plan_row_description": "The row holding the current plan and the next invoice",
+        "payment_row": "Payment method and money-back guarantee",
+        "payment_row_description": "The row holding the payment method and the money-back guarantee"
       }
     },
     "workspace": {

@@ -31,7 +31,7 @@ import {
   TenantBillingInfoModel,
   TenantSubscriptionModel,
 } from "../../db";
-import { SaasTenantBillingController as BillingPage } from "../../pages/tenant/billing";
+import { nextInvoice } from "../../pages/tenant/billing";
 import {
   composed,
   dateParam,
@@ -230,7 +230,7 @@ export class SaasTenantUpcomingInvoiceController extends Controller(
 ) {
   @Get("/")
   async getNextInvoice(
-    @AuthUserWithPermission(BillingPage.nextInvoice, {
+    @AuthUserWithPermission(nextInvoice, {
       bypassTenantAccessGate: true,
     })
     _user: User,

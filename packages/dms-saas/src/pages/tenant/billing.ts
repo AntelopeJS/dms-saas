@@ -2,9 +2,13 @@ import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import {
   Banner,
   Card,
+  Grid,
+  GridRow,
   KeyValueList,
   TableView,
+  VStack,
 } from "@antelopejs/interface-dms/base";
+import type { ComponentBuilder } from "@antelopejs/interface-dms/component";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { tenantBillingPage } from "@antelopejs/interface-dms-saas/pages";
@@ -16,6 +20,10 @@ const PERMISSION_PREFIX = "$saas.permissions.billing_page";
 const NEXT_INVOICE_ENDPOINT = "/api/saas/tenant/upcoming-invoice";
 const COMPLIMENTARY_BANNER_ENDPOINT = "/api/saas/tenant/complimentary-banner";
 const NEXT_INVOICE_SKELETON_ROWS = 6;
+const OVERVIEW_GAP = "1rem";
+// Two cards side by side need about this much each; below it the grid stacks
+// them in one column.
+const OVERVIEW_MIN_COLUMN_WIDTH = "360px";
 
 /** Name, description and icon of a block as the roles editor lists it. */
 function permissionMeta(key: string, icon: string) {
@@ -40,12 +48,59 @@ const INVOICE_TABS = [
   },
 ];
 
+const planCard = CustomComponent("DmsSaasTenantPlanCard").meta(
+  permissionMeta("plan", "i-ph-stack"),
+);
+
+/** Stripe's preview of the next invoice; its route requires this block. */
+export const nextInvoice = Card({
+  title: `${KEY_PREFIX}.next_invoice.title`,
+  description: `${KEY_PREFIX}.next_invoice.description`,
+})
+  .child(
+    "lines",
+    KeyValueList({
+      card: false,
+      fetchUrl: NEXT_INVOICE_ENDPOINT,
+      skeletonCount: NEXT_INVOICE_SKELETON_ROWS,
+      empty: {
+        title: `${KEY_PREFIX}.next_invoice.empty_title`,
+        description: `${KEY_PREFIX}.next_invoice.empty_description`,
+      },
+    }),
+  )
+  .meta(permissionMeta("next_invoice", "i-ph-receipt"));
+
+const paymentMethod = CustomComponent("DmsSaasPaymentMethodCard").meta(
+  permissionMeta("payment_method", "i-ph-credit-card"),
+);
+
+const refundButton = CustomComponent("DmsSaasRefundButton").meta(
+  permissionMeta("money_back", "i-ph-arrow-counter-clockwise"),
+);
+
+/**
+ * One cell of the overview grid: the block in a stack of its own, so a block
+ * an extension anchors beside it (`tenantBillingPageAnchorPaths`) stacks in
+ * the same column rather than adding a column to the grid. The stack carries
+ * the block's own title in the roles editor.
+ */
+function column(key: string, block: ComponentBuilder): ComponentBuilder {
+  return VStack({ alignment: "stretch", spacing: OVERVIEW_GAP })
+    .child(key, block)
+    .meta(block.metadata);
+}
+
 /**
  * Single billing surface for a workspace, top to bottom: what is wrong, what
  * the workspace is on, what it pays next and with what, the guarantee, who is
- * billed, and every invoice. Field order is block order, and the cloud module
- * injects its own blocks after `planCard` (in-progress invoice) and after
- * `billingForm` (spend protection), so those keys stay top-level.
+ * billed, and every invoice. The plan, next invoice, payment method and
+ * money-back cards share a two-column grid, as the settings design lays them
+ * out. Extensions anchor on the public names of `tenantBillingPage.components`
+ * (the cloud module puts its in-progress invoice after `planCard` and its
+ * spend protection after `billingForm`); `tenantBillingPageAnchorPaths` maps
+ * those names to the positions below, which therefore must not move without
+ * it.
  */
 @RegisterPage()
 export class SaasTenantBillingController extends PageController(
@@ -72,35 +127,25 @@ export class SaasTenantBillingController extends PageController(
     permissionMeta("past_due_alert", "i-ph-warning-circle"),
   );
 
-  static planCard = CustomComponent("DmsSaasTenantPlanCard").meta(
-    permissionMeta("plan", "i-ph-stack"),
-  );
-
-  static nextInvoice = Card({
-    title: `${KEY_PREFIX}.next_invoice.title`,
-    description: `${KEY_PREFIX}.next_invoice.description`,
+  static overview = Grid({
+    gap: OVERVIEW_GAP,
+    minColumnWidth: OVERVIEW_MIN_COLUMN_WIDTH,
   })
     .child(
-      "lines",
-      KeyValueList({
-        card: false,
-        fetchUrl: NEXT_INVOICE_ENDPOINT,
-        skeletonCount: NEXT_INVOICE_SKELETON_ROWS,
-        empty: {
-          title: `${KEY_PREFIX}.next_invoice.empty_title`,
-          description: `${KEY_PREFIX}.next_invoice.empty_description`,
-        },
-      }),
+      "plan",
+      GridRow()
+        .child("current", column("planCard", planCard))
+        .child("nextInvoice", nextInvoice)
+        .meta(permissionMeta("plan_row", "i-ph-rows")),
     )
-    .meta(permissionMeta("next_invoice", "i-ph-receipt"));
-
-  static paymentMethod = CustomComponent("DmsSaasPaymentMethodCard").meta(
-    permissionMeta("payment_method", "i-ph-credit-card"),
-  );
-
-  static refundButton = CustomComponent("DmsSaasRefundButton").meta(
-    permissionMeta("money_back", "i-ph-arrow-counter-clockwise"),
-  );
+    .child(
+      "payment",
+      GridRow()
+        .child("method", column("paymentMethod", paymentMethod))
+        .child("guarantee", column("refundButton", refundButton))
+        .meta(permissionMeta("payment_row", "i-ph-rows")),
+    )
+    .meta(permissionMeta("overview", "i-ph-squares-four"));
 
   static billingForm = CustomComponent("DmsSaasTenantBillingForm").meta(
     permissionMeta("billing_information", "i-ph-identification-card"),

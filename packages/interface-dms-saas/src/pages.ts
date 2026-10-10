@@ -43,6 +43,26 @@ export const tenantBillingPage = {
 export type TenantBillingPageComponentKey =
   (typeof tenantBillingPage.components)[keyof typeof tenantBillingPage.components];
 
+/**
+ * Where each public anchor of the tenant billing page sits in its layout: the
+ * component key, then every child id down to the block. The plan, next
+ * invoice, payment method and money-back cards share a two-column grid, each
+ * in a stack of its own so a block injected beside one lands in its column
+ * instead of adding a column to the grid. Extensions keep naming the anchor
+ * (`tenantBillingPage.components.planCard`); this is what they resolve to.
+ */
+export const tenantBillingPageAnchorPaths: Readonly<
+  Record<TenantBillingPageComponentKey, readonly string[]>
+> = {
+  freeAccessBanner: ["freeAccessBanner"],
+  pastDueAlert: ["pastDueAlert"],
+  planCard: ["overview", "plan", "current", "planCard"],
+  paymentMethod: ["overview", "payment", "method", "paymentMethod"],
+  refundButton: ["overview", "payment", "guarantee", "refundButton"],
+  billingForm: ["billingForm"],
+  table: ["table"],
+};
+
 /** Fields shared by anchored and appended tenant billing page extensions. */
 export interface TenantBillingPageExtensionComponentBase {
   key: string;
@@ -132,11 +152,12 @@ function toPageExtensionComponent(
     side: input.side ?? "end",
     order: input.order ?? 0,
   };
-  // `anchorPath` is what the DMS reads -- extension-assembly takes its first
-  // segment as the anchor key. The conditional spread this replaces set
-  // `anchorKey`, a property PageExtensionComponent does not declare, so every
-  // anchored extension was silently appended at the end of the page instead.
-  if (input.anchorKey) component.anchorPath = [input.anchorKey];
+  // `anchorPath` is what the DMS reads, not `anchorKey`: a property
+  // PageExtensionComponent does not declare is ignored, and the extension
+  // silently lands at the end of the page.
+  if (input.anchorKey) {
+    component.anchorPath = tenantBillingPageAnchorPaths[input.anchorKey];
+  }
   return component;
 }
 

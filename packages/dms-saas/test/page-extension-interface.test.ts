@@ -72,7 +72,7 @@ describe("tenant billing page extension interface", () => {
           key: "inProgressInvoice",
           component: COMPONENT,
           side: "after",
-          anchorPath: ["planCard"],
+          anchorPath: ["overview", "plan", "current", "planCard"],
           order: 10,
         },
       ],

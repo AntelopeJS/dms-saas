@@ -719,7 +719,10 @@ export class WorkspaceRegistriesController extends PageController("registries", 
 
 Extensions of the existing tenant billing page register components through
 stable page and anchor identifiers. They do not import the page controller,
-which would load the module's page registration graph.
+which would load the module's page registration graph. An anchor names a block
+(`tenantBillingPage.components.planCard`) wherever the page lays it out: the
+plan card sits in a two-column grid, and a block placed after it stacks under
+it in the same column.
 
 ```ts
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
