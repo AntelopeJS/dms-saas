@@ -62,7 +62,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/dms",
-        version: ">=0.7.1 <0.8.0",
+        version: ">=0.7.4 <0.8.0",
       },
       config: {
         auth: {
