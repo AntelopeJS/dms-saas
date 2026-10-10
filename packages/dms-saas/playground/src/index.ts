@@ -1,9 +1,10 @@
 import "./welcome/page";
-import { registerPlaygroundSeed } from "./seed";
+import { keepDemoMigrationRunning, registerPlaygroundSeed } from "./seed";
 
 export async function construct(): Promise<void> {}
 
 export async function start(): Promise<void> {
+  keepDemoMigrationRunning();
   registerPlaygroundSeed();
 }
 

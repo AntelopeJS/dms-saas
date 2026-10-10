@@ -117,27 +117,42 @@ function diffFeatures(from: SeedPlan, to: SeedPlan): PlanMigrationFeatureDiff {
   };
 }
 
+/** Each outcome a minute after the previous one, from the start of the run. */
+function timed(
+  outcomes: Omit<PlanMigrationTenantOutcome, "updatedAt">[],
+  startedAt: Date,
+): PlanMigrationTenantOutcome[] {
+  return outcomes.map((outcome, index) => ({
+    ...outcome,
+    updatedAt: addMinutes(startedAt, index + 1),
+  }));
+}
+
 function tenantOutcomes(
   migration: SeedPlanMigration,
+  startedAt: Date,
 ): PlanMigrationTenantOutcome[] {
   const failed = migration.failedWorkspaces.map((failure) => failure.tenantId);
   const moved = migration.tenantIds
     .filter((tenantId) => !failed.includes(tenantId))
     .slice(0, migration.processedWorkspaces);
-  return [
-    ...moved.map((tenantId) => ({
-      tenantId,
-      status: "succeeded" as const,
-      error: null,
-      seatQuantity: null,
-    })),
-    ...migration.failedWorkspaces.map(({ tenantId, error }) => ({
-      tenantId,
-      status: "reconciliation_required" as const,
-      error,
-      seatQuantity: null,
-    })),
-  ];
+  return timed(
+    [
+      ...moved.map((tenantId) => ({
+        tenantId,
+        status: "succeeded" as const,
+        error: null,
+        seatQuantity: null,
+      })),
+      ...migration.failedWorkspaces.map(({ tenantId, error }) => ({
+        tenantId,
+        status: "reconciliation_required" as const,
+        error,
+        seatQuantity: null,
+      })),
+    ],
+    startedAt,
+  );
 }
 
 function toMigrationRow(
@@ -145,11 +160,11 @@ function toMigrationRow(
   permissions: string[],
 ): SeedRow {
   const target = findPlan(migration.toPlanId);
-  const outcomes = tenantOutcomes(migration);
   const startedAt =
     migration.durationMinutes === null
       ? addMinutes(new Date(), RUNNING_MIGRATION_AGE_MINUTES)
       : dayFrom(migration.startedOn);
+  const outcomes = tenantOutcomes(migration, startedAt);
   const processedTenantIds = outcomes
     .filter((outcome) => outcome.status === "succeeded")
     .map((outcome) => outcome.tenantId);
