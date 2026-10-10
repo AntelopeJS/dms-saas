@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { HOME_PATH } from '../build/workspace-paths'
 import WorkspaceSwitcherRow from '../build/WorkspaceSwitcherRow.vue'
 
@@ -10,19 +10,6 @@ const props = defineProps<{
 const KEYS = 'saas.workspace.switcher'
 const SEARCH_THRESHOLD = 6
 const PAST_DUE_STATUS = 'past_due'
-/** Window event a DMS form dispatches once it saved (`FormEvents.SUBMIT_SUCCESS`). */
-const FORM_SUBMIT_SUCCESS_EVENT = 'DmsComponent.Form.SubmitSuccess'
-/** The General page's rename form, which changes what the trigger shows. */
-const RENAME_SUBMIT_URL = '/api/saas/workspaces/current'
-
-interface FormSubmitPayload {
-	submitUrl?: string
-}
-
-interface FormSubmitDetail {
-	data?: FormSubmitPayload
-}
-
 const toast = useToast()
 const { t } = useI18n()
 const { statusView } = useSaasStatus()
@@ -148,18 +135,10 @@ async function onWorkspaceCreated(
 	}
 }
 
-function onFormSaved(event: Event): void {
-	const detail = (event as CustomEvent<FormSubmitDetail>).detail
-	if (detail?.data?.submitUrl === RENAME_SUBMIT_URL) void load()
-}
+useWorkspaceRenamed(() => void load())
 
 onMounted(() => {
 	if (!isLoaded.value) void load()
-	window.addEventListener(FORM_SUBMIT_SUCCESS_EVENT, onFormSaved)
-})
-
-onBeforeUnmount(() => {
-	window.removeEventListener(FORM_SUBMIT_SUCCESS_EVENT, onFormSaved)
 })
 </script>
 

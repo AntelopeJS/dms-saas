@@ -18,6 +18,8 @@ const { confirm } = useConfirm()
 const { resolveApiError } = useApiErrorMessage()
 const toast = useToast()
 const { data: overview, error, refresh } = useWorkspaceOverview()
+// The deletion asks for the name as it is now: read again after a rename.
+useWorkspaceRenamed(() => void refresh())
 
 const destroyedOn = computed(
 	() =>
