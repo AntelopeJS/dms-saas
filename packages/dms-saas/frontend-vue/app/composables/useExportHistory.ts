@@ -54,7 +54,7 @@ export interface ExportDownloadNaming {
 	extension?: string
 }
 
-type ExportJobStatus = Omit<ExportHistoryEntry, 'jobId' | 'scope' | 'createdAt'>
+export type ExportJobStatus = Omit<ExportHistoryEntry, 'jobId' | 'scope' | 'createdAt'>
 
 interface ExportHistoryState {
 	entries: ExportHistoryEntry[]

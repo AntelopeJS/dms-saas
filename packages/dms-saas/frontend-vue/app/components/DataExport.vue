@@ -82,10 +82,25 @@ async function downloadFinished(): Promise<void> {
 		})
 }
 
+// A tick is skipped while the previous read is still out: a slow status
+// route would otherwise pile up requests every interval, until the browser's
+// few connections per host are all held and the rest of the app stalls.
+let isReadingStatus = false
+
+async function readRunningStatus(jobId: string): Promise<ExportJobStatus | null> {
+	if (isReadingStatus) return null
+	isReadingStatus = true
+	try {
+		return await readStatus(jobId).catch(() => null)
+	} finally {
+		isReadingStatus = false
+	}
+}
+
 async function pollRunning(): Promise<void> {
 	const entry = running.value
 	if (!entry) return
-	const status = await readStatus(entry.jobId).catch(() => null)
+	const status = await readRunningStatus(entry.jobId)
 	if (!status) return
 	if (status.status === EXPORT_STATUS.pending) {
 		entry.progress = status.progress
