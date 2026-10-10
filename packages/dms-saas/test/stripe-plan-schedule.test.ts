@@ -55,6 +55,48 @@ describe("scheduled downgrade", () => {
     });
   });
 
+  it("keeps the trial of a trialing subscription in the running phase", async () => {
+    stripe.prices.retrieve.mockResolvedValue({
+      id: "price_starter",
+      recurring: { interval: "month", interval_count: 1 },
+    });
+    stripe.subscriptionSchedules.create.mockResolvedValue({
+      id: "sub_sched",
+      phases: [
+        {
+          start_date: PHASE_START,
+          end_date: PHASE_END,
+          trial_end: PHASE_END,
+          items: [{ price: { id: "price_pro" }, quantity: 1 }],
+        },
+      ],
+    });
+
+    await scheduleSubscriptionDowngrade({
+      stripeSubscriptionId: "sub_1",
+      stripePriceId: "price_starter",
+    });
+
+    const [, params] = stripe.subscriptionSchedules.update.mock.calls[0];
+    expect(params.phases[0]).toMatchObject({ trial_end: PHASE_END });
+    expect(params.phases[1]).not.toHaveProperty("trial_end");
+  });
+
+  it("adds no trial to a phase that has none", async () => {
+    stripe.prices.retrieve.mockResolvedValue({
+      id: "price_starter",
+      recurring: { interval: "month", interval_count: 1 },
+    });
+
+    await scheduleSubscriptionDowngrade({
+      stripeSubscriptionId: "sub_1",
+      stripePriceId: "price_starter",
+    });
+
+    const [, params] = stripe.subscriptionSchedules.update.mock.calls[0];
+    expect(params.phases[0]).not.toHaveProperty("trial_end");
+  });
+
   it("creates no schedule when the target price is not recurring", async () => {
     stripe.prices.retrieve.mockResolvedValue({ id: "price_once" });
 

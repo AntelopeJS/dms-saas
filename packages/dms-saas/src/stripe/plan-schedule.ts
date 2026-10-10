@@ -23,6 +23,11 @@ function toPhaseItemParam(
   return { price: toPriceId(item.price), quantity: item.quantity };
 }
 
+/**
+ * The running phase as Stripe holds it. Its trial end is carried over: a
+ * phase updated without one has no trial, so scheduling a downgrade during a
+ * trial would end the trial and bill the current plan right away.
+ */
 function toCurrentPhaseParam(
   phase: Stripe.SubscriptionSchedule.Phase,
 ): Stripe.SubscriptionScheduleUpdateParams.Phase {
@@ -30,6 +35,7 @@ function toCurrentPhaseParam(
     items: phase.items.map(toPhaseItemParam),
     start_date: phase.start_date,
     end_date: phase.end_date,
+    ...(phase.trial_end ? { trial_end: phase.trial_end } : {}),
     automatic_tax: { enabled: true },
   };
 }
