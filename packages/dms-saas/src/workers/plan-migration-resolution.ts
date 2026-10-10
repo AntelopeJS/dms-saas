@@ -7,6 +7,7 @@ import type {
   TenantSubscription,
 } from "../db";
 import { PlanMigrationModel, TenantSubscriptionModel } from "../db";
+import { publishMigrationChange } from "../plans/migration-realtime";
 import {
   applyPermissionCleanup,
   migrationOperationId,
@@ -176,6 +177,7 @@ async function persistSettled(
     ...patch,
   });
   assert(isApplied, HTTP_CONFLICT, "saas.errors.migration.changed");
+  void publishMigrationChange(job._id);
 }
 
 /**

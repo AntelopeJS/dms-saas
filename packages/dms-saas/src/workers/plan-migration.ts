@@ -14,6 +14,7 @@ import type {
 import { PlanMigrationModel, PlanModel, TenantSubscriptionModel } from "../db";
 import { notifyTenantOwners, planMigratedSubject } from "../notifications";
 import { countOccupiedSeats, syncStripeSeatQuantity } from "../plans";
+import { publishMigrationChange } from "../plans/migration-realtime";
 import { getStripeClient } from "../stripe/client";
 import { getRowInstance } from "../utils";
 
@@ -263,6 +264,7 @@ async function recordTenantOutcome(
     job,
     migrationProgress(withTenantOutcome(job.tenantOutcomes, outcome)),
   );
+  void publishMigrationChange(job._id);
 }
 
 async function admitWorkspace(
@@ -401,6 +403,7 @@ async function settleJob(job: PlanMigration): Promise<void> {
     status: settledMigrationStatus(job.tenantOutcomes),
     completedAt: new Date(),
   });
+  void publishMigrationChange(job._id);
 }
 
 async function executeRetry(jobId: string): Promise<void> {
