@@ -2,11 +2,13 @@ import type { RequestContext } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import { Parameters } from "@antelopejs/interface-data-api/components";
+import { AccessMode } from "@antelopejs/interface-data-api/metadata";
 import { ValueProxy } from "@antelopejs/interface-database";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { plansDataAPI } from "../src/data-api/platformOwner/plans";
+import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
 
 const OWNER = { _id: "owner", name: "Owner" };
 const NOT_DELETED = { isDeleted: ["false", "eq"] };
@@ -97,5 +99,22 @@ describe("the plans table scope", () => {
       stage: "eq",
       args: [false],
     });
+  });
+});
+
+// A move saves through the table's edit route: it may write the position
+// alone, so it never reaches the Stripe sync of `/api/saas/plans`.
+describe("moving plans by hand", () => {
+  it("writes nothing but the position", () => {
+    const writable = Object.entries(meta.fields)
+      .filter(([, field]) => (field.mode ?? 0) & AccessMode.WriteOnly)
+      .map(([name]) => name);
+
+    expect(writable).toEqual(["order"]);
+    expect(meta.endpoints.edit).toBeDefined();
+  });
+
+  it("no longer goes through a reorder route of its own", () => {
+    expect("reorder" in SaasPlansApiController.prototype).toBe(false);
   });
 });

@@ -37,17 +37,10 @@
 				"title": "Offres",
 				"description": "Offres d’abonnement, tarifs, fonctionnalités et essais. L’ordre ci-dessous est celui que les clients voient sur la page de tarifs.",
 				"create": "Créer une offre",
-				"create_hint": "Partez de zéro ou dupliquez une offre existante pour garder ses fonctionnalités.",
 				"search": "Rechercher une offre",
 				"migrations_button": "Migrations d’offre",
 				"unlimited": "Illimité",
-				"reorder_hint": "Faites glisser une carte par sa poignée pour la déplacer. Enregistré aussitôt.",
-				"reorder_failed": "Le nouvel ordre n’a pas été enregistré",
-				"reorder_failed_hint": "Les offres ont retrouvé leur ordre enregistré. Réessayez.",
-				"features_failed": "Impossible de charger les fonctionnalités : les cartes affichent les offres sans elles.",
-				"display": {
-					"cards": "Cartes"
-				},
+				"features_failed": "Impossible de charger les fonctionnalités.",
 				"tabs": {
 					"on_sale": "En vente",
 					"legacy": "Anciennes",
@@ -126,20 +119,11 @@
 				},
 				"empty": {
 					"title": "Aucune offre pour l’instant",
-					"description": "Les clients ne peuvent pas s’inscrire tant qu’aucune offre n’est en vente.",
-					"filtered_title": "Aucune offre ne correspond à « {search} »",
+					"description": "Les clients ne peuvent pas s’inscrire tant qu’aucune offre n’est en vente. Créez-en une, ou dupliquez une offre existante pour garder ses fonctionnalités.",
+					"filtered_title": "Aucune offre à afficher",
+					"filtered_description": "Aucune offre ne correspond à cette recherche ou à cet onglet. Effacez la recherche, ou choisissez un autre onglet.",
 					"error_title": "Impossible de charger les offres",
 					"error_description": "Le catalogue n’a pas répondu. Les offres et les prix sont inchangés."
-				},
-				"empty_display": {
-					"first_run_title": "Aucune offre pour l’instant",
-					"first_run_description": "Les clients ne peuvent pas s’inscrire tant qu’aucune offre n’est en vente. Créez-en une, ou dupliquez une offre existante pour garder ses fonctionnalités.",
-					"on_sale_title": "Rien n’est en vente",
-					"on_sale_description": "Les clients ne peuvent pas s’inscrire tant qu’aucune offre n’est en vente.",
-					"legacy_title": "Aucune ancienne offre",
-					"legacy_description": "Les offres dont vous arrêtez la vente s’affichent ici, conservées pour les espaces de travail qui y sont encore.",
-					"filtered_title": "Aucune offre ne correspond à « {search} »",
-					"filtered_description": "Essayez un autre nom, ou effacez la recherche."
 				},
 				"stats": {
 					"label": "Le catalogue en bref",
@@ -155,8 +139,6 @@
 					"legacy_detail": "{names} · {count} espaces de travail à déplacer"
 				},
 				"card": {
-					"drag": "Glisser pour réordonner",
-					"order": "Position {order} · {visibility}",
 					"public": "Publique",
 					"hidden": "Masquée",
 					"not_on_sale": "Plus en vente",

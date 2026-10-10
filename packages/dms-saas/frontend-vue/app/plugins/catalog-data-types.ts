@@ -1,10 +1,5 @@
-import PlanCardsDisplay from '../components/PlanCardsDisplay.vue'
 import { formatPlanAmount } from '../build/plan-catalog'
 
-const PLAN_CARDS_DISPLAY_ID = 'saas:plan-cards'
-const PLAN_CARDS_DISPLAY_LABEL = 'saas.catalog.plans.display.cards'
-const PLAN_CARDS_DISPLAY_ICON = 'i-ph-cards'
-const PLAN_CARDS_DISPLAY_ORDER = 5
 const EMPTY_CELL = '—'
 const UNLIMITED_MEMBERS = -1
 const DEFAULT_CURRENCY_FIELD = 'currency'
@@ -15,17 +10,10 @@ interface PlanMoneyOptions {
 
 type Row = Record<string, unknown> | undefined
 
+/** The cell formatters of the plan and feature tables. */
 export default defineDmsPlugin(() => {
 	const { registerDataType } = useDataTypes()
 	const { $i18n } = useDmsApp()
-
-	registerTableViewDisplay({
-		id: PLAN_CARDS_DISPLAY_ID,
-		label: PLAN_CARDS_DISPLAY_LABEL,
-		icon: PLAN_CARDS_DISPLAY_ICON,
-		order: PLAN_CARDS_DISPLAY_ORDER,
-		component: PlanCardsDisplay,
-	})
 
 	// An amount in the currency of its own row, which the built-in price cell
 	// cannot know.

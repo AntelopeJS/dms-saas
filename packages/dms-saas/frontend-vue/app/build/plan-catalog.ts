@@ -141,24 +141,18 @@ export function isActionAllowed(
 	return true
 }
 
-/**
- * New `order` values for rows moved by hand: the moved rows take the
- * positions the shown rows held, in their new sequence, so rows hidden by a
- * tab or a search keep theirs.
- */
-export function reorderPositions<T extends { _id: string; order: number }>(
-	shown: T[],
-	moved: T[],
-): Array<{ id: string; order: number }> {
-	const sorted = shown.map((row) => row.order ?? 0).sort((a, b) => a - b)
-	const isStrict = sorted.every(
-		(value, index) => index === 0 || value > sorted[index - 1]!,
-	)
-	// Equal positions (plans never ordered) leave no room: renumber from the lowest.
-	const positions = isStrict
-		? sorted
-		: sorted.map((_, index) => (sorted[0] ?? 0) + index)
-	return moved
-		.map((row, index) => ({ id: row._id, order: positions[index] ?? index }))
-		.filter((item, index) => item.order !== moved[index]?.order)
+/** The table's row actions a plan card runs, as the cards display hands them. */
+export interface PlanCardTableActions {
+	canEditRow: (row: CatalogPlanRow) => boolean
+	edit: (row: CatalogPlanRow) => void
+	/** Runs a menu entry through the table: confirmation, request, refresh. */
+	custom: (action: PlanCardAction, row: CatalogPlanRow) => void
+}
+
+/** A card's move handle, as the cards display of a hand-ordered table hands it. */
+export interface PlanCardReorder {
+	enabled: boolean
+	dragging: boolean
+	/** Attributes and listeners to bind on the handle button. */
+	handle: Record<string, unknown>
 }

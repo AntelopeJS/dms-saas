@@ -99,8 +99,9 @@ async function usageOf(self: unknown) {
 
 /**
  * The catalogue of plans, read-only but for `order`, which the table and the
- * cards reorder. Plans are written through `/api/saas/plans`, which keeps
- * Stripe in line.
+ * cards reorder through the edit route: no field Stripe holds is writable
+ * here, so a move never syncs. Plans are otherwise written through
+ * `/api/saas/plans`, which keeps Stripe in line.
  */
 @RegisterDataController()
 @AuthOwnerOnly()
@@ -386,7 +387,9 @@ export class plansDataAPI extends DataController(
   @Exported()
   @Column({
     name: `${TEXTS}.field.order`,
-    type: new DefaultDataTypes.NumberType({ min: 0 }),
+    // A move by hand takes the value between its neighbours', or one step
+    // before the first: fractional, possibly negative.
+    type: new DefaultDataTypes.NumberType(),
     isVisible: false,
   })
   @Access(AccessMode.ReadWrite)

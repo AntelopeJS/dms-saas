@@ -1,6 +1,7 @@
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import { StatGroup, TableView } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
+import { CARDS_DISPLAY_ID } from "@antelopejs/interface-dms/base/table-view";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { ButtonVariant } from "@antelopejs/interface-dms/base/types";
 import type {
@@ -19,9 +20,10 @@ const PLAN_MIGRATIONS_PAGE_URL = "/modules/saas/catalog/plan-migrations";
 const WORKSPACES_PAGE_URL = "/modules/saas/customers/workspaces";
 const PLANS_ENDPOINT = "/api/saas/plans";
 const PLAN_DIALOGS_ENDPOINT = "/api/saas/plan-dialogs";
-const PLAN_CARDS_DISPLAY_ID = "saas:plan-cards";
 const RETIRE_MODAL_SIZE = "3xl";
 const CATALOGUE_STAT_COUNT = 4;
+// The cards draw a selection checkbox exactly when the grid does.
+const HAS_SELECTION = false;
 
 const retirePlanModal = CustomComponent("DmsSaasRetirePlanModal").meta({
   name: `${PERMISSIONS}.retire_plan`,
@@ -137,9 +139,9 @@ function serializeTarget(target: ActionTarget): ActionTargetSerialized {
 }
 
 /**
- * The plan menu as the cards display receives it: the table's own actions,
- * serialized, so a card runs them through the table (confirmation, request,
- * refresh) exactly as the grid does.
+ * The plan menu as a card receives it (its `menu` prop): the table's own
+ * actions, serialized, so a card runs them through the table (confirmation,
+ * request, refresh) exactly as the grid does.
  */
 const PLAN_CARD_ACTIONS = PLAN_ACTIONS.map((action) => ({
   ...action,
@@ -212,7 +214,7 @@ export class SaasPlansController extends PageController(
       details: false,
       delete: false,
       copyLink: false,
-      hasSelection: false,
+      hasSelection: HAS_SELECTION,
       // The rules read listed values (`workspaceCount` is a number on the
       // row), which the controller types as the getters computing them.
       // oxlint-disable-next-line anti-slop/no-chained-type-assertions
@@ -238,26 +240,25 @@ export class SaasPlansController extends PageController(
           },
         ],
       },
+      // A tab narrows the rows as a search does: the words fit both.
       filtered: {
         title: `${TEXTS}.empty.filtered_title`,
+        description: `${TEXTS}.empty.filtered_description`,
       },
       error: {
         title: `${TEXTS}.empty.error_title`,
         description: `${TEXTS}.empty.error_description`,
       },
     },
-    displays: [
-      {
-        id: PLAN_CARDS_DISPLAY_ID,
-        component: CustomComponent("DmsSaasPlanCardsDisplay"),
-        options: { actions: PLAN_CARD_ACTIONS },
-        capabilities: {
-          columnManagement: false,
-          filters: false,
-          sorting: false,
-        },
-      },
-    ],
-    defaultDisplay: PLAN_CARDS_DISPLAY_ID,
+    displays: [{ id: CARDS_DISPLAY_ID, capabilities: { filters: false } }],
+    defaultDisplay: CARDS_DISPLAY_ID,
+    card: {
+      // `menu`, not `actions`: the display hands every card the table's
+      // row actions as its `actions` prop, which would override the option.
+      component: CustomComponent("DmsSaasPlanCard").options({
+        menu: PLAN_CARD_ACTIONS,
+        selectable: HAS_SELECTION,
+      }),
+    },
   });
 }

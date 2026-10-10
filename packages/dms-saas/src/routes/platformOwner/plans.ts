@@ -178,19 +178,6 @@ interface PlanEditCatalog {
   features: PlanFeatureCatalogItem[];
 }
 
-interface PlanReorderItem {
-  id: string;
-  order: number;
-}
-
-interface PlanReorderBody {
-  items?: PlanReorderItem[];
-}
-
-interface PlanReorderResult {
-  updated: number;
-}
-
 /** A plan write the editor made, and what the operator should know of it. */
 interface PlanWriteResult {
   _id: string;
@@ -292,23 +279,6 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   async listPublic(): Promise<PublicPlan[]> {
     const plans = await this.planModel.findPubliclyVisible();
     return plans.map(toPublicPlan);
-  }
-
-  @Post("/reorder")
-  async reorder(
-    @AuthOwnerOnly() _user: User,
-    @JSONBody() body: PlanReorderBody,
-  ): Promise<PlanReorderResult> {
-    const items = (body.items ?? []).filter(
-      (item) => typeof item.id === "string" && Number.isFinite(item.order),
-    );
-    const now = new Date();
-    const results = await Promise.all(
-      items.map((item) =>
-        this.planModel.update(item.id, { order: item.order, updatedAt: now }),
-      ),
-    );
-    return { updated: results.length };
   }
 
   @Get("/")

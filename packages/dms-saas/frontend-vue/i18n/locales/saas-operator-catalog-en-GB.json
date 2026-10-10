@@ -37,17 +37,10 @@
 				"title": "Plans",
 				"description": "Subscription plans, pricing, features and trial settings. The order below is the order customers see on the pricing page.",
 				"create": "Create plan",
-				"create_hint": "Start blank or duplicate an existing plan to keep its features.",
 				"search": "Search plans",
 				"migrations_button": "Plan migrations",
 				"unlimited": "Unlimited",
-				"reorder_hint": "Drag a card by its handle to reorder. Saved instantly.",
-				"reorder_failed": "The new order was not saved",
-				"reorder_failed_hint": "The plans are back in their saved order. Try again.",
-				"features_failed": "Couldn’t load the features: the cards show the plans without them.",
-				"display": {
-					"cards": "Cards"
-				},
+				"features_failed": "Couldn’t load the features.",
 				"tabs": {
 					"on_sale": "On sale",
 					"legacy": "Legacy",
@@ -126,20 +119,11 @@
 				},
 				"empty": {
 					"title": "No plans yet",
-					"description": "Customers can’t sign up until at least one plan is on sale.",
-					"filtered_title": "No plan matches “{search}”",
+					"description": "Customers can’t sign up until at least one plan is on sale. Create one, or duplicate an existing plan to keep its features.",
+					"filtered_title": "No plan to show",
+					"filtered_description": "No plan matches this search or tab. Clear the search, or pick another tab.",
 					"error_title": "Couldn’t load plans",
 					"error_description": "The catalogue didn’t answer. Plans and prices are unchanged."
-				},
-				"empty_display": {
-					"first_run_title": "No plans yet",
-					"first_run_description": "Customers can’t sign up until at least one plan is on sale. Create one, or duplicate an existing plan to keep its features.",
-					"on_sale_title": "Nothing is on sale",
-					"on_sale_description": "Customers can’t sign up until at least one plan is on sale.",
-					"legacy_title": "No legacy plans",
-					"legacy_description": "Plans you stop selling show here, kept for the workspaces still on them.",
-					"filtered_title": "No plan matches “{search}”",
-					"filtered_description": "Try another name, or clear the search."
 				},
 				"stats": {
 					"label": "Catalogue at a glance",
@@ -155,8 +139,6 @@
 					"legacy_detail": "{names} · {count} workspaces to move"
 				},
 				"card": {
-					"drag": "Drag to reorder",
-					"order": "Order {order} · {visibility}",
 					"public": "Public",
 					"hidden": "Hidden",
 					"not_on_sale": "Not on sale",

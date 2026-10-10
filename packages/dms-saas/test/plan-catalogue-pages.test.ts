@@ -29,18 +29,44 @@ interface SerializedAction {
   target: { type: string; component?: { componentName?: string } };
 }
 
+interface SerializedCardComponent {
+  componentName?: string;
+  options?: { menu?: SerializedAction[]; selectable?: boolean };
+}
+
+interface CardsDisplayOptions {
+  card?: { component?: SerializedCardComponent };
+}
+
+/** The card component the plans' cards display draws, as serialized. */
+async function planCard(): Promise<SerializedCardComponent> {
+  const { options } = await SaasPlansController.table.serialize();
+  const cards = options?.displays?.find((display) => display.id === "cards");
+  return (
+    (cards?.options as CardsDisplayOptions | undefined)?.card?.component ?? {}
+  );
+}
+
 beforeEach(() => {
   catalogue.plans = [];
 });
 
 describe("the plans page", () => {
-  it("opens on the cards, with the plan menu the grid uses", async () => {
+  it("opens on the stock cards, beside the grid", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const displayOptions = options?.displays?.[0]?.options ?? {};
-    const actions =
-      (displayOptions as { actions?: SerializedAction[] }).actions ?? [];
+    const card = await planCard();
 
-    expect(options?.defaultDisplay).toBe("saas:plan-cards");
+    expect(options?.displays?.map((display) => display.id)).toEqual(["cards"]);
+    expect(options?.displays?.[0]?.component).toBeUndefined();
+    expect(options?.defaultDisplay).toBe("cards");
+    expect(card.componentName).toBe("DmsSaasPlanCard");
+    expect(card.options?.selectable).toBe(options?.rowActions?.hasSelection);
+  });
+
+  it("hands each card the plan menu the grid uses", async () => {
+    const { options } = await SaasPlansController.table.serialize();
+    const actions = (await planCard()).options?.menu ?? [];
+
     expect(actions.map((action) => action.key)).toEqual([
       "duplicate",
       "view_workspaces",

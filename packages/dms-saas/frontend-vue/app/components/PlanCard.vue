@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import {
 	type CatalogFeature,
 	type CatalogPlanRow,
 	type PlanCardAction,
+	type PlanCardReorder,
+	type PlanCardTableActions,
 	cardFeatures,
 	formatPlanAmount,
 	isActionAllowed,
@@ -18,126 +20,137 @@ const PUT_ON_SALE_KEY = 'put_on_sale'
 const RETIRE_KEY = 'retire'
 const UNLIMITED_MEMBERS = -1
 
-const props = defineProps<{
-	plan: CatalogPlanRow
-	features: CatalogFeature[]
-	actions: PlanCardAction[]
-	draggable: boolean
-	canEdit: boolean
-}>()
+// The card of the plans' `cards` display. Besides the props it reads, the
+// display hands it the table's columns and label key: kept off the root
+// element, which they would land on as attributes.
+defineOptions({ inheritAttrs: false })
 
-const emit = defineEmits<{
-	dragStart: []
-	edit: []
-	action: [action: PlanCardAction]
-}>()
+const props = withDefaults(
+	defineProps<{
+		row: CatalogPlanRow
+		rowId: string
+		actions: PlanCardTableActions
+		selected?: boolean
+		select: (value?: boolean) => void
+		open: () => void
+		reorder?: PlanCardReorder
+		/** The plan menu, the table's custom row actions (card option). */
+		menu?: PlanCardAction[]
+		/** The table selects rows (card option, as `rowActions.hasSelection`). */
+		selectable?: boolean
+	}>(),
+	{ selected: false, reorder: undefined, menu: () => [], selectable: false },
+)
 
 const { t, locale } = useI18n()
 const planDescription = usePlanDescription()
 const { formatFeatureValue } = usePlanFeatureFormat()
+const featureCatalog = usePlanFeatureCatalog()
 
-const row = computed(() => props.plan as unknown as Record<string, unknown>)
+const plan = computed(() => props.row)
+const canEdit = computed(() => props.actions.canEditRow(props.row))
+const titleId = computed(() => `plan-card-${props.rowId}`)
 const allowedActions = computed(() =>
-	props.actions.filter((action) => isActionAllowed(action, row.value)),
+	props.menu.filter((action) =>
+		isActionAllowed(action, props.row as unknown as Record<string, unknown>),
+	),
 )
 const saleAction = computed(() =>
 	allowedActions.value.find(
 		(action) =>
-			action.key === (props.plan.isActive ? STOP_SELLING_KEY : PUT_ON_SALE_KEY),
+			action.key === (plan.value.isActive ? STOP_SELLING_KEY : PUT_ON_SALE_KEY),
 	),
 )
 const retireAction = computed(() =>
 	allowedActions.value.find((action) => action.key === RETIRE_KEY),
 )
-const isLegacy = computed(() => !props.plan.isActive)
-const isSeatPlan = computed(() => props.plan.billingMode === 'seat')
-const isFree = computed(() => props.plan.price === 0)
+const isLegacy = computed(() => !plan.value.isActive)
+const isSeatPlan = computed(() => plan.value.billingMode === 'seat')
+const isFree = computed(() => plan.value.price === 0)
 
 const amount = computed(() =>
-	formatPlanAmount(props.plan.price, props.plan.currency, locale.value),
+	formatPlanAmount(plan.value.price, plan.value.currency, locale.value),
 )
 
 const priceSuffix = computed(() => {
 	if (isFree.value) return t('saas.catalog.plans.card.forever')
 	const key = isSeatPlan.value ? 'per_seat' : 'per'
-	return t(`saas.catalog.plans.card.${key}_${props.plan.interval}`)
+	return t(`saas.catalog.plans.card.${key}_${plan.value.interval}`)
 })
 
 const priceNote = computed(() => {
 	if (isFree.value) return t('saas.catalog.plans.card.note_free')
-	const mode = t(`saas.catalog.plans.billing_mode.${props.plan.billingMode}`)
-	if (props.plan.interval !== 'year') {
+	const mode = t(`saas.catalog.plans.billing_mode.${plan.value.billingMode}`)
+	if (plan.value.interval !== 'year') {
 		return t('saas.catalog.plans.card.note', { mode })
 	}
 	const monthly = formatPlanAmount(
-		monthlyEquivalent(props.plan),
-		props.plan.currency,
+		monthlyEquivalent(plan.value),
+		plan.value.currency,
 		locale.value,
 	)
 	return t('saas.catalog.plans.card.note_yearly', { mode, monthly })
 })
 
+// The position itself is the card's place: a move by hand stores a value
+// between its neighbours', no rank to show.
 const subtitle = computed(() => {
 	if (isLegacy.value) return t('saas.catalog.plans.card.not_on_sale')
-	const visibility = props.plan.isPublic
+	return plan.value.isPublic
 		? t('saas.catalog.plans.card.public')
 		: t('saas.catalog.plans.card.hidden')
-	return t('saas.catalog.plans.card.order', {
-		order: (props.plan.order ?? 0) + 1,
-		visibility,
-	})
 })
 
 const chips = computed(() => [
 	{
 		icon: 'i-ph-hourglass',
 		label:
-			props.plan.trialDays > 0
-				? t('saas.catalog.plans.card.trial', { days: props.plan.trialDays })
+			plan.value.trialDays > 0
+				? t('saas.catalog.plans.card.trial', { days: plan.value.trialDays })
 				: t('saas.catalog.plans.card.no_trial'),
 	},
 	{
-		icon: props.plan.audience === 'business' ? 'i-ph-buildings' : 'i-ph-user',
-		label: t(`saas.catalog.plans.audience.${props.plan.audience}`),
+		icon: plan.value.audience === 'business' ? 'i-ph-buildings' : 'i-ph-user',
+		label: t(`saas.catalog.plans.audience.${plan.value.audience}`),
 	},
 	{
 		icon: 'i-ph-users',
 		label:
-			props.plan.maxMembers === UNLIMITED_MEMBERS
+			plan.value.maxMembers === UNLIMITED_MEMBERS
 				? t('saas.catalog.plans.card.members_unlimited')
 				: t(
 						'saas.catalog.plans.card.members',
-						{ count: props.plan.maxMembers },
-						props.plan.maxMembers,
+						{ count: plan.value.maxMembers },
+						plan.value.maxMembers,
 					),
 	},
 ])
 
 const workspacesDetail = computed(() => {
-	const count = props.plan.workspaceCount
+	const count = plan.value.workspaceCount
 	const base = t('saas.catalog.plans.card.workspaces', { count }, count)
 	if (isSeatPlan.value) {
-		return `${base} · ${t('saas.catalog.plans.card.seats', { count: props.plan.seatCount }, props.plan.seatCount)}`
+		return `${base} · ${t('saas.catalog.plans.card.seats', { count: plan.value.seatCount }, plan.value.seatCount)}`
 	}
 	if (isLegacy.value) {
-		return `${base} · ${t('saas.catalog.plans.card.members_count', { count: props.plan.memberCount }, props.plan.memberCount)}`
+		return `${base} · ${t('saas.catalog.plans.card.members_count', { count: plan.value.memberCount }, plan.value.memberCount)}`
 	}
 	return base
 })
 
 const mrr = computed(() =>
-	formatPlanAmount(props.plan.mrr, props.plan.currency, locale.value),
+	formatPlanAmount(plan.value.mrr, plan.value.currency, locale.value),
 )
 const mrrShare = computed(() =>
 	new Intl.NumberFormat(locale.value, {
 		maximumFractionDigits: SHARE_FRACTION_DIGITS,
-	}).format((props.plan.mrrShare ?? 0) * PERCENT),
+	}).format((plan.value.mrrShare ?? 0) * PERCENT),
 )
 
 const features = computed(() =>
 	cardFeatures(
-		props.features,
-		props.plan.resolvedFeatures ?? [],
+		featureCatalog.data.value ?? [],
+		plan.value.resolvedFeatures ?? [],
 		FEATURE_PREVIEW_LIMIT,
 	),
 )
@@ -150,7 +163,7 @@ function featureValue(entry: {
 	return formatFeatureValue(
 		{ ...entry.feature, featureId: entry.feature._id },
 		entry.value,
-		props.plan.currency,
+		plan.value.currency,
 	)
 }
 
@@ -159,8 +172,8 @@ const menuItems = computed(() => [
 		{
 			label: t('saas.catalog.plans.action.edit'),
 			icon: 'i-ph-pencil-simple',
-			disabled: !props.canEdit,
-			onSelect: () => emit('edit'),
+			disabled: !canEdit.value,
+			onSelect: edit,
 		},
 		...allowedActions.value
 			.filter(
@@ -178,38 +191,67 @@ function toMenuItem(action: PlanCardAction) {
 		label: t(action.label.replace(/^\$/, '')),
 		icon: action.icon,
 		color: action.color === 'error' ? ('error' as const) : undefined,
-		onSelect: () => emit('action', action),
+		onSelect: () => run(action),
 	}
 }
 
-function toggleSale(): void {
-	if (saleAction.value) emit('action', saleAction.value)
+function edit(): void {
+	props.actions.edit(props.row)
 }
+
+function run(action: PlanCardAction): void {
+	props.actions.custom(action, props.row)
+}
+
+function toggleSale(): void {
+	if (saleAction.value) run(saleAction.value)
+}
+
+// Every card asks as it mounts: the cards of a page share the one request.
+onMounted(featureCatalog.refresh)
 </script>
 
 <template>
 	<DmsCard
+		as="article"
 		class="relative h-full"
-		:class="{ 'opacity-80': isLegacy }"
+		:class="{
+			'opacity-80': isLegacy && !reorder?.dragging,
+			'opacity-50': reorder?.dragging,
+			'ring-primary ring-2': selected,
+		}"
 		:selected="!!plan.borderLabel && !isLegacy"
+		:aria-labelledby="titleId"
 	>
 		<div class="flex h-full flex-col gap-4">
 			<div class="flex items-start gap-2">
 				<button
-					v-if="draggable"
-					type="button"
-					draggable="true"
-					class="text-dimmed hover:text-default -ml-1 cursor-grab pt-0.5"
-					:aria-label="$t('saas.catalog.plans.card.drag')"
-					:title="$t('saas.catalog.plans.card.drag')"
-					@dragstart="emit('dragStart')"
+					v-if="reorder"
+					v-bind="reorder.handle"
+					class="text-dimmed hover:text-highlighted focus-visible:outline-primary -ml-1 inline-flex size-6 shrink-0 cursor-grab items-center justify-center rounded focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<UIcon name="i-ph-dots-six-vertical" class="size-4" />
 				</button>
+				<UCheckbox
+					v-if="selectable"
+					class="pt-1"
+					:model-value="selected"
+					:aria-label="plan.name"
+					@update:model-value="select(!!$event)"
+				/>
 				<div class="min-w-0 flex-1">
 					<div class="flex items-center gap-2">
-						<h3 class="text-highlighted truncate text-base font-semibold">
-							{{ plan.name }}
+						<h3
+							:id="titleId"
+							class="text-highlighted truncate text-base font-semibold"
+						>
+							<button
+								type="button"
+								class="hover:underline focus-visible:underline"
+								@click="open()"
+							>
+								{{ plan.name }}
+							</button>
 						</h3>
 						<UBadge
 							v-if="isLegacy"
@@ -285,7 +327,21 @@ function toggleSale(): void {
 				</div>
 			</div>
 
-			<ul v-if="features.length" class="flex flex-col gap-1.5 text-sm">
+			<p
+				v-if="featureCatalog.error.value"
+				class="text-muted flex items-center gap-1.5 text-xs"
+			>
+				<UIcon name="i-ph-warning" class="text-warning size-4" />
+				{{ $t('saas.catalog.plans.features_failed') }}
+				<UButton
+					size="xs"
+					variant="link"
+					color="neutral"
+					:label="$t('saas.common.retry')"
+					@click="featureCatalog.refresh()"
+				/>
+			</p>
+			<ul v-else-if="features.length" class="flex flex-col gap-1.5 text-sm">
 				<li
 					v-for="entry in features"
 					:key="entry.feature._id"
@@ -314,7 +370,7 @@ function toggleSale(): void {
 					variant="outline"
 					icon="i-ph-pencil-simple"
 					:disabled="!canEdit"
-					@click="emit('edit')"
+					@click="edit"
 				>
 					{{ $t('saas.catalog.plans.action.edit') }}
 				</UButton>
@@ -324,7 +380,7 @@ function toggleSale(): void {
 					color="warning"
 					variant="outline"
 					icon="i-ph-archive"
-					@click="emit('action', retireAction)"
+					@click="run(retireAction)"
 				>
 					{{ $t('saas.catalog.plans.action.retire') }}
 				</UButton>
