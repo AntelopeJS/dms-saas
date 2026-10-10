@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import FormFieldRow from '../build/components/FormFieldRow.vue'
+import FormRows from '../build/components/FormRows.vue'
 
 /** What choosing a plan asks for, as `GET create-options` words it. */
 type CardRequirement = 'none' | 'payment' | 'verification'
@@ -294,94 +296,97 @@ onMounted(load)
 	/>
 
 	<form v-else class="flex flex-col gap-4" novalidate @submit.prevent="submit">
-		<UFormField
-			:label="$t(`${KEYS}.name`)"
-			:error="nameError ?? false"
-			required
-		>
-			<UInput
-				v-model="workspaceName"
-				:placeholder="$t(`${KEYS}.name_placeholder`)"
-				:maxlength="NAME_MAX_LENGTH"
-				class="w-full"
-				autofocus
-				@update:model-value="nameError = null"
-			/>
-		</UFormField>
+		<FormRows has-required>
+			<FormFieldRow :label="$t(`${KEYS}.name`)" :error="nameError" required>
+				<template #default="{ id }">
+					<DmsInputText
+						:id="id"
+						v-model="workspaceName"
+						:placeholder="$t(`${KEYS}.name_placeholder`)"
+						:maxlength="NAME_MAX_LENGTH"
+						class="w-full"
+						autofocus
+						@update:model-value="nameError = null"
+					/>
+				</template>
+			</FormFieldRow>
 
-		<fieldset class="flex min-w-0 flex-col gap-2">
-			<legend
-				class="mb-2 flex w-full items-baseline justify-between text-sm font-medium"
+			<FormFieldRow
+				:label="$t(`${KEYS}.plan`)"
+				:description="$t(`${KEYS}.plan_hint`)"
+				:labels-control="false"
 			>
-				{{ $t(`${KEYS}.plan`) }}
-				<span class="text-muted text-xs font-normal">
-					{{ $t(`${KEYS}.plan_hint`) }}
-				</span>
-			</legend>
-			<div role="radiogroup" class="flex flex-col gap-1.5">
-				<button
-					v-for="plan in plans"
-					:key="plan._id"
-					type="button"
-					role="radio"
-					:aria-checked="selectedPlanId === plan._id"
-					class="border-default hover:border-accented flex items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors"
-					:class="
-						selectedPlanId === plan._id ? 'border-primary bg-primary/5' : ''
-					"
-					@click="selectPlan(plan)"
+				<div
+					role="radiogroup"
+					:aria-label="$t(`${KEYS}.plan`)"
+					class="flex flex-col gap-1.5"
 				>
-					<span class="flex min-w-0 flex-1 flex-col gap-0.5">
-						<span class="text-highlighted text-sm font-medium">
-							{{ plan.name }}
+					<button
+						v-for="plan in plans"
+						:key="plan._id"
+						type="button"
+						role="radio"
+						:aria-checked="selectedPlanId === plan._id"
+						class="border-default hover:border-accented flex items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors"
+						:class="
+							selectedPlanId === plan._id ? 'border-primary bg-primary/5' : ''
+						"
+						@click="selectPlan(plan)"
+					>
+						<span class="flex min-w-0 flex-1 flex-col gap-0.5">
+							<span class="text-highlighted text-sm font-medium">
+								{{ plan.name }}
+							</span>
+							<span class="text-muted truncate text-xs">
+								{{ planMeta(plan) }}
+							</span>
 						</span>
-						<span class="text-muted truncate text-xs">
-							{{ planMeta(plan) }}
+						<span class="text-highlighted shrink-0 text-sm tabular-nums">
+							{{ planPriceLabel(plan) }}
 						</span>
-					</span>
-					<span class="text-highlighted shrink-0 text-sm tabular-nums">
-						{{ planPriceLabel(plan) }}
-					</span>
-				</button>
-			</div>
-		</fieldset>
+					</button>
+				</div>
+			</FormFieldRow>
 
-		<UFormField v-show="asksForCard" :error="cardError ?? false">
-			<template #label>
-				<span class="flex w-full items-center justify-between gap-2">
-					{{ $t(`${KEYS}.card.label`) }}
+			<FormFieldRow
+				v-show="asksForCard"
+				:label="$t(`${KEYS}.card.label`)"
+				:error="cardError"
+				:labels-control="false"
+			>
+				<template #label-extra>
 					<DmsStatusPill
 						size="sm"
 						:tone="requirement === 'verification' ? 'info' : 'primary'"
 						:label="cardBadge"
 					/>
-				</span>
-			</template>
-			<p
-				v-if="requirement === 'verification' && options?.freePerCard"
-				class="text-muted mb-2 text-xs"
-			>
-				{{
-					$t(
-						`${KEYS}.card.why_free`,
-						{ limit: options.freePerCard.limit },
-						options.freePerCard.limit,
-					)
-				}}
-			</p>
-			<div
-				:id="PAYMENT_ELEMENT_ID"
-				class="border-default rounded-md border p-3"
-			/>
-			<p class="text-muted mt-1.5 flex items-center gap-1 text-xs">
-				<UIcon name="i-ph-lock-simple" class="size-3.5" />
-				{{
-					requirement === 'verification'
-						? $t(`${KEYS}.card.never_charged`)
-						: $t(`${KEYS}.card.secured`)
-				}}
-			</p>
-		</UFormField>
+				</template>
+				<p
+					v-if="requirement === 'verification' && options?.freePerCard"
+					class="text-muted mb-2 text-xs"
+				>
+					{{
+						$t(
+							`${KEYS}.card.why_free`,
+							{ limit: options.freePerCard.limit },
+							options.freePerCard.limit,
+						)
+					}}
+				</p>
+				<div
+					:id="PAYMENT_ELEMENT_ID"
+					class="border-default rounded-md border p-3"
+				/>
+				<p class="text-muted mt-1.5 flex items-center gap-1 text-xs">
+					<UIcon name="i-ph-lock-simple" class="size-3.5" />
+					{{
+						requirement === 'verification'
+							? $t(`${KEYS}.card.never_charged`)
+							: $t(`${KEYS}.card.secured`)
+					}}
+				</p>
+			</FormFieldRow>
+		</FormRows>
 
 		<p v-if="chargeSentence" class="text-muted text-sm">{{ chargeSentence }}</p>
 

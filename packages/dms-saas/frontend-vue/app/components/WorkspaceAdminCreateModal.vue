@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import FormFieldRow from '../build/components/FormFieldRow.vue'
+import FormRows from '../build/components/FormRows.vue'
 import { planPriceLabel } from '../build/workspace-detail/planPrice'
 
 /**
@@ -294,72 +296,92 @@ onMounted(loadPlans)
 		]"
 	/>
 	<form v-else class="flex flex-col gap-4" @submit.prevent="submit">
-		<UFormField :label="$t(`${C}.name`)" :help="$t(`${C}.name_help`)" required>
-			<UInput
-				v-model="name"
-				:placeholder="$t(`${C}.name_placeholder`)"
-				class="w-full"
-				autofocus
-			/>
-		</UFormField>
-		<UFormField :label="$t(`${C}.plan`)" required>
-			<USelect
-				v-model="planId"
-				:items="planItems"
-				:placeholder="$t(`${C}.plan_placeholder`)"
-				class="w-full"
-			/>
-		</UFormField>
-		<UFormField :label="$t(`${C}.owner_email`)" required>
-			<UInput
-				v-model="ownerEmail"
-				type="email"
-				:placeholder="$t(`${C}.owner_email_placeholder`)"
-				class="w-full"
-			/>
-			<template #help>
-				<span
-					v-if="lookup?.kind === 'existing'"
-					class="flex items-center gap-1.5"
-				>
-					<UIcon name="i-ph-user-circle-check" class="text-success size-4" />
-					{{
-						$t(
-							`${C}.owner_existing`,
-							{ name: lookup.name, count: lookup.workspaces },
-							lookup.workspaces,
-						)
-					}}
-				</span>
-				<span
-					v-else-if="lookup?.kind === 'new'"
-					class="flex items-center gap-1.5"
-				>
-					<UIcon name="i-ph-envelope-simple" class="size-4" />
-					{{ $t(`${C}.owner_new`, { days: lookup.invitationDays }) }}
-				</span>
-			</template>
-		</UFormField>
-		<UFormField :label="$t(`${C}.access.label`)" required>
-			<URadioGroup
-				v-model="access"
-				variant="card"
-				:items="accessItems"
-				class="w-full"
-			/>
-		</UFormField>
-		<UFormField
-			v-if="access === 'complimentary'"
-			:label="$t(`${C}.free_until`)"
-			:hint="$t(`${C}.optional`)"
-			:help="
-				daysLeft === null
-					? $t(`${C}.free_until_empty`)
-					: $t(`${C}.free_until_days`, { count: daysLeft }, daysLeft)
-			"
-		>
-			<UInput v-model="freeUntil" type="date" class="w-full" />
-		</UFormField>
+		<FormRows has-required>
+			<FormFieldRow
+				:label="$t(`${C}.name`)"
+				:help="$t(`${C}.name_help`)"
+				required
+			>
+				<template #default="{ id }">
+					<DmsInputText
+						:id="id"
+						v-model="name"
+						:placeholder="$t(`${C}.name_placeholder`)"
+						class="w-full"
+						autofocus
+					/>
+				</template>
+			</FormFieldRow>
+			<FormFieldRow :label="$t(`${C}.plan`)" required>
+				<template #default="{ id }">
+					<DmsSelect
+						:id="id"
+						v-model="planId"
+						:items="planItems"
+						:deselectable="false"
+						:placeholder="$t(`${C}.plan_placeholder`)"
+						class="w-full"
+					/>
+				</template>
+			</FormFieldRow>
+			<FormFieldRow :label="$t(`${C}.owner_email`)" required>
+				<template #default="{ id }">
+					<DmsInputEmail
+						:id="id"
+						v-model="ownerEmail"
+						type="email"
+						:placeholder="$t(`${C}.owner_email_placeholder`)"
+						class="w-full"
+					/>
+				</template>
+				<template #help>
+					<span
+						v-if="lookup?.kind === 'existing'"
+						class="flex items-center gap-1.5"
+					>
+						<UIcon name="i-ph-user-circle-check" class="text-success size-4" />
+						{{
+							$t(
+								`${C}.owner_existing`,
+								{ name: lookup.name, count: lookup.workspaces },
+								lookup.workspaces,
+							)
+						}}
+					</span>
+					<span
+						v-else-if="lookup?.kind === 'new'"
+						class="flex items-center gap-1.5"
+					>
+						<UIcon name="i-ph-envelope-simple" class="size-4" />
+						{{ $t(`${C}.owner_new`, { days: lookup.invitationDays }) }}
+					</span>
+				</template>
+			</FormFieldRow>
+			<FormFieldRow
+				:label="$t(`${C}.access.label`)"
+				:labels-control="false"
+				required
+			>
+				<DmsChoiceCards v-model="access" :items="accessItems" />
+			</FormFieldRow>
+			<FormFieldRow
+				v-if="access === 'complimentary'"
+				:label="$t(`${C}.free_until`)"
+				:help="
+					daysLeft === null
+						? $t(`${C}.free_until_empty`)
+						: $t(`${C}.free_until_days`, { count: daysLeft }, daysLeft)
+				"
+			>
+				<template #default="{ id }">
+					<DmsDatePicker
+						:id="id"
+						:model-value="freeUntil || undefined"
+						@update:model-value="freeUntil = $event ?? ''"
+					/>
+				</template>
+			</FormFieldRow>
+		</FormRows>
 		<DmsBanner
 			v-if="whatHappens"
 			size="sm"

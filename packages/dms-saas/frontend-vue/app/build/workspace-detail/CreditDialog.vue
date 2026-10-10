@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import FormFieldRow from '../components/FormFieldRow.vue'
+import FormRows from '../components/FormRows.vue'
 import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
 import {
 	formatMinorUnits,
@@ -137,56 +139,73 @@ onMounted(load)
 			:description="$t(`${D}.unavailable_description`)"
 		/>
 		<template v-else>
-			<UFormField
-				:label="$t(`${D}.amount`)"
-				:help="$t(`${D}.ceiling`, { amount: money(ceilingMinor) })"
-				:error="isOverCeiling ? $t(`${D}.over_ceiling`) : undefined"
-				required
-			>
-				<div class="flex items-center gap-2">
-					<UInputNumber
-						v-model="amount"
-						:min="0"
-						:step="0.01"
-						:format-options="{ minimumFractionDigits: 2 }"
-						class="w-full"
-						autofocus
-					>
-						<template #trailing>
-							<span class="text-muted font-mono text-xs">{{ currency }}</span>
-						</template>
-					</UInputNumber>
-					<UButton color="neutral" variant="outline" @click="useMax">
-						{{ $t(`${D}.use_max`) }}
-					</UButton>
-				</div>
-			</UFormField>
-			<p class="text-muted text-sm">
-				{{
-					$t(`${D}.balance`, {
-						before: money(balanceMinor),
-						after: money(balanceMinor + amountMinor),
-					})
-				}}
-			</p>
-			<UFormField
-				:label="$t(`${D}.reason`)"
-				:help="
-					$t(`${D}.reason_help`, {
-						count: reason.length,
-						max: REASON_MAX_LENGTH,
-					})
-				"
-				required
-			>
-				<UTextarea
-					v-model="reason"
-					:maxlength="REASON_MAX_LENGTH"
-					:placeholder="$t(`${D}.reason_placeholder`)"
-					autoresize
-					class="w-full"
-				/>
-			</UFormField>
+			<FormRows has-required>
+				<FormFieldRow
+					:label="$t(`${D}.amount`)"
+					:help="$t(`${D}.ceiling`, { amount: money(ceilingMinor) })"
+					:error="isOverCeiling ? $t(`${D}.over_ceiling`) : undefined"
+					required
+				>
+					<template #default="{ id }">
+						<div class="flex items-center gap-2">
+							<UInputNumber
+								:id="id"
+								v-model="amount"
+								:min="0"
+								:step="0.01"
+								:format-options="{ minimumFractionDigits: 2 }"
+								class="w-full"
+								autofocus
+							>
+								<template #trailing>
+									<span class="text-muted font-mono text-xs">
+										{{ currency }}
+									</span>
+								</template>
+							</UInputNumber>
+							<UButton
+								color="neutral"
+								variant="outline"
+								class="shrink-0"
+								@click="useMax"
+							>
+								{{ $t(`${D}.use_max`) }}
+							</UButton>
+						</div>
+					</template>
+					<template #after>
+						<p class="text-muted text-sm">
+							{{
+								$t(`${D}.balance`, {
+									before: money(balanceMinor),
+									after: money(balanceMinor + amountMinor),
+								})
+							}}
+						</p>
+					</template>
+				</FormFieldRow>
+				<FormFieldRow
+					:label="$t(`${D}.reason`)"
+					:help="
+						$t(`${D}.reason_help`, {
+							count: reason.length,
+							max: REASON_MAX_LENGTH,
+						})
+					"
+					required
+				>
+					<template #default="{ id }">
+						<DmsTextarea
+							:id="id"
+							v-model="reason"
+							:maxlength="REASON_MAX_LENGTH"
+							:placeholder="$t(`${D}.reason_placeholder`)"
+							autoresize
+							class="w-full"
+						/>
+					</template>
+				</FormFieldRow>
+			</FormRows>
 			<DmsBanner
 				v-if="outcome"
 				size="sm"

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import FormFieldRow from '../build/components/FormFieldRow.vue'
+import FormRows from '../build/components/FormRows.vue'
 
 /**
  * The signup link of a pending invitation, for the operator to hand over
@@ -76,34 +78,41 @@ onMounted(load)
 			:actions="[{ label: $t('saas.workspace_detail.retry'), onClick: load }]"
 		/>
 		<template v-else-if="link">
-			<UFormField
-				:label="$t(`${L}.label`)"
-				:help="
-					expiresAt
-						? $t(
-								`${L}.expires`,
-								{
-									date: formatDate(expiresAt, locale, { dateStyle: 'medium' }),
-									count: daysLeft,
-								},
-								daysLeft,
-							)
-						: undefined
-				"
-			>
-				<div class="flex gap-2">
-					<UInput
-						:model-value="link"
-						readonly
-						class="w-full font-mono"
-						data-testid="invitation-link"
-						@focus="($event.target as HTMLInputElement).select()"
-					/>
-					<UButton icon="i-ph-copy" color="primary" @click="copy">
-						{{ $t(`${L}.copy`) }}
-					</UButton>
-				</div>
-			</UFormField>
+			<FormRows>
+				<FormFieldRow
+					:label="$t(`${L}.label`)"
+					:help="
+						expiresAt
+							? $t(
+									`${L}.expires`,
+									{
+										date: formatDate(expiresAt, locale, {
+											dateStyle: 'medium',
+										}),
+										count: daysLeft,
+									},
+									daysLeft,
+								)
+							: undefined
+					"
+				>
+					<template #default="{ id }">
+						<div class="flex gap-2">
+							<DmsInputText
+								:id="id"
+								:model-value="link"
+								readonly
+								class="w-full font-mono"
+								data-testid="invitation-link"
+								@focus="($event.target as HTMLInputElement).select()"
+							/>
+							<UButton icon="i-ph-copy" color="primary" @click="copy">
+								{{ $t(`${L}.copy`) }}
+							</UButton>
+						</div>
+					</template>
+				</FormFieldRow>
+			</FormRows>
 			<DmsBanner
 				size="sm"
 				tone="warning"

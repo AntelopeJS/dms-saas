@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import FormFieldRow from '../components/FormFieldRow.vue'
+import FormRows from '../components/FormRows.vue'
 import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
 import { formatMinorUnits } from '../../composables/useMoneyFormat'
 import { planPriceLabel } from './planPrice'
@@ -144,20 +146,35 @@ onMounted(load)
 			<p class="text-muted text-sm">
 				{{ $t(`${D}.lead`, { name: impact.workspaceName }) }}
 			</p>
-			<UFormField :label="$t(`${D}.plan`)" :help="fitNote" required>
-				<USelect v-model="planId" :items="planItems" class="w-full" />
-			</UFormField>
-			<UFormField
-				:label="$t(`${D}.expires`)"
-				:hint="$t(`${D}.optional`)"
-				:help="
-					daysLeft === null
-						? $t(`${D}.no_end`)
-						: $t(`${D}.expires_help`, { count: daysLeft }, daysLeft)
-				"
-			>
-				<UInput v-model="freeUntil" type="date" class="w-full" />
-			</UFormField>
+			<FormRows has-required>
+				<FormFieldRow :label="$t(`${D}.plan`)" :help="fitNote" required>
+					<template #default="{ id }">
+						<DmsSelect
+							:id="id"
+							v-model="planId"
+							:items="planItems"
+							:deselectable="false"
+							class="w-full"
+						/>
+					</template>
+				</FormFieldRow>
+				<FormFieldRow
+					:label="$t(`${D}.expires`)"
+					:help="
+						daysLeft === null
+							? $t(`${D}.no_end`)
+							: $t(`${D}.expires_help`, { count: daysLeft }, daysLeft)
+					"
+				>
+					<template #default="{ id }">
+						<DmsDatePicker
+							:id="id"
+							:model-value="freeUntil || undefined"
+							@update:model-value="freeUntil = $event ?? ''"
+						/>
+					</template>
+				</FormFieldRow>
+			</FormRows>
 			<DmsBanner
 				v-if="cancelsSubscription"
 				tone="error"
@@ -165,7 +182,7 @@ onMounted(load)
 				:title="$t(`${D}.cancellation_title`)"
 				:description="cancellation"
 			/>
-			<UCheckbox
+			<DmsCheckbox
 				v-if="cancelsSubscription"
 				v-model="isAcknowledged"
 				:label="$t(`${D}.acknowledge`)"

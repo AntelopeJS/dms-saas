@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import FormFieldRow from '../components/FormFieldRow.vue'
+import FormRows from '../components/FormRows.vue'
 import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
 import { formatMinorUnits } from '../../composables/useMoneyFormat'
 import type { OperatorOptions, UpgradePreview } from './types'
@@ -140,9 +142,19 @@ onMounted(load)
 			"
 		/>
 		<template v-else>
-			<UFormField :label="$t(`${D}.target`)" required>
-				<USelect v-model="planId" :items="planItems" class="w-full" />
-			</UFormField>
+			<FormRows has-required>
+				<FormFieldRow :label="$t(`${D}.target`)" required>
+					<template #default="{ id }">
+						<DmsSelect
+							:id="id"
+							v-model="planId"
+							:items="planItems"
+							:deselectable="false"
+							class="w-full"
+						/>
+					</template>
+				</FormFieldRow>
+			</FormRows>
 			<USkeleton v-if="isPreviewing" class="h-40 w-full" />
 			<DmsEmptyState
 				v-else-if="previewError"
