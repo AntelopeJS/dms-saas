@@ -111,9 +111,6 @@ export class SaasPlanMigrationDetailController extends PageController(
   },
   DefaultLayout({ fullWidth: true, hideHeader: true }),
 ) {
-  // The figures, the workspaces to settle and the operator actions all read
-  // the migration of the route: blocks fetch fixed URLs, so one component
-  // built from the DMS's public components draws the page.
   static migration = CustomComponent("DmsSaasPlanMigrationDetail")
     .options({
       endpoint: PLAN_MIGRATIONS_ENDPOINT,
