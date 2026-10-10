@@ -175,7 +175,6 @@
         },
         "company_name": "Raison sociale",
         "vat_number": "Numéro de TVA",
-        "optional": "Facultatif",
         "vat": {
           "verified": "Vérifié (VIES)",
           "pending": "Vérification en cours",

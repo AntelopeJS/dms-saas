@@ -1,5 +1,26 @@
 <script setup lang="ts">
 import { computed, resolveComponent } from 'vue'
+import FormFieldRow from '../build/components/FormFieldRow.vue'
+import FormRows from '../build/components/FormRows.vue'
+
+type AddressField = Extract<
+	BillingIdentityField,
+	'line1' | 'postalCode' | 'city'
+>
+
+interface AddressFieldRow {
+	id: AddressField
+	/** Key of the label, under the billing info texts. */
+	label: string
+	autocomplete: string
+}
+
+/** The props of a group: a titled section, or a stretch of rows. */
+interface GroupBindings {
+	title?: string
+	description?: string
+	class?: string
+}
 
 type VatBadgeTone = 'success' | 'warning'
 
@@ -28,6 +49,14 @@ const VAT_BADGE_TONES: Record<VatVerificationStatus, VatBadgeTone> = {
 	unverified: 'warning',
 }
 const KEY_PREFIX = 'saas.tenant_billing.billing_info'
+const ADDRESS_FIELDS: AddressFieldRow[] = [
+	{ id: 'line1', label: 'address_line1', autocomplete: 'address-line1' },
+	{ id: 'postalCode', label: 'postal_code', autocomplete: 'postal-code' },
+	{ id: 'city', label: 'city', autocomplete: 'address-level2' },
+]
+// Compact, the groups follow each other as one list of rows: a hairline
+// above each group but the first, as between its rows.
+const COMPACT_GROUP_CLASS = 'border-muted border-t first:border-t-0'
 
 // Literal, so the build resolves the DMS section at compile time.
 const DmsSectionComponent = resolveComponent('DmsSection')
@@ -56,30 +85,33 @@ function selectCustomerType(customerType: CustomerType): void {
 	draft.value = { ...draft.value, customerType }
 }
 
-function section(key: string) {
-	return props.sectioned
-		? {
-				title: t(`${KEY_PREFIX}.sections.${key}.title`),
-				description: t(`${KEY_PREFIX}.sections.${key}.description`, {
-					country: countryLabel.value,
-				}),
-			}
-		: null
+function group(key: string): GroupBindings {
+	if (!props.sectioned) return { class: COMPACT_GROUP_CLASS }
+	return {
+		title: t(`${KEY_PREFIX}.sections.${key}.title`),
+		description: t(`${KEY_PREFIX}.sections.${key}.description`, {
+			country: countryLabel.value,
+		}),
+	}
 }
 </script>
 
 <template>
-	<div class="flex flex-col" :class="sectioned ? 'gap-0' : 'gap-4'">
-		<component :is="groupWrapper" v-bind="section('customer_type') ?? {}">
-			<div :class="sectioned ? 'p-4' : ''">
-				<UFormField
-					:label="sectioned ? undefined : $t(`${KEY_PREFIX}.customer_type`)"
-					:error="fieldError('customerType')"
-				>
+	<FormRows has-required :legend-class="sectioned ? 'pt-3' : undefined">
+		<component :is="groupWrapper" v-bind="group('customer_type')">
+			<FormFieldRow
+				:label="sectioned ? undefined : $t(`${KEY_PREFIX}.customer_type`)"
+				:error="fieldError('customerType')"
+				:inset="sectioned"
+				:labels-control="false"
+			>
+				<!-- Side by side once the control column has room for both cards,
+					as the DMS choice cards lay out. -->
+				<div class="@container">
 					<div
 						role="radiogroup"
 						:aria-label="$t(`${KEY_PREFIX}.customer_type`)"
-						class="grid gap-2 sm:grid-cols-2"
+						class="@min-[480px]:grid-cols-2 grid gap-2"
 					>
 						<DmsCard
 							v-for="customerType in CUSTOMER_TYPES"
@@ -114,34 +146,32 @@ function section(key: string) {
 							</span>
 						</DmsCard>
 					</div>
-				</UFormField>
-			</div>
+				</div>
+			</FormFieldRow>
 		</component>
 
-		<component
-			:is="groupWrapper"
-			v-if="isBusiness"
-			v-bind="section('company') ?? {}"
-		>
-			<div class="flex flex-col gap-4" :class="sectioned ? 'p-4' : ''">
-				<UFormField
-					:label="$t(`${KEY_PREFIX}.company_name`)"
-					:error="fieldError('companyName')"
-					required
-				>
-					<UInput
+		<component :is="groupWrapper" v-if="isBusiness" v-bind="group('company')">
+			<FormFieldRow
+				:label="$t(`${KEY_PREFIX}.company_name`)"
+				:error="fieldError('companyName')"
+				:inset="sectioned"
+				required
+			>
+				<template #default="{ id }">
+					<DmsInputText
+						:id="id"
 						v-model="draft.companyName"
 						autocomplete="organization"
 						:disabled="isLocked"
 						class="w-full"
 					/>
-				</UFormField>
-				<UFormField
-					:label="$t(`${KEY_PREFIX}.vat_number`)"
-					:hint="$t(`${KEY_PREFIX}.optional`)"
-				>
+				</template>
+			</FormFieldRow>
+			<FormFieldRow :label="$t(`${KEY_PREFIX}.vat_number`)" :inset="sectioned">
+				<template #default="{ id }">
 					<div class="flex flex-wrap items-center gap-2">
-						<UInput
+						<DmsInputText
+							:id="id"
 							v-model="draft.vatNumber"
 							:disabled="isLocked"
 							class="min-w-40 grow"
@@ -152,56 +182,38 @@ function section(key: string) {
 							:label="$t(`${KEY_PREFIX}.vat.${vatVerificationStatus}`)"
 						/>
 					</div>
-				</UFormField>
-			</div>
+				</template>
+			</FormFieldRow>
 		</component>
 
-		<component :is="groupWrapper" v-bind="section('address') ?? {}">
-			<div class="flex flex-col gap-4" :class="sectioned ? 'p-4' : ''">
-				<UFormField
-					:label="$t(`${KEY_PREFIX}.address_line1`)"
-					:error="fieldError('line1')"
-					required
-				>
-					<UInput
-						v-model="draft.line1"
-						autocomplete="address-line1"
+		<component :is="groupWrapper" v-bind="group('address')">
+			<FormFieldRow
+				v-for="field in ADDRESS_FIELDS"
+				:key="field.id"
+				:label="$t(`${KEY_PREFIX}.${field.label}`)"
+				:error="fieldError(field.id)"
+				:inset="sectioned"
+				required
+			>
+				<template #default="{ id }">
+					<DmsInputText
+						:id="id"
+						v-model="draft[field.id]"
+						:autocomplete="field.autocomplete"
 						:disabled="isLocked"
 						class="w-full"
 					/>
-				</UFormField>
-				<div class="grid gap-4 sm:grid-cols-2">
-					<UFormField
-						:label="$t(`${KEY_PREFIX}.postal_code`)"
-						:error="fieldError('postalCode')"
-						required
-					>
-						<UInput
-							v-model="draft.postalCode"
-							autocomplete="postal-code"
-							:disabled="isLocked"
-							class="w-full"
-						/>
-					</UFormField>
-					<UFormField
-						:label="$t(`${KEY_PREFIX}.city`)"
-						:error="fieldError('city')"
-						required
-					>
-						<UInput
-							v-model="draft.city"
-							autocomplete="address-level2"
-							:disabled="isLocked"
-							class="w-full"
-						/>
-					</UFormField>
-				</div>
-				<UFormField
-					:label="$t(`${KEY_PREFIX}.country`)"
-					:error="fieldError('country')"
-					required
-				>
+				</template>
+			</FormFieldRow>
+			<FormFieldRow
+				:label="$t(`${KEY_PREFIX}.country`)"
+				:error="fieldError('country')"
+				:inset="sectioned"
+				required
+			>
+				<template #default="{ id }">
 					<USelectMenu
+						:id="id"
 						v-model="draft.country"
 						:items="countryItems"
 						value-key="value"
@@ -209,29 +221,31 @@ function section(key: string) {
 						:placeholder="$t(`${KEY_PREFIX}.country_placeholder`)"
 						class="w-full"
 					/>
-				</UFormField>
-			</div>
+				</template>
+			</FormFieldRow>
 		</component>
 
-		<component :is="groupWrapper" v-bind="section('email') ?? {}">
-			<div :class="sectioned ? 'p-4' : ''">
-				<UFormField
-					:label="sectioned ? undefined : $t(`${KEY_PREFIX}.billing_email`)"
-					:description="
-						sectioned ? undefined : $t(`${KEY_PREFIX}.billing_email_hint`)
-					"
-					:error="fieldError('billingEmail')"
-					required
-				>
-					<UInput
+		<component :is="groupWrapper" v-bind="group('email')">
+			<FormFieldRow
+				:label="sectioned ? undefined : $t(`${KEY_PREFIX}.billing_email`)"
+				:description="
+					sectioned ? undefined : $t(`${KEY_PREFIX}.billing_email_hint`)
+				"
+				:error="fieldError('billingEmail')"
+				:inset="sectioned"
+				required
+			>
+				<template #default="{ id }">
+					<DmsInputEmail
+						:id="id"
 						v-model="draft.billingEmail"
 						type="email"
 						autocomplete="email"
 						:disabled="isLocked"
 						class="w-full"
 					/>
-				</UFormField>
-			</div>
+				</template>
+			</FormFieldRow>
 		</component>
-	</div>
+	</FormRows>
 </template>

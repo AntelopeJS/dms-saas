@@ -175,7 +175,6 @@
         },
         "company_name": "Company name",
         "vat_number": "VAT number",
-        "optional": "Optional",
         "vat": {
           "verified": "Verified (VIES)",
           "pending": "Verification in progress",
