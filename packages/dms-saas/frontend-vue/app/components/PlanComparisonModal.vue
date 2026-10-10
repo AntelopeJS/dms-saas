@@ -76,11 +76,15 @@ const hiddenDetailCount = computed(
 const tooSmallNote = computed(() => {
 	const names = split.value.tooSmall.map((plan) => plan.name)
 	if (!names.length) return null
-	return t(`${KEY_PREFIX}.too_small`, {
-		plans: names.join(', '),
-		seats: props.seats.occupied,
-		workspace: props.workspaceName ?? '',
-	})
+	return t(
+		`${KEY_PREFIX}.too_small`,
+		{
+			plans: names.join(', '),
+			seats: props.seats.occupied,
+			workspace: props.workspaceName ?? '',
+		},
+		props.seats.occupied,
+	)
 })
 
 const otherCustomerTypeNote = computed(() => {
@@ -92,13 +96,17 @@ const otherCustomerTypeNote = computed(() => {
 })
 
 const subtitle = computed(() =>
-	t(`${KEY_PREFIX}.subtitle`, {
-		workspace: props.workspaceName ?? '',
-		plan: props.currentPlanName ?? '—',
-		seats: props.seats.occupied,
-		members: props.seats.members,
+	t(
+		`${KEY_PREFIX}.subtitle`,
+		{
+			workspace: props.workspaceName ?? '',
+			plan: props.currentPlanName ?? '—',
+			seats: props.seats.occupied,
+			members: props.seats.members,
 		invites: props.seats.pendingInvites,
-	}),
+		},
+		props.seats.occupied,
+	),
 )
 
 const isChoosingAnew = computed(
@@ -128,10 +136,14 @@ function priceLine(plan: OfferedPlanView): string {
 
 function seatTotal(plan: OfferedPlanView): string | null {
 	if (plan.billingMode !== 'seat') return null
-	return t(`${KEY_PREFIX}.seat_total`, {
-		total: formatMajorUnits(plan.price * props.seats.occupied, plan.currency),
-		seats: props.seats.occupied,
-	})
+	return t(
+		`${KEY_PREFIX}.seat_total`,
+		{
+			total: formatMajorUnits(plan.price * props.seats.occupied, plan.currency),
+			seats: props.seats.occupied,
+		},
+		props.seats.occupied,
+	)
 }
 
 function seatsCell(plan: OfferedPlanView): string {
@@ -242,7 +254,11 @@ watch(open, (isOpen) => {
 								<th class="w-48 p-3 text-left align-bottom">
 									<span class="text-muted text-xs font-normal">
 										{{
-											$t(`${KEY_PREFIX}.for_seats`, { seats: seats.occupied })
+											$t(
+												`${KEY_PREFIX}.for_seats`,
+												{ seats: seats.occupied },
+												seats.occupied,
+											)
 										}}
 									</span>
 								</th>

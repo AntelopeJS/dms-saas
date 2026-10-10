@@ -43,7 +43,7 @@
           "description": "Members, plan and ownership. Each links to where you manage it.",
           "members": "Members",
           "seats_of": "{occupied} / {max} seats",
-          "seats_unlimited": "{occupied} seats",
+          "seats_unlimited": "{occupied} seat | {occupied} seats",
           "seats_detail": "{members} · {invites}",
           "members_count": "no member | 1 member | {count} members",
           "invites_count": "no pending invite | 1 pending invite | {count} pending invites",

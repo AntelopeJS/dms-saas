@@ -61,9 +61,9 @@ const fitNote = computed(() => {
 	const plan = selectedPlan.value
 	const seats = impact.value?.seats ?? 0
 	if (!plan) return ''
-	if (plan.maxMembers < 0) return t(`${D}.fits_unlimited`, { seats })
+	if (plan.maxMembers < 0) return t(`${D}.fits_unlimited`, { seats }, seats)
 	const key = plan.fits ? 'fits' : 'exceeds'
-	return t(`${D}.${key}`, { seats, max: plan.maxMembers })
+	return t(`${D}.${key}`, { seats, max: plan.maxMembers }, seats)
 })
 
 const cancellation = computed(() => {

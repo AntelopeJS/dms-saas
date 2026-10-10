@@ -32,7 +32,9 @@ function membersItem({ seats }: WorkspaceOverview): StatGroupItem {
     eyebrow: `$${KEYS}.members`,
     value:
       seats.maxMembers === null
-        ? composed(`${KEYS}.seats_unlimited`, { occupied })
+        ? composed(`${KEYS}.seats_unlimited`, {
+            occupied: countParam(occupied),
+          })
         : composed(`${KEYS}.seats_of`, { occupied, max: seats.maxMembers }),
     detail: composed(`${KEYS}.seats_detail`, {
       members: composed(`${KEYS}.members_count`, {

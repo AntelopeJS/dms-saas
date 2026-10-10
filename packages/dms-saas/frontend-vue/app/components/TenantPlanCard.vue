@@ -163,7 +163,11 @@ const seatHint = computed(() => {
 	const free = Math.max(max - seats.value.occupied, 0)
 	return max > 0
 		? t(`${KEY_PREFIX}.seats_hint`, { used: seats.value.occupied, free })
-		: t(`${KEY_PREFIX}.seats_unlimited`, { used: seats.value.occupied })
+		: t(
+				`${KEY_PREFIX}.seats_unlimited`,
+				{ used: seats.value.occupied },
+				seats.value.occupied,
+			)
 })
 
 /** "Nov 8, 2026 · €34.80 incl. VAT" once Stripe's preview answers. */
