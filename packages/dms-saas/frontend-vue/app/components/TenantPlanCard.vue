@@ -36,6 +36,7 @@ const { consumeCancelledCheckout } = usePendingCheckout()
 const { workspace, load: loadWorkspace } = useCurrentWorkspace()
 const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
 const workspaceName = useWorkspaceName()
+const myWorkspaces = useMyWorkspaces()
 const route = useDmsRoute()
 const router = useDmsRouter()
 
@@ -252,11 +253,13 @@ function openUpgrade(plan: OfferedPlanView): void {
 	isUpgradeOpen.value = true
 }
 
-// The page's stock blocks (the complimentary banner, the next invoice) read
-// the plan too: they read their routes again once it changed.
+// The page's stock blocks (the complimentary banner, the next invoice) and
+// the sidebar switcher, which names the plan, read it too: they read their
+// routes again once it changed.
 async function refresh(): Promise<void> {
 	isLoading.value = true
 	void nextInvoice.refresh()
+	void myWorkspaces.refresh().catch(() => undefined)
 	await Promise.all([tenantPlan.refresh(), billingStatus.refresh()])
 	isLoading.value = false
 	refreshPageBlocks()
