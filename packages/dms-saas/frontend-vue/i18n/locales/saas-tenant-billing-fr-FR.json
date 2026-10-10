@@ -390,17 +390,17 @@
     },
     "workspace": {
       "plan": {
-        "change_applied": "Plan modifié.",
-        "change_error": "Échec du changement de plan",
+        "change_applied": "Offre modifiée.",
+        "change_error": "Échec du changement d'offre",
         "checkout_pending": {
           "title": "Un paiement est déjà en cours",
           "description": "Vous avez ouvert la page de paiement sécurisée de Stripe sans la terminer. Reprenez ce paiement, ou annulez-le pour recommencer.",
-          "description_paid": "Votre paiement a été reçu et est en cours de confirmation. Votre plan sera mis à jour dans un instant.",
+          "description_paid": "Votre paiement a été reçu et est en cours de confirmation. Votre offre sera mise à jour dans un instant.",
           "description_opening": "Une page de paiement est encore en cours d'ouverture pour cet espace de travail. Réessayez dans quelques minutes.",
           "resume": "Reprendre le paiement",
           "restart": "Annuler et recommencer",
           "close": "Fermer",
-          "cancelled": "Paiement annulé. Rien n'a été débité et votre plan est inchangé.",
+          "cancelled": "Paiement annulé. Rien n'a été débité et votre offre est inchangée.",
           "restart_error": "Le paiement en cours n'a pas pu être annulé. Réessayez dans un instant."
         }
       }

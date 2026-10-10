@@ -201,25 +201,25 @@
 				},
 				"free": {
 					"title": "Espaces de travail gratuits",
-					"description": "Limite les abus du plan gratuit en rattachant chaque espace gratuit à une carte de paiement.",
+					"description": "Limite les abus de l’offre gratuite en rattachant chaque espace gratuit à une carte de paiement.",
 					"per_card": "Espaces gratuits par carte",
-					"per_card_description": "Quand une carte couvre déjà ce nombre d’espaces gratuits, un nouvel espace avec la même carte demande un plan payant.",
+					"per_card_description": "Quand une carte couvre déjà ce nombre d’espaces gratuits, un nouvel espace avec la même carte demande une offre payante.",
 					"per_card_hint": "De 0 à 100. 0 désactive la règle."
 				},
 				"tax": {
 					"title": "Taxes",
 					"description": "Stripe calcule la TVA selon le pays du client et la catégorie fiscale du produit.",
 					"code": "Catégorie fiscale Stripe",
-					"code_description": "Appliquée à chaque plan lors de sa synchronisation avec Stripe.",
+					"code_description": "Appliquée à chaque offre lors de sa synchronisation avec Stripe.",
 					"code_hint": "txcd_ suivi de 8 chiffres. txcd_10000000 correspond à « Général – services fournis par voie électronique ».",
-					"plans": "Plans dans Stripe",
-					"plans_summary": "{synced} plans sur {total} portent cette catégorie",
-					"plans_summary_synced": "{synced} plans sur {total} portent cette catégorie · dernière synchronisation le {date}",
-					"plans_not_configured": "Stripe n’est pas configuré : les plans ne sont pas synchronisés.",
-					"unsaved_code": "Enregistrez d’abord : la nouvelle catégorie atteint les plans une fois enregistrée.",
-					"resync": "Resynchroniser les plans",
-					"resync_done": "Plans synchronisés avec Stripe",
-					"resync_failed": "Les plans n’ont pas pu être synchronisés avec Stripe."
+					"plans": "Offres dans Stripe",
+					"plans_summary": "{synced} offres sur {total} portent cette catégorie",
+					"plans_summary_synced": "{synced} offres sur {total} portent cette catégorie · dernière synchronisation le {date}",
+					"plans_not_configured": "Stripe n’est pas configuré : les offres ne sont pas synchronisées.",
+					"unsaved_code": "Enregistrez d’abord : la nouvelle catégorie atteint les offres une fois enregistrée.",
+					"resync": "Resynchroniser les offres",
+					"resync_done": "Offres synchronisées avec Stripe",
+					"resync_failed": "Les offres n’ont pas pu être synchronisées avec Stripe."
 				},
 				"refunds": {
 					"title": "Politique de remboursement",
@@ -239,7 +239,7 @@
 					},
 					"example": "Exemple chiffré",
 					"worked_example": {
-						"scenario": "Un plan à {price} / mois. Le propriétaire de l’espace demande un remboursement au jour {day} sur {days}.",
+						"scenario": "Une offre à {price} / mois. Le propriétaire de l’espace demande un remboursement au jour {day} sur {days}.",
 						"full": "Montant total",
 						"prorated": "Au prorata · {days} jours non utilisés"
 					},

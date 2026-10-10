@@ -2,34 +2,34 @@
   "saas": {
     "users": {
       "title": "Utilisateurs",
-      "description": "Tous les utilisateurs de la plateforme et leurs workspaces.",
+      "description": "Tous les utilisateurs de la plateforme et leurs espaces de travail.",
       "caption": "Tous les utilisateurs",
       "detail": "Utilisateur",
-      "detail_description": "Profil, workspaces, facturation, segments et rôle plateforme d'un utilisateur.",
+      "detail_description": "Profil, espaces de travail, facturation, segments et rôle plateforme d'un utilisateur.",
       "search_placeholder": "Rechercher un nom ou un e-mail",
       "footer_count": "{count} utilisateur | {count} utilisateurs",
       "load_failed": "Impossible de charger cet utilisateur.",
       "you": "Vous",
       "unverified": "Non vérifié",
       "no_segment": "—",
-      "no_workspace": "Aucun workspace",
+      "no_workspace": "Aucun espace de travail",
       "workspaces_owned": "{count} possédé | {count} possédés",
       "workspaces_member": "{count} membre | {count} membre",
       "active_now": "Actif maintenant",
       "never_active": "Jamais",
-      "owner_of": "Propriétaire du workspace {workspaces}",
+      "owner_of": "Propriétaire de l'espace de travail {workspaces}",
       "no_platform_role": "Aucun rôle plateforme",
-      "workspace_owner_badge": "Propriétaire du workspace",
+      "workspace_owner_badge": "Propriétaire de l'espace de travail",
       "empty": {
         "title": "Aucun utilisateur pour l'instant",
-        "description": "Les utilisateurs apparaissent ici dès qu'ils s'inscrivent ou sont invités dans un workspace."
+        "description": "Les utilisateurs apparaissent ici dès qu'ils s'inscrivent ou sont invités dans un espace de travail."
       },
       "column": {
         "user": "Utilisateur",
         "email": "E-mail",
         "platform_role": "Rôle plateforme",
         "email_verified": "E-mail vérifié",
-        "workspaces": "Workspaces",
+        "workspaces": "Espaces de travail",
         "segments": "Segments",
         "last_active": "Dernière activité",
         "created_at": "Créé le"
@@ -38,7 +38,7 @@
         "all": "Tous",
         "platform_admins": "Admins plateforme",
         "unverified": "Non vérifiés",
-        "workspaces": "Workspaces",
+        "workspaces": "Espaces de travail",
         "billing": "Facturation",
         "segments": "Segments"
       },
@@ -55,14 +55,14 @@
       },
       "detail_facts": {
         "label": "Faits sur l'utilisateur",
-        "workspaces": "Workspaces",
+        "workspaces": "Espaces de travail",
         "workspaces_detail": "Propriétaire de {owned} · membre de {member}",
         "language": "Langue",
         "no_language": "Non définie",
         "last_active": "Dernière activité",
         "created": "Créé le",
         "billed": "Facturé comme propriétaire",
-        "billed_detail": "Depuis le début · {count} workspace possédé | Depuis le début · {count} workspaces possédés",
+        "billed_detail": "Depuis le début · {count} espace de travail possédé | Depuis le début · {count} espaces de travail possédés",
         "languages": {
           "en": "Anglais",
           "fr": "Français"
@@ -92,7 +92,7 @@
       "platform_role": {
         "title": "Rôle plateforme",
         "not_admin": "Pas admin plateforme",
-        "explanation": "Les admins plateforme gèrent chaque workspace, offre et facture.",
+        "explanation": "Les admins plateforme gèrent chaque espace de travail, offre et facture.",
         "promote_action": "Promouvoir…",
         "demote_action": "Rétrograder…",
         "self_demote_reason": "Vous ne pouvez pas vous rétrograder. Demandez à un autre admin plateforme.",
@@ -100,18 +100,18 @@
         "promoted": "Promu admin plateforme",
         "demoted": "Rôle d'admin plateforme retiré",
         "promote_title": "Faire de {name} un admin plateforme ?",
-        "promote_description": "Les admins plateforme pilotent tout le SaaS. {name} pourra faire ce qui est listé ci-dessous. Ses rôles dans les workspaces ne changent pas, et les autres admins plateforme sont notifiés.",
+        "promote_description": "Les admins plateforme pilotent tout le SaaS. {name} pourra faire ce qui est listé ci-dessous. Ses rôles dans les espaces de travail ne changent pas, et les autres admins plateforme sont notifiés.",
         "promote_confirm": "Faire admin plateforme",
-        "grants_workspaces": "Voir et modifier chaque workspace",
+        "grants_workspaces": "Voir et modifier chaque espace de travail",
         "grants_billing": "Émettre des avoirs, des remboursements et du crédit Stripe",
         "grants_catalog": "Modifier les offres, les prix et les fonctionnalités",
         "grants_admins": "Promouvoir ou rétrograder d'autres admins plateforme",
-        "frees_seats": "Cesse d'occuper une place dans les workspaces qu'il ne possède pas",
+        "frees_seats": "Cesse d'occuper une place dans les espaces de travail qu'il ne possède pas",
         "demote_title": "Retirer le rôle d'admin plateforme de {name} ?",
-        "demote_description": "{name} perd le module SaaS au prochain chargement de page et garde ses workspaces et ses rôles.",
+        "demote_description": "{name} perd le module SaaS au prochain chargement de page et garde ses espaces de travail et ses rôles.",
         "demote_confirm": "Retirer le rôle d'admin",
-        "removes_access": "Plus d'accès aux workspaces, à la facturation ni aux offres",
-        "takes_seats": "Occupe désormais une place dans les workspaces qu'il ne possède pas",
+        "removes_access": "Plus d'accès aux espaces de travail, à la facturation ni aux offres",
+        "takes_seats": "Occupe désormais une place dans les espaces de travail qu'il ne possède pas",
         "admins_remaining": "Admins plateforme restants",
         "demote_blocked_self_title": "Vous ne pouvez pas vous rétrograder",
         "demote_blocked_self_description": "Demandez à un autre admin plateforme de retirer votre rôle.",
@@ -120,29 +120,29 @@
         "close": "Fermer"
       },
       "workspaces": {
-        "open": "Ouvrir le workspace",
-        "empty_title": "Aucun workspace",
-        "empty_description": "Cet utilisateur n'appartient à aucun workspace.",
+        "open": "Ouvrir l'espace de travail",
+        "empty_title": "Aucun espace de travail",
+        "empty_description": "Cet utilisateur n'appartient à aucun espace de travail.",
         "column": {
-          "workspace": "Workspace",
+          "workspace": "Espace de travail",
           "role": "Son rôle",
           "status": "Statut",
           "plan": "Offre",
           "joined_at": "Arrivée"
         },
         "role": {
-          "owner": "Propriétaire du workspace",
+          "owner": "Propriétaire de l'espace de travail",
           "member": "Membre"
         }
       },
       "billing": {
-        "hint": "Uniquement les workspaces qu'il possède : un workspace dont il est membre est facturé à son propriétaire.",
+        "hint": "Uniquement les espaces de travail qu'il possède : un espace de travail dont il est membre est facturé à son propriétaire.",
         "open_invoice": "Ouvrir dans Stripe",
         "download_pdf": "Télécharger le PDF",
         "empty_title": "Rien de facturé",
-        "empty_description": "Aucune facture ni aucun avoir dans les workspaces de cet utilisateur.",
+        "empty_description": "Aucune facture ni aucun avoir dans les espaces de travail de cet utilisateur.",
         "column": {
-          "workspace": "Workspace",
+          "workspace": "Espace de travail",
           "number": "Numéro",
           "type": "Type",
           "period": "Période",
@@ -184,7 +184,7 @@
       "no_value": "rien",
       "empty": {
         "title": "Regroupez les utilisateurs selon ce qu'ils font et ce qu'ils paient",
-        "description": "Un segment est un ensemble de règles enregistré, comme « propriétaires d'un workspace impayé ». Utilisez-le pour exporter une liste ou cibler des e-mails."
+        "description": "Un segment est un ensemble de règles enregistré, comme « propriétaires d'un espace de travail impayé ». Utilisez-le pour exporter une liste ou cibler des e-mails."
       },
       "column": {
         "name": "Segment",
@@ -210,7 +210,7 @@
       "export": {
         "title": "Export du segment",
         "preparing": "Préparation du téléchargement…",
-        "done_message": "Le fichier CSV a été téléchargé : e-mail, nom, workspaces, MRR possédé.",
+        "done_message": "Le fichier CSV a été téléchargé : e-mail, nom, espaces de travail, MRR possédé.",
         "success_title": "Export téléchargé",
         "error_title": "Échec de l'export",
         "retry": "Réessayer"
@@ -226,7 +226,7 @@
         "name_placeholder": "Propriétaires payants à risque",
         "description": "Description",
         "description_hint": "À quoi sert ce segment.",
-        "description_placeholder": "Propriétaires de workspaces payants qui décrochent",
+        "description_placeholder": "Propriétaires d'espaces de travail payants qui décrochent",
         "conditions": "Conditions",
         "conditions_description": "Les règles qui déterminent quels utilisateurs appartiennent à ce segment.",
         "save": "Enregistrer et réévaluer",
@@ -239,8 +239,8 @@
         "or": "Ou",
         "add": "Ajouter une condition",
         "add_group": "Ajouter un groupe",
-        "add_workspace_ref": "Ajouter une condition sur les workspaces",
-        "workspace_ref_label": "Workspaces de l'utilisateur"
+        "add_workspace_ref": "Ajouter une condition sur les espaces de travail",
+        "workspace_ref_label": "Espaces de travail de l'utilisateur"
       },
       "builder": {
         "lead_before": "Inclure les utilisateurs qui remplissent",
@@ -265,7 +265,7 @@
         "count_users": "{count} utilisateur | {count} utilisateurs",
         "count_owners": "{count} utilisateur | {count} utilisateurs",
         "empty_rules": "Aucune condition pour l'instant : le segment ne contient personne.",
-        "empty_workspace_rules": "Ajoutez une condition sur le workspace."
+        "empty_workspace_rules": "Ajoutez une condition sur l'espace de travail."
       },
       "rules": {
         "none": "Aucune règle · ne contient personne",
@@ -276,8 +276,8 @@
           "member": "Membre de"
         },
         "quantifier": {
-          "any": "au moins un workspace",
-          "all": "tous ses workspaces"
+          "any": "au moins un espace de travail",
+          "all": "tous ses espaces de travail"
         },
         "group": {
           "and": "toutes les {count} conditions | toutes les {count} conditions",
@@ -291,12 +291,12 @@
         "empty": "Aucune condition pour l'instant : ce segment ne contient personne.",
         "ref": {
           "owner": {
-            "any": "ils possèdent au moins un workspace où",
-            "all": "chaque workspace qu'ils possèdent a"
+            "any": "ils possèdent au moins un espace de travail où",
+            "all": "chaque espace de travail qu'ils possèdent a"
           },
           "member": {
-            "any": "ils appartiennent à au moins un workspace où",
-            "all": "chaque workspace auquel ils appartiennent a"
+            "any": "ils appartiennent à au moins un espace de travail où",
+            "all": "chaque espace de travail auquel ils appartiennent a"
           }
         }
       },
@@ -378,8 +378,8 @@
       "field_groups": {
         "identity": "Utilisateur",
         "activity": "Activité",
-        "memberships": "Workspaces",
-        "workspace": "Workspace",
+        "memberships": "Espaces de travail",
+        "workspace": "Espace de travail",
         "billing": "Facturation"
       },
       "enum": {
@@ -390,40 +390,40 @@
       },
       "fields": {
         "name": {
-          "label": "Nom du workspace",
-          "description": "Nom affiché du workspace."
+          "label": "Nom de l'espace de travail",
+          "description": "Nom affiché de l'espace de travail."
         },
         "created_at": {
           "label": "Créé le",
-          "description": "Date de création du workspace."
+          "description": "Date de création de l'espace de travail."
         },
         "age_in_days": {
           "label": "Ancienneté",
-          "description": "Jours écoulés depuis la création du workspace."
+          "description": "Jours écoulés depuis la création de l'espace de travail."
         },
         "members_count": {
           "label": "Nombre de membres",
-          "description": "Membres du workspace, propriétaires compris."
+          "description": "Membres de l'espace de travail, propriétaires compris."
         },
         "status": {
           "label": "Statut",
-          "description": "Statut du workspace : actif, en essai, impayé…"
+          "description": "Statut de l'espace de travail : actif, en essai, impayé…"
         },
         "plan_id": {
           "label": "Offre",
-          "description": "Offre à laquelle le workspace est abonné."
+          "description": "Offre à laquelle l'espace de travail est abonné."
         },
         "is_paying": {
           "label": "Payant",
-          "description": "Le workspace génère du revenu récurrent."
+          "description": "L'espace de travail génère du revenu récurrent."
         },
         "is_on_trial": {
           "label": "En essai",
-          "description": "Le workspace est en période d'essai."
+          "description": "L'espace de travail est en période d'essai."
         },
         "mrr": {
           "label": "MRR",
-          "description": "Revenu récurrent mensuel du workspace."
+          "description": "Revenu récurrent mensuel de l'espace de travail."
         },
         "total_revenue": {
           "label": "Revenu total",
@@ -431,11 +431,11 @@
         },
         "days_since_last_invoice": {
           "label": "Jours depuis la dernière facture",
-          "description": "Jours écoulés depuis la dernière facture. Les workspaces jamais facturés ne correspondent pas."
+          "description": "Jours écoulés depuis la dernière facture. Les espaces de travail jamais facturés ne correspondent pas."
         },
         "has_stripe_customer": {
           "label": "Client Stripe",
-          "description": "Le workspace a un client Stripe."
+          "description": "L'espace de travail a un client Stripe."
         },
         "customer_type": {
           "label": "Type de client",
@@ -470,12 +470,12 @@
           "description": "Jours depuis la dernière activité. Les utilisateurs jamais actifs ne correspondent pas."
         },
         "workspaces_count": {
-          "label": "Nombre de workspaces",
-          "description": "Workspaces auxquels l'utilisateur appartient."
+          "label": "Nombre d'espaces de travail",
+          "description": "Espaces de travail auxquels l'utilisateur appartient."
         },
         "is_owner_of_any_workspace": {
-          "label": "Possède un workspace",
-          "description": "L'utilisateur possède au moins un workspace."
+          "label": "Possède un espace de travail",
+          "description": "L'utilisateur possède au moins un espace de travail."
         }
       }
     },
@@ -483,10 +483,10 @@
       "users": {
         "profile": "Profil utilisateur",
         "profile_description": "Voir qui est un utilisateur : identité, adresse, vérification, double authentification et rôle plateforme",
-        "workspaces": "Workspaces de l'utilisateur",
-        "workspaces_description": "Voir les workspaces d'un utilisateur et son rôle dans chacun",
+        "workspaces": "Espaces de travail de l'utilisateur",
+        "workspaces_description": "Voir les espaces de travail d'un utilisateur et son rôle dans chacun",
         "billing": "Facturation de l'utilisateur",
-        "billing_description": "Voir les factures et avoirs des workspaces qu'un utilisateur possède",
+        "billing_description": "Voir les factures et avoirs des espaces de travail qu'un utilisateur possède",
         "segments": "Segments de l'utilisateur",
         "segments_description": "Voir les segments d'un utilisateur et pourquoi il y correspond",
         "security": "Sécurité et connexion",
@@ -498,7 +498,7 @@
         "segment_preview": "Aperçu en direct du segment",
         "segment_preview_description": "Voir qui correspond aux règles en cours d'édition, avant de les enregistrer",
         "facts": "Chiffres de l'utilisateur",
-        "facts_description": "Voir les workspaces d'un utilisateur, sa langue, son activité et ce qui lui est facturé"
+        "facts_description": "Voir les espaces de travail d'un utilisateur, sa langue, son activité et ce qui lui est facturé"
       }
     }
   }
