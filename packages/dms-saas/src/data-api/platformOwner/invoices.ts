@@ -2,7 +2,6 @@ import { Controller } from "@antelopejs/interface-api";
 import { GetMetadata } from "@antelopejs/interface-core";
 import {
   DataController,
-  DefaultRoutes,
   RegisterDataController,
 } from "@antelopejs/interface-data-api";
 import {
@@ -47,6 +46,7 @@ import {
 } from "../../utils";
 import { invoiceStatusDetail, invoiceWorkspaceDetail } from "./invoice-cells";
 import { HiddenStringFilter } from "./hidden-filter";
+import { withTableScope } from "./table-scope";
 import {
   INVOICE_COUNT_BATCH,
   INVOICE_GUARDS,
@@ -65,11 +65,7 @@ const CREDITABLE_STATUSES: ReadonlySet<string> = new Set(
   CREDITABLE_INVOICE_STATUSES,
 );
 
-const withInvoiceScope = <O>(route: O) =>
-  DefaultRoutes.WithOptions(
-    route as Parameters<typeof DefaultRoutes.WithOptions>[0],
-    INVOICE_LIST_OPTIONS,
-  );
+const withInvoiceScope = withTableScope(INVOICE_LIST_OPTIONS);
 
 /**
  * Every workspace's invoices, for platform admins. Credit notes share the
