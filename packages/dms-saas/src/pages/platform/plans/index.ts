@@ -213,6 +213,8 @@ export class SaasPlansController extends PageController(
       edit: { isEnabled: true, label: `${TEXTS}.action.edit` },
       details: false,
       delete: false,
+      // "Duplicate as new plan" opens the editor prefilled instead.
+      duplicate: false,
       copyLink: false,
       hasSelection: HAS_SELECTION,
       // The rules read listed values (`workspaceCount` is a number on the

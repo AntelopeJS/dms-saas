@@ -96,6 +96,7 @@ export class SaasPlanMigrationsController extends PageController(
       add: false,
       edit: false,
       delete: false,
+      duplicate: false,
       copyLink: true,
       hasSelection: false,
       details: { isEnabled: true, isVisible: false },

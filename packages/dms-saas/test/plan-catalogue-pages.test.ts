@@ -122,6 +122,18 @@ describe("the plans page", () => {
   });
 });
 
+describe("stock Duplicate", () => {
+  // Plans have their own "Duplicate as new plan"; a migration is a record of
+  // what happened, nothing to copy.
+  it("is off on the plans and plan migrations tables", async () => {
+    const plans = await SaasPlansController.table.serialize();
+    const migrations = await SaasPlanMigrationsController.table.serialize();
+
+    expect(plans.options?.rowActions?.duplicate).toBe(false);
+    expect(migrations.options?.rowActions?.duplicate).toBe(false);
+  });
+});
+
 describe("the plan migrations page", () => {
   it("is listed in the catalogue with a tab per stage, badging the ones needing attention", async () => {
     const { options } = await SaasPlanMigrationsController.table.serialize();
