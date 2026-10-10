@@ -1,303 +1,245 @@
-import { Controller, Get } from "@antelopejs/interface-api";
+import { Controller, Get, Parameter } from "@antelopejs/interface-api";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
-import { Model } from "@antelopejs/interface-database-decorators";
-import { TenantModel } from "@antelopejs/interface-dms/db";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import type {
+  ActivityFeedItem,
+  KeyValueListItem,
+  NavCardItem,
+  StatGroupItem,
+  TopListItem,
+} from "@antelopejs/interface-dms/base";
+import { getReportingCurrency } from "../../config";
 import {
+  type Invoice,
   InvoiceModel,
+  type PlanMigration,
+  PlanMigrationModel,
   PlanModel,
-  TenantBillingStateModel,
-  TenantSubscriptionModel,
 } from "../../db";
+import { buildActivityFeed, parseActivityKind } from "../../metrics/activity";
+import {
+  type DirectoryRow,
+  loadDirectoryRows,
+  nameWorkspaces,
+  summariseDirectory,
+} from "../../metrics/directory-summary";
+import {
+  attentionCards,
+  dashboardHeadline,
+  type MigrationAttention,
+  type OpenInvoicesAttention,
+  plansByMrrItems,
+  workspacesByStatusItems,
+} from "../../metrics/headline-items";
+import { sumInReportingCurrency } from "../../metrics/normalised-mrr";
+import {
+  type ChartCardPayload,
+  churnOver,
+  paidInvoicesChart,
+  parseComparison,
+  parsePeriod,
+} from "../../metrics/revenue";
+import { workspaceDetailPath } from "../../pages/platform/paths";
 import { MS_PER_DAY } from "../../utils/time";
+import { loadActivitySources } from "../../metrics/activity-sources";
 
-const ACTIVE_STATUS = "active";
-const TRIALING_STATUS = "trialing";
-const FREE_STATUS = "free";
-const PAST_DUE_STATUS = "past_due";
+/** What a list block (`StatGroup`, `NavCardGrid`, …) reads from its route. */
+interface ItemsPayload<T> {
+  items: T[];
+}
+
+/** What a `KpiCard` reads from its route. */
+interface KpiPayload {
+  value: number;
+  previousValue?: number;
+  delta?: number;
+}
+
+const ATTENTION_MIGRATION_STATUSES = new Set([
+  "failed",
+  "partially_failed",
+  "reconciliation_required",
+]);
 const OPEN_STATUS = "open";
-const PAID_STATUS = "paid";
-const COUNTED_AS_ACTIVE = [ACTIVE_STATUS, TRIALING_STATUS];
-const SUBSCRIPTIONS_SERIES_NAME = "subscriptions";
-const REVENUE_SERIES_NAME = "revenue";
-const PRICE_DIVIDER = 100;
-const REVENUE_BUCKETS = 12;
-const DAYS_PER_MONTH = 30;
-const TOP_PLANS_LIMIT = 10;
-const RECENT_ACTIVITY_LIMIT = 12;
-const CURRENCY_SYMBOL = "€";
+// Paid invoices are filtered on their issue date, which an invoice paid late
+// precedes: the window reaches back far enough to catch it.
+const LATE_PAYMENT_LOOKBACK_DAYS = 90;
+const ACTIVITY_LIMIT = 8;
+const PERCENT = 100;
 
-const STATUS_LABELS: Record<string, string> = {
-  active: "Active",
-  trialing: "Trialing",
-  past_due: "Past due",
-  suspended: "Suspended",
-  cancelled: "Cancelled",
-  pending_payment: "Pending payment",
-};
-const UNKNOWN_STATUS_LABEL = "Unknown";
-
-interface TopListItem {
-  id: string;
-  title: string;
-  value: number;
+async function loadAttentionMigrations(): Promise<MigrationAttention> {
+  const migrations = (await GetModel(PlanMigrationModel).getAll()).filter(
+    (migration: PlanMigration) =>
+      ATTENTION_MIGRATION_STATUSES.has(migration.status),
+  );
+  const [first] = migrations;
+  const fromPlan = first
+    ? await GetModel(PlanModel).get(first.fromPlanId)
+    : undefined;
+  return {
+    count: migrations.length,
+    firstFromPlan: fromPlan?.name ?? "—",
+    firstToPlan: first?.snapshot?.target.name ?? "—",
+    firstFailed: first?.failedWorkspaces.length ?? 0,
+    firstTotal: first?.totalWorkspaces ?? 0,
+  };
 }
 
-interface ChartSeriesPoint {
-  x: string;
-  y: number;
-  label?: string;
+async function loadOpenInvoices(
+  currency: string,
+): Promise<OpenInvoicesAttention> {
+  const open: Invoice[] = await GetModel(InvoiceModel, CROSS_INSTANCE)
+    .table.getAll(OPEN_STATUS, "status")
+    .run();
+  return {
+    count: open.length,
+    awaiting: sumInReportingCurrency(
+      open.map((invoice) => ({
+        amountMinor: invoice.total || invoice.amount,
+        currency: invoice.currency,
+      })),
+      currency,
+    ),
+  };
 }
 
-interface ChartSeries {
-  name: string;
-  data: ChartSeriesPoint[];
+async function loadSettledDocuments(since: Date): Promise<Invoice[]> {
+  const cutoff = new Date(
+    since.getTime() - LATE_PAYMENT_LOOKBACK_DAYS * MS_PER_DAY,
+  );
+  return GetModel(InvoiceModel, CROSS_INSTANCE)
+    .table.getAll(["paid", "issued"], "status")
+    .filter((row) => row.key("issuedAt").ge(cutoff))
+    .run();
 }
 
-/** What a `ChartCard` reads from its `fetchUrl`: the headline value and the
- * series its nested chart draws — a nested chart does not fetch on its own. */
-interface ChartCardPayload {
-  value: number;
-  series: ChartSeries[];
+function earliestStart(...ranges: Array<{ from: Date } | null>): Date {
+  return ranges
+    .filter((range): range is { from: Date } => range !== null)
+    .reduce(
+      (first, range) => (range.from < first ? range.from : first),
+      new Date(),
+    );
 }
 
-interface ActivityEntry {
-  id: string;
-  icon: string;
-  iconColor: string;
-  title: string;
-  subtitle: string;
-  timestamp: string;
-}
-
-function sumValues(points: ChartSeriesPoint[]): number {
-  return points.reduce((total, point) => total + point.y, 0);
-}
-
-function formatStatusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? UNKNOWN_STATUS_LABEL;
-}
-
-function toTimestamp(value: unknown): string {
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === "string") return value;
-  return "";
-}
-
-function formatInvoiceAmount(amount: number | null | undefined): string {
-  return `${CURRENCY_SYMBOL}${((amount ?? 0) / PRICE_DIVIDER).toFixed(2)}`;
-}
-
+/** Platform-wide figures of the back-office dashboard. */
 export class SaasDashboardController extends Controller("/api/saas/dashboard") {
-  @Model(TenantModel)
-  declare tenantModel: TenantModel;
-
-  @Model(TenantSubscriptionModel, CROSS_INSTANCE)
-  declare tenantSubscriptionModel: TenantSubscriptionModel;
-
-  @Model(PlanModel)
-  declare planModel: PlanModel;
-
-  @Model(InvoiceModel, CROSS_INSTANCE)
-  declare invoiceModel: InvoiceModel;
-
-  @Model(TenantBillingStateModel)
-  declare tenantBillingStateModel: TenantBillingStateModel;
-
-  @Get("/kpi/workspaces")
-  async kpiWorkspaces(@AuthOwnerOnly() _user: User) {
-    const value = await this.tenantModel.table.count().run();
-    return { value };
-  }
-
-  @Get("/kpi/mrr")
-  async kpiMrr(@AuthOwnerOnly() _user: User) {
-    const rows = await this.tenantSubscriptionModel.table
-      .getAll([ACTIVE_STATUS, TRIALING_STATUS], "status")
-      .pluck("planId")
-      .run();
-    const planPriceCache = new Map<string, number | null>();
-    let total = 0;
-    for (const row of rows) {
-      const planId = row.planId;
-      if (!planId) continue;
-      let price = planPriceCache.get(planId);
-      if (price === undefined) {
-        const plan = await this.planModel.get(planId);
-        price = plan?.price ?? null;
-        planPriceCache.set(planId, price);
-      }
-      if (price !== null) total += price;
-    }
-    return { value: Math.round(total * PRICE_DIVIDER) / PRICE_DIVIDER };
-  }
-
-  /**
-   * Subscription count per status, across workspaces. The active KPI and the
-   * by-status chart both read it, so the two cards on the page cannot
-   * disagree.
-   */
-  private async countSubscriptionsByStatus(): Promise<Map<string, number>> {
-    const rows = await this.tenantSubscriptionModel.table.pluck("status").run();
-    const counts = new Map<string, number>();
-    for (const { status } of rows) {
-      if (!status) continue;
-      counts.set(status, (counts.get(status) ?? 0) + 1);
-    }
-    return counts;
-  }
-
-  @Get("/kpi/active-subscriptions")
-  async kpiActive(@AuthOwnerOnly() _user: User) {
-    const counts = await this.countSubscriptionsByStatus();
-    const value = COUNTED_AS_ACTIVE.reduce(
-      (total, status) => total + (counts.get(status) ?? 0),
-      0,
-    );
-    return { value };
-  }
-
-  @Get("/kpi/open-invoices")
-  async kpiOpen(@AuthOwnerOnly() _user: User) {
-    const value = await this.invoiceModel.table
-      .getAll(OPEN_STATUS, "status")
-      .count()
-      .run();
-    return { value };
-  }
-
-  @Get("/kpi/state-active")
-  async kpiStateActive(@AuthOwnerOnly() _user: User) {
+  private async summary(): Promise<{ rows: DirectoryRow[]; currency: string }> {
     return {
-      value: await this.tenantBillingStateModel.countByState(ACTIVE_STATUS),
+      rows: await loadDirectoryRows(),
+      currency: getReportingCurrency(),
     };
   }
 
-  @Get("/kpi/state-free")
-  async kpiStateFree(@AuthOwnerOnly() _user: User) {
-    return {
-      value: await this.tenantBillingStateModel.countByState(FREE_STATUS),
-    };
-  }
-
-  @Get("/kpi/state-past-due")
-  async kpiStatePastDue(@AuthOwnerOnly() _user: User) {
-    return {
-      value: await this.tenantBillingStateModel.countByState(PAST_DUE_STATUS),
-    };
-  }
-
-  @Get("/top-plans")
-  async topPlans(@AuthOwnerOnly() _user: User): Promise<TopListItem[]> {
-    const rows = await this.tenantSubscriptionModel.table
-      .getAll([ACTIVE_STATUS, TRIALING_STATUS], "status")
-      .pluck("planId")
-      .run();
-    const counts = new Map<string, number>();
-    for (const row of rows) {
-      const planId = row.planId;
-      if (!planId) continue;
-      counts.set(planId, (counts.get(planId) ?? 0) + 1);
-    }
-    const planIds = Array.from(counts.keys());
-    const plans = await Promise.all(
-      planIds.map((id) => this.planModel.get(id)),
-    );
-    const items: TopListItem[] = [];
-    for (let i = 0; i < planIds.length; i += 1) {
-      const plan = plans[i];
-      if (!plan) continue;
-      items.push({
-        id: plan._id,
-        title: plan.name,
-        value: counts.get(planIds[i]) ?? 0,
-      });
-    }
-    items.sort((a, b) => b.value - a.value);
-    return items.slice(0, TOP_PLANS_LIMIT);
-  }
-
-  @Get("/chart/revenue")
-  async chartRevenue(@AuthOwnerOnly() _user: User): Promise<ChartCardPayload> {
-    const now = Date.now();
-    const buckets = new Map<string, number>();
-    for (let bucket = REVENUE_BUCKETS - 1; bucket >= 0; bucket -= 1) {
-      const date = new Date(now - bucket * DAYS_PER_MONTH * MS_PER_DAY);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      buckets.set(key, 0);
-    }
-    const cutoff = new Date(
-      now - REVENUE_BUCKETS * DAYS_PER_MONTH * MS_PER_DAY,
-    );
-    const invoices = await this.invoiceModel.table
-      .getAll(PAID_STATUS, "status")
-      .filter((row) => row.key("issuedAt").ge(cutoff))
-      .pluck("amount", "issuedAt")
-      .run();
-    for (const invoice of invoices) {
-      const rawIssued = invoice.issuedAt;
-      if (!rawIssued) continue;
-      const issued =
-        rawIssued instanceof Date ? rawIssued : new Date(rawIssued);
-      const key = `${issued.getFullYear()}-${String(issued.getMonth() + 1).padStart(2, "0")}`;
-      if (buckets.has(key)) {
-        buckets.set(
-          key,
-          (buckets.get(key) ?? 0) + (invoice.amount ?? 0) / PRICE_DIVIDER,
-        );
-      }
-    }
-    const data = Array.from(buckets.entries()).map(([x, y]) => ({ x, y }));
-    return {
-      value: sumValues(data),
-      series: [{ name: REVENUE_SERIES_NAME, data }],
-    };
-  }
-
-  @Get("/chart/subscriptions-by-status")
-  async chartSubscriptionsByStatus(
+  @Get("/headline")
+  async headline(
     @AuthOwnerOnly() _user: User,
-  ): Promise<ChartCardPayload> {
-    const counts = await this.countSubscriptionsByStatus();
-    const data = Array.from(counts.entries()).map(([status, count]) => {
-      const label = formatStatusLabel(status);
-      return { x: label, y: count, label };
-    });
+  ): Promise<ItemsPayload<StatGroupItem>> {
+    const { rows, currency } = await this.summary();
+    const summary = summariseDirectory(rows, new Date(), currency);
+    return { items: dashboardHeadline(summary) };
+  }
+
+  @Get("/attention")
+  async attention(
+    @AuthOwnerOnly() _user: User,
+  ): Promise<ItemsPayload<NavCardItem>> {
+    const { rows, currency } = await this.summary();
+    const summary = summariseDirectory(rows, new Date(), currency);
+    const [complimentaryEnding, migrations, openInvoices] = await Promise.all([
+      nameWorkspaces(summary.complimentaryEnding),
+      loadAttentionMigrations(),
+      loadOpenInvoices(currency),
+    ]);
     return {
-      value: sumValues(data),
-      series: [{ name: SUBSCRIPTIONS_SERIES_NAME, data }],
+      items: attentionCards({
+        summary,
+        complimentaryEnding,
+        migrations,
+        openInvoices,
+      }),
     };
   }
 
-  @Get("/recent-activity")
-  async recentActivity(@AuthOwnerOnly() _user: User): Promise<ActivityEntry[]> {
-    const tenants = await this.tenantModel.table
-      .pluck("_id", "name", "createdAt")
-      .run();
-    const invoices = await this.invoiceModel.table
-      .getAll(PAID_STATUS, "status")
-      .pluck("_id", "amount", "issuedAt")
-      .run();
-    const entries: ActivityEntry[] = [
-      ...tenants.map((tenant) => ({
-        id: `workspace-${tenant._id}`,
-        icon: "i-ph-building",
-        iconColor: "primary",
-        title: tenant.name ?? "",
-        subtitle: "saas.dashboard.activity.workspace_created",
-        timestamp: toTimestamp(tenant.createdAt),
-      })),
-      ...invoices.map((invoice) => ({
-        id: `invoice-${invoice._id}`,
-        icon: "i-ph-receipt",
-        iconColor: "success",
-        title: formatInvoiceAmount(invoice.amount),
-        subtitle: "saas.dashboard.activity.invoice_paid",
-        timestamp: toTimestamp(invoice.issuedAt),
-      })),
-    ];
-    entries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-    return entries.slice(0, RECENT_ACTIVITY_LIMIT);
+  @Get("/churn")
+  async churn(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("from", "query") from: unknown,
+    @Parameter("to", "query") to: unknown,
+    @Parameter("compareFrom", "query") compareFrom: unknown,
+    @Parameter("compareTo", "query") compareTo: unknown,
+  ): Promise<KpiPayload> {
+    const { rows, currency } = await this.summary();
+    const mrr = summariseDirectory(rows, new Date(), currency).mrr;
+    const current = churnOver(rows, parsePeriod(from, to), mrr);
+    const comparison = parseComparison(compareFrom, compareTo);
+    if (!comparison) return { value: current.rate };
+    const previous = churnOver(rows, comparison, mrr);
+    return {
+      value: current.rate,
+      previousValue: previous.rate,
+      delta:
+        previous.rate === 0
+          ? undefined
+          : ((current.rate - previous.rate) / previous.rate) * PERCENT,
+    };
+  }
+
+  @Get("/paid-invoices")
+  async paidInvoices(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("from", "query") from: unknown,
+    @Parameter("to", "query") to: unknown,
+    @Parameter("compareFrom", "query") compareFrom: unknown,
+    @Parameter("compareTo", "query") compareTo: unknown,
+  ): Promise<ChartCardPayload> {
+    const range = parsePeriod(from, to);
+    const comparison = parseComparison(compareFrom, compareTo);
+    const documents = await loadSettledDocuments(
+      earliestStart(range, comparison),
+    );
+    return paidInvoicesChart(
+      documents,
+      range,
+      comparison,
+      getReportingCurrency(),
+    );
+  }
+
+  @Get("/workspaces-by-status")
+  async workspacesByStatus(
+    @AuthOwnerOnly() _user: User,
+  ): Promise<ItemsPayload<KeyValueListItem>> {
+    const { rows, currency } = await this.summary();
+    return {
+      items: workspacesByStatusItems(
+        summariseDirectory(rows, new Date(), currency),
+      ),
+    };
+  }
+
+  @Get("/plans-by-mrr")
+  async plansByMrr(
+    @AuthOwnerOnly() _user: User,
+  ): Promise<ItemsPayload<TopListItem>> {
+    const { rows, currency } = await this.summary();
+    return { items: plansByMrrItems(rows, currency) };
+  }
+
+  @Get("/activity")
+  async activity(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("kind", "query") kind: unknown,
+  ): Promise<ItemsPayload<ActivityFeedItem>> {
+    const sources = await loadActivitySources(null, ACTIVITY_LIMIT);
+    return {
+      items: buildActivityFeed(sources, {
+        kind: parseActivityKind(kind),
+        limit: ACTIVITY_LIMIT,
+        linkOf: workspaceDetailPath,
+      }),
+    };
   }
 }

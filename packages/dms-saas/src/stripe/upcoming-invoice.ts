@@ -97,19 +97,61 @@ async function retrieveTaxRates(
 }
 
 /**
+ * Ask Stripe to price an invoice that does not exist yet (a renewal, a plan
+ * change, a first subscription), with the tax rates its taxes reference so
+ * the country, type and percentage of each tax are known.
+ */
+export async function previewStripeInvoice(
+  params: Stripe.InvoiceCreatePreviewParams,
+): Promise<PricedUpcomingInvoice> {
+  const invoice = await getStripeClient().invoices.createPreview(params);
+  const taxRates = await retrieveTaxRates(collectTaxRateIds(invoice));
+  return { invoice, taxRates };
+}
+
+/**
  * Ask Stripe to price the subscription's next invoice, quoted items included,
- * with the tax settings the subscription itself carries. The referenced tax
- * rates come with it so the country, type and percentage of each tax are known.
+ * with the tax settings the subscription itself carries.
  */
 export async function previewStripeUpcomingInvoice(
   request: UpcomingInvoicePreviewRequest,
 ): Promise<PricedUpcomingInvoice> {
-  const invoice = await getStripeClient().invoices.createPreview({
+  return previewStripeInvoice({
     customer: request.customerId,
     subscription: request.subscriptionId,
     invoice_items: request.quotedItems.map((item) =>
       toPreviewInvoiceItem(request.currency, item),
     ),
+  });
+}
+
+/** A subscription moved to another price, as a preview asks it. */
+export interface PriceChangePreviewRequest {
+  customerId: string;
+  subscriptionId: string;
+  itemId: string;
+  priceId: string;
+  /** The moment the proration is computed at, shared with the change itself. */
+  prorationDate: Date;
+}
+
+/**
+ * Ask Stripe what moving the subscription to another price bills, prorated
+ * the way the immediate plan change prorates it. When the interval changes,
+ * Stripe resets the cycle and the preview is the invoice issued at once;
+ * otherwise it is the next invoice, prorations included.
+ */
+export async function previewStripePriceChange(
+  request: PriceChangePreviewRequest,
+): Promise<PricedUpcomingInvoice> {
+  const invoice = await getStripeClient().invoices.createPreview({
+    customer: request.customerId,
+    subscription: request.subscriptionId,
+    subscription_details: {
+      items: [{ id: request.itemId, price: request.priceId }],
+      proration_behavior: "create_prorations",
+      proration_date: toStripeSeconds(request.prorationDate),
+    },
   });
   const taxRates = await retrieveTaxRates(collectTaxRateIds(invoice));
   return { invoice, taxRates };

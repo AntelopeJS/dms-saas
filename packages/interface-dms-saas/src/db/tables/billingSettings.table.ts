@@ -54,6 +54,10 @@ export class BillingSettings extends Table {
   @Field("string")
   declare stripeTaxCode: string | null;
 
+  /** When an operator last re-synced every plan with Stripe. */
+  @Field("date")
+  declare plansSyncedAt?: Date | null;
+
   @UpdateTime()
   @Field("date")
   declare updatedAt: Date;

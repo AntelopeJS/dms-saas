@@ -12,10 +12,14 @@ export const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2026-08-26.dahlia";
 
 const SECRET_KEY_PREFIX = "sk_";
 const PLACEHOLDER_MARKER = "placeholder";
+const TEST_MODE_MARKER = "_test_";
+const STRIPE_DASHBOARD_URL = "https://dashboard.stripe.com";
+const TEST_MODE_DASHBOARD_PATH = "/test";
 
 let stripeClient: Stripe | null = null;
 let stripeWebhookSecret: string | null = null;
 let stripeConfigured = false;
+let stripeTestMode = false;
 
 function isUsableSecretKey(key: string): boolean {
   return (
@@ -31,6 +35,19 @@ export function initStripeClient(config: DmsSaasStripeConfig): void {
   });
   stripeWebhookSecret = config.webhookSecret;
   stripeConfigured = isUsableSecretKey(config.secretKey);
+  stripeTestMode = config.secretKey.includes(TEST_MODE_MARKER);
+}
+
+/**
+ * A page of the Stripe Dashboard for the account the module talks to, in test
+ * mode when the configured key is a test key.
+ *
+ * @param path Dashboard path, e.g. `/invoices/in_123` (the leading slash is optional)
+ */
+export function stripeDashboardUrl(path: string): string {
+  const mode = stripeTestMode ? TEST_MODE_DASHBOARD_PATH : "";
+  const separator = path.startsWith("/") ? "" : "/";
+  return `${STRIPE_DASHBOARD_URL}${mode}${separator}${path}`;
 }
 
 export function isStripeConfigured(): boolean {

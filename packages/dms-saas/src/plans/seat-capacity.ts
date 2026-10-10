@@ -6,6 +6,7 @@ import {
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
+import type { Plan } from "../db";
 
 /** A platform owner holding a membership to support the workspace. */
 export interface PlatformSupportMember {
@@ -146,6 +147,25 @@ export async function countOccupiedSeats(
 ): Promise<number> {
   const usage = await getSeatUsage(tenantId, releasedInviteeEmail);
   return usage.occupied;
+}
+
+const SEAT_BILLING_MODE = "seat";
+const FLAT_SEATS = 1;
+
+/**
+ * The seats a price comparison between plans counts: those the workspace
+ * uses when one of the plans bills per seat, and none to read otherwise.
+ *
+ * @param plans The plans compared; a missing one is skipped
+ */
+export async function countSeatsToCompare(
+  tenantId: string,
+  plans: ReadonlyArray<Pick<Plan, "billingMode"> | null | undefined>,
+): Promise<number> {
+  const isPerSeat = plans.some(
+    (plan) => plan?.billingMode === SEAT_BILLING_MODE,
+  );
+  return isPerSeat ? countOccupiedSeats(tenantId) : FLAT_SEATS;
 }
 
 export function hasSeatCapacity(

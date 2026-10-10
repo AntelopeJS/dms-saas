@@ -18,6 +18,7 @@ import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-li
 import { recomputeTenantBillingState } from "../../billing-state";
 import { isAllowedRedirectUrl } from "../../config";
 import {
+  type Plan,
   type TenantSubscription,
   type TenantSubscriptionModel,
   TrialConsumptionModel,
@@ -43,6 +44,7 @@ import {
   HTTP_BAD_REQUEST,
   HTTP_CONFLICT,
   type PlanChangeRequest,
+  startsPaidCheckout,
   UNCHANGED_RESULT_BASE,
 } from "./tenant-plan-ops";
 import {
@@ -113,20 +115,50 @@ function validateCheckoutRedirectInput(
   return { successUrl, cancelUrl };
 }
 
+/**
+ * Whether the owner's checkout of `plan` would start with a trial: the plan
+ * offers one and this owner never had one, here or in another workspace.
+ * Read-only, for the review step; the checkout itself reserves the trial.
+ */
+export async function isCheckoutTrialAvailable(
+  plan: Plan,
+  ownerEmail: string,
+): Promise<boolean> {
+  if (!plan.trialDays || plan.trialDays <= 0) return false;
+  const emailHash = hashEmail(ownerEmail);
+  if (await GetModel(TrialConsumptionModel).existsForIdentity(emailHash, null))
+    return false;
+  const identity = await GetModel(TrialIdentityModel).get(
+    trialIdentityId("email", emailHash),
+  );
+  return !identity?.tenantId;
+}
+
+/**
+ * Whether choosing `plan` would start a trial. Only a Checkout opens one: a
+ * change on a live Stripe subscription keeps whatever trial it already has.
+ *
+ * @param plan Plan offered in the comparison
+ * @param subscription The workspace's subscription, if any
+ * @param ownerEmail E-mail of the owner who would choose it
+ */
+export async function isTrialOfferedOnChange(
+  plan: Plan,
+  subscription: TenantSubscription | undefined,
+  ownerEmail: string,
+): Promise<boolean> {
+  if (!startsPaidCheckout(plan, subscription)) return false;
+  return isCheckoutTrialAvailable(plan, ownerEmail);
+}
+
 async function resolveCheckoutTrial(
   request: PlanChangeRequest,
 ): Promise<TrialGrant> {
   const { newPlan, user, tenantId } = request;
-  if (!newPlan.trialDays || newPlan.trialDays <= 0) return NO_TRIAL;
-  const trialConsumptionModel = GetModel(TrialConsumptionModel);
-  const emailHash = hashEmail(user.email);
-  if (await trialConsumptionModel.existsForIdentity(emailHash, null)) {
+  if (!(await isCheckoutTrialAvailable(newPlan, user.email))) return NO_TRIAL;
+  const id = trialIdentityId("email", hashEmail(user.email));
+  if (!(await GetModel(TrialIdentityModel).reserve(id, tenantId)))
     return NO_TRIAL;
-  }
-  const identities = GetModel(TrialIdentityModel);
-  const id = trialIdentityId("email", emailHash);
-  if ((await identities.get(id))?.tenantId) return NO_TRIAL;
-  if (!(await identities.reserve(id, tenantId))) return NO_TRIAL;
   return { days: newPlan.trialDays, reservedIdentityId: id };
 }
 

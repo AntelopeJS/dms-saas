@@ -1,168 +1,110 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted } from 'vue'
+import { userDisplayName, useUserDetail } from '../build/users/useUserDetail'
 
-interface MatchedSegment {
-  _id: string;
-  name: string;
-}
+// The identity header of the user page: who the user is and how their
+// account stands. The figures under it are a StatGroup the page mounts.
+const props = defineProps<{ routeParams?: Record<string, string> }>()
 
-interface UserSummaryData {
-  _id: string;
-  email: string;
-  name: string;
-  owner: boolean;
-  createdAt: string;
-  language: string | null;
-  isValidated: boolean;
-  hasTwoFactor: boolean;
-  lastActiveAt: string | null;
-  segments: MatchedSegment[];
-  workspaces: Array<{ isTenantOwner: boolean }>;
-}
+const detail = useUserDetail(() => props.routeParams)
+const user = computed(() => detail.data.value)
 
-const MISSING_DATE = "—";
-const DAY_FORMAT: Intl.DateTimeFormatOptions = {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-};
+const ownedNames = computed(
+	() =>
+		user.value?.workspaces
+			.filter((workspace) => workspace.isTenantOwner)
+			.map((workspace) => workspace.name) ?? [],
+)
 
-const props = defineProps<{
-  routeParams?: Record<string, string>;
-}>();
-
-const { $authFetch } = useAuthFetch();
-const { t, locale } = useI18n();
-
-const userId = computed(() => props.routeParams?.id ?? "");
-const user = ref<UserSummaryData | null>(null);
-const isLoading = ref(true);
-
-const initials = computed(() => {
-  if (!user.value?.name) return "?";
-  return user.value.name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-});
-
-const ownedCount = computed(
-  () => user.value?.workspaces.filter((w) => w.isTenantOwner).length ?? 0,
-);
-const memberCount = computed(
-  () => user.value?.workspaces.filter((w) => !w.isTenantOwner).length ?? 0,
-);
-
-function formatDay(value: string | null): string {
-  return formatDate(value, locale.value, DAY_FORMAT) ?? MISSING_DATE;
-}
-
-async function load(): Promise<void> {
-  if (!userId.value) return;
-  isLoading.value = true;
-  try {
-    user.value = await $authFetch<UserSummaryData>(
-      `/api/saas/users/${userId.value}`,
-    );
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-onMounted(load);
+onMounted(() => void detail.refresh())
 </script>
 
 <template>
-  <DmsCard>
-    <div v-if="isLoading" class="flex justify-center py-6">
-      <UIcon name="i-ph-spinner" class="animate-spin text-2xl" />
-    </div>
-    <div v-else-if="user" class="flex flex-col gap-5">
-      <div class="flex items-start gap-4">
-        <UAvatar
-          :alt="user.name"
-          :text="initials"
-          size="xl"
-          class="bg-primary/15 text-primary"
-        />
-        <div class="flex-1 min-w-0">
-          <div class="flex flex-wrap items-center gap-2">
-            <h2 class="text-xl font-semibold truncate">{{ user.name }}</h2>
-            <UBadge v-if="user.owner" color="primary" variant="subtle">
-              {{ $t("saas.users.platform_owner_badge") }}
-            </UBadge>
-            <UBadge
-              :color="user.isValidated ? 'success' : 'warning'"
-              variant="subtle"
-            >
-              {{
-                user.isValidated
-                  ? $t("saas.users.info.email_verified")
-                  : $t("saas.users.info.email_not_verified")
-              }}
-            </UBadge>
-          </div>
-          <div class="mt-1 flex items-center gap-2 text-sm text-muted">
-            <UIcon name="i-ph-envelope" />
-            <span class="truncate">{{ user.email }}</span>
-          </div>
-        </div>
-      </div>
-
-      <USeparator />
-
-      <dl class="grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
-        <div>
-          <dt class="text-muted">{{ $t("saas.users.column.created_at") }}</dt>
-          <dd class="mt-0.5">{{ formatDay(user.createdAt) }}</dd>
-        </div>
-        <div>
-          <dt class="text-muted">{{ $t("saas.users.info.last_active") }}</dt>
-          <dd class="mt-0.5">{{ formatDay(user.lastActiveAt) }}</dd>
-        </div>
-        <div>
-          <dt class="text-muted">{{ $t("saas.users.info.language") }}</dt>
-          <dd class="mt-0.5 uppercase">{{ user.language ?? "—" }}</dd>
-        </div>
-        <div>
-          <dt class="text-muted">{{ $t("saas.users.info.two_factor") }}</dt>
-          <dd class="mt-0.5">
-            {{ user.hasTwoFactor ? t("saas.common.yes") : t("saas.common.no") }}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-muted">
-            {{ $t("saas.users.workspaces_section") }}
-          </dt>
-          <dd class="mt-0.5">
-            {{
-              $t("saas.users.summary.workspaces", {
-                count: user.workspaces.length,
-                owned: ownedCount,
-                member: memberCount,
-              })
-            }}
-          </dd>
-        </div>
-        <div class="col-span-2 lg:col-span-3">
-          <dt class="text-muted">{{ $t("saas.users.info.segments") }}</dt>
-          <dd class="mt-0.5">
-            <div v-if="user.segments.length" class="flex flex-wrap gap-1">
-              <UBadge
-                v-for="segment in user.segments"
-                :key="segment._id"
-                color="neutral"
-                variant="soft"
-              >
-                {{ segment.name }}
-              </UBadge>
-            </div>
-            <span v-else>—</span>
-          </dd>
-        </div>
-      </dl>
-    </div>
-  </DmsCard>
+	<div class="flex flex-col gap-4">
+		<DmsSaasLoadFailure
+			v-if="detail.error.value && !user"
+			:title="$t('saas.users.load_failed')"
+			@retry="detail.refresh()"
+		/>
+		<template v-else>
+			<div class="flex flex-wrap items-start gap-4">
+				<USkeleton v-if="!user" class="size-14 rounded-full" />
+				<UAvatar
+					v-else
+					:alt="userDisplayName(user)"
+					:src="typeof user.avatar === 'string' ? user.avatar : undefined"
+					size="3xl"
+				/>
+				<div v-if="!user" class="flex flex-1 flex-col gap-2">
+					<USkeleton class="h-6 w-56" />
+					<USkeleton class="h-4 w-72" />
+				</div>
+				<div v-else class="min-w-0 flex-1">
+					<div class="flex flex-wrap items-center gap-2">
+						<h2 class="text-highlighted truncate text-xl font-semibold">
+							{{ userDisplayName(user) }}
+						</h2>
+						<DmsStatusPill
+							:tone="user.security.isEmailVerified ? 'success' : 'warning'"
+							:label="
+								user.security.isEmailVerified
+									? $t('saas.users.badges.email_verified')
+									: $t('saas.users.badges.email_unverified')
+							"
+							size="sm"
+						/>
+						<DmsStatusPill
+							:tone="
+								user.security.twoFactorMethods.length ? 'success' : 'neutral'
+							"
+							:label="
+								user.security.twoFactorMethods.length
+									? $t('saas.users.badges.two_factor_on')
+									: $t('saas.users.badges.two_factor_off')
+							"
+							size="sm"
+						/>
+						<UBadge
+							v-if="user.isSelf"
+							color="neutral"
+							variant="outline"
+							size="sm"
+							:label="$t('saas.users.you')"
+						/>
+					</div>
+					<div class="text-muted mt-1 flex items-center gap-1 text-sm">
+						<UIcon name="i-ph-envelope-simple" class="shrink-0" />
+						<span class="truncate">{{ user.email }}</span>
+						<DmsCopyButton :value="user.email" />
+					</div>
+					<div
+						class="text-muted mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+					>
+						<span
+							v-if="ownedNames.length"
+							class="inline-flex items-center gap-1"
+						>
+							<UIcon name="i-ph-crown-simple" class="text-primary" />
+							{{
+								$t('saas.users.owner_of', {
+									workspaces: ownedNames.join(', '),
+								})
+							}}
+						</span>
+						<DmsStatusPill
+							:tone="user.isPlatformAdmin ? 'primary' : 'neutral'"
+							:icon="user.isPlatformAdmin ? 'i-ph-shield-check' : undefined"
+							:label="
+								user.isPlatformAdmin
+									? $t('saas.status.platform_role.admin')
+									: $t('saas.users.no_platform_role')
+							"
+							variant="outline"
+							size="sm"
+						/>
+					</div>
+				</div>
+			</div>
+		</template>
+	</div>
 </template>

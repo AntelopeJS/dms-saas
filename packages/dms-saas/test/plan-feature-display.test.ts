@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { readLocale } from "./helpers/locales";
 import { describe, expect, it, vi } from "vitest";
 import {
   formatPlanFeatureValue,
@@ -13,11 +13,6 @@ type LocaleTree = { [key: string]: string | LocaleTree };
 
 const PLURAL_SEPARATOR = " | ";
 const UNLIMITED = "unlimited";
-
-function readLocale(file: string): LocaleTree {
-  const url = new URL(`../frontend-vue/i18n/locales/${file}`, import.meta.url);
-  return JSON.parse(readFileSync(url, "utf8")) as LocaleTree;
-}
 
 function resolveMessage(tree: LocaleTree, key: string): string | null {
   let node: string | LocaleTree | undefined = tree;
@@ -116,6 +111,10 @@ describe("plan feature value formatting", () => {
       "Upgrade required",
     ],
     [{ valueType: "string", unit: "support" }, "24/7", "24/7 support"],
+    // Q36: one meaning everywhere, 0 is off, -1 unlimited, n ≥ 1 a limit.
+    [numeric(null), 0, "—"],
+    [numeric("projects"), 0, "—"],
+    [numeric("projects"), 1, "1 projects"],
   ])("renders %o with value %o as %s", (feature, value, expected) => {
     expect(formatPlanFeatureValue(feature, value, context("en-GB"))).toBe(
       expected,

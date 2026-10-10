@@ -164,7 +164,13 @@ describe("migration snapshots on the production Mongo provider", () => {
       permissions: ["read"],
     });
     expect(persisted?.tenantOutcomes).toEqual([
-      { tenantId, status: "succeeded", error: null, seatQuantity: 3 },
+      expect.objectContaining({
+        tenantId,
+        status: "succeeded",
+        error: null,
+        seatQuantity: 3,
+        attempt: 1,
+      }),
     ]);
     expect(
       (await GetModel(TenantSubscriptionModel, lateTenant).findOne())?.planId,
@@ -281,7 +287,13 @@ describe("migration snapshots on the production Mongo provider", () => {
     const persisted = await migrations.get(job._id);
     expect(persisted?.status).toBe("completed");
     expect(persisted?.tenantOutcomes).toEqual([
-      { tenantId, status: "succeeded", error: null, seatQuantity: 3 },
+      expect.objectContaining({
+        tenantId,
+        status: "succeeded",
+        error: null,
+        seatQuantity: 3,
+        attempt: 1,
+      }),
     ]);
     expect((await model.findOne())?.planId).toBe(job.toPlanId);
   });

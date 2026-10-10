@@ -1,96 +1,213 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted } from 'vue'
+import PayInvoiceDialog from '../build/PayInvoiceDialog.vue'
 
-const SUSPENDED_STATUS = "suspended";
-const KEY_PREFIX = "saas.workspace.billing.past_due";
-const DEADLINE_FORMAT: Intl.DateTimeFormatOptions = {
-  day: "numeric",
-  month: "long",
-};
+interface TimelineStep {
+	key: string
+	date: string
+	text: string
+	tone: 'error' | 'primary' | 'neutral' | 'warning'
+}
 
-const { data, error, load, refresh } = useBillingStatus();
-const { formatMinorUnits } = useMoneyFormat();
-const { t, locale } = useI18n();
+const SUSPENDED_STATUS = 'suspended'
+const UNPAID_STATUSES = new Set(['past_due', SUSPENDED_STATUS])
+const KEY_PREFIX = 'saas.tenant_billing.past_due'
+const DAY_FORMAT: Intl.DateTimeFormatOptions = {
+	day: 'numeric',
+	month: 'short',
+}
 
-const invoice = computed(() => data.value?.unpaidInvoice ?? null);
-const isSuspended = computed(() => data.value?.status === SUSPENDED_STATUS);
+const { data, error, load, refresh } = useBillingStatus()
+const { formatMinorUnits } = useMoneyFormat()
+const { open: openPayment } = usePayInvoice()
+const { t, locale } = useI18n()
 
-function formatDay(value: string | null | undefined): string | null {
-  return formatDate(value, locale.value, DEADLINE_FORMAT);
+const invoice = computed(() => data.value?.unpaidInvoice ?? null)
+const isSuspended = computed(() => data.value?.status === SUSPENDED_STATUS)
+const isTenantOwner = computed(() => !!data.value?.isTenantOwner)
+const ownerName = computed(() => data.value?.workspaceOwner?.name ?? null)
+/** Members get no invoice details: they are told who settles it. */
+const isMemberNotice = computed(
+	() => !isTenantOwner.value && UNPAID_STATUSES.has(data.value?.status ?? ''),
+)
+
+function day(value: string | null | undefined): string | null {
+	return formatDate(value, locale.value, DAY_FORMAT)
 }
 
 const amountLabel = computed(() =>
-  formatMinorUnits(invoice.value?.amount, invoice.value?.currency),
-);
-const invoiceLabel = computed(() => invoice.value?.number ?? amountLabel.value);
+	formatMinorUnits(invoice.value?.amount, invoice.value?.currency),
+)
+const subject = computed(() => ({
+	invoice: invoice.value?.number ?? amountLabel.value,
+	amount: amountLabel.value,
+}))
+const card = computed(() => data.value?.paymentMethod ?? null)
 
-const heading = computed(() =>
-  isSuspended.value
-    ? { title: `${KEY_PREFIX}.suspended_title`, badge: `${KEY_PREFIX}.suspended_badge` }
-    : { title: `${KEY_PREFIX}.title`, badge: `${KEY_PREFIX}.badge` },
-);
+const title = computed(() =>
+	isSuspended.value
+		? t(`${KEY_PREFIX}.suspended_title`)
+		: t(`${KEY_PREFIX}.title`),
+)
+
+const summary = computed(() => {
+	if (isSuspended.value)
+		return t(`${KEY_PREFIX}.suspended_summary`, subject.value)
+	const failedOn = day(invoice.value?.failedAt)
+	const sentences = [
+		failedOn
+			? t(`${KEY_PREFIX}.summary_with_date`, {
+					...subject.value,
+					date: failedOn,
+				})
+			: t(`${KEY_PREFIX}.summary`, subject.value),
+		day(invoice.value?.nextRetryAt) &&
+			t(`${KEY_PREFIX}.next_retry`, { date: day(invoice.value?.nextRetryAt) }),
+		day(invoice.value?.suspendAt) &&
+			t(`${KEY_PREFIX}.suspend_warning`, {
+				date: day(invoice.value?.suspendAt),
+			}),
+	]
+	return sentences.filter(Boolean).join(' ')
+})
 
 /**
- * The banner is one paragraph assembled from what is actually known: the
- * failure date, Stripe's next attempt and the suspension deadline are each
- * dropped when the data behind them is missing.
+ * The dunning timeline as far as it is known: each step is dropped when the
+ * date behind it is missing (no retry left, auto-suspension off).
  */
-const message = computed(() => {
-  const subject = { invoice: invoiceLabel.value, amount: amountLabel.value };
-  if (isSuspended.value) {
-    return t(`${KEY_PREFIX}.suspended_summary`, subject);
-  }
-  const failedOn = formatDay(invoice.value?.failedAt);
-  const nextRetryOn = formatDay(invoice.value?.nextRetryAt);
-  const suspendOn = formatDay(invoice.value?.suspendAt);
-  const sentences = [
-    failedOn
-      ? t(`${KEY_PREFIX}.summary_with_date`, { ...subject, date: failedOn })
-      : t(`${KEY_PREFIX}.summary`, subject),
-    nextRetryOn && t(`${KEY_PREFIX}.next_retry`, { date: nextRetryOn }),
-    suspendOn && t(`${KEY_PREFIX}.suspend_warning`, { date: suspendOn }),
-  ];
-  return sentences.filter(Boolean).join(" ");
-});
+const timeline = computed<TimelineStep[]>(() => {
+	const unpaid = invoice.value
+	if (!unpaid || isSuspended.value) return []
+	const steps: (TimelineStep | null)[] = [
+		unpaid.failedAt
+			? {
+					key: 'declined',
+					date: day(unpaid.failedAt) ?? '',
+					text: card.value
+						? t(`${KEY_PREFIX}.timeline.declined_card`, {
+								card: formatCardLabel(card.value),
+							})
+						: t(`${KEY_PREFIX}.timeline.declined`),
+					tone: 'error',
+				}
+			: null,
+		{
+			key: 'today',
+			date: t(`${KEY_PREFIX}.timeline.today`),
+			text: t(`${KEY_PREFIX}.timeline.pay_now`),
+			tone: 'primary',
+		},
+		unpaid.nextRetryAt
+			? {
+					key: 'retry',
+					date: day(unpaid.nextRetryAt) ?? '',
+					text: t(`${KEY_PREFIX}.timeline.retry`),
+					tone: 'neutral',
+				}
+			: null,
+		unpaid.suspendAt
+			? {
+					key: 'suspend',
+					date: day(unpaid.suspendAt) ?? '',
+					text: t(`${KEY_PREFIX}.timeline.suspend`),
+					tone: 'warning',
+				}
+			: null,
+	]
+	return steps.filter((step): step is TimelineStep => step !== null)
+})
 
-function settle(): void {
-  const url = invoice.value?.hostedInvoiceUrl;
-  if (!url || typeof window === "undefined") return;
-  window.open(url, "_blank", "noopener");
+const DOT_CLASSES: Record<TimelineStep['tone'], string> = {
+	error: 'bg-error',
+	primary: 'bg-primary',
+	neutral: 'bg-(--ui-border-accented)',
+	warning: 'bg-warning',
 }
 
-onMounted(load);
+function payInvoice(): void {
+	const unpaid = invoice.value
+	if (!unpaid) return
+	openPayment({
+		invoiceId: unpaid.invoiceId,
+		number: unpaid.number,
+		amount: unpaid.amount,
+		currency: unpaid.currency,
+		hostedInvoiceUrl: unpaid.hostedInvoiceUrl,
+	})
+}
+
+onMounted(load)
 </script>
 
 <template>
-  <DmsSaasLoadFailure
-    v-if="error && !data"
-    :title="$t('saas.workspace.billing.past_due.load_failed')"
-    @retry="refresh"
-  />
-  <UCard v-else-if="invoice" variant="subtle" class="ring-error/40">
-    <template #header>
-      <div class="flex flex-wrap items-center gap-2">
-        <UIcon name="i-ph-warning-circle" class="text-error size-5" />
-        <h3 class="font-semibold">{{ $t(heading.title) }}</h3>
-        <UBadge color="warning" variant="subtle">
-          {{ $t(heading.badge) }}
-        </UBadge>
-      </div>
-    </template>
+	<DmsSaasLoadFailure
+		v-if="error && !data"
+		:title="$t(`${KEY_PREFIX}.load_failed`)"
+		@retry="refresh"
+	/>
 
-    <div class="flex flex-col gap-3">
-      <p class="text-muted text-sm">{{ message }}</p>
-      <div>
-        <UButton
-          v-if="invoice.hostedInvoiceUrl"
-          color="primary"
-          icon="i-ph-arrow-square-out"
-          @click="settle"
-        >
-          {{ $t(`${KEY_PREFIX}.settle`) }}
-        </UButton>
-      </div>
-    </div>
-  </UCard>
+	<DmsBanner
+		v-else-if="invoice && isTenantOwner"
+		tone="error"
+		icon="i-ph-warning-circle"
+		:title="title"
+		data-saas-past-due-alert
+	>
+		<template #description>
+			<div class="flex flex-col gap-3">
+				<p>{{ summary }}</p>
+				<ol
+					v-if="timeline.length"
+					class="grid gap-2 sm:grid-cols-4"
+					:aria-label="$t(`${KEY_PREFIX}.timeline.label`)"
+				>
+					<li
+						v-for="step in timeline"
+						:key="step.key"
+						class="flex items-start gap-2"
+					>
+						<span
+							class="mt-1.5 size-2 shrink-0 rounded-full"
+							:class="DOT_CLASSES[step.tone]"
+						/>
+						<span class="flex flex-col">
+							<span class="text-highlighted text-xs font-semibold">
+								{{ step.date }}
+							</span>
+							<span class="text-xs">{{ step.text }}</span>
+						</span>
+					</li>
+				</ol>
+			</div>
+		</template>
+		<template #actions>
+			<DmsSaasCustomerPortalButton
+				label-key="saas.tenant_billing.past_due.update_card"
+				icon="i-ph-credit-card"
+				size="sm"
+			/>
+			<UButton
+				color="error"
+				size="sm"
+				icon="i-ph-lock-simple"
+				@click="payInvoice"
+			>
+				{{ $t(`${KEY_PREFIX}.pay`) }}
+			</UButton>
+		</template>
+	</DmsBanner>
+
+	<DmsBanner
+		v-else-if="isMemberNotice"
+		tone="warning"
+		icon="i-ph-warning-circle"
+		:title="title"
+		:description="
+			ownerName
+				? $t(`${KEY_PREFIX}.member_named`, { owner: ownerName })
+				: $t(`${KEY_PREFIX}.member`)
+		"
+	/>
+
+	<PayInvoiceDialog v-if="isTenantOwner" />
 </template>

@@ -74,6 +74,30 @@ export class Invoice extends Table {
   @Field("number")
   declare total: number;
 
+  /** What the customer paid on the invoice so far, in minor units. */
+  @Field("number")
+  declare amountPaid?: number | null;
+
+  /** Payment attempts Stripe made, its automatic retries included. */
+  @Field("number")
+  declare attemptCount?: number | null;
+
+  /** When Stripe charges the card next; null once it stopped retrying. */
+  @Field("date")
+  declare nextPaymentAttemptAt?: Date | null;
+
+  /** When an invoice sent for manual payment falls due. */
+  @Field("date")
+  declare dueAt?: Date | null;
+
+  /** When Stripe finalises a draft invoice on its own. */
+  @Field("date")
+  declare autoFinalizesAt?: Date | null;
+
+  /** The Stripe invoice that replaced this one through a revision. */
+  @Field("string")
+  declare latestRevisionStripeId?: string | null;
+
   @Field("string")
   declare currency: string;
 

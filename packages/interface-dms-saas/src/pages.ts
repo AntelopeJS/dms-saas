@@ -12,24 +12,14 @@ import {
 import {
   MODULES_ROOT_DEFINITION,
   SAAS_MODULE_DEFINITION,
-  SETTINGS_ROOT_DEFINITION,
-  WORKSPACE_SETTINGS_CATEGORY_DEFINITION,
 } from "./page-definitions";
 
 /**
- * Workspace settings descriptor for synchronous page declarations.
- * Use {@link GetWorkspaceSettingsCategory} when canonical runtime identity is
- * required.
+ * The workspace settings category (`settings.workspace`) is the DMS's own since
+ * `@antelopejs/interface-dms` 0.4: import `workspaceSettingsCategory` from
+ * `@antelopejs/interface-dms/page`. This resolves the same category, for
+ * callers that still go through the SaaS interface.
  */
-export const workspaceSettingsCategory: CategoryInfo = {
-  ...WORKSPACE_SETTINGS_CATEGORY_DEFINITION,
-  category: SETTINGS_ROOT_DEFINITION,
-  urlTransparent: false,
-  hidden: undefined,
-  bypassTenantAccessGate: undefined,
-};
-
-/** Resolve the workspace settings category registered by the SaaS runtime. */
 export const GetWorkspaceSettingsCategory =
   InterfaceFunction<() => CategoryInfo>();
 

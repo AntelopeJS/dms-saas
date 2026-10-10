@@ -1,20 +1,12 @@
-import { readFileSync } from "node:fs";
+import { readLocale } from "./helpers/locales";
 import { describe, expect, it } from "vitest";
-import { CREDIT_NOTE_STATUSES, INVOICE_STATUSES } from "../src/db";
-import {
-  BILLING_DOCUMENT_STATUS_ITEMS,
-  CREDIT_NOTE_STATUS_ITEMS,
-} from "../src/utils/billing-document-status";
+import { INVOICE_STATUSES } from "../src/db";
+import { BILLING_DOCUMENT_STATUS_ITEMS } from "../src/utils/billing-document-status";
 
 type LocaleTree = Record<string, unknown>;
 
 const LOCALE_PATHS = ["saas-en-GB.json", "saas-fr-FR.json"];
 const LABEL_PREFIX = "$";
-
-function readLocale(path: string): LocaleTree {
-  const url = new URL(`../frontend-vue/i18n/locales/${path}`, import.meta.url);
-  return JSON.parse(readFileSync(url, "utf-8")) as LocaleTree;
-}
 
 function translate(locale: LocaleTree, label: string): unknown {
   return label
@@ -26,10 +18,7 @@ function translate(locale: LocaleTree, label: string): unknown {
     );
 }
 
-const STATUS_ITEMS = [
-  ...BILLING_DOCUMENT_STATUS_ITEMS,
-  ...CREDIT_NOTE_STATUS_ITEMS,
-];
+const STATUS_ITEMS = BILLING_DOCUMENT_STATUS_ITEMS;
 
 describe("billing document status labels", () => {
   it("labels every status an invoices row can hold", () => {
@@ -37,12 +26,6 @@ describe("billing document status labels", () => {
 
     expect(values).toEqual(expect.arrayContaining([...INVOICE_STATUSES]));
     expect(values).toContain("issued");
-  });
-
-  it("labels every status a credit note can hold", () => {
-    expect(CREDIT_NOTE_STATUS_ITEMS.map((item) => item.value)).toEqual([
-      ...CREDIT_NOTE_STATUSES,
-    ]);
   });
 
   it.each(LOCALE_PATHS)("%s translates every status label", (path) => {

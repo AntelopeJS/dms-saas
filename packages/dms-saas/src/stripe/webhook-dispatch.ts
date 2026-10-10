@@ -1,6 +1,7 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import { StripeWebhookEventModel } from "../db";
+import { handleSubscriptionPendingUpdateApplied } from "../routes/tenant/tenant-plan-authentication";
 import { invalidatePreviewForStripeEvent } from "../upcoming-invoice/invalidation";
 import {
   handleChargeRefundUpdated,
@@ -40,6 +41,8 @@ const HANDLERS: Record<string, WebhookHandler> = {
   "customer.subscription.deleted": handleSubscriptionDeleted,
   "customer.subscription.trial_will_end": handleTrialWillEnd,
   "customer.subscription.updated": handleSubscriptionUpdated,
+  "customer.subscription.pending_update_applied":
+    handleSubscriptionPendingUpdateApplied,
 };
 
 export async function dispatchStripeWebhookEvent(

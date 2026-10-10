@@ -41,12 +41,65 @@ export interface PlanMigrationSnapshot {
   target: PlanMigrationTarget;
 }
 
+/**
+ * Where one captured workspace stands: being moved, moved, left uncertain by
+ * an interrupted or ambiguous provider call (`reconciliation_required`),
+ * known not to have moved and safe to retry (`failed`), or left on the source
+ * plan by an operator closing the migration (`kept`).
+ */
+export const PLAN_MIGRATION_TENANT_STATUSES = [
+  "running",
+  "succeeded",
+  "reconciliation_required",
+  "failed",
+  "kept",
+] as const;
+export type PlanMigrationTenantStatus =
+  (typeof PLAN_MIGRATION_TENANT_STATUSES)[number];
+
 export interface PlanMigrationTenantOutcome {
   tenantId: string;
-  status: "running" | "succeeded" | "reconciliation_required";
+  status: PlanMigrationTenantStatus;
   error: string | null;
   seatQuantity: number | null;
+  /** Attempts made for this workspace; a retry runs under a new operation. */
+  attempt?: number;
+  /** When the workspace last changed state, for the detail timeline. */
+  updatedAt?: Date | null;
+  /** Operator who resolved an uncertain outcome by hand. */
+  resolvedBy?: string | null;
 }
+
+/**
+ * Where a migration stands for the operator: moving workspaces, waiting for
+ * someone (uncertain or failed workspaces), or done.
+ */
+export const PLAN_MIGRATION_STAGES = [
+  "running",
+  "needs_attention",
+  "done",
+] as const;
+export type PlanMigrationStage = (typeof PLAN_MIGRATION_STAGES)[number];
+
+const STAGE_BY_STATUS: Record<PlanMigrationStatus, PlanMigrationStage> = {
+  pending: "running",
+  running: "running",
+  reconciliation_required: "needs_attention",
+  failed: "needs_attention",
+  completed: "done",
+  partially_failed: "done",
+};
+
+/** The stage a migration status belongs to. */
+export function planMigrationStageOf(
+  status: PlanMigrationStatus,
+): PlanMigrationStage {
+  return STAGE_BY_STATUS[status];
+}
+
+/** Why a migration was started. */
+export const PLAN_MIGRATION_REASONS = ["plan_retired"] as const;
+export type PlanMigrationReason = (typeof PLAN_MIGRATION_REASONS)[number];
 
 export interface PlanMigrationPermissionDiff {
   removed: string[];
@@ -98,6 +151,11 @@ export class PlanMigration extends Table {
   @Field("string")
   declare status: PlanMigrationStatus;
 
+  /** Stage of `status`, kept with it so lists can filter on it. */
+  @Index()
+  @Field("string")
+  declare stage?: PlanMigrationStage;
+
   @Field("number")
   declare totalWorkspaces: number;
 
@@ -120,6 +178,28 @@ export class PlanMigration extends Table {
 
   @Field("any")
   declare featureDiff: PlanMigrationFeatureDiff;
+
+  /** Plan names when the migration started, for the list once one is gone. */
+  @Field("string")
+  declare fromPlanName?: string | null;
+
+  @Field("string")
+  declare toPlanName?: string | null;
+
+  @Field("string")
+  declare reason?: PlanMigrationReason | null;
+
+  /** When an operator closed the migration with workspaces left behind. */
+  @Field("date")
+  declare reconciledAt?: Date | null;
+
+  @Field("string")
+  @Relation({ to: () => User })
+  declare reconciledBy?: string | null;
+
+  /** The operator's note for the audit log when reconciling. */
+  @Field("string")
+  declare reconciliationNote?: string | null;
 
   @Index()
   @CreationTime()

@@ -4,6 +4,7 @@ type PublicScreenLoader = () => Promise<unknown>;
 
 const PUBLIC_SCREEN_LOADERS: Record<PublicScreenId, PublicScreenLoader> = {
   register: () => import("./register"),
+  pricing: () => import("./pricing"),
 };
 
 /**

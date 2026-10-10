@@ -1,0 +1,416 @@
+{
+  "saas": {
+    "tenant_billing": {
+      "page": {
+        "title": "Facturation",
+        "description": "Ce que l'espace de travail paie, quand et pourquoi : offre, prochaine facture, moyen de paiement et toutes les factures au même endroit."
+      },
+      "next_invoice": {
+        "title": "Prochaine facture",
+        "description": "Aperçu fourni par Stripe",
+        "empty_title": "Aucune facture prévue",
+        "empty_description": "Rien n'est facturé : l'espace de travail est sur une offre gratuite ou un accès offert.",
+        "line": "Ligne",
+        "tax": "TVA",
+        "reverse_charge": "TVA (autoliquidation)",
+        "total": "Total dû",
+        "charged_to": "Prélevé sur",
+        "sent_to": "Envoyée à",
+        "last_payment": "Dernier paiement",
+        "paid_on": "Payé le {date}"
+      },
+      "invoices": {
+        "caption": "Factures et avoirs",
+        "tabs": {
+          "all": "Tout",
+          "invoices": "Factures",
+          "credit_notes": "Avoirs"
+        },
+        "empty_title": "Aucune facture pour l'instant",
+        "empty_description": "Les factures et avoirs apparaissent ici dès que Stripe les émet.",
+        "error_title": "Les factures n'ont pas pu être chargées",
+        "error_description": "Stripe tarde à répondre. Vos factures ne sont pas perdues.",
+        "column": {
+          "excl_vat": "Total HT",
+          "vat": "TVA",
+          "total": "Total TTC"
+        }
+      },
+      "pay": {
+        "action": "Payer la facture",
+        "title": "Payer {invoice}",
+        "description": "Payer maintenant rétablit le renouvellement normal. Stripe arrête les nouvelles tentatives.",
+        "member": "Seul le propriétaire de l'espace de travail peut payer cette facture.",
+        "member_named": "Seul {owner}, propriétaire de l'espace de travail, peut payer cette facture.",
+        "declined_on": "Refusée le {date} : ne réessayez que si la carte peut désormais être débitée",
+        "other_card": "Utiliser une autre carte",
+        "other_card_hint": "Saisie sur la page de paiement sécurisée de Stripe",
+        "confirm_card": "Payer {amount}",
+        "confirm_stripe": "Payer {amount} sur Stripe",
+        "paid": "Paiement reçu. L'accès se met à jour dans un instant.",
+        "processing": "Paiement transmis à Stripe. L'espace de travail se met à jour dès sa confirmation.",
+        "error": "Le paiement n'a pas pu être effectué",
+        "error_hint": "Rien n'a été débité. Payez avec une autre carte sur Stripe, ou mettez d'abord la carte à jour dans Stripe.",
+        "not_now": "Plus tard",
+        "missing": "Cette facture ne peut plus être lue. Actualisez le tableau.",
+        "no_method": "Aucune carte enregistrée et pas encore de page de paiement Stripe pour cette facture. Ajoutez une carte avec « Mettre à jour la carte », puis payez.",
+        "status_error": "Les informations de paiement n'ont pas pu être chargées. Votre facture n'a pas changé."
+      },
+      "portal": {
+        "open": "Gérer dans Stripe",
+        "error": "Impossible d'ouvrir le portail Stripe",
+        "error_hint": "Stripe n'a pas répondu à temps. Rien n'a changé."
+      },
+      "past_due": {
+        "title": "Échec du paiement",
+        "suspended_title": "Espace de travail suspendu",
+        "summary": "La facture {invoice} de {amount} est impayée.",
+        "summary_with_date": "La facture {invoice} de {amount} n'a pas pu être débitée le {date}.",
+        "next_retry": "Stripe réessaie le {date}.",
+        "suspend_warning": "Sans paiement, l'espace de travail est suspendu le {date} ; les données sont conservées.",
+        "suspended_summary": "La facture {invoice} de {amount} est toujours impayée. La payer rétablit l'accès immédiatement.",
+        "load_failed": "Impossible de vérifier l'état de facturation de cet espace de travail.",
+        "member": "L'espace de travail a une facture impayée. Le propriétaire de l'espace de travail doit la payer pour conserver l'accès.",
+        "member_named": "L'espace de travail a une facture impayée. {owner} (propriétaire de l'espace de travail) doit la payer pour conserver l'accès.",
+        "update_card": "Mettre à jour la carte",
+        "pay": "Payer la facture",
+        "timeline": {
+          "label": "Calendrier du paiement",
+          "declined": "Prélèvement refusé",
+          "declined_card": "Prélèvement refusé · {card}",
+          "today": "Aujourd'hui",
+          "pay_now": "Payez maintenant pour arrêter les relances",
+          "retry": "Stripe réessaie automatiquement",
+          "suspend": "Espace suspendu, données conservées"
+        },
+        "strip": {
+          "owner_generic": "Échec du paiement. Une facture est impayée : payez-la pour garder l'espace de travail actif.",
+          "owner": "Échec du paiement. La facture {invoice} de {amount} est impayée.",
+          "owner_deadline": "Échec du paiement. La facture {invoice} de {amount} est impayée. Payez-la avant le {date} pour garder {workspace} actif.",
+          "member": "{workspace} a une facture impayée. Le propriétaire de l'espace de travail doit la payer, sinon l'espace de travail est suspendu.",
+          "member_named": "{workspace} a une facture impayée. {owner} (propriétaire de l'espace de travail) doit la payer, sinon l'espace de travail est suspendu.",
+          "email_owner": "Écrire à {owner}"
+        }
+      },
+      "complimentary": {
+        "indefinite_title": "Accès offert",
+        "indefinite_description": "{workspace} bénéficie d'une offre {plan} offerte, sans date de fin. Rien n'est facturé.",
+        "ending_title": "L'accès offert prend fin le {date}",
+        "ending_description": "Encore {days} jour. Choisissez une offre payante d'ici là pour garder l'accès ; vos données restent dans tous les cas. | Encore {days} jours. Choisissez une offre payante d'ici là pour garder l'accès ; vos données restent dans tous les cas.",
+        "expired_title": "L'accès offert a expiré",
+        "expired_title_on": "L'accès offert a expiré le {date}",
+        "expired_description": "Les membres ne peuvent plus ouvrir l'espace de travail tant qu'aucune offre payante n'est choisie. Vos données sont conservées.",
+        "choose_plan": "Choisir une offre"
+      },
+      "trial": {
+        "ends": "Votre essai {plan} se termine le {date} · encore {days} jour | Votre essai {plan} se termine le {date} · encore {days} jours",
+        "charge": "Ensuite, {amount} TTC sont débités, puis chaque {interval}",
+        "charge_card": "Ensuite, {amount} TTC sont débités sur {card}, puis chaque {interval}",
+        "compare": "Comparer les offres"
+      },
+      "payment_method": {
+        "title": "Moyen de paiement",
+        "needs_update": "À mettre à jour",
+        "default": "Par défaut",
+        "load_failed": "Impossible de charger le moyen de paiement",
+        "owner_only": "Le moyen de paiement est géré par le propriétaire de l'espace de travail.",
+        "owner_only_named": "Le moyen de paiement est géré par {owner}, propriétaire de l'espace de travail.",
+        "complimentary_title": "Aucune carte nécessaire",
+        "complimentary_description": "L'espace de travail bénéficie d'un accès offert : rien n'est débité.",
+        "expires": "Expire {detail}",
+        "declined_on": "Refusée le {date}",
+        "update_note": "Le dernier prélèvement sur cette carte a été refusé. Mettez-la à jour dans Stripe, puis payez la facture, ou payez une fois avec une autre carte.",
+        "pay_another_card": "Payer une fois avec une autre carte",
+        "none_title": "Aucune carte enregistrée",
+        "none": "Vous saisirez une carte sur la page de paiement de Stripe en choisissant une offre payante.",
+        "none_with_portal": "Ajoutez une carte dans Stripe ; elle réglera les prochaines factures.",
+        "choose_plan": "Choisir une offre",
+        "stripe_note": "Les données de carte restent chez Stripe, jamais sur nos serveurs."
+      },
+      "money_back": {
+        "title": "Garantie satisfait ou remboursé",
+        "days_left": "Encore {days} jour | Encore {days} jours",
+        "ended_on": "Terminée le {date}",
+        "refunded_pill": "Remboursé",
+        "load_failed": "Impossible de vérifier la garantie satisfait ou remboursé",
+        "until": "Jusqu'au {date}",
+        "day_of": "jour {day} sur {window}",
+        "description": "Pas convaincu par {plan} ? Récupérez {amount} (votre premier paiement du {paidOn}) et l'abonnement s'arrête immédiatement. Vos données sont conservées {retention} jours.",
+        "once": "Un remboursement par espace de travail",
+        "request": "Demander le remboursement",
+        "ended_description": "La période de {window} jours après votre premier paiement ({paidOn}) s'est terminée le {date}. Vous pouvez toujours résilier à la fin de chaque période.",
+        "refunded_description": "L'espace de travail a déjà utilisé son remboursement : un seul par espace de travail.",
+        "refunded_description_on": "Remboursé le {refundedOn}. Un remboursement par espace de travail.",
+        "not_started_description": "Commence avec votre premier paiement : pendant {window} jours, vous pouvez vous le faire rembourser.",
+        "blocked_description": "Indisponible tant que l'espace de travail est bloqué. Payez d'abord la facture impayée.",
+        "confirm_title": "Rembourser {amount} et résilier {plan} ?",
+        "confirm_description": "C'est irréversible. Vous pourrez vous réabonner plus tard, mais pas être remboursé à nouveau.",
+        "confirm_action": "Rembourser et résilier",
+        "keep": "Garder {plan}",
+        "impact_refunded_to": "Remboursé sur {card}",
+        "impact_refunded": "Remboursé",
+        "impact_ends": "Fin de l'abonnement",
+        "impact_now": "Maintenant",
+        "impact_members": "Membres perdant l'accès",
+        "impact_data": "Projets et données",
+        "impact_data_kept": "Conservés {retention} jours",
+        "success": "Remboursement effectué et abonnement résilié.",
+        "error": "Le remboursement n'a pas pu être demandé"
+      },
+      "billing_info": {
+        "title": "Informations de facturation",
+        "description": "Imprimées sur chaque facture et synchronisées avec votre client Stripe. La TVA est calculée d'après le pays et le numéro.",
+        "to_complete": "À compléter",
+        "saved_on": "Enregistrées le {date}",
+        "load_failed": "Impossible de charger les informations de facturation",
+        "save": "Enregistrer les informations de facturation",
+        "saved": "Informations de facturation enregistrées",
+        "save_error": "Les informations de facturation n'ont pas pu être enregistrées",
+        "incomplete_toast": "Renseignez les champs signalés.",
+        "owner_only": "Seul le propriétaire de l'espace de travail peut modifier les informations de facturation.",
+        "customer_type": "Type de client",
+        "customer_types": {
+          "business": {
+            "label": "Entreprise",
+            "hint": "Facturé à une société, avec son numéro de TVA."
+          },
+          "individual": {
+            "label": "Particulier",
+            "hint": "Facturé à votre nom."
+          }
+        },
+        "company_name": "Raison sociale",
+        "vat_number": "Numéro de TVA",
+        "vat": {
+          "verified": "Vérifié (VIES)",
+          "pending": "Vérification en cours",
+          "unverified": "Non vérifié"
+        },
+        "address_line1": "Adresse",
+        "postal_code": "Code postal",
+        "city": "Ville",
+        "country": "Pays",
+        "country_placeholder": "Choisissez un pays",
+        "billing_email": "E-mail de facturation",
+        "billing_email_hint": "Reçoit les factures et les relances de paiement.",
+        "sections": {
+          "customer_type": {
+            "title": "Type de client",
+            "description": "Détermine si une raison sociale et un numéro de TVA figurent sur les factures."
+          },
+          "company": {
+            "title": "Société",
+            "description": "Raison sociale et numéro de TVA intracommunautaire."
+          },
+          "address": {
+            "title": "Adresse de facturation",
+            "description": "Le pays détermine le taux de TVA."
+          },
+          "email": {
+            "title": "E-mail de facturation",
+            "description": "Reçoit les factures et les relances de paiement."
+          }
+        },
+        "field_labels": {
+          "customerType": "Type de client",
+          "companyName": "Raison sociale",
+          "vatNumber": "Numéro de TVA",
+          "line1": "Adresse",
+          "postalCode": "Code postal",
+          "city": "Ville",
+          "country": "Pays",
+          "billingEmail": "E-mail de facturation"
+        },
+        "errors": {
+          "customerType": "Choisissez un type de client.",
+          "companyName": "La raison sociale est obligatoire.",
+          "country": "Choisissez le pays de facturation.",
+          "line1": "L'adresse est obligatoire.",
+          "postalCode": "Le code postal est obligatoire.",
+          "city": "La ville est obligatoire.",
+          "billingEmail": "Saisissez une adresse e-mail valide."
+        }
+      },
+      "plan": {
+        "title": "Offre actuelle",
+        "change": "Changer d'offre",
+        "go_paid": "Passer à une offre payante",
+        "resubscribe": "Choisir une offre",
+        "resubscribe_hint": "L'abonnement a été résilié. Choisissez une offre pour rouvrir l'espace de travail : ses données et ses membres sont toujours là.",
+        "more": "Autres actions sur l'offre",
+        "load_failed": "Impossible de charger l'offre",
+        "none_title": "Aucune offre pour l'instant",
+        "none_description": "L'espace de travail n'a aucune offre en vigueur. Choisissez-en une pour commencer.",
+        "price_seat": "{price} / siège / {interval}",
+        "price_flat": "{price} / {interval}",
+        "per_seat": "{unit} par siège",
+        "seats_billed": "{seats} siège facturé | {seats} sièges facturés",
+        "total_excl_tax": "{total} par {interval}, HT",
+        "seats": "Sièges",
+        "seats_hint": "{used} utilisés · {free} libres",
+        "seats_unlimited": "{used} sièges utilisés · sans limite",
+        "members": "{count} membre | {count} membres",
+        "invites": "{count} invitation en attente | {count} invitations en attente",
+        "manage_members": "Gérer les membres",
+        "billing": "Facturation",
+        "interval": {
+          "month": "Mensuelle",
+          "year": "Annuelle"
+        },
+        "interval_since": {
+          "month": "Mensuelle · depuis le {date}",
+          "year": "Annuelle · depuis le {date}"
+        },
+        "trial_until": "Essai jusqu'au",
+        "next_renewal": "Prochain renouvellement",
+        "downgrades_paused": "Les passages à une offre inférieure sont suspendus jusqu'au paiement de la facture impayée. Les passages à une offre supérieure restent possibles.",
+        "downgrades_paused_invoice": "Les passages à une offre inférieure sont suspendus jusqu'au paiement de la facture {invoice}. Les passages à une offre supérieure restent possibles.",
+        "blocked_hint": "Les changements d'offre reprennent une fois la facture impayée réglée.",
+        "blocked_hint_inactive": "Les changements d'offre reprennent une fois l'espace de travail de nouveau actif.",
+        "managed": "Votre offre est gérée par un administrateur pendant l'accès offert.",
+        "owner_changes": "Seul le propriétaire de l'espace de travail peut changer d'offre.",
+        "owner_changes_named": "Seul {owner}, propriétaire de l'espace de travail, peut changer d'offre.",
+        "manage_seats": "Gérer les sièges",
+        "cancel_subscription": "Résilier l'abonnement",
+        "pending_downgrade": "{plan} à partir du {date}",
+        "cancel_downgrade": "Annuler le changement",
+        "downgrade_cancelled": "Changement d'offre programmé annulé.",
+        "cancels_on": "{plan} prend fin le {date}",
+        "cancels_hint": "L'abonnement est résilié : plus aucune facture après cette date.",
+        "keep_subscription": "Conserver l'abonnement",
+        "export_data": "Exporter les données",
+        "subscription_kept": "L'abonnement se renouvelle de nouveau.",
+        "cancel_title": "Résilier l'abonnement {plan} ?",
+        "cancel_description": "{workspace} conserve {plan} jusqu'au {date}. Plus aucune facture ensuite.",
+        "cancel_confirm": "Résilier au {date}",
+        "cancel_keep": "Conserver l'abonnement",
+        "cancel_access_until": "Accès jusqu'au",
+        "cancel_members": "Membres perdant l'accès le {date}",
+        "cancel_data": "Données conservées ensuite",
+        "cancel_data_days": "{retention} jour | {retention} jours",
+        "cancel_note": "Téléchargez d'abord tout depuis l'export des données. Encore dans la période satisfait ou remboursé ? Demandez plutôt un remboursement.",
+        "cancel_scheduled": "L'abonnement prend fin le {date}.",
+        "next_renewal_amount": "{date} · {amount} TTC"
+      },
+      "plan_change": {
+        "title": "Changer d'offre",
+        "review_title": "Vérifier le changement d'offre",
+        "subtitle": "{workspace} est sur {plan} avec {seats} sièges utilisés, membres et invitations en attente comprises. Vous vérifiez le prix et les changements avant tout débit.",
+        "interval": {
+          "month": "Mensuel",
+          "year": "Annuel"
+        },
+        "none_title": "Aucune offre à proposer",
+        "none_description": "Aucune offre en vente ne convient à cet espace de travail pour l'instant.",
+        "for_seats": "Pour {seats} sièges utilisés",
+        "current": "Actuelle",
+        "price_seat": "{price} / siège / {interval}",
+        "price_flat": "{price} / {interval}",
+        "seat_total": "{total} pour {seats} sièges",
+        "trial_days": "Essai de {days} jours",
+        "your_plan": "Votre offre",
+        "scheduled": "Programmée",
+        "choose": "Choisir",
+        "review_upgrade": "Vérifier la montée en gamme",
+        "review_downgrade": "Vérifier le changement",
+        "seats_row": "Sièges (membres + invitations)",
+        "unlimited": "Illimité",
+        "show_detail": "Voir tout le détail · {count} fonctionnalité de plus | Voir tout le détail · {count} fonctionnalités de plus",
+        "hide_detail": "Masquer le détail",
+        "too_small": "{plans} ne peuvent pas accueillir les {seats} sièges utilisés : elles ne sont pas proposées à {workspace}.",
+        "for_other_customer_type": {
+          "business": "{plans} : réservé aux clients professionnels. Pour le choisir, passez le type de client à Entreprise dans les informations de facturation.",
+          "individual": "{plans} : réservé aux particuliers. Pour le choisir, passez le type de client à Particulier dans les informations de facturation."
+        },
+        "timing": "Les montées en gamme démarrent aujourd'hui, au prorata. Les changements vers une offre inférieure démarrent au renouvellement : {date}",
+        "review": {
+          "price_per_seat": "{price} × sièges",
+          "price_flat": "{price} / {interval}",
+          "upgrade_title": "Passer à {plan}",
+          "upgrade_description": "Démarre aujourd'hui. Vous payez la différence pour le reste de la période.",
+          "downgrade_title": "Passer à {plan} le {date}",
+          "downgrade_description": "Rien ne change avant votre renouvellement. {current} reste actif jusqu'au {date}.",
+          "until": "Jusqu'au {date}",
+          "now": "Maintenant",
+          "from_date": "À partir du {date}",
+          "from_today": "À partir d'aujourd'hui",
+          "gained": "Vous gagnez",
+          "lost": "Vous perdez",
+          "was": "(auparavant {value})",
+          "line": "Ligne",
+          "tax": "TVA {rate} {country}",
+          "subtotal": "Sous-total",
+          "renewal": "Ensuite {amount} HT le {date}, puis chaque {interval}.",
+          "confirm_downgrade": "Programmer le changement",
+          "free_title": "Passer à {plan}",
+          "free_description": "Dès aujourd'hui. Rien n'est facturé.",
+          "confirm_free": "Passer à {plan}",
+          "confirm_trial": "Passer à l'offre · rien à payer aujourd'hui",
+          "confirm_upgrade": "Passer à l'offre et payer {amount}",
+          "load_failed": "Impossible de chiffrer ce changement",
+          "scheduled": "Changement programmé pour le {date}.",
+          "applied": "Vous êtes désormais sur {plan}.",
+          "charged_today": "Débité aujourd'hui",
+          "due_today": "À payer aujourd'hui",
+          "unpriced": "Stripe n'a pas pu chiffrer ce changement pour l'instant. Réessayez dans un moment.",
+          "total_today": "Total à payer aujourd'hui",
+          "trial": "Votre essai continue : le premier prélèvement a lieu le {date}.",
+          "cancel_any_time": "Annulez le changement à tout moment avant le {date}.",
+          "back": "Retour"
+        },
+        "checkout": {
+          "title": "Passer {workspace} à {plan}",
+          "description": "Confirmez qui est facturé, puis saisissez votre carte sur la page de paiement sécurisée de Stripe.",
+          "plan_line": "{plan}, facturé chaque {interval}",
+          "trial_badge": "Essai de {days} jours",
+          "tax": "TVA {rate} ({country})",
+          "due_today": "À payer aujourd'hui",
+          "excl_tax": "{amount} HT",
+          "first_charge": "Premier prélèvement de {amount} le {date}, puis chaque {interval}. Résiliez avant le {date} et vous ne payez rien.",
+          "tax_on_stripe": "La TVA est calculée sur la page de paiement de Stripe d'après le pays de facturation.",
+          "card_note": "Carte saisie sur la page de paiement sécurisée de Stripe, jamais conservée chez nous.",
+          "confirm": "Continuer vers le paiement sécurisé"
+        }
+      }
+    },
+    "permissions": {
+      "billing_page": {
+        "complimentary_access": "Accès offert",
+        "complimentary_access_description": "Voir si l'espace de travail bénéficie d'un accès offert et jusqu'à quand",
+        "past_due_alert": "Alerte d'échec de paiement",
+        "past_due_alert_description": "Voir une facture impayée, son calendrier de paiement et la payer",
+        "plan": "Offre actuelle",
+        "plan_description": "Voir l'offre, les sièges et le renouvellement ; le propriétaire la change ou la résilie",
+        "next_invoice": "Prochaine facture",
+        "next_invoice_description": "Voir l'aperçu Stripe de la prochaine facture, ses lignes et sa TVA",
+        "payment_method": "Moyen de paiement",
+        "payment_method_description": "Voir et remplacer la carte qui règle les factures",
+        "money_back": "Garantie satisfait ou remboursé",
+        "money_back_description": "Voir la période de remboursement et demander le remboursement du premier paiement",
+        "billing_information": "Informations de facturation",
+        "billing_information_description": "Voir et modifier qui est facturé : société, numéro de TVA, adresse, e-mail de facturation",
+        "invoices": "Factures et avoirs",
+        "invoices_description": "Lister les factures et avoirs de l'espace de travail et les télécharger",
+        "pay_invoice": "Payer la facture",
+        "pay_invoice_description": "Payer une facture impayée avec la carte enregistrée ou une autre carte"
+      }
+    },
+    "workspace": {
+      "plan": {
+        "change_applied": "Offre modifiée.",
+        "change_error": "Échec du changement d'offre",
+        "checkout_pending": {
+          "title": "Un paiement est déjà en cours",
+          "description": "Vous avez ouvert la page de paiement sécurisée de Stripe sans la terminer. Reprenez ce paiement, ou annulez-le pour recommencer.",
+          "description_paid": "Votre paiement a été reçu et est en cours de confirmation. Votre offre sera mise à jour dans un instant.",
+          "description_opening": "Une page de paiement est encore en cours d'ouverture pour cet espace de travail. Réessayez dans quelques minutes.",
+          "resume": "Reprendre le paiement",
+          "restart": "Annuler et recommencer",
+          "close": "Fermer",
+          "cancelled": "Paiement annulé. Rien n'a été débité et votre offre est inchangée.",
+          "restart_error": "Le paiement en cours n'a pas pu être annulé. Réessayez dans un instant."
+        }
+      }
+    }
+  }
+}

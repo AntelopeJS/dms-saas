@@ -47,13 +47,33 @@ export function monthlyPrice(plan: Plan): number {
   return plan.price / MONTHS_PER_INTERVAL[plan.interval];
 }
 
+const SEAT_BILLING_MODE = "seat";
+const MIN_BILLED_SEATS = 1;
+
+/** What a plan bills per month for a workspace using `seats` seats. */
+function monthlyCost(plan: Plan, seats: number): number {
+  const units =
+    plan.billingMode === SEAT_BILLING_MODE
+      ? Math.max(MIN_BILLED_SEATS, seats)
+      : 1;
+  return monthlyPrice(plan) * units;
+}
+
 /**
  * A plan change is a downgrade when the customer ends up paying us less per
- * month. Equal prices are treated as an upgrade so the change applies at once.
+ * month, for the seats the workspace uses: €150 flat is less than €49 per seat
+ * for 6 seats. Equal prices are treated as an upgrade so the change applies at
+ * once.
+ *
+ * @param seats Seats the workspace uses; a per-seat price counts them
  */
-export function isDowngrade(current: Plan | null, target: Plan): boolean {
+export function isDowngrade(
+  current: Plan | null,
+  target: Plan,
+  seats = MIN_BILLED_SEATS,
+): boolean {
   if (!current) return false;
-  return monthlyPrice(target) < monthlyPrice(current);
+  return monthlyCost(target, seats) < monthlyCost(current, seats);
 }
 
 /**

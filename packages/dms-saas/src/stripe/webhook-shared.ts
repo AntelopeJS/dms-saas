@@ -20,7 +20,11 @@ import {
   stripeSecondsToDate as optionalStripeDate,
 } from "../utils";
 import { getStripeClient } from "./client";
-import { readInvoiceTax, requireInvoiceId } from "./payload-shapes";
+import {
+  readInvoiceTax,
+  readStripeId,
+  requireInvoiceId,
+} from "./payload-shapes";
 
 export const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 export const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
@@ -105,8 +109,21 @@ export async function resolveInvoiceLines(
   return lines.map(toInvoiceLine);
 }
 
+/** Where Stripe stands with collecting the invoice: what the operator list reads. */
+function toCollectionState(invoice: Stripe.Invoice) {
+  return {
+    amountPaid: invoice.amount_paid ?? null,
+    attemptCount: invoice.attempt_count ?? null,
+    nextPaymentAttemptAt: optionalStripeDate(invoice.next_payment_attempt),
+    dueAt: optionalStripeDate(invoice.due_date),
+    autoFinalizesAt: optionalStripeDate(invoice.automatically_finalizes_at),
+    latestRevisionStripeId: readStripeId(invoice.latest_revision),
+  };
+}
+
 function toInvoicePayload(invoice: Stripe.Invoice, lines: InvoiceLine[]) {
   return {
+    ...toCollectionState(invoice),
     documentType: "invoice" as const,
     stripeInvoiceId: requireInvoiceId(invoice),
     stripeCreditNoteId: null,

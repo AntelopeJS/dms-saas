@@ -1,343 +1,396 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from 'vue'
+import PlanChangeReview from '../build/PlanChangeReview.vue'
+import type { PlanInterval } from '../composables/usePlanIntervalLabel'
 
 const props = defineProps<{
-  plans: TenantPlanView[];
-  features: TenantPlanFeature[];
-  currentPlanId: string | null;
-  pendingPlanId: string | null;
-  isRecovery?: boolean;
-  /** A paid plan chosen from a free one goes through the upgrade flow. */
-  isCurrentPaid?: boolean;
-  workspaceName?: string | null;
-}>();
+	plans: OfferedPlanView[]
+	features: TenantPlanFeature[]
+	seats: SeatsInUse
+	currentPlanId: string | null
+	currentPlanName: string | null
+	pendingPlanId: string | null
+	renewalDate: string | null
+	isRecovery?: boolean
+	/**
+	 * A cancelled workspace choosing a plan again: every plan is offered, the
+	 * one it was cancelled on included, free plans as well.
+	 */
+	isResubscription?: boolean
+	/** A paid plan chosen from a free one goes through the upgrade flow. */
+	isCurrentPaid?: boolean
+	workspaceName?: string | null
+}>()
 
-const emit = defineEmits<{ changed: []; upgrade: [plan: TenantPlanView] }>();
+const emit = defineEmits<{ changed: []; upgrade: [plan: OfferedPlanView] }>()
 
-const open = defineModel<boolean>("open", { default: false });
-
-const { t } = useI18n();
-const toast = useToast();
-const { resolveApiError } = useApiErrorMessage();
-const { changePlan } = useTenantPlan();
-const { offerFor: offerPendingCheckout } = usePendingCheckout();
-const { formatFeatureValue } = usePlanFeatureFormat();
-const { formatMajorUnits } = useMoneyFormat();
-const planIntervalLabel = usePlanIntervalLabel("saas.workspace.plan.interval");
-
-const showDetailRows = ref(false);
-const pendingPlanRequest = ref<string | null>(null);
-const isDowngradeConfirmOpen = ref(false);
-const downgradeTarget = ref<TenantPlanView | null>(null);
-
-/** A feature no compared plan sets would only render a row of dashes. */
-const comparedFeatures = computed(() =>
-  props.features.filter((feature) =>
-    props.plans.some(
-      (plan) => plan.featureValues[feature.featureId] !== undefined,
-    ),
-  ),
-);
-
-interface FeatureRow {
-  feature: TenantPlanFeature;
-  label: string;
-  tooltip: string | null;
+const KEY_PREFIX = 'saas.tenant_billing.plan_change'
+const DAY_FORMAT: Intl.DateTimeFormatOptions = {
+	day: 'numeric',
+	month: 'short',
 }
 
-const visibleRows = computed<FeatureRow[]>(() =>
-  comparedFeatures.value
-    .filter((feature) => showDetailRows.value || !feature.isDetailRow)
-    .map((feature) => ({
-      feature,
-      label: feature.displayName,
-      tooltip: feature.tooltip || null,
-    })),
-);
+const { isOpen: open, reviewPlanId } = usePlanComparison()
+const { t, locale } = useI18n()
+const { formatFeatureValue } = usePlanFeatureFormat()
+const { formatMajorUnits } = useMoneyFormat()
+const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
 
-const hasDetailRows = computed(() =>
-  comparedFeatures.value.some((feature) => feature.isDetailRow),
-);
+const showDetailRows = ref(false)
+const interval = ref<PlanInterval>('month')
 
 const currentPlan = computed(
-  () => props.plans.find((plan) => plan._id === props.currentPlanId) ?? null,
-);
+	() => props.plans.find((plan) => plan._id === props.currentPlanId) ?? null,
+)
+const intervals = computed<PlanInterval[]>(() => [
+	...new Set(props.plans.map((plan) => plan.interval)),
+])
+const split = computed(() =>
+	splitOfferedPlans(props.plans, props.seats, props.currentPlanId),
+)
+const columns = computed(() =>
+	split.value.offered.filter(
+		(plan) => intervals.value.length < 2 || plan.interval === interval.value,
+	),
+)
+const reviewedPlan = computed(
+	() => props.plans.find((plan) => plan._id === reviewPlanId.value) ?? null,
+)
 
-function priceLabel(plan: TenantPlanView): string {
-  return formatMajorUnits(plan.price, plan.currency);
+const comparedFeatures = computed(() =>
+	props.features.filter((feature) =>
+		columns.value.some(
+			(plan) => plan.featureValues[feature.featureId] !== undefined,
+		),
+	),
+)
+const visibleFeatures = computed(() =>
+	comparedFeatures.value.filter(
+		(feature) => showDetailRows.value || !feature.isDetailRow,
+	),
+)
+const hiddenDetailCount = computed(
+	() => comparedFeatures.value.filter((feature) => feature.isDetailRow).length,
+)
+
+const tooSmallNote = computed(() => {
+	const names = split.value.tooSmall.map((plan) => plan.name)
+	if (!names.length) return null
+	return t(`${KEY_PREFIX}.too_small`, {
+		plans: names.join(', '),
+		seats: props.seats.occupied,
+		workspace: props.workspaceName ?? '',
+	})
+})
+
+const otherCustomerTypeNote = computed(() => {
+	const plans = split.value.forOtherCustomerType
+	if (!plans.length) return null
+	return t(`${KEY_PREFIX}.for_other_customer_type.${plans[0]!.audience}`, {
+		plans: plans.map((plan) => plan.name).join(', '),
+	})
+})
+
+const subtitle = computed(() =>
+	t(`${KEY_PREFIX}.subtitle`, {
+		workspace: props.workspaceName ?? '',
+		plan: props.currentPlanName ?? '—',
+		seats: props.seats.occupied,
+		members: props.seats.members,
+		invites: props.seats.pendingInvites,
+	}),
+)
+
+const isChoosingAnew = computed(
+	() => !!props.isRecovery || !!props.isResubscription,
+)
+
+function isCurrent(plan: OfferedPlanView): boolean {
+	return plan._id === props.currentPlanId && !isChoosingAnew.value
 }
 
-function isCurrent(plan: TenantPlanView): boolean {
-  return plan._id === props.currentPlanId;
+function isDowngradeTarget(plan: OfferedPlanView): boolean {
+	return isPlanDowngrade(
+		currentPlan.value,
+		plan,
+		!!props.isCurrentPaid,
+		props.seats.occupied,
+	)
 }
 
-/** The paid plans are the way forward from a free one or a recovery. */
-function isHighlighted(plan: TenantPlanView): boolean {
-  const isWayForward = props.isRecovery || !props.isCurrentPaid;
-  return isWayForward && plan.checkoutAvailable;
+function priceLine(plan: OfferedPlanView): string {
+	const price = formatMajorUnits(plan.price, plan.currency)
+	const period = planIntervalLabel(plan.interval)
+	return plan.billingMode === 'seat'
+		? t(`${KEY_PREFIX}.price_seat`, { price, interval: period })
+		: t(`${KEY_PREFIX}.price_flat`, { price, interval: period })
 }
 
-function needsUpgradeFlow(plan: TenantPlanView): boolean {
-  return !props.isCurrentPaid && plan.price > 0;
+function seatTotal(plan: OfferedPlanView): string | null {
+	if (plan.billingMode !== 'seat') return null
+	return t(`${KEY_PREFIX}.seat_total`, {
+		total: formatMajorUnits(plan.price * props.seats.occupied, plan.currency),
+		seats: props.seats.occupied,
+	})
 }
 
-function select(plan: TenantPlanView): void {
-  if (needsUpgradeFlow(plan)) {
-    open.value = false;
-    emit("upgrade", plan);
-    return;
-  }
-  if (isPlanDowngrade(currentPlan.value, plan, !!props.isCurrentPaid)) {
-    downgradeTarget.value = plan;
-    isDowngradeConfirmOpen.value = true;
-    return;
-  }
-  void changeTo(plan);
+function seatsCell(plan: OfferedPlanView): string {
+	return plan.maxMembers > 0
+		? String(plan.maxMembers)
+		: t(`${KEY_PREFIX}.unlimited`)
 }
 
-async function confirmDowngrade(): Promise<void> {
-  if (!downgradeTarget.value) return;
-  await changeTo(downgradeTarget.value);
-  isDowngradeConfirmOpen.value = false;
+function actionLabel(plan: OfferedPlanView): string {
+	if (isChoosingAnew.value || !props.isCurrentPaid)
+		return t(`${KEY_PREFIX}.choose`)
+	return isDowngradeTarget(plan)
+		? t(`${KEY_PREFIX}.review_downgrade`)
+		: t(`${KEY_PREFIX}.review_upgrade`)
 }
 
-async function changeTo(plan: TenantPlanView): Promise<void> {
-  pendingPlanRequest.value = plan._id;
-  try {
-    const result = await changePlan(plan._id);
-    if (result.checkoutUrl && typeof window !== "undefined") {
-      window.location.href = result.checkoutUrl;
-      return;
-    }
-    toast.add({
-      title: result.scheduled
-        ? t("saas.workspace.plan.change_scheduled")
-        : t("saas.workspace.plan.change_applied"),
-      color: "success",
-      icon: "i-ph-check-circle",
-    });
-    open.value = false;
-    emit("changed");
-  } catch (error) {
-    if (await offerPendingCheckout(error, plan._id)) {
-      open.value = false;
-      return;
-    }
-    toast.add({
-      title: resolveApiError(error, "saas.workspace.plan.change_error"),
-      color: "error",
-      icon: "i-ph-warning-circle",
-    });
-  } finally {
-    pendingPlanRequest.value = null;
-  }
+function needsCheckout(plan: OfferedPlanView): boolean {
+	return !props.isCurrentPaid && plan.price > 0
 }
+
+function select(plan: OfferedPlanView): void {
+	if (needsCheckout(plan)) {
+		open.value = false
+		emit('upgrade', plan)
+		return
+	}
+	reviewPlanId.value = plan._id
+}
+
+function finishReview(): void {
+	open.value = false
+	emit('changed')
+}
+
+const footnote = computed(() =>
+	t(`${KEY_PREFIX}.timing`, {
+		date: formatDate(props.renewalDate, locale.value, DAY_FORMAT) ?? '—',
+	}),
+)
+
+// A review asked for a plan that needs Stripe's payment page goes there.
+watch(
+	[open, reviewedPlan],
+	([isOpen, plan]) => {
+		if (isOpen && plan && needsCheckout(plan)) select(plan)
+	},
+	{ immediate: true },
+)
+
+watch(open, (isOpen) => {
+	if (isOpen)
+		interval.value =
+			currentPlan.value?.interval ?? intervals.value[0] ?? 'month'
+	else reviewPlanId.value = null
+})
 </script>
 
 <template>
-  <UModal
-    v-model:open="open"
-    :title="$t('saas.workspace.plan.comparison.title')"
-    :description="
-      currentPlan
-        ? $t('saas.workspace.plan.comparison.subtitle', {
-            workspace: workspaceName ?? '',
-            plan: currentPlan.name,
-          })
-        : $t('saas.workspace.plan.comparison.subtitle_no_plan')
-    "
-    :ui="{ content: 'max-w-5xl' }"
-  >
-    <template #body>
-      <div class="flex flex-col gap-4">
-        <div class="overflow-x-auto">
-          <table class="min-w-3xl w-full border-collapse text-sm">
-            <thead>
-              <tr>
-                <th class="w-56" />
-                <th
-                  v-for="plan in plans"
-                  :key="plan._id"
-                  scope="col"
-                  class="border-default border-b p-3 text-center align-top"
-                  :class="isCurrent(plan) ? 'bg-primary/10 rounded-t-lg' : ''"
-                >
-                  <div class="flex flex-col items-center gap-2">
-                    <span class="font-semibold">{{ plan.name }}</span>
-                    <span class="text-primary font-semibold tabular-nums">
-                      {{ priceLabel(plan) }}
-                      <span class="text-xs">
-                        /{{ planIntervalLabel(plan.interval) }}
-                      </span>
-                    </span>
-                    <UBadge
-                      v-if="isCurrent(plan) && !isRecovery"
-                      color="primary"
-                      variant="subtle"
-                    >
-                      {{ $t("saas.workspace.plan.comparison.current") }}
-                    </UBadge>
-                    <UBadge
-                      v-else-if="plan._id === pendingPlanId"
-                      color="warning"
-                      variant="subtle"
-                    >
-                      {{ $t("saas.workspace.plan.comparison.scheduled") }}
-                    </UBadge>
-                    <UButton
-                      v-else
-                      size="xs"
-                      :color="isHighlighted(plan) ? 'primary' : 'neutral'"
-                      :variant="isHighlighted(plan) ? 'solid' : 'subtle'"
-                      :loading="pendingPlanRequest === plan._id"
-                      :disabled="
-                        pendingPlanRequest !== null ||
-                        (isRecovery && !plan.checkoutAvailable)
-                      "
-                      @click="select(plan)"
-                    >
-                      {{ $t("saas.workspace.plan.comparison.choose") }}
-                    </UButton>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="{ feature, label, tooltip } in visibleRows"
-                :key="feature.featureId"
-                class="border-default border-b last:border-0"
-              >
-                <th scope="row" class="p-3 text-left font-normal">
-                  <span class="inline-flex items-center gap-1">
-                    {{ label }}
-                    <UTooltip v-if="tooltip" :text="tooltip">
-                      <UButton
-                        variant="link"
-                        color="neutral"
-                        size="xs"
-                        icon="i-ph-info"
-                        :aria-label="tooltip"
-                        class="text-muted p-0"
-                      />
-                    </UTooltip>
-                  </span>
-                </th>
-                <td
-                  v-for="plan in plans"
-                  :key="plan._id"
-                  class="p-3 text-center tabular-nums"
-                  :class="isCurrent(plan) ? 'bg-primary/10' : ''"
-                >
-                  {{
-                    formatFeatureValue(
-                      feature,
-                      plan.featureValues[feature.featureId],
-                      plan.currency,
-                    )
-                  }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+	<UModal
+		v-model:open="open"
+		:title="
+			reviewedPlan
+				? $t(`${KEY_PREFIX}.review_title`)
+				: $t(`${KEY_PREFIX}.title`)
+		"
+		:description="reviewedPlan ? undefined : subtitle"
+		:ui="{ content: reviewedPlan ? 'max-w-xl' : 'max-w-5xl' }"
+	>
+		<template #body>
+			<PlanChangeReview
+				v-if="reviewedPlan"
+				:key="reviewedPlan._id"
+				:plan="reviewedPlan"
+				:current-plan="currentPlan"
+				:current-plan-name="currentPlanName"
+				:features="features"
+				allow-back
+				@back="reviewPlanId = null"
+				@done="finishReview"
+			/>
 
-        <div v-if="hasDetailRows" class="flex justify-center">
-          <UButton
-            variant="link"
-            color="primary"
-            :icon="showDetailRows ? 'i-ph-caret-up' : 'i-ph-caret-down'"
-            @click="showDetailRows = !showDetailRows"
-          >
-            {{
-              showDetailRows
-                ? $t("saas.workspace.plan.comparison.hide_detail")
-                : $t("saas.workspace.plan.comparison.show_detail")
-            }}
-          </UButton>
-        </div>
-      </div>
-    </template>
+			<div v-else class="flex flex-col gap-4">
+				<UTabs
+					v-if="intervals.length > 1"
+					v-model="interval"
+					:items="
+						intervals.map((value) => ({
+							label: $t(`${KEY_PREFIX}.interval.${value}`),
+							value,
+						}))
+					"
+					:content="false"
+					size="sm"
+					class="self-start"
+				/>
 
-    <template #footer>
-      <div class="flex w-full justify-end">
-        <UButton color="neutral" variant="subtle" @click="open = false">
-          {{ $t("saas.workspace.plan.comparison.close") }}
-        </UButton>
-      </div>
+				<DmsEmptyState
+					v-if="!columns.length"
+					size="sm"
+					:title="$t(`${KEY_PREFIX}.none_title`)"
+					:description="$t(`${KEY_PREFIX}.none_description`)"
+				/>
 
-      <UModal
-        v-model:open="isDowngradeConfirmOpen"
-        :title="
-          $t('saas.workspace.plan.downgrade.title', {
-            plan: downgradeTarget?.name ?? '',
-          })
-        "
-        :dismissible="pendingPlanRequest === null"
-      >
-        <template #body>
-          <div v-if="downgradeTarget" class="flex flex-col gap-3 text-sm">
-            <p>
-              {{
-                $t("saas.workspace.plan.downgrade.description", {
-                  plan: downgradeTarget.name,
-                })
-              }}
-            </p>
-            <UAlert
-              color="warning"
-              variant="subtle"
-              icon="i-ph-warning"
-              :title="$t('saas.workspace.plan.downgrade.warning_title')"
-            >
-              <template #description>
-                <ul class="list-disc space-y-1 ps-4">
-                  <li>
-                    {{
-                      $t("saas.workspace.plan.downgrade.warning_features", {
-                        plan: downgradeTarget.name,
-                      })
-                    }}
-                  </li>
-                  <li>
-                    {{
-                      $t("saas.workspace.plan.downgrade.warning_limits", {
-                        plan: downgradeTarget.name,
-                      })
-                    }}
-                  </li>
-                  <li v-if="isFreePlan(downgradeTarget)">
-                    {{ $t("saas.workspace.plan.downgrade.warning_free") }}
-                  </li>
-                </ul>
-              </template>
-            </UAlert>
-          </div>
-        </template>
-        <template #footer>
-          <div class="flex w-full justify-end gap-2">
-            <UButton
-              color="neutral"
-              variant="subtle"
-              :disabled="pendingPlanRequest !== null"
-              @click="isDowngradeConfirmOpen = false"
-            >
-              {{ $t("saas.workspace.plan.downgrade.cancel") }}
-            </UButton>
-            <UButton
-              color="warning"
-              :loading="pendingPlanRequest !== null"
-              @click="confirmDowngrade"
-            >
-              {{
-                $t("saas.workspace.plan.downgrade.confirm", {
-                  plan: downgradeTarget?.name ?? "",
-                })
-              }}
-            </UButton>
-          </div>
-        </template>
-      </UModal>
-    </template>
-  </UModal>
+				<div v-else class="overflow-x-auto">
+					<table class="min-w-3xl w-full border-collapse text-sm">
+						<thead>
+							<tr>
+								<th class="w-48 p-3 text-left align-bottom">
+									<span class="text-muted text-xs font-normal">
+										{{
+											$t(`${KEY_PREFIX}.for_seats`, { seats: seats.occupied })
+										}}
+									</span>
+								</th>
+								<th
+									v-for="plan in columns"
+									:key="plan._id"
+									scope="col"
+									class="border-default border-b p-3 text-left align-top"
+									:class="isCurrent(plan) ? 'bg-primary/5' : ''"
+								>
+									<div class="flex flex-col gap-1">
+										<span class="flex items-center gap-2 font-semibold">
+											{{ plan.name }}
+											<DmsStatusPill
+												v-if="isCurrent(plan)"
+												tone="primary"
+												size="sm"
+												:label="$t(`${KEY_PREFIX}.current`)"
+											/>
+										</span>
+										<span class="tabular-nums">{{ priceLine(plan) }}</span>
+										<span v-if="seatTotal(plan)" class="text-muted text-xs">
+											{{ seatTotal(plan) }}
+										</span>
+										<UBadge
+											v-if="plan.isTrialOffered && !isCurrent(plan)"
+											color="info"
+											variant="subtle"
+											size="sm"
+											class="self-start"
+										>
+											{{
+												$t(`${KEY_PREFIX}.trial_days`, { days: plan.trialDays })
+											}}
+										</UBadge>
+										<UButton
+											v-if="isCurrent(plan)"
+											size="xs"
+											color="neutral"
+											variant="subtle"
+											disabled
+											class="mt-1 self-start"
+										>
+											{{ $t(`${KEY_PREFIX}.your_plan`) }}
+										</UButton>
+										<UButton
+											v-else-if="plan._id === pendingPlanId"
+											size="xs"
+											color="warning"
+											variant="subtle"
+											disabled
+											class="mt-1 self-start"
+										>
+											{{ $t(`${KEY_PREFIX}.scheduled`) }}
+										</UButton>
+										<UButton
+											v-else
+											size="xs"
+											:color="isDowngradeTarget(plan) ? 'neutral' : 'primary'"
+											:variant="isDowngradeTarget(plan) ? 'subtle' : 'solid'"
+											:disabled="isRecovery && !plan.checkoutAvailable"
+											class="mt-1 self-start"
+											@click="select(plan)"
+										>
+											{{ actionLabel(plan) }}
+										</UButton>
+									</div>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr class="border-default border-b">
+								<th scope="row" class="p-3 text-left font-normal">
+									{{ $t(`${KEY_PREFIX}.seats_row`) }}
+								</th>
+								<td
+									v-for="plan in columns"
+									:key="plan._id"
+									class="p-3 tabular-nums"
+									:class="isCurrent(plan) ? 'bg-primary/5' : ''"
+								>
+									{{ seatsCell(plan) }}
+								</td>
+							</tr>
+							<tr
+								v-for="feature in visibleFeatures"
+								:key="feature.featureId"
+								class="border-default border-b last:border-0"
+							>
+								<th scope="row" class="p-3 text-left font-normal">
+									<span class="inline-flex items-center gap-1">
+										{{ feature.displayName }}
+										<UTooltip v-if="feature.tooltip" :text="feature.tooltip">
+											<UIcon name="i-ph-info" class="text-muted size-3.5" />
+										</UTooltip>
+									</span>
+								</th>
+								<td
+									v-for="plan in columns"
+									:key="plan._id"
+									class="p-3 tabular-nums"
+									:class="isCurrent(plan) ? 'bg-primary/5' : ''"
+								>
+									{{
+										formatFeatureValue(
+											feature,
+											plan.featureValues[feature.featureId],
+											plan.currency,
+										)
+									}}
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<UButton
+					v-if="hiddenDetailCount"
+					variant="link"
+					color="primary"
+					class="self-center"
+					:icon="showDetailRows ? 'i-ph-caret-up' : 'i-ph-caret-down'"
+					@click="showDetailRows = !showDetailRows"
+				>
+					{{
+						showDetailRows
+							? $t(`${KEY_PREFIX}.hide_detail`)
+							: $t(
+									`${KEY_PREFIX}.show_detail`,
+									{ count: hiddenDetailCount },
+									hiddenDetailCount,
+								)
+					}}
+				</UButton>
+
+				<p v-if="otherCustomerTypeNote" class="text-muted text-sm">
+					<UIcon name="i-ph-identification-card" class="me-1 align-middle" />
+					{{ otherCustomerTypeNote }}
+				</p>
+				<p v-if="tooSmallNote" class="text-muted text-sm">
+					<UIcon name="i-ph-info" class="me-1 align-middle" />
+					{{ tooSmallNote }}
+				</p>
+				<p v-if="isCurrentPaid" class="text-muted text-sm">
+					<UIcon name="i-ph-calendar" class="me-1 align-middle" />
+					{{ footnote }}
+				</p>
+			</div>
+		</template>
+	</UModal>
 </template>

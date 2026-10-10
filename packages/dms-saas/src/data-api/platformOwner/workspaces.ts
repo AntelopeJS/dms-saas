@@ -11,127 +11,65 @@ import {
   ModelReference,
   Sortable,
 } from "@antelopejs/interface-data-api/metadata";
-import { GetModel, Model } from "@antelopejs/interface-database-decorators";
-import {
-  Tenant,
-  TenantMemberModel,
-  TenantModel,
-} from "@antelopejs/interface-dms/db";
+import { Model } from "@antelopejs/interface-database-decorators";
+import { Tenant, TenantModel } from "@antelopejs/interface-dms/db";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
-import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import {
+  type CellSubline,
   Column,
+  type ComposedText,
+  DefaultDisplays,
   Exported,
   Searchable,
   Select,
   TableViewRoutes,
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
+import { TenantBillingState, WORKSPACE_RENEWAL_KINDS } from "../../db";
+import { statusPillDisplay, statusType } from "../../utils/status-vocabulary";
+import { HiddenStringFilter } from "./hidden-filter";
 import {
-  PlanModel,
-  TenantBillingState,
-  TenantSubscriptionModel,
-} from "../../db";
-import {
-  findPendingOwnerInvite,
-  type InvitationStatus,
-  invitationStatusOf,
-} from "../../workspaces/invitations";
+  type WorkspaceCellRow,
+  workspaceMrrAmount,
+  workspaceMrrNote,
+  workspaceOwnerLabel,
+  workspaceOwnerState,
+  workspacePlanDetail,
+  workspaceRenewalDate,
+  workspaceRenewalSummary,
+} from "./workspace-cells";
 
-const BILLING_STATE_ITEMS = [
-  { label: "$saas.workspaces.billing_state.free", value: "free" },
-  { label: "$saas.workspaces.billing_state.active", value: "active" },
-  { label: "$saas.workspaces.billing_state.trialing", value: "trialing" },
-  { label: "$saas.workspaces.billing_state.past_due", value: "past_due" },
-  { label: "$saas.workspaces.billing_state.suspended", value: "suspended" },
-  { label: "$saas.workspaces.billing_state.cancelled", value: "cancelled" },
-  {
-    label: "$saas.workspaces.billing_state.pending_payment",
-    value: "pending_payment",
-  },
-];
+const COLUMN = "$saas.workspaces.column";
 
-type OwnerStatus =
-  | "joined"
-  | "invitation_pending"
-  | "invitation_expired"
-  | "none";
+// Every directory field is read off the workspace's billing state row, which
+// is keyed by the tenant id: one join per column, sortable and filterable in
+// the database.
+const DIRECTORY_JOIN = {
+  table: TenantBillingState,
+  localKey: "_id",
+  remoteIndex: "_id",
+} as const;
 
-const OWNER_STATUS_ITEMS = [
-  { label: "$saas.workspaces.owner_status.joined", value: "joined" },
-  {
-    label: "$saas.workspaces.owner_status.invitation_pending",
-    value: "invitation_pending",
-  },
-  {
-    label: "$saas.workspaces.owner_status.invitation_expired",
-    value: "invitation_expired",
-  },
-  { label: "$saas.workspaces.owner_status.none", value: "none" },
-];
-
-const OWNER_STATUS_BY_INVITATION: Record<InvitationStatus, OwnerStatus> = {
-  pending: "invitation_pending",
-  expired: "invitation_expired",
-};
-
-const NO_VALUE = "—";
-
-interface TenantRowInstance {
-  table: { _id: string };
+function directoryField(remoteField: string): PropertyDecorator {
+  return Joined({ ...DIRECTORY_JOIN, remoteField }) as PropertyDecorator;
 }
 
-function tenantIdOf(self: unknown): string {
-  return (self as TenantRowInstance).table._id;
-}
+const RENEWAL_KIND_TYPE = new DefaultDataTypes.SelectType({
+  items: WORKSPACE_RENEWAL_KINDS.map((kind) => ({
+    label: `$saas.workspaces.renewal_kind.${kind}`,
+    value: kind,
+  })),
+});
 
-async function memberOwnerEmails(tenantId: string): Promise<string[]> {
-  const owners = await GetModel(TenantMemberModel, tenantId).listOwners();
-  const userModel = GetModel(UserModel);
-  const users = await Promise.all(owners.map((m) => userModel.get(m.userId)));
-  return users
-    .filter((u): u is NonNullable<typeof u> => !!u)
-    .map((u) => u.email);
-}
-
-interface WorkspaceOwnership {
-  emails: string[];
-  inviteEmail: string | null;
-  status: OwnerStatus;
+/** A directory getter's row: the joined fields are read off the instance. */
+function directoryRow(self: unknown): WorkspaceCellRow {
+  return self as WorkspaceCellRow;
 }
 
 /**
- * Owners who joined, or else the invitee who will own the workspace once they
- * accept: a workspace created for a new account has no member yet.
+ * Every customer workspace with its directory row: status, plan, MRR, owner
+ * and the next date that matters, all stored so they sort and filter.
  */
-async function workspaceOwnership(
-  tenantId: string,
-): Promise<WorkspaceOwnership> {
-  const emails = await memberOwnerEmails(tenantId);
-  if (emails.length > 0) return { emails, inviteEmail: null, status: "joined" };
-  const invite = await findPendingOwnerInvite(tenantId);
-  if (!invite) return { emails, inviteEmail: null, status: "none" };
-  return {
-    emails,
-    inviteEmail: invite.email,
-    status: OWNER_STATUS_BY_INVITATION[invitationStatusOf(invite)],
-  };
-}
-
-// The owner and ownerStatus getters read the same row instance, so they share
-// one lookup instead of querying members and invitations twice per row.
-const ownershipByRow = new WeakMap<object, Promise<WorkspaceOwnership>>();
-
-function rowOwnership(self: unknown): Promise<WorkspaceOwnership> {
-  const row = self as object;
-  let lookup = ownershipByRow.get(row);
-  if (!lookup) {
-    lookup = workspaceOwnership(tenantIdOf(row));
-    ownershipByRow.set(row, lookup);
-  }
-  return lookup;
-}
-
 @RegisterDataController()
 @AuthOwnerOnly()
 export class workspacesDataAPI extends DataController(
@@ -161,9 +99,11 @@ export class workspacesDataAPI extends DataController(
   @Exported()
   @Sortable()
   @Column({
-    name: "$saas.workspaces.column.name",
+    name: `${COLUMN}.workspace`,
     type: new DefaultDataTypes.StringType(),
     filterable: true,
+    size: 240,
+    display: new DefaultDisplays.IdentityDisplay({ subtitleField: "_id" }),
   })
   @Access(AccessMode.ReadOnly)
   declare name: string;
@@ -172,58 +112,220 @@ export class workspacesDataAPI extends DataController(
   @Exported()
   @Sortable({ noIndex: true })
   @Column({
-    name: "$saas.workspaces.column.status",
-    type: new DefaultDataTypes.SelectType({ items: BILLING_STATE_ITEMS }),
+    name: `${COLUMN}.status`,
+    type: statusType("workspace"),
     filterable: true,
+    display: statusPillDisplay("workspace"),
   })
-  @Joined({
-    table: TenantBillingState,
-    localKey: "_id",
-    remoteField: "billingState",
-    remoteIndex: "_id",
-  })
+  @directoryField("billingState")
   @Access(AccessMode.ReadOnly)
   declare billingState: string;
 
+  /** The plan's id, filtered on by the Plans page's "View workspaces" link. */
+  @Listable(["_id"])
+  @HiddenStringFilter()
+  @directoryField("planId")
+  @Access(AccessMode.ReadOnly)
+  declare planId: string | null;
+
   @Listable(["_id"])
   @Exported()
+  @Sortable({ noIndex: true })
   @Column({
-    name: "$saas.workspaces.column.plan",
+    name: `${COLUMN}.plan`,
     type: new DefaultDataTypes.StringType(),
+    filterable: true,
+    display: new DefaultDisplays.TwoLineDisplay({ subField: "planDetail" }),
   })
+  @directoryField("planName")
   @Access(AccessMode.ReadOnly)
-  get plan(): PromiseLike<string> {
-    return GetModel(TenantSubscriptionModel, tenantIdOf(this))
-      .findOne()
-      .then(async (sub) => {
-        if (!sub?.planId) return NO_VALUE;
-        const plan = await GetModel(PlanModel).get(sub.planId);
-        return plan?.name ?? NO_VALUE;
-      });
-  }
+  declare planName: string | null;
+
+  @Listable(["_id"])
+  @Exported()
+  @Sortable({ noIndex: true })
+  @Column({
+    name: `${COLUMN}.mrr`,
+    type: new DefaultDataTypes.NumberType(),
+    filterable: true,
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "mrrAmount",
+      subField: "mrrNote",
+    }),
+  })
+  @directoryField("mrrMinor")
+  @Access(AccessMode.ReadOnly)
+  declare mrrMinor: number;
+
+  @Listable(["_id"])
+  @Searchable()
+  @Exported()
+  @Sortable({ noIndex: true })
+  @Column({
+    name: `${COLUMN}.owner`,
+    type: new DefaultDataTypes.StringType(),
+    filterable: true,
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "ownerLabel",
+      subField: "ownerState",
+    }),
+  })
+  @directoryField("ownerName")
+  @Access(AccessMode.ReadOnly)
+  declare ownerName: string | null;
+
+  @Listable(["_id"])
+  @Searchable()
+  @Exported()
+  @Column({
+    name: `${COLUMN}.owner_email`,
+    type: new DefaultDataTypes.EmailType(),
+    filterable: true,
+    isVisible: false,
+  })
+  @directoryField("ownerEmail")
+  @Access(AccessMode.ReadOnly)
+  declare ownerEmail: string | null;
 
   @Listable(["_id"])
   @Exported()
   @Column({
-    name: "$saas.workspaces.column.owner",
-    type: new DefaultDataTypes.StringType(),
+    name: `${COLUMN}.owner_status`,
+    type: statusType("owner"),
+    filterable: true,
+    isVisible: false,
   })
+  @directoryField("ownerStatus")
   @Access(AccessMode.ReadOnly)
-  get owner(): PromiseLike<string> {
-    return rowOwnership(this).then(({ emails, inviteEmail }) =>
-      emails.length > 0 ? emails.join(", ") : (inviteEmail ?? NO_VALUE),
-    );
-  }
+  declare ownerStatus: string;
+
+  @Listable(["_id"])
+  @Column({
+    name: `${COLUMN}.owner_never_joined`,
+    type: new DefaultDataTypes.BooleanType(),
+    filterable: true,
+    isVisible: false,
+  })
+  @directoryField("ownerNeverJoined")
+  @Access(AccessMode.ReadOnly)
+  declare ownerNeverJoined: boolean;
 
   @Listable(["_id"])
   @Exported()
+  @Sortable({ noIndex: true })
   @Column({
-    name: "$saas.workspaces.column.owner_status",
-    type: new DefaultDataTypes.SelectType({ items: OWNER_STATUS_ITEMS }),
+    name: `${COLUMN}.renews`,
+    type: new DefaultDataTypes.DateType(),
+    filterable: true,
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "renewalSummary",
+      subField: "renewalDate",
+    }),
   })
+  @directoryField("renewsAt")
   @Access(AccessMode.ReadOnly)
-  get ownerStatus(): PromiseLike<OwnerStatus> {
-    return rowOwnership(this).then(({ status }) => status);
+  declare renewsAt: Date | null;
+
+  @Listable(["_id"])
+  @Column({
+    name: `${COLUMN}.renewal_kind`,
+    type: RENEWAL_KIND_TYPE,
+    filterable: true,
+    isVisible: false,
+  })
+  @directoryField("renewalKind")
+  @Access(AccessMode.ReadOnly)
+  declare renewalKind: string | null;
+
+  @Listable(["_id"])
+  @Column({
+    name: `${COLUMN}.state_since`,
+    type: new DefaultDataTypes.DateType(),
+    filterable: true,
+    isVisible: false,
+  })
+  @directoryField("stateSince")
+  @Access(AccessMode.ReadOnly)
+  declare stateSince: Date | null;
+
+  @Listable(["_id"])
+  @Column({
+    name: `${COLUMN}.complimentary`,
+    type: new DefaultDataTypes.BooleanType(),
+    filterable: true,
+    isVisible: false,
+  })
+  @directoryField("isComplimentary")
+  @Access(AccessMode.ReadOnly)
+  declare isComplimentary: boolean;
+
+  @Listable(["_id"])
+  @directoryField("currency")
+  @Access(AccessMode.ReadOnly)
+  declare currency: string | null;
+
+  @Listable(["_id"])
+  @directoryField("planUnitAmountMinor")
+  @Access(AccessMode.ReadOnly)
+  declare planUnitAmountMinor: number | null;
+
+  @Listable(["_id"])
+  @directoryField("planInterval")
+  @Access(AccessMode.ReadOnly)
+  declare planInterval: string | null;
+
+  @Listable(["_id"])
+  @directoryField("planBillingMode")
+  @Access(AccessMode.ReadOnly)
+  declare planBillingMode: string | null;
+
+  @Listable(["_id"])
+  @directoryField("seats")
+  @Access(AccessMode.ReadOnly)
+  declare seats: number;
+
+  // The two-line cells' texts, written from the directory row: the browser
+  // words them in the reader's language.
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get planDetail(): ComposedText | null {
+    return workspacePlanDetail(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get mrrAmount(): ComposedText | null {
+    return workspaceMrrAmount(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get mrrNote(): CellSubline | null {
+    return workspaceMrrNote(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get ownerLabel(): string | null {
+    return workspaceOwnerLabel(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get ownerState(): CellSubline {
+    return workspaceOwnerState(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get renewalSummary(): ComposedText | null {
+    return workspaceRenewalSummary(directoryRow(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get renewalDate(): CellSubline | null {
+    return workspaceRenewalDate(directoryRow(this));
   }
 
   @Select()
@@ -231,8 +333,9 @@ export class workspacesDataAPI extends DataController(
   @Sortable()
   @Exported()
   @Column({
-    name: "$saas.workspaces.column.created_at",
+    name: `${COLUMN}.created_at`,
     type: new DefaultDataTypes.DateType(),
+    filterable: true,
   })
   @Access(AccessMode.ReadOnly)
   declare createdAt: Date;

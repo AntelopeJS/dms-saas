@@ -29,7 +29,7 @@ vi.mock("../src/routes/tenant/tenant-plan-ops", async (original) => ({
     paymentProviderRefs: harness.price > 0 ? { stripePriceId: "price" } : null,
   }),
   assertSeatLimit: async () => undefined,
-  applyImmediateChange: (...args: unknown[]) => harness.immediate(...args),
+  applyOwnerUpgrade: (...args: unknown[]) => harness.immediate(...args),
   scheduleDowngrade: (...args: unknown[]) => harness.downgrade(...args),
 }));
 

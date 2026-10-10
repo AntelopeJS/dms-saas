@@ -8,7 +8,7 @@ import {
   Put,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
-import { Model } from "@antelopejs/interface-database-decorators";
+import { GetModel, Model } from "@antelopejs/interface-database-decorators";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import {
   AuthTenantMember,
@@ -31,12 +31,18 @@ import {
 import { toPendingPlanChange } from "../../plan-changes";
 import {
   buildTenantPlanCatalog,
+  countSeatsToCompare,
   ensurePlanStripeRefs,
+  getSeatUsage,
   isDowngrade,
+  type TenantPlanView,
 } from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
 import {
-  canRecoverComplimentarySubscription,
+  canResubscribe,
+  canStartFirstPaidSubscription,
+} from "../../workspaces/first-payment";
+import {
   isComplimentaryPlanLocked,
   isComplimentarySubscription,
 } from "../../workspaces/complimentary";
@@ -47,7 +53,8 @@ import {
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
 
 import {
-  applyImmediateChange,
+  applyOwnerUpgrade,
+  assertPlanAudience,
   HTTP_BAD_REQUEST,
   HTTP_CONFLICT,
   HTTP_NOT_FOUND,
@@ -55,16 +62,28 @@ import {
   UNCHANGED_RESULT_BASE,
   assertSeatLimit,
   type ChangePlanBody,
+  ANY_PLAN_AUDIENCE,
   type ChangePlanResult,
   type CurrentPlanResult,
   dropPendingChange,
   insertFreeSubscription,
   isPaidPlan,
+  isPlanForCustomerType,
   loadAndValidateTargetPlan,
+  loadSellablePlan,
+  type OfferedPlanView,
   type PlanChangeRequest,
   scheduleDowngrade,
+  startsPaidCheckout,
 } from "./tenant-plan-ops";
-import { startPaidCheckout } from "./tenant-plan-checkout";
+import {
+  type PlanChangePreview,
+  previewPlanChange,
+} from "./tenant-plan-preview";
+import {
+  isTrialOfferedOnChange,
+  startPaidCheckout,
+} from "./tenant-plan-checkout";
 import {
   type CancelCheckoutResult,
   CHECKOUT_OPERATION_PARAM,
@@ -72,13 +91,57 @@ import {
   describePendingCheckout,
   type PendingCheckoutResult,
 } from "./tenant-plan-checkout-recovery";
+import { resubscribeOnFreePlan } from "./tenant-plan-resubscription";
 
-/** A paid target without a live Stripe subscription goes through Checkout. */
-function startsPaidCheckout(
-  newPlan: Plan,
-  subscription: TenantSubscription | undefined,
-): boolean {
-  return isPaidPlan(newPlan) && !subscription?.stripeSubscriptionId;
+const PRORATION_DATE_MAX_AGE_SECONDS = 3600;
+const MS_PER_SECOND = 1000;
+
+/**
+ * The proration date of the preview the owner reviewed, kept only while
+ * recent: an old one would bill a difference that no longer matches.
+ */
+export function acceptedProrationDate(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
+  const ageSeconds = Date.now() / MS_PER_SECOND - value;
+  const isRecent =
+    ageSeconds >= 0 && ageSeconds <= PRORATION_DATE_MAX_AGE_SECONDS;
+  return isRecent ? value : undefined;
+}
+
+function asQueryString(value: unknown): string | null {
+  return typeof value === "string" && value ? value : null;
+}
+
+/** Who the comparison is read for: the trial a plan offers depends on it. */
+interface CatalogReader {
+  subscription: TenantSubscription | undefined;
+  email: string;
+  customerType: string | null;
+}
+
+/** The customer-facing facts of a plan the comparison needs beside its features. */
+async function toOfferedPlanView(
+  view: TenantPlanView,
+  plans: Plan[],
+  reader: CatalogReader,
+): Promise<OfferedPlanView> {
+  const plan = plans.find((candidate) => candidate._id === view._id);
+  const isTrialOffered =
+    !!plan &&
+    (await isTrialOfferedOnChange(plan, reader.subscription, reader.email));
+  return {
+    ...view,
+    description: plan?.description ?? "",
+    billingMode: plan?.billingMode ?? "flat",
+    maxMembers: plan?.maxMembers ?? 0,
+    trialDays: plan?.trialDays ?? 0,
+    isTrialOffered,
+    audience: plan?.audience ?? ANY_PLAN_AUDIENCE,
+    isOfferedToCustomerType:
+      !plan ||
+      !reader.customerType ||
+      isPlanForCustomerType(plan, reader.customerType),
+  };
 }
 
 /**
@@ -115,7 +178,11 @@ export class SaasTenantPlanController extends Controller(
   @Model(FeatureModel)
   declare featureModel: FeatureModel;
 
-  private async buildCatalog(current: Plan | null, locale: string) {
+  private async buildCatalog(
+    current: Plan | null,
+    locale: string,
+    reader: CatalogReader,
+  ) {
     const publicPlans = await this.planModel.findPubliclyVisible();
     const withCurrent =
       current && !publicPlans.some((plan) => plan._id === current._id)
@@ -125,12 +192,18 @@ export class SaasTenantPlanController extends Controller(
     const offered = await Promise.all(
       withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
-    return buildTenantPlanCatalog(
+    const catalog = await buildTenantPlanCatalog(
       this.planModel,
       this.featureModel,
       offered,
       locale,
     );
+    return {
+      features: catalog.features,
+      plans: await Promise.all(
+        catalog.plans.map((view) => toOfferedPlanView(view, offered, reader)),
+      ),
+    };
   }
 
   /**
@@ -158,10 +231,12 @@ export class SaasTenantPlanController extends Controller(
    */
   @Get("/")
   async getCurrentPlan(
-    @AuthTenantMember({ bypassTenantAccessGate: true }) _user: User,
+    @AuthTenantMember({ bypassTenantAccessGate: true }) user: User,
     @Context() ctx: any,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
+    @TenantScopedModel(TenantBillingInfoModel)
+    tenantBillingInfoModel: TenantBillingInfoModel,
     @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<CurrentPlanResult> {
     const tenantId = getRequestTenantId(ctx);
@@ -177,17 +252,30 @@ export class SaasTenantPlanController extends Controller(
     const pending = subscription?.pendingPlanId
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
-    const catalog = await this.buildCatalog(current, requestLocale(language));
+    const billingInfo = await tenantBillingInfoModel.findOne();
+    const [catalog, seatUsage] = await Promise.all([
+      this.buildCatalog(current, requestLocale(language), {
+        subscription,
+        email: user.email,
+        customerType: billingInfo?.customerType ?? null,
+      }),
+      getSeatUsage(tenantId),
+    ]);
     return {
       current,
+      seats: {
+        members: seatUsage.members,
+        pendingInvites: seatUsage.pendingInvites,
+        occupied: seatUsage.occupied,
+      },
       available: catalog.plans,
       features: catalog.features,
       status: subscription?.status ?? null,
       freeUntil: subscription?.freeUntil ?? null,
       isComplimentary: isComplimentarySubscription(subscription),
       isPlanChangeLocked: isComplimentaryPlanLocked(subscription),
-      canRecoverComplimentary:
-        canRecoverComplimentarySubscription(subscription),
+      canRecoverComplimentary: canStartFirstPaidSubscription(subscription),
+      canResubscribe: canResubscribe(subscription),
       paidUsageStartedAt: subscription?.paidUsageStartedAt ?? null,
       paidUsagePeriods: subscription?.paidUsagePeriods ?? null,
       currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
@@ -250,6 +338,56 @@ export class SaasTenantPlanController extends Controller(
     );
   }
 
+  /**
+   * What changing to `planId` would cost, priced by Stripe without changing
+   * anything: the review step of the plan change dialog. Same guards as the
+   * change itself, except the customer type, which the upgrade dialog may
+   * still be filling in.
+   */
+  @Get("/preview")
+  async previewChange(
+    @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
+    @Parameter("planId", "query") planId: unknown,
+    @Parameter("country", "query") country: unknown,
+    @Context() ctx: any,
+    @TenantScopedModel(TenantBillingInfoModel)
+    tenantBillingInfoModel: TenantBillingInfoModel,
+  ): Promise<PlanChangePreview> {
+    const tenantId = getRequestTenantId(ctx);
+    const subscription = await GetModel(
+      TenantSubscriptionModel,
+      tenantId,
+    ).findOne();
+    this.assertPlanChangeAllowed(subscription, user);
+    const targetPlanId = asQueryString(planId);
+    assert(targetPlanId, HTTP_BAD_REQUEST, "saas.errors.plan.invalid");
+    assert(
+      subscription?.planId !== targetPlanId ||
+        canStartFirstPaidSubscription(subscription) ||
+        canResubscribe(subscription),
+      HTTP_CONFLICT,
+      "saas.errors.plan.already_current",
+    );
+    const billingInfo = await tenantBillingInfoModel.findOne();
+    const target = await loadSellablePlan(this.planModel, targetPlanId);
+    if (billingInfo?.customerType) {
+      assertPlanAudience(target, billingInfo.customerType);
+    }
+    await assertSeatLimit(tenantId, target);
+    const currentPlan = subscription?.planId
+      ? ((await this.planModel.get(subscription.planId)) ?? null)
+      : null;
+    return previewPlanChange({
+      tenantId,
+      subscription,
+      currentPlan,
+      target,
+      billingInfo,
+      ownerEmail: user.email,
+      country: asQueryString(country),
+    });
+  }
+
   @Put("/")
   async changePlan(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
@@ -265,8 +403,11 @@ export class SaasTenantPlanController extends Controller(
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
     const subscription = await tenantSubscriptionModel.findOne();
     this.assertPlanChangeAllowed(subscription, user);
-    const isRecovery = canRecoverComplimentarySubscription(subscription);
-    if (!isRecovery) await AssertTenantAccess(user._id, tenantId);
+    const isRecovery = canStartFirstPaidSubscription(subscription);
+    // A cancelled workspace is blocked too; choosing a plan is how its owner
+    // brings it back, on any plan, the one it was cancelled on included.
+    const choosesAnew = isRecovery || canResubscribe(subscription);
+    if (!choosesAnew) await AssertTenantAccess(user._id, tenantId);
     const billingInfo = await tenantBillingInfoModel.findOne();
     const newPlan = await loadAndValidateTargetPlan(
       this.planModel,
@@ -279,7 +420,7 @@ export class SaasTenantPlanController extends Controller(
       HTTP_CONFLICT,
       "saas.errors.plan.paid_recovery_required",
     );
-    if (subscription?.planId === body.planId && !isRecovery) {
+    if (subscription?.planId === body.planId && !choosesAnew) {
       return this.resolveSamePlanRequest(tenantId, subscription);
     }
     if (!isRecovery && startsPaidCheckout(newPlan, subscription)) {
@@ -330,6 +471,9 @@ export class SaasTenantPlanController extends Controller(
     if (startsPaidCheckout(newPlan, subscription)) {
       return startPaidCheckout(request);
     }
+    if (canResubscribe(subscription)) {
+      return resubscribeOnFreePlan(request);
+    }
     if (!subscription) {
       return insertFreeSubscription(
         user,
@@ -354,7 +498,12 @@ export class SaasTenantPlanController extends Controller(
     // waits for the cycle the customer already paid for to run out.
     const isDeferred =
       !!subscription.stripeSubscriptionId &&
-      (!isPaidPlan(newPlan) || isDowngrade(currentPlan, newPlan));
+      (!isPaidPlan(newPlan) ||
+        isDowngrade(
+          currentPlan,
+          newPlan,
+          await countSeatsToCompare(tenantId, [currentPlan, newPlan]),
+        ));
     if (isDeferred) {
       // The access gate only blocks suspended workspaces; past_due is still a
       // dunning episode over an unpaid invoice, and parking a downgrade — a
@@ -368,11 +517,12 @@ export class SaasTenantPlanController extends Controller(
       );
       return scheduleDowngrade(tenantId, subscription, newPlan);
     }
-    return applyImmediateChange(
+    return applyOwnerUpgrade(
       tenantId,
       subscription,
       newPlan,
       tenantSubscriptionModel,
+      acceptedProrationDate(request.body.prorationDate),
     );
   }
 }

@@ -1,306 +1,183 @@
-import { JSONBody, Post } from "@antelopejs/interface-api";
-import { assert } from "@antelopejs/interface-api-util";
-import { GetModel, Model } from "@antelopejs/interface-database-decorators";
-import { TenantModel } from "@antelopejs/interface-dms/db";
-import {
-  type InviteUserToTenantResult,
-  inviteUserToTenant,
-} from "@antelopejs/interface-dms/invites";
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
-import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
-import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
 import {
-  Grid,
-  GridRow,
-  KpiCard,
+  StatGroup,
   TableView,
+  type TableViewTab,
+  type TableViewView,
 } from "@antelopejs/interface-dms/base";
-import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
-import { recomputeTenantBillingState } from "../../../billing-state";
 import { workspacesDataAPI } from "../../../data-api";
-import { PlanModel, TenantSubscriptionModel } from "../../../db";
-import { parseFutureDate } from "../../../utils";
-import {
-  deliverInvitationEmail,
-  type InvitationEmailDelivery,
-  inviterNameOf,
-} from "../../../workspaces/invitations";
+import { BILLING_STATES } from "../../../db";
+import { WORKSPACE_VIEW_IDS } from "../../../metrics/headline-items";
 import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
+import { WORKSPACES_PAGE_PATH } from "../paths";
+import { CREATE_WORKSPACE_BUTTON, permissionMeta } from "./shared";
 
-const KPI_WORKSPACES = "/api/saas/dashboard/kpi/workspaces";
-const KPI_ACTIVE = "/api/saas/dashboard/kpi/state-active";
-const KPI_FREE = "/api/saas/dashboard/kpi/state-free";
-const KPI_PAST_DUE = "/api/saas/dashboard/kpi/state-past-due";
+const W = "$saas.workspaces";
+const ROW = `${W}.row_actions`;
+const ROW_API = "/api/saas/workspaces/{_id}";
+// Money and access dialogs open on the workspace's own page, where its
+// figures stand next to them: the row action names the dialog to open.
+const ROW_DETAIL = `${WORKSPACES_PAGE_PATH}/{_id}?action=`;
+const HEADLINE_FIGURES = 4;
+const PAGE_SIZE = 25;
+// MRR is stored in minor units: 500.00 in the reporting currency.
+const MRR_OVER_500_MINOR = "50000";
 
-const ACTIVE_STATUS = "active";
-
-const STATUS_TAB_FILTER_KEY = "billingState";
-
-const STATUS_TAB_IDS = ["active", "free", "past_due", "suspended"];
-
-const STATUS_TABS = STATUS_TAB_IDS.map((id) => ({
-  id,
-  label: `$saas.workspaces.billing_state.${id}`,
-  filters: [{ accessorKey: STATUS_TAB_FILTER_KEY, value: id, mode: "is" }],
+const STATUS_TABS: TableViewTab[] = BILLING_STATES.map((state) => ({
+  id: state,
+  label: `$saas.status.workspace.${state}`,
+  filter: { accessorKey: "billingState", value: state, mode: "is" },
+  // Past due is the queue operators work through: the menu shows its size.
+  navBadge: state === "past_due",
 }));
 
-// A custom form rather than the generic one: the generic form always reports
-// success, and the operator must learn when the owner's invitation email did
-// not leave.
-const workspaceCreateModal = CustomComponent(
-  "DmsSaasWorkspaceAdminCreateModal",
-);
-
-const HTTP_BAD_REQUEST = 400;
-
-interface CreateWorkspaceBody {
-  name?: unknown;
-  planId?: unknown;
-  ownerEmail?: unknown;
-  freeUntil?: unknown;
-}
-
-interface ValidatedWorkspaceInput {
-  name: string;
-  planId: string;
-  ownerEmail: string;
-  freeUntil: Date | null;
-}
-
-function asNonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : null;
-}
-
-function validateWorkspaceInput(
-  body: CreateWorkspaceBody,
-): ValidatedWorkspaceInput {
-  const name = asNonEmptyString(body.name);
-  const planId = asNonEmptyString(body.planId);
-  const ownerEmail = asNonEmptyString(body.ownerEmail);
-  const freeUntil = parseFutureDate(
-    body.freeUntil,
-    "saas.workspaces.admin.create.error.free_until_past",
-  );
-  assert(name, HTTP_BAD_REQUEST, "saas.workspaces.admin.create.error.name");
-  assert(planId, HTTP_BAD_REQUEST, "saas.workspaces.admin.create.error.plan");
-  assert(
-    ownerEmail,
-    HTTP_BAD_REQUEST,
-    "saas.workspaces.admin.create.error.owner_email",
-  );
-  return { name, planId, ownerEmail, freeUntil };
-}
-
-async function insertFreeSubscription(
-  tenantId: string,
-  planId: string,
-  userId: string,
-  now: Date,
-  freeUntil: Date | null,
-): Promise<void> {
-  await GetModel(TenantSubscriptionModel, tenantId).insert([
-    {
-      planId,
-      status: ACTIVE_STATUS,
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      stripeCheckoutSessionId: null,
-      createdBy: userId,
-      freeUntil,
-      isComplimentary: true,
-      paidUsageStartedAt: null,
-      paidUsagePeriods: [],
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]);
-}
-
-interface ProvisionedTenant {
-  tenantId: string;
-  inviteResult: InviteUserToTenantResult;
-  invitationEmail: InvitationEmailDelivery | null;
-}
-
-interface WorkspaceOwnerProvisioning {
-  name: string;
-  ownerEmail: string;
-  operator: User;
-  now: Date;
-}
-
-async function provisionTenantWithOwner(
-  tenantModel: TenantModel,
-  { name, ownerEmail, operator, now }: WorkspaceOwnerProvisioning,
-): Promise<ProvisionedTenant> {
-  // The owner has no account yet, so the operator's language is the best
-  // guess at theirs; the email follows the language stored on the invitation.
-  const ownerLanguage = operator.language;
-  const inserted = await tenantModel.insert([
-    { name, createdAt: now, updatedAt: now },
-  ]);
-  const tenantId = inserted[0];
-  const inviteResult: InviteUserToTenantResult = await inviteUserToTenant({
-    tenantId,
-    email: ownerEmail,
-    language: ownerLanguage,
-    roleIds: [],
-    asTenantOwner: true,
-  });
-  // Sent here rather than through `sendEmail`, which fires and forgets: the
-  // operator has to learn that the owner never got the link.
-  const invitationEmail =
-    inviteResult.kind === "invited"
-      ? await deliverInvitationEmail(
-          {
-            email: ownerEmail,
-            token: inviteResult.token,
-            firstname: null,
-            lastname: null,
-            language: ownerLanguage,
-          },
-          { workspaceName: name, inviterName: inviterNameOf(operator) },
-        )
-      : null;
-  return { tenantId, inviteResult, invitationEmail };
-}
+const VIEWS: TableViewView[] = [
+  {
+    id: WORKSPACE_VIEW_IDS.complimentaryEnding,
+    label: `${W}.views.complimentary_ending`,
+    icon: "i-ph-gift",
+    tone: "warning",
+    count: true,
+    filters: [
+      { accessorKey: "renewalKind", value: "free_until", mode: "is" },
+      { accessorKey: "renewsAt", value: "{{now+7d}}", mode: "less_than" },
+    ],
+    sort: [{ field: "renewsAt" }],
+  },
+  {
+    id: WORKSPACE_VIEW_IDS.pastDueOverSevenDays,
+    label: `${W}.views.past_due_7_days`,
+    icon: "i-ph-warning-circle",
+    tone: "error",
+    count: true,
+    filters: [
+      { accessorKey: "billingState", value: "past_due", mode: "is" },
+      { accessorKey: "stateSince", value: "{{now-7d}}", mode: "less_than" },
+    ],
+    sort: [{ field: "renewsAt" }],
+  },
+  {
+    id: WORKSPACE_VIEW_IDS.trialsEnding,
+    label: `${W}.views.trials_ending`,
+    icon: "i-ph-hourglass-medium",
+    tone: "info",
+    count: true,
+    filters: [
+      { accessorKey: "renewalKind", value: "trial_ends", mode: "is" },
+      { accessorKey: "renewsAt", value: "{{now+14d}}", mode: "less_than" },
+    ],
+    sort: [{ field: "renewsAt" }],
+  },
+  {
+    id: WORKSPACE_VIEW_IDS.ownerNeverJoined,
+    label: `${W}.views.owner_never_joined`,
+    icon: "i-ph-user-circle-dashed",
+    count: true,
+    filters: [{ accessorKey: "ownerNeverJoined", value: "true", mode: "is" }],
+    sort: [{ field: "createdAt", desc: true }],
+  },
+  {
+    id: WORKSPACE_VIEW_IDS.mrrOver500,
+    label: `${W}.views.mrr_over_500`,
+    icon: "i-ph-currency-circle-dollar",
+    count: true,
+    filters: [
+      {
+        accessorKey: "mrrMinor",
+        value: MRR_OVER_500_MINOR,
+        mode: "greater_than",
+      },
+    ],
+    sort: [{ field: "mrrMinor", desc: true }],
+  },
+];
 
 @RegisterPage()
 export class SaasWorkspacesListController extends PageController(
   "workspaces",
   {
-    displayName: "$saas.workspaces.title",
+    displayName: `${W}.title`,
     module: SAAS_MODULE_ID,
     category: customersCategory,
     icon: "i-ph-buildings",
-    description: "$saas.workspaces.description",
+    description: `${W}.description`,
     order: 0,
   },
-  DefaultLayout({ fullWidth: true }),
+  DefaultLayout({ fullWidth: true, headerActions: [CREATE_WORKSPACE_BUTTON] }),
 ) {
-  @Model(TenantModel)
-  declare tenantModel: TenantModel;
-
-  @Model(UserModel)
-  declare userModel: UserModel;
-
-  @Model(PlanModel)
-  declare planModel: PlanModel;
-
-  static kpis = Grid({ gap: "1rem" }).child(
-    "row",
-    GridRow()
-      .child(
-        "workspaces",
-        KpiCard({
-          title: "$saas.workspaces.kpi.workspaces",
-          icon: "i-ph-buildings",
-          fetchUrl: KPI_WORKSPACES,
-          variant: "stat",
-          valueFormat: "compact",
-          showDelta: false,
-        }),
-      )
-      .child(
-        "active",
-        KpiCard({
-          title: "$saas.workspaces.kpi.active",
-          icon: "i-ph-check-circle",
-          fetchUrl: KPI_ACTIVE,
-          variant: "stat",
-          valueFormat: "compact",
-          showDelta: false,
-        }),
-      )
-      .child(
-        "free",
-        KpiCard({
-          title: "$saas.workspaces.kpi.free",
-          icon: "i-ph-gift",
-          fetchUrl: KPI_FREE,
-          variant: "stat",
-          valueFormat: "compact",
-          showDelta: false,
-        }),
-      )
-      .child(
-        "pastDue",
-        KpiCard({
-          title: "$saas.workspaces.kpi.past_due",
-          icon: "i-ph-warning",
-          fetchUrl: KPI_PAST_DUE,
-          variant: "stat",
-          valueFormat: "compact",
-          showDelta: false,
-        }),
-      ),
-  );
+  static headline = StatGroup({
+    layout: "cards",
+    columns: HEADLINE_FIGURES,
+    skeletonCount: HEADLINE_FIGURES,
+    label: `${W}.headline.label`,
+    fetchUrl: "/api/saas/workspaces/directory-headline",
+  }).meta(permissionMeta("list_headline", "i-ph-squares-four"));
 
   static table = TableView(workspacesDataAPI, {
-    caption: "$saas.workspaces.caption",
+    caption: `${W}.caption`,
+    searchPlaceholder: `${W}.search_placeholder`,
+    labelKey: "name",
+    pageSize: PAGE_SIZE,
     tabs: STATUS_TABS,
+    views: { items: VIEWS, layout: "menu" },
+    quickFilters: [
+      { field: "planName", icon: "i-ph-stack" },
+      { field: "ownerStatus", icon: "i-ph-user-circle" },
+    ],
+    defaultSort: { field: "createdAt", desc: true },
+    queryParamFilters: { plan: { field: "planId" } },
+    footer: { countLabel: `${W}.footer_count` },
+    emptyStates: {
+      firstRun: {
+        title: `${W}.empty.first_run_title`,
+        description: `${W}.empty.first_run_description`,
+        icon: "i-ph-buildings",
+      },
+      filtered: {
+        title: `${W}.empty.filtered_title`,
+        description: `${W}.empty.filtered_description`,
+      },
+    },
     rowActions: {
       add: false,
-      copyLink: true,
-      delete: false,
-      details: { isEnabled: true, isVisible: true },
       edit: false,
+      delete: false,
       duplicate: false,
-    },
-    customButtons: [
-      {
-        label: "$saas.workspaces.admin.create.button",
-        icon: "i-ph-plus",
-        color: "primary",
-        target: {
-          type: "modal",
-          size: "lg",
-          component: workspaceCreateModal,
-          title: "$saas.workspaces.admin.create.title",
-          description: "$saas.workspaces.admin.create.description",
+      archive: false,
+      copyLink: true,
+      details: { isEnabled: true, label: `${ROW}.open` },
+      custom: [
+        {
+          label: `${ROW}.grant_free_access`,
+          icon: "i-ph-gift",
+          rule: { field: "billingState", notIn: ["cancelled"] },
+          target: { type: "page", url: `${ROW_DETAIL}complimentary` },
         },
-      },
-    ],
+        {
+          label: `${ROW}.join`,
+          icon: "i-ph-user-plus",
+          target: {
+            type: "api",
+            url: `${ROW_API}/join`,
+            method: "POST",
+            successMessage: "$saas.workspace_detail.join.success",
+          },
+          confirm: { from: `${ROW_API}/join-confirmation` },
+        },
+        {
+          label: `${ROW}.suspend`,
+          icon: "i-ph-prohibit",
+          color: "error",
+          rule: { field: "billingState", notIn: ["suspended", "cancelled"] },
+          target: { type: "page", url: `${ROW_DETAIL}suspend` },
+        },
+      ],
+    },
     formContainer: {
       type: "page",
-      pages: { view: { urlSlug: ":id", customPage: true } },
+      pages: { details: { urlSlug: ":id", customPage: true } },
     },
   });
-
-  @Post("/create")
-  async createWorkspace(
-    @AuthOwnerOnly() user: User,
-    @JSONBody() body: CreateWorkspaceBody,
-  ) {
-    const input = validateWorkspaceInput(body);
-    const plan = await this.planModel.get(input.planId);
-    assert(
-      plan && !plan.isDeleted && plan.isActive,
-      HTTP_BAD_REQUEST,
-      "saas.errors.plan.not_available",
-    );
-
-    const now = new Date();
-    const { tenantId, inviteResult, invitationEmail } =
-      await provisionTenantWithOwner(this.tenantModel, {
-        name: input.name,
-        ownerEmail: input.ownerEmail,
-        operator: user,
-        now,
-      });
-
-    await insertFreeSubscription(
-      tenantId,
-      input.planId,
-      user._id,
-      now,
-      input.freeUntil,
-    );
-    await recomputeTenantBillingState(tenantId);
-    return { tenantId, owner: inviteResult, invitationEmail };
-  }
 }

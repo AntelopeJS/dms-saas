@@ -1,0 +1,293 @@
+{
+	"saas": {
+		"permissions": {
+			"public": {
+				"pricing": "Pricing",
+				"pricing_description": "See the plans on sale, their prices and how they compare",
+				"register": "Create your account",
+				"register_description": "Sign up and open a first workspace on the free plan",
+				"no_workspace": "Set up your first workspace",
+				"no_workspace_description": "Open a first workspace after signing in with an account that has none",
+				"workspace_suspended": "Workspace access restricted",
+				"workspace_suspended_description": "See why a workspace is closed and how to reopen it, or open another one",
+				"legal_document_description": "Read this legal document, published in Billing rules & legal"
+			}
+		},
+		"public": {
+			"common": {
+				"retry": "Retry"
+			},
+			"auth_links": {
+				"create_account": "Don't have an account? Sign up",
+				"pricing": "See plans and pricing"
+			},
+			"plan": {
+				"price": {
+					"flat": "{price} / {interval}",
+					"seat": "{price} / member / {interval}"
+				},
+				"interval": {
+					"month": "month",
+					"year": "year"
+				},
+				"seat_example": "{seats} members = {total} a {interval}",
+				"trial": "{days}-day free trial",
+				"free_forever": "Free forever, no time limit"
+			},
+			"plan_card": {
+				"eyebrow": "You're signing up for",
+				"change": "Change",
+				"requested": "You chose {requested}. Your workspace opens on {plan}, then you review {requested} and its payment on Billing right after.",
+				"load_error": "We couldn't load the plan details"
+			},
+			"card": {
+				"label": "Card",
+				"required": "Required",
+				"optional": "Optional on {plan}",
+				"free_plan": "the free plan",
+				"reason": "Saved securely by Stripe. Nothing is charged on the free plan: the card confirms one person behind each free workspace ({count} per card).",
+				"later": "Add a card later",
+				"later_hint": "You'll be asked for one before moving to a paid plan."
+			},
+			"pricing": {
+				"page_title": "Pricing",
+				"page_description": "Public catalogue of the plans on sale, with a comparison and billing questions.",
+				"nav": "Account",
+				"sign_in": "Sign in",
+				"create_account": "Create account",
+				"eyebrow": "Pricing",
+				"title": "Plans that grow with your workspace",
+				"subtitle": "Start free, add members when your team grows. Prices exclude VAT and you can change plan any time.",
+				"interval": {
+					"label": "Billing interval",
+					"month": "Monthly",
+					"year": "Yearly"
+				},
+				"load_error": "We couldn't load the plans",
+				"empty_title": "No plans are on sale yet",
+				"empty_description": "Come back soon, or sign in if you already have an account.",
+				"card": {
+					"cta_free": "Start free",
+					"cta_trial": "Start {days}-day trial",
+					"cta_paid": "Choose {plan}",
+					"includes": "Includes",
+					"includes_parent": "Everything in {plan}, plus"
+				},
+				"reassurance": {
+					"currency": "Prices in {currency}, excluding VAT",
+					"vat": "Prices exclude VAT",
+					"money_back": "{days}-day money-back guarantee",
+					"cancel": "Change plan or move to free any time",
+					"stripe": "Payments secured by Stripe"
+				},
+				"compare": {
+					"title": "Compare plans",
+					"description": "Every limit, side by side. Values marked “Unlimited” have no cap.",
+					"features": "Features",
+					"choose": "Choose",
+					"members": "Members",
+					"billed_per_member": "billed per member",
+					"trial": "Free trial",
+					"money_back": "Money-back guarantee",
+					"money_back_tooltip": "Ask for a refund from Billing within {days} days of your first payment.",
+					"days": "{days} days",
+					"footnote": "Prices exclude VAT. Plans billed per member charge every member; members added during a period are prorated.",
+					"show_detail": "See full detail · {count} more rows",
+					"show_less": "Show less"
+				},
+				"faq": {
+					"title": "Questions about billing",
+					"billing": {
+						"question": "How does billing work?",
+						"renewal": "Paid plans renew every month or every year from the day you subscribe.",
+						"seats": "Plans billed per member charge each member; a member added during a period is prorated on the next invoice.",
+						"invoices": "Invoices live under Settings › Billing."
+					},
+					"vat": {
+						"question": "Is VAT included?",
+						"answer": "No, prices exclude VAT. It is added to each invoice according to your billing country."
+					},
+					"cancel": {
+						"question": "Can I change plan or stop paying any time?",
+						"answer": "Yes. Move to another plan or to the free plan from Billing: a cheaper plan starts at the end of the period you paid for, and your data stays. If you delete the workspace, its data is kept for {days} days, then deleted."
+					},
+					"money_back": {
+						"question": "Is there a money-back guarantee?",
+						"window": "Paid plans come with a {days}-day money-back guarantee, counted from your first payment. Request it from Billing: the subscription ends there and then.",
+						"full": "You are refunded in full.",
+						"prorated": "You are refunded for the unused part of the period."
+					}
+				},
+				"closing": {
+					"title": "Not sure which plan fits?",
+					"description": "Start on {plan} and upgrade from Billing when you need to. Your data comes with you."
+				}
+			},
+			"register": {
+				"page_title": "Create your account",
+				"page_description": "Create an account and open your first workspace on the free plan.",
+				"title": "Create your account",
+				"subtitle": "One workspace, free for as long as you like. Upgrade any time from Billing.",
+				"subtitle_plan": "Your workspace opens on {plan}, free for as long as you like. Upgrade any time from Billing.",
+				"oauth_note": "Signing up with a provider still asks you to accept the terms on the next step.",
+				"field": {
+					"full_name": "Full name",
+					"email": "Email",
+					"password": "Password"
+				},
+				"show_password": "Show password",
+				"hide_password": "Hide password",
+				"email_taken_hint": "{sign_in} or reset your password.",
+				"sign_in_instead": "Sign in instead",
+				"legal_acceptance": "I accept the {terms_and_conditions} and the {privacy_policy}",
+				"submit": "Create my account",
+				"has_account": "Already have an account?",
+				"sign_in": "Sign in",
+				"default_workspace_name": "{name}'s workspace",
+				"summary": {
+					"title": "We couldn't create your account",
+					"description": "Fix the field below and try again. Nothing was charged. | Fix the {count} fields below and try again. Nothing was charged."
+				},
+				"error": {
+					"name_required": "Enter your full name.",
+					"email_invalid": "Enter a valid email address.",
+					"card_required": "Enter a card to continue.",
+					"legal_required": "You must accept the terms and conditions and the privacy policy.",
+					"failed": "Registration failed. Nothing was charged; try again in a moment.",
+					"load": "We couldn't prepare the card field. Reload the page to try again."
+				}
+			},
+			"registration_closed": {
+				"title": "Registration is closed",
+				"description": "New accounts are available by invitation only. If you received an invitation, use the link in your email.",
+				"sign_in": "Sign in",
+				"invitation_title": "Have an invitation?",
+				"invitation_description": "Open the link from your email: it creates your account and adds you to the workspace. If it has expired, ask the person who invited you for a new one."
+			},
+			"no_workspace": {
+				"page_title": "Set up your first workspace",
+				"page_description": "Where an account without a workspace lands after signing in, to open its first one.",
+				"eyebrow": "Almost there · 1 step left",
+				"title": "Set up your first workspace",
+				"subtitle": "You're signed in, but you don't belong to any workspace yet. Create one on the free plan to get started; you can rename it and upgrade later.",
+				"identity": {
+					"provider": "Signed in with {provider} as {email}",
+					"password": "Signed in as {email}",
+					"hint": "This account will own the workspace and its subscription.",
+					"not_you": "Not you?"
+				},
+				"workspace_name": "Workspace name",
+				"workspace_name_hint": "Shown to members and on invoices. You can rename it later in Settings › Workspace.",
+				"compare_plans": "Compare plans",
+				"sign_out": "Sign out",
+				"submit": "Create workspace",
+				"submitting": "Creating your workspace…",
+				"sign_in_again": "Sign in again",
+				"session": {
+					"title": "Your sign-in session is missing or expired",
+					"description": "Please sign in again to continue."
+				},
+				"entry_failed": {
+					"title": "We could not confirm the account you signed in with",
+					"action": "Go to sign-in"
+				},
+				"already": {
+					"title": "You already have a workspace",
+					"description": "A workspace was created for this account, maybe from another tab.",
+					"open": "Open my workspace"
+				},
+				"error": {
+					"name_required": "Enter a name for the workspace.",
+					"failed_title": "We couldn't create the workspace"
+				}
+			},
+			"suspended": {
+				"page_title": "Workspace access restricted",
+				"page_description": "Shown instead of a workspace whose subscription blocks access.",
+				"title": "Workspace access restricted",
+				"members": "{count} member | {count} members",
+				"you_own": "you're the workspace owner",
+				"reason": {
+					"unpaid_invoice": "Invoice {invoice} of {amount} could not be charged. The workspace is closed, but its data and configuration are fully preserved. Paying it restores access immediately.",
+					"suspended": "This workspace was suspended because of a billing issue. Its data and configuration are preserved until the situation is resolved.",
+					"pending_payment": "This workspace is waiting for its first payment. Access opens as soon as it is completed.",
+					"cancelled": "This workspace's subscription was cancelled, so access is closed. Its data is kept for now: choosing a plan again reopens it.",
+					"complimentary_expired": "The complimentary access of this workspace has ended. Choose a plan to reopen it; its data is preserved."
+				},
+				"timeline": {
+					"invoice_issued": "Invoice {invoice} issued · {amount}",
+					"payment_failed": "Payment failed",
+					"complimentary_ended": "Complimentary access ended",
+					"suspended": "Workspace suspended after the grace period",
+					"awaiting_payment": "Workspace created, waiting for its first payment",
+					"cancelled": "Subscription cancelled",
+					"data_deleted": "Data deleted after the retention period",
+					"days_left": "{days} day left | {days} days left"
+				},
+				"retention": {
+					"kept": "Nothing has been deleted: data and configuration are kept while access is restricted.",
+					"until": "Data is kept until {date}, then deleted. Ask support for an export before then."
+				},
+				"owner": {
+					"title": "Restore access",
+					"pay": "Pay invoice {amount}",
+					"view_billing": "View billing",
+					"action": {
+						"pending_payment": "Complete payment",
+						"cancelled": "Choose a plan",
+						"complimentary_expired": "Choose a plan"
+					},
+					"manage_in_stripe": "Manage in Stripe",
+					"portal_failed": "We couldn't open Stripe",
+					"portal_failed_hint": "Try again, or pay the invoice from Billing."
+				},
+				"member": {
+					"title": "Only the workspace owner can restore access",
+					"ask": "Ask {owner} (workspace owner) to restore access",
+					"email": "Email {owner}",
+					"mail_subject": "Access to {workspace} is restricted",
+					"no_owner": "This workspace has no owner to contact. Ask your platform's support."
+				},
+				"others": {
+					"title": "Your other workspaces",
+					"owner": "workspace owner",
+					"member": "member",
+					"open": "Open",
+					"switch_failed": "We couldn't open {name}",
+					"switch_failed_hint": "Try again in a moment."
+				},
+				"signed_in_as": "Signed in as {email}",
+				"check_again": "Check again",
+				"sign_out": "Sign out",
+				"load_error": "We couldn't check the workspace status"
+			},
+			"legal": {
+				"terms_of_use_page_description": "Public terms of use shown to visitors and required during sign-up.",
+				"terms_and_conditions_page_description": "Public terms and conditions shown to visitors and required during sign-up.",
+				"privacy_policy_page_description": "Public privacy policy shown to visitors and required during sign-up.",
+				"summary": {
+					"terms_of_use": "Acceptable use of the service",
+					"terms_and_conditions": "Subscriptions, billing and liability",
+					"privacy_policy": "How personal data is processed"
+				},
+				"eyebrow": "Legal · {document}",
+				"eyebrow_short": "Legal",
+				"back": "Back",
+				"print": "Print",
+				"last_updated": "Last updated {date}",
+				"updated_on": "Updated {date}",
+				"version": "Version {version}",
+				"reading_time": "{minutes} min read",
+				"effective": "Version {version} · effective {date}",
+				"contents": "On this page",
+				"related": "Related documents",
+				"other_documents": "Other documents:",
+				"load_error": "We couldn't load this document",
+				"unavailable": {
+					"title": "Content unavailable",
+					"description": "This document has not been published yet. Please check again later."
+				}
+			}
+		}
+	}
+}

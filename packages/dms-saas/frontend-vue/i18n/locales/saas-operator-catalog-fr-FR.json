@@ -1,0 +1,545 @@
+{
+	"saas": {
+		"permissions": {
+			"catalog": {
+				"stats": "Chiffres du catalogue",
+				"stats_description": "Voir les offres en vente, les espaces de travail par type d’offre, le MRR du catalogue et les anciennes offres",
+				"retire_plan": "Retirer une offre",
+				"retire_plan_description": "Déplacer tous les espaces de travail d’une offre vers une autre et la fermer aux inscriptions",
+				"editor_preview": "Aperçu de l’offre",
+				"editor_preview_description": "Voir la carte de l’offre telle que les clients la voient et son état de synchronisation Stripe pendant l’édition",
+				"migrations_attention": "Migrations à traiter",
+				"migrations_attention_description": "Voir les migrations d’offre qui attendent un opérateur",
+				"migration_detail": "Migration d’offre",
+				"migration_detail_description": "Voir une migration d’offre espace par espace, trancher les déplacements incertains, relancer les échecs et la clôturer"
+			}
+		},
+		"catalog": {
+			"common": {
+				"cancel": "Annuler",
+				"back": "Retour"
+			},
+			"plans": {
+				"title": "Offres",
+				"description": "Offres d’abonnement, tarifs, fonctionnalités et essais. L’ordre ci-dessous est celui que les clients voient sur la page de tarifs.",
+				"create": "Créer une offre",
+				"create_hint": "Partez de zéro ou dupliquez une offre existante pour garder ses fonctionnalités.",
+				"search": "Rechercher une offre",
+				"migrations_button": "Migrations d’offre",
+				"unlimited": "Illimité",
+				"reorder_hint": "Faites glisser une carte par sa poignée pour la déplacer. Enregistré aussitôt.",
+				"reorder_failed": "Le nouvel ordre n’a pas été enregistré",
+				"reorder_failed_hint": "Les offres ont retrouvé leur ordre enregistré. Réessayez.",
+				"features_failed": "Impossible de charger les fonctionnalités : les cartes affichent les offres sans elles.",
+				"display": {
+					"cards": "Cartes"
+				},
+				"tabs": {
+					"on_sale": "En vente",
+					"legacy": "Anciennes",
+					"all": "Toutes"
+				},
+				"sale_status": {
+					"on_sale": "En vente",
+					"legacy": "Ancienne"
+				},
+				"column": {
+					"plan": "Offre",
+					"sale_status": "Statut",
+					"workspaces": "Espaces de travail",
+					"mrr": "MRR",
+					"mrr_description": "Normalisé : annuel ÷ 12, sièges comptés, essais et accès offerts exclus.",
+					"mrr_share": "Part du MRR"
+				},
+				"field": {
+					"description": "Description",
+					"price": "Prix",
+					"currency": "Devise",
+					"interval": "Périodicité",
+					"billing_mode": "Mode de facturation",
+					"audience": "Qui peut souscrire",
+					"trial_days": "Essai gratuit",
+					"max_members": "Membres maximum",
+					"is_public": "Publique",
+					"is_active": "En vente",
+					"order": "Position",
+					"is_deleted": "Supprimée"
+				},
+				"audience": {
+					"any": "Tout le monde",
+					"individual": "Particuliers uniquement",
+					"business": "Entreprises uniquement"
+				},
+				"interval": {
+					"month": "Mensuel",
+					"year": "Annuel"
+				},
+				"billing_mode": {
+					"flat": "Forfait",
+					"seat": "Par siège"
+				},
+				"action": {
+					"edit": "Modifier l’offre",
+					"duplicate": "Dupliquer en nouvelle offre",
+					"view_workspaces": "Voir les espaces de travail",
+					"open_stripe": "Ouvrir le produit dans Stripe",
+					"stop_selling": "Arrêter la vente…",
+					"stop_selling_success": "L’offre n’est plus en vente.",
+					"put_on_sale": "Remettre en vente",
+					"put_on_sale_success": "L’offre est de nouveau en vente.",
+					"retire": "Retirer l’offre…",
+					"delete": "Supprimer l’offre",
+					"delete_success": "Offre supprimée."
+				},
+				"dialog": {
+					"stop_selling": {
+						"title": "Arrêter la vente de {name} ?",
+						"description_in_use": "{name} disparaît de la page de tarifs et de l’inscription. Personne n’est déplacé : les clients actuels y restent et continuent d’être facturés. Pour les déplacer vers une autre offre, utilisez plutôt Retirer l’offre….",
+						"description_unused": "Aucun espace de travail n’utilise {name}, personne n’est donc concerné. Elle disparaît de la page de tarifs ; remettez-la en vente quand vous voulez.",
+						"confirm": "Arrêter la vente",
+						"impact_workspaces": "Espaces de travail qui restent sur {name}",
+						"impact_mrr": "MRR inchangé",
+						"impact_trials": "Essais en cours, toujours convertibles"
+					},
+					"delete": {
+						"title": "Supprimer l’offre {name} ?",
+						"description": "Aucun espace de travail n’utilise {name}. L’offre et ses réglages de fonctionnalités sont supprimés ; c’est irréversible.",
+						"confirm": "Supprimer l’offre",
+						"impact_workspaces": "Espaces de travail concernés",
+						"impact_stripe": "Produit Stripe archivé",
+						"blocked_title": "{name} a encore des espaces de travail",
+						"blocked_description": "La suppression est possible une fois qu’aucun espace de travail n’utilise l’offre. Retirez-la d’abord pour déplacer ses {count} espaces de travail vers une autre offre."
+					}
+				},
+				"empty": {
+					"title": "Aucune offre pour l’instant",
+					"description": "Les clients ne peuvent pas s’inscrire tant qu’aucune offre n’est en vente.",
+					"filtered_title": "Aucune offre ne correspond à « {search} »",
+					"error_title": "Impossible de charger les offres",
+					"error_description": "Le catalogue n’a pas répondu. Les offres et les prix sont inchangés."
+				},
+				"empty_display": {
+					"first_run_title": "Aucune offre pour l’instant",
+					"first_run_description": "Les clients ne peuvent pas s’inscrire tant qu’aucune offre n’est en vente. Créez-en une, ou dupliquez une offre existante pour garder ses fonctionnalités.",
+					"on_sale_title": "Rien n’est en vente",
+					"on_sale_description": "Les clients ne peuvent pas s’inscrire tant qu’aucune offre n’est en vente.",
+					"legacy_title": "Aucune ancienne offre",
+					"legacy_description": "Les offres dont vous arrêtez la vente s’affichent ici, conservées pour les espaces de travail qui y sont encore.",
+					"filtered_title": "Aucune offre ne correspond à « {search} »",
+					"filtered_description": "Essayez un autre nom, ou effacez la recherche."
+				},
+				"stats": {
+					"label": "Le catalogue en bref",
+					"on_sale": "Offres en vente",
+					"on_sale_detail": "{public} publiques · {sales} sur devis",
+					"workspaces": "Espaces de travail",
+					"workspaces_detail": "{paying} payants · {free} gratuits · {trialing} en essai",
+					"mrr": "MRR du catalogue",
+					"mrr_detail": "Normalisé · annuel ÷ 12, sièges comptés",
+					"mrr_detail_other": "Normalisé · plus {other}",
+					"legacy": "Anciennes offres",
+					"legacy_none": "Plus aucun espace de travail sur une ancienne offre",
+					"legacy_detail": "{names} · {count} espaces de travail à déplacer"
+				},
+				"card": {
+					"drag": "Glisser pour réordonner",
+					"order": "Position {order} · {visibility}",
+					"public": "Publique",
+					"hidden": "Masquée",
+					"not_on_sale": "Plus en vente",
+					"legacy": "Ancienne",
+					"on_sale": "En vente",
+					"more": "Plus d’actions",
+					"forever": "pour toujours",
+					"per_month": "/ mois",
+					"per_year": "/ an",
+					"per_seat_month": "/ siège / mois",
+					"per_seat_year": "/ siège / an",
+					"note": "{mode} · HT",
+					"note_yearly": "{mode} · ≈ {monthly} / mois · HT",
+					"note_free": "Gratuit, sans paiement",
+					"trial": "Essai de {days} jours",
+					"no_trial": "Sans essai",
+					"members": "Jusqu’à {count} membre | Jusqu’à {count} membres",
+					"members_unlimited": "Membres illimités",
+					"workspaces": "espace de travail | espaces de travail",
+					"seats": "{count} siège | {count} sièges",
+					"members_count": "{count} membre | {count} membres",
+					"mrr_share": "MRR · {share} %"
+				}
+			},
+			"editor": {
+				"new_title": "Créer une offre",
+				"new_description": "Une nouvelle offre d’abonnement. Son produit et son prix Stripe sont créés à l’enregistrement.",
+				"edit_title": "Modifier l’offre",
+				"edit_description": "Les changements de prix sont synchronisés avec Stripe à l’enregistrement.",
+				"create": "Créer l’offre",
+				"created": "Offre créée.",
+				"saved": "Offre enregistrée.",
+				"limit_error": "Une limite doit être d’au moins 1 membre. Pour aucune limite, cochez Illimité.",
+				"notice": {
+					"price_changed": "Un nouveau prix Stripe a été créé",
+					"price_changed_description": "Les nouvelles inscriptions paient le nouveau prix. Les abonnés actuels gardent le leur jusqu’à leur migration."
+				},
+				"section": {
+					"identity": "Identité",
+					"identity_description": "Comment l’offre est nommée et présentée aux clients.",
+					"pricing": "Tarif",
+					"pricing_description": "Ce que paie un espace de travail, hors taxes. La TVA est ajoutée au paiement selon le pays du client.",
+					"access": "Accès et fonctionnalités",
+					"access_description": "Ce que peuvent faire les espaces de travail de cette offre. Les valeurs s’affichent comme les clients les voient.",
+					"limits": "Limites",
+					"limits_description": "Plafonds vérifiés quand quelqu’un invite un membre.",
+					"visibility": "Visibilité",
+					"visibility_description": "Où l’offre apparaît et comment sa carte se distingue."
+				},
+				"field": {
+					"name": "Nom",
+					"name_description": "Nom commercial affiché aux clients.",
+					"description": "Description",
+					"description_description": "Accroche affichée sur la page de tarifs et les cartes d’offre. Deux lignes tiennent.",
+					"audience": "Qui peut souscrire",
+					"audience_description": "Les entreprises doivent saisir une raison sociale et un numéro de TVA à l’inscription.",
+					"price": "Prix HT",
+					"price_description": "Prix de base pour une période de facturation, dans la devise ci-dessous.",
+					"price_hint": "Saisi dans l’unité principale de la devise : 34,50 pour 34,50 €.",
+					"currency": "Devise",
+					"interval": "Périodicité",
+					"billing_mode": "Mode de facturation",
+					"billing_mode_description": "Par siège facture chaque membre ; les changements de sièges sont proratisés.",
+					"trial_days": "Essai gratuit (jours)",
+					"trial_days_description": "Aucune carte requise pendant l’essai. Mettez 0 pour aucun.",
+					"access": "Accès et fonctionnalités",
+					"access_description": "L’offre sur laquelle elle s’appuie, ses valeurs de fonctionnalités et ses permissions.",
+					"max_members": "Membres maximum",
+					"max_members_description": "Les espaces de travail déjà au-delà de la limite gardent tout le monde mais ne peuvent plus inviter.",
+					"members_unit": "membres",
+					"is_active": "En vente",
+					"is_active_description": "Désactivée, les clients actuels y restent mais personne de nouveau ne peut y souscrire.",
+					"is_public": "Publique",
+					"is_public_description": "Affichée sur la page de tarifs et à l’inscription. Les offres masquées sont attribuées par un administrateur de la plateforme.",
+					"order": "Position",
+					"order_description": "Position sur la page de tarifs, à partir de 0. Se change aussi en déplaçant les cartes sur la page Offres.",
+					"badge": "Badge de mise en avant",
+					"badge_description": "Court libellé en haut de la carte, comme « Populaire ». Laissez vide pour aucun.",
+					"badge_color": "Couleur du badge",
+					"badge_color_description": "Couleur du badge et du contour de la carte."
+				},
+				"billing_mode_hint": {
+					"flat": "Un prix par espace de travail, quelle que soit la taille de l’équipe",
+					"seat": "Prix × membres : 6 membres paient 6 fois le prix"
+				},
+				"access": {
+					"parent": "S’appuyer sur une autre offre",
+					"no_parent": "Aucune offre parente",
+					"parent_hint": "Cette offre suit {parent} en direct : quand {parent} change, les lignes marquées « Héritée » changent aussi. Les lignes remplacées gardent leur propre valeur.",
+					"no_parent_hint": "Choisissez une offre parente pour hériter de ses fonctionnalités et de ses permissions.",
+					"this_plan": "Cette offre",
+					"feature": "Fonctionnalité",
+					"value": "Valeur",
+					"source": "Origine",
+					"inherited": "Héritée de {parent}",
+					"overridden": "Remplacée",
+					"unset": "Non définie : désactivée",
+					"reset": "Reprendre la valeur de l’offre parente",
+					"no_features": "Aucune fonctionnalité pour l’instant. Créez des fonctionnalités pour les activer ou les limiter par offre.",
+					"summary": "{count} fonctionnalité | {count} fonctionnalités",
+					"summary_parent": "{count} fonctionnalités · {overridden} remplacées, {inherited} héritées",
+					"manage_features": "Gérer les fonctionnalités",
+					"permissions": "Permissions",
+					"permissions_summary": "{granted} sur {total} accordées",
+					"permissions_parent": "{granted} sur {total} · héritées de {parent}, plus {added} ajoutées sur cette offre",
+					"edit_permissions": "Modifier les permissions",
+					"load_failed": "Impossible de charger les fonctionnalités et les permissions. L’accès enregistré de l’offre est inchangé."
+				},
+				"feature": {
+					"mode": "Valeur",
+					"off": "Désactivée",
+					"limit": "Limite",
+					"unlimited": "Illimitée",
+					"included": "Incluse",
+					"not_included": "Non incluse",
+					"text_placeholder": "Affiché dans le tableau comparatif",
+					"limit_error": "Une limite doit être d’au moins 1. Pour bloquer, choisissez Désactivée."
+				},
+				"permissions": {
+					"title": "Permissions de {name}",
+					"description": "{granted} sur {total} accordées.",
+					"description_parent": "{granted} sur {total} accordées. Les lignes marquées {parent} viennent de l’offre parente.",
+					"search": "Rechercher une permission",
+					"expand_all": "Tout déplier",
+					"collapse_all": "Tout replier",
+					"no_match": "Aucune permission ne correspond à « {search} »",
+					"delta": "{count} depuis le dernier enregistrement",
+					"apply": "Appliquer"
+				},
+				"preview": {
+					"title": "Aperçu en direct",
+					"context_month": "Page de tarifs · mensuel",
+					"context_year": "Page de tarifs · annuel",
+					"unnamed": "Nom de l’offre",
+					"excl_vat": "HT",
+					"trial": "Essai gratuit de {days} jours, sans carte",
+					"start_trial": "Commencer l’essai gratuit",
+					"choose": "Choisir {name}",
+					"failed": "Impossible de charger l’aperçu. L’édition fonctionne toujours."
+				},
+				"stripe": {
+					"title": "Synchronisation Stripe",
+					"product": "Produit",
+					"price": "Prix actuel",
+					"state": {
+						"synced": "Synchronisé",
+						"out_of_sync": "En attente de synchronisation",
+						"off_stripe": "Non facturé sur Stripe",
+						"not_configured": "Stripe non configuré"
+					},
+					"on_save_title": "À l’enregistrement",
+					"on_save": "Un nouveau prix Stripe de {price} ({interval}) est créé et utilisé pour les nouvelles inscriptions. Les abonnés actuels gardent {previous} jusqu’à leur migration. {count} espaces de travail sont sur cette offre."
+				}
+			},
+			"retire": {
+				"title": "Retirer {name}",
+				"subtitle_1": "Déplacez chaque espace de travail vers une autre offre, puis supprimez {name} une fois vide.",
+				"subtitle_2": "Choisissez où vont les {count} espaces de travail et vérifiez ce qui change pour eux.",
+				"subtitle_3": "Vérifiez l’impact, puis saisissez la clé de l’offre pour confirmer.",
+				"steps": "Étapes",
+				"step_1": "Impact",
+				"step_2": "Offre cible",
+				"step_3": "Confirmation",
+				"workspaces": "Espaces de travail",
+				"workspaces_detail": "{paying} payants · {past_due} en retard de paiement",
+				"members": "Membres",
+				"largest": "le plus grand : {name}, {count}",
+				"mrr": "MRR de cette offre",
+				"renewals": "renouvellements du {first} au {last}",
+				"list_title": "Espaces de travail sur {name}",
+				"list_hint": "{count} · figés au démarrage de la migration",
+				"member_count": "{count} membre | {count} membres",
+				"renews": "Renouvellement le {date}",
+				"show_all": "Afficher {count} de plus",
+				"no_workspace": "Aucun espace de travail n’utilise cette offre.",
+				"closed_note": "Le retrait ferme {name} aux inscriptions immédiatement : aucun espace de travail ne peut la rejoindre pendant le déplacement.",
+				"open_migration": "Une migration de cette offre est en cours ou attend un opérateur. Traitez-la d’abord dans Migrations d’offre.",
+				"no_target": "Aucune autre offre n’est en vente pour accueillir les espaces de travail. Mettez-en une en vente d’abord.",
+				"nothing_changes": "Rien ne change avant l’étape 3",
+				"choose_target": "Choisir l’offre cible",
+				"move_to": "Déplacer les espaces de travail vers",
+				"move_to_placeholder": "Choisissez une offre en vente",
+				"target_option": "{name} · {price} {interval} · {mode} · {cap}",
+				"price_lost": "L’offre cible coûte plus cher : les espaces de travail paieront plus dès leur prochaine facture.",
+				"price_gained": "L’offre cible coûte moins cher : personne ne paie plus.",
+				"price_same": "Même prix, personne ne paie plus.",
+				"price_changed": "Le prix change.",
+				"pick_target": "Choisissez une offre cible pour voir ce qui change.",
+				"diff_title": "Ce qui change pour ces espaces de travail",
+				"included": "Incluse",
+				"not_included": "Non incluse",
+				"above_cap": "{count} espace de travail dépasse {cap} : il garde tout le monde mais ne peut plus inviter | {count} espaces de travail dépassent {cap} : ils gardent tout le monde mais ne peuvent plus inviter",
+				"permissions_changed": "Permissions : {added} ajoutées, {removed} retirées",
+				"unchanged": "Inchangé : {names}",
+				"notify": "Notifier les propriétaires des espaces de travail",
+				"notify_hint": "{count} destinataire · envoyé quand chaque espace est déplacé | {count} destinataires · envoyé quand chaque espace est déplacé",
+				"preview": "Aperçu de la notification",
+				"preview_sample": "Tel que {workspace} le voit",
+				"review": "Vérifier et confirmer",
+				"confirm_title": "Retirer {name} et déplacer {count} espace de travail vers {target} ? | Retirer {name} et déplacer {count} espaces de travail vers {target} ?",
+				"impact_moved": "Espaces de travail déplacés vers {target}",
+				"impact_members": "Membres qui gardent l’accès",
+				"impact_mrr": "MRR de cette offre aujourd’hui",
+				"impact_notified": "Propriétaires d’espace de travail notifiés",
+				"confirm_description": "{name} est fermée aux inscriptions dès maintenant et conservée tant qu’un espace de travail l’utilise. Les échecs restent sur {name} et apparaissent dans Migrations d’offre pour être relancés.",
+				"type_to_confirm": "Saisissez {slug} pour confirmer",
+				"confirm": "Retirer l’offre et déplacer {count} | Retirer l’offre et déplacer {count}",
+				"started": "Migration de {name} démarrée",
+				"failed": "L’offre n’a pas été retirée"
+			},
+			"migrations": {
+				"title": "Migrations d’offre",
+				"description": "Déplacements d’espaces de travail d’une offre à une autre, lancés au retrait d’une offre. Les espaces en échec restent sur leur ancienne offre jusqu’à leur relance.",
+				"caption": "Migrations",
+				"search": "Rechercher par offre",
+				"count": "{count} migration | {count} migrations",
+				"footer_hint": "La progression se rafraîchit pendant qu’une migration tourne.",
+				"plans_button": "Offres",
+				"detail_title": "Migration d’offre",
+				"detail_description": "Espaces de travail déplacés, non déplacés, et ce qu’il reste à traiter.",
+				"tabs": {
+					"all": "Toutes",
+					"running": "En cours",
+					"needs_attention": "À traiter",
+					"completed": "Terminées"
+				},
+				"stage": {
+					"running": "En cours",
+					"needs_attention": "À traiter",
+					"done": "Terminée"
+				},
+				"reason": {
+					"plan_retired": "Offre retirée"
+				},
+				"column": {
+					"migration": "Migration",
+					"reason": "Motif",
+					"status": "Statut",
+					"stage": "Étape",
+					"progress": "Progression",
+					"started_by": "Lancée par",
+					"started": "Début",
+					"finished": "Fin",
+					"not_finished": "Pas terminée"
+				},
+				"attention": {
+					"uncertain": "Des espaces de travail n’ont pas été déplacés, dont au moins un dans un état Stripe incertain : vérifiez-le dans Stripe avant de relancer.",
+					"failed": "Des espaces de travail n’ont pas été déplacés. Relancez-les, ou marquez la migration comme rapprochée.",
+					"empty_title": "Rien à traiter",
+					"empty_description": "Chaque migration a déplacé ses espaces de travail ou a été rapprochée."
+				},
+				"empty": {
+					"title": "Aucune migration pour l’instant",
+					"description": "Retirer une offre déplace ses espaces de travail vers une autre ; chaque déplacement s’affiche ici."
+				},
+				"workspace_status": {
+					"pending": "En attente",
+					"running": "En déplacement",
+					"succeeded": "Déplacé",
+					"reconciliation_required": "Incertain",
+					"failed": "Échec",
+					"kept": "Gardé sur l’ancienne offre"
+				},
+				"detail": {
+					"failed": "Impossible de charger cette migration",
+					"failed_description": "Rien n’a été modifié. Réessayez.",
+					"started": "Lancée le {date} par {name} · {reason}",
+					"captured": "Figés",
+					"moved": "Déplacés",
+					"not_moved": "Non déplacés",
+					"notified": "Propriétaires notifiés",
+					"reconciled": "Rapprochée le {date} par {name}",
+					"attention": "À traiter",
+					"uncertain_hint": "Le déplacement a été interrompu : Stripe a peut-être changé l’abonnement, ou pas, et une relance pourrait facturer deux fois. Vérifiez d’abord dans Stripe.",
+					"failed_hint": "Toujours sur {from} ; rien n’a été facturé. Il peut être relancé.",
+					"check_stripe": "Vérifier dans Stripe",
+					"stripe_says": "Stripe indique :",
+					"dms_says": "Le DMS indique :",
+					"stripe_source": "l’ancienne offre",
+					"stripe_target": "la nouvelle offre",
+					"stripe_other": "un autre prix",
+					"stripe_none": "aucun abonnement",
+					"stripe_unavailable": "indisponible",
+					"mark_moved": "Stripe affiche {plan} : marquer comme déplacé",
+					"allow_retry": "Stripe affiche {plan} : autoriser la relance",
+					"changes": "Ce qui a changé pour les espaces déplacés",
+					"permissions_changed": "Permissions : {added} ajoutées, {removed} retirées de la portée de leurs rôles.",
+					"all_workspaces": "Tous les espaces de travail",
+					"no_workspace": "Aucun espace de travail n’était sur l’offre au démarrage de la migration.",
+					"show_all": "Afficher {count} de plus",
+					"resolve_first": "Traitez {name} pour pouvoir rapprocher",
+					"mark_reconciled": "Marquer comme rapprochée",
+					"retry_failed": "Relancer les échecs ({count})",
+					"back": "Toutes les migrations"
+				},
+				"resolve": {
+					"moved_title": "Marquer {name} comme déplacé ?",
+					"moved_description": "Seulement si Stripe facture {name} sur {to}. Le DMS le passe sur {to} et applique ses permissions ; rien n’est envoyé à Stripe.",
+					"moved_confirm": "Marquer comme déplacé",
+					"not_moved_title": "Autoriser une relance pour {name} ?",
+					"not_moved_description": "Seulement si Stripe facture toujours {name} sur {from}. Il reste sur {from} et peut être relancé.",
+					"not_moved_confirm": "Autoriser la relance"
+				},
+				"retry": {
+					"title": "Relancer le déplacement de {name} vers {to} ? | Relancer le déplacement de {count} espaces de travail vers {to} ?",
+					"description": "Stripe facture à nouveau la différence au prorata. Un espace qui échoue une seconde fois reste sur {from}.",
+					"impact_retried": "Espaces de travail relancés",
+					"impact_skipped": "Ignorés, incertains",
+					"confirm": "Relancer {count} espace de travail | Relancer {count} espaces de travail",
+					"started": "Relance démarrée"
+				},
+				"reconcile": {
+					"title": "Clôturer cette migration avec {count} espace de travail laissé sur {from} ? | Clôturer cette migration avec {count} espaces de travail laissés sur {from} ?",
+					"description": "Ils restent sur {from} et continuent d’être facturés comme aujourd’hui. {from} ne peut pas être supprimée tant qu’un espace de travail l’utilise.",
+					"note": "Note pour le journal d’audit",
+					"note_placeholder": "Pourquoi ces espaces de travail restent où ils sont",
+					"confirm": "Marquer comme rapprochée"
+				}
+			},
+			"features": {
+				"title": "Fonctionnalités",
+				"description": "Ce que les offres peuvent activer ou limiter. Chaque fonctionnalité devient une ligne du tableau comparatif de la page de tarifs, dans cet ordre.",
+				"caption": "Fonctionnalités",
+				"search": "Rechercher par nom ou clé",
+				"create": "Créer une fonctionnalité",
+				"deleted": "Fonctionnalité supprimée.",
+				"count": "{count} fonctionnalité | {count} fonctionnalités",
+				"footer_hint": "Faites glisser les lignes pour changer l’ordre sur la page de tarifs.",
+				"plans_button": "Offres",
+				"used_by": "{count} offre | {count} offres",
+				"used_by_none": "Pas encore utilisée",
+				"tabs": {
+					"all": "Toutes",
+					"boolean": "Oui / non",
+					"number": "Nombre",
+					"string": "Texte",
+					"detail": "Lignes de détail"
+				},
+				"value_type": {
+					"boolean": "Oui / non",
+					"boolean_description": "Incluse ou non",
+					"number": "Nombre",
+					"number_description": "Une limite, ou illimitée",
+					"string": "Texte",
+					"string_description": "Formulation libre"
+				},
+				"row": {
+					"main": "Ligne principale",
+					"detail": "Derrière « Voir tout le détail »"
+				},
+				"column": {
+					"key": "Clé",
+					"display_name": "Nom affiché",
+					"display_name_description": "Nom affiché aux administrateurs de la plateforme et aux clients.",
+					"description": "Description",
+					"description_description": "Affichée sous le nom dans le tableau comparatif.",
+					"value_type": "Type de valeur",
+					"value_type_description": "Verrouillé tant que des offres stockent une valeur : leurs valeurs ne se liraient plus.",
+					"unit": "Unité",
+					"unit_description": "Affichée après le nombre : 100 Go.",
+					"used_by": "Utilisée par",
+					"is_detail_row": "Tableau comparatif",
+					"is_detail_row_description": "Garde le tableau court. Les visiteurs le déplient pour voir cette ligne.",
+					"is_detail_row_label": "Masquer derrière « Voir tout le détail »",
+					"tooltip": "Infobulle",
+					"tooltip_description": "Aide facultative affichée à côté de la fonctionnalité dans le tableau comparatif.",
+					"order": "Ordre",
+					"order_description": "Position dans le tableau comparatif."
+				},
+				"placeholder": {
+					"display_name": "Stockage",
+					"tooltip": "Compté sur tous les projets, sauvegardes comprises",
+					"unit": "Go"
+				},
+				"form": {
+					"new_title": "Créer une fonctionnalité",
+					"new_description": "Une ligne du tableau comparatif que les offres activent ou limitent.",
+					"edit_title": "Modifier la fonctionnalité",
+					"edit_description": "Les changements s’affichent aussitôt sur la page de tarifs."
+				},
+				"empty": {
+					"title": "Aucune fonctionnalité pour l’instant",
+					"description": "Les fonctionnalités sont ce que les offres activent ou limitent, ligne par ligne dans le tableau comparatif."
+				},
+				"dialog": {
+					"delete": {
+						"title": "Supprimer {name} ?",
+						"description": "Aucune offre ne l’utilise. La ligne disparaît du tableau comparatif. C’est irréversible.",
+						"confirm": "Supprimer la fonctionnalité",
+						"blocked_title": "{name} est utilisée par {count} offre | {name} est utilisée par {count} offres",
+						"blocked_description": "La supprimer changerait ce que peuvent faire les espaces de travail de ces offres. Désactivez-la d’abord sur chaque offre, ou masquez-la du tableau comparatif.",
+						"impact_plans": "Offres avec une valeur",
+						"impact_workspaces": "Espaces de travail qui en dépendent"
+					}
+				}
+			}
+		}
+	}
+}

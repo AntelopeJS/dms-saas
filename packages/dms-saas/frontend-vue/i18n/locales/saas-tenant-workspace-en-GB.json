@@ -1,0 +1,251 @@
+{
+  "saas": {
+    "permissions": {
+      "workspace": {
+        "identity": "Workspace identity",
+        "identity_description": "See the workspace name and ID, and rename the workspace",
+        "glance": "At a glance",
+        "glance_description": "See the members and seats, the plan and its state, and the workspace owners",
+        "danger_zone": "Delete workspace",
+        "danger_zone_description": "Delete the workspace: members lose access and its data is destroyed after the retention period",
+        "data_export_request": "Request a data export",
+        "data_export_request_description": "Request a full archive of the workspace and follow it while it builds",
+        "data_export_history": "Previous data exports",
+        "data_export_history_description": "See past exports and download the archives that are still available",
+        "seats": "Seats",
+        "seats_description": "See how many seats members and pending invites use, and who supports the workspace"
+      }
+    },
+    "workspace": {
+      "plan_price": {
+        "free": "Free",
+        "flat_month": "{price} / month",
+        "flat_year": "{price} / year",
+        "seat_month": "{price} / seat / month",
+        "seat_year": "{price} / seat / year"
+      },
+      "general": {
+        "title": "General",
+        "description": "The identity of the workspace, who is in it, and how to delete it.",
+        "identity_title": "Workspace",
+        "identity_intro": "Your workspace identity, visible to every member and on invoices.",
+        "name": "Workspace name",
+        "name_hint": "Visible to every member, in the switcher and on invoices.",
+        "workspace_id": "Workspace ID",
+        "workspace_id_hint": "Set when the workspace was created. Give it to support when you contact them.",
+        "renamed": "Workspace renamed.",
+        "error": {
+          "rename": "Couldn't rename the workspace. Your change is kept: save again to retry.",
+          "delete": "Couldn't delete the workspace. Nothing was deleted."
+        },
+        "glance": {
+          "title": "At a glance",
+          "description": "Members, plan and ownership. Each links to where you manage it.",
+          "members": "Members",
+          "seats_of": "{occupied} / {max} seats",
+          "seats_unlimited": "{occupied} seats",
+          "seats_detail": "{members} · {invites}",
+          "members_count": "no member | 1 member | {count} members",
+          "invites_count": "no pending invite | 1 pending invite | {count} pending invites",
+          "plan": "Plan",
+          "no_plan": "No plan",
+          "complimentary": "Complimentary",
+          "renews": "renews {date}",
+          "owner": "Workspace owner",
+          "you": "You",
+          "created": "created {name} on {date}",
+          "more_owners": "+{count} other | +{count} other | +{count} others",
+          "owner_and_others": "{name} {others}",
+          "load_failed": "Couldn't load the workspace summary."
+        },
+        "danger_zone_title": "Danger zone",
+        "export": {
+          "title": "Export your data",
+          "description": "Download a full copy of {name} before deleting it.",
+          "action": "Go to Data export"
+        },
+        "delete": {
+          "title": "Delete workspace",
+          "description": "Access is revoked immediately for {members}; {invites}. Data is destroyed after a {days}-day retention period.",
+          "members_count": "no member | 1 member | all {count} members",
+          "invites_count": "no pending invite to cancel | 1 pending invite is cancelled | {count} pending invites are cancelled",
+          "invoices_kept": "Invoices stay archived, as the law requires.",
+          "subscription_stops": "The {plan} subscription stops.",
+          "subscription_stops_unpaid": "The {plan} subscription stops; the unpaid invoice {invoice} stays due.",
+          "action": "Delete workspace",
+          "confirm_title": "Delete the {name} workspace?",
+          "confirm_description": "Access is revoked immediately. Data is destroyed after {days} days, on {date}.",
+          "impact_members": "Members who lose access now",
+          "impact_invites": "Pending invites cancelled",
+          "impact_data": "Data destroyed on",
+          "impact_invoices": "Invoices kept, archived",
+          "impact_subscription": "{plan} subscription",
+          "impact_subscription_stops": "Stops",
+          "export_hint": "Haven't exported yet? Cancel and request a data export first.",
+          "next_workspace": "After deleting, you land in {name}, your next workspace.",
+          "no_next_workspace": "After deleting, you have no other workspace: you can create one from the switcher.",
+          "submit": "Delete permanently",
+          "deleted": "The {name} workspace was deleted."
+        }
+      },
+      "data_export": {
+        "title": "Data export",
+        "description": "A complete copy of what this workspace stores, ready to download or move elsewhere.",
+        "gdpr": "GDPR · article 20 · right to data portability",
+        "intro": "We build the archive in the background and e-mail a download link to {email}. The link and the archive expire on the date shown in the history below. Exports are free and you can request one at any time.",
+        "request": "Request an export",
+        "request_unavailable": "Available again once the current export finishes.",
+        "scope": "Workspace data",
+        "error": {
+          "start": "Couldn't start the export. Try again in a moment.",
+          "download": "This export couldn't be downloaded. Try again in a moment."
+        },
+        "expired_link": {
+          "title": "This download link has expired",
+          "description": "The archive it pointed to was deleted from our servers. Request a new export to get a fresh link.",
+          "action": "Request a new export"
+        },
+        "in_progress": {
+          "title": "In progress",
+          "requested": "Requested {day} at {time}. We'll e-mail you when it's ready; you can leave this page."
+        },
+        "finished": {
+          "title": "Export ready",
+          "description": "Your data has been exported. A download link was also e-mailed to {email}. Available until {date}.",
+          "partial_description": "Your data has been exported, but some parts couldn't be included: the history below says which. A download link was also e-mailed to {email}. Available until {date}.",
+          "failed_title": "The export failed",
+          "failed_description": "The archive couldn't be built and nothing was sent. Try again."
+        },
+        "included": {
+          "title": "What's included",
+          "modules": "Workspace data",
+          "modules_format": "One JSON file per module",
+          "billing": "Billing history",
+          "billing_format": "Invoices, credit notes and refunds",
+          "manifest": "Manifest",
+          "manifest_format": "What each part holds, and what couldn't be exported"
+        },
+        "history": {
+          "title": "Previous exports",
+          "description": "Download links work until the date shown. Expired archives are deleted from our servers.",
+          "status": {
+            "ready": "Ready",
+            "partial": "Incomplete",
+            "expired": "Expired",
+            "failed": "Failed",
+            "pending": "In progress"
+          },
+          "available_until": "Available until {date}",
+          "expired_since": "Link expired · was available until {date}",
+          "failed_detail": "The archive couldn't be built. Nothing was sent.",
+          "pending_detail": "Building · {progress}%",
+          "partial_detail": "Workspace data · 1 part couldn't be exported | Workspace data · 1 part couldn't be exported | Workspace data · {count} parts couldn't be exported",
+          "empty_title": "No export yet",
+          "empty_description": "Request one to get every module's data and the billing history of this workspace as a ZIP archive.",
+          "error_load": "Previous exports couldn't load",
+          "error_load_description": "Your archives are safe. Try again in a moment.",
+          "download": "Download",
+          "request_new": "Request a new one",
+          "retry": "Retry",
+          "previous": "Previous",
+          "next": "Next",
+          "page": "Page {page}"
+        }
+      },
+      "seats": {
+        "title": "Seats",
+        "description": "Members and pending invites each take a seat. Expired invites and platform support don't.",
+        "meter_label": "Seats",
+        "plan": "{plan} plan",
+        "unlimited": "Unlimited seats",
+        "seats_left": "no seat left | 1 seat left | {count} seats left",
+        "no_seat_left": "No seat left",
+        "value_unlimited": "{occupied} / unlimited",
+        "members_count": "no member | 1 member | {count} members",
+        "invites_count": "no pending invite | 1 pending invite | {count} pending invites",
+        "seats_count": "no seat | 1 seat | {count} seats",
+        "manage": "Manage seats",
+        "upgrade": "Upgrade",
+        "review_invites": "Review invites",
+        "load_failed": "Couldn't load the seats. The members list above is unaffected.",
+        "full": {
+          "title": "Seat limit reached",
+          "owner_upgrade": "Upgrade to {plan}, or revoke a pending invite or remove a member to add someone.",
+          "owner_free": "Revoke a pending invite or remove a member to add someone.",
+          "member": "Ask {owner}, the workspace owner, to upgrade the plan.",
+          "an_owner": "a workspace owner",
+          "email_owner": "Email {owner}"
+        },
+        "over": {
+          "title": "{occupied} seats in use, {plan} allows {max}",
+          "description": "{members} and {invites}. Members keep access; invites are paused until you free {excess} or upgrade.",
+          "review_members": "Review members"
+        },
+        "platform_support": {
+          "title": "Platform support · no seat",
+          "description": "These platform team members can access this workspace to help you. They have no role and don't use a seat.",
+          "badge": "Platform support"
+        }
+      },
+      "switcher": {
+        "title": "Switch workspace",
+        "caption": "Workspace",
+        "none": "No workspace",
+        "no_plan": "No plan",
+        "payment_failed": "payment failed",
+        "search": "Search by name or owner",
+        "load_failed": "Couldn't load your workspaces.",
+        "no_match": "No workspace matches “{query}”.",
+        "clear_search": "Clear search",
+        "create": "Create workspace",
+        "switch_failed": "Couldn't switch to {name}",
+        "still_in": "You're still in {name}.",
+        "complimentary": "complimentary",
+        "owner_prefix": "owner",
+        "members_count": "no member | 1 member | {count} members",
+        "switching": "Switching",
+        "current": "Current workspace"
+      },
+      "create": {
+        "title": "Create a workspace",
+        "description": "An isolated space with its own projects, team and billing.",
+        "name": "Workspace name",
+        "name_placeholder": "Acme Corp",
+        "plan": "Plan",
+        "plan_hint": "Change it any time",
+        "interval": {
+          "month": "month",
+          "year": "year"
+        },
+        "trial": "{days}-day trial",
+        "free_per_card_used": "Free workspaces: {limit} per card, used by {workspaces} | Free workspaces: {limit} per card, used by {workspaces} | Free workspaces: {limit} per card, used by {workspaces}",
+        "card": {
+          "label": "Card",
+          "verification_only": "Verification only",
+          "required_for": "Required for {plan}",
+          "why_free": "Why a card for a free workspace? Each card unlocks one free workspace, so free plans can stay free. It is never charged. | Why a card for a free workspace? Each card unlocks one free workspace, so free plans can stay free. It is never charged. | Why a card for a free workspace? Each card unlocks {limit} free workspaces, so free plans can stay free. It is never charged.",
+          "never_charged": "Never charged on a free plan. Secured by Stripe.",
+          "secured": "Secured by Stripe."
+        },
+        "charge": {
+          "today": "{price} today, then each {interval}. VAT is added where it applies.",
+          "after_trial": "{zero} today. First charge of {price} on {date}, after the trial. VAT is added where it applies."
+        },
+        "submit": "Create workspace",
+        "submit_named": "Create {name} on {plan}",
+        "no_plan": {
+          "title": "No plan is available right now",
+          "description": "Contact support to create a workspace. Your other workspaces are unaffected."
+        },
+        "error": {
+          "load": "Couldn't load plans",
+          "load_description": "Nothing was created. Try again in a moment.",
+          "name": "Give the workspace a name: members see it everywhere.",
+          "card": "The card couldn't be confirmed. Check it, then try again.",
+          "card_setup": "The card form couldn't load. Try again in a moment.",
+          "failed": "Couldn't create the workspace. What you typed is kept: try again."
+        }
+      }
+    }
+  }
+}

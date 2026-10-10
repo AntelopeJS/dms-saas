@@ -1,0 +1,595 @@
+{
+  "saas": {
+    "dashboard": {
+      "title": "Tableau de bord",
+      "description": "Revenu récurrent, santé des espaces de travail et incidents de facturation pour tous les clients.",
+      "other_currencies": "{amounts} dans d'autres devises non comptés",
+      "headline": {
+        "label": "Revenu récurrent et espaces de travail",
+        "mrr": "MRR · normalisé",
+        "arr": "ARR {arr}",
+        "paying": "Espaces payants",
+        "paying_value": "{paying} / {total}",
+        "paying_detail": "{free} gratuits · {trialing} en essai",
+        "trials": "Essais",
+        "trials_detail": "Aucun ne se termine dans les 14 jours | 1 se termine dans les 14 jours | {count} se terminent dans les 14 jours"
+      },
+      "churn": {
+        "title": "Attrition du revenu",
+        "description": "MRR perdu par des résiliations sur la période"
+      },
+      "attention": {
+        "title": "À traiter",
+        "description": "Les files qu'un opérateur devrait regarder aujourd'hui.",
+        "empty_title": "Rien à signaler",
+        "empty_description": "Aucun espace en retard de paiement, aucun accès offert ne se termine cette semaine, aucune migration ni facture n'attend.",
+        "past_due": "Aucun espace en retard de paiement | 1 espace en retard de paiement | {count} espaces en retard de paiement",
+        "complimentary_ending": "Aucun accès offert ne se termine | 1 accès offert se termine | {count} accès offerts se terminent",
+        "named_ending": "{name} le {date}",
+        "migrations": "Aucune migration à réconcilier | 1 migration à réconcilier | {count} migrations à réconcilier",
+        "migrations_detail": "{from} → {to} · {failed} espaces sur {total} en échec",
+        "open_invoices": "Aucune facture ouverte | 1 facture ouverte | {count} factures ouvertes",
+        "open_invoices_detail": "{amount} en attente de paiement"
+      },
+      "paid_invoices": {
+        "title": "Factures payées",
+        "description": "Encaissé et crédité, dans la devise de reporting",
+        "collected": "Encaissé",
+        "credited": "Crédité / remboursé"
+      },
+      "by_status": {
+        "title": "Espaces par statut",
+        "description": "Une couleur par statut dans tout le module",
+        "open_list": "Ouvrir la liste"
+      },
+      "plans": {
+        "title": "Offres par MRR",
+        "subtitle": "MRR normalisé apporté par chaque offre",
+        "description": "Aucun espace · {price} | 1 espace · {price} | {count} espaces · {price}",
+        "empty": "Aucune offre n'apporte encore de revenu récurrent."
+      },
+      "activity": {
+        "title": "Activité récente",
+        "empty": "Rien ne s'est encore passé.",
+        "tabs": {
+          "all": "Tout",
+          "billing": "Facturation",
+          "lifecycle": "Cycle de vie"
+        }
+      }
+    },
+    "activity": {
+      "by_operator": "par {operator}",
+      "platform": {
+        "invoice_paid": "Facture {number} payée par {workspace}",
+        "invoice_open": "Facture {number} en attente de paiement de {workspace}",
+        "invoice_uncollectible": "Facture {number} de {workspace} passée en perte",
+        "credit_note_issued": "Avoir {number} émis pour {workspace}",
+        "workspace_suspended": "{workspace} suspendu",
+        "workspace_reactivated": "{workspace} réactivé",
+        "subscription_upgraded": "{workspace} passé de {from} à {to}",
+        "balance_credited": "Crédit Stripe accordé à {workspace}",
+        "invitation_resent": "Invitation à {workspace} renvoyée",
+        "workspace_created": "Espace {workspace} créé"
+      },
+      "workspace": {
+        "invoice_paid": "Facture {number} payée",
+        "invoice_open": "Facture {number} en attente de paiement",
+        "invoice_uncollectible": "Facture {number} passée en perte",
+        "credit_note_issued": "Avoir {number} émis",
+        "workspace_suspended": "Espace suspendu",
+        "workspace_reactivated": "Espace réactivé",
+        "subscription_upgraded": "Passé de {from} à {to}",
+        "balance_credited": "Crédit Stripe accordé",
+        "invitation_resent": "Invitation renvoyée",
+        "workspace_created": "Espace créé"
+      }
+    },
+    "workspaces": {
+      "title": "Espaces de travail",
+      "description": "Tous les espaces de travail clients et leurs abonnements.",
+      "caption": "Tous les espaces",
+      "search_placeholder": "Rechercher un nom, un propriétaire ou un e-mail",
+      "footer_count": "Aucun espace | 1 espace | {count} espaces",
+      "headline": {
+        "label": "Revenu et espaces à traiter",
+        "mrr_detail": "Aucun espace payant | 1 payant | {count} payants",
+        "past_due": "En retard de paiement",
+        "past_due_detail": "{amount} à risque · première suspension le {date}",
+        "past_due_detail_no_suspension": "{amount} à risque",
+        "complimentary_ending": "Accès offerts qui se terminent",
+        "named_ending": "{name} {date}",
+        "none_this_week": "Aucun cette semaine",
+        "trials_ending": "Essais qui se terminent",
+        "trials_ending_detail": "14 prochains jours · {amount} de MRR"
+      },
+      "views": {
+        "complimentary_ending": "Accès offert qui se termine cette semaine",
+        "past_due_7_days": "En retard de paiement depuis plus de 7 jours",
+        "trials_ending": "Essais qui se terminent dans 14 jours",
+        "owner_never_joined": "Propriétaire jamais arrivé",
+        "mrr_over_500": "MRR supérieur à 500"
+      },
+      "empty": {
+        "first_run_title": "Aucun espace pour l'instant",
+        "first_run_description": "Les espaces apparaissent ici dès qu'un client s'inscrit, ou dès que vous en créez un pour lui.",
+        "filtered_title": "Aucun espace ne correspond",
+        "filtered_description": "La recherche porte sur les noms, les noms et les e-mails des propriétaires. Videz la recherche ou les filtres pour voir tous les espaces."
+      },
+      "row_actions": {
+        "open": "Ouvrir l'espace",
+        "grant_free_access": "Offrir l'accès…",
+        "join": "Rejoindre comme membre…",
+        "suspend": "Suspendre maintenant…"
+      },
+      "column": {
+        "workspace": "Espace",
+        "status": "Statut",
+        "plan": "Offre",
+        "mrr": "MRR",
+        "owner": "Propriétaire de l'espace",
+        "owner_email": "E-mail du propriétaire",
+        "owner_status": "Statut du propriétaire",
+        "owner_never_joined": "Propriétaire jamais arrivé",
+        "renews": "Renouvellement / fin",
+        "renewal_kind": "Prochaine échéance",
+        "state_since": "Dans ce statut depuis",
+        "complimentary": "Accès offert"
+      },
+      "interval": {
+        "month": "mois",
+        "year": "an"
+      },
+      "plan_cell": {
+        "complimentary": "Offert",
+        "price_per_seat": "{price} / siège / {interval}",
+        "price_flat": "{price} / {interval}",
+        "price_times_seats": "{price} × {seats} sièges / {interval}"
+      },
+      "mrr_cell": {
+        "at_risk": "à risque",
+        "billing_paused": "facturation en pause",
+        "trial": "puis {amount}",
+        "yearly": "annuel ÷ 12"
+      },
+      "renewal_kind": {
+        "renews": "Renouvellement",
+        "trial_ends": "Fin d'essai",
+        "free_until": "Offert jusqu'au",
+        "suspends": "Suspension",
+        "suspended": "Suspendu",
+        "awaiting_payment": "En attente du premier paiement",
+        "deletes": "Suppression des données"
+      },
+      "renewal": {
+        "renews": "Se renouvelle",
+        "trial_ends": "Fin d'essai",
+        "free_until": "Offert · aujourd'hui | Offert · 1 jour | Offert · {days} jours",
+        "suspends": "Suspendu aujourd'hui | Suspendu dans 1 jour | Suspendu dans {days} jours",
+        "suspended": "Suspendu",
+        "awaiting_payment": "En attente du premier paiement depuis",
+        "deletes": "Données supprimées le"
+      },
+      "operator_create": {
+        "button": "Créer un espace",
+        "title": "Créer un espace",
+        "description": "Créez un nouvel espace de travail et désignez son propriétaire.",
+        "name": "Nom de l'espace",
+        "name_help": "Peut être renommé plus tard.",
+        "name_placeholder": "Massive Dynamic",
+        "plan": "Offre",
+        "plan_placeholder": "Choisir une offre",
+        "owner_email": "E-mail du propriétaire",
+        "owner_email_placeholder": "nina.sharp{'@'}massivedynamic.com",
+        "owner_existing": "{name} a déjà un compte · membre d'aucun espace | {name} a déjà un compte · membre d'un espace | {name} a déjà un compte · membre de {count} espaces",
+        "owner_new": "Pas encore de compte · une invitation valable {days} jours est envoyée",
+        "free_until": "Offert jusqu'au",
+        "free_until_empty": "Laissez vide pour ne fixer aucune fin.",
+        "free_until_days": "Se termine aujourd'hui | 1 jour | {count} jours",
+        "access": {
+          "label": "Accès",
+          "complimentary": "Accès offert",
+          "complimentary_description": "Aucun paiement ni abonnement Stripe. Le propriétaire choisit une offre payante avant la fin.",
+          "owner_pays": "Le propriétaire paie à sa première connexion",
+          "owner_pays_description": "L'espace attend le paiement : le propriétaire saisit une carte à sa première connexion, puis Stripe facture {price}. Statut : en attente de paiement jusqu'au paiement de la première facture.",
+          "owner_pays_unavailable": "Seule une offre payante synchronisée avec Stripe peut être payée par son propriétaire."
+        },
+        "what_happens": {
+          "title": "Ce qui va se passer",
+          "complimentary": "{name} est créé sur l'offre {plan} avec un accès offert sans date de fin. Aucune carte n'est demandée et rien n'est facturé.",
+          "complimentary_until": "{name} est créé sur l'offre {plan} avec un accès offert jusqu'au {date}. Aucune carte n'est demandée et rien n'est facturé ; après cette date, l'espace passe en retard de paiement sauf si une offre payante est choisie.",
+          "owner_pays": "{name} est créé sur l'offre {plan} en attente de paiement : l'accès s'ouvre dès que son propriétaire paie {price}.",
+          "owner_existing": "{owner} devient propriétaire de l'espace et reçoit un e-mail.",
+          "owner_new": "Une invitation part vers {email}, valable {days} jours."
+        },
+        "submit": "Créer l'espace",
+        "submit_invite": "Créer et inviter",
+        "success": "Espace créé.",
+        "open_workspace": "Ouvrir l'espace",
+        "error": "L'espace n'a pas pu être créé.",
+        "load_error": "Les offres n'ont pas pu être chargées.",
+        "email_failed": {
+          "title": "Espace créé, mais l'e-mail d'invitation n'a pas pu être envoyé",
+          "description": "Le propriétaire n'a pas été prévenu. Copiez le lien d'invitation et envoyez-le-lui vous-même.",
+          "copy_link": "Copier le lien d'invitation"
+        }
+      }
+    },
+    "workspace_detail": {
+      "title": "Espace de travail",
+      "description": "Abonnement, facturation, membres et activité d'un espace de travail.",
+      "retry": "Réessayer",
+      "error": {
+        "prepare": "Cette action n'a pas pu être préparée. Rien n'a été modifié."
+      },
+      "header": {
+        "no_owner": "Aucun propriétaire",
+        "workspace_owner": "Propriétaire de l'espace",
+        "created": "Créé le {date}",
+        "joined_as_support": "Vous avez rejoint l'espace en support plateforme · {date}",
+        "complimentary": "Offert",
+        "change_plan": "Changer d'offre",
+        "grant_free_access": "Offrir l'accès",
+        "immediate_upgrade": "Montée en gamme immédiate…",
+        "grant_credit": "Accorder un crédit Stripe…",
+        "join": "Rejoindre comme membre…",
+        "joined": "Membre",
+        "open_in_stripe": "Ouvrir le client dans Stripe",
+        "copy_link": "Copier le lien de l'espace",
+        "link_copied": "Lien de l'espace copié.",
+        "suspend": "Suspendre l'espace…",
+        "reactivate": "Réactiver l'espace…",
+        "more_actions": "Plus d'actions",
+        "open_workspace": "Ouvrir l'espace",
+        "open_error": "L'espace n'a pas pu être ouvert.",
+        "load_error": "Impossible de charger cet espace",
+        "load_error_description": "Le reste de la page peut encore se charger. Réessayez dans un instant."
+      },
+      "facts": {
+        "label": "Chiffres de l'espace",
+        "mrr": "MRR",
+        "no_plan": "Aucune offre",
+        "complimentary": "Offert · rien n'est facturé",
+        "trial_then": "Essai · puis {amount}",
+        "billing_paused": "Facturation en pause",
+        "price_times_seats": "{price} × {seats} sièges · par {interval}",
+        "flat_price": "{price} · par {interval}",
+        "seats": "Sièges",
+        "seats_of": "{used} / {max}",
+        "pending_invitations": "Aucune invitation en attente | +1 invitation en attente | +{count} invitations en attente",
+        "next_invoice": "Prochaine facture",
+        "next_invoice_total": "{amount} TTC",
+        "nothing_billed": "Rien n'est facturé",
+        "preview_unavailable": "Aperçu Stripe indisponible",
+        "stripe_customer": "Client Stripe",
+        "no_stripe_customer": "Pas encore de client Stripe",
+        "open_in_stripe": "Ouvrir dans Stripe",
+        "card": "{brand} •••• {last4}",
+        "lifetime_revenue": "Revenu cumulé",
+        "lifetime_detail": "Aucune facture payée | 1 facture · depuis {since} | {count} factures · depuis {since}",
+        "no_paid_invoice": "Aucune facture payée pour l'instant"
+      },
+      "tabs": {
+        "overview": "Vue d'ensemble",
+        "invoices": "Factures",
+        "credit_notes": "Avoirs",
+        "members": "Membres",
+        "activity": "Activité"
+      },
+      "tables": {
+        "this_workspace": "Cet espace"
+      },
+      "billing": {
+        "title": "Informations de facturation",
+        "empty": "Aucune information de facturation pour l'instant",
+        "customer_type": "Type de client",
+        "customer_types": {
+          "individual": "Particulier",
+          "business": "Client professionnel"
+        },
+        "company_name": "Raison sociale",
+        "vat_number": "Numéro de TVA",
+        "vat_status": {
+          "pending": "vérification en cours",
+          "verified": "vérifié",
+          "unverified": "non vérifié"
+        },
+        "billing_email": "E-mail de facturation",
+        "address": "Adresse"
+      },
+      "timeline": {
+        "title": "Abonnement",
+        "empty": "Aucun événement d'abonnement pour l'instant",
+        "next_invoice": "Prochaine facture · {amount}",
+        "renews": "Renouvellement",
+        "trial_ends": "Fin d'essai",
+        "free_until": "Fin de l'accès offert",
+        "suspends": "Suspension si toujours impayé",
+        "suspended": "Suspendu",
+        "awaiting_payment": "En attente du premier paiement",
+        "deletes": "Suppression des données"
+      },
+      "invoices": {
+        "title": "Factures",
+        "latest": "Dernières factures",
+        "download_pdf": "Télécharger le PDF",
+        "open_in_stripe": "Ouvrir dans Stripe",
+        "issue_credit_note": "Émettre un avoir…"
+      },
+      "credit_notes": {
+        "title": "Avoirs"
+      },
+      "members": {
+        "title": "Membres",
+        "you": "Vous",
+        "active_now": "Actif maintenant",
+        "never": "Jamais",
+        "column": {
+          "member": "Membre",
+          "email": "E-mail",
+          "role": "Rôle",
+          "joined": "Arrivé le",
+          "last_active": "Dernière activité"
+        },
+        "role": {
+          "workspace_owner": "Propriétaire de l'espace",
+          "member": "Membre",
+          "platform_support": "Support plateforme"
+        }
+      },
+      "invitations": {
+        "title": "Invitations en attente",
+        "empty": "Aucune invitation en attente. Chaque invitation en attente occupe un siège.",
+        "resend": "Renvoyer",
+        "resend_success": "Invitation renvoyée.",
+        "resend_title": "Renvoyer cette invitation ?",
+        "resend_description": "Un nouveau lien valable 7 jours est envoyé par e-mail. L'ancien lien ne fonctionne plus.",
+        "copy_link": "Copier le lien",
+        "link_title": "Lien d'invitation",
+        "revoke": "Révoquer",
+        "revoke_success": "Invitation révoquée.",
+        "revoke_title": "Révoquer l'invitation de {email} ?",
+        "revoke_description": "Son lien ne fonctionne plus et le siège qu'elle occupait est libéré.",
+        "column": {
+          "email": "E-mail",
+          "role": "Rôle",
+          "status": "Statut",
+          "sent_at": "Envoyée le",
+          "expires_at": "Expire le"
+        },
+        "link": {
+          "lead": "Envoyez ce lien à {email} pour qu'il crée son compte et rejoigne l'espace.",
+          "label": "Lien d'inscription",
+          "expires": "Valable jusqu'au {date} · expire aujourd'hui | Valable jusqu'au {date} · 1 jour restant | Valable jusqu'au {date} · {count} jours restants",
+          "copy": "Copier",
+          "copied": "Lien d'invitation copié.",
+          "copy_failed": "Le lien n'a pas pu être copié. Copiez-le manuellement :",
+          "error": "Le lien d'invitation n'a pas pu être récupéré.",
+          "warning": "Toute personne disposant de ce lien peut rejoindre l'espace à la place de l'invité. Ne le partagez qu'avec lui.",
+          "close": "Fermer"
+        }
+      },
+      "activity": {
+        "title": "Activité",
+        "recent": "Activité récente",
+        "empty": "Rien ne s'est encore passé dans cet espace."
+      },
+      "operator": {
+        "title": "Actions opérateur",
+        "load_error": "Impossible de charger les actions opérateur",
+        "upgrade": "Montée en gamme immédiate",
+        "upgrade_description": "Changer d'offre maintenant, Stripe proratise la différence",
+        "upgrade_unavailable": "Nécessite un abonnement Stripe payant",
+        "credit": "Accorder un crédit Stripe",
+        "credit_description": "Déduit des prochaines factures",
+        "credit_unavailable": "Nécessite un client Stripe",
+        "join": "Rejoindre comme membre",
+        "joined": "Membre en support plateforme",
+        "join_description": "Support plateforme · aucun siège utilisé"
+      },
+      "credit": {
+        "title": "Accorder un crédit Stripe",
+        "description": "Ajouté au solde du client et utilisé sur les prochaines factures.",
+        "available": "Crédit disponible",
+        "empty": "Pas de client Stripe : aucun solde à créditer pour l'instant.",
+        "amount": "Montant",
+        "ceiling": "Jusqu'à {amount} : une année de l'abonnement de cet espace.",
+        "over_ceiling": "Au-delà du maximum qu'un seul crédit peut accorder.",
+        "use_max": "Maximum",
+        "balance": "Solde actuel {before} → {after}",
+        "reason": "Motif",
+        "reason_placeholder": "Geste commercial pour la panne d'export (ticket n° 4812).",
+        "reason_help": "{count} / {max} · visible sur la transaction de solde Stripe",
+        "outcome": "{name} reçoit {amount} de crédit sur son solde.",
+        "outcome_invoice": "La facture du {date} passe à {amount}.",
+        "submit": "Accorder le crédit",
+        "submit_amount": "Accorder {amount} de crédit",
+        "success": "{amount} crédités sur le solde Stripe.",
+        "error": "Le crédit n'a pas pu être accordé.",
+        "load_error": "Impossible de charger le solde",
+        "unavailable_title": "Rien à créditer",
+        "unavailable_description": "Cet espace n'est pas facturé : accès offert, offre gratuite ou aucune offre."
+      },
+      "upgrade": {
+        "title": "Monter en gamme maintenant",
+        "description": "Aperçu de Stripe : rien n'est facturé avant votre confirmation.",
+        "target": "Offre cible",
+        "current": "Actuelle",
+        "new": "Cible",
+        "subtotal": "Sous-total",
+        "tax": "Taxe",
+        "tax_rate": "Taxe {rate} % {country}",
+        "tax_reverse_charge": "Taxe · autoliquidation",
+        "due_today": "À payer aujourd'hui",
+        "due_on": "Ajouté à la facture du {date}",
+        "then": "Puis {amount} HT par {interval} · MRR {before} → {after}",
+        "submit": "Monter en gamme",
+        "submit_now": "Monter en gamme et facturer {amount}",
+        "submit_next_invoice": "Monter en gamme · prorata le {date}",
+        "success": "Abonnement passé à l'offre {plan}.",
+        "error": "La montée en gamme n'a pas pu aboutir.",
+        "load_error": "Impossible de charger les offres éligibles",
+        "preview_error": "Stripe n'a pas pu chiffrer cette montée en gamme",
+        "unavailable_title": "Aucune montée en gamme immédiate",
+        "unavailable_no_plan": "Aucune offre supérieure ne correspond au type de client et aux sièges de cet espace.",
+        "unavailable_no_subscription": "Seul un espace avec un abonnement Stripe payant peut monter en gamme ici."
+      },
+      "complimentary": {
+        "title": "Offrir l'accès",
+        "description": "L'espace cesse de payer et garde l'offre ci-dessous.",
+        "lead": "{name} continue de travailler sur l'offre ci-dessous sans être facturé.",
+        "plan": "Offre",
+        "fits": "{seats} sièges utilisés tiennent ({max} sièges).",
+        "fits_unlimited": "{seats} sièges utilisés · pas de limite de membres.",
+        "exceeds": "{seats} sièges utilisés dépassent les {max} de cette offre : les membres existants sont conservés.",
+        "expires": "Expire le",
+        "no_end": "Laissez vide pour ne fixer aucune fin.",
+        "expires_help": "Se termine aujourd'hui ; l'espace passe ensuite en retard de paiement jusqu'au choix d'une offre payante. | 1 jour ; l'espace passe ensuite en retard de paiement jusqu'au choix d'une offre payante. | {count} jours ; l'espace passe ensuite en retard de paiement jusqu'au choix d'une offre payante.",
+        "cancellation_title": "L'abonnement Stripe sera résilié",
+        "cancellation": "{id} est résilié maintenant — {mrr}/mois s'arrêtent. La facture du {date} n'est pas émise. Pour se réabonner, le propriétaire devra choisir une offre et payer.",
+        "acknowledge": "Je comprends que l'abonnement payant se termine aujourd'hui et ne peut pas être rétabli d'ici.",
+        "owner_emailed": "{owner} (propriétaire de l'espace) reçoit l'e-mail « Accès offert ».",
+        "submit": "Offrir l'accès",
+        "submit_update": "Mettre à jour l'accès offert",
+        "submit_cancel": "Résilier l'abonnement et offrir l'accès",
+        "success": "Accès offert.",
+        "error": "L'accès n'a pas pu être offert.",
+        "load_error": "Impossible de charger les offres"
+      },
+      "join": {
+        "title": "Rejoindre {name} en support plateforme ?",
+        "description": "Vous pourrez ouvrir l'espace pour aider son équipe.",
+        "confirm": "Rejoindre l'espace",
+        "impact_seat": "Aucun siège n'est utilisé : toujours {seats} / {max}.",
+        "impact_visible": "Le propriétaire vous voit dans les membres en tant que « Support plateforme ».",
+        "impact_leave": "Vous pouvez partir à tout moment depuis les membres de l'espace.",
+        "already_title": "Vous faites déjà partie de {name}",
+        "already_description": "Ouvrez l'espace depuis le sélecteur d'espaces.",
+        "success": "Vous avez rejoint cet espace en support plateforme."
+      },
+      "suspend": {
+        "title": "Suspendre {name} ?",
+        "description": "L'accès est bloqué immédiatement. Les données, volumes et la configuration sont conservés ; vous pouvez réactiver à tout moment.",
+        "impact_members": "Aucun membre ne perd l'accès | 1 membre perd l'accès | {count} membres perdent l'accès",
+        "impact_subscription": "Abonnement Stripe {id} mis en pause",
+        "impact_invoice": "Facture du {date} non prélevée ({amount}) · reprise à la réactivation",
+        "impact_owner": "{owner} (propriétaire de l'espace) est prévenu par e-mail",
+        "confirm": "Suspendre l'espace",
+        "success": "Espace suspendu."
+      },
+      "reactivate": {
+        "title": "Réactiver {name} ?",
+        "description": "L'accès est rétabli immédiatement.",
+        "suspended_since": "Suspendu depuis le {date} par {by}.",
+        "automatically": "la règle des factures impayées",
+        "impact_members": "Aucun membre ne retrouve l'accès | 1 membre retrouve l'accès immédiatement | {count} membres retrouvent l'accès immédiatement",
+        "impact_billing": "La facturation Stripe reprend · prochaine facture le {date}, {amount}",
+        "impact_billing_plain": "La facturation Stripe reprend",
+        "confirm": "Réactiver",
+        "success": "Espace réactivé."
+      },
+      "danger": {
+        "title": "Zone de danger",
+        "suspend_label": "Suspendre l'espace",
+        "suspend_description": "Bloque tous les membres et met la facturation Stripe en pause. Réversible.",
+        "suspend": "Suspendre…",
+        "reactivate": "Réactiver…"
+      }
+    },
+    "notes": {
+      "title": "Notes internes",
+      "operators_only": "Réservées aux opérateurs",
+      "placeholder": "Écrire une note interne…",
+      "never_shown": "Jamais montrée au client",
+      "add": "Ajouter la note",
+      "delete": "Supprimer",
+      "empty": "Aucune note pour l'instant",
+      "empty_description": "Les notes gardent le contexte pour le prochain opérateur : une promesse, un devis, un incident.",
+      "show_all": "Afficher 1 note plus ancienne | Afficher {count} notes plus anciennes",
+      "delete_confirm": {
+        "title": "Supprimer cette note ?",
+        "description": "La note est supprimée pour tous les opérateurs.",
+        "confirm": "Supprimer la note"
+      },
+      "error": {
+        "load": "Impossible de charger les notes",
+        "create": "La note n'a pas pu être ajoutée.",
+        "delete": "La note n'a pas pu être supprimée."
+      }
+    },
+    "permissions": {
+      "workspaces": {
+        "create": "Créer un espace",
+        "create_description": "Créer un espace pour un client et choisir comment il est payé",
+        "period": "Période du tableau de bord",
+        "period_description": "Choisir la période couverte par les chiffres du tableau de bord",
+        "attention": "À traiter",
+        "attention_description": "Voir les files à traiter : retards de paiement, accès offerts qui se terminent, migrations, factures ouvertes",
+        "headline": "Chiffres clés du revenu",
+        "headline_description": "Voir le MRR normalisé, les espaces payants et les essais",
+        "figures": "Chiffres du revenu",
+        "figures_description": "Voir les chiffres du revenu du tableau de bord",
+        "figures_row": "Ligne des chiffres du revenu",
+        "figures_row_description": "Voir la ligne des chiffres du revenu",
+        "charts": "Graphiques du revenu",
+        "charts_description": "Voir les factures payées et les espaces par statut",
+        "charts_row": "Ligne des graphiques du revenu",
+        "charts_row_description": "Voir la ligne des graphiques du revenu",
+        "by_status_list": "Espaces par statut",
+        "by_status_list_description": "Voir combien d'espaces sont dans chaque statut",
+        "lists": "Offres et activité",
+        "lists_description": "Voir les offres par MRR et l'activité récente",
+        "lists_row": "Ligne des offres et de l'activité",
+        "lists_row_description": "Voir la ligne des offres et de l'activité",
+        "activity_tabs": "Onglets de l'activité",
+        "activity_tabs_description": "Passer de toute l'activité à la facturation ou au cycle de vie",
+        "activity_all": "Toute l'activité",
+        "activity_all_description": "Voir chaque événement récent de facturation et de cycle de vie",
+        "activity_billing": "Activité de facturation",
+        "activity_billing_description": "Voir les factures, avoirs et crédits récents",
+        "activity_lifecycle": "Activité de cycle de vie",
+        "activity_lifecycle_description": "Voir les créations, suspensions et réactivations récentes d'espaces",
+        "list_headline": "Chiffres clés des espaces",
+        "list_headline_description": "Voir le MRR, les espaces en retard de paiement et les échéances à traiter",
+        "header": "En-tête de l'espace",
+        "header_description": "Voir qui est l'espace et accéder à ses actions opérateur",
+        "facts": "Chiffres de l'espace",
+        "facts_description": "Voir le MRR, les sièges, la prochaine facture, le client Stripe et le revenu cumulé",
+        "tabs": "Onglets de l'espace",
+        "tabs_description": "Passer de la vue d'ensemble aux factures, avoirs, membres et à l'activité",
+        "overview": "Vue d'ensemble de l'espace",
+        "overview_description": "Voir les informations de facturation, l'abonnement, les dernières factures et l'activité",
+        "billing_info": "Informations de facturation",
+        "billing_info_description": "Voir l'identité de facturation et l'adresse du client",
+        "subscription_timeline": "Chronologie de l'abonnement",
+        "subscription_timeline_description": "Voir la prochaine facture et les derniers événements de l'abonnement",
+        "recent_activity": "Activité récente de l'espace",
+        "recent_activity_description": "Voir les derniers événements de l'espace",
+        "members": "Membres et invitations",
+        "members_description": "Voir les membres de l'espace et les invitations en attente",
+        "invitation_link": "Lien d'invitation",
+        "invitation_link_description": "Afficher et copier le lien d'inscription d'une invitation",
+        "issue_credit_note": "Émettre un avoir",
+        "issue_credit_note_description": "Créditer une facture payée ou ouverte de l'espace",
+        "activity": "Activité de l'espace",
+        "activity_description": "Voir chaque événement de facturation et de cycle de vie de l'espace",
+        "operator_actions": "Actions opérateur",
+        "operator_actions_description": "Monter en gamme maintenant, accorder un crédit Stripe, rejoindre en support plateforme",
+        "available_credit": "Crédit Stripe disponible",
+        "available_credit_description": "Voir le crédit sur le solde Stripe du client",
+        "notes": "Notes internes",
+        "notes_description": "Lire et écrire les notes que les opérateurs gardent sur l'espace",
+        "suspend_row": "Suspendre l'espace",
+        "suspend_row_description": "Voir la zone de danger de l'espace",
+        "suspend_button": "Suspendre ou réactiver",
+        "suspend_button_description": "Suspendre l'espace, ou le réactiver",
+        "sidebar": "Colonne latérale de l'espace",
+        "sidebar_description": "Voir les actions opérateur, le crédit, les notes et la zone de danger",
+        "body": "Corps de l'espace",
+        "body_description": "Voir les onglets et la colonne latérale de l'espace",
+        "body_row": "Ligne du corps de l'espace",
+        "body_row_description": "Voir la ligne qui contient les onglets et la colonne latérale"
+      }
+    }
+  }
+}

@@ -16,6 +16,8 @@ export interface PaymentMethodSummary {
   last4: string;
   expMonth: number;
   expYear: number;
+  /** Cardholder name Stripe collected with the card, when it has one. */
+  holderName: string | null;
 }
 
 export interface UnpaidInvoiceRef {
@@ -26,12 +28,15 @@ export interface UnpaidInvoiceRef {
 }
 
 export interface UnpaidInvoiceSummary extends UnpaidInvoiceRef {
+  /** Mirror row id, which the owner's pay-invoice request names. */
+  invoiceId: string;
   failedAt: Date | null;
   nextRetryAt: Date | null;
   suspendAt: Date | null;
 }
 
-function toCardSummary(
+/** Brand, last four digits, expiry and holder of a card payment method. */
+export function toCardSummary(
   paymentMethod: Stripe.PaymentMethod | null,
 ): PaymentMethodSummary | null {
   const card = paymentMethod?.card;
@@ -41,6 +46,7 @@ function toCardSummary(
     last4: card.last4,
     expMonth: card.exp_month,
     expYear: card.exp_year,
+    holderName: paymentMethod?.billing_details?.name ?? null,
   };
 }
 
@@ -125,6 +131,7 @@ export async function buildUnpaidInvoiceSummary(
   ]);
   return {
     ...toUnpaidInvoiceRef(invoice),
+    invoiceId: invoice._id,
     failedAt: subscription.pastDueSince ?? null,
     nextRetryAt,
     suspendAt,

@@ -27,8 +27,14 @@ export default defineConfig({
         type: "local",
         path: ".",
         // Not a workspace package: without `--ignore-workspace`, pnpm
-        // installs the root workspace instead of this lockfile.
-        installCommand: ["pnpm install --ignore-workspace", "pnpm build"],
+        // installs the root workspace instead of this lockfile. Transpiled
+        // without type checking: dms-saas rebuilds the interface package's
+        // types at the same moment, and checking against them half-written
+        // fails at random. `pnpm build` keeps the type check.
+        installCommand: [
+          "pnpm install --ignore-workspace",
+          "pnpm build:transpile",
+        ],
       },
     },
     "dms-saas": {
@@ -56,7 +62,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/dms",
-        version: ">=0.5.0 <1.0.0",
+        version: ">=0.7.4 <0.8.0",
       },
       config: {
         auth: {
@@ -73,7 +79,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/mongodb",
-        version: "^1.4.0",
+        version: "^1.4.2",
       },
       config: {
         url: process.env.MONGO_URL ?? "mongodb://localhost:27017",

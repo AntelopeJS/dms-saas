@@ -1,80 +1,54 @@
 import {
   Context,
   Controller,
-  Delete,
   Get,
   JSONBody,
-  Parameter,
   Post,
   Put,
   type RequestContext,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
-import { CROSS_INSTANCE } from "@antelopejs/interface-database";
-import { GetModel, Model } from "@antelopejs/interface-database-decorators";
-import {
-  type TenantMember,
-  TenantMemberModel,
-  TenantModel,
-} from "@antelopejs/interface-dms/db";
+import { Model } from "@antelopejs/interface-database-decorators";
+import { TenantModel } from "@antelopejs/interface-dms/db";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
-import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
-import { AuthOwnerOnly, AuthRawUser } from "@antelopejs/interface-dms/auth";
+import { AuthRawUser } from "@antelopejs/interface-dms/auth";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
-import {
-  type CreditNote,
-  CreditNoteModel,
-  type Invoice,
-  InvoiceModel,
-  type Plan,
-  PlanModel,
-  type TenantBillingInfo,
-  TenantBillingInfoModel,
-  type TenantSubscription,
-  TenantSubscriptionModel,
-  type TenantSubscriptionStatus,
-} from "../../db";
+import type { StatGroupItem } from "@antelopejs/interface-dms/base";
+import { PlanModel } from "../../db";
 import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
-import { getSeatUsage } from "../../plans";
-import { buildWorkspaceProjection } from "../../utils";
 import type {
   CardDetails,
+  MyWorkspaceRow,
+  SelfServeCardUse,
   WorkspaceBillingProfile,
+  WorkspaceCreateOptions,
   WorkspaceDeletionResult,
+  WorkspaceOverview,
   WorkspaceProvisioningHandles,
 } from "../../workspaces";
 import {
-  assertBillingCountry,
-  countPendingInvitations,
+  buildWorkspaceCreateOptions,
+  buildWorkspaceOverview,
+  cardRequirementOf,
   ensurePlanIsAvailableForCustomer,
-  isFreePlan,
+  listMyWorkspaces,
+  normalizeWorkspaceName,
   provisionWorkspace,
   requestWorkspaceDeletion,
   resolveBillingProfileForNewWorkspace,
   resolveCardDetails,
   resolveDataRetentionDays,
+  resolveFreeWorkspacesPerCard,
+  resolveSelfServeCardUse,
   rollbackWorkspaceProvisioning,
+  withCardHold,
+  workspaceGlanceItems,
 } from "../../workspaces";
 
 const HTTP_NOT_FOUND = 404;
-const HTTP_CONFLICT = 409;
 const HTTP_BAD_REQUEST = 400;
-
-const CANCELLED_STATUS: TenantSubscriptionStatus = "cancelled";
-
-interface WorkspaceSubscriptionSummary {
-  planName: string | null;
-  status: TenantSubscriptionStatus | null;
-}
-
-interface MyWorkspaceRow {
-  _id: string;
-  name: string;
-  planName: string | null;
-  isCurrent: boolean;
-}
 
 interface WorkspaceCreateBody {
   workspaceName?: string;
@@ -82,33 +56,10 @@ interface WorkspaceCreateBody {
   paymentMethodId?: string;
 }
 
-interface SelfServeCreationInput {
+interface SelfServeCreationInput extends SelfServeCardUse {
   workspaceName: string;
-  paymentMethodId?: string;
   planId: string;
-  card: CardDetails;
   billingProfile: WorkspaceBillingProfile;
-}
-
-/**
- * A free plan goes on without a card, and then without a billing address:
- * nothing is billed, and an upgrade collects both through Stripe Checkout.
- * A card, even on a free plan, still has to come with a supported country.
- */
-function assertPaymentReadiness(
-  plan: Plan,
-  paymentMethodId: string | undefined,
-  billingProfile: WorkspaceBillingProfile,
-): void {
-  if (paymentMethodId) {
-    assertBillingCountry(billingProfile.address);
-    return;
-  }
-  assert(
-    isFreePlan(plan),
-    HTTP_BAD_REQUEST,
-    "saas.errors.workspace.payment_method_required",
-  );
 }
 
 interface CreatedWorkspace {
@@ -121,6 +72,11 @@ interface CurrentWorkspace {
   retentionDays: number;
 }
 
+/** The "At a glance" cards, as their `StatGroup` reads them. */
+interface WorkspaceGlance {
+  items: StatGroupItem[];
+}
+
 interface WorkspaceRenameBody {
   name?: string;
 }
@@ -130,70 +86,71 @@ interface RenamedWorkspace {
   name: string;
 }
 
-interface WorkspaceMemberRow {
-  _id: string;
-  userId: string;
-  email: string;
-  name: string | null;
-  isTenantOwner: boolean;
-  joinedAt: Date;
+interface WorkspaceDeleteBody {
+  /** The workspace name, typed by the owner to confirm. */
+  confirmName?: string;
 }
 
-async function buildMemberRows(
-  members: TenantMember[],
-  userModel: UserModel,
-): Promise<WorkspaceMemberRow[]> {
-  const memberUsers = await Promise.all(
-    members.map((m) => userModel.get(m.userId)),
+/**
+ * The creation the owner asked for, once every rule of the chosen plan has
+ * passed: the name, the audience of the plan, and the card it asks for.
+ */
+async function prepareSelfServeCreation(
+  user: User,
+  ctx: RequestContext,
+  body: WorkspaceCreateBody,
+  card: CardDetails,
+): Promise<SelfServeCreationInput> {
+  const workspaceName = normalizeWorkspaceName(body.workspaceName);
+  const [billingProfile, freeWorkspacesPerCard] = await Promise.all([
+    resolveBillingProfileForNewWorkspace(
+      user._id,
+      card,
+      getRequestTenantId(ctx),
+    ),
+    resolveFreeWorkspacesPerCard(),
+  ]);
+  const plan = await ensurePlanIsAvailableForCustomer(
+    body.planId,
+    billingProfile.customerType,
   );
-  return members.map((m, i) => ({
-    _id: m._id,
-    userId: m.userId,
-    email: memberUsers[i]?.email ?? m.userId,
-    name: memberUsers[i]?.name ?? null,
-    isTenantOwner: m.isTenantOwner,
-    joinedAt: m.joinedAt,
-  }));
+  const cardUse = await resolveSelfServeCardUse({
+    requirement: cardRequirementOf(plan, freeWorkspacesPerCard),
+    paymentMethodId: body.paymentMethodId,
+    card,
+    billingProfile,
+    freeWorkspacesPerCard,
+  });
+  return { ...cardUse, workspaceName, planId: body.planId, billingProfile };
 }
 
-function sortByIssuedAtDesc<T extends { issuedAt: Date | string }>(
-  items: readonly T[],
-): T[] {
-  return items
-    .slice()
-    .sort((a, b) => +new Date(b.issuedAt) - +new Date(a.issuedAt));
-}
-
-interface WorkspaceRelations {
-  subscription: TenantSubscription | undefined;
-  billingInfo: TenantBillingInfo | undefined;
-  members: TenantMember[];
-  invoices: Invoice[];
-  creditNotes: CreditNote[];
-  plan: Plan | null;
-}
-
-async function loadWorkspaceRelations(
-  tenantId: string,
-  planModel: PlanModel,
-): Promise<WorkspaceRelations> {
-  const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
-  const tenantBillingInfoModel = GetModel(TenantBillingInfoModel, tenantId);
-  const memberModel = GetModel(TenantMemberModel, tenantId);
-  const invoiceModel = GetModel(InvoiceModel, tenantId);
-  const creditNoteModel = GetModel(CreditNoteModel, tenantId);
-  const [subscription, billingInfo, members, invoices, creditNotes] =
-    await Promise.all([
-      tenantSubscriptionModel.findOne(),
-      tenantBillingInfoModel.findOne(),
-      memberModel.listAll(),
-      invoiceModel.getAllInvoices(),
-      creditNoteModel.getAll(),
-    ]);
-  const plan = subscription?.planId
-    ? ((await planModel.get(subscription.planId)) ?? null)
-    : null;
-  return { subscription, billingInfo, members, invoices, creditNotes, plan };
+async function provisionSelfServeWorkspace(
+  user: User,
+  input: SelfServeCreationInput,
+): Promise<CreatedWorkspace> {
+  const handles: WorkspaceProvisioningHandles = { userId: user._id };
+  try {
+    const { tenantId } = await provisionWorkspace({
+      userId: user._id,
+      payload: {
+        ...input.billingProfile,
+        workspaceName: input.workspaceName,
+        planId: input.planId,
+        paymentMethodId: input.paymentMethodId,
+      },
+      stripeCustomerProfile: {
+        ...input.billingProfile,
+        email: user.email,
+        fallbackName: user.name,
+      },
+      card: input.card,
+      handles,
+    });
+    return { tenantId };
+  } catch (error) {
+    await rollbackWorkspaceProvisioning(handles);
+    throw error;
+  }
 }
 
 export class SaasWorkspacesController extends Controller(
@@ -208,73 +165,27 @@ export class SaasWorkspacesController extends Controller(
   @Model(PlanModel)
   declare planModel: PlanModel;
 
-  private async resolveSubscriptionSummaries(
-    tenantIds: string[],
-  ): Promise<Map<string, WorkspaceSubscriptionSummary>> {
-    const subscriptions = await Promise.all(
-      tenantIds.map((tenantId) =>
-        GetModel(TenantSubscriptionModel, tenantId).findOne(),
-      ),
-    );
-    // The map yields `Promise<Plan> | null`, and the rule reads the null as a
-    // non-thenable that should not reach an aggregator. Promise.all accepts it:
-    // a non-promise entry resolves to itself, which is exactly the `null` the
-    // lookup below expects at that index. Wrapping it in Promise.resolve would
-    // only add a tick.
-    const plans = await Promise.all(
-      // oxlint-disable-next-line typescript/await-thenable
-      subscriptions.map((subscription) =>
-        subscription?.planId ? this.planModel.get(subscription.planId) : null,
-      ),
-    );
-    return new Map(
-      tenantIds.map((tenantId, index) => [
-        tenantId,
-        {
-          planName: plans[index]?.name ?? null,
-          status: subscriptions[index]?.status ?? null,
-        },
-      ]),
-    );
-  }
-
+  /** The switcher's list: every live workspace of the caller, current first. */
   @Get("/mine")
   async listMine(
     @AuthRawUser() user: User,
     @Context() ctx: RequestContext,
   ): Promise<MyWorkspaceRow[]> {
-    const currentTenantId = getRequestTenantId(ctx);
-
-    const memberModel = GetModel(TenantMemberModel, CROSS_INSTANCE);
-    const memberships = await memberModel.listByUserWithTenantIds(user._id);
-    if (memberships.length === 0) return [];
-
-    const tenants = await this.tenantModel.getMany(
-      memberships.map((m) => m.tenantId),
-    );
-    const summaries = await this.resolveSubscriptionSummaries(
-      tenants.map((tenant) => tenant._id),
-    );
-    return (
-      tenants
-        // A cancelled workspace lives on until the retention cron deletes it,
-        // but switching to it only reaches the access-restricted screen.
-        .filter(
-          (tenant) => summaries.get(tenant._id)?.status !== CANCELLED_STATUS,
-        )
-        .map((tenant) => ({
-          _id: tenant._id,
-          name: tenant.name,
-          planName: summaries.get(tenant._id)?.planName ?? null,
-          isCurrent: tenant._id === currentTenantId,
-        }))
-    );
+    return listMyWorkspaces(user._id, getRequestTenantId(ctx));
   }
 
-  /** Lets the creation form report closed admission before anything is filled in. */
+  /**
+   * What the creation form offers: the plans the caller may pick, each with
+   * the card it asks for, and the per-card rule of free workspaces. Refuses a
+   * closed admission before anything is filled in.
+   */
   @Get("/create-options")
-  async createOptions(@AuthRawUser() user: User): Promise<void> {
+  async createOptions(
+    @AuthRawUser() user: User,
+    @Context() ctx: RequestContext,
+  ): Promise<WorkspaceCreateOptions> {
     assertAdmissionOpen(user.owner);
+    return buildWorkspaceCreateOptions(user, getRequestTenantId(ctx));
   }
 
   @Get("/setup-intent")
@@ -283,68 +194,23 @@ export class SaasWorkspacesController extends Controller(
     return createCardSetupIntent();
   }
 
-  private async prepareSelfServeCreation(
-    user: User,
-    ctx: RequestContext,
-    body: WorkspaceCreateBody,
-  ): Promise<SelfServeCreationInput> {
-    assertAdmissionOpen(user.owner);
-    const workspaceName = body.workspaceName?.trim();
-    assert(
-      workspaceName,
-      HTTP_BAD_REQUEST,
-      "saas.errors.workspace.name_required",
-    );
-    const card = await resolveCardDetails(body.paymentMethodId);
-    const billingProfile = await resolveBillingProfileForNewWorkspace(
-      user._id,
-      card,
-      getRequestTenantId(ctx),
-    );
-    const plan = await ensurePlanIsAvailableForCustomer(
-      body.planId,
-      billingProfile.customerType,
-    );
-    assertPaymentReadiness(plan, body.paymentMethodId, billingProfile);
-    return {
-      workspaceName,
-      paymentMethodId: body.paymentMethodId,
-      planId: body.planId,
-      card,
-      billingProfile,
-    };
-  }
-
+  /**
+   * The card is read first, to hold it for the whole creation: two creations
+   * racing with one card cannot both pass the per-card count of free
+   * workspaces.
+   */
   @Post("/")
   async createMine(
     @AuthRawUser() user: User,
     @Context() ctx: RequestContext,
     @JSONBody() body: WorkspaceCreateBody,
   ): Promise<CreatedWorkspace> {
-    const input = await this.prepareSelfServeCreation(user, ctx, body);
-    const handles: WorkspaceProvisioningHandles = { userId: user._id };
-    try {
-      const { tenantId } = await provisionWorkspace({
-        userId: user._id,
-        payload: {
-          ...input.billingProfile,
-          workspaceName: input.workspaceName,
-          planId: input.planId,
-          paymentMethodId: input.paymentMethodId,
-        },
-        stripeCustomerProfile: {
-          ...input.billingProfile,
-          email: user.email,
-          fallbackName: user.name,
-        },
-        card: input.card,
-        handles,
-      });
-      return { tenantId };
-    } catch (error) {
-      await rollbackWorkspaceProvisioning(handles);
-      throw error;
-    }
+    assertAdmissionOpen(user.owner);
+    const card = await resolveCardDetails(body.paymentMethodId);
+    return withCardHold(card.fingerprint, async () => {
+      const input = await prepareSelfServeCreation(user, ctx, body, card);
+      return provisionSelfServeWorkspace(user, input);
+    });
   }
 
   /**
@@ -367,6 +233,28 @@ export class SaasWorkspacesController extends Controller(
     };
   }
 
+  /** Feeds the "At a glance" cards of the General page. */
+  @Get("/current/glance")
+  async getCurrentGlance(
+    @AuthTenantOwner() user: User,
+    @Context() ctx: RequestContext,
+  ): Promise<WorkspaceGlance> {
+    const view = await buildWorkspaceOverview(
+      getRequestTenantId(ctx),
+      user._id,
+    );
+    return { items: workspaceGlanceItems(view) };
+  }
+
+  /** Feeds the danger zone of the General page. */
+  @Get("/current/overview")
+  async getCurrentOverview(
+    @AuthTenantOwner() user: User,
+    @Context() ctx: RequestContext,
+  ): Promise<WorkspaceOverview> {
+    return buildWorkspaceOverview(getRequestTenantId(ctx), user._id);
+  }
+
   @Put("/current")
   async renameCurrent(
     @AuthTenantOwner() _user: User,
@@ -374,80 +262,29 @@ export class SaasWorkspacesController extends Controller(
     @JSONBody() body: WorkspaceRenameBody,
   ): Promise<RenamedWorkspace> {
     const tenantId = getRequestTenantId(ctx);
-    const name = body.name?.trim();
-    assert(name, HTTP_BAD_REQUEST, "saas.errors.workspace.name_required");
+    const name = normalizeWorkspaceName(body.name);
     await this.tenantModel.update(tenantId, { name, updatedAt: new Date() });
     return { _id: tenantId, name };
   }
 
-  @Delete("/current")
+  /**
+   * The typed name is checked here, not only in the dialog: a deletion is
+   * irreversible once the retention period runs out.
+   */
+  @Post("/current/delete")
   async deleteCurrent(
     @AuthTenantOwner() _user: User,
     @Context() ctx: RequestContext,
+    @JSONBody() body: WorkspaceDeleteBody,
   ): Promise<WorkspaceDeletionResult> {
-    return requestWorkspaceDeletion(getRequestTenantId(ctx));
-  }
-
-  @Get("/:id")
-  async getDetail(@AuthOwnerOnly() _user: User, @Parameter("id") id: string) {
-    const tenant = await this.tenantModel.get(id);
+    const tenantId = getRequestTenantId(ctx);
+    const tenant = await this.tenantModel.get(tenantId);
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
-
-    const { subscription, billingInfo, members, invoices, creditNotes, plan } =
-      await loadWorkspaceRelations(id, this.planModel);
-    const [memberRows, pendingInvitationsCount, seats] = await Promise.all([
-      buildMemberRows(members, this.userModel),
-      countPendingInvitations(id),
-      getSeatUsage(id),
-    ]);
-
-    const projection = buildWorkspaceProjection({
-      tenant,
-      subscription,
-      billingInfo,
-      plan,
-      membersCount: members.length,
-      invoices,
-      now: new Date(),
-    });
-
-    return {
-      _id: projection._id,
-      name: projection.name,
-      createdAt: projection.createdAt,
-      status: projection.status,
-      planId: projection.planId,
-      planName: projection.planName,
-      currency: projection.currency,
-      mrr: projection.mrr,
-      // Counted as the customer's seats count them: platform support is
-      // announced apart, so the two numbers match the members page.
-      membersCount: seats.members,
-      platformSupportCount: seats.platformSupport.length,
-      // Shown beside the member count: a workspace created for an owner who
-      // has not signed up yet has no member, only this invitation.
-      pendingInvitationsCount,
-      subscription: subscription ?? null,
-      billingInfo: billingInfo ?? null,
-      members: memberRows,
-      invoices: sortByIssuedAtDesc(invoices),
-      creditNotes: sortByIssuedAtDesc(creditNotes),
-    };
-  }
-
-  @Post("/:id/join")
-  async joinAsMember(@AuthOwnerOnly() user: User, @Parameter("id") id: string) {
-    const tenant = await this.tenantModel.get(id);
-    assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
-
-    const memberModel = GetModel(TenantMemberModel, id);
-    const existing = await memberModel.getByUser(user._id);
-    assert(!existing, HTTP_CONFLICT, "saas.workspaces.join.already_member");
-
-    await applyTenantOwnership(this.userModel, user._id, id, {
-      roleIds: [],
-      isTenantOwner: false,
-    });
-    return { joined: true };
+    assert(
+      body.confirmName?.trim() === tenant.name,
+      HTTP_BAD_REQUEST,
+      "saas.errors.workspace.delete_confirmation_mismatch",
+    );
+    return requestWorkspaceDeletion(tenantId);
   }
 }

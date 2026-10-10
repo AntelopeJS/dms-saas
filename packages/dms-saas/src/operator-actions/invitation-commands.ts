@@ -4,6 +4,7 @@ import {
   type ReissuedInvitation,
   resendInvitation,
   resolveInvitationLink,
+  revokeInvitation,
 } from "../workspaces/invitations";
 import { executeOperatorAction, type OperatorActor } from "./journal";
 import type { OperatorActionDetails, WorkspaceOperatorAction } from "./types";
@@ -82,5 +83,16 @@ export async function copyInvitationLinkCommand(
     action: "invitation.link_copy",
     run: () => resolveInvitationLink(input.tenantId, input.inviteId),
     detailsOf: ({ expiresAt }) => ({ expiresAt: expiresAt.toISOString() }),
+  });
+}
+
+/** Withdraws a pending or expired invitation, journaled with its invitee. */
+export async function revokeInvitationCommand(
+  input: InvitationCommandInput,
+): Promise<void> {
+  await runJournaled(input, {
+    action: "invitation.revoke",
+    run: () => revokeInvitation(input.tenantId, input.inviteId),
+    detailsOf: ({ email }) => ({ email }),
   });
 }

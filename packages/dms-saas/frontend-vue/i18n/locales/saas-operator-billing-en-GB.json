@@ -1,0 +1,277 @@
+{
+	"saas": {
+		"operator_billing": {
+			"invoices": {
+				"title": "Invoices",
+				"description": "Invoices issued through Stripe across all workspaces. Amounts are shown in each invoice’s own currency.",
+				"caption": "All invoices",
+				"search": "Search number or workspace",
+				"count": "{count} invoice | {count} invoices",
+				"credit_hint": "Credit notes are issued from paid and open invoices: void invoices were never charged, drafts can still be edited.",
+				"open_stripe": "Open Stripe",
+				"empty": {
+					"title": "No invoices yet",
+					"description": "Invoices appear here as soon as Stripe issues them for a workspace."
+				},
+				"column": {
+					"number": "Number",
+					"workspace": "Workspace",
+					"amount": "Amount",
+					"status": "Status",
+					"due_at": "Due",
+					"period": "Period",
+					"issued_at": "Issued",
+					"credited": "Credited",
+					"lines": "Lines",
+					"subtotal": "Subtotal",
+					"tax": "Tax",
+					"paid_at": "Paid"
+				},
+				"actions": {
+					"view_details": "View details",
+					"download_pdf": "Download PDF",
+					"open_in_stripe": "Open in Stripe",
+					"issue_credit_note": "Issue credit note…"
+				},
+				"sub_state": {
+					"retry": "Payment failed · retry {date}",
+					"retries_over": "Payment failed · no retry left",
+					"due": "Due {date}",
+					"finalises": "Finalises {date}",
+					"replaced_by": "Replaced by {number}",
+					"written_off": "Written off"
+				}
+			},
+			"credit_notes": {
+				"title": "Credit notes",
+				"description": "Credits and Stripe refunds issued to customers. To issue one, open the invoice it corrects.",
+				"caption": "All credit notes",
+				"search": "Search credit notes",
+				"count": "{count} credit note | {count} credit notes",
+				"legend": "Credit to balance reduces the next invoice · Refund to card sends money back · Before or after payment corrects an invoice Stripe issued",
+				"to_invoices": "Invoices",
+				"automatic": "Automatic",
+				"empty": {
+					"title": "No credit notes yet",
+					"description": "Credit notes are issued from the invoice they correct."
+				},
+				"column": {
+					"number": "Number · invoice",
+					"workspace": "Workspace",
+					"amount": "Amount",
+					"type": "Type",
+					"status": "Status",
+					"reason": "Reason",
+					"issued_by": "Issued by",
+					"issued_at": "Date"
+				},
+				"actions": {
+					"view_details": "View details",
+					"download_pdf": "Download PDF"
+				}
+			},
+			"credit_reasons": {
+				"service_issue": "Service issue",
+				"billing_error": "Billing error",
+				"duplicate": "Duplicate charge",
+				"goodwill": "Goodwill gesture",
+				"fraudulent": "Fraudulent charge",
+				"other": "Other",
+				"money_back_guarantee": "Money-back guarantee",
+				"prorated_cancellation": "Prorated refund · cancelled mid-cycle",
+				"order_change": "Order change"
+			},
+			"cells": {
+				"plan_seats": "{plan} · {seats} seats"
+			},
+			"stats": {
+				"label": "Billing figures",
+				"other_currencies": "+ {amounts} · {detail}",
+				"awaiting_payment": "Awaiting payment",
+				"awaiting_payment_detail": "{count} open invoice · {retries} with a retry scheduled | {count} open invoices · {retries} with a retry scheduled",
+				"collected_this_month": "Collected this month",
+				"collected_this_month_detail": "{count} invoice paid | {count} invoices paid",
+				"credited_this_month": "Credited this month",
+				"credited_this_month_detail": "{count} credit note · {refunded} refunded | {count} credit notes · {refunded} refunded",
+				"written_off_this_year": "Written off this year",
+				"written_off_this_year_detail": "{count} uncollectible invoice | {count} uncollectible invoices",
+				"credit_split_detail": "{balance} to balance · {refunded} refunded",
+				"refunded_to_cards": "Refunded to cards",
+				"refunded_to_cards_detail": "{count} refund · {automatic} automatic | {count} refunds · {automatic} automatic",
+				"credit_notes_this_month": "Credit notes this month",
+				"credit_notes_this_month_detail": "{void} void"
+			},
+			"credit_modal": {
+				"title": "Issue credit note",
+				"subtitle_paid": "{number} · {workspace} · paid {date} by {card}",
+				"subtitle_unpaid": "{number} · {workspace} · awaiting payment",
+				"card_unknown": "the card on file",
+				"next_invoice": "the next invoice",
+				"next_invoice_on": "the next invoice, {date}",
+				"tax": "Tax",
+				"paid": "Paid",
+				"total": "Total",
+				"already_credited": "Already credited",
+				"still_creditable": "Still creditable",
+				"mode_label": "How the customer gets it",
+				"mode": {
+					"credit_to_balance": "Credit to balance",
+					"credit_to_balance_description": "Deducted from {nextInvoice}",
+					"refund": "Refund to card",
+					"refund_description": "Back to {card} in 5–10 days",
+					"reduce_amount_due": "Reduce the amount due",
+					"reduce_amount_due_description": "The open invoice asks less; nothing is refunded"
+				},
+				"amount": "Amount",
+				"amount_help": "Up to {max}",
+				"use_max": "Credit the full {max}",
+				"above_ceiling": "At most {max}.",
+				"above_ceiling_credited": "At most {max}: {credited} was already credited on {numbers}.",
+				"reason": "Reason",
+				"reason_placeholder": "Pick a reason",
+				"memo": "Internal memo",
+				"memo_hint": "Not shown to the customer",
+				"memo_too_long": "Keep the memo to {max} characters.",
+				"outcome": {
+					"empty": "Enter an amount to see what the customer gets.",
+					"credit_to_balance": "{workspace} receives {amount} as balance credit, deducted from {nextInvoice}.",
+					"refund": "{amount} goes back to {card}; the customer sees it in 5–10 days.",
+					"reduce_amount_due": "{number} then asks {remaining} instead of {before}.",
+					"total": "{number} is then credited {credited} of {total} in all."
+				},
+				"creates": "Creates a credit note in Stripe.",
+				"cancel": "Cancel",
+				"submit": {
+					"credit_to_balance": "Credit {amount}",
+					"refund": "Continue to refund…",
+					"reduce_amount_due": "Reduce by {amount}"
+				},
+				"refund_confirm": {
+					"title": "Refund {amount} to {card}?",
+					"description": "This can’t be undone. The customer sees it in 5–10 days.",
+					"confirm": "Refund {amount}",
+					"back": "Back",
+					"credited_in_total": "{number} credited in total"
+				},
+				"success": "Credit note {number} issued",
+				"success_description": "It appears in the lists once Stripe confirms it, in a few seconds.",
+				"error": "The credit note could not be issued.",
+				"load_failed": "The invoice could not be loaded.",
+				"blocked": {
+					"draft": "Drafts can still be edited. Credit becomes possible once Stripe finalises the invoice.",
+					"void": "Void invoices were never charged, so there is nothing to credit.",
+					"uncollectible": "This invoice was written off: nothing was collected to credit.",
+					"fully_credited": "This invoice has already been credited in full."
+				}
+			},
+			"billing_rules": {
+				"title": "Billing rules & legal",
+				"description": "What happens when a payment fails, who can get a refund, and the documents customers accept. Changes apply to every workspace from the next billing event.",
+				"save": "Save changes",
+				"saved": "Billing rules saved",
+				"unpaid": {
+					"title": "Unpaid invoices",
+					"description": "When a renewal can’t be charged, Stripe retries the card. If it still fails, the workspace is suspended.",
+					"suspend": "Suspend workspaces that stay unpaid",
+					"suspend_description": "Members lose access; data and files are kept. Paying the invoice restores access immediately.",
+					"suspend_days": "Days before suspension",
+					"suspend_days_description": "Counted from the first failed payment.",
+					"suspend_days_hint": "From 1 to 365 days.",
+					"retention_days": "Keep data after cancellation",
+					"retention_days_description": "Cancelled workspaces can still export during this time. Then everything is deleted for good; invoices stay archived.",
+					"retention_days_hint": "In days, from 0 to 3650.",
+					"timeline": "What a customer goes through",
+					"steps": {
+						"failed": "Payment fails",
+						"failed_when": "Day 0",
+						"failed_effect": "Workspace owner emailed, banner in the app",
+						"retries": "Stripe retries",
+						"retries_when": "Stripe’s schedule",
+						"retries_effect": "Access unchanged; retries follow your Stripe settings",
+						"suspended": "Suspended",
+						"suspended_when": "Day {days}",
+						"suspended_effect": "Members lose access, data kept",
+						"not_suspended": "Never suspended",
+						"not_suspended_when": "—",
+						"not_suspended_effect": "Access continues while the invoice stays unpaid",
+						"deleted": "Deleted",
+						"deleted_when": "{days} days after cancelling",
+						"deleted_effect": "Only if the workspace owner cancels; invoices stay archived"
+					}
+				},
+				"free": {
+					"title": "Free workspaces",
+					"description": "Limits abuse of the free plan by tying each free workspace to a payment card.",
+					"per_card": "Free workspaces per card",
+					"per_card_description": "Once a card backs this many free workspaces, another one with the same card asks for a paid plan.",
+					"per_card_hint": "From 0 to 100. 0 turns the rule off."
+				},
+				"tax": {
+					"title": "Tax",
+					"description": "Stripe calculates VAT from the customer’s country using the product’s tax category.",
+					"code": "Stripe tax category",
+					"code_description": "Applied to every plan when it’s synced to Stripe.",
+					"code_hint": "txcd_ followed by 8 digits. txcd_10000000 is “General – electronically supplied services”.",
+					"plans": "Plans in Stripe",
+					"plans_summary": "{synced} of {total} plans carry this category",
+					"plans_summary_synced": "{synced} of {total} plans carry this category · last sync {date}",
+					"plans_not_configured": "Stripe is not configured: plans are not synced.",
+					"unsaved_code": "Save first: the new category reaches the plans once it is saved.",
+					"resync": "Re-sync plans",
+					"resync_done": "Plans synced with Stripe",
+					"resync_failed": "The plans could not be synced with Stripe."
+				},
+				"refunds": {
+					"title": "Refund policy",
+					"description": "Two separate rules: refunds that workspace owners request themselves, and automatic refunds when they cancel mid-cycle.",
+					"guarantee": "Money-back guarantee",
+					"guarantee_description": "Workspace owners see a “Request a refund” button in Billing while the window is open.",
+					"window": "Refund window",
+					"window_description": "Counted from the first paid invoice.",
+					"window_hint": "From 1 to 365 days.",
+					"amount": "How much is refunded",
+					"amount_description": "Only for money-back requests.",
+					"mode": {
+						"full": "Full amount",
+						"full_description": "Everything paid on the first invoice",
+						"prorated": "Prorated",
+						"prorated_description": "Only the days not used yet"
+					},
+					"example": "Worked example",
+					"worked_example": {
+						"scenario": "A plan at {price} / month. The workspace owner asks for a refund on day {day} of {days}.",
+						"full": "Full amount",
+						"prorated": "Prorated · {days} unused days"
+					},
+					"on_cancel": "Refund unused time on cancellation",
+					"on_cancel_description": "Separate from the guarantee: when a workspace owner cancels mid-cycle, the unused days are refunded automatically, without a request."
+				},
+				"legal": {
+					"title": "Legal documents",
+					"description": "Published on public pages and linked from sign-up and the footer of every email.",
+					"terms_of_use": "Terms of use",
+					"terms_and_conditions": "Terms and conditions",
+					"privacy_policy": "Privacy policy",
+					"status_published": "Published",
+					"status_draft": "Not published",
+					"published": "Version {version} · published {date}",
+					"never_published": "Never published",
+					"next_version": "Saving a change publishes version {version}",
+					"view_public_page": "View public page"
+				}
+			}
+		},
+		"permissions": {
+			"billing": {
+				"issue_credit_note": "Billing · Issue credit note",
+				"issue_credit_note_description": "Credit an invoice to the customer’s balance or refund it to their card",
+				"invoice_stats": "Billing · Invoice figures",
+				"invoice_stats_description": "See what awaits payment, what was collected, credited and written off",
+				"credit_note_stats": "Billing · Credit note figures",
+				"credit_note_stats_description": "See what was credited and refunded this month",
+				"billing_rules": "Configuration · Billing rules & legal",
+				"billing_rules_description": "Change dunning, free workspace, tax and refund rules, and publish the legal documents"
+			}
+		}
+	}
+}

@@ -6,7 +6,6 @@ import {
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
 
-const LEGAL_ENDPOINT = "/api/saas/legal-documents";
 const DOCUMENT_FIELD = "termsOfUse";
 
 // Read before sign-up, from the auth footer and the terms checkbox: the console
@@ -16,7 +15,7 @@ export class SaasTermsOfUsePage extends PageController(
   "terms-of-use",
   {
     displayName: "$saas.legal.terms_of_use",
-    description: "$saas.legal.terms_of_use_page_description",
+    description: "$saas.public.legal.terms_of_use_page_description",
     category: pagesCategory,
     publicAccess: true,
     hidden: true,
@@ -24,6 +23,10 @@ export class SaasTermsOfUsePage extends PageController(
   EmptyLayout(),
 ) {
   static legalContent = CustomComponent("DmsSaasLegalLayout")
-    .meta({ name: "$saas.legal.terms_of_use" })
-    .options({ endpoint: LEGAL_ENDPOINT, documentField: DOCUMENT_FIELD });
+    .meta({
+      name: "$saas.legal.terms_of_use",
+      description: "$saas.permissions.public.legal_document_description",
+      icon: "i-ph-file-text",
+    })
+    .options({ documentField: DOCUMENT_FIELD });
 }

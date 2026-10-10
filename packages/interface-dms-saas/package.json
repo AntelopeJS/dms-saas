@@ -57,8 +57,8 @@
     "prepack": "pnpm run build"
   },
   "dependencies": {
-    "@antelopejs/interface-data-api": ">=0.1.9 <1.0.0",
-    "@antelopejs/interface-dms": ">=0.3.1 <1.0.0"
+    "@antelopejs/interface-data-api": ">=0.2.0 <1.0.0",
+    "@antelopejs/interface-dms": ">=0.5.1 <1.0.0"
   },
   "devDependencies": {
     "@antelopejs/interface-core": ">=0.1.1 <1.0.0",

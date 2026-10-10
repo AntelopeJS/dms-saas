@@ -64,6 +64,13 @@ export interface SegmentConditionGroup {
   )[];
 }
 
+/** The number of users a segment matched on one day. */
+export interface SegmentCountPoint {
+  /** Day of the evaluation, `YYYY-MM-DD` in UTC. */
+  day: string;
+  count: number;
+}
+
 class RevisionModifier extends Modifier {
   insert(object: Record<string, unknown>, field: string): void {
     object[field] = randomUUID();
@@ -129,6 +136,18 @@ export class Segment extends Table {
   @Index()
   @Field("date")
   declare lastEvaluatedAt: Date | null;
+
+  /**
+   * The count of each day the segment was evaluated, oldest first, over the
+   * last `SEGMENT_COUNT_HISTORY_DAYS` days: the trend and the weekly change
+   * of the segments list read it.
+   */
+  @Field("any")
+  declare countHistory?: SegmentCountPoint[];
+
+  /** How long the last evaluation took, in milliseconds. */
+  @Field("number")
+  declare lastEvaluationMs?: number | null;
 
   @CreationTime()
   @Field("date")

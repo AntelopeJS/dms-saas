@@ -1,13 +1,11 @@
 import { defineAsyncComponent, type Component } from 'vue'
-import type {
-	DmsFrontendModule,
-	DmsFrontendSdk,
-} from '#dms/frontend-module'
+import type { DmsFrontendModule, DmsFrontendSdk } from '#dms/frontend-module'
+import './app/assets/css/saas.css'
 import authLinks from './app/plugins/auth-links'
 import billingDataTypes from './app/plugins/billing-data-types'
 import footerLinks from './app/plugins/footer-links'
 import planCards from './app/plugins/plan-cards-display'
-import segmentConditions from './app/plugins/segment-conditions-data-type.client'
+import segmentConditions from './app/plugins/segment-conditions-data-type'
 import sidebarWidgets from './app/plugins/sidebar-widgets'
 
 // The tenant access gate's refusal code: the server answers a refused page
@@ -40,10 +38,7 @@ function registerComponents(sdk: DmsFrontendSdk): void {
 				.split('/')
 				.at(-1)!
 				.replace(/\.vue$/, '')
-			sdk.registerComponent(
-				`DmsSaas${pascalCase(name)}`,
-				defineAsyncComponent(loader),
-			)
+			sdk.registerComponent(pascalCase(name), defineAsyncComponent(loader))
 		})
 	Object.entries(pages)
 		.sort()
@@ -51,18 +46,19 @@ function registerComponents(sdk: DmsFrontendSdk): void {
 			const name = path.replace('./app/custom-pages/', '').replace(/\.vue$/, '')
 			const component = defineAsyncComponent(loader)
 			sdk.registerPage(name, component, loader)
-			sdk.registerComponent(`Dms${pascalCase(name)}`, component)
+			sdk.registerComponent(pascalCase(name), component)
 		})
 }
 
 const frontendModule: DmsFrontendModule = {
+	componentPrefix: 'DmsSaas',
 	setup(sdk) {
 		registerComponents(sdk)
 		sdk.registerPlugin(authLinks)
 		sdk.registerPlugin(billingDataTypes)
 		sdk.registerPlugin(footerLinks)
 		sdk.registerPlugin(planCards)
-		sdk.registerPlugin(segmentConditions, { clientOnly: true })
+		sdk.registerPlugin(segmentConditions)
 		sdk.registerPlugin(sidebarWidgets)
 		sdk.registerAccessRedirect(
 			WORKSPACE_ACCESS_BLOCKED_CODE,

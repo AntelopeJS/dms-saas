@@ -1,0 +1,505 @@
+{
+  "saas": {
+    "users": {
+      "title": "Utilisateurs",
+      "description": "Tous les utilisateurs de la plateforme et leurs espaces de travail.",
+      "caption": "Tous les utilisateurs",
+      "detail": "Utilisateur",
+      "detail_description": "Profil, espaces de travail, facturation, segments et rôle plateforme d'un utilisateur.",
+      "search_placeholder": "Rechercher un nom ou un e-mail",
+      "footer_count": "{count} utilisateur | {count} utilisateurs",
+      "load_failed": "Impossible de charger cet utilisateur.",
+      "you": "Vous",
+      "unverified": "Non vérifié",
+      "no_segment": "—",
+      "no_workspace": "Aucun espace de travail",
+      "workspaces_owned": "{count} possédé | {count} possédés",
+      "workspaces_member": "{count} membre | {count} membre",
+      "active_now": "Actif maintenant",
+      "never_active": "Jamais",
+      "owner_of": "Propriétaire de l'espace de travail {workspaces}",
+      "no_platform_role": "Aucun rôle plateforme",
+      "workspace_owner_badge": "Propriétaire de l'espace de travail",
+      "empty": {
+        "title": "Aucun utilisateur pour l'instant",
+        "description": "Les utilisateurs apparaissent ici dès qu'ils s'inscrivent ou sont invités dans un espace de travail."
+      },
+      "column": {
+        "user": "Utilisateur",
+        "email": "E-mail",
+        "platform_role": "Rôle plateforme",
+        "email_verified": "E-mail vérifié",
+        "workspaces": "Espaces de travail",
+        "segments": "Segments",
+        "last_active": "Dernière activité",
+        "created_at": "Créé le"
+      },
+      "tabs": {
+        "all": "Tous",
+        "platform_admins": "Admins plateforme",
+        "unverified": "Non vérifiés",
+        "workspaces": "Espaces de travail",
+        "billing": "Facturation",
+        "segments": "Segments"
+      },
+      "actions": {
+        "open": "Ouvrir le profil",
+        "promote": "Promouvoir admin plateforme…",
+        "demote": "Rétrograder…"
+      },
+      "badges": {
+        "email_verified": "E-mail vérifié",
+        "email_unverified": "E-mail non vérifié",
+        "two_factor_on": "2FA activée",
+        "two_factor_off": "2FA désactivée"
+      },
+      "detail_facts": {
+        "label": "Faits sur l'utilisateur",
+        "workspaces": "Espaces de travail",
+        "workspaces_detail": "Propriétaire de {owned} · membre de {member}",
+        "language": "Langue",
+        "no_language": "Non définie",
+        "last_active": "Dernière activité",
+        "created": "Créé le",
+        "billed": "Facturé comme propriétaire",
+        "billed_detail": "Depuis le début · {count} espace de travail possédé | Depuis le début · {count} espaces de travail possédés",
+        "languages": {
+          "en": "Anglais",
+          "fr": "Français"
+        }
+      },
+      "security": {
+        "title": "Sécurité et connexion",
+        "sign_in_methods": "Méthodes de connexion",
+        "no_method": "Aucune pour l'instant",
+        "two_factor": "Double authentification",
+        "off": "Désactivée",
+        "backup_codes_left": "{count} code de secours restant | {count} codes de secours restants",
+        "active_sessions": "Sessions actives",
+        "no_session": "Aucune",
+        "email_verified": "E-mail vérifié",
+        "yes": "Oui",
+        "not_yet": "Pas encore",
+        "verification_requested": "Demandé le {date}",
+        "method": {
+          "password": "E-mail et mot de passe"
+        },
+        "two_factor_method": {
+          "totp": "Application d'authentification",
+          "email": "Code par e-mail"
+        }
+      },
+      "platform_role": {
+        "title": "Rôle plateforme",
+        "not_admin": "Pas admin plateforme",
+        "explanation": "Les admins plateforme gèrent chaque espace de travail, offre et facture.",
+        "promote_action": "Promouvoir…",
+        "demote_action": "Rétrograder…",
+        "self_demote_reason": "Vous ne pouvez pas vous rétrograder. Demandez à un autre admin plateforme.",
+        "confirm_failed": "Impossible de préparer la confirmation. Réessayez.",
+        "promoted": "Promu admin plateforme",
+        "demoted": "Rôle d'admin plateforme retiré",
+        "promote_title": "Faire de {name} un admin plateforme ?",
+        "promote_description": "Les admins plateforme pilotent tout le SaaS. {name} pourra faire ce qui est listé ci-dessous. Ses rôles dans les espaces de travail ne changent pas, et les autres admins plateforme sont notifiés.",
+        "promote_confirm": "Faire admin plateforme",
+        "grants_workspaces": "Voir et modifier chaque espace de travail",
+        "grants_billing": "Émettre des avoirs, des remboursements et du crédit Stripe",
+        "grants_catalog": "Modifier les offres, les prix et les fonctionnalités",
+        "grants_admins": "Promouvoir ou rétrograder d'autres admins plateforme",
+        "frees_seats": "Cesse d'occuper une place dans les espaces de travail qu'il ne possède pas",
+        "demote_title": "Retirer le rôle d'admin plateforme de {name} ?",
+        "demote_description": "{name} perd le module SaaS au prochain chargement de page et garde ses espaces de travail et ses rôles.",
+        "demote_confirm": "Retirer le rôle d'admin",
+        "removes_access": "Plus d'accès aux espaces de travail, à la facturation ni aux offres",
+        "takes_seats": "Occupe désormais une place dans les espaces de travail qu'il ne possède pas",
+        "admins_remaining": "Admins plateforme restants",
+        "demote_blocked_self_title": "Vous ne pouvez pas vous rétrograder",
+        "demote_blocked_self_description": "Demandez à un autre admin plateforme de retirer votre rôle.",
+        "demote_blocked_last_title": "{name} est le dernier admin plateforme",
+        "demote_blocked_last_description": "Promouvez d'abord quelqu'un d'autre : la plateforme a toujours besoin d'un admin plateforme.",
+        "close": "Fermer"
+      },
+      "workspaces": {
+        "open": "Ouvrir l'espace de travail",
+        "empty_title": "Aucun espace de travail",
+        "empty_description": "Cet utilisateur n'appartient à aucun espace de travail.",
+        "column": {
+          "workspace": "Espace de travail",
+          "role": "Son rôle",
+          "status": "Statut",
+          "plan": "Offre",
+          "joined_at": "Arrivée"
+        },
+        "role": {
+          "owner": "Propriétaire de l'espace de travail",
+          "member": "Membre"
+        }
+      },
+      "billing": {
+        "hint": "Uniquement les espaces de travail qu'il possède : un espace de travail dont il est membre est facturé à son propriétaire.",
+        "open_invoice": "Ouvrir dans Stripe",
+        "download_pdf": "Télécharger le PDF",
+        "empty_title": "Rien de facturé",
+        "empty_description": "Aucune facture ni aucun avoir dans les espaces de travail de cet utilisateur.",
+        "column": {
+          "workspace": "Espace de travail",
+          "number": "Numéro",
+          "type": "Type",
+          "period": "Période",
+          "status": "Statut",
+          "total": "Total",
+          "issued_at": "Émise le"
+        }
+      },
+      "segments": {
+        "load_failed": "Impossible de charger les segments de cet utilisateur.",
+        "empty_title": "Dans aucun segment",
+        "empty_description": "Cet utilisateur ne correspond à aucun segment, d'après la dernière évaluation.",
+        "open_segments": "Voir les segments",
+        "no_longer_matches": "Ne correspond plus · mis à jour à la prochaine évaluation",
+        "column": {
+          "segment": "Segment",
+          "why": "Pourquoi il correspond",
+          "evaluated": "Évalué le"
+        }
+      }
+    },
+    "segments": {
+      "title": "Segments",
+      "description": "Segments d'utilisateurs construits à partir de règles.",
+      "caption": "Tous les segments",
+      "footer_count": "{count} segment | {count} segments",
+      "footer_hint": "Réévalués toutes les 15 minutes et à l'enregistrement",
+      "weekly_change": {
+        "up": "▲ +{change} cette semaine",
+        "down": "▼ -{change} cette semaine",
+        "flat": "— 0 cette semaine"
+      },
+      "never_evaluated": "Pas encore évalué",
+      "deleted": "Segment supprimé | {count} segments supprimés",
+      "evaluated": "Segment réévalué",
+      "duplicated": "Segment dupliqué",
+      "unknown_plan": "Offre supprimée",
+      "unknown_field": "Champ inconnu",
+      "no_value": "rien",
+      "empty": {
+        "title": "Regroupez les utilisateurs selon ce qu'ils font et ce qu'ils paient",
+        "description": "Un segment est un ensemble de règles enregistré, comme « propriétaires d'un espace de travail impayé ». Utilisez-le pour exporter une liste ou cibler des e-mails."
+      },
+      "column": {
+        "name": "Segment",
+        "description": "Description",
+        "rules": "Règles",
+        "estimated_count": "Correspondances",
+        "trend": "30 jours",
+        "last_evaluated_at": "Dernière évaluation",
+        "evaluation_time": "Durée d'évaluation"
+      },
+      "actions": {
+        "new": "Nouveau segment",
+        "edit": "Modifier les règles",
+        "export_users": "Exporter les utilisateurs (CSV)",
+        "evaluate": "Réévaluer maintenant",
+        "duplicate": "Dupliquer"
+      },
+      "delete_confirm": {
+        "title": "Supprimer {name} ?",
+        "description": "Le segment et sa liste de membres sont supprimés. Les exports déjà téléchargés sont conservés.",
+        "confirm": "Supprimer le segment"
+      },
+      "export": {
+        "title": "Export du segment",
+        "preparing": "Préparation du téléchargement…",
+        "done_message": "Le fichier CSV a été téléchargé : e-mail, nom, espaces de travail, MRR possédé.",
+        "success_title": "Export téléchargé",
+        "error_title": "Échec de l'export",
+        "retry": "Réessayer"
+      },
+      "editor": {
+        "new_title": "Nouveau segment",
+        "new_description": "Regroupez des utilisateurs avec des règles, prévisualisées en direct avant l'enregistrement.",
+        "edit_title": "Modifier le segment",
+        "edit_description": "Réévalué toutes les 15 minutes et à l'enregistrement.",
+        "details": "Détails",
+        "name": "Nom",
+        "name_hint": "Affiché dans les listes et les filtres.",
+        "name_placeholder": "Propriétaires payants à risque",
+        "description": "Description",
+        "description_hint": "À quoi sert ce segment.",
+        "description_placeholder": "Propriétaires d'espaces de travail payants qui décrochent",
+        "conditions": "Conditions",
+        "conditions_description": "Les règles qui déterminent quels utilisateurs appartiennent à ce segment.",
+        "save": "Enregistrer et réévaluer",
+        "created": "Segment créé et évalué",
+        "saved": "Segment enregistré et réévalué"
+      },
+      "conditions": {
+        "where": "Où",
+        "and": "Et",
+        "or": "Ou",
+        "add": "Ajouter une condition",
+        "add_group": "Ajouter un groupe",
+        "add_workspace_ref": "Ajouter une condition sur les espaces de travail",
+        "workspace_ref_label": "Espaces de travail de l'utilisateur"
+      },
+      "builder": {
+        "lead_before": "Inclure les utilisateurs qui remplissent",
+        "lead_after": "ces conditions",
+        "of_these_conditions": "ces conditions",
+        "logical": {
+          "and": "TOUTES",
+          "or": "UNE DE"
+        },
+        "load_failed": "Impossible de charger les champs disponibles pour les règles.",
+        "field": "Champ",
+        "operator": "Comparaison",
+        "search_fields": "Rechercher un champ",
+        "no_field": "Aucun champ ne correspond",
+        "search": "Rechercher",
+        "pick_values": "Choisir des valeurs",
+        "type_value": "Saisir une valeur",
+        "remove_condition": "Retirer la condition",
+        "remove_group": "Retirer le groupe",
+        "remove_block": "Retirer le bloc",
+        "duplicate_block": "Dupliquer le bloc",
+        "count_users": "{count} utilisateur | {count} utilisateurs",
+        "count_owners": "{count} utilisateur | {count} utilisateurs",
+        "empty_rules": "Aucune condition pour l'instant : le segment ne contient personne.",
+        "empty_workspace_rules": "Ajoutez une condition sur l'espace de travail."
+      },
+      "rules": {
+        "none": "Aucune règle · ne contient personne",
+        "load_failed": "Règles indisponibles · réessayer",
+        "where": "où",
+        "role": {
+          "owner": "Propriétaire de",
+          "member": "Membre de"
+        },
+        "quantifier": {
+          "any": "au moins un espace de travail",
+          "all": "tous ses espaces de travail"
+        },
+        "group": {
+          "and": "toutes les {count} conditions | toutes les {count} conditions",
+          "or": "une des {count} conditions | une des {count} conditions"
+        }
+      },
+      "sentence": {
+        "lead": "Les utilisateurs pour lesquels",
+        "and": "et",
+        "or": "ou",
+        "empty": "Aucune condition pour l'instant : ce segment ne contient personne.",
+        "ref": {
+          "owner": {
+            "any": "ils possèdent au moins un espace de travail où",
+            "all": "chaque espace de travail qu'ils possèdent a"
+          },
+          "member": {
+            "any": "ils appartiennent à au moins un espace de travail où",
+            "all": "chaque espace de travail auquel ils appartiennent a"
+          }
+        }
+      },
+      "preview": {
+        "title": "Aperçu en direct",
+        "live": "En direct",
+        "recounting": "Recalcul…",
+        "empty_title": "Ajoutez une condition",
+        "empty_description": "Les utilisateurs correspondant à vos règles s'affichent ici pendant l'édition, avant l'enregistrement.",
+        "failed": "Impossible de compter les correspondances de ces règles.",
+        "stale": "Dernier comptage affiché : la dernière modification n'a pas pu être comptée.",
+        "match_count": "{count} utilisateur correspond | {count} utilisateurs correspondent",
+        "vs_saved": "par rapport à la version enregistrée ({saved})",
+        "share": "{share} % des {total} utilisateurs",
+        "breakdown": "{kept} déjà dedans · {added} ajoutés · {removed} retirés par vos modifications",
+        "recounted": "Recalculé {when} · {duration} ms",
+        "everyone_title": "Tous les utilisateurs correspondent",
+        "everyone_rule": "est vrai pour tout le monde. Vérifiez la valeur.",
+        "everyone_description": "Ces règles ne filtrent plus rien. Vérifiez les valeurs.",
+        "signals": "Quel signal a correspondu",
+        "nested_rules": "Un groupe de conditions imbriqué",
+        "sample": "Exemples",
+        "sample_count": "{shown} sur {total}",
+        "no_match": "Personne ne correspond à ces règles.",
+        "added": "Ajouté",
+        "saved_evaluated": "Version enregistrée évaluée le {date}"
+      },
+      "operators": {
+        "string": {
+          "contains": "contient",
+          "eq": "est",
+          "neq": "n'est pas"
+        },
+        "number": {
+          "gt": "est supérieur à",
+          "gte": "est au moins",
+          "lt": "est inférieur à",
+          "lte": "est au plus",
+          "eq": "est",
+          "neq": "n'est pas"
+        },
+        "date": {
+          "gt": "est après le",
+          "gte": "est le ou après le",
+          "lt": "est avant le",
+          "lte": "est le ou avant le"
+        },
+        "enum": {
+          "in": "est l'un de",
+          "nin": "n'est aucun de",
+          "eq": "est",
+          "neq": "n'est pas"
+        },
+        "boolean": {
+          "eq": "est"
+        }
+      },
+      "boolean": {
+        "true": "Oui",
+        "false": "Non"
+      },
+      "units": {
+        "days": "{count} jour | {count} jours",
+        "days_unit": "jours",
+        "kind": {
+          "currency": "€",
+          "days": "jours",
+          "count": "nombre"
+        }
+      },
+      "field_types": {
+        "string": "texte",
+        "number": "nombre",
+        "boolean": "oui / non",
+        "date": "date",
+        "enum": "liste",
+        "enum_plan": "offre"
+      },
+      "field_groups": {
+        "identity": "Utilisateur",
+        "activity": "Activité",
+        "memberships": "Espaces de travail",
+        "workspace": "Espace de travail",
+        "billing": "Facturation"
+      },
+      "enum": {
+        "customer_type": {
+          "individual": "Particulier",
+          "business": "Entreprise"
+        }
+      },
+      "fields": {
+        "name": {
+          "label": "Nom de l'espace de travail",
+          "description": "Nom affiché de l'espace de travail."
+        },
+        "created_at": {
+          "label": "Créé le",
+          "description": "Date de création de l'espace de travail."
+        },
+        "age_in_days": {
+          "label": "Ancienneté",
+          "description": "Jours écoulés depuis la création de l'espace de travail."
+        },
+        "members_count": {
+          "label": "Nombre de membres",
+          "description": "Membres de l'espace de travail, propriétaires compris."
+        },
+        "status": {
+          "label": "Statut",
+          "description": "Statut de l'espace de travail : actif, en essai, impayé…"
+        },
+        "plan_id": {
+          "label": "Offre",
+          "description": "Offre à laquelle l'espace de travail est abonné."
+        },
+        "is_paying": {
+          "label": "Payant",
+          "description": "L'espace de travail génère du revenu récurrent."
+        },
+        "is_on_trial": {
+          "label": "En essai",
+          "description": "L'espace de travail est en période d'essai."
+        },
+        "mrr": {
+          "label": "MRR",
+          "description": "Revenu récurrent mensuel de l'espace de travail."
+        },
+        "total_revenue": {
+          "label": "Revenu total",
+          "description": "Somme des factures payées."
+        },
+        "days_since_last_invoice": {
+          "label": "Jours depuis la dernière facture",
+          "description": "Jours écoulés depuis la dernière facture. Les espaces de travail jamais facturés ne correspondent pas."
+        },
+        "has_stripe_customer": {
+          "label": "Client Stripe",
+          "description": "L'espace de travail a un client Stripe."
+        },
+        "customer_type": {
+          "label": "Type de client",
+          "description": "Particulier ou entreprise."
+        },
+        "user_email": {
+          "label": "E-mail",
+          "description": "Adresse e-mail de l'utilisateur."
+        },
+        "user_name": {
+          "label": "Nom",
+          "description": "Nom affiché de l'utilisateur."
+        },
+        "user_language": {
+          "label": "Langue",
+          "description": "Code de langue de l'utilisateur (fr, en…)."
+        },
+        "user_is_validated": {
+          "label": "E-mail vérifié",
+          "description": "L'utilisateur a vérifié son adresse e-mail."
+        },
+        "user_created_at": {
+          "label": "Date d'inscription",
+          "description": "Date d'inscription de l'utilisateur."
+        },
+        "user_age_in_days": {
+          "label": "Ancienneté du compte",
+          "description": "Jours écoulés depuis l'inscription."
+        },
+        "days_since_last_active": {
+          "label": "Jours depuis la dernière activité",
+          "description": "Jours depuis la dernière activité. Les utilisateurs jamais actifs ne correspondent pas."
+        },
+        "workspaces_count": {
+          "label": "Nombre d'espaces de travail",
+          "description": "Espaces de travail auxquels l'utilisateur appartient."
+        },
+        "is_owner_of_any_workspace": {
+          "label": "Possède un espace de travail",
+          "description": "L'utilisateur possède au moins un espace de travail."
+        }
+      }
+    },
+    "permissions": {
+      "users": {
+        "profile": "Profil utilisateur",
+        "profile_description": "Voir qui est un utilisateur : identité, adresse, vérification, double authentification et rôle plateforme",
+        "workspaces": "Espaces de travail de l'utilisateur",
+        "workspaces_description": "Voir les espaces de travail d'un utilisateur et son rôle dans chacun",
+        "billing": "Facturation de l'utilisateur",
+        "billing_description": "Voir les factures et avoirs des espaces de travail qu'un utilisateur possède",
+        "segments": "Segments de l'utilisateur",
+        "segments_description": "Voir les segments d'un utilisateur et pourquoi il y correspond",
+        "security": "Sécurité et connexion",
+        "security_description": "Voir comment un utilisateur se connecte : méthodes, double authentification, sessions et vérification de l'e-mail",
+        "notes": "Notes internes sur un utilisateur",
+        "notes_description": "Lire et écrire les notes que les opérateurs gardent sur un utilisateur",
+        "platform_role": "Rôle plateforme",
+        "platform_role_description": "Voir si un utilisateur est admin plateforme, et le promouvoir ou le rétrograder",
+        "segment_preview": "Aperçu en direct du segment",
+        "segment_preview_description": "Voir qui correspond aux règles en cours d'édition, avant de les enregistrer",
+        "facts": "Chiffres de l'utilisateur",
+        "facts_description": "Voir les espaces de travail d'un utilisateur, sa langue, son activité et ce qui lui est facturé"
+      }
+    }
+  }
+}

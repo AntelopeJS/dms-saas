@@ -1,0 +1,10 @@
+/*
+ * A form control as wide as its row. A DMS form row is a two-column grid (a
+ * 240px label column, then the control): an editor that needs the width of a
+ * table (the plan's feature matrix, a segment's rules) spans both columns,
+ * under its label when it has one. The row is recognised by its column
+ * template, the one class the DMS gives it.
+ */
+[class*='grid-cols-[minmax(0,240px)'] > :has(.dms-saas-wide-field) {
+	grid-column: 1 / -1;
+}
