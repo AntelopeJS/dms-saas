@@ -55,6 +55,8 @@ export class SaasTenantBillingController extends PageController(
     description: `${KEY_PREFIX}.page.description`,
     category: workspaceSettingsCategory,
     icon: "i-ph-credit-card",
+    // After the DMS Members (1) and Roles (3) pages, before Data export (100).
+    order: 50,
     // The recovery surface of a blocked workspace: reachable under the tenant
     // access gate, unlike every other tenant page. Permission checks are
     // untouched — a member still sees only what their role allows.
