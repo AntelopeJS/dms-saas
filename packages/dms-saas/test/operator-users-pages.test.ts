@@ -48,6 +48,12 @@ describe("users list", () => {
     ]);
   });
 
+  it("offers no way to copy an account", async () => {
+    const { options } = await SaasUsersListController.table.serialize();
+
+    expect(options?.rowActions?.duplicate).toBe(false);
+  });
+
   it("asks the server to word promotions and demotions", async () => {
     const { options } = await SaasUsersListController.table.serialize();
 

@@ -62,6 +62,8 @@ export class SaasUsersListController extends PageController(
       add: false,
       copyLink: true,
       delete: false,
+      // An account is created by its owner signing up, never copied.
+      duplicate: false,
       edit: false,
       details: {
         isEnabled: true,
