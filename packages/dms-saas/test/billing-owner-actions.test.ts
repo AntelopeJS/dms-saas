@@ -593,6 +593,16 @@ describe("next invoice card", () => {
       ["$saas.tenant_billing.next_invoice.sent_to", "billing@acme.test"],
       ["$saas.tenant_billing.next_invoice.last_payment", 470.4],
     ]);
+    expect(rows.items[5]?.detail).toEqual({
+      key: "saas.tenant_billing.next_invoice.paid_on",
+      params: {
+        date: {
+          type: "date",
+          value: "2026-09-07T00:00:00.000Z",
+          format: "medium",
+        },
+      },
+    });
     expect(rows.items[1]?.detail).toEqual({
       key: "saas.text.dot_list",
       params: {

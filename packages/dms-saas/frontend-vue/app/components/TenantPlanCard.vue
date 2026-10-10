@@ -26,7 +26,8 @@ const { resolveApiError } = useApiErrorMessage()
 const tenantPlan = useTenantPlan()
 const { data, error: loadError } = tenantPlan
 const billingStatus = useBillingStatus()
-const { formatMajorUnits } = useMoneyFormat()
+const nextInvoice = useNextInvoice()
+const { formatMajorUnits, formatMinorUnits } = useMoneyFormat()
 const { statusView } = useSaasStatus()
 const planDescription = usePlanDescription()
 const { formatFeatureValue } = usePlanFeatureFormat()
@@ -164,6 +165,15 @@ const seatHint = computed(() => {
 		: t(`${KEY_PREFIX}.seats_unlimited`, { used: seats.value.occupied })
 })
 
+/** "Nov 8, 2026 · €34.80 incl. VAT" once Stripe's preview answers. */
+function renewalValue(periodEnd: string): string {
+	const date = day(periodEnd)
+	const total = nextInvoice.data.value?.totalMinorUnits
+	if (typeof total !== 'number') return date
+	const amount = formatMinorUnits(total, nextInvoice.data.value?.currency)
+	return t(`${KEY_PREFIX}.next_renewal_amount`, { date, amount })
+}
+
 const facts = computed(() => {
 	const plan = current.value
 	if (!plan || !data.value) return []
@@ -189,7 +199,7 @@ const facts = computed(() => {
 	) {
 		items.push({
 			label: t(`${KEY_PREFIX}.next_renewal`),
-			value: day(data.value.currentPeriodEnd),
+			value: renewalValue(data.value.currentPeriodEnd),
 		})
 	}
 	return items
@@ -246,6 +256,7 @@ function openUpgrade(plan: OfferedPlanView): void {
 // the plan too: they read their routes again once it changed.
 async function refresh(): Promise<void> {
 	isLoading.value = true
+	void nextInvoice.refresh()
 	await Promise.all([tenantPlan.refresh(), billingStatus.refresh()])
 	isLoading.value = false
 	refreshPageBlocks()
@@ -417,6 +428,7 @@ function openChoosePlanLink(event: MouseEvent): void {
 onMounted(async () => {
 	document.addEventListener('click', openChoosePlanLink, true)
 	await releaseCancelledCheckout()
+	void nextInvoice.load()
 	await Promise.all([tenantPlan.load(), billingStatus.load()])
 	isLoading.value = false
 	await consumeUpgradeParam()
@@ -526,6 +538,7 @@ onBeforeUnmount(() => {
 				:hint="seatHint"
 				:max="current.maxMembers"
 				:segments="meterSegments"
+				format="fraction"
 				legend
 				:warn-at="80"
 				:error-at="100"

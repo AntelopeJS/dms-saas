@@ -16,7 +16,8 @@
         "total": "Total dû",
         "charged_to": "Prélevé sur",
         "sent_to": "Envoyée à",
-        "last_payment": "Dernier paiement"
+        "last_payment": "Dernier paiement",
+        "paid_on": "Payé le {date}"
       },
       "invoices": {
         "caption": "Factures et avoirs",
@@ -288,7 +289,8 @@
         "cancel_data": "Données conservées ensuite",
         "cancel_data_days": "{retention} jour | {retention} jours",
         "cancel_note": "Téléchargez d'abord tout depuis l'export des données. Encore dans la période satisfait ou remboursé ? Demandez plutôt un remboursement.",
-        "cancel_scheduled": "L'abonnement prend fin le {date}."
+        "cancel_scheduled": "L'abonnement prend fin le {date}.",
+        "next_renewal_amount": "{date} · {amount} TTC"
       },
       "plan_change": {
         "title": "Changer d'offre",

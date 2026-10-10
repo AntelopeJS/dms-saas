@@ -46,6 +46,7 @@ const PAID_STATUS = "paid";
 const KEY_PREFIX = "$saas.tenant_billing.next_invoice";
 const PERCENT = 100;
 const MASKED_DIGITS = "••••";
+const PAID_ON_KEY = "saas.tenant_billing.next_invoice.paid_on";
 
 /**
  * The rows of the card, plus the figures the trial notice reads. An empty
@@ -76,6 +77,11 @@ function fullDay(
   value: string | Date | null | undefined,
 ): ComposedText | undefined {
   return value ? valueText(dateParam(value)) : undefined;
+}
+
+// The list draws no pill beside an amount: the state reads in the detail.
+function paidOn(paidAt: Date | null | undefined): ComposedText | undefined {
+  return paidAt ? composed(PAID_ON_KEY, { date: dateParam(paidAt) }) : undefined;
 }
 
 function fromMinorUnits(amount: number): number {
@@ -148,7 +154,7 @@ function contextRows(context: NextInvoiceContext): KeyValueListItem[] {
       value: fromMinorUnits(lastPayment.total || lastPayment.amount),
       type: "money",
       currency: lastPayment.currency.toUpperCase(),
-      detail: fullDay(lastPayment.paidAt),
+      detail: paidOn(lastPayment.paidAt),
     });
   }
   return rows;

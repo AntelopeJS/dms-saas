@@ -1,29 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-
-/** The figures of the next invoice the strip quotes. */
-interface NextInvoiceSummary {
-	totalMinorUnits: number | null
-	currency: string | null
-}
+import { computed, onMounted } from 'vue'
 
 // Content of the trial-ending layout strip (see registerTrialEndingBanners),
 // shown to the workspace owner 7, 3 and 1 day before the trial ends.
 const KEY_PREFIX = 'saas.tenant_billing.trial'
 const BILLING_PATH = '/settings/workspace/billing'
-const NEXT_INVOICE_ENDPOINT = '/api/saas/tenant/upcoming-invoice'
 const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 	day: 'numeric',
 	month: 'short',
 }
 
-const { $authFetch } = useAuthFetch()
 const { data: plan, load: loadPlan } = useTenantPlan()
 const { data: billingStatus, load: loadBillingStatus } = useBillingStatus()
 const { formatMinorUnits } = useMoneyFormat()
 const { t, locale } = useI18n()
 const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
-const nextInvoice = ref<NextInvoiceSummary | null>(null)
+const { data: nextInvoice, load: loadNextInvoice } = useNextInvoice()
 
 const trialEndsAt = computed(() => plan.value?.currentPeriodEnd ?? null)
 const daysLeft = computed(() =>
@@ -58,12 +50,6 @@ const charge = computed(() => {
 			})
 		: t(`${KEY_PREFIX}.charge`, params)
 })
-
-async function loadNextInvoice(): Promise<void> {
-	nextInvoice.value = await $authFetch<NextInvoiceSummary>(
-		NEXT_INVOICE_ENDPOINT,
-	).catch(() => null)
-}
 
 onMounted(() => {
 	void loadPlan()

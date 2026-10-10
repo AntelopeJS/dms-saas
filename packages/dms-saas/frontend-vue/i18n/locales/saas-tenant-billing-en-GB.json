@@ -16,7 +16,8 @@
         "total": "Total due",
         "charged_to": "Charged to",
         "sent_to": "Sent to",
-        "last_payment": "Last payment"
+        "last_payment": "Last payment",
+        "paid_on": "Paid {date}"
       },
       "invoices": {
         "caption": "Invoices & credit notes",
@@ -288,7 +289,8 @@
         "cancel_data": "Data kept after that",
         "cancel_data_days": "{retention} day | {retention} days",
         "cancel_note": "Download everything first from Data export. Still within the money-back window? Request a refund instead.",
-        "cancel_scheduled": "The subscription ends on {date}."
+        "cancel_scheduled": "The subscription ends on {date}.",
+        "next_renewal_amount": "{date} · {amount} incl. VAT"
       },
       "plan_change": {
         "title": "Change plan",
