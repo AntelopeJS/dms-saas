@@ -55,7 +55,8 @@
           "you": "You",
           "created": "created {name} on {date}",
           "more_owners": "+{count} other | +{count} other | +{count} others",
-          "owner_and_others": "{name} {others}"
+          "owner_and_others": "{name} {others}",
+          "load_failed": "Couldn't load the workspace summary."
         },
         "danger_zone_title": "Danger zone",
         "export": {

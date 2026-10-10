@@ -118,7 +118,8 @@
 				"checkout_unavailable": "Le prestataire de paiement n'a pas répondu. Rien n'a été débité. Réessayez dans 15 minutes.",
 				"payment_declined": "La carte a été refusée. Rien n'a été débité.",
 				"payment_unavailable": "Stripe n'a pas répondu. Rien n'a été débité ; réessayez dans un moment.",
-				"preview_unavailable": "Stripe n'a pas pu prévisualiser la prochaine facture pour l'instant."
+				"preview_unavailable": "Stripe n'a pas pu prévisualiser la prochaine facture pour l'instant.",
+				"customer_balance_provider_unavailable": "Stripe n'a pas pu renvoyer le solde client pour le moment."
 			},
 			"migration": {
 				"already_pending": "Une migration est déjà en attente pour ce plan",
@@ -445,6 +446,14 @@
 				"plan_migrated": {
 					"title": "Plan modifié",
 					"description": "Votre workspace est désormais sur le plan {plan}."
+				},
+				"platform_owner_added": {
+					"title": "Admin plateforme ajouté",
+					"description": "{email} est désormais admin plateforme."
+				},
+				"platform_owner_removed": {
+					"title": "Admin plateforme retiré",
+					"description": "{email} n'est plus admin plateforme."
 				}
 			},
 			"category": {

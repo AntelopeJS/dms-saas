@@ -118,7 +118,8 @@
 				"checkout_unavailable": "The payment provider did not respond. Nothing was charged. Try again in 15 minutes.",
 				"payment_declined": "The card was declined. Nothing was charged.",
 				"payment_unavailable": "Stripe didn't answer. Nothing was charged; try again in a moment.",
-				"preview_unavailable": "Stripe couldn't preview the next invoice right now."
+				"preview_unavailable": "Stripe couldn't preview the next invoice right now.",
+				"customer_balance_provider_unavailable": "Stripe couldn't return the customer balance right now."
 			},
 			"migration": {
 				"already_pending": "A migration is already pending for this plan",
@@ -445,6 +446,14 @@
 				"plan_migrated": {
 					"title": "Plan changed",
 					"description": "Your workspace is now on the {plan} plan."
+				},
+				"platform_owner_added": {
+					"title": "Platform admin added",
+					"description": "{email} is now a platform admin."
+				},
+				"platform_owner_removed": {
+					"title": "Platform admin removed",
+					"description": "{email} is no longer a platform admin."
 				}
 			},
 			"category": {

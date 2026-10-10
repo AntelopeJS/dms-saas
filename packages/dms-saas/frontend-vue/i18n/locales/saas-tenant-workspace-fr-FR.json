@@ -55,7 +55,8 @@
           "you": "Vous",
           "created": "a créé {name} le {date}",
           "more_owners": "+{count} autre | +{count} autre | +{count} autres",
-          "owner_and_others": "{name} {others}"
+          "owner_and_others": "{name} {others}",
+          "load_failed": "Impossible de charger le résumé de l'espace de travail."
         },
         "danger_zone_title": "Zone de danger",
         "export": {

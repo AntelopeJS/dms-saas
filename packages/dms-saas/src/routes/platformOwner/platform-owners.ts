@@ -20,6 +20,13 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
 const ADDED_ICON = "i-ph-user-plus";
 const REMOVED_ICON = "i-ph-user-minus";
+const ADDED_TITLE = "$saas.notifications.payload.platform_owner_added.title";
+const ADDED_DESCRIPTION =
+  "$saas.notifications.payload.platform_owner_added.description";
+const REMOVED_TITLE =
+  "$saas.notifications.payload.platform_owner_removed.title";
+const REMOVED_DESCRIPTION =
+  "$saas.notifications.payload.platform_owner_removed.description";
 
 /** What a promotion or a demotion answers. */
 export interface PlatformRoleChange {
@@ -69,8 +76,9 @@ export class SaasPlatformOwnersController extends Controller(
       platformOwnerAddedSubject,
       {
         icon: ADDED_ICON,
-        title: "Platform admin added",
-        description: `${impact.user.email} is now a platform admin.`,
+        title: ADDED_TITLE,
+        description: ADDED_DESCRIPTION,
+        params: { email: impact.user.email },
       },
       userId,
     );
@@ -103,8 +111,9 @@ export class SaasPlatformOwnersController extends Controller(
     await syncSeatsAfterPlatformRoleChange(userId, impact.memberWorkspaces);
     await notifyAllPlatformOwners(platformOwnerRemovedSubject, {
       icon: REMOVED_ICON,
-      title: "Platform admin removed",
-      description: `${impact.user.email} is no longer a platform admin.`,
+      title: REMOVED_TITLE,
+      description: REMOVED_DESCRIPTION,
+      params: { email: impact.user.email },
     });
     return { userId };
   }
