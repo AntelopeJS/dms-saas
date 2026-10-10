@@ -182,37 +182,42 @@ async function insertSubscription(
   ]);
 }
 
-async function inviteOwner(
+async function addOwner(
   tenantId: string,
   input: ValidatedWorkspaceInput,
   operator: User,
-): Promise<Omit<CreatedWorkspace, "access">> {
+): Promise<InviteUserToTenantResult> {
   // The owner has no account yet, so the operator's language is the best
   // guess at theirs; the email follows the language stored on the invitation.
-  const language = operator.language;
-  const owner = await inviteUserToTenant({
+  return inviteUserToTenant({
     tenantId,
     email: input.ownerEmail,
-    language,
+    language: operator.language,
     roleIds: [],
     asTenantOwner: true,
   });
-  // Sent here rather than through `sendEmail`, which fires and forgets: the
-  // operator has to learn that the owner never got the link.
-  const invitationEmail =
-    owner.kind === "invited"
-      ? await deliverInvitationEmail(
-          {
-            email: input.ownerEmail,
-            token: owner.token,
-            firstname: null,
-            lastname: null,
-            language,
-          },
-          { workspaceName: input.name, inviterName: inviterNameOf(operator) },
-        )
-      : null;
-  return { tenantId, owner, invitationEmail };
+}
+
+/**
+ * Sent here rather than through `sendEmail`, which fires and forgets: the
+ * operator has to learn that the owner never got the link.
+ */
+async function emailOwnerInvitation(
+  owner: InviteUserToTenantResult,
+  input: ValidatedWorkspaceInput,
+  operator: User,
+): Promise<InvitationEmailDelivery | null> {
+  if (owner.kind !== "invited") return null;
+  return deliverInvitationEmail(
+    {
+      email: input.ownerEmail,
+      token: owner.token,
+      firstname: null,
+      lastname: null,
+      language: operator.language,
+    },
+    { workspaceName: input.name, inviterName: inviterNameOf(operator) },
+  );
 }
 
 /** Creates the workspace, its subscription and its owner (added or invited). */
@@ -224,8 +229,11 @@ export async function createWorkspaceForOwner(
   const [tenantId] = await GetModel(TenantModel).insert([
     { name: input.name, createdAt: now, updatedAt: now },
   ]);
-  const created = await inviteOwner(tenantId, input, operator);
+  const owner = await addOwner(tenantId, input, operator);
   await insertSubscription(tenantId, input, operator);
   await recomputeTenantBillingState(tenantId);
-  return { ...created, access: input.access };
+  // Last: a slow mail server must not leave the workspace without its plan,
+  // listed as free with no plan, while the operator waits.
+  const invitationEmail = await emailOwnerInvitation(owner, input, operator);
+  return { tenantId, owner, invitationEmail, access: input.access };
 }
