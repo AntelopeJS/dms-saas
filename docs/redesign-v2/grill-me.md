@@ -410,7 +410,10 @@ Recorded after the build and the browser pass, so the answers above stay as they
 - **Q35, price change:** the `Form` block cannot intercept a submit, so the consequence is stated
   in the live preview before saving and in a notice after.
 - **Q37, migration tabs:** a stored `stage` (running, needs attention, done) backs the tabs, since
-  a select column cannot be filtered on several values.
+  a select column cannot be filtered on several values. A "Partially failed" migration is done:
+  it sits under Completed, as the answer files it, and not under Needs attention as the design
+  mockup does (kept after the 2026-10 audit). Nothing is left in flight on it, and its failed
+  workspaces are still listed, with "Retry failed", on its detail page.
 - **Q40, timeline:** no "final reminder" step and no fixed retry days: the module sends no final
   reminder and cannot read Stripe's retry schedule.
 - **Q43, upgrades:** an owner's upgrade charges the prorated difference at once
