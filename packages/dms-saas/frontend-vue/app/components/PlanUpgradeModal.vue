@@ -100,12 +100,19 @@ function schedulePricing(): void {
 	pricingTimer = setTimeout(() => void price(), PREVIEW_DEBOUNCE_MS)
 }
 
-watch(open, async (isOpen) => {
-	if (!isOpen) return
-	preview.value = null
-	await loadIdentity()
-	void price()
-})
+// Immediate: `?upgrade=<planId>` can open the dialog before it is mounted
+// (the owner check that mounts it resolves last), and the identity must still
+// be read then.
+watch(
+	open,
+	async (isOpen) => {
+		if (!isOpen) return
+		preview.value = null
+		await loadIdentity()
+		void price()
+	},
+	{ immediate: true },
+)
 
 watch(
 	() => draft.value.country,
