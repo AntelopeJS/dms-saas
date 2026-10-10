@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Fragment, computed, resolveComponent } from 'vue'
+import { type FunctionalComponent, computed, resolveComponent } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
 
@@ -81,8 +81,14 @@ const groupWrapper = computed(() =>
 	props.sectioned ? DmsFieldRowComponent : 'div',
 )
 // Compact, the fields of a group are rows of their own: no box around them,
-// which would also take the hairline off the first row it holds.
-const clusterWrapper = computed(() => (props.sectioned ? 'div' : Fragment))
+// which would also take the hairline off the first row it holds. Not
+// `Fragment`: drawn as a component it drops the slot it is handed, and with it
+// every field of the cluster.
+const SlotPassthrough: FunctionalComponent = (_props, { slots }) =>
+	slots.default?.()
+const clusterWrapper = computed(() =>
+	props.sectioned ? 'div' : SlotPassthrough,
+)
 
 const { countryItems } = useBillingCountries()
 const { t } = useI18n()
@@ -293,6 +299,7 @@ function cluster(className: string): ClusterBindings {
 					<DmsInputEmail
 						:id="id"
 						v-model="draft.billingEmail"
+						:aria-label="$t(`${KEY_PREFIX}.billing_email`)"
 						type="email"
 						autocomplete="email"
 						:disabled="isLocked"
