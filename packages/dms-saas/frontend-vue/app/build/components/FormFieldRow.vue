@@ -24,6 +24,11 @@ interface FormFieldRowProps {
 	 * off for a group of controls (cards, a Stripe element).
 	 */
 	labelsControl?: boolean
+	/**
+	 * Label above the control, no padding nor hairline: one of several fields
+	 * sharing a row of a card, which spaces them itself.
+	 */
+	stacked?: boolean
 }
 
 interface FormFieldRowControl {
@@ -50,6 +55,7 @@ const props = withDefaults(defineProps<FormFieldRowProps>(), {
 	required: false,
 	inset: false,
 	labelsControl: true,
+	stacked: false,
 })
 const slots = defineSlots<FormFieldRowSlots>()
 
@@ -57,14 +63,17 @@ const controlId = useId()
 
 // A form row without a label stacks: in the form layout its control would
 // sit in the 240px label column.
-const layout = computed(() => (props.label ? 'form' : 'stack'))
+const layout = computed(() =>
+	props.label && !props.stacked ? 'form' : 'stack',
+)
+const spacing = computed(() => (props.stacked ? 'list' : 'row'))
 </script>
 
 <template>
 	<DmsFieldRow
 		:layout="layout"
 		:inset="props.inset"
-		spacing="row"
+		:spacing="spacing"
 		:label="props.label"
 		:description="props.description"
 		:label-for="props.labelsControl ? controlId : undefined"

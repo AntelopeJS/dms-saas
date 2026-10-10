@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, resolveComponent } from 'vue'
+import { Fragment, computed, resolveComponent } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
 
@@ -15,10 +15,16 @@ interface AddressFieldRow {
 	autocomplete: string
 }
 
-/** The props of a group: a titled section, or a stretch of rows. */
+/** The props of a group: a titled row of the card, or a stretch of rows. */
 interface GroupBindings {
-	title?: string
+	label?: string
 	description?: string
+	layout?: 'form'
+	class?: string
+}
+
+/** The props of the box around fields sharing a row, if any. */
+interface ClusterBindings {
 	class?: string
 }
 
@@ -30,8 +36,8 @@ const props = defineProps<{
 	vatVerificationStatus?: VatVerificationStatus | null
 	isLocked?: boolean
 	/**
-	 * One titled section per group (the billing page); compact stacked fields
-	 * otherwise (the upgrade dialog).
+	 * One card whose rows are the groups, titled, their fields side by side
+	 * (the billing page); one row per field otherwise (the upgrade dialog).
 	 */
 	sectioned?: boolean
 }>()
@@ -49,8 +55,12 @@ const VAT_BADGE_TONES: Record<VatVerificationStatus, VatBadgeTone> = {
 	unverified: 'warning',
 }
 const KEY_PREFIX = 'saas.tenant_billing.billing_info'
-const ADDRESS_FIELDS: AddressFieldRow[] = [
-	{ id: 'line1', label: 'address_line1', autocomplete: 'address-line1' },
+const STREET_FIELD: AddressFieldRow = {
+	id: 'line1',
+	label: 'address_line1',
+	autocomplete: 'address-line1',
+}
+const LOCALITY_FIELDS: AddressFieldRow[] = [
 	{ id: 'postalCode', label: 'postal_code', autocomplete: 'postal-code' },
 	{ id: 'city', label: 'city', autocomplete: 'address-level2' },
 ]
@@ -58,11 +68,21 @@ const ADDRESS_FIELDS: AddressFieldRow[] = [
 // above each group but the first, as between its rows.
 const COMPACT_GROUP_CLASS = 'border-muted border-t first:border-t-0'
 
-// Literal, so the build resolves the DMS section at compile time.
-const DmsSectionComponent = resolveComponent('DmsSection')
+// Side by side once the row has room, as the settings design pairs fields
+// (company name and VAT number; postal code, city and country).
+const CLUSTER_CLASS = '@container'
+const PAIR_GRID_CLASS = 'grid gap-3 @min-[420px]:grid-cols-2'
+const TRIPLE_GRID_CLASS =
+	'grid gap-3 @min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.4fr)]'
+
+// Literal, so the build resolves the DMS field row at compile time.
+const DmsFieldRowComponent = resolveComponent('DmsFieldRow')
 const groupWrapper = computed(() =>
-	props.sectioned ? DmsSectionComponent : 'div',
+	props.sectioned ? DmsFieldRowComponent : 'div',
 )
+// Compact, the fields of a group are rows of their own: no box around them,
+// which would also take the hairline off the first row it holds.
+const clusterWrapper = computed(() => (props.sectioned ? 'div' : Fragment))
 
 const { countryItems } = useBillingCountries()
 const { t } = useI18n()
@@ -88,21 +108,29 @@ function selectCustomerType(customerType: CustomerType): void {
 function group(key: string): GroupBindings {
 	if (!props.sectioned) return { class: COMPACT_GROUP_CLASS }
 	return {
-		title: t(`${KEY_PREFIX}.sections.${key}.title`),
+		label: t(`${KEY_PREFIX}.sections.${key}.title`),
 		description: t(`${KEY_PREFIX}.sections.${key}.description`, {
 			country: countryLabel.value,
 		}),
+		layout: 'form',
 	}
+}
+
+function cluster(className: string): ClusterBindings {
+	return props.sectioned ? { class: className } : {}
 }
 </script>
 
 <template>
-	<FormRows has-required :legend-class="sectioned ? 'pt-3' : undefined">
+	<FormRows
+		has-required
+		:legend-class="sectioned ? 'px-[18px] pb-4' : undefined"
+	>
 		<component :is="groupWrapper" v-bind="group('customer_type')">
 			<FormFieldRow
 				:label="sectioned ? undefined : $t(`${KEY_PREFIX}.customer_type`)"
 				:error="fieldError('customerType')"
-				:inset="sectioned"
+				:stacked="sectioned"
 				:labels-control="false"
 			>
 				<!-- Side by side once the control column has room for both cards,
@@ -151,78 +179,104 @@ function group(key: string): GroupBindings {
 		</component>
 
 		<component :is="groupWrapper" v-if="isBusiness" v-bind="group('company')">
-			<FormFieldRow
-				:label="$t(`${KEY_PREFIX}.company_name`)"
-				:error="fieldError('companyName')"
-				:inset="sectioned"
-				required
-			>
-				<template #default="{ id }">
-					<DmsInputText
-						:id="id"
-						v-model="draft.companyName"
-						autocomplete="organization"
-						:disabled="isLocked"
-						class="w-full"
-					/>
-				</template>
-			</FormFieldRow>
-			<FormFieldRow :label="$t(`${KEY_PREFIX}.vat_number`)" :inset="sectioned">
-				<template #default="{ id }">
-					<div class="flex flex-wrap items-center gap-2">
-						<DmsInputText
-							:id="id"
-							v-model="draft.vatNumber"
-							:disabled="isLocked"
-							class="min-w-40 grow"
-						/>
-						<DmsStatusPill
-							v-if="vatVerificationStatus"
-							:tone="VAT_BADGE_TONES[vatVerificationStatus]"
-							:label="$t(`${KEY_PREFIX}.vat.${vatVerificationStatus}`)"
-						/>
-					</div>
-				</template>
-			</FormFieldRow>
+			<component :is="clusterWrapper" v-bind="cluster(CLUSTER_CLASS)">
+				<component :is="clusterWrapper" v-bind="cluster(PAIR_GRID_CLASS)">
+					<FormFieldRow
+						:label="$t(`${KEY_PREFIX}.company_name`)"
+						:error="fieldError('companyName')"
+						:stacked="sectioned"
+						required
+					>
+						<template #default="{ id }">
+							<DmsInputText
+								:id="id"
+								v-model="draft.companyName"
+								autocomplete="organization"
+								:disabled="isLocked"
+								class="w-full"
+							/>
+						</template>
+					</FormFieldRow>
+					<FormFieldRow
+						:label="$t(`${KEY_PREFIX}.vat_number`)"
+						:stacked="sectioned"
+					>
+						<template v-if="vatVerificationStatus" #label-extra>
+							<DmsStatusPill
+								:tone="VAT_BADGE_TONES[vatVerificationStatus]"
+								:label="$t(`${KEY_PREFIX}.vat.${vatVerificationStatus}`)"
+							/>
+						</template>
+						<template #default="{ id }">
+							<DmsInputText
+								:id="id"
+								v-model="draft.vatNumber"
+								:disabled="isLocked"
+								class="w-full"
+							/>
+						</template>
+					</FormFieldRow>
+				</component>
+			</component>
 		</component>
 
 		<component :is="groupWrapper" v-bind="group('address')">
 			<FormFieldRow
-				v-for="field in ADDRESS_FIELDS"
-				:key="field.id"
-				:label="$t(`${KEY_PREFIX}.${field.label}`)"
-				:error="fieldError(field.id)"
-				:inset="sectioned"
+				:label="$t(`${KEY_PREFIX}.${STREET_FIELD.label}`)"
+				:error="fieldError(STREET_FIELD.id)"
+				:stacked="sectioned"
 				required
 			>
 				<template #default="{ id }">
 					<DmsInputText
 						:id="id"
-						v-model="draft[field.id]"
-						:autocomplete="field.autocomplete"
+						v-model="draft[STREET_FIELD.id]"
+						:autocomplete="STREET_FIELD.autocomplete"
 						:disabled="isLocked"
 						class="w-full"
 					/>
 				</template>
 			</FormFieldRow>
-			<FormFieldRow
-				:label="$t(`${KEY_PREFIX}.country`)"
-				:error="fieldError('country')"
-				:inset="sectioned"
-				required
-			>
-				<template #default="{ id }">
-					<USelectMenu
-						:id="id"
-						v-model="draft.country"
-						:items="countryItems"
-						value-key="value"
-						:disabled="isLocked"
-						:placeholder="$t(`${KEY_PREFIX}.country_placeholder`)"
-						class="w-full"
-					/>
-				</template>
-			</FormFieldRow>
+			<component :is="clusterWrapper" v-bind="cluster(CLUSTER_CLASS)">
+				<component :is="clusterWrapper" v-bind="cluster(TRIPLE_GRID_CLASS)">
+					<FormFieldRow
+						v-for="field in LOCALITY_FIELDS"
+						:key="field.id"
+						:label="$t(`${KEY_PREFIX}.${field.label}`)"
+						:error="fieldError(field.id)"
+						:stacked="sectioned"
+						required
+					>
+						<template #default="{ id }">
+							<DmsInputText
+								:id="id"
+								v-model="draft[field.id]"
+								:autocomplete="field.autocomplete"
+								:disabled="isLocked"
+								class="w-full"
+							/>
+						</template>
+					</FormFieldRow>
+					<FormFieldRow
+						:label="$t(`${KEY_PREFIX}.country`)"
+						:error="fieldError('country')"
+						:stacked="sectioned"
+						required
+					>
+						<template #default="{ id }">
+							<USelectMenu
+								:id="id"
+								v-model="draft.country"
+								:items="countryItems"
+								value-key="value"
+								:disabled="isLocked"
+								:placeholder="$t(`${KEY_PREFIX}.country_placeholder`)"
+								class="w-full"
+							/>
+						</template>
+					</FormFieldRow>
+				</component>
+			</component>
 		</component>
 
 		<component :is="groupWrapper" v-bind="group('email')">
@@ -232,7 +286,7 @@ function group(key: string): GroupBindings {
 					sectioned ? undefined : $t(`${KEY_PREFIX}.billing_email_hint`)
 				"
 				:error="fieldError('billingEmail')"
-				:inset="sectioned"
+				:stacked="sectioned"
 				required
 			>
 				<template #default="{ id }">

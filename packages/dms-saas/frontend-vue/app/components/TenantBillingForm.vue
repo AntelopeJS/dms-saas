@@ -117,58 +117,55 @@ onMounted(() => {
 </script>
 
 <template>
-	<section class="flex flex-col gap-3" :aria-label="$t(`${KEY_PREFIX}.title`)">
-		<div class="flex flex-wrap items-start justify-between gap-2">
-			<div>
-				<h3 class="text-highlighted text-[15px] font-semibold">
-					{{ $t(`${KEY_PREFIX}.title`) }}
-				</h3>
-				<p class="text-muted text-sm">{{ $t(`${KEY_PREFIX}.description`) }}</p>
-			</div>
-			<DmsStatusPill
-				v-if="!isLoading && !loadFailed && isIncomplete"
-				tone="warning"
-				:label="$t(`${KEY_PREFIX}.to_complete`)"
-			/>
-			<span v-else-if="savedLabel" class="text-muted text-xs">
-				{{ $t(`${KEY_PREFIX}.saved_on`, { date: savedLabel }) }}
-			</span>
-		</div>
+	<form id="saas-billing-info-form" novalidate @submit.prevent="save">
+		<DmsSection
+			:title="$t(`${KEY_PREFIX}.title`)"
+			:description="$t(`${KEY_PREFIX}.description`)"
+		>
+			<template #trail>
+				<DmsStatusPill
+					v-if="!isLoading && !loadFailed && isIncomplete"
+					tone="warning"
+					:label="$t(`${KEY_PREFIX}.to_complete`)"
+				/>
+				<span v-else-if="savedLabel" class="text-muted text-xs">
+					{{ $t(`${KEY_PREFIX}.saved_on`, { date: savedLabel }) }}
+				</span>
+			</template>
 
-		<DmsCard v-if="isLoading">
-			<div class="flex flex-col gap-3">
+			<div v-if="isLoading" class="flex flex-col gap-3 p-[18px]">
 				<USkeleton class="h-16 w-full" />
 				<USkeleton class="h-10 w-full" />
 				<USkeleton class="h-10 w-full" />
 			</div>
-		</DmsCard>
 
-		<DmsSaasLoadFailure
-			v-else-if="loadFailed"
-			:title="$t(`${KEY_PREFIX}.load_failed`)"
-			@retry="load"
-		/>
+			<div v-else-if="loadFailed" class="p-[18px]">
+				<DmsSaasLoadFailure
+					:title="$t(`${KEY_PREFIX}.load_failed`)"
+					@retry="load"
+				/>
+			</div>
 
-		<form v-else id="saas-billing-info-form" novalidate @submit.prevent="save">
 			<DmsSaasBillingIdentityFields
+				v-else
 				v-model="draft"
 				sectioned
 				:invalid-fields="invalidFields"
 				:vat-verification-status="vatVerificationStatus"
 				:is-locked="!isTenantOwner"
 			/>
-			<DmsSaveBar
-				v-if="isTenantOwner"
-				:dirty="changedFields.length > 0"
-				:saving="isSaving"
-				:changes="changeLabels"
-				form="saas-billing-info-form"
-				:save-label="$t(`${KEY_PREFIX}.save`)"
-				@discard="discard"
-			/>
-			<p v-else class="text-muted mt-3 text-sm">
-				{{ $t(`${KEY_PREFIX}.owner_only`) }}
-			</p>
-		</form>
-	</section>
+		</DmsSection>
+		<DmsSaveBar
+			v-if="isTenantOwner && !isLoading && !loadFailed"
+			:dirty="changedFields.length > 0"
+			:saving="isSaving"
+			:changes="changeLabels"
+			form="saas-billing-info-form"
+			:save-label="$t(`${KEY_PREFIX}.save`)"
+			@discard="discard"
+		/>
+		<p v-else-if="!isLoading && !loadFailed" class="text-muted mt-3 text-sm">
+			{{ $t(`${KEY_PREFIX}.owner_only`) }}
+		</p>
+	</form>
 </template>
