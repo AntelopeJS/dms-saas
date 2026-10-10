@@ -73,7 +73,7 @@
           "subscription_stops": "L'abonnement {plan} s'arrête.",
           "subscription_stops_unpaid": "L'abonnement {plan} s'arrête ; la facture impayée {invoice} reste due.",
           "action": "Supprimer l'espace",
-          "confirm_title": "Supprimer l'espace {name} ?",
+          "confirm_title": "Supprimer « {name} » ?",
           "confirm_description": "L'accès est retiré immédiatement. Les données sont détruites après {days} jours, le {date}.",
           "impact_members": "Membres qui perdent l'accès maintenant",
           "impact_invites": "Invitations en attente annulées",
@@ -85,7 +85,7 @@
           "next_workspace": "Après la suppression, vous arrivez dans {name}, votre espace suivant.",
           "no_next_workspace": "Après la suppression, vous n'avez plus d'autre espace : vous pourrez en créer un depuis le sélecteur.",
           "submit": "Supprimer définitivement",
-          "deleted": "L'espace {name} a été supprimé."
+          "deleted": "« {name} » a été supprimé."
         }
       },
       "data_export": {

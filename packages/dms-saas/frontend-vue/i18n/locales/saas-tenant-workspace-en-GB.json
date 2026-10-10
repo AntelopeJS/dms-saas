@@ -73,7 +73,7 @@
           "subscription_stops": "The {plan} subscription stops.",
           "subscription_stops_unpaid": "The {plan} subscription stops; the unpaid invoice {invoice} stays due.",
           "action": "Delete workspace",
-          "confirm_title": "Delete the {name} workspace?",
+          "confirm_title": "Delete “{name}”?",
           "confirm_description": "Access is revoked immediately. Data is destroyed after {days} days, on {date}.",
           "impact_members": "Members who lose access now",
           "impact_invites": "Pending invites cancelled",
@@ -85,7 +85,7 @@
           "next_workspace": "After deleting, you land in {name}, your next workspace.",
           "no_next_workspace": "After deleting, you have no other workspace: you can create one from the switcher.",
           "submit": "Delete permanently",
-          "deleted": "The {name} workspace was deleted."
+          "deleted": "“{name}” was deleted."
         }
       },
       "data_export": {
