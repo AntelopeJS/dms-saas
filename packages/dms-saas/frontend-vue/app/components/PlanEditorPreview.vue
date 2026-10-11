@@ -357,15 +357,19 @@ onBeforeUnmount(() =>
 				icon="i-ph-info"
 				:title="$t('saas.catalog.editor.stripe.on_save_title')"
 				:description="
-					$t('saas.catalog.editor.stripe.on_save', {
-						price: money(price),
-						interval: $t(`saas.catalog.plans.interval.${interval}`),
-						previous:
-							syncedAmount !== null
-								? money(syncedAmount, context.syncedCurrency ?? currency)
-								: '—',
-						count: context.workspaceCount,
-					})
+					$t(
+						'saas.catalog.editor.stripe.on_save',
+						{
+							price: money(price),
+							interval: $t(`saas.catalog.plans.interval.${interval}`),
+							previous:
+								syncedAmount !== null
+									? money(syncedAmount, context.syncedCurrency ?? currency)
+									: '—',
+							count: context.workspaceCount,
+						},
+						context.workspaceCount,
+					)
 				"
 			/>
 		</DmsCard>

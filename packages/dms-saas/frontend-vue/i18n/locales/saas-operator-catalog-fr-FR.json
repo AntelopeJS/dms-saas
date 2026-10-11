@@ -136,7 +136,7 @@
 					"mrr_detail_other": "Normalisé · plus {other}",
 					"legacy": "Anciennes offres",
 					"legacy_none": "Plus aucun espace de travail sur une ancienne offre",
-					"legacy_detail": "{names} · {count} espaces de travail à déplacer"
+					"legacy_detail": "{names} · {count} espace de travail à déplacer | {names} · {count} espaces de travail à déplacer"
 				},
 				"card": {
 					"public": "Publique",
@@ -239,7 +239,7 @@
 					"reset": "Reprendre la valeur de l’offre parente",
 					"no_features": "Aucune fonctionnalité pour l’instant. Créez des fonctionnalités pour les activer ou les limiter par offre.",
 					"summary": "{count} fonctionnalité | {count} fonctionnalités",
-					"summary_parent": "{count} fonctionnalités · {overridden} remplacées, {inherited} héritées",
+					"summary_parent": "{count} fonctionnalité · {overridden} remplacées, {inherited} héritées | {count} fonctionnalités · {overridden} remplacées, {inherited} héritées",
 					"manage_features": "Gérer les fonctionnalités",
 					"permissions": "Permissions",
 					"permissions_summary": "{granted} sur {total} accordées",
@@ -290,13 +290,13 @@
 						"not_configured": "Stripe non configuré"
 					},
 					"on_save_title": "À l’enregistrement",
-					"on_save": "Un nouveau prix Stripe de {price} ({interval}) est créé et utilisé pour les nouvelles inscriptions. Les abonnés actuels gardent {previous} jusqu’à leur migration. {count} espaces de travail sont sur cette offre."
+					"on_save": "Un nouveau prix Stripe de {price} ({interval}) est créé et utilisé pour les nouvelles inscriptions. Les abonnés actuels gardent {previous} jusqu’à leur migration. {count} espace de travail est sur cette offre. | Un nouveau prix Stripe de {price} ({interval}) est créé et utilisé pour les nouvelles inscriptions. Les abonnés actuels gardent {previous} jusqu’à leur migration. {count} espaces de travail sont sur cette offre."
 				}
 			},
 			"retire": {
 				"title": "Retirer {name}",
 				"subtitle_1": "Déplacez chaque espace de travail vers une autre offre, puis supprimez {name} une fois vide.",
-				"subtitle_2": "Choisissez où vont les {count} espaces de travail et vérifiez ce qui change pour eux.",
+				"subtitle_2": "Choisissez où va l’espace de travail et vérifiez ce qui change pour lui. | Choisissez où vont les {count} espaces de travail et vérifiez ce qui change pour eux.",
 				"subtitle_3": "Vérifiez l’impact, puis saisissez la clé de l’offre pour confirmer.",
 				"steps": "Étapes",
 				"step_1": "Impact",

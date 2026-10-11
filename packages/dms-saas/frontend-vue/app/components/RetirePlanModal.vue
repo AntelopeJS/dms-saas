@@ -286,10 +286,11 @@ onMounted(loadImpact)
 					</h3>
 					<p class="text-muted text-sm">
 						{{
-							$t(`saas.catalog.retire.subtitle_${step}`, {
-								name: planName,
-								count: impact?.workspaces ?? 0,
-							})
+							$t(
+								`saas.catalog.retire.subtitle_${step}`,
+								{ name: planName, count: impact?.workspaces ?? 0 },
+								impact?.workspaces ?? 0,
+							)
 						}}
 					</p>
 				</div>

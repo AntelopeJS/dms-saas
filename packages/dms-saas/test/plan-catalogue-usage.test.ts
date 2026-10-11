@@ -4,7 +4,7 @@ import {
   catalogueStatItems,
   summariseCatalogue,
 } from "../src/plans/catalogue-summary";
-import { LOCALES, missingKeys } from "./helpers/composed-text";
+import { LOCALES, missingKeys, writeText } from "./helpers/composed-text";
 import {
   type PlanUsageRow,
   isBilledSubscription,
@@ -183,6 +183,14 @@ describe("catalogue usage", () => {
       tone: "warning",
       detailTone: "warning",
     });
+    const legacyDetail = (count: number) =>
+      writeText(
+        catalogueStatItems({ ...summary, legacyWorkspaces: count }).find(
+          (item) => item.id === "legacy",
+        )?.detail,
+      );
+    expect(legacyDetail(1)).toBe("Growth 2024 · 1 workspace to move");
+    expect(legacyDetail(3)).toBe("Growth 2024 · 3 workspaces to move");
     for (const code of LOCALES) {
       expect(missingKeys(items, code)).toEqual([]);
       expect(

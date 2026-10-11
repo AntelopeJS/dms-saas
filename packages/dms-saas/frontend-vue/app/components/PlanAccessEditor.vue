@@ -313,11 +313,15 @@ onMounted(load)
 					<span class="text-muted">
 						{{
 							parent
-								? $t('saas.catalog.editor.access.summary_parent', {
-										count: catalog.features.length,
-										overridden: overriddenCount,
-										inherited: inheritedCount,
-									})
+								? $t(
+										'saas.catalog.editor.access.summary_parent',
+										{
+											count: catalog.features.length,
+											overridden: overriddenCount,
+											inherited: inheritedCount,
+										},
+										catalog.features.length,
+									)
 								: $t(
 										'saas.catalog.editor.access.summary',
 										{ count: catalog.features.length },

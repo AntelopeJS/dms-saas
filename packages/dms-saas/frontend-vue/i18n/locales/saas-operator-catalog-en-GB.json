@@ -136,7 +136,7 @@
 					"mrr_detail_other": "Normalised · plus {other}",
 					"legacy": "Legacy plans",
 					"legacy_none": "No workspace left on a legacy plan",
-					"legacy_detail": "{names} · {count} workspaces to move"
+					"legacy_detail": "{names} · {count} workspace to move | {names} · {count} workspaces to move"
 				},
 				"card": {
 					"public": "Public",
@@ -239,7 +239,7 @@
 					"reset": "Use the parent plan’s value",
 					"no_features": "No feature yet. Create features to switch them on or limit them per plan.",
 					"summary": "{count} feature | {count} features",
-					"summary_parent": "{count} features · {overridden} overridden, {inherited} inherited",
+					"summary_parent": "{count} feature · {overridden} overridden, {inherited} inherited | {count} features · {overridden} overridden, {inherited} inherited",
 					"manage_features": "Manage features",
 					"permissions": "Permissions",
 					"permissions_summary": "{granted} of {total} granted",
@@ -290,13 +290,13 @@
 						"not_configured": "Stripe not configured"
 					},
 					"on_save_title": "When you save",
-					"on_save": "A new Stripe price of {price} ({interval}) is created and used for new sign-ups. Existing subscribers keep {previous} until migrated. {count} workspaces are on this plan."
+					"on_save": "A new Stripe price of {price} ({interval}) is created and used for new sign-ups. Existing subscribers keep {previous} until migrated. {count} workspace is on this plan. | A new Stripe price of {price} ({interval}) is created and used for new sign-ups. Existing subscribers keep {previous} until migrated. {count} workspaces are on this plan."
 				}
 			},
 			"retire": {
 				"title": "Retire {name}",
 				"subtitle_1": "Move every workspace to another plan, then delete {name} once none is left.",
-				"subtitle_2": "Pick where the {count} workspaces go and check what changes for them.",
+				"subtitle_2": "Pick where the workspace goes and check what changes for it. | Pick where the {count} workspaces go and check what changes for them.",
 				"subtitle_3": "Check the impact, then type the plan’s key to confirm.",
 				"steps": "Steps",
 				"step_1": "Impact",

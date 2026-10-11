@@ -2,6 +2,7 @@ import type { StatGroupItem } from "@antelopejs/interface-dms/base";
 import type { Plan } from "../db";
 import {
   composed,
+  countParam,
   dotList,
   moneyParam,
   valueText,
@@ -130,7 +131,7 @@ function legacyItem(summary: CatalogueSummary): StatGroupItem {
         ? `$${STATS}.legacy_none`
         : composed(`${STATS}.legacy_detail`, {
             names: summary.legacyNames.join(NAMES_SEPARATOR),
-            count: summary.legacyWorkspaces,
+            count: countParam(summary.legacyWorkspaces),
           }),
     detailTone: hasWorkspaces ? "warning" : undefined,
   };
