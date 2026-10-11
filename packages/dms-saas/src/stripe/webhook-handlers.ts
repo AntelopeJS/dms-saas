@@ -11,8 +11,6 @@ import type {
   VatVerificationStatus,
 } from "../db";
 import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
   InvoiceModel,
   RefundModel,
   TenantBillingInfoModel,
@@ -61,6 +59,7 @@ import {
   updateSubscriptionStatus,
   upsertInvoice,
 } from "./webhook-shared";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
 const BUSINESS_CUSTOMER_TYPE: TenantCustomerType = "business";
 const SUSPENDED_STATUS: TenantSubscriptionStatus = "suspended";
@@ -205,11 +204,8 @@ async function applyAutoProrataIfEnabled(
   tenantId: string,
   subscription: Stripe.Subscription,
 ): Promise<void> {
-  const billingSettingsModel = GetModel(BillingSettingsModel);
-  const settings = await billingSettingsModel.get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
-  if (!settings?.autoProrataOnCancelEnabled) return;
+  const settings = await loadBillingSettings();
+  if (!settings.autoProrataOnCancelEnabled) return;
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const localSubscription = await tenantSubscriptionModel.findOne();
   if (wasRefundedOnSubscription(localSubscription, subscription)) return;

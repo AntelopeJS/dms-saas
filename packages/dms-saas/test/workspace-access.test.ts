@@ -167,10 +167,6 @@ describe("resolveAccessBlockReason", () => {
 });
 
 describe("toAccessTimelineRules", () => {
-  it("applies the defaults of settings never saved", () => {
-    expect(toAccessTimelineRules(undefined)).toEqual(RULES);
-  });
-
   it("drops the suspension date when automatic suspension is off", () => {
     expect(
       toAccessTimelineRules({

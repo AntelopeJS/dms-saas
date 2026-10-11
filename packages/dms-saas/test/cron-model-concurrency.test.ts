@@ -113,6 +113,8 @@ async function segmentFixture() {
     name: "Test",
     conditions: { logical: "and", conditions: [] },
     estimatedCount: 0,
+    countHistory: [],
+    lastEvaluationMs: null,
   });
   return (await model.get(id))!;
 }
@@ -365,6 +367,8 @@ describe("complete segment generations on Mongo", () => {
         name: "Raw",
         conditions: { logical: "and", conditions: [] },
         estimatedCount: 0,
+        countHistory: [],
+        lastEvaluationMs: null,
       },
       Segment.prototype,
     );

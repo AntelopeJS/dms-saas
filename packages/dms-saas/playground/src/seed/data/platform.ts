@@ -11,7 +11,10 @@ import type { SeedPlanMigration, SeedPlatformNote, SeedSegment } from "./types";
 const W = WORKSPACE_IDS;
 const P = PLAN_IDS;
 
-export type SeedBillingSettings = Omit<BillingSettings, "_id" | "updatedAt">;
+export type SeedBillingSettings = Omit<
+  BillingSettings,
+  "_id" | "updatedAt" | "plansSyncedAt"
+>;
 
 export const BILLING_SETTINGS: SeedBillingSettings = {
   autoSuspendEnabled: true,

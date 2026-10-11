@@ -1,23 +1,15 @@
 import { z } from "zod";
 import {
-  BILLING_SETTINGS_SINGLETON_ID,
   type BillingSettings,
-  DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
-  DEFAULT_DATA_RETENTION_DAYS,
-  DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
-  DEFAULT_STRIPE_TAX_CODE,
   LEGAL_DOCUMENT_KEYS,
   type LegalDocumentKey,
   type LegalDocumentVersion,
   type LegalDocumentVersions,
   type Plan,
   REFUND_PRORATA_MODES,
-  type RefundProrataMode,
 } from "../db";
 import { isPlanStripeSyncCurrent } from "../stripe/sync-plan";
 
-const DEFAULT_MONEY_BACK_WINDOW_DAYS = 14;
-const DEFAULT_REFUND_MODE: RefundProrataMode = "full";
 const MAX_DELAY_DAYS = 365;
 const MAX_RETENTION_DAYS = 3650;
 const MAX_FREE_WORKSPACES_PER_CARD = 100;
@@ -30,24 +22,6 @@ const LEGAL_DOCUMENT_PATHS: Record<LegalDocumentKey, string> = {
   termsAndConditions: "/terms-and-conditions",
   privacyPolicy: "/privacy-policy",
 };
-
-/** The settings a fresh platform starts from. */
-export function defaultBillingSettings(now: Date): BillingSettings {
-  return {
-    _id: BILLING_SETTINGS_SINGLETON_ID,
-    autoSuspendEnabled: true,
-    autoSuspendDelayDays: DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
-    dataRetentionDaysAfterCancellation: DEFAULT_DATA_RETENTION_DAYS,
-    maxFreeWorkspacesPerCard: DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
-    moneyBackGuaranteeEnabled: false,
-    moneyBackGuaranteeWindowDays: DEFAULT_MONEY_BACK_WINDOW_DAYS,
-    moneyBackGuaranteeMode: DEFAULT_REFUND_MODE,
-    autoProrataOnCancelEnabled: false,
-    stripeTaxCode: DEFAULT_STRIPE_TAX_CODE,
-    plansSyncedAt: null,
-    updatedAt: now,
-  } as BillingSettings;
-}
 
 /** The settings the Billing rules & legal page edits. */
 const BILLING_RULES_SETTING_KEYS = [

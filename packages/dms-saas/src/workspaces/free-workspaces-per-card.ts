@@ -2,15 +2,13 @@ import { assert } from "@antelopejs/interface-api-util";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
-  DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
   PlanModel,
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../db";
 import { getRowInstance } from "../utils";
 import { isFreePlan } from "./free-plan";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
 const HTTP_CONFLICT = 409;
 const POLICY_DISABLED_LIMIT = 0;
@@ -20,12 +18,8 @@ const POLICY_DISABLED_LIMIT = 0;
  * the rule off: a free workspace is then created without any card.
  */
 export async function resolveFreeWorkspacesPerCard(): Promise<number> {
-  const settings = await GetModel(BillingSettingsModel).get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
-  return (
-    settings?.maxFreeWorkspacesPerCard ?? DEFAULT_MAX_FREE_WORKSPACES_PER_CARD
-  );
+  const settings = await loadBillingSettings();
+  return settings.maxFreeWorkspacesPerCard;
 }
 
 /** Whether the rule is on, i.e. whether a free workspace asks for a card. */

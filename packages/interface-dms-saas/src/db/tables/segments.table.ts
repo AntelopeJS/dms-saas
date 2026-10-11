@@ -143,11 +143,11 @@ export class Segment extends Table {
    * of the segments list read it.
    */
   @Field("any")
-  declare countHistory?: SegmentCountPoint[];
+  declare countHistory: SegmentCountPoint[];
 
   /** How long the last evaluation took, in milliseconds. */
   @Field("number")
-  declare lastEvaluationMs?: number | null;
+  declare lastEvaluationMs: number | null;
 
   @CreationTime()
   @Field("date")

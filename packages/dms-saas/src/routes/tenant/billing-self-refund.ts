@@ -6,11 +6,7 @@ import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import type Stripe from "stripe";
 import type { BillingSettings, TenantSubscription } from "../../db";
-import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
-  TenantSubscriptionModel,
-} from "../../db";
+import { BillingSettingsModel, TenantSubscriptionModel } from "../../db";
 import {
   computeUnusedPortionCents,
   getStripeClient,
@@ -18,6 +14,7 @@ import {
 } from "../../stripe";
 import { CREDIT_NOTE_METADATA } from "../../operator-billing/credit-note-request";
 import { MS_PER_DAY } from "../../utils/time";
+import { loadBillingSettings } from "../../operator-billing/billing-settings-store";
 
 const MONEY_BACK_REASON = "money_back_guarantee";
 const HTTP_FORBIDDEN = 403;
@@ -241,13 +238,13 @@ function totalOf(refunds: InvoiceRefund[]): number {
 }
 
 async function resolveRefundEligibility(
-  settings: BillingSettings | undefined,
+  settings: BillingSettings,
   subscription: TenantSubscription | undefined,
 ): Promise<RefundEligibility> {
-  const windowDays = settings?.moneyBackGuaranteeWindowDays ?? 0;
-  const mode = settings?.moneyBackGuaranteeMode ?? null;
+  const windowDays = settings.moneyBackGuaranteeWindowDays;
+  const mode = settings.moneyBackGuaranteeMode;
   const base = { windowDays, mode, invoice: null, payments: [] };
-  if (!settings?.moneyBackGuaranteeEnabled) {
+  if (!settings.moneyBackGuaranteeEnabled) {
     return { eligible: false, reason: REASON_NOT_ENABLED, ...base };
   }
   if (!subscription?.stripeCustomerId || !subscription.stripeSubscriptionId) {
@@ -338,9 +335,7 @@ export class SaasBillingSelfRefundController extends Controller(
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<RefundEligibilityResponse> {
-    const settings = await billingSettingsModel.get(
-      BILLING_SETTINGS_SINGLETON_ID,
-    );
+    const settings = await loadBillingSettings(billingSettingsModel);
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
     return toEligibilityResponse(
@@ -356,9 +351,7 @@ export class SaasBillingSelfRefundController extends Controller(
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
   ) {
-    const settings = await billingSettingsModel.get(
-      BILLING_SETTINGS_SINGLETON_ID,
-    );
+    const settings = await loadBillingSettings(billingSettingsModel);
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
     const error = eligibility.eligible

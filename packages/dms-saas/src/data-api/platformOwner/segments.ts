@@ -61,7 +61,7 @@ function rowOf(self: unknown): SegmentRowInstance["table"] {
 }
 
 function historyOf(self: unknown): SegmentCountPoint[] {
-  return rowOf(self).countHistory ?? [];
+  return rowOf(self).countHistory;
 }
 
 function dayBefore(days: number, now: Date): string {

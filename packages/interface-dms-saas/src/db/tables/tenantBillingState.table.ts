@@ -90,7 +90,7 @@ export interface WorkspaceDirectoryFields {
 @RegisterTable(tenantBillingStateTableName, CORE_SCHEMA_NAME)
 export class TenantBillingState
   extends Table
-  implements Partial<WorkspaceDirectoryFields>
+  implements WorkspaceDirectoryFields
 {
   @Field("string")
   declare _id: string;
@@ -115,58 +115,58 @@ export class TenantBillingState
   declare deletedAt: Date | null;
 
   @Field("string")
-  declare planId?: string | null;
+  declare planId: string | null;
 
   @Field("string")
-  declare planName?: string | null;
+  declare planName: string | null;
 
   @Field("string")
-  declare planInterval?: PlanInterval | null;
+  declare planInterval: PlanInterval | null;
 
   @Field("string")
-  declare planBillingMode?: PlanBillingMode | null;
+  declare planBillingMode: PlanBillingMode | null;
 
   @Field("number")
-  declare planUnitAmountMinor?: number | null;
+  declare planUnitAmountMinor: number | null;
 
   @Field("string")
-  declare currency?: string | null;
+  declare currency: string | null;
 
   @Field("number")
-  declare seats?: number;
+  declare seats: number;
 
   @Field("boolean")
-  declare isComplimentary?: boolean;
+  declare isComplimentary: boolean;
 
   @Index()
   @Field("number")
-  declare mrrMinor?: number;
+  declare mrrMinor: number;
 
   @Field("number")
-  declare previousMrrMinor?: number;
+  declare previousMrrMinor: number;
 
   @Field("number")
-  declare reportingMrr?: number;
+  declare reportingMrr: number;
 
   @Field("string")
-  declare renewalKind?: WorkspaceRenewalKind | null;
+  declare renewalKind: WorkspaceRenewalKind | null;
 
   @Index()
   @Field("date")
-  declare renewsAt?: Date | null;
+  declare renewsAt: Date | null;
 
   @Field("date")
-  declare stateSince?: Date | null;
+  declare stateSince: Date | null;
 
   @Field("string")
-  declare ownerStatus?: WorkspaceOwnerStatus;
+  declare ownerStatus: WorkspaceOwnerStatus;
 
   @Field("boolean")
-  declare ownerNeverJoined?: boolean;
+  declare ownerNeverJoined: boolean;
 
   @Field("string")
-  declare ownerName?: string | null;
+  declare ownerName: string | null;
 
   @Field("string")
-  declare ownerEmail?: string | null;
+  declare ownerEmail: string | null;
 }

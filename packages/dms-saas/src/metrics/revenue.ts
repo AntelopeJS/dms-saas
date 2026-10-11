@@ -223,7 +223,7 @@ export function churnOver(
   );
   const lost = sumInReportingCurrency(
     cancelled.map((row) => ({
-      amountMinor: row.previousMrrMinor ?? 0,
+      amountMinor: row.previousMrrMinor,
       currency: row.currency ?? "",
     })),
     currentMrr.currency,

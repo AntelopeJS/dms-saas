@@ -22,7 +22,8 @@ import {
   type BillingRulesBody,
   billingRulesBodySchema,
   computePlanTaxSync,
-  defaultBillingSettings,
+  ensureBillingSettingsRow,
+  loadBillingSettings,
   legalDocumentReleases,
   type PlanTaxSyncStatus,
   pickBillingRules,
@@ -71,14 +72,8 @@ export class SaasBillingSettingsController extends Controller(
   declare planModel: PlanModel;
 
   private async loadSettings(): Promise<BillingSettings> {
-    const existing = await this.billingSettingsModel.get(
-      BILLING_SETTINGS_SINGLETON_ID,
-    );
-    if (existing)
-      return Object.assign(defaultBillingSettings(new Date()), existing);
-    const fresh = defaultBillingSettings(new Date());
-    await this.billingSettingsModel.insert([fresh]);
-    return fresh;
+    await ensureBillingSettingsRow(this.billingSettingsModel);
+    return loadBillingSettings(this.billingSettingsModel);
   }
 
   private async planTaxSync(
@@ -88,7 +83,7 @@ export class SaasBillingSettingsController extends Controller(
     return computePlanTaxSync(
       plans,
       taxCodeOf(settings),
-      settings.plansSyncedAt ?? null,
+      settings.plansSyncedAt,
       isStripeConfigured(),
     );
   }

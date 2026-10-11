@@ -8,6 +8,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import { recomputeTenantBillingState } from "../billing-state";
 import type {
+  Invoice,
   InvoiceLine,
   InvoiceStatus,
   TenantSubscription,
@@ -109,11 +110,31 @@ export async function resolveInvoiceLines(
   return lines.map(toInvoiceLine);
 }
 
-/** Where Stripe stands with collecting the invoice: what the operator list reads. */
-function toCollectionState(invoice: Stripe.Invoice) {
+/** Where Stripe stands with collecting an invoice: what the operator list reads. */
+export type InvoiceCollectionState = Pick<
+  Invoice,
+  | "amountPaid"
+  | "attemptCount"
+  | "nextPaymentAttemptAt"
+  | "dueAt"
+  | "autoFinalizesAt"
+  | "latestRevisionStripeId"
+>;
+
+/** The collection state of a document nobody collects: a credit note. */
+export const NO_COLLECTION_STATE: InvoiceCollectionState = {
+  amountPaid: 0,
+  attemptCount: 0,
+  nextPaymentAttemptAt: null,
+  dueAt: null,
+  autoFinalizesAt: null,
+  latestRevisionStripeId: null,
+};
+
+function toCollectionState(invoice: Stripe.Invoice): InvoiceCollectionState {
   return {
-    amountPaid: invoice.amount_paid ?? null,
-    attemptCount: invoice.attempt_count ?? null,
+    amountPaid: invoice.amount_paid,
+    attemptCount: invoice.attempt_count,
     nextPaymentAttemptAt: optionalStripeDate(invoice.next_payment_attempt),
     dueAt: optionalStripeDate(invoice.due_date),
     autoFinalizesAt: optionalStripeDate(invoice.automatically_finalizes_at),

@@ -9,6 +9,28 @@ import {
 
 const DELETE_ATTEMPTS = 3;
 
+/** The directory row of a workspace deleted before it was ever published. */
+const DELETED_WORKSPACE_DIRECTORY: WorkspaceDirectoryFields = {
+  planId: null,
+  planName: null,
+  planInterval: null,
+  planBillingMode: null,
+  planUnitAmountMinor: null,
+  currency: null,
+  seats: 0,
+  isComplimentary: false,
+  mrrMinor: 0,
+  previousMrrMinor: 0,
+  reportingMrr: 0,
+  renewalKind: null,
+  renewsAt: null,
+  stateSince: null,
+  ownerStatus: "none",
+  ownerNeverJoined: false,
+  ownerName: null,
+  ownerEmail: null,
+};
+
 /** Data access for tenant billing access state. */
 export class TenantBillingStateModel extends BasicDataModel(
   TenantBillingState,
@@ -28,7 +50,7 @@ export class TenantBillingStateModel extends BasicDataModel(
     tenantId: string,
     billingState: BillingState,
     existing: TenantBillingState | undefined,
-    directory?: WorkspaceDirectoryFields,
+    directory: WorkspaceDirectoryFields,
   ): Promise<boolean> {
     if (existing?.deletedAt) return true;
     return this.publish(tenantId, existing, billingState, null, directory);
@@ -50,7 +72,12 @@ export class TenantBillingStateModel extends BasicDataModel(
       deletedAt,
     };
     if (!existing)
-      return this.insertPublication({ _id: tenantId, ...patch, revision });
+      return this.insertPublication({
+        ...DELETED_WORKSPACE_DIRECTORY,
+        _id: tenantId,
+        ...patch,
+        revision,
+      });
     const outcome = await this.table
       .atomicMutation(tenantId, {
         type: "update",

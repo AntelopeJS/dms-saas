@@ -67,7 +67,7 @@ export async function loadSegmentDraft(id: string): Promise<SegmentDraft> {
     conditions: segment.conditions,
     estimatedCount: segment.estimatedCount ?? 0,
     lastEvaluatedAt: segment.lastEvaluatedAt ?? null,
-    lastEvaluationMs: segment.lastEvaluationMs ?? null,
+    lastEvaluationMs: segment.lastEvaluationMs,
     updatedAt: segment.updatedAt,
   };
 }
@@ -102,6 +102,7 @@ export async function createSegment(
     ...input,
     estimatedCount: 0,
     lastEvaluatedAt: null,
+    lastEvaluationMs: null,
     countHistory: [],
   });
   assert(id, HTTP_CONFLICT, "saas.errors.segments.edit_conflict");

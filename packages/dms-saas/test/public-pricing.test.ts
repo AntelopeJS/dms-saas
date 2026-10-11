@@ -117,14 +117,6 @@ beforeEach(() => {
 });
 
 describe("toPublicBillingRules", () => {
-  it("applies the billing defaults when nothing was saved", () => {
-    expect(toPublicBillingRules(undefined)).toEqual({
-      moneyBackGuarantee: null,
-      dataRetentionDays: 30,
-      maxFreeWorkspacesPerCard: 1,
-    });
-  });
-
   it("states the guarantee only when it is enabled", () => {
     const settings = {
       moneyBackGuaranteeEnabled: true,

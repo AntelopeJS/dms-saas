@@ -1,4 +1,7 @@
-import { appendSegmentCountPoint } from "@antelopejs/interface-dms-saas/db";
+import {
+  SEGMENT_COUNT_HISTORY_DAYS,
+  appendSegmentCountPoint,
+} from "@antelopejs/interface-dms-saas/db";
 import { describe, expect, it } from "vitest";
 import {
   weeklyChangeLine,
@@ -148,7 +151,7 @@ describe("segment count history", () => {
   });
 
   it("keeps the last 30 days", () => {
-    let history = appendSegmentCountPoint(undefined, 0, new Date("2026-09-01"));
+    let history = appendSegmentCountPoint([], 0, new Date("2026-09-01"));
     for (let day = 1; day <= 40; day++) {
       history = appendSegmentCountPoint(
         history,
@@ -157,7 +160,7 @@ describe("segment count history", () => {
       );
     }
 
-    expect(history).toHaveLength(30);
+    expect(history).toHaveLength(SEGMENT_COUNT_HISTORY_DAYS);
     expect(history.at(-1)).toEqual({ day: "2026-10-11", count: 40 });
   });
 

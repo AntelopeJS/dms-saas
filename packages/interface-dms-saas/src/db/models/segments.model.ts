@@ -28,12 +28,12 @@ export interface SegmentEvaluationStats {
  * {@link SEGMENT_COUNT_HISTORY_DAYS} days kept.
  */
 export function appendSegmentCountPoint(
-  history: readonly SegmentCountPoint[] | undefined,
+  history: readonly SegmentCountPoint[],
   count: number,
   evaluatedAt: Date,
 ): SegmentCountPoint[] {
   const day = evaluatedAt.toISOString().slice(0, ISO_DAY_LENGTH);
-  const kept = (history ?? []).filter((point) => point.day !== day);
+  const kept = history.filter((point) => point.day !== day);
   return [...kept, { day, count }]
     .sort((a, b) => a.day.localeCompare(b.day))
     .slice(-SEGMENT_COUNT_HISTORY_DAYS);

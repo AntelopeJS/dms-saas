@@ -5,17 +5,13 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import { UserInviteModel } from "@antelopejs/interface-dms/db";
 import { recomputeTenantBillingState } from "../billing-state";
 import type { TenantSubscription, TenantSubscriptionStatus } from "../db";
-import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
-  DEFAULT_DATA_RETENTION_DAYS,
-  TenantSubscriptionModel,
-} from "../db";
+import { DEFAULT_DATA_RETENTION_DAYS, TenantSubscriptionModel } from "../db";
 import {
   notifyTenantOwners,
   subscriptionCancelledSubject,
 } from "../notifications";
 import { getStripeClient } from "../stripe";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
@@ -49,12 +45,8 @@ export function getWorkspaceDeletionOperationId(
 }
 
 export async function resolveDataRetentionDays(): Promise<number> {
-  const settings = await GetModel(BillingSettingsModel).get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
-  return (
-    settings?.dataRetentionDaysAfterCancellation ?? DEFAULT_DATA_RETENTION_DAYS
-  );
+  const settings = await loadBillingSettings();
+  return settings.dataRetentionDaysAfterCancellation;
 }
 
 /**

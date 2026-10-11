@@ -56,7 +56,7 @@ export class BillingSettings extends Table {
 
   /** When an operator last re-synced every plan with Stripe. */
   @Field("date")
-  declare plansSyncedAt?: Date | null;
+  declare plansSyncedAt: Date | null;
 
   @UpdateTime()
   @Field("date")

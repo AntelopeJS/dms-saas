@@ -1,10 +1,6 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
-  BILLING_SETTINGS_SINGLETON_ID,
   type BillingSettings,
-  BillingSettingsModel,
-  DEFAULT_DATA_RETENTION_DAYS,
-  DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
   FeatureModel,
   type Plan,
   type PlanAudience,
@@ -14,6 +10,7 @@ import {
   type RefundProrataMode,
 } from "../../db";
 import { buildTenantPlanCatalog, type TenantPlanFeature } from "../../plans";
+import { loadBillingSettings } from "../../operator-billing/billing-settings-store";
 
 /**
  * A plan as a visitor reads it on the pricing and sign-up screens: what it
@@ -97,27 +94,22 @@ function toPublicPlan(
 }
 
 /**
- * Reads the public part of the billing rules, with the defaults the billing
- * code applies when the operator never saved them.
+ * Reads the public part of the billing rules.
  *
- * @param settings Billing settings singleton, when it exists
+ * @param settings Billing settings singleton
  */
 export function toPublicBillingRules(
-  settings: BillingSettings | undefined,
+  settings: BillingSettings,
 ): PublicBillingRules {
   return {
-    moneyBackGuarantee: settings?.moneyBackGuaranteeEnabled
+    moneyBackGuarantee: settings.moneyBackGuaranteeEnabled
       ? {
           windowDays: settings.moneyBackGuaranteeWindowDays,
           mode: settings.moneyBackGuaranteeMode,
         }
       : null,
-    dataRetentionDays:
-      settings?.dataRetentionDaysAfterCancellation ??
-      DEFAULT_DATA_RETENTION_DAYS,
-    maxFreeWorkspacesPerCard:
-      settings?.maxFreeWorkspacesPerCard ??
-      DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
+    dataRetentionDays: settings.dataRetentionDaysAfterCancellation,
+    maxFreeWorkspacesPerCard: settings.maxFreeWorkspacesPerCard,
   };
 }
 
@@ -167,8 +159,5 @@ export async function loadPublicPlanCatalog(
 
 /** The public billing rules as currently saved. */
 export async function loadPublicBillingRules(): Promise<PublicBillingRules> {
-  const settings = await GetModel(BillingSettingsModel).get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
-  return toPublicBillingRules(settings);
+  return toPublicBillingRules(await loadBillingSettings());
 }

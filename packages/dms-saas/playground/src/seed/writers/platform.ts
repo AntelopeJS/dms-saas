@@ -28,12 +28,21 @@ import { addMinutes, dayFrom, insertMissing, type SeedRow } from "./rows";
 const RUNNING_MIGRATION_AGE_MINUTES = -4;
 const FIRST_ATTEMPT = 1;
 
+/**
+ * dms-saas writes the default settings on start: the seed replaces them with
+ * the showcase's own, once, on the first start against the database.
+ */
 export async function writeBillingSettings(
   settings: SeedBillingSettings,
 ): Promise<void> {
-  await insertMissing(BillingSettingsModel, [
-    { _id: BILLING_SETTINGS_SINGLETON_ID, ...settings },
-  ]);
+  const model = GetModel(BillingSettingsModel);
+  if (!(await model.get(BILLING_SETTINGS_SINGLETON_ID))) {
+    await insertMissing(BillingSettingsModel, [
+      { _id: BILLING_SETTINGS_SINGLETON_ID, plansSyncedAt: null, ...settings },
+    ]);
+    return;
+  }
+  await model.update(BILLING_SETTINGS_SINGLETON_ID, settings);
 }
 
 const FIRST_LEGAL_VERSION = 1;
@@ -75,6 +84,8 @@ export async function writeSegments(segments: SeedSegment[]): Promise<void> {
     _id: id,
     estimatedCount: 0,
     lastEvaluatedAt: null,
+    lastEvaluationMs: null,
+    countHistory: [],
   }));
   await insertMissing(SegmentModel, rows);
 }

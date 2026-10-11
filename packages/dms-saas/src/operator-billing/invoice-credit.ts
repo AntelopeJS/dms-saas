@@ -213,9 +213,9 @@ export async function buildCreditNotePreview(
       currency: invoice.currency,
       total: invoice.total,
       tax: invoice.tax,
-      amountPaid: stripeInvoice.amount_paid ?? invoice.amountPaid ?? 0,
+      amountPaid: stripeInvoice.amount_paid,
       paidAt: invoice.paidAt,
-      autoFinalizesAt: invoice.autoFinalizesAt ?? null,
+      autoFinalizesAt: invoice.autoFinalizesAt,
       lines: invoice.lines ?? [],
     },
   };

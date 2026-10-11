@@ -54,13 +54,13 @@ interface MoneyRow {
 
 /** An open invoice: what it asks, what was paid, whether Stripe retries. */
 export interface OpenInvoiceRow extends MoneyRow {
-  amountPaid?: number | null;
-  nextPaymentAttemptAt?: Date | null;
+  amountPaid: number;
+  nextPaymentAttemptAt: Date | null;
 }
 
 /** A paid invoice: what was collected on it. */
 export interface PaidInvoiceRow extends MoneyRow {
-  amountPaid?: number | null;
+  amountPaid: number;
 }
 
 /** A credit note: how it was settled and who issued it. */
@@ -141,13 +141,13 @@ const isAutomatic = (note: CreditNoteRow) =>
 
 function amountDue(row: OpenInvoiceRow): MoneyRow {
   return {
-    amount: Math.max(0, row.amount - (row.amountPaid ?? 0)),
+    amount: Math.max(0, row.amount - row.amountPaid),
     currency: row.currency,
   };
 }
 
 function collected(row: PaidInvoiceRow): MoneyRow {
-  return { amount: row.amountPaid ?? row.amount, currency: row.currency };
+  return { amount: row.amountPaid, currency: row.currency };
 }
 
 function awaitingPayment(open: readonly OpenInvoiceRow[]): BillingFigure {

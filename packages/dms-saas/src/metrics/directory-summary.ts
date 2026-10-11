@@ -60,7 +60,7 @@ function emptyStateCounts(): Record<BillingState, number> {
 }
 
 function mrrOf(row: DirectoryRow): MinorAmount {
-  return { amountMinor: row.mrrMinor ?? 0, currency: row.currency ?? "" };
+  return { amountMinor: row.mrrMinor, currency: row.currency ?? "" };
 }
 
 /** What a trial bills per month once it converts, at its current seats. */
@@ -143,7 +143,7 @@ export function summariseDirectory(
     total: rows.length,
     byState,
     mrr: sumInReportingCurrency(rows.map(mrrOf), reportingCurrency),
-    paying: rows.filter((row) => (row.mrrMinor ?? 0) > 0).length,
+    paying: rows.filter((row) => row.mrrMinor > 0).length,
     pastDue: summarisePastDue(rows, reportingCurrency),
     trialsEnding: {
       count: trials.length,

@@ -65,7 +65,10 @@ describe("billing figures", () => {
   it("reads what was collected, credited and written off", () => {
     const { items } = computeInvoiceStats({
       open: [],
-      paidThisMonth: [{ ...eur(112_700), amountPaid: 112_700 }, eur(900)],
+      paidThisMonth: [
+        { ...eur(112_700), amountPaid: 112_700 },
+        { ...eur(900), amountPaid: 900 },
+      ],
       creditNotesThisMonth: [
         { ...eur(4_900), type: "credit_to_balance", status: "issued" },
         { ...eur(2_000), type: "refund", status: "issued", refundId: "re_1" },
@@ -122,7 +125,10 @@ describe("billing figures", () => {
   it("notes the other currencies before the detail", () => {
     const { items } = computeInvoiceStats({
       open: [],
-      paidThisMonth: [eur(5_000), { amount: 1_200, currency: "usd" }],
+      paidThisMonth: [
+        { ...eur(5_000), amountPaid: 5_000 },
+        { amount: 1_200, amountPaid: 1_200, currency: "usd" },
+      ],
       creditNotesThisMonth: [],
       writtenOffThisYear: [],
     });

@@ -17,11 +17,7 @@ import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
 import { BLOCKING_STATUSES } from "../../auth";
 import { toUnpaidInvoiceRef, type UnpaidInvoiceRef } from "../../billing-state";
 import {
-  BILLING_SETTINGS_SINGLETON_ID,
   type BillingSettings,
-  BillingSettingsModel,
-  DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
-  DEFAULT_DATA_RETENTION_DAYS,
   type Invoice,
   InvoiceModel,
   PlanModel,
@@ -34,6 +30,7 @@ import {
   canRecoverComplimentarySubscription,
   isComplimentarySubscription,
 } from "../../workspaces/complimentary";
+import { loadBillingSettings } from "../../operator-billing/billing-settings-store";
 
 /** Why a workspace refuses its members, as the restricted screen words it. */
 export type AccessBlockReason =
@@ -157,22 +154,18 @@ function isDeletedByOwner(subscription: TenantSubscription): boolean {
 }
 
 /**
- * The timeline rules with the defaults the billing code applies to settings
- * that were never saved.
+ * The timeline rules of the billing settings.
  *
- * @param settings Billing settings singleton, when it exists
+ * @param settings Billing settings singleton
  */
 export function toAccessTimelineRules(
-  settings: BillingSettings | undefined,
+  settings: BillingSettings,
 ): AccessTimelineRules {
-  const isAutoSuspendOn = settings?.autoSuspendEnabled ?? true;
   return {
-    autoSuspendDelayDays: isAutoSuspendOn
-      ? (settings?.autoSuspendDelayDays ?? DEFAULT_AUTO_SUSPEND_DELAY_DAYS)
+    autoSuspendDelayDays: settings.autoSuspendEnabled
+      ? settings.autoSuspendDelayDays
       : null,
-    dataRetentionDays:
-      settings?.dataRetentionDaysAfterCancellation ??
-      DEFAULT_DATA_RETENTION_DAYS,
+    dataRetentionDays: settings.dataRetentionDaysAfterCancellation,
   };
 }
 
@@ -281,7 +274,7 @@ export function selectOtherWorkspaces(
 interface BlockedWorkspaceState {
   subscription: TenantSubscription | undefined;
   members: TenantMember[];
-  settings: BillingSettings | undefined;
+  settings: BillingSettings;
 }
 
 async function loadBlockedWorkspaceState(
@@ -290,7 +283,7 @@ async function loadBlockedWorkspaceState(
   const [subscription, members, settings] = await Promise.all([
     GetModel(TenantSubscriptionModel, tenantId).findOne(),
     GetModel(TenantMemberModel, tenantId).listAll(),
-    GetModel(BillingSettingsModel).get(BILLING_SETTINGS_SINGLETON_ID),
+    loadBillingSettings(),
   ]);
   return { subscription, members, settings };
 }

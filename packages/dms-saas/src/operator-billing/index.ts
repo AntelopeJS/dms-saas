@@ -1,4 +1,5 @@
 export * from "./billing-rules";
+export * from "./billing-settings-store";
 export * from "./billing-stats";
 export * from "./credit-allowance";
 export * from "./credit-note-request";

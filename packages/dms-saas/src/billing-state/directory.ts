@@ -2,11 +2,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import {
-  BILLING_SETTINGS_SINGLETON_ID,
   type BillingState,
-  BillingSettingsModel,
-  DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
-  DEFAULT_DATA_RETENTION_DAYS,
   type Plan,
   PlanModel,
   type TenantBillingState,
@@ -27,6 +23,7 @@ import {
   findPendingOwnerInvite,
   invitationStatusOf,
 } from "../workspaces/invitations";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
 /** The workspace owner as the directory lists them. */
 export interface DirectoryOwner {
@@ -121,7 +118,7 @@ function resolveStateSince(inputs: DirectoryInputs): Date {
 function resolvePreviousMrr(inputs: DirectoryInputs): number {
   const { existing, billingState } = inputs;
   if (existing && existing.billingState !== billingState)
-    return existing.mrrMinor ?? 0;
+    return existing.mrrMinor;
   return existing?.previousMrrMinor ?? 0;
 }
 
@@ -205,16 +202,12 @@ export async function loadDirectoryOwner(
 
 /** The billing rules the directory dates its renewals with. */
 async function loadDirectoryPolicy(): Promise<DirectoryPolicy> {
-  const settings = await GetModel(BillingSettingsModel).get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
+  const settings = await loadBillingSettings();
   return {
-    autoSuspendDelayDays: settings?.autoSuspendEnabled
-      ? (settings.autoSuspendDelayDays ?? DEFAULT_AUTO_SUSPEND_DELAY_DAYS)
+    autoSuspendDelayDays: settings.autoSuspendEnabled
+      ? settings.autoSuspendDelayDays
       : null,
-    retentionDays:
-      settings?.dataRetentionDaysAfterCancellation ??
-      DEFAULT_DATA_RETENTION_DAYS,
+    retentionDays: settings.dataRetentionDaysAfterCancellation,
   };
 }
 

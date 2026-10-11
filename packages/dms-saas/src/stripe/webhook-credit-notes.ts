@@ -25,6 +25,7 @@ import {
   formatAmount,
   INVOICE_LINES_PAGE_SIZE,
   type MirroredCreditNote,
+  NO_COLLECTION_STATE,
   upsertInvoice,
 } from "./webhook-shared";
 
@@ -151,6 +152,7 @@ function buildCreditNoteInvoicePayload(
 ) {
   const tax = resolveCreditNoteTax(creditNote);
   return {
+    ...NO_COLLECTION_STATE,
     documentType: "credit_note" as const,
     stripeInvoiceId: invoice.stripeInvoiceId,
     stripeCreditNoteId: creditNote.id,
