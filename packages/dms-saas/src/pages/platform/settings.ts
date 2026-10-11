@@ -9,6 +9,7 @@ import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/defa
 import { FormPageLayout } from "@antelopejs/interface-dms/base/layouts";
 import { HttpMethod } from "@antelopejs/interface-dms/base/types/http";
 import {
+  DEFAULT_STRIPE_TAX_CODE,
   LEGAL_DOCUMENT_KEYS,
   type LegalDocumentKey,
   REFUND_PRORATA_MODES,
@@ -119,7 +120,9 @@ const taxSection: FormSection = {
       label: `${RULES}.tax.code`,
       description: `${RULES}.tax.code_description`,
       hint: `${RULES}.tax.code_hint`,
-      type: new DefaultDataTypes.StringType({ placeholder: "txcd_10000000" }),
+      type: new DefaultDataTypes.StringType({
+        placeholder: DEFAULT_STRIPE_TAX_CODE,
+      }),
       required: true,
     },
     insightField("planTaxSync", "tax.plans", "DmsSaasPlanTaxSync"),

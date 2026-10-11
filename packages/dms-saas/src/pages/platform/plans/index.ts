@@ -41,16 +41,16 @@ type PlanRowActions = NonNullable<PlanTableOptions["rowActions"]>["custom"];
 const isInUse = { field: "boundWorkspaceCount", notEquals: 0 } as const;
 const isUnused = { field: "boundWorkspaceCount", equals: 0 } as const;
 
-/**
- * The menu of a plan, the same in the table and on the cards: duplicate,
- * see its workspaces, open it in Stripe, stop or resume selling it, retire
- * it (moving its workspaces) or, once nobody uses it, delete it.
- */
 /** A plan menu entry, keyed so the cards find the one a control stands for. */
 interface PlanAction extends CustomRowAction {
   key: string;
 }
 
+/**
+ * The menu of a plan, the same in the table and on the cards: duplicate,
+ * see its workspaces, open it in Stripe, stop or resume selling it, retire
+ * it (moving its workspaces) or, once nobody uses it, delete it.
+ */
 const PLAN_ACTIONS: PlanAction[] = [
   {
     key: "duplicate",

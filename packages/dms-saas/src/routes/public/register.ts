@@ -373,8 +373,10 @@ export class SaasRegisterApiController extends Controller(
 
   /**
    * The plan a registration opens the workspace on, plus the one the visitor
-   * chose on the pricing page when it is another public plan. Display only:
-   * registration still lands on the default plan whatever is asked for.
+   * chose on the pricing page when it is another public plan. Registration
+   * lands on the default plan, unless the card already backs every free
+   * workspace it may: the chosen paid plan then opens it, waiting for its
+   * first payment (see `admitPendingPaymentRegistration`).
    *
    * @param reference Slug or id of the chosen plan, from `?plan=`
    * @param language Reader's locale, for the feature labels

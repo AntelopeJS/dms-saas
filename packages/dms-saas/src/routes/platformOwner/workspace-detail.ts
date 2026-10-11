@@ -33,7 +33,6 @@ import { retrieveStripeCustomerBalance } from "../../stripe/customer-balance";
 import { stripeObjectUrl } from "../../stripe/dashboard-links";
 import {
   billingInfoItems,
-  isInvoiceDocument,
   upcomingTimelineItems,
   workspaceFacts,
 } from "../../workspaces/detail-items";
@@ -210,7 +209,7 @@ export class SaasWorkspaceDetailController extends Controller(
     ]);
     const { members, pendingInvites } = view.seats;
     return {
-      invoices: invoices.filter(isInvoiceDocument).length,
+      invoices: invoices.length,
       creditNotes: creditNotes.length,
       members: pendingInvites > 0 ? `${members} + ${pendingInvites}` : members,
     };

@@ -31,7 +31,6 @@ import {
 
 const HTTP_NOT_FOUND = 404;
 const EXPORT_SCOPE = "saas-plan-migration-workspaces";
-const DONE_PROGRESS = 100;
 
 interface MigrationExportContext {
   migrationId: string;
@@ -69,14 +68,13 @@ export class SaasPlanMigrationExportController extends Controller(
       filename: `plan-migration-${id}-workspaces`,
       extension: "csv",
       contentType: "text/csv; charset=utf-8",
-      generate: async ({ localPath, reportProgress }) => {
+      generate: async ({ localPath }) => {
         const context = await loadMigrationContext(migration);
         const rows = await loadWorkspaceRows(context);
         fs.writeFileSync(localPath, CSV_BOM);
         appendCsvRow(localPath, WORKSPACE_EXPORT_HEADER);
         for (const row of rows)
           appendCsvRow(localPath, workspaceExportRow(row));
-        await reportProgress(DONE_PROGRESS);
       },
     });
   }

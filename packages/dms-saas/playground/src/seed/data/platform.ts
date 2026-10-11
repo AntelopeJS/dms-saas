@@ -1,7 +1,8 @@
-import type {
-  BillingSettings,
-  LegalDocumentKey,
-  LegalDocuments,
+import {
+  type BillingSettings,
+  DEFAULT_STRIPE_TAX_CODE,
+  type LegalDocumentKey,
+  type LegalDocuments,
 } from "@antelopejs/interface-dms-saas/db";
 import { PLAN_IDS } from "./catalogue";
 import { ADMIN_ID, HUGO_ID, SOFIA_ID } from "./people";
@@ -25,7 +26,7 @@ export const BILLING_SETTINGS: SeedBillingSettings = {
   moneyBackGuaranteeWindowDays: 14,
   moneyBackGuaranteeMode: "prorated",
   autoProrataOnCancelEnabled: true,
-  stripeTaxCode: "txcd_10000000",
+  stripeTaxCode: DEFAULT_STRIPE_TAX_CODE,
 };
 
 export type SeedLegalDocuments = Pick<LegalDocuments, LegalDocumentKey>;

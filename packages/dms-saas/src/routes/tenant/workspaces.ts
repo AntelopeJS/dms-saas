@@ -279,7 +279,7 @@ export class SaasWorkspacesController extends Controller(
     const tenant = await this.tenantModel.get(tenantId);
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
     assert(
-      body.confirmName?.trim() === tenant.name,
+      body.confirmName?.trim() === tenant.name.trim(),
       HTTP_BAD_REQUEST,
       "saas.errors.workspace.delete_confirmation_mismatch",
     );

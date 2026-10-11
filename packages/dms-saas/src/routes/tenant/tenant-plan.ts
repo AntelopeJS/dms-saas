@@ -6,6 +6,7 @@ import {
   JSONBody,
   Parameter,
   Put,
+  type RequestContext,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
 import { GetModel, Model } from "@antelopejs/interface-database-decorators";
@@ -233,7 +234,7 @@ export class SaasTenantPlanController extends Controller(
   @Get("/")
   async getCurrentPlan(
     @AuthTenantMember({ bypassTenantAccessGate: true }) user: User,
-    @Context() ctx: any,
+    @Context() ctx: RequestContext,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
     @TenantScopedModel(TenantBillingInfoModel)
@@ -288,7 +289,7 @@ export class SaasTenantPlanController extends Controller(
   @Delete("/pending")
   async cancelPendingChange(
     @AuthTenantOwner() user: User,
-    @Context() ctx: any,
+    @Context() ctx: RequestContext,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<ChangePlanResult> {
@@ -326,7 +327,7 @@ export class SaasTenantPlanController extends Controller(
   async cancelCheckout(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Parameter(CHECKOUT_OPERATION_PARAM, "query") operationId: unknown,
-    @Context() ctx: any,
+    @Context() ctx: RequestContext,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<CancelCheckoutResult> {
@@ -351,7 +352,7 @@ export class SaasTenantPlanController extends Controller(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
     @Parameter("planId", "query") planId: unknown,
     @Parameter("country", "query") country: unknown,
-    @Context() ctx: any,
+    @Context() ctx: RequestContext,
     @TenantScopedModel(TenantBillingInfoModel)
     tenantBillingInfoModel: TenantBillingInfoModel,
   ): Promise<PlanChangePreview> {
@@ -398,7 +399,7 @@ export class SaasTenantPlanController extends Controller(
   async changePlan(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
     @JSONBody() body: ChangePlanBody,
-    @Context() ctx: any,
+    @Context() ctx: RequestContext,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
     @TenantScopedModel(TenantBillingInfoModel)

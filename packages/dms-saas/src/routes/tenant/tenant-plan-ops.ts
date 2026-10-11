@@ -217,14 +217,9 @@ export async function loadAndValidateTargetPlan(
   planId: string,
   customerType: string | null | undefined,
 ): Promise<Plan> {
-  const storedPlan = await planModel.get(planId);
-  assert(
-    storedPlan && !storedPlan.isDeleted && storedPlan.isActive,
-    HTTP_BAD_REQUEST,
-    "saas.errors.plan.invalid",
-  );
-  assertPlanAudience(storedPlan, customerType);
-  return loadSellablePlan(planModel, planId);
+  const plan = await loadSellablePlan(planModel, planId);
+  assertPlanAudience(plan, customerType);
+  return plan;
 }
 
 /**

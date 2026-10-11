@@ -25,11 +25,11 @@ import {
   type UserProjection,
 } from "../../utils";
 import { CSV_BOM, appendCsvRow } from "../../utils/csv-file";
+import { slugify } from "../../plans/plan-write";
 
 const HTTP_NOT_FOUND = 404;
 const OWNERS_EXPORT_SCOPE = "saas-segment-owners";
 const MAX_GENERATE_PROGRESS = 99;
-const DONE_PROGRESS = 100;
 const MONEY_FRACTION_DIGITS = 2;
 const WORKSPACE_SEPARATOR = "; ";
 
@@ -56,15 +56,6 @@ function ownersExportAccessForSegment(
     scope: OWNERS_EXPORT_SCOPE,
     isOwnedBy: (_record, context) => context?.segmentId === segmentId,
   };
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 /** One CSV row of a matching user: who they are and what they own. */
@@ -127,7 +118,6 @@ export class SaasSegmentsExportController extends Controller(
             Math.floor(((index + 1) / matched.length) * MAX_GENERATE_PROGRESS),
           );
         }
-        if (matched.length === 0) await reportProgress(DONE_PROGRESS);
       },
     });
   }
