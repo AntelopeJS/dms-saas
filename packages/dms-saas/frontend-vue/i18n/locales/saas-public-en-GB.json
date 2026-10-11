@@ -10,7 +10,9 @@
 				"no_workspace_description": "Open a first workspace after signing in with an account that has none",
 				"workspace_suspended": "Workspace access restricted",
 				"workspace_suspended_description": "See why a workspace is closed and how to reopen it, or open another one",
-				"legal_document_description": "Read this legal document, published in Billing rules & legal"
+				"legal_document_description": "Read this legal document, published in Billing rules & legal",
+				"nav_bar": "Public navigation",
+				"nav_bar_description": "Browse the public pages, sign in or open an account"
 			}
 		},
 		"public": {
@@ -49,12 +51,16 @@
 				"later": "Add a card later",
 				"later_hint": "You'll be asked for one before moving to a paid plan."
 			},
+			"nav": {
+				"label": "Public pages",
+				"pricing": "Pricing",
+				"sign_in": "Sign in",
+				"create_account": "Create account"
+			},
 			"pricing": {
 				"page_title": "Pricing",
 				"page_description": "Public catalogue of the plans on sale, with a comparison and billing questions.",
-				"nav": "Account",
 				"sign_in": "Sign in",
-				"create_account": "Create account",
 				"eyebrow": "Pricing",
 				"title": "Plans that grow with your workspace",
 				"subtitle": "Start free, add members when your team grows. Prices exclude VAT and you can change plan any time.",

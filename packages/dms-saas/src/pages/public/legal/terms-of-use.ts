@@ -5,6 +5,7 @@ import {
 } from "@antelopejs/interface-dms/page";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
+import { publicNavBar } from "../nav-bar";
 
 const DOCUMENT_FIELD = "termsOfUse";
 
@@ -22,6 +23,8 @@ export class SaasTermsOfUsePage extends PageController(
   },
   EmptyLayout(),
 ) {
+  static navBar = publicNavBar("legal");
+
   static legalContent = CustomComponent("DmsSaasLegalLayout")
     .meta({
       name: "$saas.legal.terms_of_use",

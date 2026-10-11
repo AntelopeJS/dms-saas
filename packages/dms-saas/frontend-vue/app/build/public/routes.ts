@@ -80,6 +80,18 @@ export function isPublicScreenServed(
 	return config?.publicScreens?.includes(screen) ?? true
 }
 
+const INVITATION_ONLY = 'invitation-only'
+
+/** Whether a visitor may open a workspace on their own, from Register. */
+export function isSelfRegistrationOpen(
+	config: DmsSaasPublicRuntimeConfig | undefined,
+): boolean {
+	return (
+		config?.admissionMode !== INVITATION_ONLY &&
+		isPublicScreenServed(config, 'register')
+	)
+}
+
 /** Where a new workspace owner reviews the paid plan chosen on Pricing. */
 export function billingUpgradePath(planId: string): string {
 	return `${BILLING_PATH}?${BILLING_UPGRADE_PARAM}=${encodeURIComponent(planId)}`

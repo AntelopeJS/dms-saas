@@ -16,9 +16,8 @@ import {
 	sharedCurrency,
 } from '../build/public/pricing'
 import {
-	isPublicScreenServed,
+	isSelfRegistrationOpen,
 	LOGIN_PATH,
-	REGISTER_PATH,
 	registerPathFor,
 } from '../build/public/routes'
 import { usePublicFetch } from '../build/public/usePublicFetch'
@@ -26,7 +25,6 @@ import type { PlanInterval } from '../composables/usePlanIntervalLabel'
 
 const PRICING_ENDPOINT = '/api/saas/pricing'
 const SKELETON_CARDS = 3
-const INVITATION_ONLY = 'invitation-only'
 
 const { t } = useI18n()
 const publicFetch = usePublicFetch()
@@ -41,9 +39,7 @@ const isLoading = ref(true)
 const loadError = ref<string | null>(null)
 const interval = ref<PlanInterval>('month')
 
-const canRegister =
-	saasConfig?.admissionMode !== INVITATION_ONLY &&
-	isPublicScreenServed(saasConfig, 'register')
+const canRegister = isSelfRegistrationOpen(saasConfig)
 
 const intervals = computed(() => paidIntervals(pricing.value?.plans ?? []))
 const intervalItems = computed(() =>
@@ -117,25 +113,6 @@ onMounted(loadPricing)
 
 <template>
 	<div class="mx-auto flex w-full max-w-6xl flex-col gap-10 py-4">
-		<nav
-			class="flex justify-end gap-2"
-			:aria-label="$t('saas.public.pricing.nav')"
-		>
-			<UButton
-				:to="LOGIN_PATH"
-				:label="$t('saas.public.pricing.sign_in')"
-				color="neutral"
-				variant="ghost"
-				size="sm"
-			/>
-			<UButton
-				v-if="canRegister"
-				:to="REGISTER_PATH"
-				:label="$t('saas.public.pricing.create_account')"
-				size="sm"
-			/>
-		</nav>
-
 		<header
 			class="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center"
 		>

@@ -5,6 +5,7 @@ import {
 } from "@antelopejs/interface-dms/page";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
+import { publicNavBar } from "./nav-bar";
 
 // The default layout is the console shell: its authenticated calls answer 401
 // to an anonymous visitor, which bounces them straight back to the login
@@ -21,6 +22,8 @@ export class SaasRegisterController extends PageController(
   },
   EmptyLayout(),
 ) {
+  static navBar = publicNavBar("register");
+
   static registerComponent = CustomComponent("DmsSaasRegister").meta({
     name: "$saas.permissions.public.register",
     description: "$saas.permissions.public.register_description",

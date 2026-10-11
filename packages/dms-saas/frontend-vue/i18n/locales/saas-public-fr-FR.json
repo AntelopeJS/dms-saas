@@ -10,7 +10,9 @@
 				"no_workspace_description": "Ouvrir un premier espace de travail après s'être connecté avec un compte qui n'en a aucun",
 				"workspace_suspended": "Accès à l'espace de travail restreint",
 				"workspace_suspended_description": "Voir pourquoi un espace de travail est fermé et comment le rouvrir, ou en ouvrir un autre",
-				"legal_document_description": "Lire ce document légal, publié dans Règles de facturation et mentions légales"
+				"legal_document_description": "Lire ce document légal, publié dans Règles de facturation et mentions légales",
+				"nav_bar": "Navigation publique",
+				"nav_bar_description": "Parcourir les pages publiques, se connecter ou ouvrir un compte"
 			}
 		},
 		"public": {
@@ -49,12 +51,16 @@
 				"later": "Ajouter une carte plus tard",
 				"later_hint": "Elle vous sera demandée avant de passer à une offre payante."
 			},
+			"nav": {
+				"label": "Pages publiques",
+				"pricing": "Tarifs",
+				"sign_in": "Se connecter",
+				"create_account": "Créer un compte"
+			},
 			"pricing": {
 				"page_title": "Tarifs",
 				"page_description": "Catalogue public des offres en vente, avec une comparaison et les questions de facturation.",
-				"nav": "Compte",
 				"sign_in": "Se connecter",
-				"create_account": "Créer un compte",
 				"eyebrow": "Tarifs",
 				"title": "Des offres qui grandissent avec votre espace de travail",
 				"subtitle": "Commencez gratuitement, ajoutez des membres quand votre équipe grandit. Les prix sont hors TVA et vous pouvez changer d'offre à tout moment.",
