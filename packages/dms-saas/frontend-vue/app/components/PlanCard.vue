@@ -240,7 +240,9 @@ onMounted(featureCatalog.refresh)
 					@update:model-value="select(!!$event)"
 				/>
 				<div class="min-w-0 flex-1">
-					<div class="flex items-center gap-2">
+					<!-- Wraps rather than truncates: a Legacy or Popular badge next to a
+					longer name moves under it instead of cutting the name. -->
+					<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
 						<h3
 							:id="titleId"
 							class="text-highlighted truncate text-base font-semibold"
