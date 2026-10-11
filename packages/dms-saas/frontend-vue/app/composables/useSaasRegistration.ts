@@ -94,6 +94,12 @@ interface RegistrationPayload {
 	name: string
 	workspaceName: string
 	paymentMethodId?: string
+	/**
+	 * The plan chosen on Pricing: the API opens the workspace on it, awaiting
+	 * its first payment, when the card already backs every free workspace it
+	 * may.
+	 */
+	requestedPlanId?: string
 	extras?: Record<string, unknown>
 }
 
@@ -487,6 +493,7 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 			workspaceName: translate(DEFAULT_WORKSPACE_NAME_KEY, {
 				name: form.name.trim(),
 			}),
+			requestedPlanId: plan.summary.value?.requestedPlan?._id,
 			extras: snapshotRegistrationExtras(toValue(options.extras)),
 		}
 	}
