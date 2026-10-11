@@ -24,6 +24,7 @@ import {
   Exported,
   Searchable,
   Select,
+  type ComposedText,
   TableViewRoutes,
   type Tone,
 } from "@antelopejs/interface-dms/base";
@@ -37,7 +38,7 @@ import {
   PlanModel,
 } from "../../db";
 import { plansUsingFeature } from "../../plans/feature-usage";
-import { FeatureUsageDisplay } from "../../plans/plan-displays";
+import { composed, countParam } from "../../i18n/composed-text";
 import { CONTENT_LANGUAGE_HEADER } from "../../utils/content-language";
 
 const TEXTS = "$saas.catalog.features";
@@ -84,6 +85,12 @@ function featureRowOf(self: unknown): Feature {
 
 function featureIdOf(self: unknown): string {
   return featureRowOf(self)._id;
+}
+
+function countPlansUsing(featureId: string): Promise<number> {
+  return GetModel(PlanModel)
+    .findNotDeleted()
+    .then((plans) => plansUsingFeature(plans, featureId).length);
 }
 
 /**
@@ -204,7 +211,7 @@ export class featuresDataAPI extends DataController(
   @Column({
     name: `${TEXTS}.column.used_by`,
     type: new DefaultDataTypes.NumberType(),
-    display: new FeatureUsageDisplay(),
+    display: new DefaultDisplays.TwoLineDisplay({ primaryField: "usedByText" }),
     readonlyBehavior: {
       new: ReadonlyBehaviorType.hidden,
       edit: ReadonlyBehaviorType.hidden,
@@ -214,10 +221,19 @@ export class featuresDataAPI extends DataController(
   })
   @Access(AccessMode.ReadOnly)
   get usedBy(): Promise<number> {
-    const featureId = featureIdOf(this);
-    return GetModel(PlanModel)
-      .findNotDeleted()
-      .then((plans) => plansUsingFeature(plans, featureId).length);
+    return countPlansUsing(featureIdOf(this));
+  }
+
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get usedByText(): Promise<ComposedText> {
+    return countPlansUsing(featureIdOf(this)).then((count) =>
+      count === 0
+        ? composed("saas.catalog.features.used_by_none")
+        : composed("saas.catalog.features.used_by", {
+            count: countParam(count),
+          }),
+    );
   }
 
   @Select()

@@ -3,7 +3,6 @@ import type { DmsFrontendModule, DmsFrontendSdk } from '#dms/frontend-module'
 import './app/assets/css/saas.css'
 import authLinks from './app/plugins/auth-links'
 import billingDataTypes from './app/plugins/billing-data-types'
-import catalogDataTypes from './app/plugins/catalog-data-types'
 import footerLinks from './app/plugins/footer-links'
 import segmentConditions from './app/plugins/segment-conditions-data-type'
 import sidebarWidgets from './app/plugins/sidebar-widgets'
@@ -56,7 +55,6 @@ const frontendModule: DmsFrontendModule = {
 		registerComponents(sdk)
 		sdk.registerPlugin(authLinks)
 		sdk.registerPlugin(billingDataTypes)
-		sdk.registerPlugin(catalogDataTypes)
 		sdk.registerPlugin(footerLinks)
 		sdk.registerPlugin(segmentConditions)
 		sdk.registerPlugin(sidebarWidgets)

@@ -19,6 +19,7 @@ import {
   Exported,
   Searchable,
   Select,
+  type ComposedText,
   TableViewRoutes,
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
@@ -33,9 +34,12 @@ import {
 import { loadCatalogueUsage, planMrrShare } from "../../plans/catalogue-usage";
 import { stripeDashboardUrl } from "../../stripe/client";
 import {
-  PlanMemberCapDisplay,
-  PlanMoneyDisplay,
-} from "../../plans/plan-displays";
+  composed,
+  countParam,
+  moneyParam,
+  valueText,
+} from "../../i18n/composed-text";
+import { toMinorUnits } from "../../utils/money";
 import {
   type TableScope,
   scopedCountBatch,
@@ -71,6 +75,7 @@ const SALE_STATUS_ITEMS = PLAN_SALE_STATUSES.map((value) => ({
 const SALE_STATUS_TONES = { on_sale: "success", legacy: "warning" } as const;
 
 const COUNT_COLUMN_SIZE = 120;
+const PLAN_COLUMN_SIZE = 260;
 const TRUE_FILTER_VALUE = "true";
 
 /**
@@ -90,6 +95,11 @@ interface PlanRowInstance {
 
 function planOf(self: unknown): Plan {
   return (self as PlanRowInstance).table;
+}
+
+/** An amount in major units, written in the plan's own currency. */
+function planMoney(amount: number, currency: string): ComposedText {
+  return valueText(moneyParam(toMinorUnits(amount, currency), currency));
 }
 
 async function usageOf(self: unknown) {
@@ -149,7 +159,7 @@ export class plansDataAPI extends DataController(
         },
       ],
     }),
-    size: 260,
+    size: PLAN_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare name: string;
@@ -185,10 +195,17 @@ export class plansDataAPI extends DataController(
   @Column({
     name: `${TEXTS}.field.price`,
     type: new DefaultDataTypes.PriceType(),
-    display: new PlanMoneyDisplay({ currencyField: "currency" }),
+    display: new DefaultDisplays.TwoLineDisplay({ primaryField: "priceText" }),
   })
   @Access(AccessMode.ReadOnly)
   declare price: number;
+
+  @Listable(["price", "currency"])
+  @Access(AccessMode.ReadOnly)
+  get priceText(): ComposedText {
+    const plan = planOf(this);
+    return planMoney(plan.price, plan.currency);
+  }
 
   @Select()
   @Listable()
@@ -256,11 +273,22 @@ export class plansDataAPI extends DataController(
   @Column({
     name: `${TEXTS}.field.max_members`,
     type: new DefaultDataTypes.NumberType({ min: UNLIMITED_MEMBERS }),
-    display: new PlanMemberCapDisplay(),
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "maxMembersText",
+    }),
     size: COUNT_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare maxMembers: number;
+
+  @Listable(["maxMembers"])
+  @Access(AccessMode.ReadOnly)
+  get maxMembersText(): ComposedText {
+    const { maxMembers } = planOf(this);
+    return maxMembers === UNLIMITED_MEMBERS
+      ? composed("saas.catalog.plans.unlimited")
+      : valueText(countParam(maxMembers));
+  }
 
   @Listable(["_id"])
   @Exported()
@@ -316,11 +344,18 @@ export class plansDataAPI extends DataController(
     name: `${TEXTS}.column.mrr`,
     description: `${TEXTS}.column.mrr_description`,
     type: new DefaultDataTypes.PriceType(),
-    display: new PlanMoneyDisplay({ currencyField: "currency" }),
+    display: new DefaultDisplays.TwoLineDisplay({ primaryField: "mrrText" }),
   })
   @Access(AccessMode.ReadOnly)
   get mrr(): Promise<number> {
     return usageOf(this).then((usage) => usage?.mrr ?? 0);
+  }
+
+  @Listable(["_id", "currency"])
+  @Access(AccessMode.ReadOnly)
+  get mrrText(): Promise<ComposedText> {
+    const { currency } = planOf(this);
+    return usageOf(this).then((usage) => planMoney(usage?.mrr ?? 0, currency));
   }
 
   @Listable(["_id", "currency"])

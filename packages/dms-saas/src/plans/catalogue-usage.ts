@@ -208,11 +208,24 @@ export async function loadPlanUsageRows(
     .filter((row): row is PlanUsageRow => row !== undefined);
 }
 
-/** {@link summariseCatalogueUsage} over the stored plans and workspaces. */
-export async function loadCatalogueUsage(): Promise<CatalogueUsage> {
+async function readCatalogueUsage(): Promise<CatalogueUsage> {
   const [plans, rows] = await Promise.all([
     GetModel(PlanModel).findNotDeleted(),
     loadPlanUsageRows(),
   ]);
   return summariseCatalogueUsage(plans, rows);
+}
+
+let inFlightUsage: Promise<CatalogueUsage> | undefined;
+
+/**
+ * {@link summariseCatalogueUsage} over the stored plans and workspaces. Every
+ * plan row of a listing reads it from its getters at once: the reads made
+ * while one runs share it.
+ */
+export function loadCatalogueUsage(): Promise<CatalogueUsage> {
+  inFlightUsage ??= readCatalogueUsage().finally(() => {
+    inFlightUsage = undefined;
+  });
+  return inFlightUsage;
 }
