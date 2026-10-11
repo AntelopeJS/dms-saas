@@ -1,4 +1,8 @@
-import type { Feature, PlanFeatureValue } from "../db";
+import type {
+  Feature,
+  PlanFeatureValue,
+  PlanMigrationFeatureDiff,
+} from "../db";
 import { FEATURE_UNLIMITED_VALUE } from "./plan-write";
 
 /** How a value reads moving from one plan to another. */
@@ -99,4 +103,39 @@ export function diffPlanFeatures(
  */
 export function memberCapChange(from: number, to: number): PlanChangeKind {
   return changeKind(numberRank(from), numberRank(to));
+}
+
+function isAbsentFeature(value: unknown): boolean {
+  return value === null || value === false;
+}
+
+/**
+ * What a migration records of a feature comparison: the features the target
+ * plan adds, the ones it drops, and the ones it sets differently.
+ *
+ * @param changes Every feature compared, from `diffPlanFeatures`
+ */
+export function migrationFeatureDiff(
+  changes: FeatureChange[],
+): PlanMigrationFeatureDiff {
+  const moved = changes.filter((change) => change.kind !== "same");
+  const keysWhere = (test: (change: FeatureChange) => boolean) =>
+    moved.filter(test).map((change) => change.featureId);
+  return {
+    added: keysWhere(
+      (change) => isAbsentFeature(change.from) && !isAbsentFeature(change.to),
+    ),
+    removed: keysWhere(
+      (change) => !isAbsentFeature(change.from) && isAbsentFeature(change.to),
+    ),
+    changed: moved
+      .filter(
+        (change) => isAbsentFeature(change.from) === isAbsentFeature(change.to),
+      )
+      .map((change) => ({
+        key: change.featureId,
+        oldValue: change.from,
+        newValue: change.to,
+      })),
+  };
 }

@@ -9,15 +9,18 @@ import {
 import { assert } from "@antelopejs/interface-api-util";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel, Model } from "@antelopejs/interface-database-decorators";
+import { Logging } from "@antelopejs/interface-core/logging";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { TenantMemberModel, TenantModel } from "@antelopejs/interface-dms/db";
 import {
+  type Feature,
   FeatureModel,
   type Plan,
-  type PlanMigrationFailedWorkspace,
-  type PlanMigrationFeatureDiff,
+  type PlanMigration,
+  type PlanMigrationPermissionDiff,
   type PlanMigrationReason,
+  type ResolvedPlanInheritance,
   PlanMigrationModel,
   PlanModel,
   type TenantSubscription,
@@ -35,8 +38,8 @@ import {
   changeKind,
   diffPlanFeatures,
   memberCapChange,
+  migrationFeatureDiff,
 } from "../../plans/plan-diff";
-import { slugify } from "../../plans/plan-write";
 import { getRowInstance } from "../../utils/row-instance";
 import { processPlanMigrationJob } from "../../workers";
 
@@ -47,6 +50,11 @@ const PAST_DUE_STATUS = "past_due";
 const CONFIRM_TEXT_FIELD = "confirmText";
 const CONFIRM_TEXT_MISMATCH = "$saas.errors.plan.retire_confirm_mismatch";
 const RETIRE_REASON: PlanMigrationReason = "plan_retired";
+
+/** The migration a retirement started. */
+interface RetireResult {
+  migrationId: string;
+}
 
 interface RetireBody {
   targetPlanId: string;
@@ -116,7 +124,7 @@ function summarisePlan(plan: Plan): RetirePlanSummary {
   return {
     _id: plan._id,
     name: plan.name,
-    slug: plan.slug || slugify(plan.name),
+    slug: plan.slug,
     price: plan.price,
     currency: plan.currency,
     interval: plan.interval,
@@ -127,7 +135,7 @@ function summarisePlan(plan: Plan): RetirePlanSummary {
 
 /** The text an operator types to retire a plan: its slug. */
 export function retireConfirmText(plan: Plan): string {
-  return plan.slug || slugify(plan.name);
+  return plan.slug;
 }
 
 function renewalRange(rows: RetireWorkspace[]): [Date | null, Date | null] {
@@ -185,14 +193,31 @@ interface MigrationJobInput {
   fromPlan: Plan;
   targetPlan: Plan;
   notifyMembers: boolean;
-  totalWorkspaces: number;
   initiatedBy: string;
-  permissions: PermissionChange[];
+  fromAccess: ResolvedPlanInheritance;
+  toAccess: ResolvedPlanInheritance;
+  catalogue: Feature[];
 }
 
-function buildMigrationJobPayload(input: MigrationJobInput) {
-  const permissionIds = (kind: PlanChangeKind) =>
-    input.permissions.filter((row) => row.kind === kind).map((row) => row.id);
+function permissionDiff(
+  from: string[],
+  to: string[],
+): PlanMigrationPermissionDiff {
+  const changes = permissionChanges(from, to);
+  const idsOf = (kind: PlanChangeKind) =>
+    changes.filter((row) => row.kind === kind).map((row) => row.id);
+  const toSet = new Set(to);
+  return {
+    removed: idsOf("lost"),
+    added: idsOf("gained"),
+    unchanged: from.filter((id) => toSet.has(id)),
+  };
+}
+
+// The executor sets the workspace count once it froze the snapshot.
+function buildMigrationJobPayload(
+  input: MigrationJobInput,
+): Partial<PlanMigration> {
   return {
     fromPlanId: input.fromPlan._id,
     toPlanId: input.targetPlan._id,
@@ -200,26 +225,31 @@ function buildMigrationJobPayload(input: MigrationJobInput) {
     toPlanName: input.targetPlan.name,
     reason: RETIRE_REASON,
     notifyMembers: input.notifyMembers,
-    status: "pending" as const,
-    totalWorkspaces: input.totalWorkspaces,
+    status: "pending",
+    totalWorkspaces: 0,
     processedWorkspaces: 0,
-    processedTenantIds: [] as string[],
-    failedWorkspaces: [] as PlanMigrationFailedWorkspace[],
+    processedTenantIds: [],
+    failedWorkspaces: [],
     initiatedBy: input.initiatedBy,
-    permissionDiff: {
-      removed: permissionIds("lost"),
-      added: permissionIds("gained"),
-      unchanged: [] as string[],
-    },
-    featureDiff: {
-      removed: [],
-      added: [],
-      changed: [],
-    } as PlanMigrationFeatureDiff,
-    startedAt: null as Date | null,
-    completedAt: null as Date | null,
+    permissionDiff: permissionDiff(
+      input.fromAccess.permissions,
+      input.toAccess.permissions,
+    ),
+    featureDiff: migrationFeatureDiff(
+      diffPlanFeatures(
+        sortedCatalogue(input.catalogue),
+        input.fromAccess.features,
+        input.toAccess.features,
+      ),
+    ),
+    startedAt: null,
+    completedAt: null,
     createdAt: new Date(),
   };
+}
+
+function sortedCatalogue(catalogue: Feature[]): Feature[] {
+  return [...catalogue].sort((a, b) => a.order - b.order);
 }
 
 /**
@@ -291,7 +321,7 @@ export class SaasPlanDeletionController extends Controller(
     const [rows, targets, hasOpenMigration, scheduled] = await Promise.all([
       this.describeWorkspaces(fromPlanId, usage),
       this.retireTargets(fromPlanId),
-      this.planMigrationModel.existsPendingOrRunningForPlan(fromPlanId),
+      this.planMigrationModel.existsUnsettledForPlan(fromPlanId),
       this.countScheduledChanges(fromPlanId),
     ]);
     const [firstRenewal, lastRenewal] = renewalRange(rows);
@@ -349,7 +379,7 @@ export class SaasPlanDeletionController extends Controller(
     return {
       target: summarisePlan(toPlan),
       features: diffPlanFeatures(
-        [...catalogue].sort((a, b) => a.order - b.order),
+        sortedCatalogue(catalogue),
         fromAccess.features,
         toAccess.features,
       ),
@@ -394,22 +424,12 @@ export class SaasPlanDeletionController extends Controller(
     @AuthOwnerOnly() user: User,
     @Parameter("fromPlanId") fromPlanId: string,
     @JSONBody() body: RetireBody,
-  ) {
+  ): Promise<RetireResult> {
     const fromPlan = await this.loadPlan(fromPlanId);
     this.assertConfirmText(fromPlan, body.confirmText);
-    const targetPlan = await this.planModel.get(body.targetPlanId);
+    const targetPlan = await this.loadRetireTarget(fromPlanId, body);
     assert(
-      targetPlan &&
-        !targetPlan.isDeleted &&
-        targetPlan.isActive &&
-        targetPlan._id !== fromPlanId,
-      HTTP_BAD_REQUEST,
-      "saas.errors.plan.target_must_be_active",
-    );
-    assert(
-      !(await this.planMigrationModel.existsPendingOrRunningForPlan(
-        fromPlanId,
-      )),
+      !(await this.planMigrationModel.existsUnsettledForPlan(fromPlanId)),
       HTTP_CONFLICT,
       "saas.errors.migration.already_pending",
     );
@@ -419,34 +439,42 @@ export class SaasPlanDeletionController extends Controller(
         updatedAt: new Date(),
       });
     }
-    const [fromAccess, toAccess] = await Promise.all([
+    const [fromAccess, toAccess, catalogue] = await Promise.all([
       this.planModel.resolveInheritance(fromPlan),
       this.planModel.resolveInheritance(targetPlan),
+      this.featureModel.getAll(),
     ]);
-    const inserted = await this.planMigrationModel.insert([
+    const [jobId] = await this.planMigrationModel.insert(
       buildMigrationJobPayload({
         fromPlan,
         targetPlan,
         notifyMembers: body.notifyMembers ?? true,
-        totalWorkspaces:
-          (await this.tenantSubscriptionModel.countByPlan(fromPlanId)) +
-          (await this.countScheduledChanges(fromPlanId)),
         initiatedBy: user._id,
-        permissions: permissionChanges(
-          fromAccess.permissions,
-          toAccess.permissions,
-        ),
+        fromAccess,
+        toAccess,
+        catalogue,
       }),
-    ]);
-    const jobId = inserted[0];
-    void processPlanMigrationJob(jobId).catch(() => {
-      console.error("Plan migration requires inspection", jobId);
+    );
+    void processPlanMigrationJob(jobId).catch((error: unknown) => {
+      Logging.Error(`Plan migration ${jobId} requires inspection`, error);
     });
-    return {
-      migrationId: jobId,
-      sourcePlanRetained: true,
-      scope: "captured_tenants_only",
-    };
+    return { migrationId: jobId };
+  }
+
+  private async loadRetireTarget(
+    fromPlanId: string,
+    body: RetireBody,
+  ): Promise<Plan> {
+    const targetPlan = await this.planModel.get(body.targetPlanId);
+    assert(
+      targetPlan &&
+        !targetPlan.isDeleted &&
+        targetPlan.isActive &&
+        targetPlan._id !== fromPlanId,
+      HTTP_BAD_REQUEST,
+      "saas.errors.plan.target_must_be_active",
+    );
+    return targetPlan!;
   }
 
   private assertConfirmText(plan: Plan, typed: string | undefined): void {

@@ -10,10 +10,10 @@ import {
   needsAttention,
 } from "./migration-detail";
 import { dateTimeParam } from "./migration-blocks";
+import { FIRST_MIGRATION_ATTEMPT } from "./migration-outcomes";
 import type { UncertainResolution } from "../workers/plan-migration-resolution";
 
 const K = "saas.catalog.migrations.detail";
-const FIRST_ATTEMPT = 1;
 
 /** The two tabs of a migration's workspaces. */
 type WorkspaceGroup = "attention" | "settled";
@@ -55,7 +55,7 @@ export interface MigrationWorkspaceRow {
 }
 
 function attemptNote(view: MigrationWorkspaceView): ComposedText | null {
-  if (view.attempt <= FIRST_ATTEMPT) return null;
+  if (view.attempt <= FIRST_MIGRATION_ATTEMPT) return null;
   return composed(`${K}.attempt`, { count: countParam(view.attempt) });
 }
 

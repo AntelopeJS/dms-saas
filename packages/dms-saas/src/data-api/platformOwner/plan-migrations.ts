@@ -28,7 +28,6 @@ import {
   PLAN_MIGRATION_STAGES,
   PlanMigration,
   PlanMigrationModel,
-  PlanModel,
 } from "../../db";
 import { composed, listDateFormat, valueText } from "../../i18n/composed-text";
 import { dateTimeParam } from "../../plans/migration-blocks";
@@ -49,9 +48,6 @@ const TOTALS_FIELDS = [
 ];
 const PROGRESS_COLUMN_SIZE = 170;
 const STATUS_COLUMN_SIZE = 210;
-// Retiring a plan is the only way a migration starts: one stored before the
-// reason was recorded was started that way too, as its detail page reads it.
-const DEFAULT_REASON = "plan_retired";
 const REASON_KEY = "saas.catalog.migrations.reason";
 const PERSON_COLUMN_SIZE = 150;
 const TITLE_COLUMN_SIZE = 240;
@@ -78,15 +74,6 @@ function listDateTime(date: Date): ComposedText {
 
 function migrationOf(self: unknown): PlanMigration {
   return (self as MigrationRowInstance).table;
-}
-
-async function planName(
-  stored: string | null | undefined,
-  planId: string,
-): Promise<string> {
-  if (stored) return stored;
-  const plan = await GetModel(PlanModel).get(planId);
-  return plan?.name ?? planId;
 }
 
 /**
@@ -116,7 +103,7 @@ export class planMigrationsDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare _id: string;
 
-  @Listable(["fromPlanId", "toPlanId", "fromPlanName", "toPlanName"])
+  @Listable(["fromPlanName", "toPlanName"])
   @Column({
     name: `${TEXTS}.column.migration`,
     type: new DefaultDataTypes.StringType(),
@@ -127,12 +114,9 @@ export class planMigrationsDataAPI extends DataController(
     size: TITLE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
-  get title(): Promise<string> {
+  get title(): string {
     const migration = migrationOf(this);
-    return Promise.all([
-      planName(migration.fromPlanName, migration.fromPlanId),
-      planName(migration.toPlanName, migration.toPlanId),
-    ]).then(([from, to]) => `${from} ${ARROW} ${to}`);
+    return `${migration.fromPlanName} ${ARROW} ${migration.toPlanName}`;
   }
 
   @Select()
@@ -140,14 +124,14 @@ export class planMigrationsDataAPI extends DataController(
   @Searchable()
   @HiddenStringFilter()
   @Access(AccessMode.ReadOnly)
-  declare fromPlanName: string | null;
+  declare fromPlanName: string;
 
   @Select()
   @Listable()
   @Searchable()
   @HiddenStringFilter()
   @Access(AccessMode.ReadOnly)
-  declare toPlanName: string | null;
+  declare toPlanName: string;
 
   @Select()
   @Listable()
@@ -157,14 +141,12 @@ export class planMigrationsDataAPI extends DataController(
     isVisible: false,
   })
   @Access(AccessMode.ReadOnly)
-  declare reason: string | null;
+  declare reason: string;
 
   @Listable(["reason"])
   @Access(AccessMode.ReadOnly)
   get reasonLabel(): ComposedText {
-    return composed(
-      `${REASON_KEY}.${migrationOf(this).reason ?? DEFAULT_REASON}`,
-    );
+    return composed(`${REASON_KEY}.${migrationOf(this).reason}`);
   }
 
   @Select()
@@ -189,7 +171,7 @@ export class planMigrationsDataAPI extends DataController(
     isVisible: false,
   })
   @Access(AccessMode.ReadOnly)
-  declare stage: string | null;
+  declare stage: string;
 
   @Select()
   @Listable()

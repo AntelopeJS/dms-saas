@@ -11,13 +11,7 @@ import type {
   TopListItem,
 } from "@antelopejs/interface-dms/base";
 import { getReportingCurrency } from "../../config";
-import {
-  type Invoice,
-  InvoiceModel,
-  type PlanMigration,
-  PlanMigrationModel,
-  PlanModel,
-} from "../../db";
+import { type Invoice, InvoiceModel, PlanMigrationModel } from "../../db";
 import { buildActivityFeed, parseActivityKind } from "../../metrics/activity";
 import {
   type DirectoryRow,
@@ -42,6 +36,7 @@ import {
   parsePeriod,
 } from "../../metrics/revenue";
 import { workspaceDetailPath } from "../../pages/platform/paths";
+import { migrationTotals } from "../../plans/migration-detail";
 import { MS_PER_DAY } from "../../utils/time";
 import { loadActivitySources } from "../../metrics/activity-sources";
 
@@ -57,11 +52,6 @@ interface KpiPayload {
   delta?: number;
 }
 
-const ATTENTION_MIGRATION_STATUSES = new Set([
-  "failed",
-  "partially_failed",
-  "reconciliation_required",
-]);
 const OPEN_STATUS = "open";
 // Paid invoices are filtered on their issue date, which an invoice paid late
 // precedes: the window reaches back far enough to catch it.
@@ -69,21 +59,18 @@ const LATE_PAYMENT_LOOKBACK_DAYS = 90;
 const ACTIVITY_LIMIT = 8;
 const PERCENT = 100;
 
+/** The migrations the migrations list shows as needing an operator. */
 async function loadAttentionMigrations(): Promise<MigrationAttention> {
-  const migrations = (await GetModel(PlanMigrationModel).getAll()).filter(
-    (migration: PlanMigration) =>
-      ATTENTION_MIGRATION_STATUSES.has(migration.status),
-  );
+  const migrations =
+    await GetModel(PlanMigrationModel).findByStage("needs_attention");
   const [first] = migrations;
-  const fromPlan = first
-    ? await GetModel(PlanModel).get(first.fromPlanId)
-    : undefined;
+  const totals = first ? migrationTotals(first) : null;
   return {
     count: migrations.length,
-    firstFromPlan: fromPlan?.name ?? "—",
-    firstToPlan: first?.snapshot?.target.name ?? "—",
-    firstFailed: first?.failedWorkspaces.length ?? 0,
-    firstTotal: first?.totalWorkspaces ?? 0,
+    firstFromPlan: first?.fromPlanName ?? "—",
+    firstToPlan: first?.toPlanName ?? "—",
+    firstFailed: totals?.notMoved ?? 0,
+    firstTotal: totals?.captured ?? 0,
   };
 }
 
@@ -97,7 +84,7 @@ async function loadOpenInvoices(
     count: open.length,
     awaiting: sumInReportingCurrency(
       open.map((invoice) => ({
-        amountMinor: invoice.total || invoice.amount,
+        amountMinor: invoice.total,
         currency: invoice.currency,
       })),
       currency,

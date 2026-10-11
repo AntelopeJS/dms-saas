@@ -6,25 +6,27 @@ import type {
   PlanMigrationTenantOutcome,
   TenantSubscription,
 } from "../db";
-import { PlanMigrationModel, TenantSubscriptionModel } from "../db";
+import {
+  PlanMigrationModel,
+  TenantSubscriptionModel,
+  isPlanMigrationExecuting,
+} from "../db";
+import {
+  isUncertainOutcome,
+  settledOutcomes,
+  withTenantOutcome,
+} from "../plans/migration-outcomes";
 import { publishMigrationChange } from "../plans/migration-realtime";
 import {
   applyPermissionCleanup,
   migrationOperationId,
   migrationProgress,
   settledMigrationStatus,
-  settledOutcomes,
-  withTenantOutcome,
 } from "./plan-migration";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
-const UNCERTAIN_STATUSES = new Set<PlanMigrationTenantOutcome["status"]>([
-  "reconciliation_required",
-  "running",
-]);
-const FIRST_ATTEMPT = 1;
 
 /** How an operator settles a workspace whose move left Stripe uncertain. */
 export type UncertainResolution = "moved" | "not_moved";
@@ -48,19 +50,11 @@ async function loadSettledJob(migrationId: string): Promise<PlanMigration> {
   const job = await GetModel(PlanMigrationModel).get(migrationId);
   assert(job, HTTP_NOT_FOUND, "saas.errors.migration.not_found");
   assert(
-    job.status !== "pending" && job.status !== "running",
+    !isPlanMigrationExecuting(job.status),
     HTTP_CONFLICT,
     "saas.errors.migration.still_running",
   );
   return job;
-}
-
-/**
- * An outcome still `running` once nothing runs was cut short by the
- * executor's end: as uncertain as a reported one.
- */
-function isUncertain(outcome: PlanMigrationTenantOutcome): boolean {
-  return UNCERTAIN_STATUSES.has(outcome.status);
 }
 
 function uncertainOutcome(
@@ -69,7 +63,7 @@ function uncertainOutcome(
 ): PlanMigrationTenantOutcome {
   const outcome = job.tenantOutcomes.find((row) => row.tenantId === tenantId);
   assert(
-    outcome && isUncertain(outcome),
+    outcome && isUncertainOutcome(outcome),
     HTTP_CONFLICT,
     "saas.errors.migration.workspace_not_uncertain",
   );
@@ -94,11 +88,7 @@ function attemptOperationId(
   job: PlanMigration,
   outcome: PlanMigrationTenantOutcome,
 ): string {
-  return migrationOperationId(
-    job._id,
-    outcome.tenantId,
-    outcome.attempt ?? FIRST_ATTEMPT,
-  );
+  return migrationOperationId(job._id, outcome.tenantId, outcome.attempt);
 }
 
 /**
@@ -218,7 +208,7 @@ export async function reconcileMigration(
   const job = await loadSettledJob(input.migrationId);
   const settled = settledOutcomes(job);
   assert(
-    !settled.some(isUncertain),
+    !settled.some(isUncertainOutcome),
     HTTP_CONFLICT,
     "saas.errors.migration.uncertain_workspaces",
   );

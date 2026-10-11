@@ -4,14 +4,13 @@ import {
   type PlanMigration,
   type PlanMigrationTenantOutcome,
   type PlanMigrationTenantStatus,
+  isPlanMigrationExecuting,
 } from "../db";
-
-/** Outcomes an operator must settle by reading Stripe. */
-const UNCERTAIN_STATUSES = new Set<PlanMigrationTenantStatus>([
-  "reconciliation_required",
-  "running",
-]);
-const EXECUTING_STATUSES = new Set(["pending", "running"]);
+import {
+  isNotMovedOutcome,
+  isUncertainOutcome,
+  settledOutcomes,
+} from "./migration-outcomes";
 
 /** Where a captured workspace stands, `pending` until the run reaches it. */
 export type MigrationWorkspaceStatus = PlanMigrationTenantStatus | "pending";
@@ -61,31 +60,13 @@ export interface MigrationAbilities {
   canResolve: boolean;
 }
 
-const NOT_MOVED = new Set<PlanMigrationTenantStatus>([
-  "reconciliation_required",
-  "failed",
-  "kept",
-]);
-
-/**
- * The outcomes of a migration, a workspace a stopped executor never reached
- * counted as failed (it was never admitted, so it did not move).
- */
+/** The outcomes of a migration, the ones a stopped run never reached included. */
 function effectiveOutcomes(
   migration: PlanMigration,
 ): PlanMigrationTenantOutcome[] {
-  const outcomes = migration.tenantOutcomes ?? [];
-  if (EXECUTING_STATUSES.has(migration.status)) return outcomes;
-  const reached = new Set(outcomes.map((row) => row.tenantId));
-  const unreached = (migration.snapshot?.tenantIds ?? [])
-    .filter((tenantId) => !reached.has(tenantId))
-    .map((tenantId) => ({
-      tenantId,
-      status: "failed" as const,
-      error: null,
-      seatQuantity: null,
-    }));
-  return [...outcomes, ...unreached];
+  return isPlanMigrationExecuting(migration.status)
+    ? migration.tenantOutcomes
+    : settledOutcomes(migration);
 }
 
 function countOf(
@@ -104,14 +85,13 @@ function countOf(
 export function migrationTotals(migration: PlanMigration): MigrationTotals {
   const outcomes = effectiveOutcomes(migration);
   const moved = countOf(outcomes, (row) => row.status === "succeeded");
-  const isSettled = !EXECUTING_STATUSES.has(migration.status);
+  const isSettled = !isPlanMigrationExecuting(migration.status);
   return {
-    captured:
-      migration.snapshot?.tenantIds.length ?? migration.totalWorkspaces ?? 0,
+    captured: migration.snapshot?.tenantIds.length ?? migration.totalWorkspaces,
     moved,
-    notMoved: countOf(outcomes, (row) => NOT_MOVED.has(row.status)),
+    notMoved: countOf(outcomes, (row) => isNotMovedOutcome(row)),
     uncertain: isSettled
-      ? countOf(outcomes, (row) => UNCERTAIN_STATUSES.has(row.status))
+      ? countOf(outcomes, (row) => isUncertainOutcome(row))
       : 0,
     failed: countOf(outcomes, (row) => row.status === "failed"),
     notified: migration.notifyMembers ? moved : 0,
@@ -130,7 +110,7 @@ export function migrationAbilities(
   migration: PlanMigration,
   totals: MigrationTotals,
 ): MigrationAbilities {
-  const isSettled = !EXECUTING_STATUSES.has(migration.status);
+  const isSettled = !isPlanMigrationExecuting(migration.status);
   const isOpen =
     migration.status === "reconciliation_required" ||
     migration.status === "failed";
@@ -139,18 +119,6 @@ export function migrationAbilities(
     canRetry: isSettled && totals.uncertain === 0 && totals.failed > 0,
     canReconcile: isSettled && isOpen && totals.uncertain === 0,
   };
-}
-
-/**
- * When a workspace reached its state. An outcome stored before outcomes were
- * timed, or one the run never reached, took its state when the run ended.
- */
-function outcomeTime(
-  migration: PlanMigration,
-  outcome: PlanMigrationTenantOutcome | undefined,
-): Date | null {
-  if (!outcome) return null;
-  return outcome.updatedAt ?? migration.completedAt ?? null;
 }
 
 /**
@@ -167,7 +135,7 @@ export function migrationWorkspaces(
   const outcomes = new Map(
     effectiveOutcomes(migration).map((row) => [row.tenantId, row]),
   );
-  const isSettled = !EXECUTING_STATUSES.has(migration.status);
+  const isSettled = !isPlanMigrationExecuting(migration.status);
   const tenantIds = migration.snapshot?.tenantIds ?? [...outcomes.keys()];
   const rows = tenantIds.map((tenantId) => {
     const outcome = outcomes.get(tenantId);
@@ -178,11 +146,10 @@ export function migrationWorkspaces(
       status,
       error: outcome?.error ?? null,
       attempt: outcome?.attempt ?? 0,
-      updatedAt: outcomeTime(migration, outcome),
+      updatedAt: outcome?.updatedAt ?? null,
       resolvedBy: outcome?.resolvedBy ?? null,
       isUncertain:
-        isSettled &&
-        UNCERTAIN_STATUSES.has(status as PlanMigrationTenantStatus),
+        isSettled && outcome !== undefined && isUncertainOutcome(outcome),
     };
   });
   return rows.sort(

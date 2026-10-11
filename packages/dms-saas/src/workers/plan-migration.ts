@@ -14,6 +14,13 @@ import type {
 import { PlanMigrationModel, PlanModel, TenantSubscriptionModel } from "../db";
 import { notifyTenantOwners, planMigratedSubject } from "../notifications";
 import { countOccupiedSeats, syncStripeSeatQuantity } from "../plans";
+import {
+  FIRST_MIGRATION_ATTEMPT,
+  type RecordedTenantOutcome,
+  isNotMovedOutcome,
+  settledOutcomes,
+  withTenantOutcome,
+} from "../plans/migration-outcomes";
 import { publishMigrationChange } from "../plans/migration-realtime";
 import { redirectPendingPlanChange } from "../plan-changes/pending-target";
 import { getStripeClient } from "../stripe/client";
@@ -23,19 +30,12 @@ import { getRowInstance } from "../utils";
 const ALL_PERMISSIONS = "*";
 const ICON_MIGRATION = "i-ph-stack";
 const PRORATION_BEHAVIOR = "create_prorations" as const;
-const FIRST_ATTEMPT = 1;
 const UNKNOWN_FAILURE = "Reconciliation required";
-const NOT_REACHED_ERROR = "Not reached before the migration stopped";
 /** What the owners are told: moved now, or their scheduled change redirected. */
 const MIGRATION_NOTICES = {
   migrated: "$saas.notifications.payload.plan_migrated",
   redirected: "$saas.notifications.payload.plan_change_redirected",
 } as const;
-const NOT_MOVED_STATUSES = new Set<PlanMigrationTenantOutcome["status"]>([
-  "reconciliation_required",
-  "failed",
-  "kept",
-]);
 
 /**
  * The operation a workspace's move runs under. A retry is a new operation:
@@ -48,10 +48,10 @@ const NOT_MOVED_STATUSES = new Set<PlanMigrationTenantOutcome["status"]>([
 export function migrationOperationId(
   jobId: string,
   tenantId: string,
-  attempt: number = FIRST_ATTEMPT,
+  attempt: number = FIRST_MIGRATION_ATTEMPT,
 ): string {
   const base = `migration:${jobId}:${tenantId}`;
-  return attempt > FIRST_ATTEMPT ? `${base}:${attempt}` : base;
+  return attempt > FIRST_MIGRATION_ATTEMPT ? `${base}:${attempt}` : base;
 }
 
 /**
@@ -118,47 +118,11 @@ export function migrationProgress(
     tenantOutcomes,
     processedTenantIds,
     processedWorkspaces: processedTenantIds.length,
-    failedWorkspaces: tenantOutcomes
-      .filter((row) => NOT_MOVED_STATUSES.has(row.status))
-      .map((row) => ({
-        tenantId: row.tenantId,
-        error: row.error ?? UNKNOWN_FAILURE,
-      })),
+    failedWorkspaces: tenantOutcomes.filter(isNotMovedOutcome).map((row) => ({
+      tenantId: row.tenantId,
+      error: row.error ?? UNKNOWN_FAILURE,
+    })),
   };
-}
-
-/**
- * Every captured workspace's outcome once nothing runs: a workspace an
- * interrupted executor never reached was never admitted, so it did not move
- * and can be retried from its first attempt.
- *
- * @param job A settled migration
- */
-export function settledOutcomes(
-  job: PlanMigration,
-): PlanMigrationTenantOutcome[] {
-  const reached = new Set(job.tenantOutcomes.map((row) => row.tenantId));
-  const unreached = (job.snapshot?.tenantIds ?? [])
-    .filter((tenantId) => !reached.has(tenantId))
-    .map((tenantId) => ({
-      tenantId,
-      status: "failed" as const,
-      error: NOT_REACHED_ERROR,
-      seatQuantity: null,
-      attempt: FIRST_ATTEMPT - 1,
-    }));
-  return [...job.tenantOutcomes, ...unreached];
-}
-
-/** Workspace outcomes with one workspace's outcome replaced. */
-export function withTenantOutcome(
-  outcomes: PlanMigrationTenantOutcome[],
-  outcome: PlanMigrationTenantOutcome,
-): PlanMigrationTenantOutcome[] {
-  return [
-    ...outcomes.filter((row) => row.tenantId !== outcome.tenantId),
-    { ...outcome, updatedAt: new Date() },
-  ];
 }
 
 interface WorkspaceMigration {
@@ -319,7 +283,7 @@ async function snapshotMigration(
 
 async function recordTenantOutcome(
   job: PlanMigration,
-  outcome: PlanMigrationTenantOutcome,
+  outcome: RecordedTenantOutcome,
 ): Promise<void> {
   await GetModel(PlanMigrationModel).checkpoint(
     job,
@@ -417,7 +381,7 @@ async function migrateTenant(
 async function processTenantInJob(
   job: PlanMigration,
   tenantId: string,
-  attempt: number = FIRST_ATTEMPT,
+  attempt: number = FIRST_MIGRATION_ATTEMPT,
 ): Promise<void> {
   try {
     await runTenantLifecycleOperation(tenantId, () =>
@@ -479,11 +443,7 @@ async function executeRetry(jobId: string): Promise<void> {
   const retried = settledOutcomes(job).filter((row) => row.status === "failed");
   if (retried.length === 0 || !(await model.reopen(job))) return;
   for (const outcome of retried)
-    await processTenantInJob(
-      job,
-      outcome.tenantId,
-      (outcome.attempt ?? FIRST_ATTEMPT) + 1,
-    );
+    await processTenantInJob(job, outcome.tenantId, outcome.attempt + 1);
   await settleJob(job);
 }
 
@@ -528,10 +488,6 @@ export async function processPlanMigrationJob(jobId: string): Promise<void> {
  */
 export async function resumePendingPlanMigrations(): Promise<void> {
   const model = GetModel(PlanMigrationModel);
-  // Lists filter on the stage: migrations stored before it get theirs first.
-  for (const job of await model.findWithoutStage()) {
-    await model.backfillStage(job);
-  }
   for (const job of await model.findResumable()) {
     if (job.status !== "running") {
       await processPlanMigrationJob(job._id);

@@ -279,17 +279,12 @@ describe("retiring a plan", () => {
     const controller = new SaasPlanDeletionController();
     controller.planModel = planModel(store);
     controller.planMigrationModel = {
-      existsPendingOrRunningForPlan: vi.fn(async () => false),
+      existsUnsettledForPlan: vi.fn(async () => false),
       insert: vi.fn(async () => ["migration-1"]),
     } as unknown as PlanMigrationModel;
-    controller.tenantSubscriptionModel = {
-      countByPlan: vi.fn(async () => 12),
-      // Two workspaces of another plan are scheduled to switch to it.
-      findByPendingPlan: vi.fn(async () => [
-        { planId: "starter", pendingPlanId: PLAN_ID },
-        { planId: "team", pendingPlanId: PLAN_ID },
-      ]),
-    } as unknown as TenantSubscriptionModel;
+    controller.featureModel = {
+      getAll: vi.fn(async () => []),
+    } as unknown as FeatureModel;
     return controller;
   }
 
@@ -318,7 +313,7 @@ describe("retiring a plan", () => {
     );
   });
 
-  it("closes the plan to sign-ups and starts the snapshot migration, scheduled changes included", async () => {
+  it("closes the plan to sign-ups and starts the snapshot migration", async () => {
     const store = storeWith(storedPlan({}), target);
     const controller = retireController(store);
     const result = await controller.migrateAndDelete(OWNER, PLAN_ID, {
@@ -327,15 +322,14 @@ describe("retiring a plan", () => {
     });
     expect(result).toMatchObject({ migrationId: "migration-1" });
     expect(store.plans.get(PLAN_ID)?.isActive).toBe(false);
-    expect(controller.planMigrationModel.insert).toHaveBeenCalledWith([
+    expect(controller.planMigrationModel.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         fromPlanName: "Growth 2024",
         toPlanName: "Pro",
         reason: "plan_retired",
         initiatedBy: "operator",
-        totalWorkspaces: 14,
       }),
-    ]);
+    );
     expect(worker.processPlanMigrationJob).toHaveBeenCalledWith("migration-1");
   });
 });

@@ -30,15 +30,15 @@ import { stripeObjectUrl } from "../../stripe/dashboard-links";
 
 const HTTP_CONFLICT = 409;
 
-/** A plan as a migration names it: its stored name once the plan is gone. */
+/** A plan as a migration names it, priced while the plan still exists. */
 export async function planRef(
   planId: string,
-  stored: string | null | undefined,
+  name: string,
 ): Promise<MigrationPlanRef> {
   const plan = await GetModel(PlanModel).get(planId);
   return {
     _id: planId,
-    name: stored || plan?.name || planId,
+    name,
     price: plan?.price ?? null,
     currency: plan?.currency ?? null,
   };
@@ -58,7 +58,7 @@ async function workspaceNames(
 function capturedTenantIds(migration: PlanMigration): string[] {
   return (
     migration.snapshot?.tenantIds ??
-    (migration.tenantOutcomes ?? []).map((row) => row.tenantId)
+    migration.tenantOutcomes.map((row) => row.tenantId)
   );
 }
 
@@ -66,7 +66,7 @@ function mentionedPeople(migration: PlanMigration): string[] {
   const ids = [
     migration.initiatedBy,
     migration.reconciledBy,
-    ...(migration.tenantOutcomes ?? []).map((row) => row.resolvedBy),
+    ...migration.tenantOutcomes.map((row) => row.resolvedBy),
   ];
   return [...new Set(ids.filter((id): id is string => Boolean(id)))];
 }
@@ -224,8 +224,8 @@ export async function readStripe(
     tenantId,
   ).findOne();
   const dmsPlan = subscription?.planId
-    ? await planRef(subscription.planId, null)
-    : null;
+    ? await GetModel(PlanModel).get(subscription.planId)
+    : undefined;
   const subscriptionId = subscription?.stripeSubscriptionId ?? null;
   const reading: StripeReading = {
     stripeSubscriptionId: subscriptionId,

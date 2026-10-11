@@ -63,9 +63,12 @@ export interface PlanMigrationTenantOutcome {
   error: string | null;
   seatQuantity: number | null;
   /** Attempts made for this workspace; a retry runs under a new operation. */
-  attempt?: number;
-  /** When the workspace last changed state, for the detail timeline. */
-  updatedAt?: Date | null;
+  attempt: number;
+  /**
+   * When the workspace last changed state, for the detail timeline; for a
+   * workspace a stopped run never reached, when the run ended.
+   */
+  updatedAt: Date | null;
   /** Operator who resolved an uncertain outcome by hand. */
   resolvedBy?: string | null;
 }
@@ -95,6 +98,11 @@ export function planMigrationStageOf(
   status: PlanMigrationStatus,
 ): PlanMigrationStage {
   return STAGE_BY_STATUS[status];
+}
+
+/** Whether an executor works on a migration in this status: nobody else may write it then. */
+export function isPlanMigrationExecuting(status: PlanMigrationStatus): boolean {
+  return planMigrationStageOf(status) === "running";
 }
 
 /** Why a migration was started. */
@@ -154,7 +162,7 @@ export class PlanMigration extends Table {
   /** Stage of `status`, kept with it so lists can filter on it. */
   @Index()
   @Field("string")
-  declare stage?: PlanMigrationStage;
+  declare stage: PlanMigrationStage;
 
   @Field("number")
   declare totalWorkspaces: number;
@@ -181,13 +189,13 @@ export class PlanMigration extends Table {
 
   /** Plan names when the migration started, for the list once one is gone. */
   @Field("string")
-  declare fromPlanName?: string | null;
+  declare fromPlanName: string;
 
   @Field("string")
-  declare toPlanName?: string | null;
+  declare toPlanName: string;
 
   @Field("string")
-  declare reason?: PlanMigrationReason | null;
+  declare reason: PlanMigrationReason;
 
   /** When an operator closed the migration with workspaces left behind. */
   @Field("date")

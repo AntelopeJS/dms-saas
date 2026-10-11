@@ -24,6 +24,7 @@ import { addMinutes, dayFrom, insertMissing, type SeedRow } from "./rows";
 
 /** Minutes ago the running migration started. */
 const RUNNING_MIGRATION_AGE_MINUTES = -4;
+const FIRST_ATTEMPT = 1;
 
 export async function writeBillingSettings(
   settings: SeedBillingSettings,
@@ -143,12 +144,14 @@ function tenantOutcomes(
         status: "succeeded" as const,
         error: null,
         seatQuantity: null,
+        attempt: FIRST_ATTEMPT,
       })),
       ...migration.failedWorkspaces.map(({ tenantId, error }) => ({
         tenantId,
         status: "reconciliation_required" as const,
         error,
         seatQuantity: null,
+        attempt: FIRST_ATTEMPT,
       })),
     ],
     startedAt,
@@ -177,6 +180,7 @@ function toMigrationRow(
     // may be renamed or deleted later, and the list searches these names.
     fromPlanName: findPlan(migration.fromPlanId).name,
     toPlanName: target.name,
+    reason: "plan_retired",
     status: migration.status,
     stage: planMigrationStageOf(migration.status),
     notifyMembers: true,

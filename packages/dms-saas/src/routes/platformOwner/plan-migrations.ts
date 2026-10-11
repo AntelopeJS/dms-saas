@@ -7,6 +7,7 @@ import {
   Post,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
+import { Logging } from "@antelopejs/interface-core/logging";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
@@ -56,7 +57,6 @@ import {
   loadFeatureNames,
   loadMigrationContext,
   loadWorkspaceRows,
-  planRef,
   readStripe,
   uncertainView,
 } from "./plan-migration-context";
@@ -72,7 +72,6 @@ const MIGRATIONS_API = "/api/saas/plan-migrations";
 const URLS = { api: MIGRATIONS_API, list: MIGRATIONS_PAGE };
 const TEXTS = "$saas.catalog.migrations";
 
-/** What a list block (`StatGroup`, `KeyValueList`, …) reads from its route. */
 /** The Stripe check drawer: the reading, and what it tells the operator to do. */
 interface StripeReadingPayload extends ItemsPayload<KeyValueListItem> {
   resolution: UncertainResolution | null;
@@ -131,14 +130,9 @@ export class SaasPlanMigrationsController extends Controller(MIGRATIONS_API) {
   async attention(
     @AuthOwnerOnly() _user: User,
   ): Promise<ItemsPayload<NavCardItem>> {
-    const rows = await this.planMigrationModel.table
-      .getAll("needs_attention", "stage")
-      .run();
-    const migrations = rows
-      .map((row) => PlanMigrationModel.fromDatabase(row))
-      .filter((row): row is PlanMigration => row !== undefined);
-    const items = await Promise.all(migrations.map(attentionCard));
-    return { items };
+    const migrations =
+      await this.planMigrationModel.findByStage("needs_attention");
+    return { items: migrations.map(attentionCard) };
   }
 
   @Get("/:id/header")
@@ -271,8 +265,8 @@ export class SaasPlanMigrationsController extends Controller(MIGRATIONS_API) {
       HTTP_CONFLICT,
       "saas.errors.migration.nothing_to_retry",
     );
-    void retryFailedPlanMigrationWorkspaces(id).catch(() => {
-      console.error("Plan migration retry requires inspection", id);
+    void retryFailedPlanMigrationWorkspaces(id).catch((error: unknown) => {
+      Logging.Error(`Plan migration retry ${id} requires inspection`, error);
     });
     return { _id: id };
   }
@@ -296,15 +290,11 @@ export class SaasPlanMigrationsController extends Controller(MIGRATIONS_API) {
   }
 }
 
-async function attentionCard(migration: PlanMigration): Promise<NavCardItem> {
-  const [from, to] = await Promise.all([
-    planRef(migration.fromPlanId, migration.fromPlanName),
-    planRef(migration.toPlanId, migration.toPlanName),
-  ]);
+function attentionCard(migration: PlanMigration): NavCardItem {
   const totals = migrationTotals(migration);
   return {
     id: migration._id,
-    title: `${from.name} → ${to.name}`,
+    title: `${migration.fromPlanName} → ${migration.toPlanName}`,
     description:
       totals.uncertain > 0
         ? `${TEXTS}.attention.uncertain`

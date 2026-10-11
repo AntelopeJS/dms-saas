@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Plan } from "../src/db";
 import { featureUsage, plansUsingFeature } from "../src/plans/feature-usage";
-import { diffPlanFeatures, memberCapChange } from "../src/plans/plan-diff";
+import {
+  diffPlanFeatures,
+  memberCapChange,
+  migrationFeatureDiff,
+} from "../src/plans/plan-diff";
 import {
   expandInheritance,
   invalidFeatureValues,
@@ -145,6 +149,27 @@ describe("what changes moving between two plans", () => {
       ["domains", "lost"],
       ["support", "same"],
     ]);
+  });
+
+  it("records the features a migration adds, drops and sets differently", () => {
+    const changes = diffPlanFeatures(
+      [...CATALOGUE, { _id: "sso", valueType: "boolean" as const }],
+      [
+        { featureId: "projects", value: 25 },
+        { featureId: "domains", value: true },
+        { featureId: "support", value: "Forum" },
+      ],
+      [
+        { featureId: "projects", value: -1 },
+        { featureId: "support", value: "Forum" },
+        { featureId: "sso", value: true },
+      ],
+    );
+    expect(migrationFeatureDiff(changes)).toEqual({
+      added: ["sso"],
+      removed: ["domains"],
+      changed: [{ key: "projects", oldValue: 25, newValue: -1 }],
+    });
   });
 
   it("reads a lower limit as lost and off as the lowest", () => {

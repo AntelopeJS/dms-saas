@@ -32,9 +32,6 @@ import {
 const K = "saas.catalog.migrations.detail";
 const REASON_KEY = "saas.catalog.migrations.reason";
 const STATUS_KEY = "saas.status.migration";
-// A migration stored before its reason was recorded was started by retiring
-// a plan, the only way one starts.
-const DEFAULT_REASON = "plan_retired";
 const MIGRATION_ICON = "i-ph-arrows-clockwise";
 const MINOR_UNITS_PER_UNIT = 100;
 // Plans store a limit no workspace reaches as -1.
@@ -87,7 +84,7 @@ function startedText(context: MigrationDetailContext): ComposedText {
   return composed(`${K}.started`, {
     date: dateTimeParam(migration.createdAt),
     name: personName(context, migration.initiatedBy),
-    reason: composed(`${REASON_KEY}.${migration.reason ?? DEFAULT_REASON}`),
+    reason: composed(`${REASON_KEY}.${migration.reason}`),
   });
 }
 
