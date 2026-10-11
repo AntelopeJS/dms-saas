@@ -30,7 +30,9 @@ import {
   readStripeId,
   readSubscriptionPeriodEnd,
   reconcileStripeTaxId,
+  rememberCustomerLocale,
   toStripeAddress,
+  toStripePreferredLocales,
   toTenantBillingAddress,
 } from "../stripe";
 import { hashEmail, insertOrUpdateById, stripeSecondsToDate } from "../utils";
@@ -258,10 +260,10 @@ export async function resolveRegistrationPlan(): Promise<Plan> {
 }
 
 async function createStripeCustomer(
-  profile: StripeCustomerProfile,
+  input: WorkspaceProvisioningInput,
   paymentMethodId: string,
-  handles: WorkspaceProvisioningHandles,
 ): Promise<string> {
+  const { stripeCustomerProfile: profile, handles } = input;
   const stripe = getStripeClient();
   // Set rather than spread: a customer without a VAT number carries no
   // `vatNumber` key at all, which is what Stripe's metadata expects.
@@ -278,10 +280,12 @@ async function createStripeCustomer(
           ? profile.companyName
           : profile.fallbackName,
       address: toStripeAddress(profile.address),
+      preferred_locales: toStripePreferredLocales(input.ownerLanguage),
       metadata: { ...metadata, provisioningAttempt: handles.tenantId ?? "" },
     },
     { idempotencyKey: `provisioning-customer:${handles.tenantId}` },
   );
+  rememberCustomerLocale(customer.id, input.ownerLanguage);
   // Recorded before the follow-up calls: a failed attach (declined or already
   // attached card) must still leave the rollback able to delete the customer
   // and the PII it carries.
@@ -555,11 +559,7 @@ async function provisionStripeBilling(
   paymentMethodId: string,
 ): Promise<ProvisionedBilling> {
   const { stripeCustomerProfile, handles } = input;
-  const stripeCustomerId = await createStripeCustomer(
-    stripeCustomerProfile,
-    paymentMethodId,
-    handles,
-  );
+  const stripeCustomerId = await createStripeCustomer(input, paymentMethodId);
   if (isBilledOffStripe(plan)) {
     return { stripeCustomerId, subscription: LOCAL_SUBSCRIPTION };
   }

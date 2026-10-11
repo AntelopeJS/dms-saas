@@ -76,6 +76,7 @@ vi.mock("../src/operator-actions/lifecycle-outbox", () => ({
 vi.mock("../src/stripe", async () => ({
   ...(await vi.importActual("../src/stripe/payload-shapes")),
   ...(await vi.importActual("../src/stripe/billing-mode")),
+  ...(await vi.importActual("../src/stripe/customer-locale")),
   getStripeClient: () => stripe,
   reconcileStripeTaxId: async () => undefined,
   toStripeAddress: () => undefined,
@@ -153,6 +154,14 @@ describe("initial paid usage coverage of a provisioned workspace", () => {
   it("gives the workspace its Member role, named in the owner's language", async () => {
     await provision("pm_card");
     expect(store.memberRoles).toEqual([["tenant", "fr"]]);
+  });
+
+  it("creates the Stripe customer in the owner's language", async () => {
+    await provision("pm_card");
+    expect(stripe.customers.create).toHaveBeenCalledWith(
+      expect.objectContaining({ preferred_locales: ["fr"] }),
+      expect.anything(),
+    );
   });
 
   it("creates the subscription in the classic billing mode", async () => {
