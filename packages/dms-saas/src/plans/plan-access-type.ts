@@ -5,9 +5,8 @@ import {
 } from "@antelopejs/interface-dms/base/data-types";
 import { z } from "zod";
 
-/** Options of {@link PlanAccessType}: where its editor reads its catalogues. */
+/** Options of {@link PlanAccessType}: where its editor reads the permissions. */
 export interface PlanAccessTypeOptions {
-  catalogUrl?: string;
   permissionsTreeUrl?: string;
   [key: string]: unknown;
 }
@@ -34,7 +33,6 @@ export class PlanAccessType extends DataType {
   protected defaultInputComponent() {
     return CustomComponent("DmsSaasPlanAccessEditor")
       .options({
-        catalogUrl: this.options.catalogUrl,
         permissionsTreeUrl: this.options.permissionsTreeUrl,
       })
       .serializeSync();

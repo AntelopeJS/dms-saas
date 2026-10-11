@@ -9,29 +9,9 @@ const API = '/api/saas/platform-owners'
 
 type RoleChange = 'promote' | 'demote'
 
-interface ServerImpact {
-	icon: string
-	label: string
-	count?: number | string
-}
-
-/** A confirmation the server words (`ConfirmDialogSerialized`). */
-interface ServerConfirm {
-	title: string
-	description?: string
-	params?: Record<string, unknown>
-	icon?: string
-	color?: string
-	confirmLabel?: string
-	cancelLabel?: string
-	impact?: ServerImpact[]
-	blocked?: boolean
-}
-
 const { t } = useI18n()
-const { processI18n } = useTranslation()
 const { $authFetch } = useAuthFetch()
-const { confirm } = useConfirm()
+const { confirmFrom } = useServerConfirm()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
 const detail = useUserDetail(() => props.routeParams)
@@ -41,10 +21,6 @@ const isOpening = ref(false)
 const change = computed<RoleChange>(() =>
 	user.value?.isPlatformAdmin ? 'demote' : 'promote',
 )
-
-function resolved(text: string | undefined, params: Record<string, unknown>) {
-	return text ? processI18n(text, params) : undefined
-}
 
 async function runChange(kind: RoleChange): Promise<void> {
 	await $authFetch(`${API}/${detail.userId.value}/${kind}`, { method: 'POST' })
@@ -56,24 +32,9 @@ async function openConfirm(): Promise<void> {
 	const kind = change.value
 	isOpening.value = true
 	try {
-		const dialog = await $authFetch<ServerConfirm>(
-			`${API}/${detail.userId.value}/${kind}-confirm`,
+		await confirmFrom(`${API}/${detail.userId.value}/${kind}-confirm`, () =>
+			runChange(kind),
 		)
-		const params = dialog.params ?? {}
-		await confirm({
-			title: processI18n(dialog.title, params),
-			description: resolved(dialog.description, params),
-			icon: dialog.icon,
-			color: dialog.color as 'primary',
-			confirmLabel: resolved(dialog.confirmLabel, params),
-			cancelLabel: resolved(dialog.cancelLabel, params),
-			blocked: dialog.blocked,
-			impact: dialog.impact?.map((entry) => ({
-				...entry,
-				label: processI18n(entry.label, params),
-			})),
-			onConfirm: () => runChange(kind),
-		})
 	} catch (error) {
 		toast.add({
 			color: 'error',

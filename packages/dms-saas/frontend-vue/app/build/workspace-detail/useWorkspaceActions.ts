@@ -10,18 +10,6 @@ interface ImpactEntry {
 	label: string
 }
 
-/** The join confirmation the server words for the workspace. */
-interface JoinConfirmation {
-	title: string
-	description?: string
-	params?: Record<string, unknown>
-	icon?: string
-	color?: 'primary'
-	confirmLabel?: string
-	impact?: ImpactEntry[]
-	blocked?: boolean
-}
-
 /**
  * The operator actions confirmed in the DMS's own dialog: join as platform
  * support, suspend (impact listed, workspace name typed) and reactivate.
@@ -32,17 +20,10 @@ export function useWorkspaceActions(tenantId: string) {
 	const { $authFetch } = useAuthFetch()
 	const { t, locale } = useI18n()
 	const { confirm } = useConfirm()
+	const { confirmFrom } = useServerConfirm()
 	const toast = useToast()
 	const { resolveApiError } = useApiErrorMessage()
 	const base = `/api/saas/workspaces/${tenantId}`
-
-	function translate(
-		text: string | undefined,
-		params: Record<string, unknown>,
-	) {
-		if (!text) return undefined
-		return text.startsWith('$') ? t(text.slice(1), params) : text
-	}
 
 	function day(value: string): string {
 		return formatDate(value, locale.value, { dateStyle: 'medium' }) ?? value
@@ -71,26 +52,10 @@ export function useWorkspaceActions(tenantId: string) {
 		}
 	}
 
-	async function confirmJoin(): Promise<boolean> {
-		const dialog = await $authFetch<JoinConfirmation>(
-			`${base}/join-confirmation`,
+	function confirmJoin(): Promise<boolean> {
+		return confirmFrom(`${base}/join-confirmation`, () =>
+			$authFetch(`${base}/join`, { method: 'POST' }),
 		)
-		const params = dialog.params ?? {}
-		return confirm({
-			title: translate(dialog.title, params) ?? '',
-			description: translate(dialog.description, params),
-			icon: dialog.icon,
-			color: dialog.color,
-			blocked: dialog.blocked,
-			confirmLabel: translate(dialog.confirmLabel, params),
-			impact: dialog.impact?.map((entry) => ({
-				icon: entry.icon,
-				label: translate(entry.label, params) ?? '',
-			})),
-			onConfirm: async () => {
-				await $authFetch(`${base}/join`, { method: 'POST' })
-			},
-		})
 	}
 
 	function suspensionImpact(impact: SuspensionImpact): ImpactEntry[] {

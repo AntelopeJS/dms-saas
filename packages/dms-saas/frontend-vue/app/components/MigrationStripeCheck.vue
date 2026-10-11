@@ -21,24 +21,6 @@ interface StripeReading {
 	stripeUrl: string | null
 }
 
-interface ServerImpact {
-	icon: string
-	label: string
-	count?: number | string
-}
-
-/** A confirmation the server words (`ConfirmDialogSerialized`). */
-interface ServerConfirm {
-	title: string
-	description?: string
-	params?: Record<string, unknown>
-	icon?: string
-	color?: string
-	confirmLabel?: string
-	cancelLabel?: string
-	impact?: ServerImpact[]
-}
-
 const API = '/api/saas/plan-migrations'
 const DETAIL = 'saas.catalog.migrations.detail'
 const READING_ROWS = 4
@@ -52,8 +34,7 @@ const props = defineProps<{ rowData?: MigrationWorkspaceRow }>()
 const KeyValueListBlock = resolveDmsComponent('dms-key-value-list-block')
 const { $authFetch } = useAuthFetch()
 const { t } = useI18n()
-const { processI18n } = useTranslation()
-const { confirm } = useConfirm()
+const { confirmFrom } = useServerConfirm()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
 
@@ -70,10 +51,6 @@ const workspaceApi = computed(() =>
 const resolution = computed(() =>
 	isSettled.value ? null : (reading.value?.resolution ?? null),
 )
-
-function resolved(text: string | undefined, params: Record<string, unknown>) {
-	return text ? processI18n(text, params) : undefined
-}
 
 async function load(): Promise<void> {
 	if (!workspaceApi.value) return
@@ -99,23 +76,9 @@ async function settle(kind: UncertainResolution): Promise<void> {
 
 async function openSettlement(kind: UncertainResolution): Promise<void> {
 	try {
-		const dialog = await $authFetch<ServerConfirm>(
-			`${workspaceApi.value}/dialogs/${kind}`,
+		await confirmFrom(`${workspaceApi.value}/dialogs/${kind}`, () =>
+			settle(kind),
 		)
-		const params = dialog.params ?? {}
-		await confirm({
-			title: processI18n(dialog.title, params),
-			description: resolved(dialog.description, params),
-			icon: dialog.icon,
-			color: dialog.color as 'primary',
-			confirmLabel: resolved(dialog.confirmLabel, params),
-			cancelLabel: resolved(dialog.cancelLabel, params),
-			impact: dialog.impact?.map((entry) => ({
-				...entry,
-				label: processI18n(entry.label, params),
-			})),
-			onConfirm: () => settle(kind),
-		})
 	} catch (error) {
 		toast.add({
 			color: 'error',

@@ -5,8 +5,6 @@ import { useSegmentDraft } from './useSegmentDraft'
 
 const PREVIEW_URL = '/api/saas/segments/preview'
 const RECOUNT_DELAY_MS = 500
-/** Sent by a DMS form once it saved (`FormEvents.SUBMIT_SUCCESS`). */
-const FORM_SAVED_EVENT = 'DmsComponent.Form.SubmitSuccess'
 
 /**
  * Recounts the rules being edited, without saving them: on each edit, once
@@ -60,12 +58,12 @@ export function useSegmentPreview(segmentId: () => string | undefined) {
 
 	watch(() => JSON.stringify(draft.conditions.value), scheduleRecount)
 	onMounted(() => {
-		window.addEventListener(FORM_SAVED_EVENT, onSaved)
+		window.addEventListener(FormEvents.SUBMIT_SUCCESS, onSaved)
 		scheduleRecount()
 	})
 	onBeforeUnmount(() => {
 		if (timer) clearTimeout(timer)
-		window.removeEventListener(FORM_SAVED_EVENT, onSaved)
+		window.removeEventListener(FormEvents.SUBMIT_SUCCESS, onSaved)
 	})
 
 	return {

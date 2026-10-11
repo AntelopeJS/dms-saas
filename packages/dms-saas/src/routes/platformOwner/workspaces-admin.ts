@@ -14,6 +14,10 @@ import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
 import type { ConfirmDialog } from "@antelopejs/interface-dms/base";
+import {
+  type ConfirmDialogSerialized,
+  serializeConfirmDialog,
+} from "@antelopejs/interface-dms/base/table-view";
 import { recomputeTenantBillingState } from "../../billing-state";
 import {
   type Plan,
@@ -304,12 +308,12 @@ export class SaasWorkspacesAdminController extends Controller(
   async joinConfirmation(
     @AuthOwnerOnly() user: User,
     @Parameter("tenantId", "param") tenantId: string,
-  ): Promise<ConfirmDialog> {
+  ): Promise<ConfirmDialogSerialized> {
     const view = await loadWorkspaceOperatorView(tenantId);
     const membership = await GetModel(TenantMemberModel, tenantId).getByUser(
       user._id,
     );
-    return joinConfirmationDialog(view, !!membership);
+    return serializeConfirmDialog(joinConfirmationDialog(view, !!membership));
   }
 
   /**

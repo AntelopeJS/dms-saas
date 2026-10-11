@@ -8,7 +8,6 @@ import {
 	type PlanCardTableActions,
 	cardFeatures,
 	formatPlanAmount,
-	isActionAllowed,
 	monthlyEquivalent,
 } from '../build/plan-catalog'
 
@@ -43,16 +42,22 @@ const props = withDefaults(
 )
 
 const { t, locale } = useI18n()
+const { processI18n } = useTranslation()
 const planDescription = usePlanDescription()
 const { formatFeatureValue } = usePlanFeatureFormat()
-const featureCatalog = usePlanFeatureCatalog()
+const catalog = usePlanCatalog()
 
 const plan = computed(() => props.row)
 const canEdit = computed(() => props.actions.canEditRow(props.row))
 const titleId = computed(() => `plan-card-${props.rowId}`)
 const allowedActions = computed(() =>
-	props.menu.filter((action) =>
-		isActionAllowed(action, props.row as unknown as Record<string, unknown>),
+	props.menu.filter(
+		(action) =>
+			!action.rule ||
+			evaluateRowActionRule(
+				action.rule,
+				props.row as unknown as Record<string, unknown>,
+			),
 	),
 )
 const saleAction = computed(() =>
@@ -149,7 +154,7 @@ const mrrShare = computed(() =>
 
 const features = computed(() =>
 	cardFeatures(
-		featureCatalog.data.value ?? [],
+		catalog.data.value?.features ?? [],
 		plan.value.resolvedFeatures ?? [],
 		FEATURE_PREVIEW_LIMIT,
 	),
@@ -188,7 +193,7 @@ const menuItems = computed(() => [
 
 function toMenuItem(action: PlanCardAction) {
 	return {
-		label: t(action.label.replace(/^\$/, '')),
+		label: processI18n(action.label),
 		icon: action.icon,
 		color: action.color === 'error' ? ('error' as const) : undefined,
 		onSelect: () => run(action),
@@ -208,7 +213,7 @@ function toggleSale(): void {
 }
 
 // Every card asks as it mounts: the cards of a page share the one request.
-onMounted(featureCatalog.refresh)
+onMounted(catalog.refresh)
 </script>
 
 <template>
@@ -330,7 +335,7 @@ onMounted(featureCatalog.refresh)
 			</div>
 
 			<p
-				v-if="featureCatalog.error.value"
+				v-if="catalog.error.value"
 				class="text-muted flex items-center gap-1.5 text-xs"
 			>
 				<UIcon name="i-ph-warning" class="text-warning size-4" />
@@ -340,7 +345,7 @@ onMounted(featureCatalog.refresh)
 					variant="link"
 					color="neutral"
 					:label="$t('saas.common.retry')"
-					@click="featureCatalog.refresh()"
+					@click="catalog.refresh()"
 				/>
 			</p>
 			<ul v-else-if="features.length" class="flex flex-col gap-1.5 text-sm">

@@ -113,13 +113,6 @@ export function cardFeatures(
 		.slice(0, limit)
 }
 
-/** A row rule of the plan menu: a field equal, or not, to a value. */
-export interface PlanActionRule {
-	field: string
-	equals?: unknown
-	notEquals?: unknown
-}
-
 /** One entry of the plan menu, as the table serializes it for the cards. */
 export interface PlanCardAction {
 	key: string
@@ -127,20 +120,7 @@ export interface PlanCardAction {
 	icon?: string
 	color?: string
 	target: { type: string }
-	rule?: PlanActionRule
-}
-
-/** Whether a menu entry applies to a plan, as the table's rule decides. */
-export function isActionAllowed(
-	action: Pick<PlanCardAction, 'rule'>,
-	plan: Record<string, unknown>,
-): boolean {
-	const rule = action.rule
-	if (!rule) return true
-	const value = plan[rule.field] ?? null
-	if ('equals' in rule) return value === rule.equals
-	if ('notEquals' in rule) return value !== rule.notEquals
-	return true
+	rule?: RowActionRule
 }
 
 /** The table's row actions a plan card runs, as the cards display hands them. */

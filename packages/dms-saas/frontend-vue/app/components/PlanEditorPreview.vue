@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, type Ref, ref } from 'vue'
+import { useLiveFormValues } from '../build/composables/useLiveFormValues'
 import {
 	cardFeatures,
 	formatPlanAmount,
 	type PlanCatalog,
 	PLANS_ENDPOINT,
 } from '../build/plan-catalog'
+import { fromMinorUnits } from '../composables/useMoneyFormat'
 
 interface PlanAccess {
 	parentPlanId: string | null
@@ -41,14 +43,7 @@ interface EditorContext {
 	syncState: SyncState
 }
 
-interface FieldChangeDetail {
-	component?: string
-	data?: { formValues?: PlanDraft }
-}
-
-const FIELD_CHANGE_EVENT = 'DmsComponent.Form.FieldChange'
 const FEATURE_PREVIEW_LIMIT = 6
-const MINOR_UNITS = 100
 const UNLIMITED = -1
 
 const SYNC_TONES: Record<SyncState, 'success' | 'warning' | 'neutral'> = {
@@ -70,7 +65,6 @@ const planDescription = usePlanDescription()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
 const saved = ref<PlanDraft | null>(null)
-const live = ref<PlanDraft | null>(null)
 const context = ref<EditorContext | null>(null)
 const catalog = ref<PlanCatalog>({
 	plans: [],
@@ -81,9 +75,13 @@ const isLoading = ref(true)
 const hasError = ref(false)
 
 const planId = computed(() => props.routeParams?.id)
+// DMS gap: a field's component is not handed its form's id, only its own
+// (`<page>.<block>`), so the form's is derived from it.
 const formComponentId = computed(() =>
 	props.componentId?.replace(/[^.]+$/, props.formKey ?? 'form'),
 )
+const live = useLiveFormValues(() => formComponentId.value) as Ref<PlanDraft | null>
+const planCatalog = usePlanCatalog()
 const draft = computed<PlanDraft>(() => live.value ?? saved.value ?? {})
 const currency = computed(() => draft.value.currency ?? 'EUR')
 const price = computed(() => Number(draft.value.price ?? 0))
@@ -162,7 +160,10 @@ function featureLine(entry: (typeof features.value)[number]): string {
 
 const syncedAmount = computed(() =>
 	context.value?.syncedPrice != null
-		? context.value.syncedPrice / MINOR_UNITS
+		? fromMinorUnits(
+				context.value.syncedPrice,
+				context.value.syncedCurrency ?? currency.value,
+			)
 		: null,
 )
 
@@ -180,19 +181,12 @@ const isPriceChanged = computed(() => {
 
 const productUrl = computed(() => context.value?.stripeProductUrl ?? undefined)
 
-function onFieldChange(event: Event): void {
-	const detail = (event as CustomEvent<FieldChangeDetail>).detail
-	if (!detail || detail.component !== formComponentId.value) return
-	const values = detail.data?.formValues
-	if (values) live.value = { ...values }
-}
-
 async function load(): Promise<void> {
 	isLoading.value = true
 	hasError.value = false
 	try {
 		const [loadedCatalog, plan, editor] = await Promise.all([
-			$authFetch<PlanCatalog>(`${PLANS_ENDPOINT}/catalog`),
+			planCatalog.refresh(),
 			planId.value
 				? $authFetch<PlanDraft>(`${PLANS_ENDPOINT}/${planId.value}`)
 				: null,
@@ -202,7 +196,7 @@ async function load(): Promise<void> {
 					)
 				: null,
 		])
-		catalog.value = loadedCatalog
+		if (loadedCatalog) catalog.value = loadedCatalog
 		saved.value = plan
 		context.value = editor
 	} catch {
@@ -212,13 +206,7 @@ async function load(): Promise<void> {
 	}
 }
 
-onMounted(() => {
-	window.addEventListener(FIELD_CHANGE_EVENT, onFieldChange)
-	void load()
-})
-onBeforeUnmount(() =>
-	window.removeEventListener(FIELD_CHANGE_EVENT, onFieldChange),
-)
+onMounted(() => void load())
 </script>
 
 <template>

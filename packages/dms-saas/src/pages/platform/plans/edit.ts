@@ -139,7 +139,6 @@ const ACCESS_FIELDS: FormField[] = [
   {
     id: "inheritance",
     type: new PlanAccessType({
-      catalogUrl: `${PLANS_ENDPOINT}/catalog`,
       permissionsTreeUrl: `${PLANS_ENDPOINT}/permissions-tree`,
     }),
   },

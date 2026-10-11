@@ -1,9 +1,5 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-// The DMS form broadcasts every change of its values under this event name
-// (`FormEvents.FIELD_CHANGE`), with the whole state as `formValues`.
-const FIELD_CHANGE_EVENT = 'DmsComponent.Form.FieldChange'
-
 interface FieldChangePayload {
 	formValues?: Record<string, unknown>
 }
@@ -14,7 +10,8 @@ interface FieldChangeDetail {
 }
 
 /**
- * The values a form holds right now, unsaved changes included, for a panel
+ * The values a form holds right now (the DMS form broadcasts each change of
+ * them as `FormEvents.FIELD_CHANGE`), unsaved changes included, for a panel
  * drawn among its fields: `null` until the form reports a change.
  *
  * @param componentId Id of the form, as its fields receive it
@@ -30,9 +27,9 @@ export function useLiveFormValues(componentId: () => string | undefined) {
 		if (formValues) values.value = { ...formValues }
 	}
 
-	onMounted(() => window.addEventListener(FIELD_CHANGE_EVENT, onFieldChange))
+	onMounted(() => window.addEventListener(FormEvents.FIELD_CHANGE, onFieldChange))
 	onBeforeUnmount(() =>
-		window.removeEventListener(FIELD_CHANGE_EVENT, onFieldChange),
+		window.removeEventListener(FormEvents.FIELD_CHANGE, onFieldChange),
 	)
 
 	return values

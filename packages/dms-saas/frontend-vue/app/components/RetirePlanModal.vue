@@ -6,8 +6,6 @@ import {
 	type CatalogFeature,
 	formatPlanAmount,
 	isFeatureIncluded,
-	type PlanCatalog,
-	PLANS_ENDPOINT,
 } from '../build/plan-catalog'
 import {
 	changedFeatures,
@@ -57,6 +55,7 @@ const props = defineProps<{
 const emit = defineEmits<{ success: [] }>()
 
 const { $authFetch } = useAuthFetch()
+const planCatalog = usePlanCatalog()
 const { t, locale } = useI18n()
 const toast = useToast()
 const { processApiMessage } = useTranslation()
@@ -188,10 +187,10 @@ async function loadImpact(): Promise<void> {
 	try {
 		const [loaded, catalog] = await Promise.all([
 			$authFetch<RetireImpact>(`${RETIRE_ENDPOINT}/${planId.value}/impact`),
-			$authFetch<PlanCatalog>(`${PLANS_ENDPOINT}/catalog`),
+			planCatalog.load(),
 		])
 		impact.value = loaded
-		features.value = catalog.features
+		features.value = catalog?.features ?? []
 	} catch (error) {
 		loadError.value = processApiMessage(readError(error))
 	} finally {

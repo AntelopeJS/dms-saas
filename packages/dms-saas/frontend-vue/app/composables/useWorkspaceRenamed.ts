@@ -1,7 +1,5 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 
-/** Window event a DMS form dispatches once it saved (`FormEvents.SUBMIT_SUCCESS`). */
-const FORM_SUBMIT_SUCCESS_EVENT = 'DmsComponent.Form.SubmitSuccess'
 /** The General page's rename form, which changes the workspace's name. */
 const RENAME_SUBMIT_URL = '/api/saas/workspaces/current'
 
@@ -14,7 +12,7 @@ interface FormSubmitDetail {
 }
 
 /** Whether a form's success event is the rename of the current workspace. */
-export function isWorkspaceRenameEvent(event: Event): boolean {
+function isWorkspaceRenameEvent(event: Event): boolean {
 	const detail = (event as CustomEvent<FormSubmitDetail>).detail
 	return detail?.data?.submitUrl === RENAME_SUBMIT_URL
 }
@@ -28,8 +26,8 @@ export function useWorkspaceRenamed(onRenamed: () => void): void {
 	function onFormSaved(event: Event): void {
 		if (isWorkspaceRenameEvent(event)) onRenamed()
 	}
-	onMounted(() => window.addEventListener(FORM_SUBMIT_SUCCESS_EVENT, onFormSaved))
+	onMounted(() => window.addEventListener(FormEvents.SUBMIT_SUCCESS, onFormSaved))
 	onBeforeUnmount(() =>
-		window.removeEventListener(FORM_SUBMIT_SUCCESS_EVENT, onFormSaved),
+		window.removeEventListener(FormEvents.SUBMIT_SUCCESS, onFormSaved),
 	)
 }

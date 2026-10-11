@@ -23,13 +23,13 @@ const props = defineProps<{
 	modelValue?: PlanAccess | string | null
 	disabled?: boolean
 	routeParams?: Record<string, string>
-	catalogUrl?: string
 	permissionsTreeUrl?: string
 }>()
 
 const emit = defineEmits<{ 'update:modelValue': [value: PlanAccess] }>()
 
 const { $authFetch } = useAuthFetch()
+const planCatalog = usePlanCatalog()
 const route = useDmsRoute()
 const { t } = useI18n()
 const { processI18n } = useTranslation()
@@ -204,11 +204,12 @@ async function load(): Promise<void> {
 	hasError.value = false
 	try {
 		const [loadedCatalog, loadedTree] = await Promise.all([
-			$authFetch<PlanCatalog>(props.catalogUrl ?? '/api/saas/plans/catalog'),
+			planCatalog.refresh(),
 			$authFetch<PermissionNode[]>(
 				props.permissionsTreeUrl ?? '/api/saas/plans/permissions-tree',
 			),
 		])
+		if (!loadedCatalog) throw new Error('catalog unavailable')
 		catalog.value = loadedCatalog
 		tree.value = loadedTree
 		startNewPlanWithEveryPermission()
