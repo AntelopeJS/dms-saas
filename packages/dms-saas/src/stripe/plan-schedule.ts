@@ -31,13 +31,14 @@ function toPhaseItemParam(
 function toCurrentPhaseParam(
   phase: Stripe.SubscriptionSchedule.Phase,
 ): Stripe.SubscriptionScheduleUpdateParams.Phase {
-  return {
+  const param: Stripe.SubscriptionScheduleUpdateParams.Phase = {
     items: phase.items.map(toPhaseItemParam),
     start_date: phase.start_date,
     end_date: phase.end_date,
-    ...(phase.trial_end ? { trial_end: phase.trial_end } : {}),
     automatic_tax: { enabled: true },
   };
+  if (phase.trial_end) param.trial_end = phase.trial_end;
+  return param;
 }
 
 type PhaseDuration = Stripe.SubscriptionScheduleUpdateParams.Phase.Duration;
