@@ -204,7 +204,15 @@ describe("dashboard headline and attention queue", () => {
   it("lists every status in its own tone, linking to its tab", () => {
     const items = workspacesByStatusItems(summary);
 
-    expect(items).toHaveLength(7);
+    expect(items.map((item) => item.id)).toEqual([
+      "active",
+      "trialing",
+      "free",
+      "past_due",
+      "pending_payment",
+      "suspended",
+      "cancelled",
+    ]);
     expect(items.find((item) => item.id === "past_due")).toMatchObject({
       value: 1,
       tone: "error",

@@ -3,7 +3,7 @@ import { DefaultDisplays } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import type { FormComponents } from "@antelopejs/interface-dms/base/form-schema";
 import {
-  BILLING_STATES,
+  type BillingState,
   CREDIT_NOTE_STATUSES,
   CREDIT_NOTE_TYPES,
   INVOICE_STATUSES,
@@ -68,11 +68,26 @@ export const STATUS_TONES = {
  */
 export const PAYMENT_FAILED_STATUS = "payment_failed";
 
+/**
+ * The order workspace statuses are listed in, on tabs, filters and the
+ * dashboard: the order of the shared vocabulary (healthy, then needing
+ * attention, then closed), not the order the states were declared in.
+ */
+export const WORKSPACE_STATUS_ORDER: readonly BillingState[] = [
+  "active",
+  "trialing",
+  "free",
+  "past_due",
+  "pending_payment",
+  "suspended",
+  "cancelled",
+];
+
 /** A family of statuses sharing one vocabulary and one tone table. */
 export type StatusFamily = keyof typeof STATUS_TONES;
 
 const STATUS_VALUES: Record<StatusFamily, readonly string[]> = {
-  workspace: BILLING_STATES,
+  workspace: WORKSPACE_STATUS_ORDER,
   invoice: [...INVOICE_STATUSES, "issued"],
   credit_note: CREDIT_NOTE_STATUSES,
   credit_note_type: CREDIT_NOTE_TYPES,

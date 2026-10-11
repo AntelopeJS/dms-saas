@@ -7,8 +7,8 @@ import {
 } from "@antelopejs/interface-dms/base";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { workspacesDataAPI } from "../../../data-api";
-import { BILLING_STATES } from "../../../db";
 import { WORKSPACE_VIEW_IDS } from "../../../metrics/headline-items";
+import { WORKSPACE_STATUS_ORDER } from "../../../utils/status-vocabulary";
 import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
 import { WORKSPACES_PAGE_PATH } from "../paths";
@@ -25,7 +25,7 @@ const PAGE_SIZE = 25;
 // MRR is stored in minor units: 500.00 in the reporting currency.
 const MRR_OVER_500_MINOR = "50000";
 
-const STATUS_TABS: TableViewTab[] = BILLING_STATES.map((state) => ({
+const STATUS_TABS: TableViewTab[] = WORKSPACE_STATUS_ORDER.map((state) => ({
   id: state,
   label: `$saas.status.workspace.${state}`,
   filter: { accessorKey: "billingState", value: state, mode: "is" },

@@ -6,7 +6,6 @@ import type {
   StatGroupItem,
   TopListItem,
 } from "@antelopejs/interface-dms/base";
-import { BILLING_STATES } from "../db";
 import {
   commaList,
   composed,
@@ -23,7 +22,10 @@ import {
   workspacesTabPath,
   workspacesViewPath,
 } from "../pages/platform/paths";
-import { STATUS_TONES } from "../utils/status-vocabulary";
+import {
+  STATUS_TONES,
+  WORKSPACE_STATUS_ORDER,
+} from "../utils/status-vocabulary";
 import type {
   DatedWorkspace,
   DirectoryRow,
@@ -280,7 +282,7 @@ export function attentionCards(inputs: AttentionInputs): NavCardItem[] {
 export function workspacesByStatusItems(
   summary: DirectorySummary,
 ): KeyValueListItem[] {
-  return BILLING_STATES.map((state) => ({
+  return WORKSPACE_STATUS_ORDER.map((state) => ({
     id: state,
     label: `$saas.status.workspace.${state}`,
     value: summary.byState[state],

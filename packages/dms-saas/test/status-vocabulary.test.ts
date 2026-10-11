@@ -4,7 +4,12 @@ import {
   fromMinorUnits,
   toMinorUnits,
 } from "../frontend-vue/app/composables/useMoneyFormat";
-import { STATUS_TONES, statusItems } from "../src/utils/status-vocabulary";
+import { BILLING_STATES } from "../src/db";
+import {
+  STATUS_TONES,
+  statusItems,
+  WORKSPACE_STATUS_ORDER,
+} from "../src/utils/status-vocabulary";
 import { flattenLocale, readLocale } from "./helpers/locales";
 
 const LOCALES = ["en-GB", "fr-FR"];
@@ -24,6 +29,13 @@ describe("status vocabulary", () => {
     );
 
     expect(missing).toEqual([]);
+  });
+
+  it("lists every workspace status once, in the vocabulary's order", () => {
+    expect([...WORKSPACE_STATUS_ORDER].sort()).toEqual(
+      [...BILLING_STATES].sort(),
+    );
+    expect(WORKSPACE_STATUS_ORDER).toEqual(Object.keys(STATUS_TONES.workspace));
   });
 });
 

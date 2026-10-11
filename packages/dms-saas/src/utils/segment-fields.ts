@@ -1,10 +1,6 @@
 import type { Tone } from "@antelopejs/interface-dms/base";
-import {
-  BILLING_STATES,
-  type SEGMENT_OPERATORS,
-  TENANT_CUSTOMER_TYPES,
-} from "../db";
-import { STATUS_TONES } from "./status-vocabulary";
+import { type SEGMENT_OPERATORS, TENANT_CUSTOMER_TYPES } from "../db";
+import { STATUS_TONES, WORKSPACE_STATUS_ORDER } from "./status-vocabulary";
 
 /**
  * Which field catalog a condition is validated against: "user" at the root
@@ -118,13 +114,12 @@ function defineField(spec: FieldSpec): SegmentFieldDefinition {
   };
 }
 
-const BILLING_STATE_OPTIONS: readonly SegmentEnumOption[] = BILLING_STATES.map(
-  (state) => ({
+const BILLING_STATE_OPTIONS: readonly SegmentEnumOption[] =
+  WORKSPACE_STATUS_ORDER.map((state) => ({
     value: state,
     labelKey: `saas.status.workspace.${state}`,
     tone: STATUS_TONES.workspace[state],
-  }),
-);
+  }));
 
 const CUSTOMER_TYPE_OPTIONS: readonly SegmentEnumOption[] =
   TENANT_CUSTOMER_TYPES.map((type) => ({
