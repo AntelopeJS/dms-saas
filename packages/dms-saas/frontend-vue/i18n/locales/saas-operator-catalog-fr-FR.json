@@ -202,7 +202,7 @@
 					"interval": "Périodicité",
 					"billing_mode": "Mode de facturation",
 					"billing_mode_description": "Par siège facture chaque membre ; les changements de sièges sont proratisés.",
-					"trial_days": "Essai gratuit (jours)",
+					"trial_days": "Essai gratuit",
 					"trial_days_description": "Aucune carte requise pendant l’essai. Mettez 0 pour aucun.",
 					"max_members": "Membres maximum",
 					"max_members_description": "Les espaces de travail déjà au-delà de la limite gardent tout le monde mais ne peuvent plus inviter.",
@@ -216,7 +216,8 @@
 					"badge": "Badge de mise en avant",
 					"badge_description": "Court libellé en haut de la carte, comme « Populaire ». Laissez vide pour aucun.",
 					"badge_color": "Couleur du badge",
-					"badge_color_description": "Couleur du badge et du contour de la carte."
+					"badge_color_description": "Couleur du badge et du contour de la carte.",
+					"days_unit": "jours"
 				},
 				"billing_mode_hint": {
 					"flat": "Un prix par espace de travail, quelle que soit la taille de l’équipe",

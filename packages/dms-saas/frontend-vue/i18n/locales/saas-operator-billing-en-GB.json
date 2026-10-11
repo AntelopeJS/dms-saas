@@ -258,6 +258,11 @@
 					"never_published": "Never published",
 					"next_version": "Saving a change publishes version {version}",
 					"view_public_page": "View public page"
+				},
+				"days_unit": "days",
+				"nav": {
+					"billing": "Billing",
+					"legal": "Legal"
 				}
 			}
 		},

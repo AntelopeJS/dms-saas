@@ -18,6 +18,9 @@ import { SAAS_MODULE_ID } from "../module";
 import { configurationCategory } from "./categories";
 
 const RULES = "$saas.operator_billing.billing_rules";
+const DAYS_UNIT = `${RULES}.days_unit`;
+const BILLING_NAV_GROUP = `${RULES}.nav.billing`;
+const LEGAL_NAV_GROUP = `${RULES}.nav.legal`;
 const PERMISSIONS = "$saas.permissions.billing";
 const BILLING_RULES_URL = "/api/saas/settings/billing";
 const MAX_DAYS = 365;
@@ -30,18 +33,19 @@ const LEGAL_DOCUMENT_SLUGS: Record<LegalDocumentKey, string> = {
   privacyPolicy: "privacy_policy",
 };
 
-function countField(
-  id: string,
-  key: string,
-  min: number,
-  max: number,
-): FormField {
+interface CountRange {
+  min: number;
+  max: number;
+  suffix?: string;
+}
+
+function countField(id: string, key: string, range: CountRange): FormField {
   return {
     id,
     label: `${RULES}.${key}`,
     description: `${RULES}.${key}_description`,
     hint: `${RULES}.${key}_hint`,
-    type: new DefaultDataTypes.NumberType({ min, max, step: 1 }),
+    type: new DefaultDataTypes.NumberType({ ...range, step: 1 }),
     required: true,
   };
 }
@@ -66,17 +70,21 @@ function insightField(id: string, key: string, component: string): FormField {
 const unpaidSection: FormSection = {
   id: "unpaid",
   label: `${RULES}.unpaid.title`,
+  navGroup: BILLING_NAV_GROUP,
   description: `${RULES}.unpaid.description`,
   icon: "i-ph-warning-circle",
   fields: [
     switchField("autoSuspendEnabled", "unpaid.suspend"),
-    countField("autoSuspendDelayDays", "unpaid.suspend_days", 1, MAX_DAYS),
-    countField(
-      "dataRetentionDaysAfterCancellation",
-      "unpaid.retention_days",
-      0,
-      MAX_RETENTION_DAYS,
-    ),
+    countField("autoSuspendDelayDays", "unpaid.suspend_days", {
+      min: 1,
+      max: MAX_DAYS,
+      suffix: DAYS_UNIT,
+    }),
+    countField("dataRetentionDaysAfterCancellation", "unpaid.retention_days", {
+      min: 0,
+      max: MAX_RETENTION_DAYS,
+      suffix: DAYS_UNIT,
+    }),
     insightField(
       "customerTimeline",
       "unpaid.timeline",
@@ -88,21 +96,21 @@ const unpaidSection: FormSection = {
 const freeSection: FormSection = {
   id: "free",
   label: `${RULES}.free.title`,
+  navGroup: BILLING_NAV_GROUP,
   description: `${RULES}.free.description`,
   icon: "i-ph-gift",
   fields: [
-    countField(
-      "maxFreeWorkspacesPerCard",
-      "free.per_card",
-      0,
-      MAX_FREE_WORKSPACES_PER_CARD,
-    ),
+    countField("maxFreeWorkspacesPerCard", "free.per_card", {
+      min: 0,
+      max: MAX_FREE_WORKSPACES_PER_CARD,
+    }),
   ],
 };
 
 const taxSection: FormSection = {
   id: "tax",
   label: `${RULES}.tax.title`,
+  navGroup: BILLING_NAV_GROUP,
   description: `${RULES}.tax.description`,
   icon: "i-ph-percent",
   fields: [
@@ -127,11 +135,16 @@ const REFUND_MODE_ITEMS = REFUND_PRORATA_MODES.map((mode) => ({
 const refundSection: FormSection = {
   id: "refunds",
   label: `${RULES}.refunds.title`,
+  navGroup: BILLING_NAV_GROUP,
   description: `${RULES}.refunds.description`,
   icon: "i-ph-arrow-u-down-left",
   fields: [
     switchField("moneyBackGuaranteeEnabled", "refunds.guarantee"),
-    countField("moneyBackGuaranteeWindowDays", "refunds.window", 1, MAX_DAYS),
+    countField("moneyBackGuaranteeWindowDays", "refunds.window", {
+      min: 1,
+      max: MAX_DAYS,
+      suffix: DAYS_UNIT,
+    }),
     {
       id: "moneyBackGuaranteeMode",
       label: `${RULES}.refunds.amount`,
@@ -166,6 +179,7 @@ function legalDocumentGroup(key: LegalDocumentKey): FieldGroup {
 const legalSection: FormSection = {
   id: "legal",
   label: `${RULES}.legal.title`,
+  navGroup: LEGAL_NAV_GROUP,
   description: `${RULES}.legal.description`,
   icon: "i-ph-scroll",
   fields: LEGAL_DOCUMENT_KEYS.map(legalDocumentGroup),

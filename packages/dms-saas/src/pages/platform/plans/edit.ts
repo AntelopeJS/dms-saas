@@ -125,7 +125,11 @@ const PRICING_FIELDS: FormField[] = [
     id: "trialDays",
     label: `${TEXTS}.field.trial_days`,
     description: `${TEXTS}.field.trial_days_description`,
-    type: new DefaultDataTypes.NumberType({ min: 0, step: 1 }),
+    type: new DefaultDataTypes.NumberType({
+      min: 0,
+      step: 1,
+      suffix: `${TEXTS}.field.days_unit`,
+    }),
   },
 ];
 

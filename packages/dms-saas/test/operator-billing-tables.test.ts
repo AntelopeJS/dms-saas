@@ -109,4 +109,44 @@ describe("billing rules & legal page", () => {
       "legal",
     ]);
   });
+
+  it("reads the day counts with their unit after the field", () => {
+    const form = SaasSettingsController.form.serializeSync() as {
+      options: {
+        fields: { id: string; component?: { options?: { suffix?: string } } }[];
+      };
+    };
+    const suffixes = Object.fromEntries(
+      form.options.fields.map((field) => [
+        field.id,
+        field.component?.options?.suffix,
+      ]),
+    );
+
+    expect(suffixes).toMatchObject({
+      autoSuspendDelayDays: "$saas.operator_billing.billing_rules.days_unit",
+      dataRetentionDaysAfterCancellation:
+        "$saas.operator_billing.billing_rules.days_unit",
+      moneyBackGuaranteeWindowDays:
+        "$saas.operator_billing.billing_rules.days_unit",
+    });
+    expect(suffixes.maxFreeWorkspacesPerCard).toBeUndefined();
+  });
+
+  it("groups its side navigation under Billing and Legal", () => {
+    const form = SaasSettingsController.form.serializeSync() as {
+      options: { sections: { id: string; navGroup?: string }[] };
+    };
+    const groups = "$saas.operator_billing.billing_rules.nav";
+
+    expect(
+      form.options.sections.map((section) => [section.id, section.navGroup]),
+    ).toEqual([
+      ["unpaid", `${groups}.billing`],
+      ["free", `${groups}.billing`],
+      ["tax", `${groups}.billing`],
+      ["refunds", `${groups}.billing`],
+      ["legal", `${groups}.legal`],
+    ]);
+  });
 });

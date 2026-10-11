@@ -202,7 +202,7 @@
 					"interval": "Billing interval",
 					"billing_mode": "Billing mode",
 					"billing_mode_description": "Per seat bills every member; seat changes are prorated.",
-					"trial_days": "Free trial (days)",
+					"trial_days": "Free trial",
 					"trial_days_description": "No card needed during the trial. Set 0 for none.",
 					"max_members": "Maximum members",
 					"max_members_description": "Workspaces already above the cap keep everyone but can’t invite more.",
@@ -216,7 +216,8 @@
 					"badge": "Highlight badge",
 					"badge_description": "Short label on top of the card, like “Popular”. Leave empty for none.",
 					"badge_color": "Badge colour",
-					"badge_color_description": "Colour of the badge and the card’s outline."
+					"badge_color_description": "Colour of the badge and the card’s outline.",
+					"days_unit": "days"
 				},
 				"billing_mode_hint": {
 					"flat": "One price per workspace, whatever the team size",

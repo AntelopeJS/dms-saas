@@ -258,6 +258,11 @@
 					"never_published": "Jamais publié",
 					"next_version": "Enregistrer un changement publie la version {version}",
 					"view_public_page": "Voir la page publique"
+				},
+				"days_unit": "jours",
+				"nav": {
+					"billing": "Facturation",
+					"legal": "Juridique"
 				}
 			}
 		},
