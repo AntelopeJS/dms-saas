@@ -2,6 +2,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import { RoleModel } from "@antelopejs/interface-dms/db";
 import { GetPermissions } from "@antelopejs/interface-dms/permissions";
 import { grantablePermissionIds } from "../plans/plan-permission-tree";
+import { baseLanguage } from "../utils/language";
 
 const MEMBER_ROLE_SUFFIX = "member";
 const FALLBACK_LANGUAGE = "en";
@@ -33,7 +34,7 @@ export function defaultMemberRoleId(tenantId: string): string {
 }
 
 function memberRoleText(language: string | undefined): RoleText {
-  const base = language?.split("-")[0]?.toLowerCase() ?? FALLBACK_LANGUAGE;
+  const base = baseLanguage(language) ?? FALLBACK_LANGUAGE;
   return MEMBER_ROLE_TEXTS[base] ?? MEMBER_ROLE_TEXTS[FALLBACK_LANGUAGE];
 }
 

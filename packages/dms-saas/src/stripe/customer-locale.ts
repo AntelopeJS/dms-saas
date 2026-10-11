@@ -1,5 +1,6 @@
 import { Logging } from "@antelopejs/interface-core/logging";
 import { getStripeClient } from "./client";
+import { baseLanguage } from "../utils/language";
 
 const LOG_PREFIX = "[dms-saas:customer-locale]";
 
@@ -21,7 +22,7 @@ const syncedLocales = new Map<string, string>();
 export function toStripePreferredLocales(
   language: string | null | undefined,
 ): string[] | undefined {
-  const base = language?.split("-")[0]?.trim().toLowerCase();
+  const base = baseLanguage(language);
   return base ? [base] : undefined;
 }
 

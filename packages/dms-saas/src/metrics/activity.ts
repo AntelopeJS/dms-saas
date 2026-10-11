@@ -13,6 +13,7 @@ import {
 import type { OperatorAction } from "../operator-actions/db/operator-action.table";
 import type { WorkspaceOperatorAction } from "../operator-actions/types";
 import { getRowInstance } from "../utils/row-instance";
+import { MS_PER_DAY } from "../utils/time";
 
 /** The activity feeds offered: everything, money movements, or lifecycle. */
 export const ACTIVITY_KINDS = ["all", "billing", "lifecycle"] as const;
@@ -75,7 +76,6 @@ const KEY_PREFIX = "$saas.activity";
 // workspace in the title; a workspace's own feed does not repeat it.
 const PLATFORM_TITLES = "platform";
 const WORKSPACE_TITLES = "workspace";
-const DAY_MS = 86_400_000;
 
 const DOCUMENT_LOOKS: Record<string, DocumentLook> = {
   paid: { icon: "i-ph-check-circle", tone: "success", title: "invoice_paid" },
@@ -271,7 +271,8 @@ function trailingDay(at: Date, now: Date): BlockText {
 }
 
 function withTrailingDay(entry: ActivityEntry, now?: Date): ActivityFeedItem {
-  if (!now || now.getTime() - entry.at.getTime() < DAY_MS) return entry.item;
+  if (!now || now.getTime() - entry.at.getTime() < MS_PER_DAY)
+    return entry.item;
   return { ...entry.item, time: trailingDay(entry.at, now) };
 }
 

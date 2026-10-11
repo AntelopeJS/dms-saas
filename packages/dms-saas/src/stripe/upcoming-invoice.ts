@@ -144,7 +144,7 @@ export interface PriceChangePreviewRequest {
 export async function previewStripePriceChange(
   request: PriceChangePreviewRequest,
 ): Promise<PricedUpcomingInvoice> {
-  const invoice = await getStripeClient().invoices.createPreview({
+  return previewStripeInvoice({
     customer: request.customerId,
     subscription: request.subscriptionId,
     subscription_details: {
@@ -153,6 +153,4 @@ export async function previewStripePriceChange(
       proration_date: toStripeSeconds(request.prorationDate),
     },
   });
-  const taxRates = await retrieveTaxRates(collectTaxRateIds(invoice));
-  return { invoice, taxRates };
 }

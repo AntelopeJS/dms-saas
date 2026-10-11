@@ -15,6 +15,7 @@ import {
   valueText,
 } from "../i18n/composed-text";
 import type { MoneyTotal, UserDetail, UserSecurity } from "./user-detail";
+import { baseLanguage } from "../utils/language";
 
 const FACTS = "saas.users.detail_facts";
 const SECURITY = "saas.users.security";
@@ -28,8 +29,8 @@ const NAMED_TWO_FACTOR_METHODS = new Set(["totp", "email"]);
 
 function languageName(code: string | null): ComposedText | string {
   if (!code) return `$${FACTS}.no_language`;
-  const language = code.split("-")[0]!.toLowerCase();
-  return NAMED_LANGUAGES.has(language)
+  const language = baseLanguage(code);
+  return language && NAMED_LANGUAGES.has(language)
     ? composed(`${FACTS}.languages.${language}`)
     : code;
 }
