@@ -18,7 +18,7 @@ import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { ACTIVITY_KINDS } from "../../metrics/activity";
 import { SAAS_MODULE_ID } from "../module";
 import { overviewCategory } from "./categories";
-import { WORKSPACES_PAGE_PATH } from "./paths";
+import { PLANS_PAGE_PATH, WORKSPACES_PAGE_PATH } from "./paths";
 import {
   CREATE_WORKSPACE_BUTTON,
   inReportingCurrency,
@@ -50,6 +50,7 @@ const activityTabs = ACTIVITY_KINDS.reduce(
       label: `${K}.activity.tabs.${kind}`,
       slot: kind,
     })),
+    fit: true,
   }).meta(permissionMeta("activity_tabs", "i-ph-tabs")),
 );
 
@@ -195,6 +196,13 @@ export class SaasDashboardController extends PageController(
               showBar: true,
               skeletonCount: 4,
               emptyLabel: `${K}.plans.empty`,
+              actions: [
+                {
+                  label: `${K}.plans.open_catalogue`,
+                  to: PLANS_PAGE_PATH,
+                  icon: "i-ph-arrow-right",
+                },
+              ],
             }),
           ),
         )

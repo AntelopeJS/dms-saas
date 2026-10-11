@@ -46,7 +46,8 @@
         "title": "Offres par MRR",
         "subtitle": "MRR normalisé apporté par chaque offre",
         "description": "Aucun espace · {price} | 1 espace · {price} | {count} espaces · {price}",
-        "empty": "Aucune offre n'apporte encore de revenu récurrent."
+        "empty": "Aucune offre n'apporte encore de revenu récurrent.",
+        "open_catalogue": "Catalogue"
       },
       "activity": {
         "title": "Activité récente",

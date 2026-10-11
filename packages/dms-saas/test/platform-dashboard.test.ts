@@ -374,6 +374,16 @@ describe("dashboard page", () => {
     });
   });
 
+  it("links the plans ranking to the catalogue and fits the activity tabs", () => {
+    const lists =
+      SaasDashboardController.lists.serializeSync() as SerializedBlock;
+
+    expect(findChild(lists, "plans")?.options).toMatchObject({
+      actions: [{ to: "/modules/saas/catalog/plans" }],
+    });
+    expect(findChild(lists, "tabs")?.options).toMatchObject({ fit: true });
+  });
+
   it("hangs the day's credits under its collected bar", () => {
     const charts =
       SaasDashboardController.charts.serializeSync() as SerializedBlock;

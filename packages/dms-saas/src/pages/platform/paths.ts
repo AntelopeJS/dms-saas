@@ -4,7 +4,7 @@
  * `/modules/<module>/<category>/<page>`.
  */
 export const WORKSPACES_PAGE_PATH = "/modules/saas/customers/workspaces";
-const PLANS_PAGE_PATH = "/modules/saas/catalog/plans";
+export const PLANS_PAGE_PATH = "/modules/saas/catalog/plans";
 export const PLAN_MIGRATIONS_PAGE_PATH =
   "/modules/saas/catalog/plan-migrations";
 export const INVOICES_PAGE_PATH = "/modules/saas/billing/invoices";
