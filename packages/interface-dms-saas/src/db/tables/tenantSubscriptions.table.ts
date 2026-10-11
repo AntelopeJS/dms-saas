@@ -164,6 +164,17 @@ export class TenantSubscription extends Table {
   @Field("date")
   declare refundRequestedAt: Date | null;
 
+  /**
+   * When an owner deleted the workspace, cleared once it resumes: the
+   * restricted screen tells a deletion apart from a cancelled subscription.
+   */
+  @Field("date")
+  declare deletionRequestedAt: Date | null;
+
+  /** The owner who deleted the workspace, with `deletionRequestedAt`. */
+  @Field("string")
+  declare deletionRequestedBy: string | null;
+
   /** Dunning clock: when the subscription entered `past_due`, driving the
    * auto-suspend deadline. Kept apart from `updatedAt`, which any write moves.
    * Disarmed by construction on any status write that leaves `past_due`. */

@@ -24,7 +24,12 @@ const ACCESS_ENDPOINT = '/api/saas/workspace-access'
 const PORTAL_ENDPOINT = '/api/saas/billing/portal-session'
 
 /** Reasons the owner settles by choosing a plan, on the comparison itself. */
-const PLAN_CHOICE_REASONS = new Set(['cancelled', 'complimentary_expired'])
+const PLAN_CHOICE_REASONS = new Set([
+	'cancelled',
+	'deleted',
+	'complimentary_expired',
+])
+const DELETED_REASON = 'deleted'
 const PENDING_PAYMENT_REASON = 'pending_payment'
 
 interface PortalSession {
@@ -75,8 +80,33 @@ const workspaceLine = computed(() => {
 	return parts.filter(Boolean).join(' · ')
 })
 
+function mediumDate(value: string | null | undefined): string {
+	return value
+		? new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(
+				new Date(value),
+			)
+		: ''
+}
+
+// Deleted by an owner, not cancelled: who did it, and until when it can
+// still be restored by choosing a plan again.
+const deletionExplanation = computed(() => {
+	const deletion = access.value?.deletion
+	const params = {
+		date: mediumDate(deletion?.at),
+		until: mediumDate(access.value?.dataDeletionAt),
+		name: deletion?.byName ?? '',
+	}
+	if (deletion?.isByCaller)
+		return t('saas.public.suspended.reason.deleted_by_you', params)
+	if (deletion?.byName)
+		return t('saas.public.suspended.reason.deleted_by', params)
+	return t('saas.public.suspended.reason.deleted', params)
+})
+
 const explanation = computed(() => {
 	if (!reason.value) return ''
+	if (reason.value === DELETED_REASON) return deletionExplanation.value
 	if (invoice.value) {
 		return t('saas.public.suspended.reason.unpaid_invoice', {
 			invoice: invoice.value.number ?? invoiceAmount.value,
@@ -90,9 +120,7 @@ const retentionLine = computed(() => {
 	const deletionAt = access.value?.dataDeletionAt
 	if (!deletionAt) return t('saas.public.suspended.retention.kept')
 	return t('saas.public.suspended.retention.until', {
-		date: new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(
-			new Date(deletionAt),
-		),
+		date: mediumDate(deletionAt),
 	})
 })
 

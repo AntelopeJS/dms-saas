@@ -278,7 +278,7 @@ export class SaasWorkspacesController extends Controller(
    */
   @Post("/current/delete")
   async deleteCurrent(
-    @AuthTenantOwner() _user: User,
+    @AuthTenantOwner() user: User,
     @Context() ctx: RequestContext,
     @JSONBody() body: WorkspaceDeleteBody,
   ): Promise<WorkspaceDeletionResult> {
@@ -290,6 +290,6 @@ export class SaasWorkspacesController extends Controller(
       HTTP_BAD_REQUEST,
       "saas.errors.workspace.delete_confirmation_mismatch",
     );
-    return requestWorkspaceDeletion(tenantId);
+    return requestWorkspaceDeletion(tenantId, user._id);
   }
 }

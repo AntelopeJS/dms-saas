@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const store = vi.hoisted(() => ({
   deletedInvites: [] as string[],
   completed: [] as string[],
+  patches: [] as Record<string, unknown>[],
 }));
 
 vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
@@ -18,8 +19,13 @@ vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
         stripeSubscriptionId: null,
       }),
       beginTransition: async () => undefined,
-      completeTransition: async (id: string) => {
+      completeTransition: async (
+        id: string,
+        _operationId: string,
+        patch: Record<string, unknown>,
+      ) => {
         store.completed.push(id);
+        store.patches.push(patch);
       },
     }),
     UserInviteModel: () => ({
@@ -52,12 +58,25 @@ const { requestWorkspaceDeletion } = await import("../src/workspaces/deletion");
 
 describe("workspace deletion", () => {
   it("cancels the pending invitations, as the confirmation announces", async () => {
-    await expect(requestWorkspaceDeletion("acme")).resolves.toEqual({
+    await expect(requestWorkspaceDeletion("acme", "owner")).resolves.toEqual({
       status: "cancelled",
       retentionDays: 30,
     });
 
     expect(store.completed).toEqual(["acme"]);
     expect(store.deletedInvites).toEqual(["invite-1", "invite-2"]);
+  });
+
+  it("records which owner deleted the workspace, and when", async () => {
+    store.patches = [];
+    await requestWorkspaceDeletion("acme", "owner");
+
+    expect(store.patches).toEqual([
+      expect.objectContaining({
+        status: "cancelled",
+        deletionRequestedBy: "owner",
+        deletionRequestedAt: expect.any(Date),
+      }),
+    ]);
   });
 });

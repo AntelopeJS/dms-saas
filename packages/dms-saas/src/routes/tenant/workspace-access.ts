@@ -40,6 +40,7 @@ export type AccessBlockReason =
   | "suspended"
   | "pending_payment"
   | "cancelled"
+  | "deleted"
   | "complimentary_expired";
 
 /** One dated step of how the workspace came to be blocked. */
@@ -50,6 +51,7 @@ export type AccessTimelineKind =
   | "suspended"
   | "awaiting_payment"
   | "cancelled"
+  | "deleted"
   | "data_deleted";
 
 export interface AccessTimelineEntry {
@@ -106,7 +108,18 @@ export interface WorkspaceAccessDetails {
   timeline: AccessTimelineEntry[];
   /** When a cancelled workspace's data goes; null while nothing is scheduled. */
   dataDeletionAt: Date | null;
+  /** Who deleted the workspace, when an owner did. */
+  deletion: WorkspaceDeletionView | null;
   otherWorkspaces: OtherWorkspace[];
+}
+
+/** An owner's deletion, as the restricted screen words it. */
+export interface WorkspaceDeletionView {
+  at: Date;
+  /** The caller deleted it: the screen says "you". */
+  isByCaller: boolean;
+  /** The owner who did, for everyone else; null once their account is gone. */
+  byName: string | null;
 }
 
 const CANCELLED_STATUS: TenantSubscriptionStatus = "cancelled";
@@ -130,9 +143,17 @@ export function resolveAccessBlockReason(
   const isEndedGift =
     subscription.status === SUSPENDED_STATUS &&
     canRecoverComplimentarySubscription(subscription, now);
-  return isEndedGift
-    ? "complimentary_expired"
-    : (subscription.status as AccessBlockReason);
+  if (isEndedGift) return "complimentary_expired";
+  if (isDeletedByOwner(subscription)) return "deleted";
+  return subscription.status as AccessBlockReason;
+}
+
+/** A workspace an owner deleted, still within its retention period. */
+function isDeletedByOwner(subscription: TenantSubscription): boolean {
+  return (
+    subscription.status === CANCELLED_STATUS &&
+    !!subscription.deletionRequestedAt
+  );
 }
 
 /**
@@ -211,6 +232,10 @@ const TIMELINE_STEPS: Record<
   ],
   cancelled: (subscription, rules) => [
     ["cancelled", subscription.updatedAt],
+    ["data_deleted", resolveDataDeletionAt(subscription, rules)],
+  ],
+  deleted: (subscription, rules) => [
+    ["deleted", subscription.deletionRequestedAt],
     ["data_deleted", resolveDataDeletionAt(subscription, rules)],
   ],
 };
@@ -388,7 +413,27 @@ export class SaasWorkspaceAccessController extends Controller(
           ? buildAccessTimeline(reason, state.subscription, rules, invoice)
           : [],
       dataDeletionAt: resolveDataDeletionAt(state.subscription, rules),
+      deletion:
+        reason === "deleted"
+          ? await this.describeDeletion(state.subscription, user)
+          : null,
       otherWorkspaces: await this.loadOtherWorkspaces(user._id, tenantId),
+    };
+  }
+
+  private async describeDeletion(
+    subscription: TenantSubscription | undefined,
+    caller: User,
+  ): Promise<WorkspaceDeletionView | null> {
+    if (!subscription?.deletionRequestedAt) return null;
+    const ownerId = subscription.deletionRequestedBy;
+    const isByCaller = ownerId === caller._id;
+    const owner =
+      ownerId && !isByCaller ? await this.userModel.get(ownerId) : undefined;
+    return {
+      at: subscription.deletionRequestedAt,
+      isByCaller,
+      byName: owner ? owner.name || owner.email : null,
     };
   }
 

@@ -15,6 +15,7 @@ import type {
 import { applyPlanDowngradeCleanup } from "../../workers";
 import { closePaidUsagePeriods } from "../../workspaces/complimentary";
 import { canResubscribe } from "../../workspaces/first-payment";
+import { DELETION_REQUEST_CLEARED } from "../../workspaces/deletion-request";
 import {
   assertCardMayBackFreeWorkspace,
   isFreePerCardPolicyActive,
@@ -51,6 +52,7 @@ function freeResumptionPatch(
     paidUsageStartedAt: null,
     paidUsagePeriods: closePaidUsagePeriods(subscription, now),
     cronNotification: null,
+    ...DELETION_REQUEST_CLEARED,
     updatedAt: now,
   };
 }

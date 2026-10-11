@@ -212,6 +212,9 @@
 					"suspended": "Cet espace de travail a été suspendu à cause d'un problème de facturation. Ses données et sa configuration sont conservées jusqu'à ce que la situation soit réglée.",
 					"pending_payment": "Cet espace de travail attend son premier paiement. L'accès s'ouvre dès qu'il est effectué.",
 					"cancelled": "L'abonnement de cet espace de travail a été résilié, l'accès est donc fermé. Ses données sont conservées pour l'instant : choisir à nouveau une offre le rouvre.",
+					"deleted_by_you": "Vous avez supprimé cet espace de travail le {date}. Vous pouvez le restaurer jusqu'au {until} en choisissant à nouveau une offre ; ses données sont ensuite supprimées.",
+					"deleted_by": "{name} a supprimé cet espace de travail le {date}. Il peut être restauré jusqu'au {until} ; ses données sont ensuite supprimées.",
+					"deleted": "Cet espace de travail a été supprimé par son propriétaire. Il peut être restauré jusqu'au {until} ; ses données sont ensuite supprimées.",
 					"complimentary_expired": "L'accès offert à cet espace de travail a pris fin. Choisissez une offre pour le rouvrir ; ses données sont conservées."
 				},
 				"timeline": {
@@ -221,6 +224,7 @@
 					"suspended": "Espace de travail suspendu après le délai de grâce",
 					"awaiting_payment": "Espace de travail créé, en attente de son premier paiement",
 					"cancelled": "Abonnement résilié",
+					"deleted": "Espace de travail supprimé par son propriétaire",
 					"data_deleted": "Données supprimées après la durée de conservation",
 					"days_left": "{days} jour restant | {days} jours restants"
 				},
@@ -235,6 +239,7 @@
 					"action": {
 						"pending_payment": "Finaliser le paiement",
 						"cancelled": "Choisir une offre",
+						"deleted": "Restaurer l'espace de travail",
 						"complimentary_expired": "Choisir une offre"
 					},
 					"manage_in_stripe": "Gérer dans Stripe",
