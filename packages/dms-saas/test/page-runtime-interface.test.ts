@@ -37,7 +37,7 @@ vi.mock("@antelopejs/interface-dms/page", () => ({
 
 import * as pagesImplementation from "../src/implementations/dms-saas/pages";
 import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
-import { saasModule, workspaceSettingsCategory } from "../src/pages/module";
+import { saasModule } from "../src/pages/module";
 
 beforeAll(() => {
   ImplementInterface(pagesInterface, pagesImplementation);
@@ -61,12 +61,6 @@ describe("page runtime interface", () => {
   it("returns the canonical registered objects", async () => {
     await expect(pagesInterface.GetPlatformSaasModule()).resolves.toBe(
       saasModule,
-    );
-    await expect(pagesInterface.GetWorkspaceSettingsCategory()).resolves.toBe(
-      pageRegistration.workspaceSettingsCategory,
-    );
-    expect(workspaceSettingsCategory).toBe(
-      pageRegistration.workspaceSettingsCategory,
     );
     expect(pagesInterface.platformSaasModule).not.toBe(saasModule);
   });

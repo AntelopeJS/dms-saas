@@ -14,15 +14,6 @@ import {
   SAAS_MODULE_DEFINITION,
 } from "./page-definitions";
 
-/**
- * The workspace settings category (`settings.workspace`) is the DMS's own since
- * `@antelopejs/interface-dms` 0.4: import `workspaceSettingsCategory` from
- * `@antelopejs/interface-dms/page`. This resolves the same category, for
- * callers that still go through the SaaS interface.
- */
-export const GetWorkspaceSettingsCategory =
-  InterfaceFunction<() => CategoryInfo>();
-
 /** Stable identifiers for the tenant billing page and its extension anchors. */
 export const tenantBillingPage = {
   id: "billing",
@@ -152,9 +143,6 @@ function toPageExtensionComponent(
     side: input.side ?? "end",
     order: input.order ?? 0,
   };
-  // `anchorPath` is what the DMS reads, not `anchorKey`: a property
-  // PageExtensionComponent does not declare is ignored, and the extension
-  // silently lands at the end of the page.
   if (input.anchorKey) {
     component.anchorPath = tenantBillingPageAnchorPaths[input.anchorKey];
   }

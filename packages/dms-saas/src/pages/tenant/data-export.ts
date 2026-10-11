@@ -6,7 +6,7 @@ import {
 } from "@antelopejs/interface-dms/page";
 import { KeyValueList } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
-import { workspaceSettingsCategory } from "../module";
+import { workspaceSettingsCategory } from "@antelopejs/interface-dms/page";
 
 const KEYS = "$saas.workspace.data_export";
 const INCLUDED = `${KEYS}.included`;

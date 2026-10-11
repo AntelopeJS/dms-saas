@@ -14,7 +14,7 @@ import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { tenantBillingPage } from "@antelopejs/interface-dms-saas/pages";
 import { tenantInvoicesDataAPI } from "../../data-api";
-import { workspaceSettingsCategory } from "../module";
+import { workspaceSettingsCategory } from "@antelopejs/interface-dms/page";
 
 const KEY_PREFIX = "$saas.tenant_billing";
 const PERMISSION_PREFIX = "$saas.permissions.billing_page";

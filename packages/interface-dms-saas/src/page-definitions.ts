@@ -25,24 +25,6 @@ export const MODULES_ROOT_DEFINITION: PageInfo = {
   bypassTenantAccessGate: undefined,
 };
 
-export const SETTINGS_ROOT_DEFINITION: PageInfo = {
-  id: "settings",
-  fullId: "settings",
-  fullSlug: "/settings",
-  layoutUrl: "/settings/pagelayout",
-  category: undefined,
-  displayName: "$page.settings.title",
-  description: "$page.settings.intro",
-  urlSlug: "/settings",
-  icon: "i-ph-gear",
-  order: 3,
-  noComponentPermissions: true,
-  hidden: undefined,
-  publicAccess: undefined,
-  authOnly: undefined,
-  bypassTenantAccessGate: undefined,
-};
-
 export const SAAS_MODULE_ID = "saas";
 
 export const SAAS_MODULE_DEFINITION: SaasModuleDefinition = {
