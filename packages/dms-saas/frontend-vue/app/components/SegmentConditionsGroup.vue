@@ -163,31 +163,33 @@ function countAt(index: number): number | undefined {
 					<span class="text-muted text-sm">
 						{{ $t('saas.segments.rules.where') }}
 					</span>
-					<span
-						v-if="countAt(index) !== undefined"
-						class="text-muted ms-auto font-mono text-[11px] tabular-nums"
-					>
-						{{ $t(countLabel, { count: countAt(index) }, countAt(index)!) }}
-					</span>
-					<template v-if="!disabled">
-						<UButton
-							:class="countAt(index) === undefined ? 'ms-auto' : ''"
-							color="neutral"
-							variant="ghost"
-							icon="i-ph-copy"
-							size="xs"
-							:aria-label="$t('saas.segments.builder.duplicate_block')"
-							@click="duplicateAt(index)"
-						/>
-						<UButton
-							color="neutral"
-							variant="ghost"
-							icon="i-ph-x"
-							size="xs"
-							:aria-label="$t('saas.segments.builder.remove_block')"
-							@click="removeAt(index)"
-						/>
-					</template>
+					<!-- One unit, so a wrapping header keeps its buttons together. -->
+					<div class="ms-auto flex shrink-0 items-center gap-2">
+						<span
+							v-if="countAt(index) !== undefined"
+							class="text-muted font-mono text-[11px] tabular-nums"
+						>
+							{{ $t(countLabel, { count: countAt(index) }, countAt(index)!) }}
+						</span>
+						<template v-if="!disabled">
+							<UButton
+								color="neutral"
+								variant="ghost"
+								icon="i-ph-copy"
+								size="xs"
+								:aria-label="$t('saas.segments.builder.duplicate_block')"
+								@click="duplicateAt(index)"
+							/>
+							<UButton
+								color="neutral"
+								variant="ghost"
+								icon="i-ph-x"
+								size="xs"
+								:aria-label="$t('saas.segments.builder.remove_block')"
+								@click="removeAt(index)"
+							/>
+						</template>
+					</div>
 				</div>
 				<div class="mt-2 ps-4">
 					<DmsSaasSegmentConditionsGroup

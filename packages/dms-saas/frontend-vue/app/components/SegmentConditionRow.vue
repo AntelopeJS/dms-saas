@@ -148,21 +148,24 @@ const formattedCount = computed(() =>
 		<span v-else class="text-error text-xs">
 			{{ $t('saas.segments.unknown_field') }}
 		</span>
-		<span
-			v-if="formattedCount"
-			class="text-muted ms-auto font-mono text-[11px] tabular-nums"
-		>
-			{{ formattedCount }}
-		</span>
-		<UButton
-			v-if="!disabled"
-			:class="formattedCount ? '' : 'ms-auto'"
-			color="neutral"
-			variant="ghost"
-			icon="i-ph-x"
-			size="xs"
-			:aria-label="$t('saas.segments.builder.remove_condition')"
-			@click="emit('remove')"
-		/>
+		<!-- One unit: when the row wraps, the count and the remove button move
+		together instead of leaving the button alone on a line. -->
+		<div class="ms-auto flex shrink-0 items-center gap-2">
+			<span
+				v-if="formattedCount"
+				class="text-muted font-mono text-[11px] tabular-nums"
+			>
+				{{ formattedCount }}
+			</span>
+			<UButton
+				v-if="!disabled"
+				color="neutral"
+				variant="ghost"
+				icon="i-ph-x"
+				size="xs"
+				:aria-label="$t('saas.segments.builder.remove_condition')"
+				@click="emit('remove')"
+			/>
+		</div>
 	</div>
 </template>
