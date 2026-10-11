@@ -47,12 +47,3 @@ export function isPlanDowngrade(
 	return isCurrentPaid && target.price === FREE_PLAN_PRICE
 }
 
-/**
- * Whether a plan is free.
- *
- * @param plan Plan to inspect
- * @returns True when the plan costs nothing
- */
-export function isFreePlan(plan: PlanPricing): boolean {
-	return plan.price === FREE_PLAN_PRICE
-}

@@ -2,7 +2,7 @@ const DEFAULT_MINOR_DIGITS = 2;
 const DECIMAL_BASE = 10;
 
 /** Decimal places of a currency's minor unit, as Stripe counts them: 2 for EUR, 0 for JPY. */
-export function currencyMinorDigits(currency: string): number {
+function currencyMinorDigits(currency: string): number {
   try {
     return (
       new Intl.NumberFormat("en", {

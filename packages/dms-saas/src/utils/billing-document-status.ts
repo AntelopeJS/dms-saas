@@ -1,5 +1,4 @@
 import type { FormComponents } from "@antelopejs/interface-dms/base/form-schema";
-import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import type { BillingDocumentStatus } from "../db";
 import { INVOICE_STATUSES } from "../db";
 
@@ -25,9 +24,3 @@ export const BILLING_DOCUMENT_STATUS_ITEMS = statusItems(
   "saas.invoices.status",
 );
 
-/** Renders a billing document status through its translated label. */
-export function billingDocumentStatusType(): DefaultDataTypes.SelectType {
-  return new DefaultDataTypes.SelectType({
-    items: BILLING_DOCUMENT_STATUS_ITEMS,
-  });
-}

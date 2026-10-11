@@ -31,7 +31,7 @@ import { stripeObjectUrl } from "../../stripe/dashboard-links";
 const HTTP_CONFLICT = 409;
 
 /** A plan as a migration names it, priced while the plan still exists. */
-export async function planRef(
+async function planRef(
   planId: string,
   name: string,
 ): Promise<MigrationPlanRef> {

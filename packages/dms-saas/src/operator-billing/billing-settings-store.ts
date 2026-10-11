@@ -14,7 +14,7 @@ const DEFAULT_MONEY_BACK_WINDOW_DAYS = 14;
 const DEFAULT_REFUND_MODE: RefundProrataMode = "full";
 
 /** The settings a fresh platform starts from. */
-export function defaultBillingSettings(now: Date): BillingSettings {
+function defaultBillingSettings(now: Date): BillingSettings {
   return {
     _id: BILLING_SETTINGS_SINGLETON_ID,
     autoSuspendEnabled: true,

@@ -86,15 +86,8 @@ export interface TenantPlanResponse {
 	/** A cancelled workspace whose owner may choose a plan again to reopen it. */
 	canResubscribe: boolean
 	paidUsageStartedAt: string | null
-	paidUsagePeriods: PaidUsagePeriod[] | null
 	currentPeriodEnd: string | null
 	pendingPlan: PendingPlanChange | null
-}
-
-export interface PaidUsagePeriod {
-	stripeSubscriptionId: string
-	start: string
-	end: string | null
 }
 
 /** The payment the owner must authenticate before an upgrade applies. */

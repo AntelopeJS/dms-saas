@@ -133,11 +133,6 @@ function summarisePlan(plan: Plan): RetirePlanSummary {
   };
 }
 
-/** The text an operator types to retire a plan: its slug. */
-export function retireConfirmText(plan: Plan): string {
-  return plan.slug;
-}
-
 function renewalRange(rows: RetireWorkspace[]): [Date | null, Date | null] {
   const dates = rows
     .map((row) => row.renewsAt?.getTime())
@@ -477,8 +472,9 @@ export class SaasPlanDeletionController extends Controller(
     return targetPlan!;
   }
 
+  /** The operator types the plan's slug to retire it. */
   private assertConfirmText(plan: Plan, typed: string | undefined): void {
-    if (typed?.trim() === retireConfirmText(plan)) return;
+    if (typed?.trim() === plan.slug) return;
     throw new HTTPResult(HTTP_BAD_REQUEST, {
       message: CONFIRM_TEXT_MISMATCH,
       field: CONFIRM_TEXT_FIELD,

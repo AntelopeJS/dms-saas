@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { Plan } from "../src/db";
 import { isDowngrade } from "../src/plans";
 import {
-  isFreePlan,
   isPlanDowngrade,
   type PlanPricing,
 } from "../frontend-vue/app/composables/usePlanDowngrade";
@@ -52,11 +51,6 @@ describe("plan downgrade detection", () => {
     expect(isPlanDowngrade(business, team, true, 6)).toBe(true);
     expect(isPlanDowngrade(business, team, true, 2)).toBe(false);
     expect(isPlanDowngrade(team, business, true, 6)).toBe(false);
-  });
-
-  it("recognises a free plan", () => {
-    expect(isFreePlan(FREE)).toBe(true);
-    expect(isFreePlan(STARTER)).toBe(false);
   });
 });
 
