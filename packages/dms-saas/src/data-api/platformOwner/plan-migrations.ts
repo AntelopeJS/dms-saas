@@ -46,14 +46,14 @@ const TOTALS_FIELDS = [
   "notifyMembers",
 ];
 const PROGRESS_COLUMN_SIZE = 170;
-const STATUS_COLUMN_SIZE = 230;
+const STATUS_COLUMN_SIZE = 210;
 // Retiring a plan is the only way a migration starts: one stored before the
 // reason was recorded was started that way too, as its detail page reads it.
 const DEFAULT_REASON = "plan_retired";
 const REASON_KEY = "saas.catalog.migrations.reason";
 const PERSON_COLUMN_SIZE = 150;
-const TITLE_COLUMN_SIZE = 250;
-const DATE_COLUMN_SIZE = 140;
+const TITLE_COLUMN_SIZE = 240;
+const DATE_COLUMN_SIZE = 130;
 
 const REASON_ITEMS = PLAN_MIGRATION_REASONS.map((value) => ({
   value,

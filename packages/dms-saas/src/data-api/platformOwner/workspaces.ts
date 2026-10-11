@@ -40,6 +40,14 @@ import {
 } from "./workspace-cells";
 
 const COLUMN = "$saas.workspaces.column";
+// The seven visible columns fit a 1440px screen without scrolling.
+const NAME_COLUMN_SIZE = 220;
+const STATUS_COLUMN_SIZE = 130;
+const PLAN_COLUMN_SIZE = 170;
+const MRR_COLUMN_SIZE = 110;
+const OWNER_COLUMN_SIZE = 160;
+const RENEWS_COLUMN_SIZE = 150;
+const CREATED_COLUMN_SIZE = 120;
 
 // Every directory field is read off the workspace's billing state row, which
 // is keyed by the tenant id: one join per column, sortable and filterable in
@@ -102,7 +110,7 @@ export class workspacesDataAPI extends DataController(
     name: `${COLUMN}.workspace`,
     type: new DefaultDataTypes.StringType(),
     filterable: true,
-    size: 240,
+    size: NAME_COLUMN_SIZE,
     display: new DefaultDisplays.IdentityDisplay({ subtitleField: "_id" }),
   })
   @Access(AccessMode.ReadOnly)
@@ -116,6 +124,7 @@ export class workspacesDataAPI extends DataController(
     type: statusType("workspace"),
     filterable: true,
     display: statusPillDisplay("workspace"),
+    size: STATUS_COLUMN_SIZE,
   })
   @directoryField("billingState")
   @Access(AccessMode.ReadOnly)
@@ -136,6 +145,7 @@ export class workspacesDataAPI extends DataController(
     type: new DefaultDataTypes.StringType(),
     filterable: true,
     display: new DefaultDisplays.TwoLineDisplay({ subField: "planDetail" }),
+    size: PLAN_COLUMN_SIZE,
   })
   @directoryField("planName")
   @Access(AccessMode.ReadOnly)
@@ -152,6 +162,7 @@ export class workspacesDataAPI extends DataController(
       primaryField: "mrrAmount",
       subField: "mrrNote",
     }),
+    size: MRR_COLUMN_SIZE,
   })
   @directoryField("mrrMinor")
   @Access(AccessMode.ReadOnly)
@@ -169,6 +180,7 @@ export class workspacesDataAPI extends DataController(
       primaryField: "ownerLabel",
       subField: "ownerState",
     }),
+    size: OWNER_COLUMN_SIZE,
   })
   @directoryField("ownerName")
   @Access(AccessMode.ReadOnly)
@@ -221,6 +233,7 @@ export class workspacesDataAPI extends DataController(
       primaryField: "renewalSummary",
       subField: "renewalDate",
     }),
+    size: RENEWS_COLUMN_SIZE,
   })
   @directoryField("renewsAt")
   @Access(AccessMode.ReadOnly)
@@ -336,6 +349,7 @@ export class workspacesDataAPI extends DataController(
     name: `${COLUMN}.created_at`,
     type: new DefaultDataTypes.DateType(),
     filterable: true,
+    size: CREATED_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare createdAt: Date;

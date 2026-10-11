@@ -119,7 +119,7 @@ export class invoicesDataAPI extends DataController(
     type: new DefaultDataTypes.StringType(),
     display: new DefaultDisplays.MonoDisplay(),
     filterable: true,
-    size: 150,
+    size: 140,
   })
   @Access(AccessMode.ReadOnly)
   declare number: string | null;
@@ -139,7 +139,7 @@ export class invoicesDataAPI extends DataController(
     type: new DefaultDataTypes.StringType(),
     display: new DefaultDisplays.TwoLineDisplay({ subField: "planDetail" }),
     filterable: true,
-    size: 220,
+    size: 200,
   })
   @Joined({ table: Tenant, localKey: "_instance", remoteField: "name" })
   @Access(AccessMode.ReadOnly)
@@ -168,7 +168,7 @@ export class invoicesDataAPI extends DataController(
   @Column({
     name: `${COLUMN}.amount`,
     type: new MoneyCentsType(),
-    size: 120,
+    size: 110,
   })
   @Access(AccessMode.ReadOnly)
   declare total: number;
@@ -191,7 +191,7 @@ export class invoicesDataAPI extends DataController(
       subTone: "muted",
     }),
     filterable: true,
-    size: 240,
+    size: 200,
   })
   @Access(AccessMode.ReadOnly)
   declare status: InvoiceStatus;
@@ -232,7 +232,7 @@ export class invoicesDataAPI extends DataController(
     name: `${COLUMN}.period`,
     type: new DefaultDataTypes.DateType(),
     display: new BillingPeriodDisplay({ endField: "periodEnd" }),
-    size: 190,
+    size: 150,
   })
   @Access(AccessMode.ReadOnly)
   declare periodStart: Date | null;
@@ -251,7 +251,7 @@ export class invoicesDataAPI extends DataController(
     name: `${COLUMN}.issued_at`,
     type: new DefaultDataTypes.DateType(),
     display: new DefaultDisplays.RelativeDateDisplay({ style: "day" }),
-    size: 110,
+    size: 120,
   })
   @Access(AccessMode.ReadOnly)
   declare issuedAt: Date;

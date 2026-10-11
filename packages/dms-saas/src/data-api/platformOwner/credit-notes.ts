@@ -82,7 +82,7 @@ export class creditNotesDataAPI extends DataController(
       subtitleField: "invoiceNumber",
     }),
     filterable: true,
-    size: 190,
+    size: 160,
   })
   @Access(AccessMode.ReadOnly)
   declare number: string;
@@ -115,7 +115,7 @@ export class creditNotesDataAPI extends DataController(
     type: new DefaultDataTypes.StringType(),
     display: new DefaultDisplays.IdentityDisplay(),
     filterable: true,
-    size: 180,
+    size: 160,
   })
   @Joined({ table: Tenant, localKey: "_instance", remoteField: "name" })
   @Access(AccessMode.ReadOnly)
@@ -128,7 +128,7 @@ export class creditNotesDataAPI extends DataController(
   @Column({
     name: `${COLUMN}.amount`,
     type: new MoneyCentsType(),
-    size: 110,
+    size: 100,
   })
   @Access(AccessMode.ReadOnly)
   declare amount: number;
@@ -147,7 +147,7 @@ export class creditNotesDataAPI extends DataController(
     name: `${COLUMN}.type`,
     type: statusType("credit_note_type"),
     filterable: true,
-    size: 150,
+    size: 130,
   })
   @Access(AccessMode.ReadOnly)
   declare type: string;
@@ -161,7 +161,7 @@ export class creditNotesDataAPI extends DataController(
     type: statusType("credit_note"),
     display: statusPillDisplay("credit_note"),
     filterable: true,
-    size: 110,
+    size: 100,
   })
   @Access(AccessMode.ReadOnly)
   declare status: string;
@@ -187,7 +187,7 @@ export class creditNotesDataAPI extends DataController(
     name: `${COLUMN}.reason`,
     type: REASON_TYPE,
     display: new DefaultDisplays.TwoLineDisplay({ subField: "internalMemo" }),
-    size: 260,
+    size: 180,
   })
   @Access(AccessMode.ReadOnly)
   get reasonCode(): string | null {
@@ -210,7 +210,7 @@ export class creditNotesDataAPI extends DataController(
       emptyLabel: "$saas.operator_billing.credit_notes.automatic",
       emptyIcon: "i-ph-robot",
     }),
-    size: 160,
+    size: 130,
   })
   @Access(AccessMode.ReadOnly)
   get issuedBy(): string | null {
@@ -225,7 +225,7 @@ export class creditNotesDataAPI extends DataController(
     name: `${COLUMN}.issued_at`,
     type: new DefaultDataTypes.DateType(),
     display: new DefaultDisplays.RelativeDateDisplay({ style: "day" }),
-    size: 110,
+    size: 100,
   })
   @Access(AccessMode.ReadOnly)
   declare issuedAt: Date;

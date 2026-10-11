@@ -37,7 +37,10 @@ import { statusPillDisplay, statusType } from "../../utils";
 import { HiddenStringFilter } from "./hidden-filter";
 
 const NO_PLAN = "—";
-const NAME_COLUMN_SIZE = 240;
+// The five columns fit beside the sidebar of the user page.
+const NAME_COLUMN_SIZE = 200;
+const ROLE_COLUMN_SIZE = 150;
+const REGULAR_COLUMN_SIZE = 110;
 
 interface MembershipRowInstance {
   table: { _instance: string };
@@ -112,6 +115,7 @@ export class adminUserWorkspacesDataAPI extends DataController(
       onTone: "primary",
       offTone: "muted",
     }),
+    size: ROLE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare isTenantOwner: boolean;
@@ -124,6 +128,7 @@ export class adminUserWorkspacesDataAPI extends DataController(
     type: statusType("workspace"),
     filterable: true,
     display: statusPillDisplay("workspace"),
+    size: REGULAR_COLUMN_SIZE,
   })
   @Joined({
     table: TenantBillingState,
@@ -139,6 +144,7 @@ export class adminUserWorkspacesDataAPI extends DataController(
   @Column({
     name: "$saas.users.workspaces.column.plan",
     type: new DefaultDataTypes.StringType(),
+    size: REGULAR_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   get plan(): PromiseLike<string> {
@@ -159,6 +165,7 @@ export class adminUserWorkspacesDataAPI extends DataController(
     name: "$saas.users.workspaces.column.joined_at",
     type: new DefaultDataTypes.DateType(),
     display: new DefaultDisplays.RelativeDateDisplay({ style: "day" }),
+    size: REGULAR_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare joinedAt: Date;

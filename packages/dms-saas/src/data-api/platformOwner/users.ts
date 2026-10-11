@@ -30,7 +30,12 @@ import { composed, countParam, dotList } from "../../i18n/composed-text";
 import { getSegmentNamesCached } from "../../utils";
 
 const ACTIVE_NOW_MS = 5 * 60 * 1000;
-const IDENTITY_COLUMN_SIZE = 280;
+const IDENTITY_COLUMN_SIZE = 260;
+// The six visible columns fit a 1440px screen without scrolling.
+const ROLE_COLUMN_SIZE = 160;
+const SEGMENTS_COLUMN_SIZE = 200;
+const REGULAR_COLUMN_SIZE = 140;
+const DATE_COLUMN_SIZE = 120;
 
 interface UserRowInstance {
   table: { _id: string };
@@ -173,6 +178,7 @@ export class saasUsersDataAPI extends DataController(
       onTone: "primary",
       offTone: "dimmed",
     }),
+    size: ROLE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare owner: boolean;
@@ -199,6 +205,7 @@ export class saasUsersDataAPI extends DataController(
       subField: "workspacesSplit",
       emptyLabel: "$saas.users.no_workspace",
     }),
+    size: REGULAR_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   get workspaces(): PromiseLike<number> {
@@ -229,6 +236,7 @@ export class saasUsersDataAPI extends DataController(
     display: new DefaultDisplays.PillsDisplay({
       emptyLabel: "$saas.users.no_segment",
     }),
+    size: SEGMENTS_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   get segments(): PromiseLike<string[]> {
@@ -257,6 +265,7 @@ export class saasUsersDataAPI extends DataController(
       emptyLabel: "$saas.users.never_active",
       emptyTone: "dimmed",
     }),
+    size: REGULAR_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare lastActiveAt: Date | null;
@@ -272,6 +281,7 @@ export class saasUsersDataAPI extends DataController(
       style: "day",
       tone: "muted",
     }),
+    size: DATE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare createdAt: Date;

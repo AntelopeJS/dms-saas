@@ -47,8 +47,12 @@ const VALUE_TYPE_OPTIONS = FEATURE_VALUE_TYPES.map((value) => ({
 }));
 
 const DESCRIPTION_ROWS = 2;
+// The visible columns fit a 1440px screen without scrolling.
 const NAME_COLUMN_SIZE = 260;
-const SHORT_COLUMN_SIZE = 120;
+const KEY_COLUMN_SIZE = 180;
+const COMPARISON_COLUMN_SIZE = 200;
+const SHORT_COLUMN_SIZE = 100;
+const ORDER_COLUMN_SIZE = 80;
 
 interface FeatureRowInstance {
   table: Feature;
@@ -81,24 +85,6 @@ export class featuresDataAPI extends DataController(
   @Listable()
   @Searchable()
   @Exported()
-  @Column({
-    name: `${TEXTS}.column.key`,
-    type: new DefaultDataTypes.StringType(),
-    display: new DefaultDisplays.MonoDisplay({ copy: true }),
-    readonlyBehavior: {
-      new: ReadonlyBehaviorType.hidden,
-      edit: ReadonlyBehaviorType.disabled,
-      view: ReadonlyBehaviorType.disabled,
-    },
-    size: SHORT_COLUMN_SIZE * 2,
-  })
-  @Access(AccessMode.ReadOnly)
-  declare _id: string;
-
-  @Select()
-  @Listable()
-  @Searchable()
-  @Exported()
   @Sortable()
   @Mandatory("new", "edit")
   @Column({
@@ -115,6 +101,24 @@ export class featuresDataAPI extends DataController(
   })
   @Access(AccessMode.ReadWrite)
   declare displayName: string;
+
+  @Select()
+  @Listable()
+  @Searchable()
+  @Exported()
+  @Column({
+    name: `${TEXTS}.column.key`,
+    type: new DefaultDataTypes.StringType(),
+    display: new DefaultDisplays.MonoDisplay({ copy: true }),
+    readonlyBehavior: {
+      new: ReadonlyBehaviorType.hidden,
+      edit: ReadonlyBehaviorType.disabled,
+      view: ReadonlyBehaviorType.disabled,
+    },
+    size: KEY_COLUMN_SIZE,
+  })
+  @Access(AccessMode.ReadOnly)
+  declare _id: string;
 
   @Select()
   @Listable()
@@ -201,7 +205,7 @@ export class featuresDataAPI extends DataController(
       offTone: "default",
     }),
     filterable: true,
-    size: SHORT_COLUMN_SIZE * 2,
+    size: COMPARISON_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadWrite)
   declare isDetailRow: boolean;
@@ -227,7 +231,7 @@ export class featuresDataAPI extends DataController(
     name: `${TEXTS}.column.order`,
     description: `${TEXTS}.column.order_description`,
     type: new DefaultDataTypes.NumberType({ min: 0, step: 1 }),
-    size: SHORT_COLUMN_SIZE,
+    size: ORDER_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadWrite)
   declare order: number;
