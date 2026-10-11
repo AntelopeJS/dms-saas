@@ -669,6 +669,7 @@ onBeforeUnmount(() => {
 			v-model:open="isUpgradeOpen"
 			:plan="upgradeTarget"
 			:workspace-name="workspaceName"
+			:is-resubscription="canResubscribe"
 			@changed="refresh"
 		/>
 		<DmsSaasPendingCheckoutModal v-if="isTenantOwner" />

@@ -45,6 +45,11 @@ import {
   resolveInvitationLink,
 } from "../src/workspaces/invitations";
 
+// The DMS permission registry is not wired here: the role is created against
+// it in production, and its own test covers what it holds.
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async () => "member-role",
+}));
 vi.mock("../src/billing-state", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/billing-state")>()),
   recomputeTenantBillingState: async () => undefined,

@@ -31,6 +31,7 @@ const SUBJECT_KEYS = {
   complimentaryAccessGranted:
     "saas.notifications.subjects.complimentary_access_granted",
   automation: "saas.notifications.subjects.automation",
+  invitationEmailFailed: "saas.notifications.subjects.invitation_email_failed",
 } as const;
 
 export const planMigratedSubject = NotificationSubject("saas.plan_migrated", {
@@ -142,6 +143,15 @@ export const complimentaryAccessGrantedSubject = NotificationSubject(
     category: SaasCategory,
     labelKey: SUBJECT_KEYS.complimentaryAccessGranted,
     togglePermission: "default",
+  },
+);
+/** To the operator who created a workspace whose owner e-mail did not leave. */
+export const invitationEmailFailedSubject = NotificationSubject(
+  "saas.invitation_email_failed",
+  {
+    category: SaasCategory,
+    labelKey: SUBJECT_KEYS.invitationEmailFailed,
+    togglePermission: "forbidden",
   },
 );
 export const automationNotificationSubject = NotificationSubject(

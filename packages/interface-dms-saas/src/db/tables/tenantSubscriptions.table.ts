@@ -143,6 +143,7 @@ export class TenantSubscription extends Table {
   @Field("date")
   declare currentPeriodEnd: Date | null;
 
+  @Index({ crossInstance: true })
   @Field("string")
   @Relation({ to: () => Plan })
   declare pendingPlanId: string | null;
@@ -162,6 +163,17 @@ export class TenantSubscription extends Table {
 
   @Field("date")
   declare refundRequestedAt: Date | null;
+
+  /**
+   * When an owner deleted the workspace, cleared once it resumes: the
+   * restricted screen tells a deletion apart from a cancelled subscription.
+   */
+  @Field("date")
+  declare deletionRequestedAt: Date | null;
+
+  /** The owner who deleted the workspace, with `deletionRequestedAt`. */
+  @Field("string")
+  declare deletionRequestedBy: string | null;
 
   /** Dunning clock: when the subscription entered `past_due`, driving the
    * auto-suspend deadline. Kept apart from `updatedAt`, which any write moves.

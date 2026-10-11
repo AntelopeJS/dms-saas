@@ -114,7 +114,9 @@ describe("plan feature value formatting", () => {
     // Q36: one meaning everywhere, 0 is off, -1 unlimited, n ≥ 1 a limit.
     [numeric(null), 0, "—"],
     [numeric("projects"), 0, "—"],
-    [numeric("projects"), 1, "1 projects"],
+    [numeric("project | projects"), 1, "1 project"],
+    [numeric("project | projects"), 3, "3 projects"],
+    [numeric("/ month"), 100, "100 / month"],
   ])("renders %o with value %o as %s", (feature, value, expected) => {
     expect(formatPlanFeatureValue(feature, value, context("en-GB"))).toBe(
       expected,
@@ -182,6 +184,35 @@ describe("plan feature value formatting", () => {
     expect(
       plain(formatPlanFeatureValue(numeric("per byte"), 0.00000000009, fr)),
     ).toBe("0,09 € / Go");
+  });
+});
+
+describe("plan feature units agreeing with their number", () => {
+  it.each([
+    ["projet | projets", 1, "1 projet"],
+    ["projet | projets", 1.5, "1,5 projet"],
+    ["projet | projets", 12, "12 projets"],
+    ["/ mois", 100, "100 / mois"],
+  ])("reads %s with %d in French as %s", (unit, value, expected) => {
+    expect(
+      plain(formatPlanFeatureValue(numeric(unit), value, context("fr-FR"))),
+    ).toBe(expected);
+  });
+
+  it("agrees a written plural with a text value", () => {
+    expect(
+      formatPlanFeatureValue(
+        { valueType: "string", unit: "seat | seats" },
+        "Unlimited",
+        context("en-GB"),
+      ),
+    ).toBe("Unlimited seats");
+  });
+
+  it("still scales a built-in unit written with its plural", () => {
+    expect(
+      formatPlanFeatureValue(numeric("byte | bytes"), 1_500, context("en-GB")),
+    ).toBe("1.5 KB");
   });
 });
 

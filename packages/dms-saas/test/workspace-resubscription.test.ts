@@ -179,6 +179,8 @@ async function seedCancelledWorkspace(
     stripeSubscriptionId: ENDED_SUBSCRIPTION,
     cardFingerprint: CARD,
     refundRequestedAt: REFUNDED_AT,
+    deletionRequestedAt: REFUNDED_AT,
+    deletionRequestedBy: "owner",
     createdBy: "owner",
     paidUsagePeriods: [
       {
@@ -322,6 +324,8 @@ describe("a cancelled workspace choosing a plan again", () => {
       stripeSubscriptionId: NEW_SUBSCRIPTION,
       cardFingerprint: CARD,
       domainTransition: null,
+      deletionRequestedAt: null,
+      deletionRequestedBy: null,
     });
     expect(reopened?.paidUsagePeriods).toEqual([
       expect.objectContaining({
@@ -366,6 +370,9 @@ describe("a cancelled workspace choosing a plan again", () => {
       stripeCustomerId: KEPT_CUSTOMER,
       stripeSubscriptionId: null,
       refundRequestedAt: REFUNDED_AT,
+      // Back on its feet, it is no longer the workspace its owner deleted.
+      deletionRequestedAt: null,
+      deletionRequestedBy: null,
     });
     expect(resumed?.paidUsagePeriods[0]?.end).toBeInstanceOf(Date);
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();

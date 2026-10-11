@@ -76,6 +76,16 @@ const PLAN = {
   billingMode: "flat",
   paymentProviderRefs: { stripePriceId: "price_free" },
 };
+const PAID_PLAN = {
+  ...PLAN,
+  _id: "plan_pro",
+  slug: "pro",
+  name: "Pro",
+  price: 29,
+  order: 1,
+  paymentProviderRefs: { stripePriceId: "price_pro" },
+};
+const PLANS = [PLAN, PAID_PLAN];
 
 let sequence = 0;
 const deliveries = new Map<string, LifecycleDelivery>();
@@ -86,6 +96,11 @@ const subscriptions = new Map<string, TenantSubscription>();
 const billingInfos = new Map<string, TenantBillingInfo>();
 const admission = vi.hoisted(() => ({ close: vi.fn() }));
 
+// The DMS permission registry is not wired here: the role is created against
+// it in production, and its own test covers what it holds.
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async () => "member-role",
+}));
 vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
   closeTenantLifecycleAdmission: (...args: unknown[]) =>
     admission.close(...args),
@@ -223,8 +238,9 @@ const modelFakes: Record<string, (tenantId?: string) => unknown> = {
   }),
   BillingSettingsModel: () => ({ get: async () => undefined }),
   PlanModel: () => ({
-    get: async () => PLAN,
+    get: async (id: string) => PLANS.find((plan) => plan._id === id),
     findActiveNotDeleted: async () => [PLAN],
+    findPubliclyVisible: async () => PLANS,
   }),
   TenantModel: () => ({
     get: async (id: string) =>
@@ -396,6 +412,7 @@ const { SaasRegisterApiController } =
 
 interface RegisterBodyInput {
   extras?: unknown;
+  requestedPlanId?: string;
 }
 
 function buildRegisterBody(input: RegisterBodyInput = {}) {
@@ -1020,6 +1037,39 @@ describe("registration card policy", () => {
     });
     expect(world.users.size).toBe(1);
     expect(world.stripeCustomers.size).toBe(1);
+  });
+
+  it("opens a paid plan chosen on Pricing awaiting its first payment instead", async () => {
+    applyPolicy("required");
+    await buildController().register(buildRegisterBody());
+
+    const result = await buildController().register(
+      buildRegisterBody({ requestedPlanId: PAID_PLAN._id }),
+    );
+
+    expect(subscriptionOf(result.tenantId)).toMatchObject({
+      planId: PAID_PLAN._id,
+      status: "pending_payment",
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      cardFingerprint: null,
+    });
+    expect(world.stripeCustomers.size).toBe(1);
+    expect(world.users.size).toBe(2);
+  });
+
+  it("still refuses the card when the plan chosen on Pricing is free", async () => {
+    applyPolicy("required");
+    await buildController().register(buildRegisterBody());
+
+    await expect(
+      buildController().register(
+        buildRegisterBody({ requestedPlanId: PLAN._id }),
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.workspace.free_card_limit_reached",
+    });
   });
 
   it("never calls Stripe under `none`, even when a card is sent", async () => {

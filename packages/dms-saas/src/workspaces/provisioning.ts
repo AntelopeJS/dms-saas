@@ -30,10 +30,13 @@ import {
   readStripeId,
   readSubscriptionPeriodEnd,
   reconcileStripeTaxId,
+  rememberCustomerLocale,
   toStripeAddress,
+  toStripePreferredLocales,
   toTenantBillingAddress,
 } from "../stripe";
 import { hashEmail, insertOrUpdateById, stripeSecondsToDate } from "../utils";
+import { createDefaultMemberRole } from "./default-member-role";
 import { resolveDefaultPlan } from "./default-plan";
 import { isFreePlan } from "./free-plan";
 import { buildSubscriptionCreateParams } from "./subscription-create-params";
@@ -49,6 +52,7 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
+const PENDING_PAYMENT_STATUS: TenantSubscriptionStatus = "pending_payment";
 
 export type WorkspaceCustomerType = "individual" | "business";
 
@@ -66,8 +70,17 @@ export interface WorkspaceBillingProfile {
 export interface WorkspaceProvisioningPayload extends WorkspaceBillingProfile {
   workspaceName: string;
   planId: string;
-  /** Absent for a card-less workspace, which only a free plan allows. */
+  /**
+   * Absent for a card-less workspace, which only a free plan allows, or a
+   * workspace that awaits its first payment.
+   */
   paymentMethodId?: string;
+  /**
+   * The workspace opens on its paid plan waiting for its first payment, made
+   * through Checkout, as one an operator creates for its owner to pay. No
+   * Stripe object is created here.
+   */
+  awaitsFirstPayment?: boolean;
   /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else. Opaque here: dms-saas never reads it, never
@@ -99,6 +112,8 @@ export interface CardDetails {
 
 export interface WorkspaceProvisioningInput {
   userId: string;
+  /** The owner's language, for what the workspace is set up with in words. */
+  ownerLanguage?: string;
   payload: WorkspaceProvisioningPayload;
   stripeCustomerProfile: StripeCustomerProfile;
   card: CardDetails;
@@ -245,10 +260,10 @@ export async function resolveRegistrationPlan(): Promise<Plan> {
 }
 
 async function createStripeCustomer(
-  profile: StripeCustomerProfile,
+  input: WorkspaceProvisioningInput,
   paymentMethodId: string,
-  handles: WorkspaceProvisioningHandles,
 ): Promise<string> {
+  const { stripeCustomerProfile: profile, handles } = input;
   const stripe = getStripeClient();
   // Set rather than spread: a customer without a VAT number carries no
   // `vatNumber` key at all, which is what Stripe's metadata expects.
@@ -265,10 +280,12 @@ async function createStripeCustomer(
           ? profile.companyName
           : profile.fallbackName,
       address: toStripeAddress(profile.address),
+      preferred_locales: toStripePreferredLocales(input.ownerLanguage),
       metadata: { ...metadata, provisioningAttempt: handles.tenantId ?? "" },
     },
     { idempotencyKey: `provisioning-customer:${handles.tenantId}` },
   );
+  rememberCustomerLocale(customer.id, input.ownerLanguage);
   // Recorded before the follow-up calls: a failed attach (declined or already
   // attached card) must still leave the rollback able to delete the customer
   // and the PII it carries.
@@ -435,11 +452,19 @@ function initialPaidUsagePeriods(
  * insert; the paid subscription then replaces that free row rather than
  * sitting beside it or failing a creation the customer already paid for.
  */
+function initialStatus(
+  payload: WorkspaceProvisioningPayload,
+  subscription: CreatedSubscription,
+): TenantSubscriptionStatus {
+  if (payload.awaitsFirstPayment) return PENDING_PAYMENT_STATUS;
+  return subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS;
+}
+
 async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
   const { tenantId, payload, subscription } = input;
   const subscriptionPatch = {
     planId: payload.planId,
-    status: subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS,
+    status: initialStatus(payload, subscription),
     isComplimentary: false,
     paidUsagePeriods: initialPaidUsagePeriods(subscription),
     stripeCustomerId: input.stripeCustomerId,
@@ -473,10 +498,9 @@ async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
 }
 
 async function createOwnedTenant(
-  workspaceName: string,
-  userId: string,
-  handles: WorkspaceProvisioningHandles,
+  input: WorkspaceProvisioningInput,
 ): Promise<string> {
+  const { userId, handles } = input;
   const tenantId = handles.tenantId;
   if (!tenantId)
     throw new Error("Provisioning intent must precede tenant creation");
@@ -485,7 +509,7 @@ async function createOwnedTenant(
     await GetModel(TenantModel).insert([
       {
         _id: tenantId,
-        name: workspaceName,
+        name: input.payload.workspaceName,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -494,6 +518,7 @@ async function createOwnedTenant(
       roleIds: [],
       isTenantOwner: true,
     });
+    await createDefaultMemberRole(tenantId, input.ownerLanguage);
     return tenantId;
   });
 }
@@ -505,9 +530,12 @@ export async function provisionWorkspace(
   const plan = await loadBillablePlan(input.payload.planId);
   assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_available");
   // Nothing can be charged without a card, so only a free plan goes on
-  // without one — checked before any durable state is written.
+  // without one, or a workspace whose first payment goes through Checkout —
+  // checked before any durable state is written.
   assert(
-    input.payload.paymentMethodId || isFreePlan(plan),
+    input.payload.paymentMethodId ||
+      isFreePlan(plan) ||
+      input.payload.awaitsFirstPayment,
     HTTP_BAD_REQUEST,
     "saas.errors.workspace.payment_method_required",
   );
@@ -531,11 +559,7 @@ async function provisionStripeBilling(
   paymentMethodId: string,
 ): Promise<ProvisionedBilling> {
   const { stripeCustomerProfile, handles } = input;
-  const stripeCustomerId = await createStripeCustomer(
-    stripeCustomerProfile,
-    paymentMethodId,
-    handles,
-  );
+  const stripeCustomerId = await createStripeCustomer(input, paymentMethodId);
   if (isBilledOffStripe(plan)) {
     return { stripeCustomerId, subscription: LOCAL_SUBSCRIPTION };
   }
@@ -560,11 +584,7 @@ async function runProvisioning(
     ? await provisionStripeBilling(input, plan, payload.paymentMethodId)
     : CARDLESS_BILLING;
 
-  const tenantId = await createOwnedTenant(
-    payload.workspaceName,
-    userId,
-    handles,
-  );
+  const tenantId = await createOwnedTenant(input);
   await runTenantLifecycleOperation(tenantId, () =>
     insertTenantRecords({
       tenantId,

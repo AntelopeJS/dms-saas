@@ -15,17 +15,22 @@ import { PlanMigrationModel, PlanModel, TenantSubscriptionModel } from "../db";
 import { notifyTenantOwners, planMigratedSubject } from "../notifications";
 import { countOccupiedSeats, syncStripeSeatQuantity } from "../plans";
 import { publishMigrationChange } from "../plans/migration-realtime";
+import { redirectPendingPlanChange } from "../plan-changes/pending-target";
 import { getStripeClient } from "../stripe/client";
+import { isDefinitiveStripeRejection } from "../stripe/workspace-checkout";
 import { getRowInstance } from "../utils";
 
 const ALL_PERMISSIONS = "*";
 const ICON_MIGRATION = "i-ph-stack";
 const PRORATION_BEHAVIOR = "create_prorations" as const;
 const FIRST_ATTEMPT = 1;
-/** The type stripe-node gives an error Stripe raised for a declined card. */
-const DECLINED_PAYMENT_ERROR_TYPE = "StripeCardError";
 const UNKNOWN_FAILURE = "Reconciliation required";
 const NOT_REACHED_ERROR = "Not reached before the migration stopped";
+/** What the owners are told: moved now, or their scheduled change redirected. */
+const MIGRATION_NOTICES = {
+  migrated: "$saas.notifications.payload.plan_migrated",
+  redirected: "$saas.notifications.payload.plan_change_redirected",
+} as const;
 const NOT_MOVED_STATUSES = new Set<PlanMigrationTenantOutcome["status"]>([
   "reconciliation_required",
   "failed",
@@ -67,12 +72,34 @@ export function settledMigrationStatus(
   return "completed";
 }
 
-function isDeclinedPayment(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { type?: unknown }).type === DECLINED_PAYMENT_ERROR_TYPE
-  );
+/**
+ * Stripe refused the plan change outright — a declined card, an archived
+ * price, a subscription gone: the request had no effect, so the workspace did
+ * not move and a retry is safe. Raised for the provider change alone; a
+ * refusal after it (the seat sync) leaves a workspace that did move.
+ */
+class ProviderChangeRefusedError extends Error {
+  constructor(readonly cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = "ProviderChangeRefusedError";
+  }
+}
+
+function isRefusedMove(error: unknown): boolean {
+  return error instanceof ProviderChangeRefusedError;
+}
+
+async function changeProviderPlanOrRefuse(
+  work: WorkspaceMigration,
+): Promise<void> {
+  try {
+    await changeProviderPlan(work);
+  } catch (error) {
+    if (isDefinitiveStripeRejection(error)) {
+      throw new ProviderChangeRefusedError(error);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -140,6 +167,25 @@ interface WorkspaceMigration {
   subscription: TenantSubscription;
   target: PlanMigrationTarget;
   seatQuantity: number;
+  /**
+   * The workspace is not on the retired plan but scheduled to switch to it:
+   * its scheduled change is redirected to the target, nothing moves now.
+   */
+  isScheduledChange: boolean;
+}
+
+/**
+ * What a migration does to a workspace it captured: on the retired plan, it
+ * moves now; scheduled to switch to it, the scheduled change goes to the
+ * target instead, or it would land on a plan that no longer exists.
+ */
+function capturedBy(
+  subscription: TenantSubscription | undefined,
+  fromPlanId: string,
+): "move" | "redirect" | null {
+  if (subscription?.planId === fromPlanId) return "move";
+  if (subscription?.pendingPlanId === fromPlanId) return "redirect";
+  return null;
 }
 
 /**
@@ -199,10 +245,22 @@ async function changeProviderPlan(work: WorkspaceMigration): Promise<void> {
   );
 }
 
+async function redirectScheduledChange(
+  work: WorkspaceMigration,
+): Promise<void> {
+  await redirectPendingPlanChange({
+    tenantId: work.tenantId,
+    subscription: work.subscription,
+    operationId: work.operationId,
+    target: work.target,
+  });
+}
+
 async function applyWorkspaceMigration(
   work: WorkspaceMigration,
 ): Promise<void> {
-  await changeProviderPlan(work);
+  if (work.isScheduledChange) return redirectScheduledChange(work);
+  await changeProviderPlanOrRefuse(work);
   const subscriptionModel = GetModel(TenantSubscriptionModel, work.tenantId);
   const freePlanPatch: Partial<TenantSubscription> = work.target.stripePriceId
     ? {}
@@ -240,12 +298,15 @@ async function snapshotMigration(
   if (!target || target.isDeleted || !target.isActive)
     throw new Error("Target plan is unavailable");
   const resolved = await planModel.resolveInheritance(target);
-  const subscriptions = await GetModel(
-    TenantSubscriptionModel,
-    CROSS_INSTANCE,
-  ).findByPlan(job.fromPlanId);
+  const model = GetModel(TenantSubscriptionModel, CROSS_INSTANCE);
+  const [onPlan, scheduledToPlan] = await Promise.all([
+    model.findByPlan(job.fromPlanId),
+    model.findByPendingPlan(job.fromPlanId),
+  ]);
   return {
-    tenantIds: [...new Set(subscriptions.map(getRowInstance))],
+    tenantIds: [
+      ...new Set([...onPlan, ...scheduledToPlan].map(getRowInstance)),
+    ],
     target: {
       planId: target._id,
       name: target.name,
@@ -275,7 +336,8 @@ async function admitWorkspace(
   if (!job.snapshot) throw new Error("Migration snapshot is missing");
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await model.findOne();
-  if (!subscription || subscription.planId !== job.fromPlanId)
+  const capture = capturedBy(subscription, job.fromPlanId);
+  if (!subscription || !capture)
     throw new Error("Snapshot subscription changed; reconciliation required");
   const seatQuantity = await countOccupiedSeats(tenantId);
   await recordTenantOutcome(job, {
@@ -298,14 +360,15 @@ async function admitWorkspace(
     subscription,
     target: job.snapshot.target,
     seatQuantity,
+    isScheduledChange: capture === "redirect",
   };
 }
 
 /**
- * Stripe refused the change outright (a declined card): nothing moved, so the
- * workspace's intent is released and it can be retried under a new operation.
+ * Stripe refused the change outright: nothing moved, so the workspace's
+ * intent is released and it can be retried under a new operation.
  */
-async function releaseDeclinedMove(work: WorkspaceMigration): Promise<void> {
+async function releaseRefusedMove(work: WorkspaceMigration): Promise<void> {
   await GetModel(TenantSubscriptionModel, work.tenantId).completeTransition(
     work.subscription._id,
     work.operationId,
@@ -322,15 +385,18 @@ async function migrateTenant(
   try {
     await applyWorkspaceMigration(work);
   } catch (error) {
-    if (isDeclinedPayment(error)) await releaseDeclinedMove(work);
+    if (isRefusedMove(error)) await releaseRefusedMove(work);
     throw error;
   }
   if (job.notifyMembers) {
+    const payload = work.isScheduledChange
+      ? MIGRATION_NOTICES.redirected
+      : MIGRATION_NOTICES.migrated;
     await notifyTenantOwners(tenantId, planMigratedSubject, {
       eventId: work.operationId,
       icon: ICON_MIGRATION,
-      title: "$saas.notifications.payload.plan_migrated.title",
-      description: "$saas.notifications.payload.plan_migrated.description",
+      title: `${payload}.title`,
+      description: `${payload}.description`,
       params: { plan: work.target.name },
     });
   }
@@ -360,7 +426,7 @@ async function processTenantInJob(
   } catch (error) {
     await recordTenantOutcome(job, {
       tenantId,
-      status: isDeclinedPayment(error) ? "failed" : "reconciliation_required",
+      status: isRefusedMove(error) ? "failed" : "reconciliation_required",
       error: error instanceof Error ? error.message : String(error),
       seatQuantity:
         job.tenantOutcomes.find((row) => row.tenantId === tenantId)

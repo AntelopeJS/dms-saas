@@ -56,10 +56,6 @@ interface StripePaymentElementHandle {
   confirmAndGetPaymentMethod: () => Promise<ConfirmResult>;
 }
 
-// Payment method types are fixed server-side on the SetupIntent: Stripe
-// rejects `paymentMethodTypes` next to a `clientSecret`, since it only applies
-// to an Elements instance created in deferred-intent `mode`.
-const ALLOWED_CARD_BRANDS = ["visa", "mastercard"];
 const UNKNOWN_STRIPE_ERROR = "Stripe could not confirm the card";
 
 /**
@@ -110,6 +106,9 @@ export function useStripePaymentElement(
     if (!stripeInstance) {
       return;
     }
+    // Payment method types are fixed server-side on the SetupIntent: Stripe
+    // rejects `paymentMethodTypes` next to a `clientSecret`, since it only
+    // applies to an Elements instance created in deferred-intent `mode`.
     elementsInstance = stripeInstance.elements({
       clientSecret: options.clientSecret,
     });
@@ -118,7 +117,6 @@ export function useStripePaymentElement(
       fields: {
         billingDetails: { address: "auto", name: "auto", email: "never" },
       },
-      cardBrands: ALLOWED_CARD_BRANDS,
     });
     paymentElement.mount(`#${options.containerId}`);
   }

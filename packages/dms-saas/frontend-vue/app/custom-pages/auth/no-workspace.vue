@@ -228,6 +228,7 @@ async function submit(): Promise<void> {
 				tenantAssignmentToken: tenantAssignmentToken.value,
 				workspaceName: workspaceName.value.trim(),
 				paymentMethodId,
+				requestedPlanId: plan.summary.value?.requestedPlan?._id,
 			}),
 		})
 		const destination = landingPath()

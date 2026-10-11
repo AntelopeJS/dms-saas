@@ -60,6 +60,15 @@ export async function listFreeWorkspacesBackedByCard(
     .map((subscription) => getRowInstance(subscription));
 }
 
+/** Whether the card backs fewer free workspaces than the billing rules allow. */
+export async function cardMayBackFreeWorkspace(
+  fingerprint: string,
+  limit: number,
+): Promise<boolean> {
+  const backed = await listFreeWorkspacesBackedByCard(fingerprint);
+  return backed.length < limit;
+}
+
 /**
  * Refuses a free workspace once its card backs as many as the billing rules
  * allow: the visitor is asked for a paid plan or another card instead.
@@ -70,9 +79,8 @@ export async function assertCardMayBackFreeWorkspace(
   fingerprint: string,
   limit: number,
 ): Promise<void> {
-  const backed = await listFreeWorkspacesBackedByCard(fingerprint);
   assert(
-    backed.length < limit,
+    await cardMayBackFreeWorkspace(fingerprint, limit),
     HTTP_CONFLICT,
     "saas.errors.workspace.free_card_limit_reached",
   );

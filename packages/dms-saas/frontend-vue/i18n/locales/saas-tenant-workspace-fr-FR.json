@@ -3,15 +3,15 @@
     "permissions": {
       "workspace": {
         "identity": "Identité de l'espace",
-        "identity_description": "Voir le nom et l'identifiant de l'espace, et le renommer",
+        "identity_description": "Voir le nom et l'identifiant de l'espace ; les propriétaires peuvent aussi le renommer",
         "glance": "En un coup d'œil",
         "glance_description": "Voir les membres et les places, l'offre et son état, et les propriétaires de l'espace",
         "danger_zone": "Supprimer l'espace",
-        "danger_zone_description": "Supprimer l'espace : les membres perdent l'accès et ses données sont détruites après la période de conservation",
+        "danger_zone_description": "Supprimer l'espace : les membres perdent l'accès et ses données sont détruites après la période de conservation. Réservé aux propriétaires",
         "data_export_request": "Demander un export des données",
-        "data_export_request_description": "Demander une archive complète de l'espace et suivre sa préparation",
+        "data_export_request_description": "Demander une archive complète de l'espace et suivre sa préparation. Réservé aux propriétaires",
         "data_export_history": "Exports précédents",
-        "data_export_history_description": "Voir les exports passés et télécharger les archives encore disponibles",
+        "data_export_history_description": "Voir les exports passés et télécharger les archives encore disponibles. Réservé aux propriétaires",
         "seats": "Places",
         "seats_description": "Voir combien de places occupent les membres et les invitations en attente, et qui assiste l'espace"
       }
@@ -33,6 +33,7 @@
         "name_hint": "Visible par tous les membres, dans le sélecteur et sur les factures.",
         "workspace_id": "Identifiant de l'espace",
         "workspace_id_hint": "Fixé à la création de l'espace. Communiquez-le au support quand vous le contactez.",
+        "owner_only": "Réservé aux propriétaires",
         "renamed": "Espace renommé.",
         "error": {
           "rename": "Impossible de renommer l'espace. Votre modification est conservée : enregistrez à nouveau pour réessayer.",

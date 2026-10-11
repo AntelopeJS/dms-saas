@@ -1,5 +1,4 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import {
   type LayoutBannerComponentInfo,
   type LayoutBannerContext,
@@ -7,24 +6,13 @@ import {
   RegisterLayoutBanner,
 } from "@antelopejs/interface-dms/layout-banners";
 import { type BillingState, TenantBillingStateModel } from "../db";
+import { isWorkspaceOwnerRequest } from "../workspaces/workspace-owner";
 
 const PAST_DUE_STATE: BillingState = "past_due";
 const BANNER_COMPONENT = "DmsSaasPastDueBanner";
 
 /** Who a past-due banner speaks to: the owner pays, a member is told who. */
 type PastDueAudience = "owner" | "member";
-
-/** Whether the request comes from an owner of the workspace. */
-export async function isWorkspaceOwnerRequest({
-  user,
-  tenantId,
-}: LayoutBannerContext): Promise<boolean> {
-  if (!user) return false;
-  const membership = await GetModel(TenantMemberModel, tenantId).getByUser(
-    user._id,
-  );
-  return !!membership?.isTenantOwner;
-}
 
 /**
  * Whether the workspace has an unpaid invoice to announce. Only `past_due`

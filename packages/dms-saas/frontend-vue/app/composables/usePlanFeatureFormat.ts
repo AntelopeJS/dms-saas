@@ -7,6 +7,8 @@ const EMPTY_LABEL = '—'
 const INCLUDED_LABEL = '✓'
 const EXCLUDED_LABEL = '—'
 const PRICE_UNIT_PREFIX = 'per '
+const UNIT_FORMS_SEPARATOR = '|'
+const SINGULAR_PLURAL_CATEGORY = 'one'
 const UNIT_LABEL_KEY_PREFIX = 'saas.workspace.plan.units'
 const MAX_QUANTITY_FRACTION_DIGITS = 2
 const MIN_PRICE_FRACTION_DIGITS = 2
@@ -116,6 +118,30 @@ function normalizeUnit(unit: string): string {
 	return unit.trim().toLowerCase()
 }
 
+function unitForms(unit: string): string[] {
+	return unit
+		.split(UNIT_FORMS_SEPARATOR)
+		.map((form) => form.trim())
+		.filter((form) => form.length > 0)
+}
+
+/**
+ * The form of a unit agreeing with `count` in `locale`. A unit written
+ * `singular | plural`, as an i18n message is (`project | projects`), reads
+ * `1 project` and `3 projects` — and `1,5 projet` in French, whose singular
+ * goes up to two. A unit with one form reads as written.
+ *
+ * @param unit Unit as stored, in the reader's language
+ * @param count The number it follows
+ * @param locale Reader's locale, for its plural rules
+ */
+export function agreeUnit(unit: string, count: number, locale: string): string {
+	const forms = unitForms(unit)
+	if (forms.length < 2) return forms[0] ?? ''
+	const category = new Intl.PluralRules(locale).select(count)
+	return category === SINGULAR_PLURAL_CATEGORY ? forms[0]! : forms.at(-1)!
+}
+
 /**
  * Teaches the plan pages how a feature unit reads, e.g. vCPU-minutes shown
  * in vCPU-hours. Call it from a frontend plugin of the module declaring the
@@ -159,8 +185,9 @@ interface ParsedUnit {
 	base: string
 }
 
+// The plural form names the unit for the rules: `byte | bytes` is `bytes`.
 function parseUnit(unit: string): ParsedUnit {
-	const normalized = normalizeUnit(unit)
+	const normalized = normalizeUnit(unitForms(unit).at(-1) ?? unit)
 	if (normalized.startsWith(PRICE_UNIT_PREFIX)) {
 		return {
 			kind: 'price',
@@ -254,7 +281,7 @@ function formatWithUnknownUnit(
 		parsed.kind === 'price'
 			? formatPrice(value, context)
 			: formatNumber(value, context.locale)
-	return `${amount} ${unit.trim()}`
+	return `${amount} ${agreeUnit(unit, value, context.locale)}`
 }
 
 function formatNumberWithUnit(
@@ -304,7 +331,10 @@ function formatText(
 	const text = String(value).trim()
 	if (!text) return EMPTY_LABEL
 	const shown = context.translateText(text)
-	return unit ? `${shown} ${unit}` : shown
+	const count = Number(text)
+	return unit
+		? `${shown} ${agreeUnit(unit, Number.isNaN(count) ? Infinity : count, context.locale)}`
+		: shown
 }
 
 const FORMATTERS: Record<string, FeatureValueFormatter> = {

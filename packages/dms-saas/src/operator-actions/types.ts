@@ -3,6 +3,7 @@ export type WorkspaceOperatorAction =
   | "workspace.unsuspend"
   | "subscription.upgrade"
   | "customer_balance.credit"
+  | "invitation.send"
   | "invitation.resend"
   | "invitation.link_copy"
   | "invitation.revoke";

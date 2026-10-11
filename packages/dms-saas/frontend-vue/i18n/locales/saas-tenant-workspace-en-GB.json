@@ -3,15 +3,15 @@
     "permissions": {
       "workspace": {
         "identity": "Workspace identity",
-        "identity_description": "See the workspace name and ID, and rename the workspace",
+        "identity_description": "See the workspace name and ID; owners can also rename the workspace",
         "glance": "At a glance",
         "glance_description": "See the members and seats, the plan and its state, and the workspace owners",
         "danger_zone": "Delete workspace",
-        "danger_zone_description": "Delete the workspace: members lose access and its data is destroyed after the retention period",
+        "danger_zone_description": "Delete the workspace: members lose access and its data is destroyed after the retention period. Owners only",
         "data_export_request": "Request a data export",
-        "data_export_request_description": "Request a full archive of the workspace and follow it while it builds",
+        "data_export_request_description": "Request a full archive of the workspace and follow it while it builds. Owners only",
         "data_export_history": "Previous data exports",
-        "data_export_history_description": "See past exports and download the archives that are still available",
+        "data_export_history_description": "See past exports and download the archives that are still available. Owners only",
         "seats": "Seats",
         "seats_description": "See how many seats members and pending invites use, and who supports the workspace"
       }
@@ -33,6 +33,7 @@
         "name_hint": "Visible to every member, in the switcher and on invoices.",
         "workspace_id": "Workspace ID",
         "workspace_id_hint": "Set when the workspace was created. Give it to support when you contact them.",
+        "owner_only": "Owners only",
         "renamed": "Workspace renamed.",
         "error": {
           "rename": "Couldn't rename the workspace. Your change is kept: save again to retry.",

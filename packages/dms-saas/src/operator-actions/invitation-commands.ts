@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  type InvitationEmailDelivery,
   type InvitationLink,
   type ReissuedInvitation,
   resendInvitation,
@@ -51,6 +52,25 @@ async function runJournaled<T>(
   const [outcome] = outcomes;
   if (outcome === undefined) throw new Error("Journaled effect did not run");
   return outcome;
+}
+
+export interface SendInvitationCommandInput extends InvitationCommandInput {
+  email: string;
+  send: () => Promise<InvitationEmailDelivery>;
+}
+
+/**
+ * Sends an invitation's first e-mail, journaled with its outcome: the
+ * workspace's activity says whether its owner was told.
+ */
+export async function sendInvitationCommand(
+  input: SendInvitationCommandInput,
+): Promise<InvitationEmailDelivery> {
+  return runJournaled(input, {
+    action: "invitation.send",
+    run: input.send,
+    detailsOf: (emailDelivery) => ({ email: input.email, emailDelivery }),
+  });
 }
 
 /**

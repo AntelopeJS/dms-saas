@@ -86,6 +86,11 @@ interface RetireImpact {
   firstRenewal: Date | null;
   lastRenewal: Date | null;
   rows: RetireWorkspace[];
+  /**
+   * Workspaces on other plans scheduled to switch to this one: the migration
+   * redirects their scheduled change to its target.
+   */
+  scheduled: number;
   targets: RetirePlanSummary[];
   hasOpenMigration: boolean;
 }
@@ -283,10 +288,11 @@ export class SaasPlanDeletionController extends Controller(
   ): Promise<RetireImpact> {
     const plan = await this.loadPlan(fromPlanId);
     const usage = await loadPlanUsageRows(fromPlanId);
-    const [rows, targets, hasOpenMigration] = await Promise.all([
+    const [rows, targets, hasOpenMigration, scheduled] = await Promise.all([
       this.describeWorkspaces(fromPlanId, usage),
       this.retireTargets(fromPlanId),
       this.planMigrationModel.existsPendingOrRunningForPlan(fromPlanId),
+      this.countScheduledChanges(fromPlanId),
     ]);
     const [firstRenewal, lastRenewal] = renewalRange(rows);
     return {
@@ -299,9 +305,17 @@ export class SaasPlanDeletionController extends Controller(
       firstRenewal,
       lastRenewal,
       rows,
+      scheduled,
       targets: targets.map(summarisePlan),
       hasOpenMigration,
     };
+  }
+
+  /** Workspaces on another plan whose scheduled change lands on this one. */
+  private async countScheduledChanges(planId: string): Promise<number> {
+    const scheduled =
+      await this.tenantSubscriptionModel.findByPendingPlan(planId);
+    return scheduled.filter((row) => row.planId !== planId).length;
   }
 
   private async countRecipients(tenantIds: string[]): Promise<number> {
@@ -415,7 +429,8 @@ export class SaasPlanDeletionController extends Controller(
         targetPlan,
         notifyMembers: body.notifyMembers ?? true,
         totalWorkspaces:
-          await this.tenantSubscriptionModel.countByPlan(fromPlanId),
+          (await this.tenantSubscriptionModel.countByPlan(fromPlanId)) +
+          (await this.countScheduledChanges(fromPlanId)),
         initiatedBy: user._id,
         permissions: permissionChanges(
           fromAccess.permissions,

@@ -318,6 +318,57 @@ describe("GET /api/saas/workspace-access", () => {
     );
   });
 
+  describe("a workspace an owner deleted", () => {
+    const deletedAt = new Date(NOW.getTime() - 2 * DAY);
+
+    beforeEach(() => {
+      state.subscriptions.set(
+        CURRENT_TENANT,
+        subscription({
+          status: "cancelled",
+          deletionRequestedAt: deletedAt,
+          deletionRequestedBy: OWNER._id,
+          updatedAt: deletedAt,
+        }),
+      );
+    });
+
+    it("tells the owner they deleted it, restorable until its data goes", async () => {
+      const access = await controller().getWorkspaceAccess(
+        {} as RequestContext,
+        OWNER,
+      );
+
+      expect(access).toMatchObject({
+        reason: "deleted",
+        deletion: { at: deletedAt, isByCaller: true, byName: null },
+        dataDeletionAt: new Date(deletedAt.getTime() + 30 * DAY),
+      });
+      expect(access.timeline.map((entry) => entry.kind)).toEqual([
+        "deleted",
+        "data_deleted",
+      ]);
+    });
+
+    it("names the owner who deleted it to a member", async () => {
+      const access = await controller().getWorkspaceAccess(
+        {} as RequestContext,
+        MEMBER,
+      );
+
+      expect(access.deletion).toMatchObject({
+        isByCaller: false,
+        byName: "Peter Gibbons",
+      });
+    });
+
+    it("still reads a subscription cancelled otherwise as cancelled", () => {
+      expect(
+        resolveAccessBlockReason(subscription({ status: "cancelled" }), NOW),
+      ).toBe("cancelled");
+    });
+  });
+
   it("answers unblocked so the screen can send the caller back in", async () => {
     state.subscriptions.set(CURRENT_TENANT, subscription({ status: "active" }));
 

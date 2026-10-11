@@ -18,7 +18,6 @@ export function useInvitationLink() {
 	const { $authFetch } = useAuthFetch()
 	const nuxtApp = useDmsApp()
 	const toast = useToast()
-	const { resolveApiError } = useApiErrorMessage()
 
 	function fetchInvitationLink(ref: InvitationRef): Promise<InvitationLink> {
 		return $authFetch<InvitationLink>(
@@ -52,21 +51,5 @@ export function useInvitationLink() {
 		}
 	}
 
-	async function fetchAndCopy(ref: InvitationRef): Promise<void> {
-		try {
-			const { link } = await fetchInvitationLink(ref)
-			await copyLink(link)
-		} catch (error) {
-			toast.add({
-				title: resolveApiError(
-					error,
-					'saas.workspace_detail.invitations.link.error',
-				),
-				color: 'error',
-				icon: 'i-ph-warning-circle',
-			})
-		}
-	}
-
-	return { fetchInvitationLink, copyLink, fetchAndCopy }
+	return { fetchInvitationLink, copyLink }
 }

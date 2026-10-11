@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({ steps: [] as string[] }));
 
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async (_tenantId: string, language: string) => {
+    harness.steps.push(`member role (${language})`);
+    return "member-role";
+  },
+}));
 vi.mock(
   "@antelopejs/interface-database-decorators",
   async (importOriginal) => ({
@@ -29,11 +35,9 @@ vi.mock("../src/billing-state", () => ({
     harness.steps.push("billing state");
   },
 }));
-vi.mock("../src/workspaces/invitations", () => ({
-  inviterNameOf: () => "Camille Laurent",
-  deliverInvitationEmail: async () => {
+vi.mock("../src/workspaces/owner-invitation-email", () => ({
+  sendOwnerInvitationEmailInBackground: () => {
     harness.steps.push("email");
-    return "failed";
   },
 }));
 
@@ -48,8 +52,9 @@ beforeEach(() => {
 
 describe("operator workspace creation", () => {
   // A mail server that takes minutes to time out left the workspace listed as
-  // free, with no plan, until the invitation e-mail gave up.
-  it("writes the plan before it e-mails the owner", async () => {
+  // free, with no plan, until the invitation e-mail gave up; and the operator
+  // waiting for it.
+  it("writes the plan, then e-mails the owner without waiting", async () => {
     const created = await createWorkspaceForOwner(
       {
         name: "Recette Op Co",
@@ -64,13 +69,14 @@ describe("operator workspace creation", () => {
     expect(harness.steps).toEqual([
       "tenant",
       "owner",
+      "member role (en)",
       "subscription",
       "billing state",
       "email",
     ]);
     expect(created).toMatchObject({
       tenantId: "tenant-new",
-      invitationEmail: "failed",
+      invitationEmail: "sending",
       access: "owner_pays",
     });
   });

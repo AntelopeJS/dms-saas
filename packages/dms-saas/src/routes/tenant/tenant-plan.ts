@@ -51,6 +51,8 @@ import {
   requestLocale,
 } from "../../utils/content-language";
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
+import { isWorkspaceOwner } from "../../workspaces/workspace-owner";
+import { syncCustomerPreferredLocale } from "../../stripe/customer-locale";
 
 import {
   applyOwnerUpgrade,
@@ -246,6 +248,7 @@ export class SaasTenantPlanController extends Controller(
       tenantId,
       tenantSubscriptionModel,
     );
+    void this.followOwnerLanguage(tenantId, subscription, user);
     const current = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
@@ -377,6 +380,10 @@ export class SaasTenantPlanController extends Controller(
     const currentPlan = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
+    await syncCustomerPreferredLocale(
+      subscription?.stripeCustomerId,
+      user.language,
+    );
     return previewPlanChange({
       tenantId,
       subscription,
@@ -426,6 +433,10 @@ export class SaasTenantPlanController extends Controller(
     if (!isRecovery && startsPaidCheckout(newPlan, subscription)) {
       assertBillingIdentityComplete(billingInfo);
     }
+    await syncCustomerPreferredLocale(
+      subscription?.stripeCustomerId,
+      user.language,
+    );
 
     return this.routePlanChange({
       tenantId,
@@ -435,6 +446,26 @@ export class SaasTenantPlanController extends Controller(
       subscription,
       tenantSubscriptionModel,
     });
+  }
+
+  /**
+   * Billing is where an owner comes back after changing language: the Stripe
+   * customer follows it from then on, renewals included. A member's language
+   * is not the one the workspace's invoices are written in.
+   */
+  private async followOwnerLanguage(
+    tenantId: string,
+    subscription: TenantSubscription | undefined,
+    user: User,
+  ): Promise<void> {
+    if (!subscription?.stripeCustomerId) return;
+    if (!(await isWorkspaceOwner(user._id, tenantId).catch(() => false))) {
+      return;
+    }
+    await syncCustomerPreferredLocale(
+      subscription.stripeCustomerId,
+      user.language,
+    );
   }
 
   private assertPlanChangeAllowed(

@@ -378,11 +378,13 @@ describe("the migration dialogs", () => {
   });
 
   it("reads what Stripe bills a workspace, for the Stripe check", async () => {
-    const { items } = await controller(migration()).stripeReading(
+    const { items, resolution } = await controller(migration()).stripeReading(
       OWNER,
       "mig",
       "bluth",
     );
+    // Stripe already bills the new plan: the drawer offers to mark it moved.
+    expect(resolution).toBe("moved");
     expect(items.map((item) => [item.id, item.value])).toEqual([
       ["subscription", "sub_bluth"],
       ["stripe", "Team"],
@@ -421,5 +423,27 @@ describe("the migration detail page", () => {
       },
       undefined,
     ]);
+  });
+});
+
+describe("the settlement a Stripe reading points to", () => {
+  it.each([
+    ["target", "moved"],
+    ["source", "not_moved"],
+    ["none", "not_moved"],
+    ["other", null],
+    ["unavailable", null],
+  ] as const)("reads %s as %s", async (stripePlan, expected) => {
+    const { recommendedResolution } =
+      await import("../src/plans/migration-workspaces");
+    expect(
+      recommendedResolution({
+        stripeSubscriptionId: null,
+        stripeUrl: null,
+        stripePlan,
+        stripePlanName: null,
+        dmsPlanName: null,
+      }),
+    ).toBe(expected);
   });
 });

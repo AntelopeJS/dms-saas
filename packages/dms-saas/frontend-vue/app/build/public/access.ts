@@ -2,6 +2,7 @@ export type AccessBlockReason =
 	| 'suspended'
 	| 'pending_payment'
 	| 'cancelled'
+	| 'deleted'
 	| 'complimentary_expired'
 
 export type AccessTimelineKind =
@@ -11,6 +12,7 @@ export type AccessTimelineKind =
 	| 'suspended'
 	| 'awaiting_payment'
 	| 'cancelled'
+	| 'deleted'
 	| 'data_deleted'
 
 export interface AccessTimelineEntry {
@@ -58,7 +60,15 @@ export interface WorkspaceAccessDetails {
 	canManageInStripe: boolean
 	timeline: AccessTimelineEntry[]
 	dataDeletionAt: string | null
+	/** Who deleted the workspace, when an owner did. */
+	deletion: WorkspaceDeletionView | null
 	otherWorkspaces: OtherWorkspace[]
+}
+
+export interface WorkspaceDeletionView {
+	at: string
+	isByCaller: boolean
+	byName: string | null
 }
 
 export interface AccessReasonView {
@@ -73,6 +83,7 @@ export const ACCESS_REASON_VIEWS: Record<AccessBlockReason, AccessReasonView> =
 		suspended: { status: 'suspended', icon: 'i-ph-lock-simple' },
 		pending_payment: { status: 'pending_payment', icon: 'i-ph-hourglass' },
 		cancelled: { status: 'cancelled', icon: 'i-ph-archive' },
+		deleted: { status: 'cancelled', icon: 'i-ph-trash' },
 		complimentary_expired: { status: 'suspended', icon: 'i-ph-gift' },
 	}
 
@@ -89,6 +100,7 @@ export const TIMELINE_STEP_VIEWS: Record<AccessTimelineKind, TimelineStepView> =
 		suspended: { icon: 'i-ph-lock-simple', tone: 'error' },
 		awaiting_payment: { icon: 'i-ph-hourglass', tone: 'warning' },
 		cancelled: { icon: 'i-ph-archive', tone: 'neutral' },
+		deleted: { icon: 'i-ph-trash', tone: 'neutral' },
 		data_deleted: { icon: 'i-ph-trash', tone: 'error' },
 	}
 

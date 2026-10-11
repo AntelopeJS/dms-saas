@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { checkoutHeadingCase } from '../build/plan-change-heading'
 
 const props = defineProps<{
 	plan: OfferedPlanView | null
 	workspaceName?: string | null
+	/** A cancelled workspace choosing a plan again. */
+	isResubscription?: boolean
 }>()
 
 const emit = defineEmits<{ changed: [] }>()
@@ -62,6 +65,16 @@ const planAmount = computed(() => {
 		? formatMajorUnits(props.plan.price, props.plan.currency)
 		: ''
 })
+const headingCase = computed(() =>
+	checkoutHeadingCase(!!props.isResubscription, isTrial.value),
+)
+const headingParams = computed(() => ({
+	workspace: props.workspaceName ?? '',
+	plan: props.plan?.name ?? '',
+	days: props.plan?.trialDays ?? 0,
+	date: firstChargeOn.value ?? '',
+}))
+
 const dueToday = computed(() => {
 	if (isTrial.value) return formatMinorUnits(0, currency.value)
 	return charge.value
@@ -168,13 +181,10 @@ async function confirm(): Promise<void> {
 <template>
 	<UModal
 		v-model:open="open"
-		:title="
-			$t(`${KEY_PREFIX}.title`, {
-				workspace: workspaceName ?? '',
-				plan: plan?.name ?? '',
-			})
+		:title="$t(`${KEY_PREFIX}.${headingCase}_title`, headingParams)"
+		:description="
+			$t(`${KEY_PREFIX}.${headingCase}_description`, headingParams)
 		"
-		:description="$t(`${KEY_PREFIX}.description`)"
 		:ui="{ content: 'max-w-2xl' }"
 	>
 		<template #body>

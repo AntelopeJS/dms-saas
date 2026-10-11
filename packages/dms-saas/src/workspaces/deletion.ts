@@ -57,9 +57,16 @@ export async function resolveDataRetentionDays(): Promise<number> {
   );
 }
 
-/** Admit cancellation before Stripe; ambiguity retains intent and blocks retention. */
+/**
+ * Admit cancellation before Stripe; ambiguity retains intent and blocks
+ * retention.
+ *
+ * @param tenantId The workspace deleted
+ * @param ownerId The owner deleting it, named on the restricted screen
+ */
 export async function requestWorkspaceDeletion(
   tenantId: string,
+  ownerId: string,
 ): Promise<WorkspaceDeletionResult> {
   const subscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await subscriptionModel.findOne();
@@ -87,9 +94,12 @@ export async function requestWorkspaceDeletion(
       { idempotencyKey: `workspace-delete:${operationId}` },
     );
   }
+  const now = new Date();
   await subscriptionModel.completeTransition(subscription._id, operationId, {
     status: CANCELLED_STATUS,
-    updatedAt: new Date(),
+    deletionRequestedAt: now,
+    deletionRequestedBy: ownerId,
+    updatedAt: now,
   });
   return {
     status: CANCELLED_STATUS,

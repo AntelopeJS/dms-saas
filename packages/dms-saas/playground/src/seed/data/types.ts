@@ -37,11 +37,12 @@ export interface SeedUser {
 export interface SeedFeature {
   id: string;
   displayName: LocalizedText;
-  description: string;
+  description: LocalizedText;
   tooltip: LocalizedText | null;
   valueType: FeatureValueType;
   defaultValue: unknown;
-  unit: string | null;
+  /** `singular | plural` where the unit agrees with its number. */
+  unit: LocalizedText | null;
   isDetailRow: boolean;
   order: number;
 }

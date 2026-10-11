@@ -233,7 +233,7 @@
 					"amount_description": "Only for money-back requests.",
 					"mode": {
 						"full": "Full amount",
-						"full_description": "Everything paid on the first invoice",
+						"full_description": "Everything paid within the window, from the first invoice",
 						"prorated": "Prorated",
 						"prorated_description": "Only the days not used yet"
 					},

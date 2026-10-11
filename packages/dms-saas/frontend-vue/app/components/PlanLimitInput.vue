@@ -13,7 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
 
 const { processI18n } = useTranslation()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const isUnlimited = computed(
 	() => props.modelValue === UNLIMITED || props.modelValue == null,
@@ -37,6 +37,17 @@ const limitError = computed(() =>
 	(typeof props.modelValue !== 'number' || props.modelValue < MIN_LIMIT)
 		? t('saas.catalog.editor.limit_error')
 		: null,
+)
+
+// Read with the limit typed, or as a plural while the cap is unlimited.
+const unitLabel = computed(() =>
+	props.unit
+		? agreeUnit(
+				processI18n(props.unit),
+				isUnlimited.value ? Infinity : (props.modelValue ?? 0),
+				locale.value,
+			)
+		: '',
 )
 
 function setUnlimited(value: boolean | 'indeterminate'): void {
@@ -65,8 +76,8 @@ function setLimit(value: number | null | undefined): void {
 					:highlight="!!limitError"
 					@update:model-value="setLimit"
 				/>
-				<span v-if="unit" class="text-muted text-sm">
-					{{ processI18n(unit) }}
+				<span v-if="unitLabel" class="text-muted text-sm">
+					{{ unitLabel }}
 				</span>
 			</div>
 			<UCheckbox

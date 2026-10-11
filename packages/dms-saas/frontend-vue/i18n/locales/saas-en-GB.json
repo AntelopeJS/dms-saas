@@ -384,7 +384,8 @@
 				"workspace_reactivated": "Workspace reactivated",
 				"complimentary_access_granted": "Complimentary access granted",
 				"automation": "Automation",
-				"seat_overage": "Plan seat overage"
+				"seat_overage": "Plan seat overage",
+				"invitation_email_failed": "Invitation e-mail not sent"
 			},
 			"payload": {
 				"workspace_suspended_admin": {
@@ -446,6 +447,14 @@
 				"plan_migrated": {
 					"title": "Plan changed",
 					"description": "Your workspace is now on the {plan} plan."
+				},
+				"invitation_email_failed": {
+					"title": "Invitation e-mail to {email} not sent",
+					"description": "The owner of {workspace} was not told about it. Open the workspace to copy the invitation link and send it yourself."
+				},
+				"plan_change_redirected": {
+					"title": "Scheduled plan change updated",
+					"description": "The {plan} plan replaces the one your workspace was scheduled to switch to, at the same date."
 				},
 				"platform_owner_added": {
 					"title": "Platform admin added",

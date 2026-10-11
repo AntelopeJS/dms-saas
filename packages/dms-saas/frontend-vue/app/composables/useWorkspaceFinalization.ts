@@ -32,12 +32,15 @@ export interface WorkspaceFinalization {
   tenantAssignmentToken: string;
   workspaceName: string;
   paymentMethodId?: string;
+  /** The plan chosen on Pricing, see `requestedPlanId` on the API. */
+  requestedPlanId?: string;
 }
 
 export interface WorkspaceFinalizationPayload {
   tenant_assignment_token: string;
   workspaceName: string;
   paymentMethodId?: string;
+  requestedPlanId?: string;
 }
 
 /** What `/auth/establish` takes: an endpoint to call, and its body. */
@@ -66,6 +69,7 @@ export function buildSessionEstablishRequest(
       tenant_assignment_token: finalization.tenantAssignmentToken,
       workspaceName: finalization.workspaceName,
       paymentMethodId: finalization.paymentMethodId,
+      requestedPlanId: finalization.requestedPlanId,
     },
   };
 }

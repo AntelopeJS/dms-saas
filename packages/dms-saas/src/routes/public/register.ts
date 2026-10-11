@@ -40,13 +40,15 @@ import {
 import type {
   CardDetails,
   WorkspaceBillingProfile,
+  WorkspaceCustomerType,
   WorkspaceProvisioningHandles,
   WorkspaceProvisioningInput,
 } from "../../workspaces";
 import {
-  assertCardMayBackFreeWorkspace,
   assertRegistrationExtras,
+  cardMayBackFreeWorkspace,
   isFreePerCardPolicyActive,
+  isFreePlan,
   provisionWorkspace,
   resolveCardDetails,
   resolveFreeWorkspacesPerCard,
@@ -63,6 +65,9 @@ import {
 import type { TenantPlanFeature } from "../../plans";
 
 const HTTP_BAD_REQUEST = 400;
+const HTTP_CONFLICT = 409;
+/** A registration starts as an individual; the upgrade flow collects a business. */
+const REGISTRATION_CUSTOMER_TYPE: WorkspaceCustomerType = "individual";
 const AUTH_KEY_BYTES = 32;
 /** Renamable from the workspace settings; the screens send a localised one. */
 const DEFAULT_WORKSPACE_NAME = "My workspace";
@@ -75,6 +80,12 @@ const DEFAULT_WORKSPACE_NAME = "My workspace";
 interface RegistrationPayload {
   workspaceName?: string;
   paymentMethodId?: string;
+  /**
+   * The paid plan chosen on Pricing. The workspace opens on it, waiting for
+   * its first payment, when the card already backs every free workspace the
+   * billing rules allow it.
+   */
+  requestedPlanId?: string;
   /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else.
@@ -97,12 +108,14 @@ interface AdmittedRegistration {
   plan: Plan;
   paymentMethodId: string | undefined;
   card: CardDetails;
+  awaitsFirstPayment: boolean;
 }
 
 interface RegistrationAccount {
   userId: string;
   email: string;
   name: string;
+  language: string | undefined;
 }
 
 interface PendingRegistrationBody {
@@ -162,23 +175,64 @@ function assertRegistrationPassword(password: unknown): void {
 }
 
 /**
- * A registration always opens a free workspace, so its card is held to the
- * billing rules' free workspaces per card, like a workspace created from the
- * app. A card-less registration has no fingerprint to count.
+ * Whether the registration's card may back one more free workspace, under
+ * the billing rules' free workspaces per card, like a workspace created from
+ * the app. A card-less registration has no fingerprint to count.
  */
-async function assertRegistrationCardMayBackFreeWorkspace(
+async function registrationCardMayBackFreeWorkspace(
   card: CardDetails,
-): Promise<void> {
-  if (!card.fingerprint) return;
+): Promise<boolean> {
+  if (!card.fingerprint) return true;
   const limit = await resolveFreeWorkspacesPerCard();
-  if (!isFreePerCardPolicyActive(limit)) return;
-  await assertCardMayBackFreeWorkspace(card.fingerprint, limit);
+  if (!isFreePerCardPolicyActive(limit)) return true;
+  return cardMayBackFreeWorkspace(card.fingerprint, limit);
+}
+
+/**
+ * The paid plan chosen on Pricing, when a workspace may open on it waiting
+ * for its first payment: public, priced, billed by Stripe, and offered to an
+ * individual, the customer type a registration starts as.
+ */
+async function resolveRequestedPaidPlan(
+  reference: unknown,
+): Promise<Plan | null> {
+  const publicPlans = await GetModel(PlanModel).findPubliclyVisible();
+  const plan = findPlanByReference(publicPlans, reference);
+  const isPayable =
+    !!plan &&
+    plan.isActive &&
+    !plan.isDeleted &&
+    !isFreePlan(plan) &&
+    !!plan.paymentProviderRefs?.stripePriceId &&
+    (plan.audience === "any" || plan.audience === REGISTRATION_CUSTOMER_TYPE);
+  return isPayable ? plan : null;
+}
+
+/**
+ * The registration of a card already backing every free workspace it may:
+ * refused, unless a paid plan was chosen on Pricing. The workspace then
+ * opens on that plan waiting for its first payment, made through Checkout,
+ * and the card is left out — it backs no free workspace, and Checkout asks
+ * for the one that pays.
+ */
+async function admitPendingPaymentRegistration(
+  body: RegistrationPayload,
+  card: CardDetails,
+): Promise<AdmittedRegistration> {
+  const plan = await resolveRequestedPaidPlan(body.requestedPlanId);
+  assert(plan, HTTP_CONFLICT, "saas.errors.workspace.free_card_limit_reached");
+  return {
+    plan,
+    paymentMethodId: undefined,
+    card: { fingerprint: null, billingAddress: card.billingAddress },
+    awaitsFirstPayment: true,
+  };
 }
 
 /**
  * Validate a registration against the deployment before anything is created:
  * the card policy and the card's free workspaces, the extras bounds, and the
- * free plan it will land on.
+ * plan it will land on.
  */
 async function admitRegistration(
   body: RegistrationPayload,
@@ -189,8 +243,10 @@ async function admitRegistration(
   assertRegistrationExtras(body.extras);
   const plan = await resolveRegistrationPlan();
   const card = await resolveCardDetails(paymentMethodId);
-  await assertRegistrationCardMayBackFreeWorkspace(card);
-  return { plan, paymentMethodId, card };
+  if (!(await registrationCardMayBackFreeWorkspace(card))) {
+    return admitPendingPaymentRegistration(body, card);
+  }
+  return { plan, paymentMethodId, card, awaitsFirstPayment: false };
 }
 
 /**
@@ -206,16 +262,18 @@ async function buildRegistrationProvisioning(
 ): Promise<WorkspaceProvisioningInput> {
   const { card } = admitted;
   const billingProfile: WorkspaceBillingProfile = {
-    customerType: "individual",
+    customerType: REGISTRATION_CUSTOMER_TYPE,
     address: card.billingAddress,
   };
   return {
     userId: account.userId,
+    ownerLanguage: account.language,
     payload: {
       ...billingProfile,
       workspaceName: body.workspaceName?.trim() || DEFAULT_WORKSPACE_NAME,
       planId: admitted.plan._id,
       paymentMethodId: admitted.paymentMethodId,
+      awaitsFirstPayment: admitted.awaitsFirstPayment,
       extras: body.extras,
     },
     stripeCustomerProfile: {
@@ -246,6 +304,9 @@ export class SaasRegisterApiController extends Controller(
   @Parameter("x-forwarded-for", "header")
   declare forwardedFor: string;
 
+  @Parameter(CONTENT_LANGUAGE_HEADER, "header")
+  declare contentLanguage: unknown;
+
   private async ensureEmailAvailable(email: string): Promise<void> {
     const existing = await this.userModel.getByEmail(email);
     assert(!existing, HTTP_BAD_REQUEST, "saas.errors.user.email_in_use");
@@ -269,6 +330,7 @@ export class SaasRegisterApiController extends Controller(
         password: body.password,
         authKey: generateAuthKey(),
         owner: false,
+        language: requestLocale(this.contentLanguage),
         createdAt: new Date(),
       },
     ]);
@@ -361,6 +423,7 @@ export class SaasRegisterApiController extends Controller(
         userId: handles.userId,
         email: body.email,
         name: body.name,
+        language: requestLocale(this.contentLanguage),
       };
       const { tenantId } = await provisionWorkspace(
         await buildRegistrationProvisioning(account, body, admitted, handles),
@@ -421,7 +484,12 @@ export class SaasRegisterApiController extends Controller(
 
     const handles: WorkspaceProvisioningHandles = { userId: user._id };
     try {
-      const account = { userId: user._id, email: user.email, name: user.name };
+      const account = {
+        userId: user._id,
+        email: user.email,
+        name: user.name,
+        language: user.language || requestLocale(this.contentLanguage),
+      };
       const { tenantId } = await provisionWorkspace(
         await buildRegistrationProvisioning(account, body, admitted, handles),
       );

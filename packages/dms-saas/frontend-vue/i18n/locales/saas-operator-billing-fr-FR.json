@@ -233,7 +233,7 @@
 					"amount_description": "Uniquement pour les demandes au titre de la garantie.",
 					"mode": {
 						"full": "Montant total",
-						"full_description": "Tout ce qui a été payé sur la première facture",
+						"full_description": "Tout ce qui a été payé pendant la période, dès la première facture",
 						"prorated": "Au prorata",
 						"prorated_description": "Seulement les jours pas encore utilisés"
 					},

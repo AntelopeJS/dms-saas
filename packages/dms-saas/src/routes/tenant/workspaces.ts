@@ -10,7 +10,10 @@ import {
 import { assert } from "@antelopejs/interface-api-util";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { TenantModel } from "@antelopejs/interface-dms/db";
-import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
+import {
+  AuthTenantMember,
+  AuthTenantOwner,
+} from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthRawUser } from "@antelopejs/interface-dms/auth";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
@@ -132,6 +135,7 @@ async function provisionSelfServeWorkspace(
   try {
     const { tenantId } = await provisionWorkspace({
       userId: user._id,
+      ownerLanguage: user.language,
       payload: {
         ...input.billingProfile,
         workspaceName: input.workspaceName,
@@ -214,13 +218,14 @@ export class SaasWorkspacesController extends Controller(
   }
 
   /**
-   * Read by the billing page, the recovery surface of a blocked workspace:
-   * the name and retention period are the workspace's own identity, nothing
-   * the access gate protects. Renaming and deleting stay gated.
+   * Read by every member on the General page, and by the billing page, the
+   * recovery surface of a blocked workspace: the name and retention period
+   * are the workspace's own identity, nothing the access gate protects.
+   * Renaming and deleting stay gated, and reserved to owners.
    */
   @Get("/current")
   async getCurrent(
-    @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
+    @AuthTenantMember({ bypassTenantAccessGate: true }) _user: User,
     @Context() ctx: RequestContext,
   ): Promise<CurrentWorkspace> {
     const tenantId = getRequestTenantId(ctx);
@@ -233,10 +238,10 @@ export class SaasWorkspacesController extends Controller(
     };
   }
 
-  /** Feeds the "At a glance" cards of the General page. */
+  /** Feeds the "At a glance" cards of the General page, for every member. */
   @Get("/current/glance")
   async getCurrentGlance(
-    @AuthTenantOwner() user: User,
+    @AuthTenantMember() user: User,
     @Context() ctx: RequestContext,
   ): Promise<WorkspaceGlance> {
     const view = await buildWorkspaceOverview(
@@ -273,7 +278,7 @@ export class SaasWorkspacesController extends Controller(
    */
   @Post("/current/delete")
   async deleteCurrent(
-    @AuthTenantOwner() _user: User,
+    @AuthTenantOwner() user: User,
     @Context() ctx: RequestContext,
     @JSONBody() body: WorkspaceDeleteBody,
   ): Promise<WorkspaceDeletionResult> {
@@ -285,6 +290,6 @@ export class SaasWorkspacesController extends Controller(
       HTTP_BAD_REQUEST,
       "saas.errors.workspace.delete_confirmation_mismatch",
     );
-    return requestWorkspaceDeletion(tenantId);
+    return requestWorkspaceDeletion(tenantId, user._id);
   }
 }

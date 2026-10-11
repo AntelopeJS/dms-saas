@@ -30,6 +30,8 @@ export interface RetireImpact {
 	firstRenewal: string | null
 	lastRenewal: string | null
 	rows: RetireWorkspace[]
+	/** Workspaces on other plans scheduled to switch to the retired one. */
+	scheduled: number
 	targets: RetirePlanSummary[]
 	hasOpenMigration: boolean
 }

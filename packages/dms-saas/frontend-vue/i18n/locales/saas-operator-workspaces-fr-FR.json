@@ -69,6 +69,8 @@
         "workspace_reactivated": "{workspace} réactivé",
         "subscription_upgraded": "{workspace} passé de {from} à {to}",
         "balance_credited": "Crédit Stripe accordé à {workspace}",
+        "invitation_sent": "Invitation à {workspace} envoyée par e-mail à {email}",
+        "invitation_email_failed": "E-mail d'invitation à {email} pour {workspace} non envoyé",
         "invitation_resent": "Invitation à {workspace} renvoyée",
         "workspace_created": "Espace {workspace} créé"
       },
@@ -81,6 +83,8 @@
         "workspace_reactivated": "Espace réactivé",
         "subscription_upgraded": "Passé de {from} à {to}",
         "balance_credited": "Crédit Stripe accordé",
+        "invitation_sent": "Invitation envoyée par e-mail à {email}",
+        "invitation_email_failed": "E-mail d'invitation à {email} non envoyé : copiez le lien pour l'envoyer vous-même",
         "invitation_resent": "Invitation renvoyée",
         "workspace_created": "Espace créé"
       }
@@ -210,11 +214,7 @@
         "open_workspace": "Ouvrir l'espace",
         "error": "L'espace n'a pas pu être créé.",
         "load_error": "Les offres n'ont pas pu être chargées.",
-        "email_failed": {
-          "title": "Espace créé, mais l'e-mail d'invitation n'a pas pu être envoyé",
-          "description": "Le propriétaire n'a pas été prévenu. Copiez le lien d'invitation et envoyez-le-lui vous-même.",
-          "copy_link": "Copier le lien d'invitation"
-        }
+        "email_sending": "L'e-mail d'invitation est en cours d'envoi. S'il ne peut pas partir, vous recevrez une notification et pourrez copier le lien depuis l'espace."
       }
     },
     "workspace_detail": {

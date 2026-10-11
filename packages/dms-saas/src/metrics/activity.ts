@@ -92,7 +92,32 @@ const DOCUMENT_LOOKS: Record<string, DocumentLook> = {
   },
 };
 
-const ACTION_LOOKS: Partial<Record<WorkspaceOperatorAction, ActionLook>> = {
+type ActionLookOf = (action: OperatorAction) => ActionLook;
+
+const INVITATION_SEND_LOOKS: Record<string, ActionLook> = {
+  sent: {
+    kind: "lifecycle",
+    icon: "i-ph-envelope-simple",
+    tone: "neutral",
+    title: "invitation_sent",
+  },
+  failed: {
+    kind: "lifecycle",
+    icon: "i-ph-warning",
+    tone: "warning",
+    title: "invitation_email_failed",
+  },
+};
+
+// The first e-mail of an owner invitation reads by its outcome: the operator
+// learns from the feed too whether the owner was told.
+const invitationSendLook: ActionLookOf = (action) =>
+  INVITATION_SEND_LOOKS[detailString(action, "emailDelivery")] ??
+  INVITATION_SEND_LOOKS.sent!;
+
+const ACTION_LOOKS: Partial<
+  Record<WorkspaceOperatorAction, ActionLook | ActionLookOf>
+> = {
   "workspace.suspend": {
     kind: "lifecycle",
     icon: "i-ph-prohibit",
@@ -117,6 +142,7 @@ const ACTION_LOOKS: Partial<Record<WorkspaceOperatorAction, ActionLook>> = {
     tone: "info",
     title: "balance_credited",
   },
+  "invitation.send": invitationSendLook,
   "invitation.resend": {
     kind: "lifecycle",
     icon: "i-ph-envelope-simple",
@@ -124,6 +150,11 @@ const ACTION_LOOKS: Partial<Record<WorkspaceOperatorAction, ActionLook>> = {
     title: "invitation_resent",
   },
 };
+
+function lookOf(action: OperatorAction): ActionLook | undefined {
+  const look = ACTION_LOOKS[action.action];
+  return typeof look === "function" ? look(action) : look;
+}
 
 function key(name: string): string {
   return `${KEY_PREFIX}.${name}`;
@@ -190,7 +221,7 @@ function actionEntry(
   sources: ActivitySources,
   options: ActivityOptions,
 ): ActivityEntry | null {
-  const look = ACTION_LOOKS[action.action];
+  const look = lookOf(action);
   if (!look || action.status !== "succeeded") return null;
   const at = new Date(action.effectiveAt ?? action.createdAt);
   return {
@@ -207,6 +238,7 @@ function actionEntry(
         operator: action.actorEmail,
         from: detailString(action, "previousPlanName"),
         to: detailString(action, "targetPlanName"),
+        email: detailString(action, "email"),
       },
       date: at.toISOString(),
       to: linkTo(options, action.tenantId),

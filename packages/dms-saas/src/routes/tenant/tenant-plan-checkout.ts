@@ -321,12 +321,14 @@ async function openCheckoutSession(
       operationId: attempt.operationId,
       tenantId: request.tenantId,
       ownerEmail: request.user.email,
+      ownerLanguage: request.user.language,
     }));
   if (!existingCustomerId) attempt.createdCustomerId = customerId;
   return createWorkspaceCheckoutSession({
     operationId: attempt.operationId,
     tenantId: request.tenantId,
     ownerEmail: request.user.email,
+    ownerLanguage: request.user.language,
     stripePriceId: target.stripePriceId,
     trialDays: trial.days,
     successUrl: redirect.successUrl,
