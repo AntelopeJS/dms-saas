@@ -61,6 +61,7 @@ const identityForm = Form({
       required: true,
       type: new DefaultDataTypes.StringType({
         maxLength: WORKSPACE_NAME_MAX_LENGTH,
+        showCount: true,
       }),
     },
     {

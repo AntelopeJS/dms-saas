@@ -8,6 +8,7 @@ import type {
   ComponentFilterContext,
 } from "@antelopejs/interface-dms/component";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { WORKSPACE_NAME_MAX_LENGTH } from "../src/workspaces/workspace-name";
 
 const harness = vi.hoisted(() => ({
   owners: new Set<string>(),
@@ -76,6 +77,19 @@ describe("General page for a workspace member", () => {
         badge: { label: "$saas.workspace.general.owner_only", tone: "neutral" },
       },
     ]);
+  });
+
+  it("counts the name's characters out of its limit", async () => {
+    const form = await identityForm();
+    const { options } = await form.serialize();
+    const name = options.fields.find(
+      (field) => field.id === "name",
+    ) as FormFieldSerialized;
+
+    expect(name.component?.options).toMatchObject({
+      maxLength: WORKSPACE_NAME_MAX_LENGTH,
+      showCount: true,
+    });
   });
 
   it("serves the identity form unchanged to an owner", async () => {
