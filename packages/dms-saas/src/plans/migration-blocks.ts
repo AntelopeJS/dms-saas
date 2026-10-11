@@ -28,12 +28,12 @@ import {
   type MigrationWorkspaceView,
   firstUncertain,
 } from "./migration-detail";
+import { toMinorUnits } from "../utils/money";
 
 const K = "saas.catalog.migrations.detail";
 const REASON_KEY = "saas.catalog.migrations.reason";
 const STATUS_KEY = "saas.status.migration";
 const MIGRATION_ICON = "i-ph-arrows-clockwise";
-const MINOR_UNITS_PER_UNIT = 100;
 // Plans store a limit no workspace reaches as -1.
 const UNLIMITED = -1;
 const DEFAULT_BANNER_TONE: BannerTone = "info";
@@ -289,10 +289,7 @@ function listedFeatureItems(
 
 function priceText(plan: MigrationPlanRef): ComposedTextParam | null {
   if (plan.price === null || !plan.currency) return null;
-  return moneyParam(
-    Math.round(plan.price * MINOR_UNITS_PER_UNIT),
-    plan.currency,
-  );
+  return moneyParam(toMinorUnits(plan.price, plan.currency), plan.currency);
 }
 
 function priceItems(context: MigrationDetailContext): KeyValueListItem[] {

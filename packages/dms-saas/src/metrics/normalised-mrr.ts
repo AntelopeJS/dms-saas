@@ -1,8 +1,5 @@
 import type { BillingState, PlanBillingMode, PlanInterval } from "../db";
-
-// Plans store their price in major units and the Stripe sync bills it times
-// 100 (see `stripe/sync-plan.ts`): MRR reads the same figure Stripe charges.
-const PLAN_PRICE_MINOR_FACTOR = 100;
+import { fromMinorUnits, toMinorUnits } from "../utils/money";
 
 const MONTHS_PER_INTERVAL: Record<PlanInterval, number> = {
   month: 1,
@@ -17,6 +14,11 @@ const BILLED_STATES: ReadonlySet<BillingState> = new Set([
 ]);
 
 const MIN_BILLED_SEATS = 1;
+
+/** Whether a billing state is billed: past due still is, a trial is not. */
+export function isBilledState(billingState: BillingState): boolean {
+  return BILLED_STATES.has(billingState);
+}
 
 /** The plan terms MRR is computed from. */
 export interface MrrPlanTerms {
@@ -49,8 +51,10 @@ export interface ReportingTotal extends MinorAmount {
 }
 
 /** The plan's unit price in minor units, as the Stripe sync bills it. */
-export function planUnitAmountMinor(plan: Pick<MrrPlanTerms, "price">): number {
-  return Math.round(plan.price * PLAN_PRICE_MINOR_FACTOR);
+export function planUnitAmountMinor(
+  plan: Pick<MrrPlanTerms, "price" | "currency">,
+): number {
+  return toMinorUnits(plan.price, plan.currency);
 }
 
 /** A plan's billing terms with its unit price already in minor units. */
@@ -100,7 +104,7 @@ export function normalisedMrr(input: MrrInput): MinorAmount {
   const isBilled =
     !!input.plan &&
     !input.isComplimentary &&
-    BILLED_STATES.has(input.billingState) &&
+    isBilledState(input.billingState) &&
     input.plan.price > 0;
   if (!isBilled || !input.plan) return { amountMinor: 0, currency };
   return {
@@ -118,7 +122,7 @@ export function reportingMajorUnits(
   reportingCurrency: string,
 ): number {
   return amount.currency === reportingCurrency
-    ? amount.amountMinor / PLAN_PRICE_MINOR_FACTOR
+    ? fromMinorUnits(amount.amountMinor, amount.currency)
     : 0;
 }
 

@@ -2,6 +2,7 @@ import type { Invoice } from "../db";
 import { MS_PER_DAY } from "../utils/time";
 import type { DirectoryRow } from "./directory-summary";
 import { type ReportingTotal, sumInReportingCurrency } from "./normalised-mrr";
+import { fromMinorUnits } from "../utils/money";
 
 /** A date range a `PeriodSelector` sends (`from`, `to`). */
 export interface PeriodRange {
@@ -40,7 +41,6 @@ export interface ChurnFigures {
 const DEFAULT_PERIOD_DAYS = 30;
 // Up to a quarter, one bar per day reads; beyond it, one per month.
 const DAILY_BUCKETS_MAX_DAYS = 92;
-const MINOR_UNITS_PER_UNIT = 100;
 const PERCENT = 100;
 const DAY_KEY_LENGTH = 10;
 const MONTH_KEY_LENGTH = 7;
@@ -108,7 +108,7 @@ function inReportingCurrency(document: Invoice, currency: string): boolean {
 }
 
 function majorUnitsOf(document: Invoice): number {
-  return (document.total || document.amount) / MINOR_UNITS_PER_UNIT;
+  return fromMinorUnits(document.total, document.currency);
 }
 
 function sumMajorUnits(documents: Invoice[]): number {

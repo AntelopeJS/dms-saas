@@ -10,9 +10,9 @@ import type {
 import { DEFAULT_STRIPE_TAX_CODE } from "../db";
 import { getStripeClient } from "./client";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
+import { toMinorUnits } from "../utils/money";
 
 /** Minor units per major unit of a plan price, as its Stripe price is created. */
-export const PRICE_MULTIPLIER = 100;
 const SEAT_USAGE_TYPE = "licensed" as const;
 const PRICE_TAX_BEHAVIOR = "exclusive" as const;
 const IDEMPOTENCY_KEY_PREFIX = "dms-saas:plan-sync";
@@ -60,7 +60,7 @@ function planStripeTerms(plan: Plan, taxCode: string): PlanStripeSyncedTerms {
       taxCode,
     },
     price: {
-      unitAmount: Math.round(plan.price * PRICE_MULTIPLIER),
+      unitAmount: toMinorUnits(plan.price, plan.currency),
       currency: plan.currency.toLowerCase(),
       interval: plan.interval,
       billingMode: plan.billingMode,

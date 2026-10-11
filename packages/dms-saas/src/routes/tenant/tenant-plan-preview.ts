@@ -17,13 +17,13 @@ import {
   readStripeId,
   readSubscriptionPeriod,
 } from "../../stripe/payload-shapes";
-import { PRICE_MULTIPLIER } from "../../stripe/sync-plan";
 import { previewStripeInvoice } from "../../stripe/upcoming-invoice";
 import { toAvailablePreview } from "../../upcoming-invoice/mapping";
 import { MS_PER_DAY, stripeSecondsToDate } from "../../utils/time";
 import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
 import { isCheckoutTrialAvailable } from "./tenant-plan-checkout";
 import { isPaidPlan, planQuantity } from "./tenant-plan-ops";
+import { toMinorUnits } from "../../utils/money";
 
 const LOG_PREFIX = "[dms-saas:plan-preview]";
 const MS_PER_SECOND = 1000;
@@ -112,7 +112,7 @@ export function recurringAmountMinorUnits(
   plan: Plan,
   quantity: number,
 ): number {
-  return Math.round(plan.price * PRICE_MULTIPLIER) * quantity;
+  return toMinorUnits(plan.price, plan.currency) * quantity;
 }
 
 function addInterval(date: Date, interval: PlanInterval): Date {

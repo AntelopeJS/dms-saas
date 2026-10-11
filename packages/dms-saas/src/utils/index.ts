@@ -8,6 +8,7 @@ export * from "./export-dataset-stream";
 export * from "./form-insight-type";
 export * from "./invoice-lines-type";
 export * from "./keyed-insert";
+export * from "./money";
 export * from "./money-cents-type";
 export * from "./pagination";
 export * from "./parse-future-date";

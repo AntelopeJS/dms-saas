@@ -12,6 +12,7 @@ import {
   emptyPlanUsage,
   type PlanUsage,
 } from "./catalogue-usage";
+import { toMinorUnits } from "../utils/money";
 
 /** MRR of the plans billed in one currency. */
 export interface CurrencyMrr {
@@ -87,14 +88,10 @@ export function summariseCatalogue(
 }
 
 const STATS = "saas.catalog.plans.stats";
-const MINOR_UNITS_PER_UNIT = 100;
 const NAMES_SEPARATOR = ", ";
 
 function mrrParam(entry: CurrencyMrr) {
-  return moneyParam(
-    Math.round(entry.mrr * MINOR_UNITS_PER_UNIT),
-    entry.currency,
-  );
+  return moneyParam(toMinorUnits(entry.mrr, entry.currency), entry.currency);
 }
 
 function mrrItem(summary: CatalogueSummary): StatGroupItem {

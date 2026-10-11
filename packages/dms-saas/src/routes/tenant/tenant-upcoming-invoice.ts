@@ -41,9 +41,9 @@ import {
   valueText,
 } from "../../i18n/composed-text";
 import { getUpcomingInvoicePreview } from "../../upcoming-invoice/preview";
+import { fromMinorUnits } from "../../utils/money";
 
 const HTTP_SERVICE_UNAVAILABLE = 503;
-const MINOR_UNITS_PER_MAJOR = 100;
 const PAID_STATUS = "paid";
 const KEY_PREFIX = "$saas.tenant_billing.next_invoice";
 const PERCENT = 100;
@@ -92,10 +92,6 @@ function paidOn(paidAt: Date | null | undefined): ComposedText | undefined {
     : undefined;
 }
 
-function fromMinorUnits(amount: number): number {
-  return amount / MINOR_UNITS_PER_MAJOR;
-}
-
 /**
  * The line's label. Stripe words a plan's recurring line in the account's
  * language whatever the customer's ("1 × Pro (at €29.00 / month)"), so it is
@@ -127,7 +123,7 @@ function lineRow(
   });
   return {
     label: lineLabel(line, planNames),
-    value: fromMinorUnits(line.amountMinorUnits),
+    value: fromMinorUnits(line.amountMinorUnits, currency),
     type: "money",
     currency,
     detail: period,
@@ -153,7 +149,7 @@ function taxRow(tax: UpcomingInvoiceTax, currency: string): KeyValueListItem {
     label: tax.isReverseCharge
       ? `${KEY_PREFIX}.reverse_charge`
       : `${KEY_PREFIX}.tax`,
-    value: fromMinorUnits(tax.amountMinorUnits),
+    value: fromMinorUnits(tax.amountMinorUnits, currency),
     type: "money",
     currency,
     detail: taxDetail(tax),
@@ -180,7 +176,7 @@ function contextRows(context: NextInvoiceContext): KeyValueListItem[] {
   if (lastPayment) {
     rows.push({
       label: `${KEY_PREFIX}.last_payment`,
-      value: fromMinorUnits(lastPayment.total || lastPayment.amount),
+      value: fromMinorUnits(lastPayment.total, lastPayment.currency),
       type: "money",
       currency: lastPayment.currency.toUpperCase(),
       detail: paidOn(lastPayment.paidAt),
@@ -201,7 +197,7 @@ export function toNextInvoiceRows(
   const { currency } = preview;
   const total: KeyValueListItem = {
     label: `${KEY_PREFIX}.total`,
-    value: fromMinorUnits(preview.amountDueMinorUnits),
+    value: fromMinorUnits(preview.amountDueMinorUnits, currency),
     type: "money",
     currency,
     tone: "primary",

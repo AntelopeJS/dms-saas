@@ -15,13 +15,13 @@ import type {
   WorkspaceOverview,
   WorkspacePlanOverview,
 } from "./workspace-overview";
+import { toMinorUnits } from "../utils/money";
 
 const KEYS = "saas.workspace.general.glance";
 const PRICE_KEYS = "saas.workspace.plan_price";
 const MEMBERS_PATH = "/settings/workspace/members";
 const BILLING_PATH = "/settings/workspace/billing";
 const HEALTHY_TONE = "success";
-const MINOR_UNITS_PER_UNIT = 100;
 const NO_VALUE = "—";
 
 function membersItem({ seats }: WorkspaceOverview): StatGroupItem {
@@ -52,10 +52,7 @@ function membersItem({ seats }: WorkspaceOverview): StatGroupItem {
 function priceLabel(plan: WorkspacePlanOverview): ComposedText {
   if (plan.price <= 0) return composed(`${PRICE_KEYS}.free`);
   return composed(`${PRICE_KEYS}.${plan.billingMode}_${plan.interval}`, {
-    price: moneyParam(
-      Math.round(plan.price * MINOR_UNITS_PER_UNIT),
-      plan.currency,
-    ),
+    price: moneyParam(toMinorUnits(plan.price, plan.currency), plan.currency),
   });
 }
 

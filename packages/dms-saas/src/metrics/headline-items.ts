@@ -32,6 +32,7 @@ import type {
   DirectorySummary,
 } from "./directory-summary";
 import type { ReportingTotal } from "./normalised-mrr";
+import { fromMinorUnits } from "../utils/money";
 
 /** Ids of the workspace list's predefined views, shared with its page. */
 export const WORKSPACE_VIEW_IDS = {
@@ -339,7 +340,7 @@ export function plansByMrrItems(
         count: countParam(group.workspaces),
         price: planPriceLabel(group.row),
       }),
-      value: group.mrrMinor / 100,
+      value: fromMinorUnits(group.mrrMinor, currency),
       to: planEditPath(group.planId),
     }));
 }

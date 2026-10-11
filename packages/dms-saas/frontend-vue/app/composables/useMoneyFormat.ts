@@ -1,5 +1,3 @@
-export const MINOR_UNITS_PER_UNIT = 100
-
 const FALLBACK_CURRENCY = 'EUR'
 
 export interface MajorUnitsFormatOptions {
@@ -30,7 +28,7 @@ export function formatMinorUnits(
 	locale: string,
 ): string {
 	if (typeof amount !== 'number') return '—'
-	return formatMajorUnits(amount / MINOR_UNITS_PER_UNIT, currency, locale)
+	return formatMajorUnits(fromMinorUnits(amount, currency), currency, locale)
 }
 
 /** Locale-bound view of the formatters above, for use inside components. */

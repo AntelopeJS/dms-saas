@@ -33,6 +33,7 @@ import {
   workspaceFacts,
 } from "../../workspaces/detail-items";
 import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
+import { fromMinorUnits } from "../../utils/money";
 
 /** What a list block (`StatGroup`, `KeyValueList`, …) reads from its route. */
 interface ItemsPayload<T> {
@@ -68,7 +69,6 @@ const ACTIVITY_LIMIT = 30;
 const OVERVIEW_ACTIVITY_LIMIT = 4;
 const TIMELINE_HISTORY_LIMIT = 4;
 const UNLIMITED_MEMBERS = -1;
-const MINOR_UNITS_PER_UNIT = 100;
 
 async function loadDocuments(tenantId: string): Promise<Invoice[]> {
   return GetModel(InvoiceModel, tenantId).getAllInvoices();
@@ -237,7 +237,10 @@ export class SaasWorkspaceDetailController extends Controller(
         {
           id: "available_credit",
           label: "$saas.workspace_detail.credit.available",
-          value: Math.max(0, -balance.balanceMinorUnits) / MINOR_UNITS_PER_UNIT,
+          value: fromMinorUnits(
+            Math.max(0, -balance.balanceMinorUnits),
+            currency,
+          ),
           type: "money",
           currency,
         },
