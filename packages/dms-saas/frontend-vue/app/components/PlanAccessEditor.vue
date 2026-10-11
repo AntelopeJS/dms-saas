@@ -20,7 +20,7 @@ const FEATURES_PAGE_URL = '/modules/saas/catalog/features'
 const NO_PARENT = '__none__'
 
 const props = defineProps<{
-	modelValue?: PlanAccess | string | null
+	modelValue?: PlanAccess | null
 	disabled?: boolean
 	routeParams?: Record<string, string>
 	permissionsTreeUrl?: string
@@ -45,17 +45,8 @@ const isLoading = ref(true)
 const hasError = ref(false)
 const isPickerOpen = ref(false)
 
-function parseAccess(raw: PlanAccess | string | null | undefined): PlanAccess {
-	let value: Partial<PlanAccess> | null = null
-	if (typeof raw === 'string' && raw) {
-		try {
-			value = JSON.parse(raw) as PlanAccess
-		} catch {
-			value = null
-		}
-	} else if (raw && typeof raw === 'object') {
-		value = raw
-	}
+// A new plan starts with no value: no parent, nothing of its own.
+function copyAccess(value: PlanAccess | null | undefined): PlanAccess {
 	return {
 		parentPlanId: value?.parentPlanId ?? null,
 		extraPermissions: [...(value?.extraPermissions ?? [])],
@@ -63,7 +54,7 @@ function parseAccess(raw: PlanAccess | string | null | undefined): PlanAccess {
 	}
 }
 
-const access = computed(() => parseAccess(props.modelValue))
+const access = computed(() => copyAccess(props.modelValue))
 const currentPlanId = computed(() => props.routeParams?.id)
 const parent = computed(() =>
 	catalog.value.plans.find((plan) => plan._id === access.value.parentPlanId),

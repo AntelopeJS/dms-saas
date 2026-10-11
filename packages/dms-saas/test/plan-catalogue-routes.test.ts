@@ -10,6 +10,7 @@ import type {
   TenantSubscriptionModel,
 } from "../src/db";
 import { SaasPlanDeletionController } from "../src/routes/platformOwner/plan-deletion";
+import type { PlanInheritanceInput } from "../src/plans/plan-write";
 import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
 
 const stripe = vi.hoisted(() => ({
@@ -208,6 +209,18 @@ describe("creating a plan", () => {
       },
     });
     expect(store.plans.get(NEW_PLAN_ID)?.permissions).toEqual(["settings"]);
+  });
+
+  it("refuses an access it cannot read, under its field", async () => {
+    const store = storeWith();
+    const error = await refusal(() =>
+      plansController(store).create(OWNER, {
+        ...NEW_PLAN,
+        inheritance: { parentPlanId: null } as unknown as PlanInheritanceInput,
+      }),
+    );
+    expect(refusedField(error)).toBe("inheritance");
+    expect(store.plans.get(NEW_PLAN_ID)).toBeUndefined();
   });
 
   it("keeps a plan the operator left without any permission empty", async () => {

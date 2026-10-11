@@ -3,7 +3,7 @@ import { withPermissionAncestors } from "./plan-permission-tree";
 import { PLAN_UNLIMITED } from "../db";
 
 /**
- * What a number feature holds (Q36): `0` turns it off, `-1` makes it
+ * What a number feature holds: `0` turns it off, `-1` makes it
  * unlimited, and any whole number from 1 is a limit.
  */
 export const FEATURE_OFF_VALUE = 0;
@@ -50,20 +50,8 @@ export const PLAN_WRITE_FIELDS = [
 export type PlanWriteBody = Partial<
   Pick<Plan, (typeof PLAN_WRITE_FIELDS)[number]>
 > & {
-  inheritance?: PlanInheritanceInput | string | null;
+  inheritance?: PlanInheritanceInput | null;
 };
-
-function parseInheritance(
-  raw: PlanInheritanceInput | string | null,
-): PlanInheritanceInput | null {
-  if (typeof raw !== "string") return raw;
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as PlanInheritanceInput;
-  } catch {
-    return null;
-  }
-}
 
 function withoutInheritance(body: PlanWriteBody): PlanWriteBody {
   const rest = { ...body };
@@ -73,14 +61,13 @@ function withoutInheritance(body: PlanWriteBody): PlanWriteBody {
 
 /** The plan fields the `inheritance` value of the editor stands for. */
 export function expandInheritance(body: PlanWriteBody): PlanWriteBody {
-  if (body.inheritance === undefined) return body;
-  const parsed = parseInheritance(body.inheritance);
-  if (!parsed) return withoutInheritance(body);
+  const { inheritance } = body;
+  if (!inheritance) return withoutInheritance(body);
   return {
     ...withoutInheritance(body),
-    inheritsFromPlanId: parsed.parentPlanId ?? null,
-    permissions: parsed.extraPermissions ?? [],
-    features: Object.entries(parsed.extraFeatures ?? {}).map(
+    inheritsFromPlanId: inheritance.parentPlanId,
+    permissions: inheritance.extraPermissions,
+    features: Object.entries(inheritance.extraFeatures).map(
       ([featureId, value]) => ({ featureId, value }),
     ),
   };

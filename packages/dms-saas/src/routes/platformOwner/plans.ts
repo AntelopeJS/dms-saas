@@ -57,6 +57,7 @@ import {
   CONTENT_LANGUAGE_HEADER,
   requestLocale,
 } from "../../utils/content-language";
+import { isPlanAccess } from "../../plans/plan-access-type";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -80,6 +81,7 @@ const PRICE_TERMS_FIELDS = [
 const PRICE_CHANGED_NOTICE = "$saas.catalog.editor.notice.price_changed";
 const INVALID_FEATURES_MESSAGE = "$saas.errors.plan.invalid_feature_value";
 const INVALID_MEMBER_CAP_MESSAGE = "$saas.errors.plan.invalid_member_cap";
+const INVALID_ACCESS_MESSAGE = "$saas.errors.plan.invalid_access";
 const INHERITANCE_FIELD = "inheritance";
 const MAX_MEMBERS_FIELD = "maxMembers";
 
@@ -108,6 +110,13 @@ function changesPriceTerms(current: Plan, write: Partial<Plan>): boolean {
 /** A refusal the plan editor shows under the field it names. */
 function fieldRefusal(field: string, message: string): HTTPResult {
   return new HTTPResult(HTTP_BAD_REQUEST, { message, field });
+}
+
+/** A write whose access the editor sent readable; refused under its field otherwise. */
+function readableWrite(body: PlanWriteBody): PlanWriteBody {
+  if (body.inheritance && !isPlanAccess(body.inheritance))
+    throw fieldRefusal(INHERITANCE_FIELD, INVALID_ACCESS_MESSAGE);
+  return body;
 }
 
 type PlanWithWorkspaceCount = Plan & { workspaceCount: number };
@@ -382,7 +391,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     @AuthOwnerOnly() _user: User,
     @JSONBody() body: PlanWriteBody,
   ): Promise<PlanWriteResult> {
-    const sanitized = pickPlanWrite(body);
+    const sanitized = pickPlanWrite(readableWrite(body));
     assertPlanInterval(sanitized.interval);
     await this.assertValidAccess(sanitized);
     if (!sanitized.slug && sanitized.name) {
@@ -429,7 +438,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   ): Promise<PlanWriteResult> {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
-    const sanitized = pickPlanWrite(body);
+    const sanitized = pickPlanWrite(readableWrite(body));
     await this.assertValidAccess(sanitized);
     if (sanitized.inheritsFromPlanId !== undefined) {
       await ensureInheritanceIsAcyclic(

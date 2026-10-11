@@ -20,6 +20,15 @@ const planAccessSchema = z
   .passthrough();
 
 /**
+ * Whether a written value is a plan's access, as the access editor sends it.
+ *
+ * @param value The `inheritance` field of a plan write
+ */
+export function isPlanAccess(value: unknown): boolean {
+  return planAccessSchema.safeParse(value).success;
+}
+
+/**
  * The access part of a plan as one value: the parent it follows live, its own
  * permissions, and the feature values it overrides (a feature left out is
  * inherited). Edited by the plan editor's access editor.

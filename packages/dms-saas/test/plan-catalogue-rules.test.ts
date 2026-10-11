@@ -118,8 +118,8 @@ describe("plan inheritance as the editor writes it", () => {
     });
   });
 
-  it("drops an inheritance it cannot read", () => {
-    expect(expandInheritance({ name: "Pro", inheritance: "{" })).toEqual({
+  it("leaves the access alone when the write carries none", () => {
+    expect(expandInheritance({ name: "Pro", inheritance: null })).toEqual({
       name: "Pro",
     });
   });
