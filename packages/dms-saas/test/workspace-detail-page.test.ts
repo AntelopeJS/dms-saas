@@ -7,6 +7,11 @@ interface SerializedBlock {
   children: { id: string; component: SerializedBlock }[];
 }
 
+interface ColumnOptions {
+  id: string;
+  isVisible?: boolean;
+}
+
 function findChild(
   block: SerializedBlock,
   id: string,
@@ -38,4 +43,20 @@ describe("workspace detail page", () => {
       "flat=true",
     );
   });
+
+  it.each(["table", "invoiceTable", "creditNoteTable"])(
+    "hides the workspace column of %s rather than offering a view for it",
+    (id) => {
+      const options = findChild(body, id)?.options as {
+        columns: ColumnOptions[];
+        views?: unknown;
+      };
+      const workspace = options.columns.find(
+        (column) => column.id === "workspaceName",
+      );
+
+      expect(workspace?.isVisible).toBe(false);
+      expect(options.views).toBeUndefined();
+    },
+  );
 });

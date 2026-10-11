@@ -278,9 +278,6 @@
         "members": "Membres",
         "activity": "Activité"
       },
-      "tables": {
-        "this_workspace": "Cet espace"
-      },
       "billing": {
         "title": "Informations de facturation",
         "empty": "Aucune information de facturation pour l'instant",

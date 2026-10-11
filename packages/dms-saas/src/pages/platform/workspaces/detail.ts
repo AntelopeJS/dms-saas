@@ -47,17 +47,7 @@ const NO_ROW_ACTIONS = {
 const ROUTE_FILTER_TENANT = { id: { field: "_instance" } };
 
 // The workspace is the page: its column would repeat on every row.
-const WITHOUT_WORKSPACE_COLUMN = {
-  items: [
-    {
-      id: "workspace",
-      label: `${D}.tables.this_workspace`,
-      columns: { hidden: ["workspaceName"] },
-    },
-  ],
-  defaultView: "workspace",
-  layout: "menu" as const,
-};
+const WITHOUT_WORKSPACE_COLUMN = { hidden: ["workspaceName"] };
 
 // The same actions as the Invoices page: credit only paid and open invoices.
 const invoiceRowActions = {
@@ -158,7 +148,7 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
           layout: "compact",
           pageSize: LATEST_INVOICES,
           defaultSort: { field: "issuedAt", desc: true },
-          views: WITHOUT_WORKSPACE_COLUMN,
+          columns: WITHOUT_WORKSPACE_COLUMN,
           rowActions: invoiceRowActions,
           routeParamFilters: ROUTE_FILTER_TENANT,
         }),
@@ -230,7 +220,7 @@ const tabs = Tab({
     TableView(invoicesDataAPI, {
       caption: `${D}.invoices.title`,
       defaultSort: { field: "issuedAt", desc: true },
-      views: WITHOUT_WORKSPACE_COLUMN,
+      columns: WITHOUT_WORKSPACE_COLUMN,
       rowActions: invoiceRowActions,
       routeParamFilters: ROUTE_FILTER_TENANT,
     }),
@@ -241,7 +231,7 @@ const tabs = Tab({
     TableView(creditNotesDataAPI, {
       caption: `${D}.credit_notes.title`,
       defaultSort: { field: "issuedAt", desc: true },
-      views: WITHOUT_WORKSPACE_COLUMN,
+      columns: WITHOUT_WORKSPACE_COLUMN,
       rowActions: NO_ROW_ACTIONS,
       routeParamFilters: ROUTE_FILTER_TENANT,
     }),

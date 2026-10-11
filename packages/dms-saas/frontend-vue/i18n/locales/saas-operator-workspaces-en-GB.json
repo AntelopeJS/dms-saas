@@ -278,9 +278,6 @@
         "members": "Members",
         "activity": "Activity"
       },
-      "tables": {
-        "this_workspace": "This workspace"
-      },
       "billing": {
         "title": "Billing information",
         "empty": "No billing information yet",
