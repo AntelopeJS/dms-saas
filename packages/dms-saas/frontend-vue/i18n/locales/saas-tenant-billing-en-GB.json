@@ -17,7 +17,8 @@
         "charged_to": "Charged to",
         "sent_to": "Sent to",
         "last_payment": "Last payment",
-        "paid_on": "Paid {date}"
+        "paid_on": "Paid {date}",
+        "subscription_line": "{quantity} × {plan}"
       },
       "invoices": {
         "caption": "Invoices & credit notes",

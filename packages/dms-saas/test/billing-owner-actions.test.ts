@@ -74,6 +74,7 @@ import { applyOwnerUpgrade } from "../src/routes/tenant/tenant-plan-ops";
 import { SaasTenantPlanCancellationController } from "../src/routes/tenant/tenant-plan-cancellation";
 import {
   latestPaidInvoice,
+  planNamesByProduct,
   toNextInvoiceRows,
 } from "../src/routes/tenant/tenant-upcoming-invoice";
 import { LOCALES, missingKeys } from "./helpers/composed-text";
@@ -541,6 +542,7 @@ describe("next invoice card", () => {
         periodEnd: "2026-11-30T00:00:00.000Z",
         isProration: false,
         usageLineKey: null,
+        productId: "prod_business",
       },
     ],
     hasMoreLines: false,
@@ -587,6 +589,7 @@ describe("next invoice card", () => {
         total: 47040,
         paidAt: new Date("2026-09-07T00:00:00.000Z"),
       }),
+      planNames: new Map(),
     });
 
     expect(rows.items.map((row) => [row.label, row.value])).toEqual([
@@ -631,6 +634,38 @@ describe("next invoice card", () => {
       currency: "EUR",
       billingDate: "2026-10-31T00:00:00.000Z",
     });
+  });
+
+  it("words the plan's own line in the reader's language, not Stripe's", () => {
+    const proration = {
+      ...preview.lines[0]!,
+      description: "Remaining time on Business after 1 Oct 2026",
+      isProration: true,
+    };
+    const rows = toNextInvoiceRows(
+      { ...preview, lines: [...preview.lines, proration] },
+      {
+        paymentMethod: null,
+        billingEmail: null,
+        lastPayment: null,
+        planNames: planNamesByProduct([
+          {
+            name: "Business",
+            paymentProviderRefs: { stripeProductId: "prod_business" },
+          } as Plan,
+          { name: "Off Stripe", paymentProviderRefs: {} } as Plan,
+        ]),
+      },
+    );
+
+    expect(rows.items[0]?.label).toEqual({
+      key: "saas.tenant_billing.next_invoice.subscription_line",
+      params: { quantity: { type: "number", value: 10 }, plan: "Business" },
+    });
+    expect(rows.items[1]?.label).toBe(
+      "Remaining time on Business after 1 Oct 2026",
+    );
+    for (const code of LOCALES) expect(missingKeys(rows, code)).toEqual([]);
   });
 
   it("picks the most recently paid invoice", () => {

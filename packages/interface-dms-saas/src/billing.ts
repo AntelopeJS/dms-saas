@@ -80,6 +80,8 @@ export interface UpcomingInvoiceLine {
   isProration: boolean;
   /** `<provider id>:<key>` of a usage line, null for any other kind. */
   usageLineKey: string | null;
+  /** Stripe product the line bills, null when Stripe names none. */
+  productId: string | null;
 }
 
 /**

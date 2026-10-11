@@ -17,7 +17,8 @@
         "charged_to": "Prélevé sur",
         "sent_to": "Envoyée à",
         "last_payment": "Dernier paiement",
-        "paid_on": "Payé le {date}"
+        "paid_on": "Payé le {date}",
+        "subscription_line": "{quantity} × {plan}"
       },
       "invoices": {
         "caption": "Factures et avoirs",

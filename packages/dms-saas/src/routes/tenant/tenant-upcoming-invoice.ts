@@ -28,6 +28,8 @@ import {
 import {
   type Invoice,
   InvoiceModel,
+  type Plan,
+  PlanModel,
   TenantBillingInfoModel,
   TenantSubscriptionModel,
 } from "../../db";
@@ -47,6 +49,8 @@ const KEY_PREFIX = "$saas.tenant_billing.next_invoice";
 const PERCENT = 100;
 const MASKED_DIGITS = "••••";
 const PAID_ON_KEY = "saas.tenant_billing.next_invoice.paid_on";
+const SUBSCRIPTION_LINE_KEY =
+  "saas.tenant_billing.next_invoice.subscription_line";
 
 /**
  * The rows of the card, plus the figures the trial notice reads. An empty
@@ -64,6 +68,8 @@ interface NextInvoiceContext {
   paymentMethod: PaymentMethodSummary | null;
   billingEmail: string | null;
   lastPayment: Invoice | null;
+  /** Plan names by Stripe product, to word the plan's own line. */
+  planNames: ReadonlyMap<string, string>;
 }
 
 const NOTHING_TO_INVOICE: NextInvoiceRows = {
@@ -90,16 +96,37 @@ function fromMinorUnits(amount: number): number {
   return amount / MINOR_UNITS_PER_MAJOR;
 }
 
+/**
+ * The line's label. Stripe words a plan's recurring line in the account's
+ * language whatever the customer's ("1 × Pro (at €29.00 / month)"), so it is
+ * written here in the reader's; other lines (prorations, usage) keep Stripe's
+ * or their provider's wording.
+ */
+function lineLabel(
+  line: UpcomingInvoiceLine,
+  planNames: ReadonlyMap<string, string>,
+): KeyValueListItem["label"] {
+  const planName = line.productId ? planNames.get(line.productId) : undefined;
+  if (line.kind === "subscription" && !line.isProration && planName) {
+    return composed(SUBSCRIPTION_LINE_KEY, {
+      quantity: { type: "number", value: line.quantity ?? 1 },
+      plan: planName,
+    });
+  }
+  return line.description ?? `${KEY_PREFIX}.line`;
+}
+
 function lineRow(
   line: UpcomingInvoiceLine,
   currency: string,
+  planNames: ReadonlyMap<string, string>,
 ): KeyValueListItem {
   const period = composed("saas.text.range", {
     from: dateParam(line.periodStart, "day"),
     to: dateParam(line.periodEnd, "day"),
   });
   return {
-    label: line.description ?? `${KEY_PREFIX}.line`,
+    label: lineLabel(line, planNames),
     value: fromMinorUnits(line.amountMinorUnits),
     type: "money",
     currency,
@@ -182,7 +209,9 @@ export function toNextInvoiceRows(
   };
   return {
     items: [
-      ...preview.lines.map((line) => lineRow(line, currency)),
+      ...preview.lines.map((line) =>
+        lineRow(line, currency, context.planNames),
+      ),
       ...preview.taxes.map((tax) => taxRow(tax, currency)),
       total,
       ...contextRows(context),
@@ -207,11 +236,22 @@ export function latestPaidInvoice(invoices: Invoice[]): Invoice | null {
     );
 }
 
+/** Plan names by Stripe product, retired plans included: a line may still bill one. */
+export function planNamesByProduct(plans: Plan[]): Map<string, string> {
+  return new Map(
+    plans.flatMap((plan) => {
+      const productId = plan.paymentProviderRefs?.stripeProductId;
+      return productId ? [[productId, plan.name] as const] : [];
+    }),
+  );
+}
+
 async function loadContext(tenantId: string): Promise<NextInvoiceContext> {
-  const [subscription, billingInfo, invoices] = await Promise.all([
+  const [subscription, billingInfo, invoices, plans] = await Promise.all([
     GetModel(TenantSubscriptionModel, tenantId).findOne(),
     GetModel(TenantBillingInfoModel, tenantId).findOne(),
     GetModel(InvoiceModel, tenantId).getAllInvoices(),
+    GetModel(PlanModel).findNotDeleted(),
   ]);
   const paymentMethod = subscription?.stripeCustomerId
     ? await fetchDefaultPaymentMethod(subscription.stripeCustomerId)
@@ -220,6 +260,7 @@ async function loadContext(tenantId: string): Promise<NextInvoiceContext> {
     paymentMethod,
     billingEmail: billingInfo?.billingEmail ?? null,
     lastPayment: latestPaidInvoice(invoices),
+    planNames: planNamesByProduct(plans),
   };
 }
 
