@@ -61,6 +61,8 @@ export interface CatalogParentPlan {
 export interface PlanCatalog {
 	plans: CatalogParentPlan[]
 	features: CatalogFeature[]
+	/** What the editor preselects for a new plan: every permission. */
+	newPlanPermissions: string[]
 }
 
 export const PLANS_ENDPOINT = '/api/saas/plans'

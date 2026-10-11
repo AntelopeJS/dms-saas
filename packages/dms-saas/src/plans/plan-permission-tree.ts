@@ -39,6 +39,24 @@ export function withPermissionAncestors(permissions: string[]): string[] {
   ];
 }
 
+/**
+ * Every permission id of a registered tree: pages, blocks and actions. The
+ * plan editor preselects them for a new plan, as the seeded plans hold them,
+ * and a new workspace's Member role holds them.
+ */
+export function grantablePermissionIds(
+  tree: Record<string, PermissionTree>,
+): string[] {
+  return [...new Set(collectPermissionIds(tree))];
+}
+
+function collectPermissionIds(tree: Record<string, PermissionTree>): string[] {
+  return Object.values(tree).flatMap((node) => [
+    ...(node.data ? [node.data.id] : []),
+    ...collectPermissionIds(node.children),
+  ]);
+}
+
 function toPlanPermissionNode(
   permission: Permission,
   children: PlanPermissionNode[],

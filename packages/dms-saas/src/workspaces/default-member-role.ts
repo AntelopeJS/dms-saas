@@ -1,9 +1,7 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { RoleModel } from "@antelopejs/interface-dms/db";
-import {
-  GetPermissions,
-  type PermissionTree,
-} from "@antelopejs/interface-dms/permissions";
+import { GetPermissions } from "@antelopejs/interface-dms/permissions";
+import { grantablePermissionIds } from "../plans/plan-permission-tree";
 
 const MEMBER_ROLE_SUFFIX = "member";
 const FALLBACK_LANGUAGE = "en";
@@ -39,13 +37,6 @@ function memberRoleText(language: string | undefined): RoleText {
   return MEMBER_ROLE_TEXTS[base] ?? MEMBER_ROLE_TEXTS[FALLBACK_LANGUAGE];
 }
 
-function collectPermissionIds(tree: Record<string, PermissionTree>): string[] {
-  return Object.values(tree).flatMap((node) => [
-    ...(node.data ? [node.data.id] : []),
-    ...collectPermissionIds(node.children),
-  ]);
-}
-
 /**
  * Gives a new workspace the role its owner invites with: every permission
  * the DMS grants, which the plan then caps and the owner-only surfaces are
@@ -58,9 +49,7 @@ export async function createDefaultMemberRole(
   tenantId: string,
   language: string | undefined,
 ): Promise<string> {
-  const permissions = [
-    ...new Set(collectPermissionIds(await GetPermissions())),
-  ];
+  const permissions = grantablePermissionIds(await GetPermissions());
   const now = new Date();
   const [roleId] = await GetModel(RoleModel, tenantId).insert([
     {

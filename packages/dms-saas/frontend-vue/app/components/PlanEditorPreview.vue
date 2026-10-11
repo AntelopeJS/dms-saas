@@ -72,7 +72,11 @@ const { formatFeatureValue } = usePlanFeatureFormat()
 const saved = ref<PlanDraft | null>(null)
 const live = ref<PlanDraft | null>(null)
 const context = ref<EditorContext | null>(null)
-const catalog = ref<PlanCatalog>({ plans: [], features: [] })
+const catalog = ref<PlanCatalog>({
+	plans: [],
+	features: [],
+	newPlanPermissions: [],
+})
 const isLoading = ref(true)
 const hasError = ref(false)
 

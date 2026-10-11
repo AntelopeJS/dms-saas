@@ -30,11 +30,16 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [value: PlanAccess] }>()
 
 const { $authFetch } = useAuthFetch()
+const route = useDmsRoute()
 const { t } = useI18n()
 const { processI18n } = useTranslation()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
-const catalog = ref<PlanCatalog>({ plans: [], features: [] })
+const catalog = ref<PlanCatalog>({
+	plans: [],
+	features: [],
+	newPlanPermissions: [],
+})
 const tree = ref<PermissionNode[]>([])
 const isLoading = ref(true)
 const hasError = ref(false)
@@ -178,6 +183,22 @@ const permissionGroups = computed(() =>
 
 const planName = computed(() => t('saas.catalog.editor.access.this_plan'))
 
+function isBlank(value: PlanAccess): boolean {
+	return (
+		!value.parentPlanId &&
+		value.extraPermissions.length === 0 &&
+		Object.keys(value.extraFeatures).length === 0
+	)
+}
+
+// A new plan starts with every permission checked, as the seeded plans hold
+// them, for the operator to uncheck; a duplicate keeps the plan it copies.
+function startNewPlanWithEveryPermission(): void {
+	if (currentPlanId.value || route.query.duplicate) return
+	if (!isBlank(access.value)) return
+	update({ extraPermissions: catalog.value.newPlanPermissions })
+}
+
 async function load(): Promise<void> {
 	isLoading.value = true
 	hasError.value = false
@@ -190,6 +211,7 @@ async function load(): Promise<void> {
 		])
 		catalog.value = loadedCatalog
 		tree.value = loadedTree
+		startNewPlanWithEveryPermission()
 	} catch {
 		hasError.value = true
 	} finally {

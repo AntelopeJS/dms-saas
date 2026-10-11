@@ -22,11 +22,27 @@ const worker = vi.hoisted(() => ({
   processPlanMigrationJob: vi.fn(async () => undefined),
 }));
 
+const permissions = vi.hoisted(() => ({
+  GetPermissions: vi.fn(async () => ({
+    settings: {
+      data: { id: "settings", title: "settings" },
+      children: {
+        billing: {
+          data: { id: "settings.billing", title: "billing" },
+          children: {},
+        },
+      },
+    },
+  })),
+}));
+
+vi.mock("@antelopejs/interface-dms/permissions", () => permissions);
 vi.mock("../src/plans/stripe-sync", () => stripe);
 vi.mock("../src/workers", () => worker);
 
 const OWNER = { _id: "operator" } as User;
 const PLAN_ID = "growth";
+const NEW_PLAN_ID = "starter";
 const FIELD_REFUSAL = 400;
 
 const CATALOGUE = [
@@ -63,6 +79,12 @@ function planModel(store: Store): PlanModel {
     update: vi.fn(async (id: string, patch: Partial<Plan>) => {
       const current = store.plans.get(id);
       if (current) store.plans.set(id, { ...current, ...patch } as Plan);
+    }),
+    findNotDeleted: vi.fn(async () => [...store.plans.values()]),
+    insert: vi.fn(async (rows: Plan[]) => {
+      const created = { ...rows[0], _id: NEW_PLAN_ID } as Plan;
+      store.plans.set(NEW_PLAN_ID, created);
+      return [NEW_PLAN_ID];
     }),
     resolveInheritance: vi.fn(async (plan: Plan) => ({
       permissions: plan.permissions ?? [],
@@ -169,6 +191,48 @@ describe("plan writes from the editor", () => {
     expect(draft.inheritance).toMatchObject({
       extraFeatures: { domains: true },
     });
+  });
+});
+
+describe("creating a plan", () => {
+  const NEW_PLAN = { name: "Starter", interval: "month" } as const;
+
+  it("keeps the permissions the editor sent", async () => {
+    const store = storeWith();
+    await plansController(store).create(OWNER, {
+      ...NEW_PLAN,
+      inheritance: {
+        parentPlanId: null,
+        extraPermissions: ["settings"],
+        extraFeatures: {},
+      },
+    });
+    expect(store.plans.get(NEW_PLAN_ID)?.permissions).toEqual(["settings"]);
+  });
+
+  it("keeps a plan the operator left without any permission empty", async () => {
+    const store = storeWith();
+    await plansController(store).create(OWNER, {
+      ...NEW_PLAN,
+      inheritance: {
+        parentPlanId: null,
+        extraPermissions: [],
+        extraFeatures: {},
+      },
+    });
+    expect(store.plans.get(NEW_PLAN_ID)?.permissions).toEqual([]);
+  });
+
+  it("offers the editor every registered permission for a new plan", async () => {
+    const controller = plansController(storeWith());
+    controller.featureModel = {
+      getAll: vi.fn(async () => []),
+    } as unknown as FeatureModel;
+    const catalog = await controller.editCatalog(OWNER, undefined);
+    expect(catalog.newPlanPermissions).toEqual([
+      "settings",
+      "settings.billing",
+    ]);
   });
 });
 

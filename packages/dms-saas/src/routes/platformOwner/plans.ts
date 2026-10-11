@@ -28,6 +28,7 @@ import {
 } from "../../db";
 import { localizeFeature } from "../../plans";
 import {
+  grantablePermissionIds,
   mapPlanPermissionTree,
   type PlanPermissionNode,
 } from "../../plans/plan-permission-tree";
@@ -176,6 +177,8 @@ interface PlanFeatureCatalogItem {
 interface PlanEditCatalog {
   plans: PlanInheritanceOption[];
   features: PlanFeatureCatalogItem[];
+  /** What the editor preselects for a new plan: every permission. */
+  newPlanPermissions: string[];
 }
 
 /** A plan write the editor made, and what the operator should know of it. */
@@ -314,9 +317,10 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<PlanEditCatalog> {
     const locale = requestLocale(language);
-    const [plans, features] = await Promise.all([
+    const [plans, features, permissions] = await Promise.all([
       this.planModel.findNotDeleted(),
       this.featureModel.getAll(),
+      GetPermissions(),
     ]);
     const resolvedPlans = await Promise.all(
       plans.map(async (plan) => {
@@ -335,6 +339,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
       features: features
         .map((feature) => toCatalogFeature(localizeFeature(feature, locale)))
         .sort((left, right) => left.order - right.order),
+      newPlanPermissions: grantablePermissionIds(permissions),
     };
   }
 
