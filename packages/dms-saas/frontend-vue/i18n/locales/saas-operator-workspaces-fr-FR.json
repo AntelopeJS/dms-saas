@@ -312,6 +312,7 @@
       "invoices": {
         "title": "Factures",
         "latest": "Dernières factures",
+        "see_all": "Toutes les factures",
         "download_pdf": "Télécharger le PDF",
         "open_in_stripe": "Ouvrir dans Stripe",
         "issue_credit_note": "Émettre un avoir…"
@@ -372,6 +373,7 @@
       "activity": {
         "title": "Activité",
         "recent": "Activité récente",
+        "see_all": "Onglet Activité",
         "empty": "Rien ne s'est encore passé dans cet espace."
       },
       "operator": {
@@ -563,6 +565,8 @@
         "billing_info_description": "Voir l'identité de facturation et l'adresse du client",
         "subscription_timeline": "Chronologie de l'abonnement",
         "subscription_timeline_description": "Voir la prochaine facture et les derniers événements de l'abonnement",
+        "latest_invoices": "Dernières factures de l'espace",
+        "latest_invoices_description": "Voir les trois dernières factures de l'espace",
         "recent_activity": "Activité récente de l'espace",
         "recent_activity_description": "Voir les derniers événements de l'espace",
         "members": "Membres et invitations",

@@ -312,6 +312,7 @@
       "invoices": {
         "title": "Invoices",
         "latest": "Latest invoices",
+        "see_all": "All invoices",
         "download_pdf": "Download PDF",
         "open_in_stripe": "Open in Stripe",
         "issue_credit_note": "Issue credit note…"
@@ -372,6 +373,7 @@
       "activity": {
         "title": "Activity",
         "recent": "Recent activity",
+        "see_all": "Activity tab",
         "empty": "Nothing happened in this workspace yet."
       },
       "operator": {
@@ -563,6 +565,8 @@
         "billing_info_description": "See the customer's billing identity and address",
         "subscription_timeline": "Subscription timeline",
         "subscription_timeline_description": "See the next invoice and the latest subscription events",
+        "latest_invoices": "Latest workspace invoices",
+        "latest_invoices_description": "See the workspace's three latest invoices",
         "recent_activity": "Recent workspace activity",
         "recent_activity_description": "See the latest events of the workspace",
         "members": "Members and invitations",

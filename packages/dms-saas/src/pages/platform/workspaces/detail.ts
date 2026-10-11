@@ -2,6 +2,7 @@ import { INVOICE_ROW_ACTIONS } from "../invoices";
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import {
   ActivityFeed,
+  Card,
   FieldRow,
   Grid,
   GridRow,
@@ -28,6 +29,9 @@ const API = "/api/saas/workspaces/{{params.id}}";
 const INVITATION_API = "/api/saas/workspaces/{_instance}/invitations/{_id}";
 const FACTS = 5;
 const LATEST_INVOICES = 3;
+// The overview's links open a tab of this page: the query its `Tab` keeps.
+const INVOICES_TAB_LINK = "?workspace-tab=1";
+const ACTIVITY_TAB_LINK = "?workspace-tab=4";
 
 const NO_ROW_ACTIONS = {
   add: false,
@@ -133,15 +137,32 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
   )
   .child(
     "latestInvoices",
-    TableView(invoicesDataAPI, {
-      caption: `${D}.invoices.latest`,
-      layout: "compact",
-      pageSize: LATEST_INVOICES,
-      defaultSort: { field: "issuedAt", desc: true },
-      views: WITHOUT_WORKSPACE_COLUMN,
-      rowActions: invoiceRowActions,
-      routeParamFilters: ROUTE_FILTER_TENANT,
-    }),
+    // A compact table draws no caption: the card titles it and links to
+    // every invoice.
+    Card({
+      title: `${D}.invoices.latest`,
+      padded: false,
+      actions: [
+        {
+          label: `${D}.invoices.see_all`,
+          to: INVOICES_TAB_LINK,
+          icon: "i-ph-arrow-right",
+        },
+      ],
+    })
+      .child(
+        "table",
+        TableView(invoicesDataAPI, {
+          caption: `${D}.invoices.latest`,
+          layout: "compact",
+          pageSize: LATEST_INVOICES,
+          defaultSort: { field: "issuedAt", desc: true },
+          views: WITHOUT_WORKSPACE_COLUMN,
+          rowActions: invoiceRowActions,
+          routeParamFilters: ROUTE_FILTER_TENANT,
+        }),
+      )
+      .meta(permissionMeta("latest_invoices", "i-ph-receipt")),
   )
   .child(
     "recentActivity",
@@ -150,6 +171,13 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
       fetchUrl: `${API}/activity?limit=short`,
       groupByDay: false,
       empty: { title: `${D}.activity.empty` },
+      actions: [
+        {
+          label: `${D}.activity.see_all`,
+          to: ACTIVITY_TAB_LINK,
+          icon: "i-ph-arrow-right",
+        },
+      ],
     }).meta(permissionMeta("recent_activity", "i-ph-pulse")),
   )
   .meta(permissionMeta("overview", "i-ph-squares-four"));
