@@ -406,12 +406,17 @@ async function consumeUpgradeParam(): Promise<void> {
 	comparison.openReview(plan._id)
 }
 
-/** `?choose-plan` (sent by the access-restricted screen) opens Compare. */
+/**
+ * `?choose-plan` (sent by the access-restricted screen and the complimentary
+ * banner) opens Compare.
+ */
 async function consumeChoosePlanParam(): Promise<void> {
 	if (route.query[BILLING_CHOOSE_PLAN_PARAM] === undefined) return
 	const { [BILLING_CHOOSE_PLAN_PARAM]: _choosePlan, ...query } = route.query
 	await router.replace({ query })
-	if (canChangePlan.value) comparison.open()
+	// Owners compare plans even while an administrator manages the plan
+	// (complimentary access): choosing a paid one is how they keep access.
+	if (isTenantOwner.value) comparison.open()
 }
 
 onMounted(async () => {
