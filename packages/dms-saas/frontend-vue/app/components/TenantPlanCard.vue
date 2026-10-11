@@ -563,7 +563,7 @@ onBeforeUnmount(() => {
 			</DmsMeter>
 			<p v-else class="text-muted text-sm">{{ seatHint }}</p>
 
-			<DmsKeyValueList v-if="facts.length" :items="facts" :columns="2" dense />
+			<DmsKeyValueList v-if="facts.length" :items="facts" dense />
 
 			<DmsBanner
 				v-if="pendingPlan"
