@@ -16,9 +16,8 @@ import {
 } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthRawUser } from "@antelopejs/interface-dms/auth";
-import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
+import { type User } from "@antelopejs/interface-dms/auth/db";
 import type { StatGroupItem } from "@antelopejs/interface-dms/base";
-import { PlanModel } from "../../db";
 import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
 import type {
@@ -162,12 +161,6 @@ export class SaasWorkspacesController extends Controller(
 ) {
   @Model(TenantModel)
   declare tenantModel: TenantModel;
-
-  @Model(UserModel)
-  declare userModel: UserModel;
-
-  @Model(PlanModel)
-  declare planModel: PlanModel;
 
   /** The switcher's list: every live workspace of the caller, current first. */
   @Get("/mine")

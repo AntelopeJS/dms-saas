@@ -117,42 +117,6 @@ interface CatalogueStats {
   items: StatGroupItem[];
 }
 
-interface PublicPlan {
-  _id: string;
-  name: string;
-  slug: string;
-  description: string;
-  audience: Plan["audience"];
-  price: number;
-  currency: string;
-  interval: Plan["interval"];
-  billingMode: Plan["billingMode"];
-  features: Plan["features"];
-  trialDays: number;
-  borderColor: string | null;
-  borderLabel: string | null;
-  order: number;
-}
-
-function toPublicPlan(plan: Plan): PublicPlan {
-  return {
-    _id: plan._id,
-    name: plan.name,
-    slug: plan.slug,
-    description: plan.description,
-    audience: plan.audience,
-    price: plan.price,
-    currency: plan.currency,
-    interval: plan.interval,
-    billingMode: plan.billingMode,
-    features: plan.features,
-    trialDays: plan.trialDays,
-    borderColor: plan.borderColor,
-    borderLabel: plan.borderLabel,
-    order: plan.order,
-  };
-}
-
 /** A plan the editor can build on, with its own and its resolved access. */
 interface PlanInheritanceOption {
   _id: string;
@@ -277,12 +241,6 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
 
   @Model(TenantSubscriptionModel, CROSS_INSTANCE)
   declare tenantSubscriptionModel: TenantSubscriptionModel;
-
-  @Get("/public")
-  async listPublic(): Promise<PublicPlan[]> {
-    const plans = await this.planModel.findPubliclyVisible();
-    return plans.map(toPublicPlan);
-  }
 
   @Get("/")
   async list(@AuthOwnerOnly() _user: User): Promise<PlanWithWorkspaceCount[]> {
