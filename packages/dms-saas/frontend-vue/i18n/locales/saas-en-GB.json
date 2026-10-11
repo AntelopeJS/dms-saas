@@ -328,7 +328,7 @@
 				"title": "Workspace settings"
 			},
 			"plan": {
-				"unlimited": "unlimited",
+				"unlimited": "Unlimited",
 				"units": {
 					"byte": {
 						"quantity": "{value} byte | {value} bytes",

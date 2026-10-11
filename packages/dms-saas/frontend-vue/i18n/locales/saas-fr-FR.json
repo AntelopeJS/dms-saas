@@ -328,7 +328,7 @@
 				"title": "Paramètres de l'espace de travail"
 			},
 			"plan": {
-				"unlimited": "illimité",
+				"unlimited": "Illimité",
 				"units": {
 					"byte": {
 						"quantity": "{value} octet | {value} octets",
