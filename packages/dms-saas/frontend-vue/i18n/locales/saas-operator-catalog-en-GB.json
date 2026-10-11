@@ -385,7 +385,7 @@
 				"attention": {
 					"uncertain": "Some workspaces didn’t move, one at least with an uncertain Stripe state: check it in Stripe before retrying.",
 					"failed": "Some workspaces didn’t move. Retry them, or mark the migration as reconciled.",
-					"state": "{count} of {total} not moved",
+					"state": "{count} of {total} not moved | {count} of {total} not moved",
 					"empty_title": "Nothing needs your attention",
 					"empty_description": "Every migration moved its workspaces or was reconciled."
 				},
