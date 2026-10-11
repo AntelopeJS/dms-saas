@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.5.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.4.0...v0.5.0)
+
+### 🚀 Enhancements
+
+- **saas:** ⚠️  V2 redesign on @antelopejs/dms 0.6 ([#81](https://github.com/AntelopeJS/dms-saas/pull/81))
+
+### 📦 Build
+
+- **saas:** Require @antelopejs/interface-dms-saas 0.4 ([#82](https://github.com/AntelopeJS/dms-saas/pull/82))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.4.0 ([ec90112](https://github.com/AntelopeJS/dms-saas/commit/ec90112))
+
+#### ⚠️ Breaking Changes
+
+- **saas:** ⚠️  V2 redesign on @antelopejs/dms 0.6 ([#81](https://github.com/AntelopeJS/dms-saas/pull/81))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.4.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.3.15...v0.4.0)
