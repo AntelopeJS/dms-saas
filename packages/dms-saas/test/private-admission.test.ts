@@ -38,6 +38,11 @@ import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
 
 const stripe = vi.hoisted(() => ({ called: vi.fn() }));
+// The DMS permission registry is not wired here: the role is created against
+// it in production, and its own test covers what it holds.
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async () => "member-role",
+}));
 vi.mock("../src/stripe/client", () => ({
   getStripeClient: () => {
     stripe.called();

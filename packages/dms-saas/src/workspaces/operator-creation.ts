@@ -21,6 +21,7 @@ import {
   type InvitationEmailDelivery,
   inviterNameOf,
 } from "./invitations";
+import { createDefaultMemberRole } from "./default-member-role";
 
 const HTTP_BAD_REQUEST = 400;
 
@@ -230,6 +231,9 @@ export async function createWorkspaceForOwner(
     { name: input.name, createdAt: now, updatedAt: now },
   ]);
   const owner = await addOwner(tenantId, input, operator);
+  // The owner has no account yet: their invitation is in the operator's
+  // language, and so is the role they invite their own members with.
+  await createDefaultMemberRole(tenantId, operator.language);
   await insertSubscription(tenantId, input, operator);
   await recomputeTenantBillingState(tenantId);
   // Last: a slow mail server must not leave the workspace without its plan,

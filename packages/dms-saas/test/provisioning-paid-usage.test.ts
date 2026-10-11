@@ -7,6 +7,7 @@ const PERIOD_END_SECONDS = 1_782_592_000;
 const store = vi.hoisted(() => ({
   plan: undefined as Plan | undefined,
   subscriptions: [] as Partial<TenantSubscription>[],
+  memberRoles: [] as [string, string | undefined][],
 }));
 
 const stripe = vi.hoisted(() => ({
@@ -33,6 +34,14 @@ const MODEL_FAKES: Record<string, () => unknown> = {
   }),
 };
 
+// The DMS permission registry is not wired here: the role is created against
+// it in production, and its own test covers what it holds.
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async (tenantId: string, language?: string) => {
+    store.memberRoles.push([tenantId, language]);
+    return "member-role";
+  },
+}));
 vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
   const actual =
     await importOriginal<
@@ -86,6 +95,7 @@ const { provisionWorkspace } = await import("../src/workspaces/provisioning");
 function provision(paymentMethodId?: string) {
   return provisionWorkspace({
     userId: "owner",
+    ownerLanguage: "fr",
     payload: {
       workspaceName: "Acme",
       planId: "plan",
@@ -105,6 +115,7 @@ function provision(paymentMethodId?: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   store.subscriptions = [];
+  store.memberRoles = [];
   store.plan = {
     _id: "plan",
     price: 29,
@@ -137,6 +148,11 @@ describe("initial paid usage coverage of a provisioned workspace", () => {
         ],
       }),
     ]);
+  });
+
+  it("gives the workspace its Member role, named in the owner's language", async () => {
+    await provision("pm_card");
+    expect(store.memberRoles).toEqual([["tenant", "fr"]]);
   });
 
   it("creates the subscription in the classic billing mode", async () => {

@@ -86,6 +86,11 @@ const subscriptions = new Map<string, TenantSubscription>();
 const billingInfos = new Map<string, TenantBillingInfo>();
 const admission = vi.hoisted(() => ({ close: vi.fn() }));
 
+// The DMS permission registry is not wired here: the role is created against
+// it in production, and its own test covers what it holds.
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async () => "member-role",
+}));
 vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
   closeTenantLifecycleAdmission: (...args: unknown[]) =>
     admission.close(...args),

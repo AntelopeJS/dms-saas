@@ -34,6 +34,7 @@ import {
   toTenantBillingAddress,
 } from "../stripe";
 import { hashEmail, insertOrUpdateById, stripeSecondsToDate } from "../utils";
+import { createDefaultMemberRole } from "./default-member-role";
 import { resolveDefaultPlan } from "./default-plan";
 import { isFreePlan } from "./free-plan";
 import { buildSubscriptionCreateParams } from "./subscription-create-params";
@@ -99,6 +100,8 @@ export interface CardDetails {
 
 export interface WorkspaceProvisioningInput {
   userId: string;
+  /** The owner's language, for what the workspace is set up with in words. */
+  ownerLanguage?: string;
   payload: WorkspaceProvisioningPayload;
   stripeCustomerProfile: StripeCustomerProfile;
   card: CardDetails;
@@ -473,10 +476,9 @@ async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
 }
 
 async function createOwnedTenant(
-  workspaceName: string,
-  userId: string,
-  handles: WorkspaceProvisioningHandles,
+  input: WorkspaceProvisioningInput,
 ): Promise<string> {
+  const { userId, handles } = input;
   const tenantId = handles.tenantId;
   if (!tenantId)
     throw new Error("Provisioning intent must precede tenant creation");
@@ -485,7 +487,7 @@ async function createOwnedTenant(
     await GetModel(TenantModel).insert([
       {
         _id: tenantId,
-        name: workspaceName,
+        name: input.payload.workspaceName,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -494,6 +496,7 @@ async function createOwnedTenant(
       roleIds: [],
       isTenantOwner: true,
     });
+    await createDefaultMemberRole(tenantId, input.ownerLanguage);
     return tenantId;
   });
 }
@@ -560,11 +563,7 @@ async function runProvisioning(
     ? await provisionStripeBilling(input, plan, payload.paymentMethodId)
     : CARDLESS_BILLING;
 
-  const tenantId = await createOwnedTenant(
-    payload.workspaceName,
-    userId,
-    handles,
-  );
+  const tenantId = await createOwnedTenant(input);
   await runTenantLifecycleOperation(tenantId, () =>
     insertTenantRecords({
       tenantId,

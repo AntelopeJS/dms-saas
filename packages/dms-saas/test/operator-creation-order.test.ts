@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({ steps: [] as string[] }));
 
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async (_tenantId: string, language: string) => {
+    harness.steps.push(`member role (${language})`);
+    return "member-role";
+  },
+}));
 vi.mock(
   "@antelopejs/interface-database-decorators",
   async (importOriginal) => ({
@@ -64,6 +70,7 @@ describe("operator workspace creation", () => {
     expect(harness.steps).toEqual([
       "tenant",
       "owner",
+      "member role (en)",
       "subscription",
       "billing state",
       "email",

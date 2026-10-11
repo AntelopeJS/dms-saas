@@ -135,6 +135,7 @@ async function provisionSelfServeWorkspace(
   try {
     const { tenantId } = await provisionWorkspace({
       userId: user._id,
+      ownerLanguage: user.language,
       payload: {
         ...input.billingProfile,
         workspaceName: input.workspaceName,

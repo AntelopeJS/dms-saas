@@ -1,4 +1,5 @@
 export * from "./billing-profile";
+export * from "./default-member-role";
 export * from "./default-plan";
 export * from "./deletion";
 export * from "./free-plan";

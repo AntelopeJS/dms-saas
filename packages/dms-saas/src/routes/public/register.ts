@@ -103,6 +103,7 @@ interface RegistrationAccount {
   userId: string;
   email: string;
   name: string;
+  language: string | undefined;
 }
 
 interface PendingRegistrationBody {
@@ -211,6 +212,7 @@ async function buildRegistrationProvisioning(
   };
   return {
     userId: account.userId,
+    ownerLanguage: account.language,
     payload: {
       ...billingProfile,
       workspaceName: body.workspaceName?.trim() || DEFAULT_WORKSPACE_NAME,
@@ -246,6 +248,9 @@ export class SaasRegisterApiController extends Controller(
   @Parameter("x-forwarded-for", "header")
   declare forwardedFor: string;
 
+  @Parameter(CONTENT_LANGUAGE_HEADER, "header")
+  declare contentLanguage: unknown;
+
   private async ensureEmailAvailable(email: string): Promise<void> {
     const existing = await this.userModel.getByEmail(email);
     assert(!existing, HTTP_BAD_REQUEST, "saas.errors.user.email_in_use");
@@ -269,6 +274,7 @@ export class SaasRegisterApiController extends Controller(
         password: body.password,
         authKey: generateAuthKey(),
         owner: false,
+        language: requestLocale(this.contentLanguage),
         createdAt: new Date(),
       },
     ]);
@@ -361,6 +367,7 @@ export class SaasRegisterApiController extends Controller(
         userId: handles.userId,
         email: body.email,
         name: body.name,
+        language: requestLocale(this.contentLanguage),
       };
       const { tenantId } = await provisionWorkspace(
         await buildRegistrationProvisioning(account, body, admitted, handles),
@@ -421,7 +428,12 @@ export class SaasRegisterApiController extends Controller(
 
     const handles: WorkspaceProvisioningHandles = { userId: user._id };
     try {
-      const account = { userId: user._id, email: user.email, name: user.name };
+      const account = {
+        userId: user._id,
+        email: user.email,
+        name: user.name,
+        language: user.language || requestLocale(this.contentLanguage),
+      };
       const { tenantId } = await provisionWorkspace(
         await buildRegistrationProvisioning(account, body, admitted, handles),
       );
