@@ -60,6 +60,9 @@ export interface PlanProviderRefs {
   stripeSyncedTerms?: PlanStripeSyncedTerms;
 }
 
+/** A member cap or feature limit no workspace reaches. */
+export const PLAN_UNLIMITED = -1;
+
 /** Commercial plan offered to SaaS workspaces. */
 @RegisterTable(plansTableName, CORE_SCHEMA_NAME)
 export class Plan extends Table {

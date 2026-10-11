@@ -6,6 +6,7 @@ import {
 	type CatalogFeature,
 	formatPlanAmount,
 	isFeatureIncluded,
+	PLAN_UNLIMITED,
 } from '../build/plan-catalog'
 import {
 	changedFeatures,
@@ -31,7 +32,6 @@ interface RetireResponse {
 type Step = 1 | 2 | 3
 
 const ROWS_PREVIEW = 4
-const UNLIMITED = -1
 const CONFIRM_TEXT_FIELD = 'confirmText'
 
 const KIND_ICONS: Record<PlanChangeKind, string> = {
@@ -136,7 +136,7 @@ function formatDay(value: string | null): string {
 
 function planOption(candidate: RetirePlanSummary): string {
 	const cap =
-		candidate.maxMembers === UNLIMITED
+		candidate.maxMembers === PLAN_UNLIMITED
 			? t('saas.catalog.plans.card.members_unlimited')
 			: t(
 					'saas.catalog.plans.card.members',
@@ -178,7 +178,7 @@ function featureName(featureId: string): string {
 }
 
 function memberCap(value: number): string {
-	return value === UNLIMITED ? t('saas.catalog.plans.unlimited') : String(value)
+	return value === PLAN_UNLIMITED ? t('saas.catalog.plans.unlimited') : String(value)
 }
 
 async function loadImpact(): Promise<void> {

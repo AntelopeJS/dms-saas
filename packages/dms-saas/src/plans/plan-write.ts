@@ -1,12 +1,12 @@
 import type { Feature, Plan, PlanFeatureValue } from "../db";
 import { withPermissionAncestors } from "./plan-permission-tree";
+import { PLAN_UNLIMITED } from "../db";
 
 /**
  * What a number feature holds (Q36): `0` turns it off, `-1` makes it
  * unlimited, and any whole number from 1 is a limit.
  */
 export const FEATURE_OFF_VALUE = 0;
-export const FEATURE_UNLIMITED_VALUE = -1;
 
 const MIN_LIMIT = 1;
 const SLUG_MAX_LENGTH = 100;
@@ -134,7 +134,7 @@ function isNumberFeatureValue(value: unknown): boolean {
     Number.isInteger(value) &&
     (value >= MIN_LIMIT ||
       value === FEATURE_OFF_VALUE ||
-      value === FEATURE_UNLIMITED_VALUE)
+      value === PLAN_UNLIMITED)
   );
 }
 
@@ -173,6 +173,6 @@ export function isValidMemberCap(value: unknown): boolean {
   return (
     typeof value === "number" &&
     Number.isInteger(value) &&
-    (value >= MIN_LIMIT || value === FEATURE_UNLIMITED_VALUE)
+    (value >= MIN_LIMIT || value === PLAN_UNLIMITED)
   );
 }

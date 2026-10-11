@@ -4,6 +4,7 @@ import FormFieldRow from '../components/FormFieldRow.vue'
 import FormRows from '../components/FormRows.vue'
 import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
 import { formatMinorUnits } from '../../composables/useMoneyFormat'
+import { PLAN_UNLIMITED } from '../plan-catalog'
 import { planPriceLabel } from './planPrice'
 import type { ComplimentaryImpact } from './types'
 
@@ -61,7 +62,7 @@ const fitNote = computed(() => {
 	const plan = selectedPlan.value
 	const seats = impact.value?.seats ?? 0
 	if (!plan) return ''
-	if (plan.maxMembers < 0) return t(`${D}.fits_unlimited`, { seats }, seats)
+	if (plan.maxMembers === PLAN_UNLIMITED) return t(`${D}.fits_unlimited`, { seats }, seats)
 	const key = plan.fits ? 'fits' : 'exceeds'
 	return t(`${D}.${key}`, { seats, max: plan.maxMembers }, seats)
 })

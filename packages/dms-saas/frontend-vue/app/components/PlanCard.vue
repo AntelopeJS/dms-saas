@@ -9,6 +9,7 @@ import {
 	cardFeatures,
 	formatPlanAmount,
 	monthlyEquivalent,
+	PLAN_UNLIMITED,
 } from '../build/plan-catalog'
 
 const FEATURE_PREVIEW_LIMIT = 5
@@ -17,7 +18,6 @@ const SHARE_FRACTION_DIGITS = 1
 const STOP_SELLING_KEY = 'stop_selling'
 const PUT_ON_SALE_KEY = 'put_on_sale'
 const RETIRE_KEY = 'retire'
-const UNLIMITED_MEMBERS = -1
 
 // The card of the plans' `cards` display. Besides the props it reads, the
 // display hands it the table's columns and label key: kept off the root
@@ -121,7 +121,7 @@ const chips = computed(() => [
 	{
 		icon: 'i-ph-users',
 		label:
-			plan.value.maxMembers === UNLIMITED_MEMBERS
+			plan.value.maxMembers === PLAN_UNLIMITED
 				? t('saas.catalog.plans.card.members_unlimited')
 				: t(
 						'saas.catalog.plans.card.members',

@@ -1,7 +1,7 @@
 import { formatMajorUnits } from './useMoneyFormat'
+import { PLAN_UNLIMITED } from '../build/plan-catalog'
 
 /** Q36: a number feature reads `0` as off, `-1` as unlimited, n ≥ 1 as a limit. */
-const UNLIMITED_NUMERIC_VALUE = -1
 const OFF_NUMERIC_VALUE = 0
 const EMPTY_LABEL = '—'
 const INCLUDED_LABEL = '✓'
@@ -318,7 +318,7 @@ function formatNumeric(
 	// A unit price of 0 is free, not off: only a quantity of 0 turns it off.
 	const isPrice = !!unit?.trim() && parseUnit(unit).kind === 'price'
 	if (numeric === OFF_NUMERIC_VALUE && !isPrice) return EXCLUDED_LABEL
-	if (numeric === UNLIMITED_NUMERIC_VALUE) return context.unlimitedLabel
+	if (numeric === PLAN_UNLIMITED) return context.unlimitedLabel
 	if (!unit?.trim()) return formatNumber(numeric, context.locale)
 	return formatNumberWithUnit(numeric, unit, context)
 }

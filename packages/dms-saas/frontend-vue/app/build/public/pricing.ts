@@ -1,5 +1,6 @@
 import type { PlanInterval } from '../../composables/usePlanIntervalLabel'
 import type { TenantPlanFeature } from '../../composables/useTenantPlan'
+import { PLAN_UNLIMITED } from '../plan-catalog'
 
 export type PlanBillingMode = 'flat' | 'seat'
 export type RefundMode = 'full' | 'prorated'
@@ -66,7 +67,6 @@ export interface ComparisonRows {
 	detail: TenantPlanFeature[]
 }
 
-const UNLIMITED_MEMBERS = -1
 /** Team size the per-seat price is worked out for, under the plan's cap. */
 const EXAMPLE_SEATS = 10
 const INTERVAL_ORDER: PlanInterval[] = ['month', 'year']
@@ -119,7 +119,7 @@ export function plansForInterval(
  */
 export function seatExample(plan: PublicPlan): SeatExample | null {
 	if (plan.billingMode !== 'seat' || !isPaidPlan(plan)) return null
-	const isCapped = plan.maxMembers !== UNLIMITED_MEMBERS && plan.maxMembers > 0
+	const isCapped = plan.maxMembers !== PLAN_UNLIMITED && plan.maxMembers > 0
 	const seats = isCapped
 		? Math.min(EXAMPLE_SEATS, plan.maxMembers)
 		: EXAMPLE_SEATS

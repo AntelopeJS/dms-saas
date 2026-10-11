@@ -29,13 +29,12 @@ import {
   firstUncertain,
 } from "./migration-detail";
 import { toMinorUnits } from "../utils/money";
+import { PLAN_UNLIMITED } from "../db";
 
 const K = "saas.catalog.migrations.detail";
 const REASON_KEY = "saas.catalog.migrations.reason";
 const STATUS_KEY = "saas.status.migration";
 const MIGRATION_ICON = "i-ph-arrows-clockwise";
-// Plans store a limit no workspace reaches as -1.
-const UNLIMITED = -1;
 const DEFAULT_BANNER_TONE: BannerTone = "info";
 const BANNER_TONES = new Set<string>([
   "info",
@@ -253,7 +252,7 @@ export type FeatureNames = Map<string, string>;
 function featureValue(value: unknown): ComposedTextParam {
   if (value === true) return composed(`${K}.change.included`);
   if (value === false) return composed(`${K}.change.excluded`);
-  if (value === null || value === undefined || value === UNLIMITED) {
+  if (value === null || value === undefined || value === PLAN_UNLIMITED) {
     return composed(`${K}.change.unlimited`);
   }
   if (typeof value === "number" || typeof value === "string") return value;

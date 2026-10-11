@@ -30,6 +30,7 @@ import {
   Plan,
   type PlanFeatureValue,
   PlanModel,
+  PLAN_UNLIMITED,
 } from "../../db";
 import { loadCatalogueUsage, planMrrShare } from "../../plans/catalogue-usage";
 import { stripeDashboardUrl } from "../../stripe/client";
@@ -87,7 +88,6 @@ const PLAN_CATALOGUE_SCOPE = {
   filters: { isDeleted: ["false", "eq"] },
 } satisfies TableScope;
 const withCatalogueScope = withTableScope(PLAN_CATALOGUE_SCOPE);
-const UNLIMITED_MEMBERS = -1;
 
 interface PlanRowInstance {
   table: Plan;
@@ -272,7 +272,7 @@ export class plansDataAPI extends DataController(
   @Exported()
   @Column({
     name: `${TEXTS}.field.max_members`,
-    type: new DefaultDataTypes.NumberType({ min: UNLIMITED_MEMBERS }),
+    type: new DefaultDataTypes.NumberType({ min: PLAN_UNLIMITED }),
     display: new DefaultDisplays.TwoLineDisplay({
       primaryField: "maxMembersText",
     }),
@@ -285,7 +285,7 @@ export class plansDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   get maxMembersText(): ComposedText {
     const { maxMembers } = planOf(this);
-    return maxMembers === UNLIMITED_MEMBERS
+    return maxMembers === PLAN_UNLIMITED
       ? composed("saas.catalog.plans.unlimited")
       : valueText(countParam(maxMembers));
   }

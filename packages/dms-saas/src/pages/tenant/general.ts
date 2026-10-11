@@ -1,4 +1,8 @@
-import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
+import {
+  PageController,
+  RegisterPage,
+  workspaceSettingsCategory,
+} from "@antelopejs/interface-dms/page";
 import {
   Form,
   type FormFieldOrGroupSerialized,
@@ -11,7 +15,6 @@ import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/defa
 import { HttpMethod } from "@antelopejs/interface-dms/base/types/http";
 import { WORKSPACE_NAME_MAX_LENGTH } from "../../workspaces/workspace-name";
 import { isWorkspaceOwnerRequest } from "../../workspaces/workspace-owner";
-import { workspaceSettingsCategory } from "@antelopejs/interface-dms/page";
 
 /** Read and renamed here; the switcher refreshes when this form saves. */
 const CURRENT_WORKSPACE_ENDPOINT = "/api/saas/workspaces/current";

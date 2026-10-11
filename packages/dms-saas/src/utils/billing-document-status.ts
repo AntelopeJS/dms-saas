@@ -23,4 +23,3 @@ export const BILLING_DOCUMENT_STATUS_ITEMS = statusItems(
   BILLING_DOCUMENT_STATUSES,
   "saas.invoices.status",
 );
-

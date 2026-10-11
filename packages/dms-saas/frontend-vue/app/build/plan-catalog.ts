@@ -68,7 +68,8 @@ export interface PlanCatalog {
 export const PLANS_ENDPOINT = '/api/saas/plans'
 export const PLANS_PAGE_URL = '/modules/saas/catalog/plans'
 const MONTHS_PER_YEAR = 12
-const UNLIMITED = -1
+/** A member cap or feature limit no workspace reaches. */
+export const PLAN_UNLIMITED = -1
 const OFF = 0
 
 /** A plan's price in its currency, whole amounts without decimals. */
@@ -91,7 +92,7 @@ export function monthlyEquivalent(
 
 /** Whether a resolved feature value reads as included (on, a limit, unlimited). */
 export function isFeatureIncluded(value: unknown): boolean {
-	if (typeof value === 'number') return value === UNLIMITED || value > OFF
+	if (typeof value === 'number') return value === PLAN_UNLIMITED || value > OFF
 	if (typeof value === 'string') return value.trim().length > 0
 	return value === true
 }

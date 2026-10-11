@@ -9,6 +9,7 @@ import {
 } from './pricing'
 import { registerPathFor } from './routes'
 import { usePublicPlanFormat } from './usePublicPlanFormat'
+import { PLAN_UNLIMITED } from '../plan-catalog'
 
 interface PricingComparisonProps {
 	plans: PublicPlan[]
@@ -30,7 +31,6 @@ interface ComparisonRow {
 
 const props = defineProps<PricingComparisonProps>()
 
-const UNLIMITED_MEMBERS = -1
 const EMPTY_VALUE = '—'
 
 const { t } = useI18n()
@@ -46,7 +46,7 @@ function cell(value: string, note: string | null = null): ComparisonCell {
 
 function membersCell(plan: PublicPlan): ComparisonCell {
 	const value =
-		plan.maxMembers === UNLIMITED_MEMBERS
+		plan.maxMembers === PLAN_UNLIMITED
 			? t('saas.workspace.plan.unlimited')
 			: String(plan.maxMembers)
 	const note =

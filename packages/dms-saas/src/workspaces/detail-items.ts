@@ -18,6 +18,7 @@ import {
 import { monthlyAmountAfterTrial } from "../metrics/directory-summary";
 import { stripeObjectUrl } from "../stripe/dashboard-links";
 import type { WorkspaceOperatorView } from "./operator-view";
+import { PLAN_UNLIMITED } from "../db";
 
 /** What the facts strip of a workspace is built from, besides the view. */
 export interface WorkspaceFactsInputs {
@@ -28,7 +29,6 @@ export interface WorkspaceFactsInputs {
 }
 
 const D = "saas.workspace_detail";
-const UNLIMITED_MEMBERS = -1;
 const PAID_STATUS = "paid";
 const INVOICE_DOCUMENT = "invoice";
 const NO_VALUE = "—";
@@ -82,14 +82,14 @@ function mrrFact(view: WorkspaceOperatorView): StatGroupItem {
 }
 
 function seatsFact(view: WorkspaceOperatorView): StatGroupItem {
-  const maxMembers = view.plan?.maxMembers ?? UNLIMITED_MEMBERS;
+  const maxMembers = view.plan?.maxMembers ?? PLAN_UNLIMITED;
   const used = view.seats.occupied;
   return {
     id: "seats",
     icon: "i-ph-users",
     eyebrow: `$${D}.facts.seats`,
     value:
-      maxMembers === UNLIMITED_MEMBERS
+      maxMembers === PLAN_UNLIMITED
         ? used
         : composed(`${D}.facts.seats_of`, { used, max: maxMembers }),
     detail: composed(`${D}.facts.pending_invitations`, {

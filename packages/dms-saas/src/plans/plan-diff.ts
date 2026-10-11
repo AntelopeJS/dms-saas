@@ -3,7 +3,7 @@ import type {
   PlanFeatureValue,
   PlanMigrationFeatureDiff,
 } from "../db";
-import { FEATURE_UNLIMITED_VALUE } from "./plan-write";
+import { PLAN_UNLIMITED } from "../db";
 
 /** How a value reads moving from one plan to another. */
 export type PlanChangeKind = "lost" | "gained" | "changed" | "same";
@@ -29,7 +29,7 @@ function booleanRank(value: unknown): number {
 
 /** Off and missing rank lowest, unlimited highest, a limit in between. */
 function numberRank(value: unknown): number {
-  if (value === FEATURE_UNLIMITED_VALUE) return Number.POSITIVE_INFINITY;
+  if (value === PLAN_UNLIMITED) return Number.POSITIVE_INFINITY;
   return typeof value === "number" && value > 0 ? value : NO_RANK;
 }
 

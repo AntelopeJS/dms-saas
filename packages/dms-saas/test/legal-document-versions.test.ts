@@ -3,7 +3,6 @@ import type { LegalDocumentsModel } from "../src/db";
 import {
   bumpLegalDocumentVersions,
   readLegalDocuments,
-  readLegalDocumentVersions,
   saveLegalDocuments,
 } from "../src/operator-billing";
 import { LegalDocumentsController } from "../src/routes/public/legal-documents";

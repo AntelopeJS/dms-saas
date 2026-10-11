@@ -13,10 +13,13 @@ import { AuthTenantMember } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
-import { type Plan, PlanModel, TenantSubscriptionModel } from "../../db";
+import {
+  type Plan,
+  PlanModel,
+  TenantSubscriptionModel,
+  PLAN_UNLIMITED,
+} from "../../db";
 import { getSeatUsage, type SeatUsage } from "../../plans";
-
-const UNLIMITED_SEATS = -1;
 
 /** A workspace owner a member is told to ask for more seats. */
 interface SeatOwnerContact {
@@ -35,7 +38,7 @@ interface SeatQuotaResult extends SeatUsage {
 
 function offersMoreSeats(candidate: Plan, current: Plan): boolean {
   if (candidate._id === current._id) return false;
-  if (candidate.maxMembers === UNLIMITED_SEATS) return true;
+  if (candidate.maxMembers === PLAN_UNLIMITED) return true;
   return candidate.maxMembers > current.maxMembers;
 }
 
@@ -66,7 +69,7 @@ export class SaasTenantSeatsController extends Controller(
   declare planModel: PlanModel;
 
   private async resolveUpgradePlanName(plan: Plan): Promise<string | null> {
-    if (plan.maxMembers === UNLIMITED_SEATS) return null;
+    if (plan.maxMembers === PLAN_UNLIMITED) return null;
     const plans = await this.planModel.findPubliclyVisible();
     const upgrade = plans
       .filter((candidate) => offersMoreSeats(candidate, plan))
@@ -92,7 +95,7 @@ export class SaasTenantSeatsController extends Controller(
     const plan = subscription?.planId
       ? await this.planModel.get(subscription.planId)
       : undefined;
-    const isLimited = !!plan && plan.maxMembers !== UNLIMITED_SEATS;
+    const isLimited = !!plan && plan.maxMembers !== PLAN_UNLIMITED;
     return {
       ...usage,
       maxMembers: isLimited ? plan.maxMembers : null,

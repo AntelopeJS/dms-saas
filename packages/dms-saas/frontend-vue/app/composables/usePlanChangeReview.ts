@@ -3,11 +3,11 @@ import type {
 	SeatsInUse,
 	TenantPlanFeature,
 } from './useTenantPlan'
+import { PLAN_UNLIMITED } from '../build/plan-catalog'
 
 /** Query parameter naming the plan to review on arrival on the billing page. */
 export const UPGRADE_QUERY_PARAM = 'upgrade'
 
-const UNLIMITED_VALUE = -1
 const UNLIMITED_RANK = Number.POSITIVE_INFINITY
 
 /** One feature that differs between two plans. */
@@ -51,7 +51,7 @@ export function readUpgradeParam(
 
 /** Whether a plan's seat cap holds the seats in use (negative means no cap). */
 export function fitsSeats(plan: OfferedPlanView, seats: SeatsInUse): boolean {
-	return plan.maxMembers <= UNLIMITED_VALUE || plan.maxMembers >= seats.occupied
+	return plan.maxMembers <= PLAN_UNLIMITED || plan.maxMembers >= seats.occupied
 }
 
 /**
@@ -88,7 +88,7 @@ export function featureRank(value: unknown): number {
 	if (value === undefined || value === null || value === false) return 0
 	if (value === true) return 1
 	if (typeof value === 'number') {
-		return value === UNLIMITED_VALUE ? UNLIMITED_RANK : Math.max(value, 0)
+		return value === PLAN_UNLIMITED ? UNLIMITED_RANK : Math.max(value, 0)
 	}
 	return typeof value === 'string' && value.trim() ? 1 : 0
 }

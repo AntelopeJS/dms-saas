@@ -6,6 +6,7 @@ import {
 	formatPlanAmount,
 	type PlanCatalog,
 	PLANS_ENDPOINT,
+	PLAN_UNLIMITED,
 } from '../build/plan-catalog'
 import { fromMinorUnits } from '../composables/useMoneyFormat'
 
@@ -44,7 +45,6 @@ interface EditorContext {
 }
 
 const FEATURE_PREVIEW_LIMIT = 6
-const UNLIMITED = -1
 
 const SYNC_TONES: Record<SyncState, 'success' | 'warning' | 'neutral'> = {
 	synced: 'success',
@@ -141,8 +141,8 @@ const features = computed(() =>
 )
 
 const membersLine = computed(() => {
-	const cap = Number(draft.value.maxMembers ?? UNLIMITED)
-	return cap === UNLIMITED
+	const cap = Number(draft.value.maxMembers ?? PLAN_UNLIMITED)
+	return cap === PLAN_UNLIMITED
 		? t('saas.catalog.plans.card.members_unlimited')
 		: t('saas.catalog.plans.card.members', { count: cap }, cap)
 })

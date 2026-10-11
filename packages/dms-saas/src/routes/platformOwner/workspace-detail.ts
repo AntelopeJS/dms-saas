@@ -10,7 +10,12 @@ import type {
 } from "@antelopejs/interface-dms/base";
 import { fetchDefaultPaymentMethod } from "../../billing-state";
 import { getReportingCurrency } from "../../config";
-import { CreditNoteModel, type Invoice, InvoiceModel } from "../../db";
+import {
+  CreditNoteModel,
+  type Invoice,
+  InvoiceModel,
+  PLAN_UNLIMITED,
+} from "../../db";
 import {
   buildActivityFeed,
   isFlatFeed,
@@ -68,7 +73,6 @@ interface WorkspaceOverview {
 const ACTIVITY_LIMIT = 30;
 const OVERVIEW_ACTIVITY_LIMIT = 4;
 const TIMELINE_HISTORY_LIMIT = 4;
-const UNLIMITED_MEMBERS = -1;
 
 async function loadDocuments(tenantId: string): Promise<Invoice[]> {
   return GetModel(InvoiceModel, tenantId).getAllInvoices();
@@ -103,7 +107,7 @@ export class SaasWorkspaceDetailController extends Controller(
       user._id,
     );
     const customerId = view.subscription?.stripeCustomerId ?? null;
-    const maxMembers = view.plan?.maxMembers ?? UNLIMITED_MEMBERS;
+    const maxMembers = view.plan?.maxMembers ?? PLAN_UNLIMITED;
     return {
       _id: view.tenant._id,
       name: view.tenant.name,
@@ -125,7 +129,7 @@ export class SaasWorkspaceDetailController extends Controller(
       platformSupport: view.seats.platformSupport.length,
       pendingInvitations: view.seats.pendingInvites,
       seats: view.seats.occupied,
-      maxMembers: maxMembers === UNLIMITED_MEMBERS ? null : maxMembers,
+      maxMembers: maxMembers === PLAN_UNLIMITED ? null : maxMembers,
     };
   }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { PLAN_UNLIMITED } from '../build/plan-catalog'
 
-const UNLIMITED = -1
 const MIN_LIMIT = 1
 
 const props = defineProps<{
@@ -16,7 +16,7 @@ const { processI18n } = useTranslation()
 const { t, locale } = useI18n()
 
 const isUnlimited = computed(
-	() => props.modelValue === UNLIMITED || props.modelValue == null,
+	() => props.modelValue === PLAN_UNLIMITED || props.modelValue == null,
 )
 // The last cap typed, so ticking Unlimited off restores it.
 const lastLimit = ref<number>(
@@ -51,7 +51,7 @@ const unitLabel = computed(() =>
 )
 
 function setUnlimited(value: boolean | 'indeterminate'): void {
-	emit('update:modelValue', value === true ? UNLIMITED : lastLimit.value)
+	emit('update:modelValue', value === true ? PLAN_UNLIMITED : lastLimit.value)
 }
 
 function setLimit(value: number | null | undefined): void {

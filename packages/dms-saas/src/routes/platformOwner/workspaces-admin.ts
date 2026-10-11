@@ -25,6 +25,7 @@ import {
   TenantBillingInfoModel,
   TenantSubscriptionModel,
   type TenantSubscriptionStatus,
+  PLAN_UNLIMITED,
 } from "../../db";
 import {
   complimentaryAccessGrantedSubject,
@@ -80,7 +81,6 @@ interface JoinResult {
 }
 
 const JOIN = "$saas.workspace_detail.join";
-const UNLIMITED_MEMBERS = -1;
 
 /**
  * Joining takes no seat and shows the operator to the owner as platform
@@ -90,11 +90,11 @@ function joinConfirmationDialog(
   view: WorkspaceOperatorView,
   isMember: boolean,
 ): ConfirmDialog {
-  const maxMembers = view.plan?.maxMembers ?? UNLIMITED_MEMBERS;
+  const maxMembers = view.plan?.maxMembers ?? PLAN_UNLIMITED;
   const params = {
     name: view.tenant.name,
     seats: view.seats.occupied,
-    max: maxMembers === UNLIMITED_MEMBERS ? "∞" : maxMembers,
+    max: maxMembers === PLAN_UNLIMITED ? "∞" : maxMembers,
   };
   if (isMember)
     return {

@@ -12,6 +12,7 @@ import {
   PLAN_AUDIENCES,
   PLAN_BILLING_MODES,
   PLAN_INTERVALS,
+  PLAN_UNLIMITED,
 } from "../../../db";
 import { PlanAccessType } from "../../../plans/plan-access-type";
 import { PLANS_PAGE_URL, SaasPlansController } from "./index";
@@ -25,7 +26,6 @@ const FORM_KEY = "form";
 const NAME_MAX_LENGTH = 100;
 const DESCRIPTION_TEXTAREA_ROWS = 2;
 const BADGE_MAX_LENGTH = 50;
-const UNLIMITED_MEMBERS = -1;
 const DEFAULT_BADGE_COLOR_PLACEHOLDER = "#3b82f6";
 const PLAN_CURRENCIES = ["EUR", "USD"] as const;
 const FORM_COLUMN_SPAN = 2;
@@ -151,7 +151,7 @@ const LIMIT_FIELDS: FormField[] = [
     id: "maxMembers",
     label: `${TEXTS}.field.max_members`,
     description: `${TEXTS}.field.max_members_description`,
-    type: new DefaultDataTypes.NumberType({ min: UNLIMITED_MEMBERS }),
+    type: new DefaultDataTypes.NumberType({ min: PLAN_UNLIMITED }),
     inputComponent: CustomComponent("DmsSaasPlanLimitInput")
       .options({ unit: `${TEXTS}.field.members_unit` })
       .serializeSync(),

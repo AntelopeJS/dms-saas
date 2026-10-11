@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { PLAN_UNLIMITED } from './plan-catalog'
 
 type ValueType = 'boolean' | 'number' | 'string'
 type NumberMode = 'off' | 'limit' | 'unlimited'
 
 const OFF = 0
-const UNLIMITED = -1
 const MIN_LIMIT = 1
 
 const props = defineProps<{
@@ -20,7 +20,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
 const { t, locale } = useI18n()
 
 function modeOf(value: unknown): NumberMode {
-	if (value === UNLIMITED) return 'unlimited'
+	if (value === PLAN_UNLIMITED) return 'unlimited'
 	return typeof value === 'number' && value !== OFF ? 'limit' : 'off'
 }
 
@@ -36,7 +36,7 @@ const limit = ref<number | null>(
 watch(
 	() => props.modelValue,
 	(value) => {
-		if (typeof value === 'number' && value !== OFF && value !== UNLIMITED) {
+		if (typeof value === 'number' && value !== OFF && value !== PLAN_UNLIMITED) {
 			limit.value = value
 		}
 	},
@@ -70,7 +70,7 @@ const booleanModes = computed(() => [
 const NUMBER_MODE_VALUES: Record<NumberMode, () => unknown> = {
 	off: () => OFF,
 	limit: () => limit.value ?? MIN_LIMIT,
-	unlimited: () => UNLIMITED,
+	unlimited: () => PLAN_UNLIMITED,
 }
 
 function setNumberMode(next: string | number | undefined): void {

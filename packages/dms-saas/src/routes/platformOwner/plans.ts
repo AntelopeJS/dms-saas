@@ -25,6 +25,7 @@ import {
   PLAN_INTERVALS,
   PlanModel,
   TenantSubscriptionModel,
+  PLAN_UNLIMITED,
 } from "../../db";
 import { localizeFeature } from "../../plans";
 import {
@@ -61,7 +62,6 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
 const HTTP_INTERNAL_ERROR = 500;
-const DEFAULT_MAX_MEMBERS = -1;
 const VALID_PLAN_INTERVALS = new Set<string>(PLAN_INTERVALS);
 const STRIPE_SYNC_FIELDS = [
   "name",
@@ -399,7 +399,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
         isActive: sanitized.isActive ?? true,
         isDeleted: false,
         isPublic: sanitized.isPublic ?? true,
-        maxMembers: sanitized.maxMembers ?? DEFAULT_MAX_MEMBERS,
+        maxMembers: sanitized.maxMembers ?? PLAN_UNLIMITED,
         order: sanitized.order ?? (await this.nextOrder()),
         paymentProviderRefs: {},
         createdAt: new Date(),

@@ -16,6 +16,7 @@ import {
   PlanModel,
   type TenantSubscription,
   TenantSubscriptionModel,
+  PLAN_UNLIMITED,
 } from "../db";
 import { getSeatUsage } from "../plans";
 import { MS_PER_DAY } from "../utils/time";
@@ -23,7 +24,6 @@ import { resolveDataRetentionDays } from "./deletion";
 import { listMyWorkspaces } from "./my-workspaces";
 
 const HTTP_NOT_FOUND = 404;
-const UNLIMITED_SEATS = -1;
 
 /** Seats as the members page counts them; `maxMembers` null when unlimited. */
 export interface WorkspaceSeatsOverview {
@@ -121,7 +121,7 @@ function toSeats(
   usage: Awaited<ReturnType<typeof getSeatUsage>>,
   plan: Plan | null,
 ): WorkspaceSeatsOverview {
-  const isLimited = !!plan && plan.maxMembers !== UNLIMITED_SEATS;
+  const isLimited = !!plan && plan.maxMembers !== PLAN_UNLIMITED;
   return {
     members: usage.members,
     pendingInvites: usage.pendingInvites,
