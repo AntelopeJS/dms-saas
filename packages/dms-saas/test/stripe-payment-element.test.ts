@@ -7,7 +7,9 @@ import {
 
 const stripe = vi.hoisted(() => ({
   confirmSetup: vi.fn(),
-  elements: { create: () => ({ mount: vi.fn() }) },
+  elements: {
+    create: vi.fn((_type: string, _options: object) => ({ mount: vi.fn() })),
+  },
 }));
 
 vi.mock("../frontend-vue/node_modules/@stripe/stripe-js", () => ({
@@ -88,6 +90,16 @@ describe("useStripePaymentElement", () => {
     expect(stripe.confirmSetup).toHaveBeenCalledWith(
       buildSetupConfirmation(stripe.elements, PAYER_EMAIL),
     );
+  });
+
+  it("passes only options the Payment Element supports", async () => {
+    await mountedHandle(() => PAYER_EMAIL);
+
+    const [, elementOptions] = stripe.elements.create.mock.lastCall ?? [];
+    expect(Object.keys(elementOptions ?? {}).sort()).toEqual([
+      "fields",
+      "wallets",
+    ]);
   });
 
   it("reports an error Stripe.js throws instead of rejecting", async () => {
