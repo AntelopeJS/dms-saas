@@ -194,10 +194,6 @@ export async function ensurePlanIsAvailableForCustomer(
 
 const NO_CARD: CardDetails = { fingerprint: null, billingAddress: undefined };
 
-/**
- * A workspace without a card stays entirely local: the upgrade checkout
- * creates the Stripe customer the day one is needed.
- */
 const LOCAL_SUBSCRIPTION: CreatedSubscription = {
   stripeSubscriptionId: null,
   startedAt: null,
@@ -206,6 +202,10 @@ const LOCAL_SUBSCRIPTION: CreatedSubscription = {
   latestInvoiceId: null,
 };
 
+/**
+ * A workspace without a card stays entirely local: the upgrade checkout
+ * creates the Stripe customer the day one is needed.
+ */
 const CARDLESS_BILLING: ProvisionedBilling = {
   stripeCustomerId: null,
   subscription: LOCAL_SUBSCRIPTION,
@@ -447,12 +447,7 @@ function initialPaidUsagePeriods(
   return [{ stripeSubscriptionId, start: startedAt, end: null }];
 }
 
-/**
- * Both rows are keyed by the tenant id, like every other writer of them. The
- * default-plan backfill may cover the workspace between its creation and this
- * insert; the paid subscription then replaces that free row rather than
- * sitting beside it or failing a creation the customer already paid for.
- */
+/** The status a new subscription starts in. */
 function initialStatus(
   payload: WorkspaceProvisioningPayload,
   subscription: CreatedSubscription,
@@ -461,6 +456,12 @@ function initialStatus(
   return subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS;
 }
 
+/**
+ * Both rows are keyed by the tenant id, like every other writer of them. The
+ * default-plan backfill may cover the workspace between its creation and this
+ * insert; the paid subscription then replaces that free row rather than
+ * sitting beside it or failing a creation the customer already paid for.
+ */
 async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
   const { tenantId, payload, subscription } = input;
   const subscriptionPatch = {

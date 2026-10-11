@@ -22,20 +22,9 @@ async function workspaceNames(
   return new Map(tenants.map((tenant) => [tenant._id, tenant.name]));
 }
 
-function newestFirst<T>(
-  rows: T[],
-  dateOf: (row: T) => Date,
-  limit: number,
-): T[] {
-  return rows
-    .slice()
-    .sort((left, right) => dateOf(right).getTime() - dateOf(left).getTime())
-    .slice(0, limit);
-}
-
 async function platformSources(limit: number): Promise<ActivitySources> {
   const depth = limit * SOURCE_OVERFETCH;
-  const [documents, actions, tenants] = await Promise.all([
+  const [documents, actions, workspaces] = await Promise.all([
     GetModel(InvoiceModel, CROSS_INSTANCE)
       .table.orderBy("issuedAt", "desc")
       .slice(0, depth)
@@ -45,13 +34,12 @@ async function platformSources(limit: number): Promise<ActivitySources> {
       .filter((row) => row.key("status").eq(SUCCEEDED_STATUS))
       .slice(0, depth)
       .run() as Promise<OperatorAction[]>,
-    GetModel(TenantModel).table.pluck("_id", "name", "createdAt").run(),
+    GetModel(TenantModel)
+      .table.orderBy("createdAt", "desc")
+      .slice(0, depth)
+      .pluck("_id", "name", "createdAt")
+      .run() as Promise<ActivityWorkspace[]>,
   ]);
-  const workspaces = newestFirst(
-    tenants as ActivityWorkspace[],
-    (tenant) => new Date(tenant.createdAt),
-    depth,
-  );
   const names = await workspaceNames([
     ...documents.map((document) => getRowInstance(document)),
     ...actions.map((action) => action.tenantId),
