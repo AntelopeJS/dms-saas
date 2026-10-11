@@ -76,10 +76,11 @@ const isLoading = ref(true)
 const hasError = ref(false)
 
 const planId = computed(() => props.routeParams?.id)
-// DMS gap: a field's component is not handed its form's id, only its own
-// (`<page>.<block>`), so the form's is derived from it.
+// The form declared beside the preview, in the same grid row.
 const formComponentId = computed(() =>
-	props.componentId?.replace(/[^.]+$/, props.formKey ?? 'form'),
+	props.componentId
+		? siblingComponentId(props.componentId, props.formKey ?? 'form')
+		: undefined,
 )
 const live = useLiveFormValues(() => formComponentId.value) as Ref<PlanDraft | null>
 const planCatalog = usePlanCatalog()

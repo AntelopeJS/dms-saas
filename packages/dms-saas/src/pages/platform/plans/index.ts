@@ -4,10 +4,6 @@ import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { CARDS_DISPLAY_ID } from "@antelopejs/interface-dms/base/table-view";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { ButtonVariant } from "@antelopejs/interface-dms/base/types";
-import type {
-  ActionTarget,
-  ActionTargetSerialized,
-} from "@antelopejs/interface-dms/base/types/action-target";
 import type { CustomRowAction } from "@antelopejs/interface-dms/base/types/row-action";
 import { plansDataAPI } from "../../../data-api";
 import { SAAS_MODULE_ID } from "../../module";
@@ -41,39 +37,35 @@ type PlanRowActions = NonNullable<PlanTableOptions["rowActions"]>["custom"];
 const isInUse = { field: "boundWorkspaceCount", notEquals: 0 } as const;
 const isUnused = { field: "boundWorkspaceCount", equals: 0 } as const;
 
-/** A plan menu entry, keyed so the cards find the one a control stands for. */
-interface PlanAction extends CustomRowAction {
-  key: string;
-}
-
 /**
- * The menu of a plan, the same in the table and on the cards: duplicate,
+ * The menu of a plan, the same in the table and on the cards (which find the
+ * one a control stands for by its `id`): duplicate,
  * see its workspaces, open it in Stripe, stop or resume selling it, retire
  * it (moving its workspaces) or, once nobody uses it, delete it.
  */
-const PLAN_ACTIONS: PlanAction[] = [
+const PLAN_ACTIONS: CustomRowAction[] = [
   {
-    key: "duplicate",
+    id: "duplicate",
     label: `${TEXTS}.action.duplicate`,
     icon: "i-ph-copy",
     target: { type: "page", url: `${PLANS_PAGE_PATH}/new?duplicate={_id}` },
   },
   {
-    key: "view_workspaces",
+    id: "view_workspaces",
     label: `${TEXTS}.action.view_workspaces`,
     icon: "i-ph-buildings",
     target: { type: "page", url: `${WORKSPACES_PAGE_PATH}?plan={_id}` },
     rule: isInUse,
   },
   {
-    key: "open_stripe",
+    id: "open_stripe",
     label: `${TEXTS}.action.open_stripe`,
     icon: "i-ph-stripe-logo",
     target: { type: "external", url: "{stripeProductUrl}", newTab: true },
     rule: { field: "stripeProductUrl", notEquals: null },
   },
   {
-    key: "stop_selling",
+    id: "stop_selling",
     label: `${TEXTS}.action.stop_selling`,
     icon: "i-ph-pause",
     color: "warning",
@@ -88,7 +80,7 @@ const PLAN_ACTIONS: PlanAction[] = [
     rule: { field: "isActive", equals: true },
   },
   {
-    key: "put_on_sale",
+    id: "put_on_sale",
     label: `${TEXTS}.action.put_on_sale`,
     icon: "i-ph-play",
     target: {
@@ -101,7 +93,7 @@ const PLAN_ACTIONS: PlanAction[] = [
     rule: { field: "isActive", equals: false },
   },
   {
-    key: "retire",
+    id: "retire",
     label: `${TEXTS}.action.retire`,
     icon: "i-ph-archive",
     color: "warning",
@@ -114,7 +106,7 @@ const PLAN_ACTIONS: PlanAction[] = [
     rule: isInUse,
   },
   {
-    key: "delete",
+    id: "delete",
     label: `${TEXTS}.action.delete`,
     icon: "i-ph-trash",
     color: "error",
@@ -128,31 +120,6 @@ const PLAN_ACTIONS: PlanAction[] = [
     rule: isUnused,
   },
 ];
-
-const PLAN_ROW_ACTIONS: CustomRowAction[] = PLAN_ACTIONS.map(
-  ({ key: _key, ...action }) => action,
-);
-
-function serializeTarget(target: ActionTarget): ActionTargetSerialized {
-  if (
-    target.type === "modal" ||
-    target.type === "drawer" ||
-    target.type === "sidePanel"
-  ) {
-    return { ...target, component: target.component.serializeSync() };
-  }
-  return target;
-}
-
-/**
- * The plan menu as a card receives it (its `menu` prop): the table's own
- * actions, serialized, so a card runs them through the table (confirmation,
- * request, refresh) exactly as the grid does.
- */
-const PLAN_CARD_ACTIONS = PLAN_ACTIONS.map((action) => ({
-  ...action,
-  target: serializeTarget(action.target),
-}));
 
 @RegisterPage()
 export class SaasPlansController extends PageController(
@@ -226,7 +193,7 @@ export class SaasPlansController extends PageController(
       // The rules read listed values (`boundWorkspaceCount` is a number on the
       // row), which the controller types as the getters computing them.
       // oxlint-disable-next-line anti-slop/no-chained-type-assertions
-      custom: PLAN_ROW_ACTIONS as unknown as PlanRowActions,
+      custom: PLAN_ACTIONS as unknown as PlanRowActions,
     },
     formContainer: {
       type: "page",
@@ -261,10 +228,7 @@ export class SaasPlansController extends PageController(
     displays: [{ id: CARDS_DISPLAY_ID, capabilities: { filters: false } }],
     defaultDisplay: CARDS_DISPLAY_ID,
     card: {
-      // `menu`, not `actions`: the display hands every card the table's
-      // row actions as its `actions` prop, which would override the option.
       component: CustomComponent("DmsSaasPlanCard").options({
-        menu: PLAN_CARD_ACTIONS,
         selectable: HAS_SELECTION,
       }),
     },

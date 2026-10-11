@@ -16,9 +16,9 @@ import {
 const FEATURE_PREVIEW_LIMIT = 5
 const PERCENT = 100
 const SHARE_FRACTION_DIGITS = 1
-const STOP_SELLING_KEY = 'stop_selling'
-const PUT_ON_SALE_KEY = 'put_on_sale'
-const RETIRE_KEY = 'retire'
+const STOP_SELLING_ID = 'stop_selling'
+const PUT_ON_SALE_ID = 'put_on_sale'
+const RETIRE_ID = 'retire'
 
 // The card of the plans' `cards` display. Besides the props it reads, the
 // display hands it the table's columns and label key: kept off the root
@@ -34,12 +34,10 @@ const props = withDefaults(
 		select: (value?: boolean) => void
 		open: () => void
 		reorder?: PlanCardReorder
-		/** The plan menu, the table's custom row actions (card option). */
-		menu?: PlanCardAction[]
 		/** The table selects rows (card option, as `rowActions.hasSelection`). */
 		selectable?: boolean
 	}>(),
-	{ selected: false, reorder: undefined, menu: () => [], selectable: false },
+	{ selected: false, reorder: undefined, selectable: false },
 )
 
 const { t, locale } = useI18n()
@@ -51,24 +49,15 @@ const catalog = usePlanCatalog()
 const plan = computed(() => props.row)
 const canEdit = computed(() => props.actions.canEditRow(props.row))
 const titleId = computed(() => `plan-card-${props.rowId}`)
-const allowedActions = computed(() =>
-	props.menu.filter(
-		(action) =>
-			!action.rule ||
-			evaluateRowActionRule(
-				action.rule,
-				props.row as unknown as Record<string, unknown>,
-			),
-	),
-)
+const allowedActions = computed(() => props.actions.customFor(props.row))
 const saleAction = computed(() =>
 	allowedActions.value.find(
 		(action) =>
-			action.key === (plan.value.isActive ? STOP_SELLING_KEY : PUT_ON_SALE_KEY),
+			action.id === (plan.value.isActive ? STOP_SELLING_ID : PUT_ON_SALE_ID),
 	),
 )
 const retireAction = computed(() =>
-	allowedActions.value.find((action) => action.key === RETIRE_KEY),
+	allowedActions.value.find((action) => action.id === RETIRE_ID),
 )
 const isLegacy = computed(() => !plan.value.isActive)
 const isSeatPlan = computed(() => plan.value.billingMode === 'seat')

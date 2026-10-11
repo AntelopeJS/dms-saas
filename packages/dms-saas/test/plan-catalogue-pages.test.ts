@@ -22,7 +22,7 @@ interface SerializedTab {
 }
 
 interface SerializedAction {
-  key?: string;
+  id?: string;
   label: string;
   rule?: unknown;
   confirm?: unknown;
@@ -31,7 +31,7 @@ interface SerializedAction {
 
 interface SerializedCardComponent {
   componentName?: string;
-  options?: { menu?: SerializedAction[]; selectable?: boolean };
+  options?: { selectable?: boolean };
 }
 
 interface CardsDisplayOptions {
@@ -63,11 +63,11 @@ describe("the plans page", () => {
     expect(card.options?.selectable).toBe(options?.rowActions?.hasSelection);
   });
 
-  it("hands each card the plan menu the grid uses", async () => {
+  it("names each menu entry, so the cards find the one a control stands for", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const actions = (await planCard()).options?.menu ?? [];
+    const actions = (options?.rowActions?.custom ?? []) as SerializedAction[];
 
-    expect(actions.map((action) => action.key)).toEqual([
+    expect(actions.map((action) => action.id)).toEqual([
       "duplicate",
       "view_workspaces",
       "open_stripe",
@@ -77,12 +77,9 @@ describe("the plans page", () => {
       "delete",
     ]);
     expect(
-      actions.find((action) => action.key === "retire")?.target.component
+      actions.find((action) => action.id === "retire")?.target.component
         ?.componentName,
     ).toBe("DmsSaasRetirePlanModal");
-    expect(options?.rowActions?.custom?.map((action) => action.label)).toEqual(
-      actions.map((action) => action.label),
-    );
   });
 
   // Moving cards by hand is off while a filter narrows the rows: deleted

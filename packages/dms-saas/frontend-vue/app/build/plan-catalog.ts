@@ -116,7 +116,8 @@ export function cardFeatures(
 
 /** One entry of the plan menu, as the table serializes it for the cards. */
 export interface PlanCardAction {
-	key: string
+	/** Names the entry a card control stands for (`stop_selling`, `retire`). */
+	id?: string
 	label: string
 	icon?: string
 	color?: string
@@ -130,6 +131,8 @@ export interface PlanCardTableActions {
 	edit: (row: CatalogPlanRow) => void
 	/** Runs a menu entry through the table: confirmation, request, refresh. */
 	custom: (action: PlanCardAction, row: CatalogPlanRow) => void
+	/** The plan's menu entries, the table's custom row actions its rules allow. */
+	customFor: (row: CatalogPlanRow) => PlanCardAction[]
 }
 
 /** A card's move handle, as the cards display of a hand-ordered table hands it. */
