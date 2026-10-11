@@ -9,6 +9,7 @@ import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
 import * as workspaceLifecycleInterface from "@antelopejs/interface-dms-saas/workspace-lifecycle";
 import type { ScheduledTask } from "node-cron";
 import {
+  registerOwnerOnlyPermissionsResolver,
   registerPlanPermissionsResolver,
   registerSubscriptionAccessGate,
 } from "./auth";
@@ -50,6 +51,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
   initStripeClient(config.stripe);
   registerSaasHookListeners();
   registerPlanPermissionsResolver();
+  registerOwnerOnlyPermissionsResolver();
   registerSubscriptionAccessGate();
   registerSeatHooks();
   registerWorkspaceDirectoryHooks();

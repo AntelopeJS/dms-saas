@@ -7,7 +7,7 @@ import {
 } from "@antelopejs/interface-dms/layout-banners";
 import { TenantSubscriptionModel } from "../db";
 import { MS_PER_DAY } from "../utils/time";
-import { isWorkspaceOwnerRequest } from "./past-due-banner";
+import { isWorkspaceOwnerRequest } from "../workspaces/workspace-owner";
 
 const TRIALING_STATUS = "trialing";
 const BANNER_COMPONENT = "DmsSaasTrialEndingBanner";
