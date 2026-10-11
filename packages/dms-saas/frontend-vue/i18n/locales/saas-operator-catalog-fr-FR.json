@@ -551,7 +551,7 @@
 					"value_type": "Type de valeur",
 					"value_type_description": "Verrouillé tant que des offres stockent une valeur : leurs valeurs ne se liraient plus.",
 					"unit": "Unité",
-					"unit_description": "Affichée après le nombre : 100 Go.",
+					"unit_description": "Affichée après le nombre, dans chaque langue : 100 Go. Écrivez singulier | pluriel pour une unité qui s’accorde avec lui : projet | projets.",
 					"used_by": "Utilisée par",
 					"is_detail_row": "Tableau comparatif",
 					"is_detail_row_description": "Garde le tableau court. Les visiteurs le déplient pour voir cette ligne.",

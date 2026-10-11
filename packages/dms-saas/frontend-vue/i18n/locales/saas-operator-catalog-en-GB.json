@@ -551,7 +551,7 @@
 					"value_type": "Value type",
 					"value_type_description": "Locked while plans store a value: their values would no longer read.",
 					"unit": "Unit",
-					"unit_description": "Shown after the number: 100 GB.",
+					"unit_description": "Shown after the number, in each language: 100 GB. Write singular | plural for a unit that agrees with it: project | projects.",
 					"used_by": "Used by",
 					"is_detail_row": "Comparison table",
 					"is_detail_row_description": "Keeps the table short. Visitors expand it to see this row.",

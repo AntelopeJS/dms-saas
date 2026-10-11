@@ -25,9 +25,10 @@ export type FeatureLocalizedText = Record<string, string>;
 /**
  * Feature definition available to SaaS plans.
  *
- * `displayName` and `tooltip` are localized: read them after
- * `feature.localize(locale)`, write them through `localize("*")` with one
- * value per locale.
+ * `displayName`, `description`, `tooltip` and `unit` are localized: read
+ * them after `feature.localize(locale)`, write them through `localize("*")`
+ * with one value per locale. A unit that agrees with its number is written
+ * `singular | plural` (`project | projects`), as an i18n message is.
  */
 @RegisterTable(featuresTableName, CORE_SCHEMA_NAME)
 export class Feature extends Table.with(LocalizationModifier) {
@@ -38,6 +39,7 @@ export class Feature extends Table.with(LocalizationModifier) {
   @Field("string")
   declare displayName: string;
 
+  @Localized({ fallbackLocale: FEATURE_FALLBACK_LOCALE })
   @Field("string")
   declare description: string;
 
@@ -51,6 +53,7 @@ export class Feature extends Table.with(LocalizationModifier) {
   @Field("string")
   declare tooltip: string | null;
 
+  @Localized({ fallbackLocale: FEATURE_FALLBACK_LOCALE })
   @Field("string")
   declare unit: string | null;
 

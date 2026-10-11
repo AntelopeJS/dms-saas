@@ -81,7 +81,9 @@ export function isDowngrade(
  */
 export const FEATURE_LOCALIZED_FIELDS: Array<keyof Feature> = [
   "displayName",
+  "description",
   "tooltip",
+  "unit",
 ];
 
 /**
