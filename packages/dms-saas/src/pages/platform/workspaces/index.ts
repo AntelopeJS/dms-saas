@@ -126,7 +126,7 @@ export class SaasWorkspacesListController extends PageController(
       labelKey: "name",
       pageSize: PAGE_SIZE,
       tabs: STATUS_TABS,
-      views: { items: VIEWS, layout: "menu" },
+      views: { items: VIEWS, layout: "strip" },
       quickFilters: [
         { field: "planName", icon: "i-ph-stack" },
         { field: "ownerStatus", icon: "i-ph-user-circle" },

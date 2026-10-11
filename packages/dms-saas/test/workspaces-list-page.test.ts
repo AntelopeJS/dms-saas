@@ -72,6 +72,10 @@ describe("workspace list", () => {
     }
   });
 
+  it("lays the views out as a strip of pills", () => {
+    expect(table.options?.views?.layout).toBe("strip");
+  });
+
   it("totals the listed MRR in the reporting currency", async () => {
     const filter = SaasWorkspacesListController.table.onFilterCallback;
     const filtered = (await filter?.(
