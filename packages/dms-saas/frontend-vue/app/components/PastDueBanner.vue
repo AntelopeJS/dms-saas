@@ -63,20 +63,15 @@ const ownerMailto = computed(() =>
 )
 
 function payInvoice(): void {
-	const unpaid = invoice.value
-	if (!unpaid) return
-	openPayment({
-		invoiceId: unpaid.invoiceId,
-		number: unpaid.number,
-		amount: unpaid.amount,
-		currency: unpaid.currency,
-		hostedInvoiceUrl: unpaid.hostedInvoiceUrl,
-	})
+	if (invoice.value) openPayment(invoice.value)
 }
 
 // The layout strip is drawn by the DMS around this content; on the billing
 // page the whole strip steps aside for the detailed alert instead of leaving
-// an empty band.
+// an empty band. DMS gap: a layout banner cannot be hidden by route (its
+// `visible` resolver runs once, server-side, without the path), so the strip
+// is found by the private `data-dms-layout-banner` attribute of the DMS's
+// DashboardBanners.
 watchEffect(() => {
 	const row = root.value?.closest<HTMLElement>(LAYOUT_BANNER_SELECTOR)
 	if (row) row.hidden = isOnBillingPage.value

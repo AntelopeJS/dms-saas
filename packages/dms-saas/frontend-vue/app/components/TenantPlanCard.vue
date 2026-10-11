@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useWorkspaceName } from '../build/useWorkspaceName'
 import { UPGRADE_QUERY_PARAM } from '../composables/usePlanChangeReview'
@@ -8,7 +8,6 @@ import { BILLING_CHOOSE_PLAN_PARAM } from '../build/public/routes'
 const KEY_PREFIX = 'saas.tenant_billing.plan'
 const MEMBERS_PATH = '/settings/workspace/members'
 const DATA_EXPORT_PATH = '/settings/workspace/data-export'
-const CHOOSE_PLAN_LINK_SELECTOR = `a[href="#${BILLING_CHOOSE_PLAN_PARAM}"]`
 const FREE_STATE = 'free'
 const ACTIVE_STATUS = 'active'
 const TRIALING_STATUS = 'trialing'
@@ -422,22 +421,7 @@ async function consumeChoosePlanParam(): Promise<void> {
 	if (canChangePlan.value) comparison.open()
 }
 
-/**
- * A link to `#choose-plan` on the page (the complimentary banner's "Choose a
- * plan", a stock banner whose actions are links) opens Compare in place. The
- * click is taken before the link follows it: the router would visit the page
- * again and remount every block for an anchor.
- */
-function openChoosePlanLink(event: MouseEvent): void {
-	const target = event.target instanceof Element ? event.target : null
-	if (!target?.closest(CHOOSE_PLAN_LINK_SELECTOR)) return
-	event.preventDefault()
-	event.stopPropagation()
-	if (isTenantOwner.value) comparison.open()
-}
-
 onMounted(async () => {
-	document.addEventListener('click', openChoosePlanLink, true)
 	await releaseCancelledCheckout()
 	void nextInvoice.load()
 	await Promise.all([tenantPlan.load(), billingStatus.load()])
@@ -446,9 +430,14 @@ onMounted(async () => {
 	await consumeChoosePlanParam()
 })
 
-onBeforeUnmount(() => {
-	document.removeEventListener('click', openChoosePlanLink, true)
-})
+// The complimentary banner links the same page with `?choose-plan`: the
+// card stays mounted, so it answers the query as it changes too.
+watch(
+	() => route.query[BILLING_CHOOSE_PLAN_PARAM],
+	(value) => {
+		if (value !== undefined && !isLoading.value) void consumeChoosePlanParam()
+	},
+)
 </script>
 
 <template>

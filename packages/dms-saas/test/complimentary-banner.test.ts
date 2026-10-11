@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TenantSubscription } from "../src/db";
 import {
-  CHOOSE_PLAN_ANCHOR,
+  CHOOSE_PLAN_URL,
   type ComplimentaryBannerInputs,
   complimentaryBanner,
 } from "../src/workspaces/complimentary-banner";
@@ -66,7 +66,7 @@ describe("complimentary access banner", () => {
     expect(writeText(banner.title)).toBe("Complimentary access ends 4 Oct");
     expect(writeText(banner.description)).toMatch(/^3 days left\./);
     expect(banner.actions).toEqual([
-      expect.objectContaining({ to: CHOOSE_PLAN_ANCHOR, icon: "i-ph-stack" }),
+      expect.objectContaining({ to: CHOOSE_PLAN_URL, icon: "i-ph-stack" }),
     ]);
   });
 

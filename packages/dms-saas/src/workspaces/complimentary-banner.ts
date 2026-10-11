@@ -1,4 +1,5 @@
 import type { BannerContent, BannerTone } from "@antelopejs/interface-dms/base";
+import { tenantBillingPage } from "@antelopejs/interface-dms-saas/pages";
 import { BLOCKING_STATUSES } from "../auth/subscription-access-gate";
 import type { TenantSubscription } from "../db";
 import { composed, countParam, dateParam } from "../i18n/composed-text";
@@ -27,11 +28,11 @@ interface ComplimentaryLook {
 const K = "saas.tenant_billing.complimentary";
 
 /**
- * The anchor the plan card answers by opening its plan comparison in place
- * (see `TenantPlanCard`): a banner action is a link, and the comparison
- * lives in the plan card next to it.
+ * The billing page with its plan comparison open: the plan card opens it on
+ * `?choose-plan` (see `TenantPlanCard`), as the access-restricted screen
+ * links it.
  */
-export const CHOOSE_PLAN_ANCHOR = "#choose-plan";
+export const CHOOSE_PLAN_URL = `${tenantBillingPage.fullSlug}?choose-plan=1`;
 
 const LOOKS: Record<ComplimentaryState, ComplimentaryLook> = {
   indefinite: { tone: "info", icon: "i-ph-gift", canChoosePlan: false },
@@ -114,7 +115,7 @@ export function complimentaryBanner(
           {
             label: `$${K}.choose_plan`,
             icon: "i-ph-stack",
-            to: CHOOSE_PLAN_ANCHOR,
+            to: CHOOSE_PLAN_URL,
           },
         ]
       : [],

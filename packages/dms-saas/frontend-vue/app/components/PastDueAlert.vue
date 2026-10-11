@@ -124,15 +124,7 @@ const DOT_CLASSES: Record<TimelineStep['tone'], string> = {
 }
 
 function payInvoice(): void {
-	const unpaid = invoice.value
-	if (!unpaid) return
-	openPayment({
-		invoiceId: unpaid.invoiceId,
-		number: unpaid.number,
-		amount: unpaid.amount,
-		currency: unpaid.currency,
-		hostedInvoiceUrl: unpaid.hostedInvoiceUrl,
-	})
+	if (invoice.value) openPayment(invoice.value)
 }
 
 onMounted(load)
