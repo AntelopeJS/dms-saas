@@ -126,7 +126,8 @@ export class SaasWorkspacesListController extends PageController(
       { field: "planName", icon: "i-ph-stack" },
       { field: "ownerStatus", icon: "i-ph-user-circle" },
     ],
-    defaultSort: { field: "createdAt", desc: true },
+    // Largest accounts first, as an operator scans the directory.
+    defaultSort: { field: "mrrMinor", desc: true },
     queryParamFilters: { plan: { field: "planId" } },
     footer: { countLabel: `${W}.footer_count` },
     emptyStates: {
