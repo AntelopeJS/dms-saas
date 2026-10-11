@@ -32,13 +32,19 @@ export async function readGrantablePermissions(): Promise<string[]> {
   return [...new Set(collectPermissionIds(await GetPermissions()))];
 }
 
-// A feature without a tooltip holds one empty text per language, as the DMS
-// form writes it: the data API cannot localize a null.
-const NO_TOOLTIP: LocalizedText = { en: "", fr: "" };
+// A feature without a tooltip or a unit holds one empty text per language, as
+// the DMS form writes it: a localized field cannot be read back from a null.
+const NO_TEXT: LocalizedText = { en: "", fr: "" };
 
-function toFeatureRow(feature: SeedFeature): SeedRow {
+/** The feature as stored, every localized field holding a text per language. */
+export function toFeatureRow(feature: SeedFeature): SeedRow {
   const { id, ...fields } = feature;
-  return { ...fields, tooltip: fields.tooltip ?? NO_TOOLTIP, _id: id };
+  return {
+    ...fields,
+    tooltip: fields.tooltip ?? NO_TEXT,
+    unit: fields.unit ?? NO_TEXT,
+    _id: id,
+  };
 }
 
 function localizeAll(feature: Feature): Feature {
