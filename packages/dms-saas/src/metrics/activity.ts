@@ -4,7 +4,12 @@ import type {
   Tone,
 } from "@antelopejs/interface-dms/base";
 import type { Invoice } from "../db";
-import { dateParam, moneyParam, valueText } from "../i18n/composed-text";
+import {
+  dateParam,
+  listDateFormat,
+  moneyParam,
+  valueText,
+} from "../i18n/composed-text";
 import type { OperatorAction } from "../operator-actions/db/operator-action.table";
 import type { WorkspaceOperatorAction } from "../operator-actions/types";
 import { getRowInstance } from "../utils/row-instance";
@@ -230,8 +235,7 @@ function workspaceEntry(
 }
 
 function trailingDay(at: Date, now: Date): BlockText {
-  const isThisYear = at.getUTCFullYear() === now.getUTCFullYear();
-  return valueText(dateParam(at, isThisYear ? "day" : "medium"));
+  return valueText(dateParam(at, listDateFormat(at, now)));
 }
 
 function withTrailingDay(entry: ActivityEntry, now?: Date): ActivityFeedItem {

@@ -48,6 +48,14 @@ export function dateParam(
   return { type: "date", value: new Date(date).toISOString(), format };
 }
 
+/**
+ * How a list writes a date: day and month alone this year ("Sep 26"), with
+ * its year otherwise ("Sep 26, 2025").
+ */
+export function listDateFormat(date: Date, now: Date): ComposedTextDateFormat {
+  return date.getUTCFullYear() === now.getUTCFullYear() ? "day" : "medium";
+}
+
 /** The distance from now when the text is drawn ("2 hours ago"). */
 export function relativeParam(
   date: Date | string,

@@ -30,7 +30,8 @@ import {
   PlanMigrationModel,
   PlanModel,
 } from "../../db";
-import { composed } from "../../i18n/composed-text";
+import { composed, listDateFormat, valueText } from "../../i18n/composed-text";
+import { dateTimeParam } from "../../plans/migration-blocks";
 import { migrationTotals } from "../../plans/migration-detail";
 import { statusPillDisplay, statusType } from "../../utils/status-vocabulary";
 
@@ -67,6 +68,11 @@ const STAGE_ITEMS = PLAN_MIGRATION_STAGES.map((value) => ({
 
 interface MigrationRowInstance {
   table: PlanMigration;
+}
+
+function listDateTime(date: Date): ComposedText {
+  const at = new Date(date);
+  return valueText(dateTimeParam(at, listDateFormat(at, new Date())));
 }
 
 function migrationOf(self: unknown): PlanMigration {
@@ -242,7 +248,7 @@ export class planMigrationsDataAPI extends DataController(
   @Column({
     name: `${TEXTS}.column.started`,
     type: new DefaultDataTypes.DateType(),
-    display: new DefaultDisplays.RelativeDateDisplay({ style: "day" }),
+    display: new DefaultDisplays.TwoLineDisplay({ primaryField: "startedOn" }),
     size: DATE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
@@ -255,15 +261,28 @@ export class planMigrationsDataAPI extends DataController(
   @Column({
     name: `${TEXTS}.column.finished`,
     type: new DefaultDataTypes.DateType(),
-    display: new DefaultDisplays.RelativeDateDisplay({
-      style: "day",
+    display: new DefaultDisplays.TwoLineDisplay({
+      primaryField: "finishedOn",
       emptyLabel: `${TEXTS}.column.not_finished`,
-      emptyTone: "muted",
     }),
     size: DATE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare completedAt: Date | null;
+
+  // A migration runs for minutes: the lists date it to the minute.
+  @Listable(["createdAt"])
+  @Access(AccessMode.ReadOnly)
+  get startedOn(): ComposedText {
+    return listDateTime(migrationOf(this).createdAt);
+  }
+
+  @Listable(["completedAt"])
+  @Access(AccessMode.ReadOnly)
+  get finishedOn(): ComposedText | null {
+    const { completedAt } = migrationOf(this);
+    return completedAt ? listDateTime(completedAt) : null;
+  }
 
   @Listable(["status"])
   @Access(AccessMode.ReadOnly)
