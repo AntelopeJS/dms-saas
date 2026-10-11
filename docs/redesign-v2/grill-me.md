@@ -11,7 +11,8 @@ Inputs:
   `settings/members.html`, `settings/data-export.html`) and its UX review (findings S01 to S20);
 - `@antelopejs/dms` 0.6.0 / `@antelopejs/interface-dms` 0.4.0 (PR AntelopeJS/dms#119 and its
   follow-ups #160 to #167), the migration guide `docs/02.building/13.migration-0-3-to-0-4.md`;
-- `@antelopejs/dms-frontend` 0.4.0 and 0.5.0 (module-declared auto-imports, `componentPrefix`).
+- `@antelopejs/dms-frontend` 0.4.0 and 0.5.0 (module-declared auto-imports, `componentPrefix`);
+  the module now requires `@antelopejs/dms` 0.7.7 and `@antelopejs/dms-frontend` 0.5.2 (see Q5).
 
 ---
 
@@ -45,8 +46,8 @@ workspace-owner pages stay in the core settings navigation, under the DMS's work
 **Q5. Which ranges?**
 `@antelopejs/interface-dms >=0.4.0 <1.0.0` (the repository's `antelopejs-check-interface-ranges`
 requires `<1.0.0` for an interface it does not own), `@antelopejs/interface-data-api >=0.2.0`,
-`@antelopejs/dms >=0.6.0 <0.7.0`, `@antelopejs/dms-frontend 0.5.0`, `@antelopejs/core 1.13.5`,
-`@antelopejs/mongodb 1.4.2`, and the frontend layer's `engines` `>=0.5.0 <0.6.0`.
+`@antelopejs/dms >=0.7.7 <0.8.0`, `@antelopejs/dms-frontend >=0.5.2 <0.6.0`, `@antelopejs/core 1.13.5`,
+`@antelopejs/mongodb 1.4.2`, and the frontend layer's `engines` `>=0.5.2 <0.6.0`.
 
 **Q6. `interface-dms-saas` changes in a breaking way. Does the module require 0.4 of it now?**
 No. The repository releases the interface first and raises the module's range in a follow-up
@@ -425,8 +426,8 @@ Recorded after the build and the browser pass, so the answers above stay as they
 - **Q46, Data export:** the DMS export API has no cancel and no archive size, and keeps an archive
   24 hours; the page shows the real expiry date.
 - **Q51, suspended screen:** data is deleted only for cancelled workspaces, so a suspended one reads
-  "nothing has been deleted"; the invoice timeline has no attempt count (the mirror does not store
-  one).
+  "nothing has been deleted"; its invoice timeline shows no attempt count (the mirror stores
+  `Invoice.attemptCount`, which the invoice lists read, but the timeline does not).
 - **Form rows that need the full width** (the plan feature matrix, the segment rules): a DMS form
   row gives its control a 240px column when the field has no label; `frontend-vue/app/assets/css/saas.css`
   lets such an editor span the row. Worth fixing in the DMS's `FieldRow`.
