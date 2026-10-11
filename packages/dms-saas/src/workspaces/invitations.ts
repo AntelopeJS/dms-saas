@@ -217,11 +217,25 @@ export async function revokeInvitation(
   inviteId: string,
 ): Promise<UserInvite> {
   const invite = await loadActionableInvite(tenantId, inviteId);
+  await cancelInvitation(tenantId, invite);
+  return invite;
+}
+
+/**
+ * Cancels a loaded invitation through the DMS resolution: its token stops
+ * working, its extensions are cleaned up and the DMS hooks run.
+ *
+ * @param tenantId Workspace of the invitation
+ * @param invite The invitation
+ */
+export async function cancelInvitation(
+  tenantId: string,
+  invite: UserInvite,
+): Promise<void> {
   const resolution = await decideInvite({
     tenantId,
     invite,
     reason: REVOKED_REASON,
   });
   await completeInviteResolution(resolution);
-  return invite;
 }

@@ -4,6 +4,7 @@ import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { UserInviteModel } from "@antelopejs/interface-dms/db";
 import { recomputeTenantBillingState } from "../billing-state";
+import { cancelInvitation } from "./invitations";
 import type { TenantSubscription, TenantSubscriptionStatus } from "../db";
 import { DEFAULT_DATA_RETENTION_DAYS, TenantSubscriptionModel } from "../db";
 import {
@@ -129,9 +130,8 @@ async function runAfterCancellation(tenantId: string): Promise<number> {
  * confirmation dialog announces.
  */
 async function cancelPendingInvitations(tenantId: string): Promise<void> {
-  const model = GetModel(UserInviteModel, tenantId);
-  const invites = await model.getAll();
-  await Promise.all(invites.map((invite) => model.delete(invite._id)));
+  const invites = await GetModel(UserInviteModel, tenantId).getAll();
+  for (const invite of invites) await cancelInvitation(tenantId, invite);
 }
 
 async function bestEffort(

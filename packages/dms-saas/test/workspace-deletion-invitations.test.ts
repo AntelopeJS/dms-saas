@@ -30,10 +30,6 @@ vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
     }),
     UserInviteModel: () => ({
       getAll: async () => [{ _id: "invite-1" }, { _id: "invite-2" }],
-      delete: async (id: string) => {
-        store.deletedInvites.push(id);
-        return 1;
-      },
     }),
     BillingSettingsModel: () => ({ get: async () => undefined }),
   };
@@ -42,6 +38,16 @@ vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
     GetModel: (model: { name: string }) => fakes[model.name]?.(),
   };
 });
+
+vi.mock("@antelopejs/interface-dms/invite-resolution", () => ({
+  decideInvite: async (input: { invite: { _id: string }; reason: string }) => ({
+    inviteId: input.invite._id,
+    reason: input.reason,
+  }),
+  completeInviteResolution: async (resolution: { inviteId: string }) => {
+    store.deletedInvites.push(resolution.inviteId);
+  },
+}));
 
 vi.mock("../src/billing-state", () => ({
   recomputeTenantBillingState: async () => undefined,
@@ -57,7 +63,7 @@ vi.mock("../src/stripe", () => ({ getStripeClient: () => ({}) }));
 const { requestWorkspaceDeletion } = await import("../src/workspaces/deletion");
 
 describe("workspace deletion", () => {
-  it("cancels the pending invitations, as the confirmation announces", async () => {
+  it("cancels the pending invitations through the DMS, as the confirmation announces", async () => {
     await expect(requestWorkspaceDeletion("acme", "owner")).resolves.toEqual({
       status: "cancelled",
       retentionDays: 30,
