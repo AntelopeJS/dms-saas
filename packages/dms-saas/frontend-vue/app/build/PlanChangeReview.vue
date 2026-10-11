@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { planChangeHeadingCase } from './plan-change-heading'
 
 interface SummaryRow {
 	key: string
@@ -77,26 +78,32 @@ const dueToday = computed(() => {
 	return charge.value?.amountDueMinorUnits ?? null
 })
 
+const headingCase = computed(() =>
+	planChangeHeadingCase(preview.value, props.currentPlan, props.plan),
+)
+
 const heading = computed(() => {
 	const params = {
 		plan: props.plan.name,
 		current: props.currentPlanName ?? '',
 		date: day(preview.value?.effectiveAt),
+		trialEnd: day(preview.value?.trialEndsAt),
 	}
-	if (isFreeSwitch.value)
-		return {
-			title: t(`${KEY_PREFIX}.free_title`, params),
-			description: t(`${KEY_PREFIX}.free_description`, params),
-		}
-	return isDowngrade.value
-		? {
-				title: t(`${KEY_PREFIX}.downgrade_title`, params),
-				description: t(`${KEY_PREFIX}.downgrade_description`, params),
-			}
-		: {
-				title: t(`${KEY_PREFIX}.upgrade_title`, params),
-				description: t(`${KEY_PREFIX}.upgrade_description`, params),
-			}
+	return {
+		title: t(`${KEY_PREFIX}.${headingCase.value}_title`, params),
+		description: t(`${KEY_PREFIX}.${headingCase.value}_description`, params),
+	}
+})
+
+// During a trial the lines are what the first invoice will bill, not what is
+// due today: their eyebrow says when they are charged.
+const linesEyebrow = computed(() => {
+	if (isDowngrade.value) return t(`${KEY_PREFIX}.charged_today`)
+	if (preview.value?.isTrial)
+		return t(`${KEY_PREFIX}.trial_lines`, {
+			date: day(preview.value.trialEndsAt),
+		})
+	return t(`${KEY_PREFIX}.due_today`)
 })
 
 const chargeRows = computed<SummaryRow[]>(() => {
@@ -140,7 +147,13 @@ const confirmLabel = computed(() => {
 	if (isDowngrade.value) return t(`${KEY_PREFIX}.confirm_downgrade`)
 	if (isFreeSwitch.value)
 		return t(`${KEY_PREFIX}.confirm_free`, { plan: props.plan.name })
-	if (preview.value?.isTrial) return t(`${KEY_PREFIX}.confirm_trial`)
+	if (preview.value?.isTrial)
+		return t(`${KEY_PREFIX}.confirm_trial`, { plan: props.plan.name })
+	if (headingCase.value === 'same_price')
+		return t(`${KEY_PREFIX}.confirm_same_price`, {
+			plan: props.plan.name,
+			amount: money(dueToday.value),
+		})
 	return t(`${KEY_PREFIX}.confirm_upgrade`, { amount: money(dueToday.value) })
 })
 
@@ -310,11 +323,7 @@ onMounted(() => {
 
 		<div v-else-if="preview && !isFreeSwitch" class="flex flex-col gap-2 text-sm">
 			<p class="text-muted text-xs font-semibold uppercase">
-				{{
-					isDowngrade
-						? $t(`${KEY_PREFIX}.charged_today`)
-						: $t(`${KEY_PREFIX}.due_today`)
-				}}
+				{{ linesEyebrow }}
 			</p>
 			<div
 				v-for="row in chargeRows"
