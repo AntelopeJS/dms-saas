@@ -9,6 +9,22 @@ loadDotenv({ path: resolve(__dirname, ".env") });
 const CLIENT_HOSTS = ["localhost", "127.0.0.1"];
 const CLIENT_PORTS = [3000, 3001];
 
+interface OAuthCredentials {
+  clientId?: string;
+  clientSecret?: string;
+}
+
+// The DMS offers a provider, and draws its "Continue with" button on the
+// login and sign-up screens, only once both credentials are set: read from
+// the environment or `playground/.env`, never committed. Register
+// `http://localhost:3001/auth/oauth/<provider>/callback` with the provider.
+function oauthCredentials(prefix: string): OAuthCredentials {
+  return {
+    clientId: process.env[`${prefix}_CLIENT_ID`],
+    clientSecret: process.env[`${prefix}_CLIENT_SECRET`],
+  };
+}
+
 export default defineConfig({
   name: "playground",
   logging: {
@@ -67,6 +83,15 @@ export default defineConfig({
       config: {
         auth: {
           jwtSecret: "dev",
+          oauth: {
+            providers: {
+              github: oauthCredentials("GITHUB"),
+              google: oauthCredentials("GOOGLE"),
+            },
+            // Signing up with a provider opens a new account, which then
+            // sets up its first workspace on `auth/no-workspace`.
+            allowAccountCreation: true,
+          },
         },
         homepage: "/welcome",
         meta: {

@@ -34,6 +34,12 @@ playground frontend during backend development, use `pnpm frontend:dev`; this
 dispatches through the core CLI as `ajs dms dev`. The playground connects to
 MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, either in the
 environment or in `playground/.env`.
+Sign-in with GitHub and Google is wired to `GITHUB_CLIENT_ID`,
+`GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, read the
+same way: a provider's button appears on the login and register screens once
+both of its values are set, with
+`http://localhost:3001/auth/oauth/<provider>/callback` registered as its
+callback URL.
 
 ### Playground data set
 
