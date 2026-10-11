@@ -1,7 +1,7 @@
 import { formatMajorUnits } from './useMoneyFormat'
 import { PLAN_UNLIMITED } from '../build/plan-catalog'
 
-/** Q36: a number feature reads `0` as off, `-1` as unlimited, n ≥ 1 as a limit. */
+/** A number feature reads `0` as off, `-1` as unlimited, n ≥ 1 as a limit. */
 const OFF_NUMERIC_VALUE = 0
 const EMPTY_LABEL = '—'
 const INCLUDED_LABEL = '✓'
@@ -300,12 +300,8 @@ function formatNumberWithUnit(
 		: formatQuantityInRule(value, rule, context)
 }
 
-function isTruthyFlag(value: unknown): boolean {
-	return value === true || value === 'true' || value === 1
-}
-
 function formatBoolean(value: unknown): string {
-	return isTruthyFlag(value) ? INCLUDED_LABEL : EXCLUDED_LABEL
+	return value === true ? INCLUDED_LABEL : EXCLUDED_LABEL
 }
 
 function formatNumeric(

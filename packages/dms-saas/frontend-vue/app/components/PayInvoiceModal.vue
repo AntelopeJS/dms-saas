@@ -5,11 +5,10 @@ import PayInvoicePanel from '../build/PayInvoicePanel.vue'
 /** The invoices table row, as the list returned it. */
 interface InvoiceRow {
 	_id: string
-	number?: string | null
-	total?: number | null
-	amount?: number | null
-	currency?: string | null
-	hostedInvoiceUrl?: string | null
+	number: string | null
+	total: number
+	currency: string
+	hostedInvoiceUrl: string | null
 }
 
 // Opened by the "Pay invoice" row action of the billing page's table, which
@@ -26,10 +25,10 @@ const invoice = computed<PayableInvoice | null>(() => {
 	if (!row?._id) return null
 	return {
 		invoiceId: row._id,
-		number: row.number ?? null,
-		amount: row.total || row.amount || 0,
-		currency: row.currency ?? 'EUR',
-		hostedInvoiceUrl: row.hostedInvoiceUrl ?? null,
+		number: row.number,
+		amount: row.total,
+		currency: row.currency,
+		hostedInvoiceUrl: row.hostedInvoiceUrl,
 	}
 })
 

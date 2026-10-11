@@ -1,13 +1,3 @@
-/** The DMS's semantic tones (`Tone` of dms-ui), restated so tests can import this file. */
-export type SaasTone =
-	| 'neutral'
-	| 'primary'
-	| 'secondary'
-	| 'success'
-	| 'warning'
-	| 'error'
-	| 'info'
-
 /**
  * One colour per status across the module, mirrored from the backend's
  * `STATUS_TONES` (src/utils/status-vocabulary.ts); a test keeps them equal.
@@ -56,23 +46,23 @@ export const SAAS_STATUS_TONES = {
 		expired: 'error',
 		none: 'neutral',
 	},
-} as const satisfies Record<string, Record<string, SaasTone>>
+} as const satisfies Record<string, Record<string, Tone>>
 
 export type SaasStatusFamily = keyof typeof SAAS_STATUS_TONES
 
 export interface SaasStatusView {
 	label: string
-	tone: SaasTone
+	tone: Tone
 }
 
-const FALLBACK_TONE: SaasTone = 'neutral'
+const FALLBACK_TONE: Tone = 'neutral'
 
 /** The tone of a status, neutral for a value the family does not know. */
 function saasStatusTone(
 	family: SaasStatusFamily,
 	status: string | null | undefined,
-): SaasTone {
-	const tones: Record<string, SaasTone> = SAAS_STATUS_TONES[family]
+): Tone {
+	const tones: Record<string, Tone> = SAAS_STATUS_TONES[family]
 	return (status && tones[status]) || FALLBACK_TONE
 }
 

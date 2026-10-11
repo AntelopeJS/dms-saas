@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
+import { readApiErrorKey } from '../composables/useApiErrorMessage'
 import {
 	type CatalogFeature,
 	formatPlanAmount,
@@ -33,6 +34,7 @@ type Step = 1 | 2 | 3
 
 const ROWS_PREVIEW = 4
 const CONFIRM_TEXT_FIELD = 'confirmText'
+const RETIRE_FAILED_KEY = 'saas.catalog.retire.failed'
 
 const KIND_ICONS: Record<PlanChangeKind, string> = {
 	lost: 'i-ph-minus-circle',
@@ -199,10 +201,7 @@ async function loadImpact(): Promise<void> {
 }
 
 function readError(error: unknown): string {
-	const data = (error as { data?: unknown }).data
-	if (typeof data === 'string') return data
-	const message = (data as { message?: unknown } | undefined)?.message
-	return typeof message === 'string' ? message : 'saas.catalog.retire.failed'
+	return readApiErrorKey(error) ?? RETIRE_FAILED_KEY
 }
 
 async function prepare(): Promise<void> {
@@ -221,8 +220,13 @@ async function prepare(): Promise<void> {
 	}
 }
 
+/** A refusal the server sent under a field (`{ message, field }`). */
+interface FieldRefusal {
+	field?: unknown
+}
+
 function isTypedRefusal(error: unknown): boolean {
-	const data = (error as { data?: { field?: unknown } }).data
+	const data = (error as { data?: FieldRefusal } | undefined)?.data
 	return typeof data === 'object' && data?.field === CONFIRM_TEXT_FIELD
 }
 

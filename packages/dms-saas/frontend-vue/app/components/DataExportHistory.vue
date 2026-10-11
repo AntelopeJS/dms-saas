@@ -19,7 +19,7 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 /** What a row says about its archive; `expired` outlives every status. */
 type ExportRowState = 'ready' | 'partial' | 'expired' | 'failed' | 'pending'
 
-const ROW_TONES: Record<ExportRowState, SaasTone> = {
+const ROW_TONES: Record<ExportRowState, Tone> = {
 	ready: 'success',
 	partial: 'warning',
 	expired: 'neutral',
