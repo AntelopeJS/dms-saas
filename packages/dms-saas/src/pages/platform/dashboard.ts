@@ -138,8 +138,13 @@ export class SaasDashboardController extends PageController(
               valueFormat: "currency",
               valuePrecision: "native",
               showDelta: true,
+              // Credits are negative: stacked, they hang under the day's
+              // collected bar, which then takes the whole column instead of
+              // half of it. `columnWidth` is a fixed pixel width, too wide
+              // for the 90 daily bars of a quarter.
               chart: ChartColumn({
                 xaxisType: "datetime",
+                stacked: true,
                 showLegend: true,
                 color: ["success", "info"],
               }),

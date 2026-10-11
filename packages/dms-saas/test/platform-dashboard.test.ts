@@ -374,6 +374,17 @@ describe("dashboard page", () => {
     });
   });
 
+  it("hangs the day's credits under its collected bar", () => {
+    const charts =
+      SaasDashboardController.charts.serializeSync() as SerializedBlock;
+    const card = findChild(charts, "paidInvoices");
+
+    expect(card && findChild(card, "chart")?.options).toMatchObject({
+      type: "column",
+      stacked: true,
+    });
+  });
+
   it.each(["en-GB", "fr-FR"])("%s has every key the headlines name", (code) => {
     const summary = summariseDirectory(ROWS, NOW, "EUR");
     const endings = [
