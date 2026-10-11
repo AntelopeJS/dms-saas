@@ -428,6 +428,6 @@ Recorded after the build and the browser pass, so the answers above stay as they
 - **Q51, suspended screen:** data is deleted only for cancelled workspaces, so a suspended one reads
   "nothing has been deleted"; its invoice timeline shows no attempt count (the mirror stores
   `Invoice.attemptCount`, which the invoice lists read, but the timeline does not).
-- **Form rows that need the full width** (the plan feature matrix, the segment rules): a DMS form
-  row gives its control a 240px column when the field has no label; `frontend-vue/app/assets/css/saas.css`
-  lets such an editor span the row. Worth fixing in the DMS's `FieldRow`.
+- **Form rows that need the full width** (the plan feature matrix, the segment rules): these
+  fields have no label, and the DMS's `FieldRow` spans a label-less control over both form columns
+  (AntelopeJS/dms#205), so no workaround is left in dms-saas.

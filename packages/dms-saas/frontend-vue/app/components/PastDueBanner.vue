@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watchEffect } from 'vue'
+import { computed, onMounted } from 'vue'
 import PayInvoiceDialog from '../build/PayInvoiceDialog.vue'
 import { useWorkspaceName } from '../build/useWorkspaceName'
 
@@ -12,7 +12,6 @@ const props = withDefaults(defineProps<{ audience?: 'owner' | 'member' }>(), {
 
 const KEY_PREFIX = 'saas.tenant_billing.past_due.strip'
 const BILLING_PATH = '/settings/workspace/billing'
-const LAYOUT_BANNER_SELECTOR = '[data-dms-layout-banner]'
 const DEADLINE_FORMAT: Intl.DateTimeFormatOptions = {
 	day: 'numeric',
 	month: 'long',
@@ -24,12 +23,11 @@ const { formatMinorUnits } = useMoneyFormat()
 const { open: openPayment } = usePayInvoice()
 const { t, locale } = useI18n()
 const route = useDmsRoute()
-const root = ref<HTMLElement | null>(null)
 
 const isOwnerStrip = computed(() => props.audience === 'owner')
 const invoice = computed(() => data.value?.unpaidInvoice ?? null)
 const owner = computed(() => data.value?.workspaceOwner ?? null)
-/** The billing page shows the detailed alert in its place. */
+/** The billing page mounts its own payment dialog. */
 const isOnBillingPage = computed(() => route.path.startsWith(BILLING_PATH))
 
 const deadline = computed(() =>
@@ -66,23 +64,11 @@ function payInvoice(): void {
 	if (invoice.value) openPayment(invoice.value)
 }
 
-// The layout strip is drawn by the DMS around this content; on the billing
-// page the whole strip steps aside for the detailed alert instead of leaving
-// an empty band. DMS gap: a layout banner cannot be hidden by route (its
-// `visible` resolver runs once, server-side, without the path), so the strip
-// is found by the private `data-dms-layout-banner` attribute of the DMS's
-// DashboardBanners.
-watchEffect(() => {
-	const row = root.value?.closest<HTMLElement>(LAYOUT_BANNER_SELECTOR)
-	if (row) row.hidden = isOnBillingPage.value
-})
-
 onMounted(load)
 </script>
 
 <template>
 	<div
-		ref="root"
 		data-saas-past-due-banner
 		class="flex flex-wrap items-center gap-x-3 gap-y-2"
 	>

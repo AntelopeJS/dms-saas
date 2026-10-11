@@ -215,7 +215,7 @@ onMounted(load)
 </script>
 
 <template>
-	<div class="dms-saas-wide-field flex flex-col gap-4">
+	<div class="flex flex-col gap-4">
 		<div v-if="isLoading" class="flex flex-col gap-2">
 			<USkeleton v-for="index in 4" :key="index" class="h-10 w-full" />
 		</div>
