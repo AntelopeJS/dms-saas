@@ -1,13 +1,14 @@
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import { describe, expect, it } from "vitest";
 import { workspacesDataAPI } from "../src/data-api/platformOwner/workspaces";
-import { BILLING_STATES } from "../src/db";
 import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
+import { WORKSPACE_STATUS_ORDER } from "../src/utils/status-vocabulary";
 
 interface SerializedTable {
   options?: {
     tabs?: { id: string; filter?: { accessorKey: string; value?: string } }[];
     views?: { items: { id: string; filters?: { accessorKey: string }[] }[] };
+    defaultSort?: { field: string; desc?: boolean };
   };
 }
 
@@ -29,11 +30,18 @@ describe("workspace list", () => {
 
   it("offers a tab per status, filtering on the stored billing state", () => {
     expect(table.options?.tabs?.map((tab) => tab.id)).toEqual([
-      ...BILLING_STATES,
+      ...WORKSPACE_STATUS_ORDER,
     ]);
     expect(table.options?.tabs?.[0]?.filter).toMatchObject({
       accessorKey: "billingState",
-      value: BILLING_STATES[0],
+      value: WORKSPACE_STATUS_ORDER[0],
+    });
+  });
+
+  it("opens on the largest accounts first", () => {
+    expect(table.options?.defaultSort).toEqual({
+      field: "mrrMinor",
+      desc: true,
     });
   });
 
