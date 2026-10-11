@@ -240,8 +240,8 @@ describe("segment CSV export", () => {
     const row = segmentExportRow(
       user("eve", {
         workspaces: [
-          workspace({ name: "Initech", mrr: 4900 }),
-          workspace({ name: "Hooli", isOwner: false, mrr: 9900 }),
+          workspace({ name: "Initech", mrr: 49 }),
+          workspace({ name: "Hooli", isOwner: false, mrr: 99 }),
         ],
       }),
     );

@@ -30,7 +30,7 @@ const HTTP_NOT_FOUND = 404;
 const OWNERS_EXPORT_SCOPE = "saas-segment-owners";
 const MAX_GENERATE_PROGRESS = 99;
 const DONE_PROGRESS = 100;
-const MINOR_UNITS_PER_UNIT = 100;
+const MONEY_FRACTION_DIGITS = 2;
 const WORKSPACE_SEPARATOR = "; ";
 
 const CSV_HEADER = [
@@ -80,7 +80,8 @@ export function segmentExportRow(projection: UserProjection): string[] {
     projection.isValidated ? "true" : "false",
     projection.workspaces.map((w) => w.name).join(WORKSPACE_SEPARATOR),
     owned.map((w) => w.name).join(WORKSPACE_SEPARATOR),
-    (ownedMrr / MINOR_UNITS_PER_UNIT).toFixed(2),
+    // The projection's MRR is in major units already, as segment rules read it.
+    ownedMrr.toFixed(MONEY_FRACTION_DIGITS),
   ];
 }
 
