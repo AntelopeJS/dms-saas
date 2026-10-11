@@ -41,8 +41,8 @@ import {
 const SEGMENTS_API_BASE = "/api/saas/segments";
 const CHANGE_WINDOW_DAYS = 7;
 const ISO_DAY_LENGTH = 10;
-// The visible columns fit a 1440px screen without scrolling.
-const RULES_COLUMN_SIZE = 340;
+// The visible columns fit a 1440px screen without scrolling, scrollbar included.
+const RULES_COLUMN_SIZE = 330;
 const NAME_COLUMN_SIZE = 220;
 const COUNT_COLUMN_SIZE = 125;
 const REGULAR_COLUMN_SIZE = 130;

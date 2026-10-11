@@ -123,9 +123,9 @@ const TOTALS_COUNT = 4;
 const JOURNAL_SKELETON_ROWS = 3;
 const ROW_API = `${PLAN_MIGRATIONS_ENDPOINT}/{migrationId}/workspaces/{_id}`;
 const OUTCOME_COLUMN_SIZE = 150;
-const NAME_COLUMN_SIZE = 200;
+const NAME_COLUMN_SIZE = 190;
 const STRIPE_COLUMN_SIZE = 215;
-const REASON_COLUMN_SIZE = 240;
+const REASON_COLUMN_SIZE = 210;
 const TIME_COLUMN_SIZE = 150;
 const ATTENTION_GROUP = "attention";
 

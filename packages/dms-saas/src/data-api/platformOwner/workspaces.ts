@@ -40,10 +40,11 @@ import {
 } from "./workspace-cells";
 
 const COLUMN = "$saas.workspaces.column";
-// The seven visible columns fit a 1440px screen without scrolling.
-const NAME_COLUMN_SIZE = 190;
+// The seven visible columns fit a 1440px screen without scrolling, scrollbar
+// included.
+const NAME_COLUMN_SIZE = 175;
 const STATUS_COLUMN_SIZE = 130;
-const PLAN_COLUMN_SIZE = 155;
+const PLAN_COLUMN_SIZE = 150;
 const MRR_COLUMN_SIZE = 100;
 const OWNER_COLUMN_SIZE = 185;
 const RENEWS_COLUMN_SIZE = 170;

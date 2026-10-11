@@ -187,7 +187,7 @@ export class creditNotesDataAPI extends DataController(
     name: `${COLUMN}.reason`,
     type: REASON_TYPE,
     display: new DefaultDisplays.TwoLineDisplay({ subField: "internalMemo" }),
-    size: 135,
+    size: 120,
   })
   @Access(AccessMode.ReadOnly)
   get reasonCode(): string | null {

@@ -38,7 +38,7 @@ import { HiddenStringFilter } from "./hidden-filter";
 
 const NO_PLAN = "—";
 // The five columns fit beside the sidebar of the user page.
-const NAME_COLUMN_SIZE = 200;
+const NAME_COLUMN_SIZE = 185;
 const ROLE_COLUMN_SIZE = 150;
 const REGULAR_COLUMN_SIZE = 110;
 
