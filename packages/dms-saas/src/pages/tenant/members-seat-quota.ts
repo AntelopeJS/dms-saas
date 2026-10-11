@@ -15,13 +15,14 @@ function seatQuotaBlock() {
       description: "$saas.permissions.workspace.seats_description",
       icon: "i-ph-users-three",
     })
-    .after(TABLE_ANCHOR);
+    .before(TABLE_ANCHOR);
 }
 
 /**
  * Seats are a plan quota, so the DMS members page cannot own this block: the
  * seat meter, the platform support list and the "seats full" notice are
- * injected from here, under the members table, and stay inert on a
+ * injected from here, above the members table as the settings design
+ * places them, and stay inert on a
  * deployment that runs the DMS without the SaaS module. The invite button
  * itself stays the DMS's: `RegisterInviteAvailability` disables it at the
  * limit, with the reason.

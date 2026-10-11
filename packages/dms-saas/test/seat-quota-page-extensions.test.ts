@@ -8,7 +8,7 @@ interface ExtensionInfo {
 }
 
 describe("seat quota page extensions", () => {
-  it("puts the seat quota under the table of both workspace member pages", async () => {
+  it("puts the seat quota above the table of both workspace member pages", async () => {
     const register = vi
       .spyOn(internal.RegisterPageExtension, "register")
       .mockImplementation(() => undefined);
@@ -30,7 +30,7 @@ describe("seat quota page extensions", () => {
         (targetFullId) => ({
           targetFullId,
           components: [
-            { key: "seatQuota", side: "after", anchorPath: ["table"] },
+            { key: "seatQuota", side: "before", anchorPath: ["table"] },
           ],
         }),
       ),

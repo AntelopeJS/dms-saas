@@ -110,7 +110,7 @@ function initialsOf(name: string): string {
 
 // Refetch rather than serve the shared cache: adding a member or an invite
 // lands back on this page, and a stale count would contradict the table right
-// above the block.
+// under the block.
 onMounted(refresh)
 </script>
 
