@@ -447,6 +447,10 @@
 					"title": "Plan changed",
 					"description": "Your workspace is now on the {plan} plan."
 				},
+				"plan_change_redirected": {
+					"title": "Scheduled plan change updated",
+					"description": "The {plan} plan replaces the one your workspace was scheduled to switch to, at the same date."
+				},
 				"platform_owner_added": {
 					"title": "Platform admin added",
 					"description": "{email} is now a platform admin."

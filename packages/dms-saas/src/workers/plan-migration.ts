@@ -15,6 +15,7 @@ import { PlanMigrationModel, PlanModel, TenantSubscriptionModel } from "../db";
 import { notifyTenantOwners, planMigratedSubject } from "../notifications";
 import { countOccupiedSeats, syncStripeSeatQuantity } from "../plans";
 import { publishMigrationChange } from "../plans/migration-realtime";
+import { redirectPendingPlanChange } from "../plan-changes/pending-target";
 import { getStripeClient } from "../stripe/client";
 import { getRowInstance } from "../utils";
 
@@ -26,6 +27,11 @@ const FIRST_ATTEMPT = 1;
 const DECLINED_PAYMENT_ERROR_TYPE = "StripeCardError";
 const UNKNOWN_FAILURE = "Reconciliation required";
 const NOT_REACHED_ERROR = "Not reached before the migration stopped";
+/** What the owners are told: moved now, or their scheduled change redirected. */
+const MIGRATION_NOTICES = {
+  migrated: "$saas.notifications.payload.plan_migrated",
+  redirected: "$saas.notifications.payload.plan_change_redirected",
+} as const;
 const NOT_MOVED_STATUSES = new Set<PlanMigrationTenantOutcome["status"]>([
   "reconciliation_required",
   "failed",
@@ -140,6 +146,25 @@ interface WorkspaceMigration {
   subscription: TenantSubscription;
   target: PlanMigrationTarget;
   seatQuantity: number;
+  /**
+   * The workspace is not on the retired plan but scheduled to switch to it:
+   * its scheduled change is redirected to the target, nothing moves now.
+   */
+  isScheduledChange: boolean;
+}
+
+/**
+ * What a migration does to a workspace it captured: on the retired plan, it
+ * moves now; scheduled to switch to it, the scheduled change goes to the
+ * target instead, or it would land on a plan that no longer exists.
+ */
+function capturedBy(
+  subscription: TenantSubscription | undefined,
+  fromPlanId: string,
+): "move" | "redirect" | null {
+  if (subscription?.planId === fromPlanId) return "move";
+  if (subscription?.pendingPlanId === fromPlanId) return "redirect";
+  return null;
 }
 
 /**
@@ -199,9 +224,21 @@ async function changeProviderPlan(work: WorkspaceMigration): Promise<void> {
   );
 }
 
+async function redirectScheduledChange(
+  work: WorkspaceMigration,
+): Promise<void> {
+  await redirectPendingPlanChange({
+    tenantId: work.tenantId,
+    subscription: work.subscription,
+    operationId: work.operationId,
+    target: work.target,
+  });
+}
+
 async function applyWorkspaceMigration(
   work: WorkspaceMigration,
 ): Promise<void> {
+  if (work.isScheduledChange) return redirectScheduledChange(work);
   await changeProviderPlan(work);
   const subscriptionModel = GetModel(TenantSubscriptionModel, work.tenantId);
   const freePlanPatch: Partial<TenantSubscription> = work.target.stripePriceId
@@ -240,12 +277,15 @@ async function snapshotMigration(
   if (!target || target.isDeleted || !target.isActive)
     throw new Error("Target plan is unavailable");
   const resolved = await planModel.resolveInheritance(target);
-  const subscriptions = await GetModel(
-    TenantSubscriptionModel,
-    CROSS_INSTANCE,
-  ).findByPlan(job.fromPlanId);
+  const model = GetModel(TenantSubscriptionModel, CROSS_INSTANCE);
+  const [onPlan, scheduledToPlan] = await Promise.all([
+    model.findByPlan(job.fromPlanId),
+    model.findByPendingPlan(job.fromPlanId),
+  ]);
   return {
-    tenantIds: [...new Set(subscriptions.map(getRowInstance))],
+    tenantIds: [
+      ...new Set([...onPlan, ...scheduledToPlan].map(getRowInstance)),
+    ],
     target: {
       planId: target._id,
       name: target.name,
@@ -275,7 +315,8 @@ async function admitWorkspace(
   if (!job.snapshot) throw new Error("Migration snapshot is missing");
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await model.findOne();
-  if (!subscription || subscription.planId !== job.fromPlanId)
+  const capture = capturedBy(subscription, job.fromPlanId);
+  if (!subscription || !capture)
     throw new Error("Snapshot subscription changed; reconciliation required");
   const seatQuantity = await countOccupiedSeats(tenantId);
   await recordTenantOutcome(job, {
@@ -298,6 +339,7 @@ async function admitWorkspace(
     subscription,
     target: job.snapshot.target,
     seatQuantity,
+    isScheduledChange: capture === "redirect",
   };
 }
 
@@ -326,11 +368,14 @@ async function migrateTenant(
     throw error;
   }
   if (job.notifyMembers) {
+    const payload = work.isScheduledChange
+      ? MIGRATION_NOTICES.redirected
+      : MIGRATION_NOTICES.migrated;
     await notifyTenantOwners(tenantId, planMigratedSubject, {
       eventId: work.operationId,
       icon: ICON_MIGRATION,
-      title: "$saas.notifications.payload.plan_migrated.title",
-      description: "$saas.notifications.payload.plan_migrated.description",
+      title: `${payload}.title`,
+      description: `${payload}.description`,
       params: { plan: work.target.name },
     });
   }

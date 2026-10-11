@@ -9,6 +9,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -19,7 +20,7 @@ import {
   PlanModel,
   TenantSubscriptionModel,
 } from "../src/db";
-import type { PlanMigration } from "../src/db";
+import type { PlanMigration, TenantSubscription } from "../src/db";
 import {
   processPlanMigrationJob,
   resumePendingPlanMigrations,
@@ -34,6 +35,21 @@ vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
 vi.mock("../src/plans", () => ({
   countOccupiedSeats: async () => 3,
   syncStripeSeatQuantity: async () => undefined,
+}));
+vi.mock("../src/plans/seat-capacity", () => ({
+  countOccupiedSeats: async () => 3,
+}));
+
+const SCHEDULED_AT = new Date("2026-11-01T00:00:00.000Z");
+const schedule = vi.hoisted(() => ({
+  reset: vi.fn(async () => undefined),
+  downgrade: vi.fn(async () => new Date("2026-11-01T00:00:00.000Z")),
+  cancelAtPeriodEnd: vi.fn(async () => new Date("2026-11-01T00:00:00.000Z")),
+}));
+vi.mock("../src/stripe/plan-schedule", () => ({
+  resetSubscriptionPendingState: schedule.reset,
+  scheduleSubscriptionDowngrade: schedule.downgrade,
+  setSubscriptionCancelAtPeriodEnd: schedule.cancelAtPeriodEnd,
 }));
 
 const SETUP_TIMEOUT_MS = 60_000;
@@ -92,16 +108,82 @@ async function createJob(): Promise<PlanMigration> {
   return job;
 }
 
-async function createSubscription(planId: string): Promise<string> {
+async function createSubscription(
+  planId: string,
+  fields: Partial<TenantSubscription> = {},
+): Promise<string> {
   const tenantId = randomUUID();
   await GetModel(TenantSubscriptionModel, tenantId).insert({
     _id: randomUUID(),
     planId,
     status: "active",
     stripeSubscriptionId: null,
+    ...fields,
   });
   return tenantId;
 }
+
+/** A workspace on its own plan, scheduled to switch to the retired one. */
+async function createScheduledChange(
+  job: PlanMigration,
+  currentPlanId: string = randomUUID(),
+): Promise<string> {
+  return createSubscription(currentPlanId, {
+    stripeSubscriptionId: "sub_scheduled",
+    pendingPlanId: job.fromPlanId,
+    pendingPlanChangeAt: new Date("2026-10-31T00:00:00.000Z"),
+  });
+}
+
+describe("retiring a plan scheduled changes switch to", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("redirects the scheduled change to the target plan", async () => {
+    const job = await createJob();
+    const tenantId = await createScheduledChange(job);
+
+    await processPlanMigrationJob(job._id);
+
+    const persisted = await GetModel(PlanMigrationModel).get(job._id);
+    expect(persisted?.snapshot?.tenantIds).toEqual([tenantId]);
+    expect(persisted?.tenantOutcomes).toEqual([
+      expect.objectContaining({ tenantId, status: "succeeded" }),
+    ]);
+    expect(schedule.reset).toHaveBeenCalledWith("sub_scheduled");
+    // The target has no Stripe price: the change lands as a cancellation at
+    // the period end, as any deferred change to such a plan does.
+    expect(schedule.cancelAtPeriodEnd).toHaveBeenCalledWith(
+      "sub_scheduled",
+      true,
+    );
+    const subscription = await GetModel(
+      TenantSubscriptionModel,
+      tenantId,
+    ).findOne();
+    expect(subscription).toMatchObject({
+      pendingPlanId: job.toPlanId,
+      pendingPlanChangeAt: SCHEDULED_AT,
+      domainTransition: null,
+    });
+    expect(subscription?.planId).not.toBe(job.toPlanId);
+  });
+
+  it("drops a scheduled change that would land on the plan in force", async () => {
+    const job = await createJob();
+    const tenantId = await createScheduledChange(job, job.toPlanId);
+
+    await processPlanMigrationJob(job._id);
+
+    expect(
+      await GetModel(TenantSubscriptionModel, tenantId).findOne(),
+    ).toMatchObject({
+      planId: job.toPlanId,
+      pendingPlanId: null,
+      pendingPlanChangeAt: null,
+    });
+    expect(schedule.cancelAtPeriodEnd).not.toHaveBeenCalled();
+  });
+});
 
 describe("migration snapshots on the production Mongo provider", () => {
   it("does not execute after an admitted job loses its acknowledgement", async () => {

@@ -201,6 +201,11 @@ describe("retiring a plan", () => {
     } as unknown as PlanMigrationModel;
     controller.tenantSubscriptionModel = {
       countByPlan: vi.fn(async () => 12),
+      // Two workspaces of another plan are scheduled to switch to it.
+      findByPendingPlan: vi.fn(async () => [
+        { planId: "starter", pendingPlanId: PLAN_ID },
+        { planId: "team", pendingPlanId: PLAN_ID },
+      ]),
     } as unknown as TenantSubscriptionModel;
     return controller;
   }
@@ -230,7 +235,7 @@ describe("retiring a plan", () => {
     );
   });
 
-  it("closes the plan to sign-ups and starts the snapshot migration", async () => {
+  it("closes the plan to sign-ups and starts the snapshot migration, scheduled changes included", async () => {
     const store = storeWith(storedPlan({}), target);
     const controller = retireController(store);
     const result = await controller.migrateAndDelete(OWNER, PLAN_ID, {
@@ -245,7 +250,7 @@ describe("retiring a plan", () => {
         toPlanName: "Pro",
         reason: "plan_retired",
         initiatedBy: "operator",
-        totalWorkspaces: 12,
+        totalWorkspaces: 14,
       }),
     ]);
     expect(worker.processPlanMigrationJob).toHaveBeenCalledWith("migration-1");

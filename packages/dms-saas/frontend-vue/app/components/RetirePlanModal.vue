@@ -474,6 +474,19 @@ onMounted(loadImpact)
 					<UIcon name="i-ph-info" class="mt-0.5 size-4 shrink-0" />
 					{{ $t('saas.catalog.retire.closed_note', { name: plan.name }) }}
 				</p>
+				<p
+					v-if="impact.scheduled > 0"
+					class="text-muted flex items-start gap-2 text-sm"
+				>
+					<UIcon name="i-ph-calendar-check" class="mt-0.5 size-4 shrink-0" />
+					{{
+						$t(
+							'saas.catalog.retire.scheduled_note',
+							{ name: plan.name, count: impact.scheduled },
+							impact.scheduled,
+						)
+					}}
+				</p>
 
 				<div class="flex items-center justify-end gap-2">
 					<span class="text-dimmed mr-auto flex items-center gap-1 text-xs">

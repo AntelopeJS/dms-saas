@@ -313,6 +313,7 @@
 				"show_all": "Show {count} more",
 				"no_workspace": "No workspace uses this plan.",
 				"closed_note": "Retiring closes {name} to sign-ups at once: no workspace can join it while its workspaces move.",
+				"scheduled_note": "{count} more workspace is scheduled to switch to {name}: its scheduled change goes to the plan you pick instead. | {count} more workspaces are scheduled to switch to {name}: their scheduled change goes to the plan you pick instead.",
 				"open_migration": "A migration of this plan is running or waits for an operator. Settle it in Plan migrations first.",
 				"no_target": "No other plan is on sale to move the workspaces to. Put one on sale first.",
 				"nothing_changes": "Nothing changes until step 3",

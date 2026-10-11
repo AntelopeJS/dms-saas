@@ -143,6 +143,7 @@ export class TenantSubscription extends Table {
   @Field("date")
   declare currentPeriodEnd: Date | null;
 
+  @Index({ crossInstance: true })
   @Field("string")
   @Relation({ to: () => Plan })
   declare pendingPlanId: string | null;

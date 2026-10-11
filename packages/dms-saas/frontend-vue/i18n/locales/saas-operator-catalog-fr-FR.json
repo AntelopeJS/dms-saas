@@ -313,6 +313,7 @@
 				"show_all": "Afficher {count} de plus",
 				"no_workspace": "Aucun espace de travail n’utilise cette offre.",
 				"closed_note": "Le retrait ferme {name} aux inscriptions immédiatement : aucun espace de travail ne peut la rejoindre pendant le déplacement.",
+				"scheduled_note": "{count} autre espace de travail doit passer à {name} : son changement prévu ira vers l’offre choisie. | {count} autres espaces de travail doivent passer à {name} : leur changement prévu ira vers l’offre choisie.",
 				"open_migration": "Une migration de cette offre est en cours ou attend un opérateur. Traitez-la d’abord dans Migrations d’offre.",
 				"no_target": "Aucune autre offre n’est en vente pour accueillir les espaces de travail. Mettez-en une en vente d’abord.",
 				"nothing_changes": "Rien ne change avant l’étape 3",

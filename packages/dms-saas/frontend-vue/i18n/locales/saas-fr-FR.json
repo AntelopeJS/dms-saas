@@ -447,6 +447,10 @@
 					"title": "Offre modifiée",
 					"description": "Votre espace de travail est désormais sur l'offre {plan}."
 				},
+				"plan_change_redirected": {
+					"title": "Changement d'offre prévu mis à jour",
+					"description": "L'offre {plan} remplace celle vers laquelle votre espace de travail devait passer, à la même date."
+				},
 				"platform_owner_added": {
 					"title": "Admin plateforme ajouté",
 					"description": "{email} est désormais admin plateforme."
