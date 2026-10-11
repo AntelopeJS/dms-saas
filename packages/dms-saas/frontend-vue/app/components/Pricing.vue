@@ -20,7 +20,10 @@ import {
 	LOGIN_PATH,
 	registerPathFor,
 } from '../build/public/routes'
-import { usePublicFetch } from '../build/public/usePublicFetch'
+import {
+	onPublicLocaleChange,
+	usePublicFetch,
+} from '../build/public/usePublicFetch'
 import type { PlanInterval } from '../composables/usePlanIntervalLabel'
 
 const PRICING_ENDPOINT = '/api/saas/pricing'
@@ -109,6 +112,7 @@ async function loadPricing(): Promise<void> {
 }
 
 onMounted(loadPricing)
+onPublicLocaleChange(loadPricing)
 </script>
 
 <template>

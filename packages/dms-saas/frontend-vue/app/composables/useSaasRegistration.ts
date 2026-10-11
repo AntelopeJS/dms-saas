@@ -18,7 +18,10 @@ import {
 	loginPathThen,
 	REGISTER_PLAN_PARAM,
 } from '../build/public/routes'
-import { usePublicFetch } from '../build/public/usePublicFetch'
+import {
+	onPublicLocaleChange,
+	usePublicFetch,
+} from '../build/public/usePublicFetch'
 
 export interface RegistrationForm {
 	email: string
@@ -329,6 +332,8 @@ export function useSaasRegistrationPlan(
 			isLoading.value = false
 		}
 	}
+
+	onPublicLocaleChange(load)
 
 	return { summary, isLoading, loadError, load }
 }
