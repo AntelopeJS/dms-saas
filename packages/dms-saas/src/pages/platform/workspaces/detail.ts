@@ -168,7 +168,7 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
     "recentActivity",
     ActivityFeed({
       title: `${D}.activity.recent`,
-      fetchUrl: `${API}/activity?limit=short`,
+      fetchUrl: `${API}/activity?limit=short&flat=true`,
       groupByDay: false,
       empty: { title: `${D}.activity.empty` },
       actions: [

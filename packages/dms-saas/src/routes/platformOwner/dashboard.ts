@@ -239,6 +239,7 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
         kind: parseActivityKind(kind),
         limit: ACTIVITY_LIMIT,
         linkOf: workspaceDetailPath,
+        now: new Date(),
       }),
     };
   }

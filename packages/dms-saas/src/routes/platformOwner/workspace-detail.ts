@@ -11,7 +11,11 @@ import type {
 import { fetchDefaultPaymentMethod } from "../../billing-state";
 import { getReportingCurrency } from "../../config";
 import { CreditNoteModel, type Invoice, InvoiceModel } from "../../db";
-import { buildActivityFeed, parseActivityKind } from "../../metrics/activity";
+import {
+  buildActivityFeed,
+  isFlatFeed,
+  parseActivityKind,
+} from "../../metrics/activity";
 import { loadActivitySources } from "../../metrics/activity-sources";
 import {
   loadDirectoryRows,
@@ -165,6 +169,7 @@ export class SaasWorkspaceDetailController extends Controller(
     const history = buildActivityFeed(sources, {
       kind: "all",
       limit: TIMELINE_HISTORY_LIMIT,
+      now: new Date(),
     });
     return {
       items: [...upcomingTimelineItems(view, preview), ...history],
@@ -177,6 +182,7 @@ export class SaasWorkspaceDetailController extends Controller(
     @Parameter("tenantId", "param") tenantId: string,
     @Parameter("kind", "query") kind: unknown,
     @Parameter("limit", "query") limit: unknown,
+    @Parameter("flat", "query") flat: unknown,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
     const cut = limit === "short" ? OVERVIEW_ACTIVITY_LIMIT : ACTIVITY_LIMIT;
     const sources = await loadActivitySources(tenantId, cut);
@@ -184,6 +190,7 @@ export class SaasWorkspaceDetailController extends Controller(
       items: buildActivityFeed(sources, {
         kind: parseActivityKind(kind),
         limit: cut,
+        now: isFlatFeed(flat) ? new Date() : undefined,
       }),
     };
   }

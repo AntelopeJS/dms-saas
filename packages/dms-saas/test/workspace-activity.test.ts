@@ -3,6 +3,7 @@ import type { Invoice } from "../src/db";
 import {
   type ActivitySources,
   buildActivityFeed,
+  isFlatFeed,
   parseActivityKind,
 } from "../src/metrics/activity";
 import type { OperatorAction } from "../src/operator-actions/db/operator-action.table";
@@ -144,6 +145,37 @@ describe("activity feed", () => {
     expect(buildActivityFeed(SOURCES, { kind: "all", limit: 1 })).toHaveLength(
       1,
     );
+  });
+
+  it("trails older entries with their day on a flat feed", () => {
+    const items = buildActivityFeed(SOURCES, {
+      kind: "all",
+      limit: 10,
+      now: new Date("2026-10-04T18:00:00Z"),
+    });
+
+    expect(items[0]?.time).toBeUndefined();
+    expect(items[1]?.time).toEqual({
+      key: "saas.text.value",
+      params: {
+        value: {
+          type: "date",
+          value: "2026-10-02T09:00:00.000Z",
+          format: "day",
+        },
+      },
+    });
+    expect(items[2]?.time).toMatchObject({
+      params: { value: { format: "medium" } },
+    });
+  });
+
+  it("leaves the time to the block on a feed grouped by day", () => {
+    const items = buildActivityFeed(SOURCES, { kind: "all", limit: 10 });
+
+    expect(items.every((item) => item.time === undefined)).toBe(true);
+    expect(isFlatFeed("true")).toBe(true);
+    expect(isFlatFeed(undefined)).toBe(false);
   });
 
   it("reads an unknown kind as everything", () => {

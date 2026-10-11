@@ -4,7 +4,7 @@ import type {
   Tone,
 } from "@antelopejs/interface-dms/base";
 import type { Invoice } from "../db";
-import { moneyParam, valueText } from "../i18n/composed-text";
+import { dateParam, moneyParam, valueText } from "../i18n/composed-text";
 import type { OperatorAction } from "../operator-actions/db/operator-action.table";
 import type { WorkspaceOperatorAction } from "../operator-actions/types";
 import { getRowInstance } from "../utils/row-instance";
@@ -37,6 +37,13 @@ export interface ActivityOptions {
   limit: number;
   /** Detail page of a workspace; left out on that page itself. */
   linkOf?: (tenantId: string) => string;
+  /**
+   * When the feed is read, for a feed drawn without day separators: an entry
+   * older than a day then trails with its day ("Sep 26"), which the block
+   * would otherwise write as a numeric date and time. Newer entries keep the
+   * block's relative time ("12 minutes ago").
+   */
+  now?: Date;
 }
 
 interface ActivityEntry {
@@ -63,6 +70,7 @@ const KEY_PREFIX = "$saas.activity";
 // workspace in the title; a workspace's own feed does not repeat it.
 const PLATFORM_TITLES = "platform";
 const WORKSPACE_TITLES = "workspace";
+const DAY_MS = 86_400_000;
 
 const DOCUMENT_LOOKS: Record<string, DocumentLook> = {
   paid: { icon: "i-ph-check-circle", tone: "success", title: "invoice_paid" },
@@ -221,6 +229,16 @@ function workspaceEntry(
   };
 }
 
+function trailingDay(at: Date, now: Date): BlockText {
+  const isThisYear = at.getUTCFullYear() === now.getUTCFullYear();
+  return valueText(dateParam(at, isThisYear ? "day" : "medium"));
+}
+
+function withTrailingDay(entry: ActivityEntry, now?: Date): ActivityFeedItem {
+  if (!now || now.getTime() - entry.at.getTime() < DAY_MS) return entry.item;
+  return { ...entry.item, time: trailingDay(entry.at, now) };
+}
+
 /** The feed, newest first, of the kind asked, cut at the limit. */
 export function buildActivityFeed(
   sources: ActivitySources,
@@ -238,7 +256,12 @@ export function buildActivityFeed(
     .filter((entry) => options.kind === "all" || entry.kind === options.kind)
     .sort((left, right) => right.at.getTime() - left.at.getTime())
     .slice(0, options.limit)
-    .map((entry) => entry.item);
+    .map((entry) => withTrailingDay(entry, options.now));
+}
+
+/** Whether a query asks for a feed drawn without day separators. */
+export function isFlatFeed(value: unknown): boolean {
+  return value === "true";
 }
 
 /** The feed kind a query names, `all` when it names none it knows. */
