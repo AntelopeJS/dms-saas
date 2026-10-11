@@ -8,6 +8,7 @@ export const PLANS_PAGE_PATH = "/modules/saas/catalog/plans";
 export const PLAN_MIGRATIONS_PAGE_PATH =
   "/modules/saas/catalog/plan-migrations";
 export const INVOICES_PAGE_PATH = "/modules/saas/billing/invoices";
+export const SEGMENTS_PAGE_PATH = "/modules/saas/customers/segments";
 
 /** The detail page of one workspace. */
 export function workspaceDetailPath(tenantId: string): string {

@@ -19,11 +19,7 @@ import {
   userSecurityItems,
   userTabCounts,
 } from "../../users";
-
-/** What a list block (`StatGroup`, `KeyValueList`, …) reads from its route. */
-interface ItemsPayload<T> {
-  items: T[];
-}
+import type { ItemsPayload } from "./block-payloads";
 
 /** The segments a user belongs to, for the user page's Segments tab. */
 export interface UserSegmentMatches {

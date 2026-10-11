@@ -6,8 +6,6 @@ import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
 
 const SEGMENTS_API = "/api/saas/segments/{_id}";
-/** Where the segment pages live, for links built before the page registers. */
-export const SEGMENTS_PAGE_URL = "/modules/saas/customers/segments";
 
 @RegisterPage()
 export class SaasSegmentsController extends PageController(

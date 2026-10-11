@@ -31,6 +31,10 @@ import {
   isComplimentarySubscription,
 } from "../../workspaces/complimentary";
 import { loadBillingSettings } from "../../operator-billing/billing-settings-store";
+import {
+  type WorkspaceOwnerContact,
+  listWorkspaceOwnerContacts,
+} from "../../workspaces/owner-contact";
 
 /** Why a workspace refuses its members, as the restricted screen words it. */
 export type AccessBlockReason =
@@ -63,11 +67,6 @@ export interface AccessTimelineRules {
   /** Null when the operator turned automatic suspension off. */
   autoSuspendDelayDays: number | null;
   dataRetentionDays: number;
-}
-
-export interface WorkspaceOwnerContact {
-  name: string | null;
-  email: string;
 }
 
 export interface OtherWorkspace {
@@ -317,18 +316,6 @@ export class SaasWorkspaceAccessController extends Controller(
     return (await this.planModel.get(subscription.planId))?.name ?? null;
   }
 
-  private async loadOwnerContacts(
-    members: TenantMember[],
-  ): Promise<WorkspaceOwnerContact[]> {
-    const owners = members.filter((member) => member.isTenantOwner);
-    const users = await Promise.all(
-      owners.map((owner) => this.userModel.get(owner.userId)),
-    );
-    return users.flatMap((user) =>
-      user ? [{ name: user.name || null, email: user.email }] : [],
-    );
-  }
-
   private async describeWorkspace(
     tenantId: string,
   ): Promise<OtherWorkspace | null> {
@@ -395,7 +382,7 @@ export class SaasWorkspaceAccessController extends Controller(
       reason,
       workspace: await this.summarizeWorkspace(tenantId, state),
       isTenantOwner,
-      owners: await this.loadOwnerContacts(state.members),
+      owners: await listWorkspaceOwnerContacts(state.members),
       unpaidInvoice: invoice ? toUnpaidInvoiceRef(invoice) : null,
       canManageInStripe:
         isTenantOwner &&

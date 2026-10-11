@@ -18,6 +18,7 @@ import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { tenantBillingPage } from "@antelopejs/interface-dms-saas/pages";
 import { tenantInvoicesDataAPI } from "../../data-api";
+import { blockMeta } from "../block-meta";
 
 const KEY_PREFIX = "$saas.tenant_billing";
 const PERMISSION_PREFIX = "$saas.permissions.billing_page";
@@ -31,11 +32,7 @@ const OVERVIEW_MIN_COLUMN_WIDTH = "360px";
 
 /** Name, description and icon of a block as the roles editor lists it. */
 function permissionMeta(key: string, icon: string) {
-  return {
-    name: `${PERMISSION_PREFIX}.${key}`,
-    description: `${PERMISSION_PREFIX}.${key}_description`,
-    icon,
-  };
+  return blockMeta(PERMISSION_PREFIX, key, icon);
 }
 
 const INVOICE_TABS = [

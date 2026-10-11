@@ -4,15 +4,12 @@ import {
   Get,
   type RequestContext,
 } from "@antelopejs/interface-api";
-import { GetModel, Model } from "@antelopejs/interface-database-decorators";
-import {
-  type TenantMember,
-  TenantMemberModel,
-} from "@antelopejs/interface-dms/db";
+import { Model } from "@antelopejs/interface-database-decorators";
+import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import { AuthTenantMember } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
-import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
+import { type User } from "@antelopejs/interface-dms/auth/db";
 import {
   type Plan,
   PlanModel,
@@ -20,38 +17,25 @@ import {
   PLAN_UNLIMITED,
 } from "../../db";
 import { getSeatUsage, type SeatUsage } from "../../plans";
+import {
+  type WorkspaceOwnerContact,
+  listWorkspaceOwnerContacts,
+} from "../../workspaces/owner-contact";
 
 /** A workspace owner a member is told to ask for more seats. */
-interface SeatOwnerContact {
-  name: string;
-  email: string;
-}
-
 interface SeatQuotaResult extends SeatUsage {
   maxMembers: number | null;
   planName: string | null;
   /** The first plan on sale with more seats, named in the "full" banner. */
   upgradePlanName: string | null;
   isTenantOwner: boolean;
-  owners: SeatOwnerContact[];
+  owners: WorkspaceOwnerContact[];
 }
 
 function offersMoreSeats(candidate: Plan, current: Plan): boolean {
   if (candidate._id === current._id) return false;
   if (candidate.maxMembers === PLAN_UNLIMITED) return true;
   return candidate.maxMembers > current.maxMembers;
-}
-
-async function resolveOwnerContacts(
-  members: TenantMember[],
-): Promise<SeatOwnerContact[]> {
-  const owners = members.filter((member) => member.isTenantOwner);
-  const users = await Promise.all(
-    owners.map((owner) => GetModel(UserModel).get(owner.userId)),
-  );
-  return users.flatMap((user) =>
-    user ? [{ name: user.name || user.email, email: user.email }] : [],
-  );
 }
 
 /**
@@ -104,7 +88,7 @@ export class SaasTenantSeatsController extends Controller(
       isTenantOwner: members.some(
         (member) => member.userId === user._id && member.isTenantOwner,
       ),
-      owners: await resolveOwnerContacts(members),
+      owners: await listWorkspaceOwnerContacts(members),
     };
   }
 }

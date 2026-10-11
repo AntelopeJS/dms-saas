@@ -23,12 +23,12 @@ import {
 import { PLAN_MIGRATION_TOPIC } from "../../../plans/migration-realtime";
 import { SAAS_MODULE_ID } from "../../module";
 import { catalogCategory } from "../categories";
+import { PLANS_PAGE_PATH } from "../paths";
+import { blockMeta } from "../../block-meta";
 
 const TEXTS = "$saas.catalog.migrations";
 const PERMISSIONS = "$saas.permissions.catalog";
-export const PLAN_MIGRATIONS_PAGE_URL = "/modules/saas/catalog/plan-migrations";
 const PLAN_MIGRATIONS_ENDPOINT = "/api/saas/plan-migrations";
-const PLANS_PAGE_URL = "/modules/saas/catalog/plans";
 const MIGRATIONS_ORDER = 5;
 const ATTENTION_COLUMNS = 2;
 const NEEDS_ATTENTION_STAGE = "needs_attention";
@@ -62,7 +62,7 @@ export class SaasPlanMigrationsController extends PageController(
         label: `${TEXTS}.plans_button`,
         icon: "i-ph-stack",
         color: "neutral",
-        target: { type: "page", url: PLANS_PAGE_URL },
+        target: { type: "page", url: PLANS_PAGE_PATH },
       },
     ],
   }),
@@ -111,7 +111,7 @@ export class SaasPlanMigrationsController extends PageController(
         title: `${TEXTS}.empty.title`,
         description: `${TEXTS}.empty.description`,
         icon: "i-ph-arrows-clockwise",
-        actions: [{ label: `${TEXTS}.plans_button`, to: PLANS_PAGE_URL }],
+        actions: [{ label: `${TEXTS}.plans_button`, to: PLANS_PAGE_PATH }],
       },
     },
   });
@@ -131,11 +131,7 @@ const ATTENTION_GROUP = "attention";
 
 /** Name, description and icon of a block as the roles editor lists it. */
 function detailMeta(key: string, icon: string) {
-  return {
-    name: `${PERMISSIONS}.migration_${key}`,
-    description: `${PERMISSIONS}.migration_${key}_description`,
-    icon,
-  };
+  return blockMeta(PERMISSIONS, `migration_${key}`, icon);
 }
 
 const OUTCOME_ITEMS = MIGRATION_WORKSPACE_STATUSES.map((value) => ({

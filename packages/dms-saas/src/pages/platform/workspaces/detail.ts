@@ -10,6 +10,7 @@ import {
   Section,
   StatGroup,
   Tab,
+  type TabItem,
   TableView,
   TabVariant,
   VStack,
@@ -24,25 +25,32 @@ import {
 } from "../../../data-api";
 import { SaasWorkspacesListController } from "./index";
 import { permissionMeta } from "./shared";
+import { NO_ROW_ACTIONS } from "../../block-meta";
 
 const D = "$saas.workspace_detail";
 const API = "/api/saas/workspaces/{{params.id}}";
 const INVITATION_API = "/api/saas/workspaces/{_instance}/invitations/{_id}";
 const FACTS = 5;
 const LATEST_INVOICES = 3;
-// The overview's links open a tab of this page: the query its `Tab` keeps.
-const INVOICES_TAB_LINK = "?workspace-tab=1";
-const ACTIVITY_TAB_LINK = "?workspace-tab=4";
+const TAB_STATE_KEY = "workspace-tab";
 
-const NO_ROW_ACTIONS = {
-  add: false,
-  delete: false,
-  edit: false,
-  details: false,
-  duplicate: false,
-  archive: false,
-  copyLink: false,
-} as const;
+const TAB_ITEMS: TabItem[] = [
+  { label: `${D}.tabs.overview`, icon: "i-ph-squares-four", slot: "overview" },
+  { label: `${D}.tabs.invoices`, icon: "i-ph-receipt", slot: "invoices" },
+  {
+    label: `${D}.tabs.credit_notes`,
+    icon: "i-ph-arrow-u-down-left",
+    slot: "creditNotes",
+  },
+  { label: `${D}.tabs.members`, icon: "i-ph-users", slot: "members" },
+  { label: `${D}.tabs.activity`, icon: "i-ph-pulse", slot: "activity" },
+];
+
+/** A link opening a tab of this page: the query its `Tab` keeps, by index. */
+function tabLink(slot: string): string {
+  const index = TAB_ITEMS.findIndex((item) => item.slot === slot);
+  return `?${TAB_STATE_KEY}=${index}`;
+}
 
 const ROUTE_FILTER_TENANT = { id: { field: "_instance" } };
 
@@ -136,7 +144,7 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
       actions: [
         {
           label: `${D}.invoices.see_all`,
-          to: INVOICES_TAB_LINK,
+          to: tabLink("invoices"),
           icon: "i-ph-arrow-right",
         },
       ],
@@ -165,7 +173,7 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
       actions: [
         {
           label: `${D}.activity.see_all`,
-          to: ACTIVITY_TAB_LINK,
+          to: tabLink("activity"),
           icon: "i-ph-arrow-right",
         },
       ],
@@ -194,24 +202,12 @@ const members = VStack({ spacing: "1.5rem", alignment: "stretch" })
   )
   .meta(permissionMeta("members", "i-ph-users"));
 
-const TAB_ITEMS = [
-  { label: `${D}.tabs.overview`, icon: "i-ph-squares-four", slot: "overview" },
-  { label: `${D}.tabs.invoices`, icon: "i-ph-receipt", slot: "invoices" },
-  {
-    label: `${D}.tabs.credit_notes`,
-    icon: "i-ph-arrow-u-down-left",
-    slot: "creditNotes",
-  },
-  { label: `${D}.tabs.members`, icon: "i-ph-users", slot: "members" },
-  { label: `${D}.tabs.activity`, icon: "i-ph-pulse", slot: "activity" },
-];
-
 const tabs = Tab({
   items: TAB_ITEMS,
   variant: TabVariant.link,
   badgesUrl: `${API}/tab-counts`,
   persistState: true,
-  stateKey: "workspace-tab",
+  stateKey: TAB_STATE_KEY,
 })
   .meta(permissionMeta("tabs", "i-ph-tabs"))
   .child("overview", overview, { slot: "overview" })

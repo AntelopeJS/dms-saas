@@ -9,7 +9,8 @@ import type {
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { HttpMethod } from "@antelopejs/interface-dms/base/types/http";
 import { SegmentConditionsType } from "../../../utils";
-import { SaasSegmentsController, SEGMENTS_PAGE_URL } from "./index";
+import { SaasSegmentsController } from "./index";
+import { SEGMENTS_PAGE_PATH } from "../paths";
 
 const SEGMENTS_API = "/api/saas/segments";
 const NAME_MAX_LENGTH = 120;
@@ -66,7 +67,7 @@ const BASE_FORM: FormProps = {
   saveMode: "bar",
   submitLabel: `${I18N}.save`,
   labelKey: "name",
-  backTo: SEGMENTS_PAGE_URL,
+  backTo: SEGMENTS_PAGE_PATH,
 };
 
 const preview = CustomComponent("DmsSaasSegmentLivePreview").meta({
@@ -102,7 +103,7 @@ export class SaasSegmentNewController extends PageController(
     submitUrl: SEGMENTS_API,
     submitUrlMethod: HttpMethod.post,
     successMessage: `${I18N}.created`,
-    redirectOnSuccess: `${SEGMENTS_PAGE_URL}/{{response._id}}/edit`,
+    redirectOnSuccess: `${SEGMENTS_PAGE_PATH}/{{response._id}}/edit`,
   });
 }
 

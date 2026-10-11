@@ -57,6 +57,25 @@ function resolveConstants(source: string): Map<string, string> {
   return constants;
 }
 
+/**
+ * Prefix constants handed whole to code that appends the rest
+ * (`blockMeta(PERMISSIONS, key, icon)`), rather than interpolated.
+ */
+function handedConstants(
+  source: string,
+  constants: Map<string, string>,
+  prefixes: Set<string>,
+): string[] {
+  const body = source.replace(KEY_CONSTANT, "");
+  return [...constants]
+    .filter(([name, value]) => {
+      if (!prefixes.has(value)) return false;
+      const bare = new RegExp(`(?<![\\w.$\\{])${name}\\b(?!\\s*\\})`);
+      return bare.test(body);
+    })
+    .map(([, value]) => value);
+}
+
 interface KeyReferences {
   /** Every source file, its key constants written out. */
   text: string;
@@ -79,6 +98,7 @@ function collectReferences(prefixes: Set<string>): KeyReferences {
       (whole, name: string) => constants.get(name) ?? whole,
     );
     references.text += `${resolved}\n`;
+    references.roots.push(...handedConstants(source, constants, prefixes));
     for (const match of resolved
       .replace(KEY_CONSTANT, "")
       .matchAll(KEY_LITERAL))

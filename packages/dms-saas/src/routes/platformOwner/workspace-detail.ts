@@ -39,11 +39,7 @@ import {
 } from "../../workspaces/detail-items";
 import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
 import { fromMinorUnits } from "../../utils/money";
-
-/** What a list block (`StatGroup`, `KeyValueList`, …) reads from its route. */
-interface ItemsPayload<T> {
-  items: T[];
-}
+import type { ItemsPayload } from "./block-payloads";
 
 /** The header of a workspace's detail page. */
 interface WorkspaceOverview {

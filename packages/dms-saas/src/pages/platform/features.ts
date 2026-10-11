@@ -9,10 +9,10 @@ import {
 } from "../../plans/feature-guards";
 import { SAAS_MODULE_ID } from "../module";
 import { catalogCategory } from "./categories";
+import { PLANS_PAGE_PATH } from "./paths";
 
 const TEXTS = "$saas.catalog.features";
 const PLAN_DIALOGS_ENDPOINT = "/api/saas/plan-dialogs";
-const PLANS_PAGE_URL = "/modules/saas/catalog/plans";
 const FEATURES_ORDER = 10;
 const PAGE_SIZE = 50;
 
@@ -47,7 +47,7 @@ export class SaasFeaturesController extends PageController(
         label: `${TEXTS}.plans_button`,
         icon: "i-ph-stack",
         color: "neutral",
-        target: { type: "page", url: PLANS_PAGE_URL },
+        target: { type: "page", url: PLANS_PAGE_PATH },
       },
     ],
   }),

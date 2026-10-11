@@ -10,11 +10,11 @@ import { creditNotesDataAPI } from "../../data-api";
 import { statusLabelKey } from "../../utils";
 import { SAAS_MODULE_ID } from "../module";
 import { billingCategory } from "./categories";
+import { INVOICES_PAGE_PATH } from "./paths";
 
 const TEXT = "$saas.operator_billing.credit_notes";
 const PERMISSIONS = "$saas.permissions.billing";
 const STATS_URL = "/api/saas/billing-stats/credit-notes";
-const INVOICES_PAGE_URL = "/modules/saas/billing/invoices";
 const STATS_COUNT = 3;
 
 const TYPE_TABS: TableViewTab[] = (
@@ -50,7 +50,7 @@ export class SaasCreditNotesController extends PageController(
         icon: "i-ph-receipt",
         variant: ButtonVariant.outline,
         color: "neutral",
-        target: { type: "page", url: INVOICES_PAGE_URL },
+        target: { type: "page", url: INVOICES_PAGE_PATH },
       },
     ],
   }),
@@ -76,7 +76,7 @@ export class SaasCreditNotesController extends PageController(
         title: `${TEXT}.empty.title`,
         description: `${TEXT}.empty.description`,
         icon: "i-ph-receipt-x",
-        actions: [{ label: `${TEXT}.to_invoices`, to: INVOICES_PAGE_URL }],
+        actions: [{ label: `${TEXT}.to_invoices`, to: INVOICES_PAGE_PATH }],
       },
     },
     rowActions: {

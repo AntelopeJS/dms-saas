@@ -6,26 +6,16 @@ import type {
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import type { ComponentBuilder } from "@antelopejs/interface-dms/component";
 import { getReportingCurrency } from "../../../config";
+import { type BlockPermissionMeta, blockMeta } from "../../block-meta";
 
 const PERMISSIONS = "$saas.permissions.workspaces";
-
-/** The metadata a block shows in the roles editor: what it is, what it lets one do. */
-export interface BlockPermissionMeta {
-  name: string;
-  description: string;
-  icon: string;
-}
 
 /**
  * The roles editor's name and description of a block of the dashboard or the
  * workspace pages, from `saas.permissions.workspaces.<key>`.
  */
 export function permissionMeta(key: string, icon: string): BlockPermissionMeta {
-  return {
-    name: `${PERMISSIONS}.${key}`,
-    description: `${PERMISSIONS}.${key}_description`,
-    icon,
-  };
+  return blockMeta(PERMISSIONS, key, icon);
 }
 
 interface CurrencyOptions {

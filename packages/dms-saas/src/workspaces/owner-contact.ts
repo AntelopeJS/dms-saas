@@ -1,11 +1,35 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { TenantMemberModel } from "@antelopejs/interface-dms/db";
-import { UserModel } from "@antelopejs/interface-dms/auth/db";
+import {
+  type TenantMember,
+  TenantMemberModel,
+} from "@antelopejs/interface-dms/db";
+import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
 
 /** Who a member asks when the workspace needs its owner (an unpaid invoice). */
 export interface WorkspaceOwnerContact {
   name: string;
   email: string;
+}
+
+function toContact(user: User): WorkspaceOwnerContact {
+  return { name: user.name || user.email, email: user.email };
+}
+
+/**
+ * Every owner among `members`, as members see them named: by name, else by
+ * e-mail.
+ *
+ * @param members Members of the workspace
+ */
+export async function listWorkspaceOwnerContacts(
+  members: TenantMember[],
+): Promise<WorkspaceOwnerContact[]> {
+  const users = await Promise.all(
+    members
+      .filter((member) => member.isTenantOwner)
+      .map((owner) => GetModel(UserModel).get(owner.userId)),
+  );
+  return users.flatMap((user) => (user ? [toContact(user)] : []));
 }
 
 /**
@@ -20,6 +44,5 @@ export async function findWorkspaceOwnerContact(
   const [owner] = await GetModel(TenantMemberModel, tenantId).listOwners();
   if (!owner) return null;
   const user = await GetModel(UserModel).get(owner.userId);
-  if (!user) return null;
-  return { name: user.name || user.email, email: user.email };
+  return user ? toContact(user) : null;
 }

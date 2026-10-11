@@ -39,11 +39,7 @@ import { workspaceDetailPath } from "../../pages/platform/paths";
 import { migrationTotals } from "../../plans/migration-detail";
 import { MS_PER_DAY } from "../../utils/time";
 import { loadActivitySources } from "../../metrics/activity-sources";
-
-/** What a list block (`StatGroup`, `NavCardGrid`, …) reads from its route. */
-interface ItemsPayload<T> {
-  items: T[];
-}
+import type { ItemsPayload } from "./block-payloads";
 
 /** What a `KpiCard` reads from its route. */
 interface KpiPayload {

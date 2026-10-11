@@ -60,6 +60,8 @@ import {
   readStripe,
   uncertainView,
 } from "./plan-migration-context";
+import { PLAN_MIGRATIONS_PAGE_PATH } from "../../pages/platform/paths";
+import type { ItemsPayload, RowsPayload } from "./block-payloads";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
@@ -67,25 +69,14 @@ const HTTP_CONFLICT = 409;
 const NOTE_MAX_LENGTH = 500;
 const NOTE_REQUIRED = "$saas.errors.migration.note_required";
 const RESOLUTIONS = new Set<UncertainResolution>(["moved", "not_moved"]);
-const MIGRATIONS_PAGE = "/modules/saas/catalog/plan-migrations";
 const MIGRATIONS_API = "/api/saas/plan-migrations";
-const URLS = { api: MIGRATIONS_API, list: MIGRATIONS_PAGE };
+const URLS = { api: MIGRATIONS_API, list: PLAN_MIGRATIONS_PAGE_PATH };
 const TEXTS = "$saas.catalog.migrations";
 
 /** The Stripe check drawer: the reading, and what it tells the operator to do. */
 interface StripeReadingPayload extends ItemsPayload<KeyValueListItem> {
   resolution: UncertainResolution | null;
   stripeUrl: string | null;
-}
-
-interface ItemsPayload<T> {
-  items: T[];
-}
-
-/** What a source table reads from its route. */
-interface RowsPayload<T> {
-  results: T[];
-  total: number;
 }
 
 interface ResolveBody {
@@ -301,7 +292,7 @@ function attentionCard(migration: PlanMigration): NavCardItem {
         : `${TEXTS}.attention.failed`,
     icon: "i-ph-warning-circle",
     iconTone: totals.uncertain > 0 ? "error" : "warning",
-    to: `${MIGRATIONS_PAGE}/${migration._id}`,
+    to: `${PLAN_MIGRATIONS_PAGE_PATH}/${migration._id}`,
     state: attentionState(totals),
     stateTone: totals.uncertain > 0 ? "error" : "warning",
   };

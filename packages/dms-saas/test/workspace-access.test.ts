@@ -69,6 +69,7 @@ vi.mock(
           listByUserWithTenantIds: async () => state.memberships,
         },
         BillingSettingsModel: { get: async () => state.settings },
+        UserModel: { get: async (id: string) => USERS.get(id) },
         InvoiceModel: { findLatestOpen: async () => state.openInvoice },
       })[model.name],
   }),

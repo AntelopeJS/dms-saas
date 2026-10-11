@@ -15,20 +15,12 @@ import {
   adminUserWorkspacesDataAPI,
 } from "../../../data-api";
 import { SaasUsersListController } from "./index";
+import { WORKSPACES_PAGE_PATH } from "../paths";
+import { NO_ROW_ACTIONS, blockMeta } from "../../block-meta";
 
 const PERMISSIONS = "$saas.permissions.users";
 const SPACING = "1.5rem";
-const WORKSPACE_DETAIL_URL = "/modules/saas/customers/workspaces/{_instance}";
-
-const NO_ROW_ACTIONS = {
-  add: false,
-  delete: false,
-  edit: false,
-  details: false,
-  duplicate: false,
-  archive: false,
-  copyLink: false,
-} as const;
+const WORKSPACE_DETAIL_URL = `${WORKSPACES_PAGE_PATH}/{_instance}`;
 
 const ROUTE_FILTER_USER = { id: { field: "userId" } };
 const USER_API = "/api/saas/users/{{params.id}}";
@@ -36,11 +28,7 @@ const FACT_COUNT = 5;
 const SECURITY_ROW_COUNT = 4;
 
 function described(key: string, icon: string) {
-  return {
-    name: `${PERMISSIONS}.${key}`,
-    description: `${PERMISSIONS}.${key}_description`,
-    icon,
-  };
+  return blockMeta(PERMISSIONS, key, icon);
 }
 
 const summary = CustomComponent("DmsSaasUserSummaryCard").meta(

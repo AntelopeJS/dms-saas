@@ -15,7 +15,8 @@ import {
   PLAN_UNLIMITED,
 } from "../../../db";
 import { PlanAccessType } from "../../../plans/plan-access-type";
-import { PLANS_PAGE_URL, SaasPlansController } from "./index";
+import { SaasPlansController } from "./index";
+import { PLANS_PAGE_PATH } from "../paths";
 
 const PLANS_ENDPOINT = "/api/saas/plans";
 const TEXTS = "$saas.catalog.editor";
@@ -278,8 +279,8 @@ export class SaasPlanNewController extends PageController(
       submitUrlMethod: HttpMethod.post,
       submitLabel: `${TEXTS}.create`,
       successMessage: `${TEXTS}.created`,
-      backTo: PLANS_PAGE_URL,
-      redirectOnSuccess: `${PLANS_PAGE_URL}/{{response._id}}/edit`,
+      backTo: PLANS_PAGE_PATH,
+      redirectOnSuccess: `${PLANS_PAGE_PATH}/{{response._id}}/edit`,
     }),
   );
 }
@@ -306,7 +307,7 @@ export class SaasPlanEditController extends PageController(
       submitUrl: `${PLANS_ENDPOINT}/{{params.id}}`,
       submitUrlMethod: HttpMethod.put,
       successMessage: `${TEXTS}.saved`,
-      backTo: PLANS_PAGE_URL,
+      backTo: PLANS_PAGE_PATH,
     }),
   );
 }

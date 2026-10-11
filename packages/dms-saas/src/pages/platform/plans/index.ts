@@ -12,12 +12,14 @@ import type { CustomRowAction } from "@antelopejs/interface-dms/base/types/row-a
 import { plansDataAPI } from "../../../data-api";
 import { SAAS_MODULE_ID } from "../../module";
 import { catalogCategory } from "../categories";
+import {
+  PLANS_PAGE_PATH,
+  PLAN_MIGRATIONS_PAGE_PATH,
+  WORKSPACES_PAGE_PATH,
+} from "../paths";
 
 const TEXTS = "$saas.catalog.plans";
 const PERMISSIONS = "$saas.permissions.catalog";
-export const PLANS_PAGE_URL = "/modules/saas/catalog/plans";
-const PLAN_MIGRATIONS_PAGE_URL = "/modules/saas/catalog/plan-migrations";
-const WORKSPACES_PAGE_URL = "/modules/saas/customers/workspaces";
 const PLANS_ENDPOINT = "/api/saas/plans";
 const PLAN_DIALOGS_ENDPOINT = "/api/saas/plan-dialogs";
 const RETIRE_MODAL_SIZE = "3xl";
@@ -54,13 +56,13 @@ const PLAN_ACTIONS: PlanAction[] = [
     key: "duplicate",
     label: `${TEXTS}.action.duplicate`,
     icon: "i-ph-copy",
-    target: { type: "page", url: `${PLANS_PAGE_URL}/new?duplicate={_id}` },
+    target: { type: "page", url: `${PLANS_PAGE_PATH}/new?duplicate={_id}` },
   },
   {
     key: "view_workspaces",
     label: `${TEXTS}.action.view_workspaces`,
     icon: "i-ph-buildings",
-    target: { type: "page", url: `${WORKSPACES_PAGE_URL}?plan={_id}` },
+    target: { type: "page", url: `${WORKSPACES_PAGE_PATH}?plan={_id}` },
     rule: isInUse,
   },
   {
@@ -167,13 +169,13 @@ export class SaasPlansController extends PageController(
         icon: "i-ph-arrows-clockwise",
         color: "neutral",
         variant: ButtonVariant.outline,
-        target: { type: "page", url: PLAN_MIGRATIONS_PAGE_URL },
+        target: { type: "page", url: PLAN_MIGRATIONS_PAGE_PATH },
       },
       {
         label: `${TEXTS}.create`,
         icon: "i-ph-plus",
         color: "primary",
-        target: { type: "page", url: `${PLANS_PAGE_URL}/new` },
+        target: { type: "page", url: `${PLANS_PAGE_PATH}/new` },
       },
     ],
   }),
@@ -237,7 +239,7 @@ export class SaasPlansController extends PageController(
         actions: [
           {
             label: `${TEXTS}.create`,
-            to: `${PLANS_PAGE_URL}/new`,
+            to: `${PLANS_PAGE_PATH}/new`,
             icon: "i-ph-plus",
           },
         ],
