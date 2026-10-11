@@ -16,11 +16,7 @@ import {
   type TenantSubscriptionStatus,
 } from "../db";
 import { parseFutureDate } from "../utils/parse-future-date";
-import {
-  deliverInvitationEmail,
-  type InvitationEmailDelivery,
-  inviterNameOf,
-} from "./invitations";
+import { sendOwnerInvitationEmailInBackground } from "./owner-invitation-email";
 import { createDefaultMemberRole } from "./default-member-role";
 
 const HTTP_BAD_REQUEST = 400;
@@ -60,9 +56,15 @@ export type OwnerLookup =
 export interface CreatedWorkspace {
   tenantId: string;
   owner: InviteUserToTenantResult;
-  invitationEmail: InvitationEmailDelivery | null;
+  invitationEmail: OwnerInvitationEmailState;
   access: WorkspaceAccessModel;
 }
+
+/**
+ * The owner's invitation e-mail when the request answers: on its way, or
+ * none for an owner who already had an account.
+ */
+export type OwnerInvitationEmailState = "sending" | null;
 
 interface SubscriptionTerms {
   status: TenantSubscriptionStatus;
@@ -201,24 +203,25 @@ async function addOwner(
 
 /**
  * Sent here rather than through `sendEmail`, which fires and forgets: the
- * operator has to learn that the owner never got the link.
+ * operator is told when the owner never got the link. The request does not
+ * wait for it.
  */
-async function emailOwnerInvitation(
+function emailOwnerInvitation(
+  tenantId: string,
   owner: InviteUserToTenantResult,
   input: ValidatedWorkspaceInput,
   operator: User,
-): Promise<InvitationEmailDelivery | null> {
+): OwnerInvitationEmailState {
   if (owner.kind !== "invited") return null;
-  return deliverInvitationEmail(
-    {
-      email: input.ownerEmail,
-      token: owner.token,
-      firstname: null,
-      lastname: null,
-      language: operator.language,
-    },
-    { workspaceName: input.name, inviterName: inviterNameOf(operator) },
-  );
+  sendOwnerInvitationEmailInBackground({
+    tenantId,
+    workspaceName: input.name,
+    email: input.ownerEmail,
+    inviteId: owner.inviteId,
+    token: owner.token,
+    operator,
+  });
+  return "sending";
 }
 
 /** Creates the workspace, its subscription and its owner (added or invited). */
@@ -236,8 +239,12 @@ export async function createWorkspaceForOwner(
   await createDefaultMemberRole(tenantId, operator.language);
   await insertSubscription(tenantId, input, operator);
   await recomputeTenantBillingState(tenantId);
-  // Last: a slow mail server must not leave the workspace without its plan,
-  // listed as free with no plan, while the operator waits.
-  const invitationEmail = await emailOwnerInvitation(owner, input, operator);
+  // Last: the e-mail is about a workspace complete with its plan.
+  const invitationEmail = emailOwnerInvitation(
+    tenantId,
+    owner,
+    input,
+    operator,
+  );
   return { tenantId, owner, invitationEmail, access: input.access };
 }

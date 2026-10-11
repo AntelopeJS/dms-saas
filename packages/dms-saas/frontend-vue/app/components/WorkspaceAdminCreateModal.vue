@@ -8,8 +8,8 @@ import { planPriceLabel } from '../build/workspace-detail/planPrice'
  * Creates a workspace for a customer. The operator chooses how it is paid —
  * complimentary access until a date, or by its owner at first sign-in — sees
  * whether the owner e-mail is an existing account or a new invitation, and
- * reads what will happen before anything is created. An invitation e-mail
- * that did not leave stays on screen with the link to hand over.
+ * reads what will happen before anything is created. The invitation e-mail
+ * leaves in the background: a failure arrives as a notification.
  */
 interface PlanOption {
 	_id: string
@@ -36,7 +36,7 @@ type CreatedOwner =
 interface CreatedWorkspace {
 	tenantId: string
 	owner: CreatedOwner
-	invitationEmail: 'sent' | 'failed' | null
+	invitationEmail: 'sending' | null
 }
 
 const props = defineProps<{
@@ -52,7 +52,6 @@ const WORKSPACES_PATH = '/modules/saas/customers/workspaces'
 const LOOKUP_DELAY_MS = 400
 const MS_PER_DAY = 86_400_000
 const MINOR_UNITS_PER_UNIT = 100
-const STICKY_TOAST_DURATION = 0
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const { $authFetch } = useAuthFetch()
@@ -60,7 +59,6 @@ const { t, locale } = useI18n()
 const toast = useToast()
 const router = useDmsRouter()
 const { resolveApiError } = useApiErrorMessage()
-const { fetchAndCopy } = useInvitationLink()
 
 const plans = ref<PlanOption[]>([])
 const loadError = ref<string | null>(null)
@@ -215,40 +213,20 @@ function openWorkspace(tenantId: string): void {
 }
 
 function notifyCreated(created: CreatedWorkspace): void {
-	const { owner } = created
-	const openAction = {
-		label: t(`${C}.open_workspace`),
-		icon: 'i-ph-arrow-right',
-		onClick: () => openWorkspace(created.tenantId),
-	}
-	if (created.invitationEmail !== 'failed' || owner.kind !== 'invited') {
-		toast.add({
-			title: t(`${C}.success`),
-			color: 'success',
-			icon: 'i-ph-check-circle',
-			actions: [openAction],
-		})
-		return
-	}
-	// The workspace exists but nobody told its owner: the notice stays until
-	// dismissed, with the link to hand over.
 	toast.add({
-		title: t(`${C}.email_failed.title`),
-		description: t(`${C}.email_failed.description`),
-		color: 'warning',
-		icon: 'i-ph-warning',
-		duration: STICKY_TOAST_DURATION,
+		title: t(`${C}.success`),
+		description:
+			created.invitationEmail === 'sending'
+				? t(`${C}.email_sending`)
+				: undefined,
+		color: 'success',
+		icon: 'i-ph-check-circle',
 		actions: [
 			{
-				label: t(`${C}.email_failed.copy_link`),
-				icon: 'i-ph-link',
-				onClick: () =>
-					void fetchAndCopy({
-						tenantId: created.tenantId,
-						inviteId: owner.inviteId,
-					}),
+				label: t(`${C}.open_workspace`),
+				icon: 'i-ph-arrow-right',
+				onClick: () => openWorkspace(created.tenantId),
 			},
-			openAction,
 		],
 	})
 }

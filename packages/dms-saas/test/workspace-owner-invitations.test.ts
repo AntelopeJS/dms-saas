@@ -42,6 +42,13 @@ import { SaasWorkspaceInvitationsController } from "../src/routes/platformOwner/
 vi.mock("../src/workspaces/default-member-role", () => ({
   createDefaultMemberRole: async () => "member-role",
 }));
+const notified = vi.hoisted(() => ({
+  notifyUser: vi.fn(async () => undefined),
+}));
+vi.mock("../src/notifications", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/notifications")>()),
+  notifyUser: notified.notifyUser,
+}));
 vi.mock("../src/billing-state", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/billing-state")>()),
   recomputeTenantBillingState: async () => undefined,
@@ -99,6 +106,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  notified.notifyUser.mockClear();
   sendInviteEmail.mockReset();
   sendInviteEmail.mockResolvedValue(undefined);
   setRuntimeConfig({
@@ -172,6 +180,13 @@ async function journalFor(tenantId: string) {
   return actions.filter((action) => action.action.startsWith("invitation."));
 }
 
+/** The journal past the creation's own invitation e-mail. */
+async function journalAfterCreation(tenantId: string) {
+  return (await journalFor(tenantId)).filter(
+    (action) => action.action !== "invitation.send",
+  );
+}
+
 function signupLinkOf(invite: Pick<UserInvite, "token" | "email">): string {
   const params = new URLSearchParams({
     token: invite.token,
@@ -187,17 +202,38 @@ describe("back-office workspace creation for a new owner", () => {
       owner.inviteId,
     );
 
-    expect(sendInviteEmail).toHaveBeenCalledWith(
-      email,
-      owner.token,
-      undefined,
-      {
-        workspaceName: WORKSPACE_NAME,
-        inviterName: "Olivia Operator",
-        language: "en",
-      },
+    await vi.waitFor(() =>
+      expect(sendInviteEmail).toHaveBeenCalledWith(
+        email,
+        owner.token,
+        undefined,
+        {
+          workspaceName: WORKSPACE_NAME,
+          inviterName: "Olivia Operator",
+          language: "en",
+        },
+      ),
     );
     expect(created).toMatchObject({ email, asTenantOwner: true });
+    await vi.waitFor(async () =>
+      expect(await journalFor(tenantId)).toEqual([
+        expect.objectContaining({
+          action: "invitation.send",
+          status: "succeeded",
+          details: expect.objectContaining({ email, emailDelivery: "sent" }),
+        }),
+      ]),
+    );
+    expect(notified.notifyUser).not.toHaveBeenCalled();
+  });
+
+  it("answers before the invitation e-mail leaves", async () => {
+    sendInviteEmail.mockReturnValue(new Promise<void>(() => undefined));
+
+    const created = await createWorkspaceFor(`${randomUUID()}@example.test`);
+
+    expect(created.invitationEmail).toBe("sending");
+    expect(created.owner.kind).toBe("invited");
   });
 
   it("writes the invitation in the stored invitation language", async () => {
@@ -207,11 +243,13 @@ describe("back-office workspace creation for a new owner", () => {
     const created = await createWorkspaceFor(email, frenchOperator);
 
     expect((await storedInvite(created.tenantId)).language).toBe("fr");
-    expect(sendInviteEmail).toHaveBeenCalledWith(
-      email,
-      expect.any(String),
-      undefined,
-      expect.objectContaining({ language: "fr" }),
+    await vi.waitFor(() =>
+      expect(sendInviteEmail).toHaveBeenCalledWith(
+        email,
+        expect.any(String),
+        undefined,
+        expect.objectContaining({ language: "fr" }),
+      ),
     );
   });
 
@@ -221,26 +259,43 @@ describe("back-office workspace creation for a new owner", () => {
 
     await createWorkspaceFor(email, namelessOperator);
 
-    expect(sendInviteEmail).toHaveBeenCalledWith(
-      email,
-      expect.any(String),
-      undefined,
-      expect.objectContaining({
-        workspaceName: WORKSPACE_NAME,
-        inviterName: undefined,
-      }),
+    await vi.waitFor(() =>
+      expect(sendInviteEmail).toHaveBeenCalledWith(
+        email,
+        expect.any(String),
+        undefined,
+        expect.objectContaining({
+          workspaceName: WORKSPACE_NAME,
+          inviterName: undefined,
+        }),
+      ),
     );
   });
 
-  it("surfaces a failed invitation email instead of reporting success", async () => {
+  it("tells the operator afterwards that the invitation e-mail did not leave", async () => {
     sendInviteEmail.mockRejectedValue(new Error("render failed: 401"));
     const email = `${randomUUID()}@example.test`;
 
     const created = await createWorkspaceFor(email);
 
-    expect(created.invitationEmail).toBe("failed");
-    expect(created.owner.kind).toBe("invited");
+    expect(created.invitationEmail).toBe("sending");
     expect(await storedInvite(created.tenantId)).toMatchObject({ email });
+    await vi.waitFor(() =>
+      expect(notified.notifyUser).toHaveBeenCalledWith(
+        operator._id,
+        expect.objectContaining({ id: "saas.invitation_email_failed" }),
+        expect.objectContaining({
+          params: { workspace: WORKSPACE_NAME, email },
+          linkTo: `/modules/saas/customers/workspaces/${created.tenantId}`,
+        }),
+      ),
+    );
+    expect(await journalFor(created.tenantId)).toEqual([
+      expect.objectContaining({
+        action: "invitation.send",
+        details: expect.objectContaining({ emailDelivery: "failed" }),
+      }),
+    ]);
   });
 
   it("sends no invitation when the owner already has an account", async () => {
@@ -372,7 +427,7 @@ describe("copy invitation link", () => {
     );
 
     expect(result.link).toBe(signupLinkOf(invite));
-    const [journaled] = await journalFor(tenantId);
+    const [journaled] = await journalAfterCreation(tenantId);
     expect(journaled).toMatchObject({
       action: "invitation.link_copy",
       actorId: operator._id,
@@ -450,7 +505,7 @@ describe("resend invitation from the back office", () => {
       body: "saas.errors.invitations.email_not_sent",
     });
     expect((await storedInvite(tenantId)).token).not.toBe(owner.token);
-    const [journaled] = await journalFor(tenantId);
+    const [journaled] = await journalAfterCreation(tenantId);
     expect(journaled).toMatchObject({
       action: "invitation.resend",
       details: { emailDelivery: "failed" },

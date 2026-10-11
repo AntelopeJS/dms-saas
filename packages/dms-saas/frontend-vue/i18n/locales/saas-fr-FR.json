@@ -384,7 +384,8 @@
 				"workspace_reactivated": "Espace de travail réactivé",
 				"complimentary_access_granted": "Accès gratuit accordé",
 				"automation": "Automatisation",
-				"seat_overage": "Dépassement de sièges de l'offre"
+				"seat_overage": "Dépassement de sièges de l'offre",
+				"invitation_email_failed": "E-mail d'invitation non envoyé"
 			},
 			"payload": {
 				"workspace_suspended_admin": {
@@ -446,6 +447,10 @@
 				"plan_migrated": {
 					"title": "Offre modifiée",
 					"description": "Votre espace de travail est désormais sur l'offre {plan}."
+				},
+				"invitation_email_failed": {
+					"title": "E-mail d'invitation à {email} non envoyé",
+					"description": "Le propriétaire de {workspace} n'a pas été prévenu. Ouvrez l'espace de travail pour copier le lien d'invitation et le lui envoyer vous-même."
 				},
 				"plan_change_redirected": {
 					"title": "Changement d'offre prévu mis à jour",

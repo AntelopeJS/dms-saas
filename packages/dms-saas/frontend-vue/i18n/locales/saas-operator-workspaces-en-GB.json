@@ -69,6 +69,8 @@
         "workspace_reactivated": "{workspace} reactivated",
         "subscription_upgraded": "{workspace} upgraded {from} → {to}",
         "balance_credited": "Stripe credit granted to {workspace}",
+        "invitation_sent": "Invitation to {workspace} e-mailed to {email}",
+        "invitation_email_failed": "Invitation e-mail to {email} for {workspace} not sent",
         "invitation_resent": "Invitation to {workspace} sent again",
         "workspace_created": "Workspace {workspace} created"
       },
@@ -81,6 +83,8 @@
         "workspace_reactivated": "Workspace reactivated",
         "subscription_upgraded": "Upgraded {from} → {to}",
         "balance_credited": "Stripe credit granted",
+        "invitation_sent": "Invitation e-mailed to {email}",
+        "invitation_email_failed": "Invitation e-mail to {email} not sent: copy the link to send it yourself",
         "invitation_resent": "Invitation sent again",
         "workspace_created": "Workspace created"
       }
@@ -208,11 +212,7 @@
         "open_workspace": "Open workspace",
         "error": "Could not create the workspace.",
         "load_error": "Could not load the plans.",
-        "email_failed": {
-          "title": "Workspace created, but the invitation e-mail could not be sent",
-          "description": "The owner has not been notified. Copy the invitation link and send it to them yourself.",
-          "copy_link": "Copy invitation link"
-        }
+        "email_sending": "The invitation e-mail is on its way. If it can't be sent, you'll get a notification and can copy the link from the workspace."
       }
     },
     "workspace_detail": {

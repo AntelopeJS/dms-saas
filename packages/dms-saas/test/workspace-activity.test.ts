@@ -152,3 +152,34 @@ describe("activity feed", () => {
     expect(parseActivityKind(undefined)).toBe("all");
   });
 });
+
+describe("the owner invitation e-mail in the activity feed", () => {
+  function sendAction(emailDelivery: string): OperatorAction {
+    return {
+      _id: `op_send_${emailDelivery}`,
+      tenantId: "t1",
+      actorEmail: "camille@ops.test",
+      action: "invitation.send",
+      status: "succeeded",
+      details: { email: "owner@northwind.test", emailDelivery },
+      createdAt: new Date("2026-10-06T09:00:00Z"),
+      effectiveAt: new Date("2026-10-06T09:00:00Z"),
+    } as unknown as OperatorAction;
+  }
+
+  it.each([
+    ["sent", "invitation_sent", "neutral"],
+    ["failed", "invitation_email_failed", "warning"],
+  ])("reads an e-mail %s as %s", (delivery, title, tone) => {
+    const [entry] = buildActivityFeed(
+      { ...SOURCES, actions: [sendAction(delivery)] },
+      { kind: "lifecycle", limit: 1 },
+    );
+
+    expect(entry).toMatchObject({
+      title: `$saas.activity.workspace.${title}`,
+      tone,
+      params: { email: "owner@northwind.test" },
+    });
+  });
+});
