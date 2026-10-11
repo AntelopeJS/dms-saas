@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { userDisplayName, useUserDetail } from '../build/users/useUserDetail'
 
 // The identity header of the user page: who the user is and how their
@@ -14,6 +14,13 @@ const ownedNames = computed(
 		user.value?.workspaces
 			.filter((workspace) => workspace.isTenantOwner)
 			.map((workspace) => workspace.name) ?? [],
+)
+
+const { getUrl, resolve } = useFileReadUrls()
+const avatarKey = computed(() => user.value?.avatar?.key ?? null)
+watch(avatarKey, (key) => key && resolve(key), { immediate: true })
+const avatarSrc = computed(() =>
+	avatarKey.value ? getUrl(avatarKey.value) : undefined,
 )
 
 onMounted(() => void detail.refresh())
@@ -32,7 +39,7 @@ onMounted(() => void detail.refresh())
 				<UAvatar
 					v-else
 					:alt="userDisplayName(user)"
-					:src="typeof user.avatar === 'string' ? user.avatar : undefined"
+					:src="avatarSrc"
 					size="3xl"
 				/>
 				<div v-if="!user" class="flex flex-1 flex-col gap-2">

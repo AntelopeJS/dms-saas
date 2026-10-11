@@ -24,12 +24,17 @@ export interface UserSecurity {
 	verificationRequestedAt: string | null
 }
 
+/** A stored image, as the DMS image type writes it. */
+export interface UserAvatar {
+	key: string
+}
+
 /** What `GET /api/saas/users/:id` answers. */
 export interface UserDetail {
 	_id: string
 	name: string
 	email: string
-	avatar: { key: string } | string | null
+	avatar: UserAvatar | null
 	language: string | null
 	createdAt: string
 	lastActiveAt: string | null
