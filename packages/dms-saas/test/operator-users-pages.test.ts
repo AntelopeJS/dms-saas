@@ -1,11 +1,10 @@
 import { GetMetadata } from "@antelopejs/interface-core";
-import { TableViewMeta } from "@antelopejs/interface-dms/base";
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import type {
   Component,
   ComponentInfo,
 } from "@antelopejs/interface-dms/component";
-import { TableViewRoutes } from "@antelopejs/interface-dms/base";
+import { TableViewMeta, TableViewRoutes } from "@antelopejs/interface-dms/base";
 import { describe, expect, it } from "vitest";
 import { saasUsersDataAPI } from "../src/data-api/platformOwner/users";
 import { SaasSegmentsController } from "../src/pages/platform/segments";
