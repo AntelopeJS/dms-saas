@@ -134,7 +134,11 @@ const PLAN_ROW_ACTIONS: CustomRowAction[] = PLAN_ACTIONS.map(
 );
 
 function serializeTarget(target: ActionTarget): ActionTargetSerialized {
-  if (target.type === "modal" || target.type === "drawer") {
+  if (
+    target.type === "modal" ||
+    target.type === "drawer" ||
+    target.type === "sidePanel"
+  ) {
     return { ...target, component: target.component.serializeSync() };
   }
   return target;
