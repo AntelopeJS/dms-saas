@@ -10,14 +10,17 @@ export interface PlanPriceTerms {
 
 type Translate = (key: string, params?: Record<string, unknown>) => string
 
-/** "€49 / seat / month" or "€29 / month". */
+/**
+ * "€49 / seat / month" or "€29 / month", worded as `usePlanPriceLabel` words
+ * a plan priced in major units.
+ */
 export function planPriceLabel(
 	terms: PlanPriceTerms,
 	t: Translate,
 	locale: string,
 ): string {
 	const price = formatMinorUnits(terms.unitAmountMinor, terms.currency, locale)
-	const interval = t(`saas.workspaces.interval.${terms.interval}`)
-	const key = terms.billingMode === 'seat' ? 'price_per_seat' : 'price_flat'
-	return t(`saas.workspaces.plan_cell.${key}`, { price, interval })
+	return t(`saas.workspace.plan_price.${terms.billingMode}_${terms.interval}`, {
+		price,
+	})
 }

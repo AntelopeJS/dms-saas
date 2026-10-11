@@ -7,6 +7,7 @@ import {
 	type PlanCardReorder,
 	type PlanCardTableActions,
 	cardFeatures,
+	cardPriceSuffixKey,
 	formatPlanAmount,
 	monthlyEquivalent,
 	PLAN_UNLIMITED,
@@ -77,11 +78,7 @@ const amount = computed(() =>
 	formatPlanAmount(plan.value.price, plan.value.currency, locale.value),
 )
 
-const priceSuffix = computed(() => {
-	if (isFree.value) return t('saas.catalog.plans.card.forever')
-	const key = isSeatPlan.value ? 'per_seat' : 'per'
-	return t(`saas.catalog.plans.card.${key}_${plan.value.interval}`)
-})
+const priceSuffix = computed(() => t(cardPriceSuffixKey(plan.value)))
 
 const priceNote = computed(() => {
 	if (isFree.value) return t('saas.catalog.plans.card.note_free')

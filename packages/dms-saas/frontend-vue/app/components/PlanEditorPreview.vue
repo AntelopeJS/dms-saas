@@ -3,6 +3,7 @@ import { computed, onMounted, type Ref, ref } from 'vue'
 import { useLiveFormValues } from '../build/composables/useLiveFormValues'
 import {
 	cardFeatures,
+	cardPriceSuffixKey,
 	formatPlanAmount,
 	type PlanCatalog,
 	PLANS_ENDPOINT,
@@ -93,12 +94,15 @@ function money(amount: number, code = currency.value): string {
 	return formatPlanAmount(amount, code, locale.value)
 }
 
-const priceSuffix = computed(() => {
-	if (price.value === 0) return t('saas.catalog.plans.card.forever')
-	return t(
-		`saas.catalog.plans.card.${isSeat.value ? 'per_seat' : 'per'}_${interval.value}`,
-	)
-})
+const priceSuffix = computed(() =>
+	t(
+		cardPriceSuffixKey({
+			price: price.value,
+			interval: interval.value,
+			billingMode: draft.value.billingMode ?? 'flat',
+		}),
+	),
+)
 
 const terms = computed(() => {
 	const parts = [t('saas.catalog.editor.preview.excl_vat')]

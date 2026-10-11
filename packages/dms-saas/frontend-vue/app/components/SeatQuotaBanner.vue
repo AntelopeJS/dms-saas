@@ -5,6 +5,7 @@ import {
 	INVITES_PATH,
 	MEMBERS_PATH,
 } from '../build/workspace-paths'
+import { workspaceInitials } from '../build/public/access'
 
 const KEYS = 'saas.workspace.seats'
 const WARN_AT_PERCENT = 80
@@ -98,15 +99,6 @@ const overDescription = computed(() => {
 		excess: t(`${KEYS}.seats_count`, excess),
 	})
 })
-
-function initialsOf(name: string): string {
-	return name
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map((part) => part[0]?.toUpperCase() ?? '')
-		.join('')
-}
 
 // Refetch rather than serve the shared cache: adding a member or an invite
 // lands back on this page, and a stale count would contradict the table right
@@ -241,7 +233,7 @@ onMounted(refresh)
 						>
 							<DmsIconWell size="xs" tone="muted">
 								<span class="text-[11px] font-semibold">
-									{{ initialsOf(member.name) }}
+									{{ workspaceInitials(member.name) }}
 								</span>
 							</DmsIconWell>
 							<span class="text-highlighted font-medium">

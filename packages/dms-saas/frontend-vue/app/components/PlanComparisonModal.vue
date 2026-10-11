@@ -126,13 +126,7 @@ function isDowngradeTarget(plan: OfferedPlanView): boolean {
 	)
 }
 
-function priceLine(plan: OfferedPlanView): string {
-	const price = formatMajorUnits(plan.price, plan.currency)
-	const period = planIntervalLabel(plan.interval)
-	return plan.billingMode === 'seat'
-		? t(`${KEY_PREFIX}.price_seat`, { price, interval: period })
-		: t(`${KEY_PREFIX}.price_flat`, { price, interval: period })
-}
+const priceLine = usePlanPriceLabel()
 
 function seatTotal(plan: OfferedPlanView): string | null {
 	if (plan.billingMode !== 'seat') return null

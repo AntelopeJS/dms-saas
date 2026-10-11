@@ -113,17 +113,10 @@ const summary = computed(() => {
 		.join(' · ')
 })
 
-const priceLabel = computed(() => {
-	const plan = current.value
-	if (!plan) return ''
-	const params = {
-		price: formatMajorUnits(plan.price, plan.currency),
-		interval: planIntervalLabel(plan.interval),
-	}
-	return isSeatPlan.value
-		? t(`${KEY_PREFIX}.price_seat`, params)
-		: t(`${KEY_PREFIX}.price_flat`, params)
-})
+const planPriceLabel = usePlanPriceLabel()
+const priceLabel = computed(() =>
+	current.value ? planPriceLabel(current.value) : '',
+)
 
 const seatArithmetic = computed(() => {
 	const plan = current.value

@@ -19,7 +19,6 @@ const props = defineProps<{
 }>()
 
 const L = 'saas.workspace_detail.invitations.link'
-const MS_PER_DAY = 86_400_000
 
 const { locale } = useI18n()
 const { resolveApiError } = useApiErrorMessage()
@@ -30,13 +29,9 @@ const expiresAt = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
 const isLoading = ref(true)
 
-const daysLeft = computed(() => {
-	if (!expiresAt.value) return 0
-	return Math.max(
-		0,
-		Math.ceil((new Date(expiresAt.value).getTime() - Date.now()) / MS_PER_DAY),
-	)
-})
+const daysLeft = computed(() =>
+	expiresAt.value ? countDaysUntil(expiresAt.value, new Date()) : 0,
+)
 
 async function load(): Promise<void> {
 	if (!props.rowData) return

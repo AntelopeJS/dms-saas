@@ -139,3 +139,20 @@ export interface PlanCardReorder {
 	/** Attributes and listeners to bind on the handle button. */
 	handle: Record<string, unknown>
 }
+
+/** The plan fields a catalogue card's price reads. */
+export interface CardPricedPlan {
+	price: number
+	interval: string
+	billingMode: string
+}
+
+/**
+ * The i18n key of what follows a card's amount: "per seat / month", "per
+ * year", or "forever" for a free plan.
+ */
+export function cardPriceSuffixKey(plan: CardPricedPlan): string {
+	if (plan.price === 0) return 'saas.catalog.plans.card.forever'
+	const key = plan.billingMode === 'seat' ? 'per_seat' : 'per'
+	return `saas.catalog.plans.card.${key}_${plan.interval}`
+}

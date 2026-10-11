@@ -2,7 +2,6 @@
 /** How a workspace came to be blocked, oldest first, deadlines included. */
 import {
 	type AccessTimelineEntry,
-	daysUntil,
 	TIMELINE_STEP_VIEWS,
 	type UnpaidInvoiceRef,
 } from './access'
@@ -34,7 +33,7 @@ function stepTitle(entry: AccessTimelineEntry): string {
 
 function stepNote(entry: AccessTimelineEntry): string | null {
 	if (!entry.isUpcoming) return null
-	const days = daysUntil(entry.at)
+	const days = countDaysUntil(entry.at, new Date())
 	return t(
 		'saas.public.suspended.timeline.days_left',
 		{ days: String(days) },

@@ -105,7 +105,6 @@ export const TIMELINE_STEP_VIEWS: Record<AccessTimelineKind, TimelineStepView> =
 	}
 
 const INITIALS_LENGTH = 2
-const MS_PER_DAY = 86_400_000
 const WORD_SEPARATOR = /\s+/
 
 /** Two letters for a workspace tile: "Northwind Traders" reads "NT". */
@@ -116,12 +115,4 @@ export function workspaceInitials(name: string): string {
 			? words.slice(0, INITIALS_LENGTH).map((word) => word[0])
 			: [...(words[0] ?? '')].slice(0, INITIALS_LENGTH)
 	return letters.join('').toUpperCase()
-}
-
-/** Whole days from `now` until `date`, never negative. */
-export function daysUntil(date: string, now = new Date()): number {
-	return Math.max(
-		0,
-		Math.ceil((new Date(date).getTime() - now.getTime()) / MS_PER_DAY),
-	)
 }

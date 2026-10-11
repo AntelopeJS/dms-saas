@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
-import { planPriceLabel } from '../build/workspace-detail/planPrice'
+import type { PricedPlan } from '../composables/usePlanPriceLabel'
 
 /**
  * Creates a workspace for a customer. The operator chooses how it is paid —
@@ -11,13 +11,9 @@ import { planPriceLabel } from '../build/workspace-detail/planPrice'
  * reads what will happen before anything is created. The invitation e-mail
  * leaves in the background: a failure arrives as a notification.
  */
-interface PlanOption {
+interface PlanOption extends PricedPlan {
 	_id: string
 	name: string
-	price: number
-	currency: string
-	interval: string
-	billingMode: string
 	isActive: boolean
 	isDeleted: boolean
 	paymentProviderRefs?: { stripePriceId?: string } | null
@@ -50,8 +46,6 @@ const CREATE_ENDPOINT = '/api/saas/workspaces/create'
 const LOOKUP_ENDPOINT = '/api/saas/workspaces/owner-lookup'
 const WORKSPACES_PATH = '/modules/saas/customers/workspaces'
 const LOOKUP_DELAY_MS = 400
-const MS_PER_DAY = 86_400_000
-const MINOR_UNITS_PER_UNIT = 100
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const { $authFetch } = useAuthFetch()
@@ -92,33 +86,18 @@ const canSubmit = computed(
 		!isSubmitting.value,
 )
 
-function priceOf(option: PlanOption): string {
-	return planPriceLabel(
-		{
-			unitAmountMinor: Math.round(option.price * MINOR_UNITS_PER_UNIT),
-			currency: option.currency,
-			interval: option.interval,
-			billingMode: option.billingMode,
-		},
-		t,
-		locale.value,
-	)
-}
+const planPriceLabel = usePlanPriceLabel()
 
 const planItems = computed(() =>
 	plans.value.map((option) => ({
 		value: option._id,
-		label: `${option.name} · ${priceOf(option)}`,
+		label: `${option.name} · ${planPriceLabel(option)}`,
 	})),
 )
 
-const daysLeft = computed(() => {
-	if (!freeUntil.value) return null
-	return Math.max(
-		0,
-		Math.ceil((new Date(freeUntil.value).getTime() - Date.now()) / MS_PER_DAY),
-	)
-})
+const daysLeft = computed(() =>
+	freeUntil.value ? countDaysUntil(freeUntil.value, new Date()) : null,
+)
 
 function day(value: string): string {
 	return formatDate(value, locale.value, { dateStyle: 'medium' }) ?? value

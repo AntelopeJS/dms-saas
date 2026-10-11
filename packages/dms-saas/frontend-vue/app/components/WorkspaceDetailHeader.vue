@@ -5,6 +5,7 @@ import WorkspaceActionDialogs from '../build/workspace-detail/WorkspaceActionDia
 import { useWorkspaceActions } from '../build/workspace-detail/useWorkspaceActions'
 import { useWorkspaceOverview } from '../build/workspace-detail/useWorkspaceOverview'
 import type { WorkspaceDialog } from '../build/workspace-detail/types'
+import { workspaceInitials } from '../build/public/access'
 
 /**
  * The head of a workspace's page: who it is (tile, name, status, plan,
@@ -16,7 +17,6 @@ const props = defineProps<{ routeParams?: Record<string, string> }>()
 
 const D = 'saas.workspace_detail.header'
 const ACTION_QUERY = 'action'
-const MAX_INITIALS = 2
 const WORKSPACE_HOME = '/'
 
 const tenantId = props.routeParams?.id ?? ''
@@ -34,14 +34,7 @@ const isSuspended = computed(() => overview.value?.status === 'suspended')
 const isCancelled = computed(() => overview.value?.status === 'cancelled')
 const isBilled = computed(() => !!overview.value?.hasStripeSubscription)
 
-const initials = computed(() =>
-	(overview.value?.name ?? '')
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, MAX_INITIALS)
-		.map((word) => word[0]!.toLocaleUpperCase())
-		.join(''),
-)
+const initials = computed(() => workspaceInitials(overview.value?.name ?? ''))
 
 const owner = computed(() => {
 	const current = overview.value

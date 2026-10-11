@@ -1,5 +1,6 @@
 import type { RequestContext } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import { countDaysUntil } from "../frontend-vue/app/composables/useDaysLeft";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   BillingSettings,
@@ -7,10 +8,7 @@ import type {
   Plan,
   TenantSubscription,
 } from "../src/db";
-import {
-  daysUntil,
-  workspaceInitials,
-} from "../frontend-vue/app/build/public/access";
+import { workspaceInitials } from "../frontend-vue/app/build/public/access";
 
 const NOW = new Date("2026-10-07T12:00:00.000Z");
 const DAY = 86_400_000;
@@ -392,8 +390,10 @@ describe("restricted screen helpers", () => {
 
   it("counts whole days left, never below zero", () => {
     expect(
-      daysUntil(new Date(NOW.getTime() + 25.5 * DAY).toISOString(), NOW),
+      countDaysUntil(new Date(NOW.getTime() + 25.5 * DAY).toISOString(), NOW),
     ).toBe(26);
-    expect(daysUntil(new Date(NOW.getTime() - DAY).toISOString(), NOW)).toBe(0);
+    expect(
+      countDaysUntil(new Date(NOW.getTime() - DAY).toISOString(), NOW),
+    ).toBe(0);
   });
 });

@@ -17,7 +17,6 @@ const props = defineProps<{ tenantId: string }>()
 const emit = defineEmits<{ done: []; cancel: [] }>()
 
 const D = 'saas.workspace_detail.complimentary'
-const MS_PER_DAY = 86_400_000
 
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
@@ -42,11 +41,9 @@ const planItems = computed(() =>
 		label: `${plan.name} · ${planPriceLabel(plan, t, locale.value)}`,
 	})),
 )
-const daysLeft = computed(() => {
-	if (!freeUntil.value) return null
-	const ms = new Date(freeUntil.value).getTime() - Date.now()
-	return Math.max(0, Math.ceil(ms / MS_PER_DAY))
-})
+const daysLeft = computed(() =>
+	freeUntil.value ? countDaysUntil(freeUntil.value, new Date()) : null,
+)
 const canSubmit = computed(
 	() =>
 		!!planId.value &&
