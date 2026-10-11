@@ -456,6 +456,7 @@ describe("money-back guarantee", () => {
   const paidInvoice = {
     id: "in_first",
     amountPaid: 47040,
+    refundable: 47040,
     created: firstPayment,
     periodStart: null,
     periodEnd: null,
@@ -471,6 +472,7 @@ describe("money-back guarantee", () => {
           windowDays: 30,
           mode: "full",
           invoice: paidInvoice,
+          payments: [paidInvoice],
         },
         null,
       ),
@@ -481,6 +483,7 @@ describe("money-back guarantee", () => {
       mode: "full",
       refundAmount: 47040,
       currency: "eur",
+      paymentsCount: 1,
       firstPaymentAt: new Date("2026-09-07T00:00:00.000Z"),
       windowEndsAt: new Date("2026-10-07T00:00:00.000Z"),
       refundedAt: null,
@@ -510,6 +513,7 @@ describe("money-back guarantee", () => {
         windowDays: 30,
         mode: "full",
         invoice: paidInvoice,
+        payments: [],
       },
       null,
     );

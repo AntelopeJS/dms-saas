@@ -9,6 +9,7 @@ interface RefundEligibility {
 	mode: string | null
 	refundAmount: number | null
 	currency: string | null
+	paymentsCount: number
 	firstPaymentAt: string | null
 	windowEndsAt: string | null
 	refundedAt: string | null
@@ -84,11 +85,19 @@ const dayOfWindow = computed(() => {
 	return Math.min(Math.max(elapsed, 1), window.windowDays)
 })
 
+const paidOn = computed(() => day(eligibility.value?.firstPaymentAt))
+// Every payment made within the window is refunded, not only the first.
+const paymentsLabel = computed(() => {
+	const count = eligibility.value?.paymentsCount ?? 1
+	return t(`${KEY_PREFIX}.payments`, { count, paidOn: paidOn.value }, count)
+})
+
 const params = computed(() => ({
 	amount: amountLabel.value,
+	payments: paymentsLabel.value,
 	plan: planName.value,
 	date: day(eligibility.value?.windowEndsAt),
-	paidOn: day(eligibility.value?.firstPaymentAt),
+	paidOn: paidOn.value,
 	refundedOn: day(eligibility.value?.refundedAt),
 	window: eligibility.value?.windowDays ?? 0,
 	days: daysLeft.value,
