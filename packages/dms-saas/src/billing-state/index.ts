@@ -6,7 +6,10 @@ import {
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../db";
-import { loadWorkspaceDirectoryFields } from "./directory";
+import {
+  type DirectoryDepartures,
+  loadWorkspaceDirectoryFields,
+} from "./directory";
 
 import { registerPastDueBanners } from "./past-due-banner";
 import { registerTrialEndingBanners } from "./trial-ending-banner";
@@ -36,9 +39,13 @@ export function deriveBillingState(
 /**
  * Publishes the tenant's billing state and its workspace directory row (plan,
  * seats, MRR, renewal, owner), derived from the records as they are now.
+ *
+ * @param tenantId The workspace
+ * @param departures Members and invitee being removed, not deleted yet
  */
 export async function recomputeTenantBillingState(
   tenantId: string,
+  departures: DirectoryDepartures = {},
 ): Promise<void> {
   const model = GetModel(TenantBillingStateModel);
   for (let attempt = 0; attempt < PUBLICATION_ATTEMPTS; attempt++) {
@@ -55,6 +62,7 @@ export async function recomputeTenantBillingState(
       billingState,
       subscription,
       existing,
+      departures,
     );
     if (
       await model.upsertForTenant(tenantId, billingState, existing, directory)

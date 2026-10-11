@@ -110,17 +110,22 @@ function listPlatformSupport(
  * successor before deleting it, so invitations are counted per invitee: the
  * two incarnations of a resent invitation hold a single seat.
  * `releasedInviteeEmail` leaves out the seat of an invitee whose invitation is
- * about to be replaced, since the replacement takes that seat over.
+ * about to be replaced or deleted, `departingUserIds` the members about to be
+ * removed: the DMS runs its removal hooks before it deletes.
  */
 export async function getSeatUsage(
   tenantId: string,
   releasedInviteeEmail?: string,
+  departingUserIds: readonly string[] = [],
 ): Promise<SeatUsage> {
-  const [members, invites, owners] = await Promise.all([
+  const [allMembers, invites, owners] = await Promise.all([
     GetModel(TenantMemberModel, tenantId).listAll(),
     GetModel(UserInviteModel, tenantId).getAll(),
     loadPlatformOwners(),
   ]);
+  const members = allMembers.filter(
+    (member) => !departingUserIds.includes(member.userId),
+  );
   const nowMs = Date.now();
   const pendingInvitees = new Set(
     invites

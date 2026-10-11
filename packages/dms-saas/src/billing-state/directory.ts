@@ -25,6 +25,15 @@ import {
 } from "../workspaces/invitations";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
+/**
+ * Who is leaving the workspace while the directory is recomputed: the DMS
+ * runs its member and invitation removal hooks before it deletes the rows.
+ */
+export interface DirectoryDepartures {
+  userIds?: readonly string[];
+  inviteeEmail?: string;
+}
+
 /** The workspace owner as the directory lists them. */
 export interface DirectoryOwner {
   status: WorkspaceOwnerStatus;
@@ -172,8 +181,12 @@ export function buildWorkspaceDirectoryFields(
 
 async function loadJoinedOwner(
   tenantId: string,
+  departures: DirectoryDepartures,
 ): Promise<DirectoryOwner | null> {
-  const [owner] = await GetModel(TenantMemberModel, tenantId).listOwners();
+  const owners = await GetModel(TenantMemberModel, tenantId).listOwners();
+  const owner = owners.find(
+    (member) => !departures.userIds?.includes(member.userId),
+  );
   if (!owner) return null;
   const user = await GetModel(UserModel).get(owner.userId);
   return {
@@ -190,11 +203,12 @@ async function loadJoinedOwner(
 export async function loadDirectoryOwner(
   tenantId: string,
   now: Date = new Date(),
+  departures: DirectoryDepartures = {},
 ): Promise<DirectoryOwner> {
-  const joined = await loadJoinedOwner(tenantId);
+  const joined = await loadJoinedOwner(tenantId, departures);
   if (joined) return joined;
   const invite = await findPendingOwnerInvite(tenantId);
-  if (!invite) return NO_OWNER;
+  if (!invite || invite.email === departures.inviteeEmail) return NO_OWNER;
   return {
     status: OWNER_STATUS_BY_INVITATION[invitationStatusOf(invite, now)],
     name: null,
@@ -219,14 +233,15 @@ export async function loadWorkspaceDirectoryFields(
   billingState: BillingState,
   subscription: TenantSubscription | undefined,
   existing: TenantBillingState | undefined,
+  departures: DirectoryDepartures = {},
 ): Promise<WorkspaceDirectoryFields> {
   const now = new Date();
   const [plan, seats, owner, policy] = await Promise.all([
     subscription?.planId
       ? GetModel(PlanModel).get(subscription.planId)
       : undefined,
-    getSeatUsage(tenantId),
-    loadDirectoryOwner(tenantId, now),
+    getSeatUsage(tenantId, departures.inviteeEmail, departures.userIds),
+    loadDirectoryOwner(tenantId, now, departures),
     loadDirectoryPolicy(),
   ]);
   return buildWorkspaceDirectoryFields({
