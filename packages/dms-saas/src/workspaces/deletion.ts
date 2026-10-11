@@ -2,19 +2,17 @@ import { randomUUID } from "node:crypto";
 import { assert } from "@antelopejs/interface-api-util";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
+import { UserInviteModel } from "@antelopejs/interface-dms/db";
 import { recomputeTenantBillingState } from "../billing-state";
+import { cancelInvitation } from "./invitations";
 import type { TenantSubscription, TenantSubscriptionStatus } from "../db";
-import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
-  DEFAULT_DATA_RETENTION_DAYS,
-  TenantSubscriptionModel,
-} from "../db";
+import { DEFAULT_DATA_RETENTION_DAYS, TenantSubscriptionModel } from "../db";
 import {
   notifyTenantOwners,
   subscriptionCancelledSubject,
 } from "../notifications";
 import { getStripeClient } from "../stripe";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
@@ -48,17 +46,20 @@ export function getWorkspaceDeletionOperationId(
 }
 
 export async function resolveDataRetentionDays(): Promise<number> {
-  const settings = await GetModel(BillingSettingsModel).get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
-  return (
-    settings?.dataRetentionDaysAfterCancellation ?? DEFAULT_DATA_RETENTION_DAYS
-  );
+  const settings = await loadBillingSettings();
+  return settings.dataRetentionDaysAfterCancellation;
 }
 
-/** Admit cancellation before Stripe; ambiguity retains intent and blocks retention. */
+/**
+ * Admit cancellation before Stripe; ambiguity retains intent and blocks
+ * retention.
+ *
+ * @param tenantId The workspace deleted
+ * @param ownerId The owner deleting it, named on the restricted screen
+ */
 export async function requestWorkspaceDeletion(
   tenantId: string,
+  ownerId: string,
 ): Promise<WorkspaceDeletionResult> {
   const subscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await subscriptionModel.findOne();
@@ -86,9 +87,12 @@ export async function requestWorkspaceDeletion(
       { idempotencyKey: `workspace-delete:${operationId}` },
     );
   }
+  const now = new Date();
   await subscriptionModel.completeTransition(subscription._id, operationId, {
     status: CANCELLED_STATUS,
-    updatedAt: new Date(),
+    deletionRequestedAt: now,
+    deletionRequestedBy: ownerId,
+    updatedAt: now,
   });
   return {
     status: CANCELLED_STATUS,
@@ -107,6 +111,9 @@ async function runAfterCancellation(tenantId: string): Promise<number> {
   await bestEffort(tenantId, "recompute billing state", () =>
     recomputeTenantBillingState(tenantId),
   );
+  await bestEffort(tenantId, "cancel pending invitations", () =>
+    cancelPendingInvitations(tenantId),
+  );
   await bestEffort(tenantId, "notify owners", () =>
     notifyTenantOwners(tenantId, subscriptionCancelledSubject, {
       icon: NOTIF_ICON,
@@ -115,6 +122,16 @@ async function runAfterCancellation(tenantId: string): Promise<number> {
     }),
   );
   return resolveDataRetentionDays().catch(() => DEFAULT_DATA_RETENTION_DAYS);
+}
+
+/**
+ * An invitation accepted after the deletion would only lead to the
+ * access-restricted screen, so the deletion withdraws them, as the
+ * confirmation dialog announces.
+ */
+async function cancelPendingInvitations(tenantId: string): Promise<void> {
+  const invites = await GetModel(UserInviteModel, tenantId).getAll();
+  for (const invite of invites) await cancelInvitation(tenantId, invite);
 }
 
 async function bestEffort(

@@ -333,16 +333,16 @@ describe("subscription effect admission with real Mongo mutations", () => {
       stripeSubscriptionId: "paid",
     });
     stripe.subscriptions.cancel.mockRejectedValueOnce(new Error("ack unknown"));
-    await expect(requestWorkspaceDeletion(request.tenantId)).rejects.toThrow(
-      "ack unknown",
-    );
+    await expect(
+      requestWorkspaceDeletion(request.tenantId, "owner"),
+    ).rejects.toThrow("ack unknown");
     expect(await request.tenantSubscriptionModel.findOne()).toMatchObject({
       status: "active",
       domainTransition: { kind: "cancel" },
     });
-    await expect(requestWorkspaceDeletion(request.tenantId)).rejects.toThrow(
-      "different pending transition",
-    );
+    await expect(
+      requestWorkspaceDeletion(request.tenantId, "owner"),
+    ).rejects.toThrow("different pending transition");
     expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
   });
 

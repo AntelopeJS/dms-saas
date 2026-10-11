@@ -1,7 +1,7 @@
 import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { PLAN_INTERVALS, type Plan, PlanModel } from "../db";
-import { isStripeConfigured } from "../stripe/client";
+import { getStripeClient, isStripeConfigured } from "../stripe/client";
 import {
   isPlanStripeSyncCurrent,
   resolveProductTaxCode,
@@ -153,4 +153,44 @@ export function startPlanReconciliation(): void {
   void reconcilePlansWithStripe().catch((error: unknown) =>
     Logging.Error(`${LOG_PREFIX} Stripe plan reconciliation failed`, error),
   );
+}
+
+/**
+ * Where a plan stands with Stripe: in line with its terms, waiting for a sync
+ * (a write Stripe has not taken yet), billed off Stripe (free and never
+ * linked), or Stripe not configured at all.
+ */
+export type PlanStripeSyncState =
+  | "synced"
+  | "out_of_sync"
+  | "off_stripe"
+  | "not_configured";
+
+/**
+ * {@link PlanStripeSyncState} of a plan, read from what the last sync
+ * recorded: no Stripe call.
+ *
+ * @param plan Plan as stored
+ */
+export async function planStripeSyncState(
+  plan: Plan,
+): Promise<PlanStripeSyncState> {
+  if (!isStripeConfigured()) return "not_configured";
+  if (!isStripeBilledPlan(plan)) return "off_stripe";
+  const taxCode = await resolveProductTaxCode();
+  return isPlanStripeSyncCurrent(plan, taxCode) ? "synced" : "out_of_sync";
+}
+
+/**
+ * Archives the Stripe product of a plan being deleted, so it no longer shows
+ * in Stripe as something on sale. A plan never linked, or Stripe not
+ * configured, is left alone. Provider errors propagate: the caller keeps the
+ * plan as it was.
+ *
+ * @param plan Plan about to be deleted
+ */
+export async function archivePlanStripeProduct(plan: Plan): Promise<void> {
+  const productId = plan.paymentProviderRefs?.stripeProductId;
+  if (!productId || !isStripeConfigured()) return;
+  await getStripeClient().products.update(productId, { active: false });
 }

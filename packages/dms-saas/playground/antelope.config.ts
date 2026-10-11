@@ -9,6 +9,22 @@ loadDotenv({ path: resolve(__dirname, ".env") });
 const CLIENT_HOSTS = ["localhost", "127.0.0.1"];
 const CLIENT_PORTS = [3000, 3001];
 
+interface OAuthCredentials {
+  clientId?: string;
+  clientSecret?: string;
+}
+
+// The DMS offers a provider, and draws its "Continue with" button on the
+// login and sign-up screens, only once both credentials are set: read from
+// the environment or `playground/.env`, never committed. Register
+// `http://localhost:3001/auth/oauth/<provider>/callback` with the provider.
+function oauthCredentials(prefix: string): OAuthCredentials {
+  return {
+    clientId: process.env[`${prefix}_CLIENT_ID`],
+    clientSecret: process.env[`${prefix}_CLIENT_SECRET`],
+  };
+}
+
 export default defineConfig({
   name: "playground",
   logging: {
@@ -27,8 +43,14 @@ export default defineConfig({
         type: "local",
         path: ".",
         // Not a workspace package: without `--ignore-workspace`, pnpm
-        // installs the root workspace instead of this lockfile.
-        installCommand: ["pnpm install --ignore-workspace", "pnpm build"],
+        // installs the root workspace instead of this lockfile. Transpiled
+        // without type checking: dms-saas rebuilds the interface package's
+        // types at the same moment, and checking against them half-written
+        // fails at random. `pnpm build` keeps the type check.
+        installCommand: [
+          "pnpm install --ignore-workspace",
+          "pnpm build:transpile",
+        ],
       },
     },
     "dms-saas": {
@@ -56,11 +78,20 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/dms",
-        version: ">=0.5.0 <1.0.0",
+        version: ">=0.7.7 <0.8.0",
       },
       config: {
         auth: {
           jwtSecret: "dev",
+          oauth: {
+            providers: {
+              github: oauthCredentials("GITHUB"),
+              google: oauthCredentials("GOOGLE"),
+            },
+            // Signing up with a provider opens a new account, which then
+            // sets up its first workspace on `auth/no-workspace`.
+            allowAccountCreation: true,
+          },
         },
         homepage: "/welcome",
         meta: {
@@ -73,7 +104,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/mongodb",
-        version: "^1.4.0",
+        version: "^1.4.2",
       },
       config: {
         url: process.env.MONGO_URL ?? "mongodb://localhost:27017",

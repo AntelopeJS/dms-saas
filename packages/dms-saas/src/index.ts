@@ -9,6 +9,7 @@ import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
 import * as workspaceLifecycleInterface from "@antelopejs/interface-dms-saas/workspace-lifecycle";
 import type { ScheduledTask } from "node-cron";
 import {
+  registerOwnerOnlyPermissionsResolver,
   registerPlanPermissionsResolver,
   registerSubscriptionAccessGate,
 } from "./auth";
@@ -16,7 +17,8 @@ import {
   registerAutomationNodes,
   unregisterAutomationNodes,
 } from "./automation";
-import { registerPastDueBanner } from "./billing-state";
+import { registerBillingLayoutBanners } from "./billing-state";
+import { registerWorkspaceDirectoryHooks } from "./billing-state/directory-hooks";
 import {
   getRegistrationPaymentMethodPolicy,
   resolveDevMode,
@@ -28,7 +30,7 @@ import * as billingImplementation from "./implementations/dms-saas/billing";
 import * as invoiceLineItemsImplementation from "./implementations/dms-saas/invoice-line-items";
 import * as pagesImplementation from "./implementations/dms-saas/pages";
 import * as workspaceLifecycleImplementation from "./implementations/dms-saas/workspace-lifecycle";
-import { registerPublicScreens } from "./pages";
+import { registerPublicScreens, resolvePublicScreensToRegister } from "./pages";
 import { registerSeatHooks } from "./plans";
 import { initStripeClient } from "./stripe";
 import type { DmsSaasConfig } from "./types";
@@ -49,9 +51,11 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
   initStripeClient(config.stripe);
   registerSaasHookListeners();
   registerPlanPermissionsResolver();
+  registerOwnerOnlyPermissionsResolver();
   registerSubscriptionAccessGate();
   registerSeatHooks();
-  registerPastDueBanner();
+  registerWorkspaceDirectoryHooks();
+  registerBillingLayoutBanners();
   ImplementInterface(billingInterface, billingImplementation);
   ImplementInterface(invoiceLineItemsInterface, invoiceLineItemsImplementation);
   ImplementInterface(pagesInterface, pagesImplementation);
@@ -77,6 +81,8 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
         stripePublishableKey: config.stripe.publishableKey,
         admissionMode: config.admissionMode ?? "open",
         registrationPaymentMethod: getRegistrationPaymentMethodPolicy(),
+        // Sign-in only links to the bundled screens the deployment serves.
+        publicScreens: resolvePublicScreensToRegister(config),
       },
     },
   });

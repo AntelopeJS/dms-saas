@@ -1,174 +1,170 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted } from 'vue'
 
-type BadgeColor = "success" | "warning" | "neutral";
-
-interface PaymentMethodBadge {
-  color: BadgeColor;
-  key: string;
+const UNPAID_STATUSES = new Set(['past_due', 'suspended'])
+const KEY_PREFIX = 'saas.tenant_billing.payment_method'
+const DAY_FORMAT: Intl.DateTimeFormatOptions = {
+	day: 'numeric',
+	month: 'short',
 }
 
-const PAST_DUE_STATUS = "past_due";
-const FREE_PLAN_PRICE = 0;
-const EXPIRY_YEAR_MODULO = 100;
-const EXPIRY_PAD_LENGTH = 2;
-const KEY_PREFIX = "saas.workspace.billing.payment_method";
-const FULL_DATE_FORMAT: Intl.DateTimeFormatOptions = {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-};
+const { data, error, load, refresh } = useBillingStatus()
+const { data: plan, load: loadPlan } = useTenantPlan()
+const { open: openPlanComparison } = usePlanComparison()
+const { open: openPayment } = usePayInvoice()
+const { locale } = useI18n()
 
-const { data, error, load, refresh } = useBillingStatus();
-const { data: plan, load: loadPlan } = useTenantPlan();
-const { open: openPlanComparison } = usePlanComparison();
-const { t, locale } = useI18n();
-
-const card = computed(() => data.value?.paymentMethod ?? null);
-const needsUpdate = computed(() => data.value?.status === PAST_DUE_STATUS);
-const isFreePlan = computed(
-  () => (plan.value?.current?.price ?? FREE_PLAN_PRICE) <= FREE_PLAN_PRICE,
-);
-// Card details are owner-only in the API payload: a member is told who
-// manages the card rather than shown a misleading "no card".
-const isTenantOwner = computed(() => !!data.value?.isTenantOwner);
-const hasStripeCustomer = computed(() => !!data.value?.hasStripeCustomer);
-// A gift on the top plan needs no card: offering an upgrade there is noise.
+const card = computed(() => data.value?.paymentMethod ?? null)
+const unpaidInvoice = computed(() => data.value?.unpaidInvoice ?? null)
+const needsUpdate = computed(() =>
+	UNPAID_STATUSES.has(data.value?.status ?? ''),
+)
+const isTenantOwner = computed(() => !!data.value?.isTenantOwner)
+const ownerName = computed(() => data.value?.workspaceOwner?.name ?? null)
+const hasStripeCustomer = computed(() => !!data.value?.hasStripeCustomer)
 const complimentaryAccess = computed(() =>
-  resolveComplimentaryAccess(plan.value),
-);
+	resolveComplimentaryAccess(plan.value),
+)
+const declinedOn = computed(() =>
+	formatDate(unpaidInvoice.value?.failedAt, locale.value, DAY_FORMAT),
+)
+const cardDetail = computed(() => {
+	if (!card.value) return ''
+	const holder = card.value.holderName
+	const expiry = formatCardExpiry(card.value)
+	return holder ? `${expiry} · ${holder}` : expiry
+})
 
-const complimentaryNote = computed(() => {
-  const endsOn = formatDate(
-    complimentaryAccess.value?.endsAt,
-    locale.value,
-    FULL_DATE_FORMAT,
-  );
-  return endsOn
-    ? t(`${KEY_PREFIX}.complimentary_until_note`, { date: endsOn })
-    : t(`${KEY_PREFIX}.complimentary_note`);
-});
-
-// "You'll be asked for a card on upgrade" is only true without a Stripe
-// customer: once one exists, a missing card is added through the portal.
-const noCardKey = computed(() =>
-  hasStripeCustomer.value ? "none_with_portal" : "none",
-);
-
-const headerBadge = computed<PaymentMethodBadge>(() => {
-  if (complimentaryAccess.value) {
-    return { color: "success", key: "complimentary" };
-  }
-  if (!card.value) return { color: "warning", key: "missing" };
-  if (needsUpdate.value) return { color: "warning", key: "needs_update" };
-  if (isFreePlan.value) return { color: "success", key: "verified" };
-  return { color: "success", key: "active" };
-});
-
-const cardBadge = computed<PaymentMethodBadge>(() => {
-  if (needsUpdate.value) return { color: "warning", key: "declined" };
-  if (isFreePlan.value) return { color: "success", key: "never_charged" };
-  return { color: "neutral", key: "default" };
-});
-
-const expiryLabel = computed(() => {
-  if (!card.value) return "";
-  const month = String(card.value.expMonth).padStart(EXPIRY_PAD_LENGTH, "0");
-  const year = String(card.value.expYear % EXPIRY_YEAR_MODULO).padStart(
-    EXPIRY_PAD_LENGTH,
-    "0",
-  );
-  return `${month}/${year}`;
-});
+function payWithAnotherCard(): void {
+	const unpaid = unpaidInvoice.value
+	if (!unpaid) return
+	openPayment({
+		invoiceId: unpaid.invoiceId,
+		number: unpaid.number,
+		amount: unpaid.amount,
+		currency: unpaid.currency,
+		hostedInvoiceUrl: unpaid.hostedInvoiceUrl,
+	})
+}
 
 onMounted(() => {
-  void loadPlan();
-  return load();
-});
+	void loadPlan()
+	return load()
+})
 </script>
 
 <template>
-  <DmsSaasLoadFailure v-if="error && !data" @retry="refresh" />
-  <UCard v-else-if="data">
-    <template #header>
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h3 class="font-semibold">{{ $t(`${KEY_PREFIX}.title`) }}</h3>
-        <UBadge
-          v-if="isTenantOwner"
-          :color="headerBadge.color"
-          variant="subtle"
-        >
-          {{ $t(`${KEY_PREFIX}.${headerBadge.key}`) }}
-        </UBadge>
-      </div>
-    </template>
+	<DmsCard :title="$t(`${KEY_PREFIX}.title`)">
+		<template v-if="data && isTenantOwner && card" #actions>
+			<DmsStatusPill
+				:tone="needsUpdate ? 'warning' : 'success'"
+				:label="
+					needsUpdate
+						? $t(`${KEY_PREFIX}.needs_update`)
+						: $t(`${KEY_PREFIX}.default`)
+				"
+			/>
+		</template>
 
-    <p v-if="!isTenantOwner" class="text-muted text-sm">
-      {{ $t(`${KEY_PREFIX}.owner_only`) }}
-    </p>
+		<div v-if="!data && !error" class="flex flex-col gap-3">
+			<USkeleton class="h-14 w-full" />
+			<USkeleton class="h-4 w-2/3" />
+		</div>
 
-    <div v-else class="flex flex-col gap-4">
-      <div
-        v-if="complimentaryAccess"
-        class="border-default flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3"
-      >
-        <UIcon name="i-ph-gift" class="text-muted size-5" />
-        <span class="text-muted grow text-sm">{{ complimentaryNote }}</span>
-      </div>
+		<DmsSaasLoadFailure
+			v-else-if="error && !data"
+			:title="$t(`${KEY_PREFIX}.load_failed`)"
+			@retry="refresh"
+		/>
 
-      <template v-else-if="card">
-        <div
-          class="border-default flex flex-wrap items-center gap-3 rounded-lg border p-3"
-        >
-          <UIcon name="i-ph-credit-card" class="text-muted size-5" />
-          <span class="font-medium capitalize">
-            {{ card.brand }} •••• {{ card.last4 }}
-          </span>
-          <span class="text-muted text-sm">
-            {{ $t(`${KEY_PREFIX}.expires`, { date: expiryLabel }) }}
-          </span>
-          <span class="grow" />
-          <UBadge :color="cardBadge.color" variant="subtle">
-            {{ $t(`${KEY_PREFIX}.${cardBadge.key}`) }}
-          </UBadge>
-        </div>
-        <p v-if="needsUpdate" class="text-muted text-sm">
-          {{ $t(`${KEY_PREFIX}.update_note`) }}
-        </p>
-        <p v-else-if="isFreePlan" class="text-muted text-sm">
-          {{ $t(`${KEY_PREFIX}.free_note`) }}
-        </p>
-      </template>
+		<p v-else-if="!isTenantOwner" class="text-muted text-sm">
+			{{
+				ownerName
+					? $t(`${KEY_PREFIX}.owner_only_named`, { owner: ownerName })
+					: $t(`${KEY_PREFIX}.owner_only`)
+			}}
+		</p>
 
-      <div
-        v-else
-        class="border-default flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3"
-      >
-        <UIcon name="i-ph-credit-card" class="text-muted size-5" />
-        <span class="text-muted grow text-sm">
-          {{ $t(`${KEY_PREFIX}.${noCardKey}`) }}
-        </span>
-        <UButton
-          v-if="!hasStripeCustomer"
-          size="sm"
-          color="primary"
-          variant="subtle"
-          icon="i-ph-plus"
-          @click="openPlanComparison"
-        >
-          {{ $t(`${KEY_PREFIX}.add`) }}
-        </UButton>
-      </div>
+		<DmsEmptyState
+			v-else-if="complimentaryAccess"
+			size="sm"
+			icon="i-ph-gift"
+			:title="$t(`${KEY_PREFIX}.complimentary_title`)"
+			:description="$t(`${KEY_PREFIX}.complimentary_description`)"
+		/>
 
-      <div
-        v-if="hasStripeCustomer"
-        class="border-default flex flex-wrap items-center gap-3 border-t pt-4"
-      >
-        <DmsSaasCustomerPortalButton />
-        <p class="text-muted grow text-xs">
-          {{ $t(`${KEY_PREFIX}.portal_hint`) }}
-        </p>
-      </div>
-    </div>
-  </UCard>
+		<div v-else-if="card" class="flex flex-col gap-4">
+			<div class="flex flex-wrap items-center gap-3">
+				<DmsIconWell
+					icon="i-ph-credit-card"
+					:tone="needsUpdate ? 'warning' : 'neutral'"
+					size="md"
+				/>
+				<div class="min-w-0 grow">
+					<p class="font-medium">{{ formatCardLabel(card) }}</p>
+					<p class="text-muted text-sm">
+						{{ $t(`${KEY_PREFIX}.expires`, { detail: cardDetail }) }}
+					</p>
+				</div>
+				<span v-if="needsUpdate && declinedOn" class="text-warning text-sm">
+					{{ $t(`${KEY_PREFIX}.declined_on`, { date: declinedOn }) }}
+				</span>
+			</div>
+			<div v-if="needsUpdate" class="flex flex-col gap-2">
+				<p class="text-sm">{{ $t(`${KEY_PREFIX}.update_note`) }}</p>
+				<UButton
+					v-if="unpaidInvoice?.hostedInvoiceUrl"
+					class="self-start"
+					size="sm"
+					color="neutral"
+					variant="link"
+					icon="i-ph-plus"
+					@click="payWithAnotherCard"
+				>
+					{{ $t(`${KEY_PREFIX}.pay_another_card`) }}
+				</UButton>
+			</div>
+		</div>
+
+		<DmsEmptyState
+			v-else
+			size="sm"
+			icon="i-ph-credit-card"
+			:title="$t(`${KEY_PREFIX}.none_title`)"
+			:description="
+				hasStripeCustomer
+					? $t(`${KEY_PREFIX}.none_with_portal`)
+					: $t(`${KEY_PREFIX}.none`)
+			"
+		>
+			<template v-if="!hasStripeCustomer" #actions>
+				<UButton
+					size="sm"
+					color="primary"
+					variant="subtle"
+					icon="i-ph-stack"
+					@click="openPlanComparison"
+				>
+					{{ $t(`${KEY_PREFIX}.choose_plan`) }}
+				</UButton>
+			</template>
+		</DmsEmptyState>
+
+		<template v-if="data && isTenantOwner && hasStripeCustomer" #footer>
+			<div class="flex w-full flex-wrap items-center gap-3">
+				<p class="text-muted grow text-xs">
+					<UIcon name="i-ph-lock-simple" class="me-1 align-middle" />
+					{{ $t(`${KEY_PREFIX}.stripe_note`) }}
+				</p>
+				<DmsSaasCustomerPortalButton
+					:label-key="
+						needsUpdate
+							? 'saas.tenant_billing.past_due.update_card'
+							: 'saas.tenant_billing.portal.open'
+					"
+					size="sm"
+				/>
+			</div>
+		</template>
+	</DmsCard>
 </template>

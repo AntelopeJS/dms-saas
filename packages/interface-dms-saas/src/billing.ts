@@ -80,6 +80,8 @@ export interface UpcomingInvoiceLine {
   isProration: boolean;
   /** `<provider id>:<key>` of a usage line, null for any other kind. */
   usageLineKey: string | null;
+  /** Stripe product the line bills, null when Stripe names none. */
+  productId: string | null;
 }
 
 /**
@@ -186,3 +188,12 @@ export const GetUpcomingInvoicePreview =
   InterfaceFunction<
     (scope: UpcomingInvoicePreviewScope) => Promise<UpcomingInvoicePreview>
   >();
+
+/**
+ * Republishes a workspace's billing state and its workspace directory row
+ * (plan, seats, MRR, renewal, owner) from its records as they are now. dms-saas
+ * does it after every billing change of its own; a writer that bypasses it
+ * (an import, a seed) calls it once its rows are written.
+ */
+export const RecomputeTenantBillingState =
+  InterfaceFunction<(tenantId: string) => Promise<void>>();

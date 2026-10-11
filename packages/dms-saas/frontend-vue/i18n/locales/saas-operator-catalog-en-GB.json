@@ -1,0 +1,597 @@
+{
+	"saas": {
+		"permissions": {
+			"catalog": {
+				"stats": "Catalogue figures",
+				"stats_description": "See the plans on sale, the workspaces on each kind of plan, the catalogue MRR and the legacy plans",
+				"retire_plan": "Retire plan",
+				"retire_plan_description": "Move every workspace of a plan to another one and close it to sign-ups",
+				"editor_preview": "Plan preview",
+				"editor_preview_description": "See the plan card as customers see it and its Stripe sync status while editing",
+				"migrations_attention": "Migrations needing attention",
+				"migrations_attention_description": "See the plan migrations waiting for an operator",
+				"migration_header": "Migration header",
+				"migration_header_description": "See where a plan migration stands and retry, export or close it",
+				"migration_totals": "Migration totals",
+				"migration_totals_description": "See how many workspaces a migration captured, moved and left behind",
+				"migration_workspaces": "Migration workspaces",
+				"migration_workspaces_description": "List a migration’s workspaces and settle the uncertain ones",
+				"migration_stripe_check": "Stripe check",
+				"migration_stripe_check_description": "Read what Stripe bills an uncertain workspace on",
+				"migration_changes": "What changed",
+				"migration_changes_description": "See what changes for a moved workspace",
+				"migration_journal": "Migration journal",
+				"migration_journal_description": "See who started, settled and closed a migration",
+				"migration_details": "Changes and journal",
+				"migration_details_description": "The grid holding what changed and the journal",
+				"migration_details_row": "Changes and journal row",
+				"migration_details_row_description": "The row holding what changed and the journal"
+			}
+		},
+		"catalog": {
+			"common": {
+				"cancel": "Cancel",
+				"back": "Back"
+			},
+			"plans": {
+				"title": "Plans",
+				"description": "Subscription plans, pricing, features and trial settings. The order below is the order customers see on the pricing page.",
+				"create": "Create plan",
+				"search": "Search plans",
+				"migrations_button": "Plan migrations",
+				"unlimited": "Unlimited",
+				"features_failed": "Couldn’t load the features.",
+				"tabs": {
+					"on_sale": "On sale",
+					"legacy": "Legacy",
+					"all": "All"
+				},
+				"sale_status": {
+					"on_sale": "On sale",
+					"legacy": "Legacy"
+				},
+				"column": {
+					"plan": "Plan",
+					"sale_status": "Status",
+					"workspaces": "Workspaces",
+					"mrr": "MRR",
+					"mrr_description": "Normalised: yearly ÷ 12, seats counted, trials and complimentary access excluded.",
+					"mrr_share": "MRR share"
+				},
+				"field": {
+					"description": "Description",
+					"price": "Price",
+					"currency": "Currency",
+					"interval": "Billing interval",
+					"billing_mode": "Billing mode",
+					"audience": "Who can subscribe",
+					"trial_days": "Free trial",
+					"max_members": "Maximum members",
+					"is_public": "Public",
+					"is_active": "On sale",
+					"order": "Position"
+				},
+				"audience": {
+					"any": "Anyone",
+					"individual": "Individuals only",
+					"business": "Businesses only"
+				},
+				"interval": {
+					"month": "Monthly",
+					"year": "Yearly"
+				},
+				"billing_mode": {
+					"flat": "Flat rate",
+					"seat": "Per seat"
+				},
+				"action": {
+					"edit": "Edit plan",
+					"duplicate": "Duplicate as new plan",
+					"view_workspaces": "View workspaces",
+					"open_stripe": "Open product in Stripe",
+					"stop_selling": "Stop selling…",
+					"stop_selling_success": "The plan is no longer on sale.",
+					"put_on_sale": "Put on sale",
+					"put_on_sale_success": "The plan is on sale again.",
+					"retire": "Retire plan…",
+					"delete": "Delete plan",
+					"delete_success": "Plan deleted."
+				},
+				"dialog": {
+					"stop_selling": {
+						"title": "Stop selling {name}?",
+						"description_in_use": "{name} disappears from the pricing page and sign-up. Nobody is moved: current customers stay on it and keep being billed. To move them to another plan, use Retire plan… instead.",
+						"description_unused": "No workspace uses {name}, so nobody is affected. It disappears from the pricing page; put it back on sale any time.",
+						"confirm": "Stop selling",
+						"impact_workspaces": "Workspaces staying on {name}",
+						"impact_mrr": "MRR unchanged",
+						"impact_trials": "Trials in progress, still convert"
+					},
+					"delete": {
+						"title": "Delete plan {name}?",
+						"description": "No workspace uses {name}. The plan and its feature settings are deleted; this can’t be undone.",
+						"confirm": "Delete plan",
+						"impact_workspaces": "Workspaces affected",
+						"impact_stripe": "Stripe product archived",
+						"blocked_title": "{name} still has workspaces",
+						"blocked_description": "Delete is available once no workspace uses the plan. Retire it first to move its {count} workspaces to another plan."
+					}
+				},
+				"empty": {
+					"title": "No plans yet",
+					"description": "Customers can’t sign up until at least one plan is on sale. Create one, or duplicate an existing plan to keep its features.",
+					"filtered_title": "No plan to show",
+					"filtered_description": "No plan matches this search or tab. Clear the search, or pick another tab.",
+					"error_title": "Couldn’t load plans",
+					"error_description": "The catalogue didn’t answer. Plans and prices are unchanged."
+				},
+				"stats": {
+					"label": "Catalogue at a glance",
+					"on_sale": "Plans on sale",
+					"on_sale_detail": "{public} public · {sales} sales-led",
+					"workspaces": "Workspaces",
+					"workspaces_detail": "{paying} paying · {free} free · {trialing} in trial",
+					"mrr": "Catalogue MRR",
+					"mrr_detail": "Normalised · yearly ÷ 12, seats counted",
+					"mrr_detail_other": "Normalised · plus {other}",
+					"legacy": "Legacy plans",
+					"legacy_none": "No workspace left on a legacy plan",
+					"legacy_detail": "{names} · {count} workspace to move | {names} · {count} workspaces to move"
+				},
+				"card": {
+					"public": "Public",
+					"hidden": "Hidden",
+					"not_on_sale": "Not on sale",
+					"legacy": "Legacy",
+					"on_sale": "On sale",
+					"more": "More actions",
+					"forever": "forever",
+					"per_month": "/ month",
+					"per_year": "/ year",
+					"per_seat_month": "/ seat / month",
+					"per_seat_year": "/ seat / year",
+					"note": "{mode} · excl. VAT",
+					"note_yearly": "{mode} · ≈ {monthly} / month · excl. VAT",
+					"note_free": "Free, no payment",
+					"trial": "{days}-day trial",
+					"no_trial": "No trial",
+					"members": "Up to {count} member | Up to {count} members",
+					"members_unlimited": "Unlimited members",
+					"workspaces": "workspace | workspaces",
+					"seats": "{count} seat | {count} seats",
+					"members_count": "{count} member | {count} members",
+					"mrr_share": "MRR · {share}%"
+				}
+			},
+			"editor": {
+				"new_title": "Create plan",
+				"new_description": "A new subscription plan. Its Stripe product and price are created when you save.",
+				"edit_title": "Edit plan",
+				"edit_description": "Pricing changes are synced to Stripe when you save.",
+				"create": "Create plan",
+				"created": "Plan created.",
+				"saved": "Plan saved.",
+				"limit_error": "A cap must be at least 1 member. For no cap, tick Unlimited.",
+				"notice": {
+					"price_changed": "A new Stripe price was created",
+					"price_changed_description": "New sign-ups pay the new price. Existing subscribers keep theirs until you migrate them."
+				},
+				"section": {
+					"identity": "Identity",
+					"identity_description": "How the plan is named and pitched to customers.",
+					"pricing": "Pricing",
+					"pricing_description": "What a workspace pays, excluding tax. VAT is added at checkout from the customer’s country.",
+					"access": "Access & features",
+					"access_description": "What workspaces on this plan can do. Values show exactly as customers see them.",
+					"limits": "Limits",
+					"limits_description": "Hard caps checked when someone invites a member.",
+					"visibility": "Visibility",
+					"visibility_description": "Where the plan appears and how its card stands out."
+				},
+				"field": {
+					"name": "Name",
+					"name_description": "Commercial name shown to customers.",
+					"description": "Description",
+					"description_description": "Pitch shown on the pricing page and plan cards. Two lines fit.",
+					"audience": "Who can subscribe",
+					"audience_description": "Businesses must enter a company name and VAT number at sign-up.",
+					"price": "Price excl. tax",
+					"price_description": "Base price for one billing period, in the currency below.",
+					"price_hint": "Typed in the currency’s main unit: 34.50 for €34.50.",
+					"currency": "Currency",
+					"interval": "Billing interval",
+					"billing_mode": "Billing mode",
+					"billing_mode_description": "Per seat bills every member; seat changes are prorated.",
+					"trial_days": "Free trial",
+					"trial_days_description": "No card needed during the trial. Set 0 for none.",
+					"max_members": "Maximum members",
+					"max_members_description": "Workspaces already above the cap keep everyone but can’t invite more.",
+					"members_unit": "members",
+					"is_active": "On sale",
+					"is_active_description": "When off, current customers stay on it but nobody new can subscribe.",
+					"is_public": "Public",
+					"is_public_description": "Listed on the pricing page and at sign-up. Hidden plans are assigned by a platform admin.",
+					"order": "Position",
+					"order_description": "Position on the pricing page: lower comes first. Also changed by dragging cards on the Plans page.",
+					"badge": "Highlight badge",
+					"badge_description": "Short label on top of the card, like “Popular”. Leave empty for none.",
+					"badge_color": "Badge colour",
+					"badge_color_description": "Colour of the badge and the card’s outline.",
+					"days_unit": "days"
+				},
+				"billing_mode_hint": {
+					"flat": "One price per workspace, whatever the team size",
+					"seat": "Price × members, e.g. 6 members pay 6 times the price"
+				},
+				"access": {
+					"parent": "Build on another plan",
+					"no_parent": "No parent plan",
+					"parent_hint": "This plan follows {parent} live: when {parent} changes, rows marked “Inherited” change too. Overridden rows keep their own value.",
+					"no_parent_hint": "Pick a parent plan to inherit its features and permissions.",
+					"this_plan": "This plan",
+					"feature": "Feature",
+					"value": "Value",
+					"source": "Source",
+					"inherited": "Inherited from {parent}",
+					"overridden": "Overridden",
+					"unset": "Not set: off",
+					"reset": "Use the parent plan’s value",
+					"no_features": "No feature yet. Create features to switch them on or limit them per plan.",
+					"summary": "{count} feature | {count} features",
+					"summary_parent": "{count} feature · {overridden} overridden, {inherited} inherited | {count} features · {overridden} overridden, {inherited} inherited",
+					"manage_features": "Manage features",
+					"permissions": "Permissions",
+					"permissions_summary": "{granted} of {total} granted",
+					"permissions_parent": "{granted} of {total} · inherited from {parent}, plus {added} added on this plan",
+					"edit_permissions": "Edit permissions",
+					"load_failed": "Couldn’t load the features and permissions. The plan’s saved access is unchanged."
+				},
+				"feature": {
+					"mode": "Value",
+					"off": "Off",
+					"limit": "Limit",
+					"unlimited": "Unlimited",
+					"included": "Included",
+					"not_included": "Not included",
+					"text_placeholder": "Shown in the comparison table",
+					"limit_error": "A limit must be at least 1. To block it, pick Off."
+				},
+				"permissions": {
+					"title": "Permissions on {name}",
+					"description": "{granted} of {total} granted.",
+					"description_parent": "{granted} of {total} granted. Rows tagged {parent} come from the parent plan.",
+					"search": "Search permissions",
+					"expand_all": "Expand all",
+					"collapse_all": "Collapse all",
+					"no_match": "No permission matches “{search}”",
+					"delta": "{count} since last save",
+					"apply": "Apply"
+				},
+				"preview": {
+					"title": "Live preview",
+					"context_month": "Pricing page · monthly",
+					"context_year": "Pricing page · yearly",
+					"unnamed": "Plan name",
+					"excl_vat": "Excl. VAT",
+					"trial": "{days}-day free trial, no card",
+					"start_trial": "Start free trial",
+					"choose": "Choose {name}",
+					"failed": "Couldn’t load the preview. Editing still works."
+				},
+				"stripe": {
+					"title": "Stripe sync",
+					"product": "Product",
+					"price": "Current price",
+					"state": {
+						"synced": "Synced",
+						"out_of_sync": "Waiting for sync",
+						"off_stripe": "Not billed on Stripe",
+						"not_configured": "Stripe not configured"
+					},
+					"on_save_title": "When you save",
+					"on_save": "A new Stripe price of {price} ({interval}) is created and used for new sign-ups. Existing subscribers keep {previous} until migrated. {count} workspace is on this plan. | A new Stripe price of {price} ({interval}) is created and used for new sign-ups. Existing subscribers keep {previous} until migrated. {count} workspaces are on this plan."
+				}
+			},
+			"retire": {
+				"title": "Retire {name}",
+				"subtitle_1": "Move every workspace to another plan, then delete {name} once none is left.",
+				"subtitle_2": "Pick where the workspace goes and check what changes for it. | Pick where the {count} workspaces go and check what changes for them.",
+				"subtitle_3": "Check the impact, then type the plan’s key to confirm.",
+				"steps": "Steps",
+				"step_1": "Impact",
+				"step_2": "Target plan",
+				"step_3": "Confirm",
+				"workspaces": "Workspaces",
+				"workspaces_detail": "{paying} paying · {past_due} past due",
+				"members": "Members",
+				"largest": "largest: {name}, {count}",
+				"mrr": "MRR on this plan",
+				"renewals": "renewals {first} – {last}",
+				"list_title": "Workspaces on {name}",
+				"list_hint": "{count} · captured when the migration starts",
+				"member_count": "{count} member | {count} members",
+				"renews": "Renews {date}",
+				"show_all": "Show {count} more",
+				"no_workspace": "No workspace uses this plan.",
+				"closed_note": "Retiring closes {name} to sign-ups at once: no workspace can join it while its workspaces move.",
+				"scheduled_note": "{count} more workspace is scheduled to switch to {name}: its scheduled change goes to the plan you pick instead. | {count} more workspaces are scheduled to switch to {name}: their scheduled change goes to the plan you pick instead.",
+				"open_migration": "A migration of this plan is running or waits for an operator. Settle it in Plan migrations first.",
+				"no_target": "No other plan is on sale to move the workspaces to. Put one on sale first.",
+				"nothing_changes": "Nothing changes until step 3",
+				"choose_target": "Choose target plan",
+				"move_to": "Move workspaces to",
+				"move_to_placeholder": "Pick a plan on sale",
+				"target_option": "{name} · {price} {interval} · {mode} · {cap}",
+				"price_lost": "The target costs more: workspaces pay more from their next invoice.",
+				"price_gained": "The target costs less: nobody is charged more.",
+				"price_same": "Same price, so nobody is charged more.",
+				"price_changed": "The price changes.",
+				"pick_target": "Pick a target plan to see what changes.",
+				"diff_title": "What changes for these workspaces",
+				"included": "Included",
+				"not_included": "Not included",
+				"above_cap": "{count} workspace is above {cap}: it keeps everyone but can’t invite | {count} workspaces are above {cap}: they keep everyone but can’t invite",
+				"permissions_changed": "Permissions: {added} added, {removed} removed",
+				"unchanged": "Unchanged: {names}",
+				"notify": "Notify workspace owners",
+				"notify_hint": "{count} recipient · sent when each workspace moves | {count} recipients · sent when each workspace moves",
+				"preview": "Notification preview",
+				"preview_sample": "As {workspace} sees it",
+				"review": "Review and confirm",
+				"confirm_title": "Retire {name} and move {count} workspace to {target}? | Retire {name} and move {count} workspaces to {target}?",
+				"impact_moved": "Workspaces moved to {target}",
+				"impact_members": "Members keep access",
+				"impact_mrr": "MRR on this plan today",
+				"impact_notified": "Workspace owners notified",
+				"confirm_description": "{name} is closed to sign-ups now and kept until no workspace is left on it. Failures stay on {name} and appear in Plan migrations for a retry.",
+				"type_to_confirm": "Type {slug} to confirm",
+				"confirm": "Retire plan and move {count} | Retire plan and move {count}",
+				"started": "Migration of {name} started",
+				"failed": "The plan was not retired"
+			},
+			"migrations": {
+				"title": "Plan migrations",
+				"description": "Moves of workspaces from one plan to another, started when a plan is retired. Failed workspaces stay on their old plan until retried.",
+				"caption": "Migrations",
+				"search": "Search by plan",
+				"count": "{count} migration | {count} migrations",
+				"footer_hint": "Progress refreshes while a migration runs.",
+				"plans_button": "Plans",
+				"detail_title": "Plan migration",
+				"detail_description": "Workspaces moved, not moved, and what is left to settle.",
+				"tabs": {
+					"all": "All",
+					"running": "Running",
+					"needs_attention": "Needs attention",
+					"completed": "Completed"
+				},
+				"stage": {
+					"running": "Running",
+					"needs_attention": "Needs attention",
+					"done": "Completed"
+				},
+				"reason": {
+					"plan_retired": "Plan retired"
+				},
+				"column": {
+					"migration": "Migration",
+					"reason": "Reason",
+					"status": "Status",
+					"stage": "Stage",
+					"progress": "Progress",
+					"started_by": "Started by",
+					"started": "Started",
+					"finished": "Finished",
+					"not_finished": "Not finished"
+				},
+				"attention": {
+					"uncertain": "Some workspaces didn’t move, one at least with an uncertain Stripe state: check it in Stripe before retrying.",
+					"failed": "Some workspaces didn’t move. Retry them, or mark the migration as reconciled.",
+					"state": "{count} of {total} not moved | {count} of {total} not moved",
+					"empty_title": "Nothing needs your attention",
+					"empty_description": "Every migration moved its workspaces or was reconciled."
+				},
+				"empty": {
+					"title": "No migration yet",
+					"description": "Retiring a plan moves its workspaces to another one; each move shows here."
+				},
+				"workspace_status": {
+					"pending": "Waiting",
+					"running": "Moving",
+					"succeeded": "Moved",
+					"reconciliation_required": "Uncertain",
+					"failed": "Failed",
+					"kept": "Kept on old plan"
+				},
+				"detail": {
+					"started": "Started {date} by {name} · {reason}",
+					"captured": "Captured",
+					"moved": "Moved",
+					"not_moved": "Not moved",
+					"notified": "Owners notified",
+					"uncertain_hint": "The move was cut short: Stripe may or may not have switched the subscription, so a retry could charge twice. Check it in Stripe first, then settle it here as the reading says.",
+					"check_stripe": "Check in Stripe",
+					"stripe_source": "Old plan",
+					"stripe_target": "New plan",
+					"stripe_other": "Another price",
+					"stripe_none": "No subscription",
+					"stripe_unavailable": "Unavailable",
+					"changes": "What changed for moved workspaces",
+					"all_workspaces": "All workspaces",
+					"no_workspace": "No workspace was on the plan when the migration started.",
+					"resolve_first": "Resolve {name} to mark as reconciled",
+					"mark_reconciled": "Mark as reconciled",
+					"back": "All migrations",
+					"title": "{from} → {to}",
+					"totals": "Migration totals",
+					"notified_off": "Owners weren’t notified",
+					"export": "Export CSV",
+					"export_job": {
+						"title": "Workspaces export",
+						"preparing": "Preparing the CSV file…",
+						"success_title": "Export ready",
+						"success_message": "The CSV file of the migration’s workspaces is downloading.",
+						"error_title": "Couldn’t export the workspaces",
+						"retry": "Try again"
+					},
+					"retry_action": "Retry failed workspaces",
+					"reconciled_toast": "Migration marked as reconciled",
+					"changes_empty": "Nothing changes for moved workspaces",
+					"change": {
+						"included": "Included",
+						"excluded": "Not included",
+						"unlimited": "Unlimited",
+						"from_to": "{from} → {to}",
+						"feature_added": "Now included",
+						"feature_removed": "No longer included",
+						"price": "Price",
+						"permissions_added": "Permissions added",
+						"permissions_removed": "Permissions removed",
+						"permission_count": "{count} permission | {count} permissions"
+					},
+					"journal": {
+						"title": "Journal",
+						"started": "{name} started the migration",
+						"captured": "{count} workspace captured | {count} workspaces captured",
+						"resolved_moved": "{name} marked {workspace} as moved",
+						"resolved_not_moved": "{name} allowed a retry for {workspace}",
+						"finished": "Migration finished",
+						"outcome": "{moved} of {captured} moved",
+						"reconciled": "{name} marked the migration as reconciled"
+					},
+					"attempt": "Attempt {count}",
+					"search": "Search workspaces",
+					"workspace_count": "{count} workspace | {count} workspaces",
+					"column": {
+						"workspace": "Workspace",
+						"outcome": "Outcome",
+						"stripe": "Stripe subscription",
+						"reason": "Reason",
+						"time": "Time",
+						"group": "Group"
+					},
+					"stripe_check_title": "Stripe says / DMS says",
+					"stripe_subscription": "Stripe subscription",
+					"stripe_label": "Stripe bills",
+					"dms_label": "DMS says",
+					"verdict": "What to do",
+					"verdict_target": "Stripe already bills the new plan: mark it as moved.",
+					"verdict_source": "Stripe still bills the old plan: allow a retry.",
+					"verdict_other": "Stripe bills another price: check the subscription before settling it.",
+					"verdict_none": "No Stripe subscription, so nothing was charged: allow a retry.",
+					"verdict_unavailable": "Stripe couldn’t be read. Try again before settling it.",
+					"moved_action": "Mark as moved",
+					"not_moved_action": "Allow retry",
+					"moved_done": "Workspace marked as moved",
+					"not_moved_done": "Workspace can be retried",
+					"settle_failed": "Couldn’t settle the workspace",
+					"open_stripe": "Open in Stripe",
+					"tab_all": "All",
+					"not_moved_uncertain": "{count} uncertain | {count} uncertain",
+					"not_moved_failed": "{count} failed"
+				},
+				"resolve": {
+					"moved_title": "Mark {name} as moved?",
+					"moved_description": "Do this only if Stripe bills {name} on {to}. The DMS moves it to {to} and applies its permissions; nothing is sent to Stripe.",
+					"moved_confirm": "Mark as moved",
+					"not_moved_title": "Allow a retry for {name}?",
+					"not_moved_description": "Do this only if Stripe still bills {name} on {from}. It stays on {from} and can be retried.",
+					"not_moved_confirm": "Allow retry"
+				},
+				"retry": {
+					"title": "Retry moving {name} to {to}? | Retry moving {count} workspaces to {to}?",
+					"description": "Stripe charges the prorated difference again. A workspace failing a second time stays on {from}.",
+					"impact_retried": "Workspaces retried",
+					"impact_skipped": "Skipped, uncertain",
+					"confirm": "Retry {count} workspace | Retry {count} workspaces",
+					"started": "Retry started"
+				},
+				"reconcile": {
+					"title": "Close this migration with {count} workspace left on {from}? | Close this migration with {count} workspaces left on {from}?",
+					"description": "They stay on {from} and keep being billed as today. {from} can’t be deleted while a workspace uses it.",
+					"note": "Note for the audit log",
+					"note_placeholder": "Why these workspaces stay where they are",
+					"confirm": "Mark as reconciled",
+					"impact_kept": "Kept on {from}"
+				}
+			},
+			"features": {
+				"title": "Features",
+				"description": "What plans can switch on or limit. Each feature becomes a row of the comparison table on the pricing page, in this order.",
+				"caption": "Features",
+				"search": "Search by name or key",
+				"create": "Create feature",
+				"deleted": "Feature deleted.",
+				"count": "{count} feature | {count} features",
+				"footer_hint": "Drag rows to change the order on the pricing page.",
+				"plans_button": "Plans",
+				"used_by": "{count} plan | {count} plans",
+				"used_by_none": "Not used yet",
+				"tabs": {
+					"all": "All",
+					"boolean": "On / off",
+					"number": "Number",
+					"string": "Text",
+					"detail": "Detail rows"
+				},
+				"value_type": {
+					"boolean": "On / off",
+					"boolean_description": "Included or not",
+					"number": "Number",
+					"number_description": "A limit, or unlimited",
+					"string": "Text",
+					"string_description": "Free wording"
+				},
+				"row": {
+					"main": "Main row",
+					"detail": "Behind “See full detail”"
+				},
+				"column": {
+					"key": "Key",
+					"display_name": "Display name",
+					"display_name_description": "Name shown to platform admins and customers.",
+					"description": "Description",
+					"description_description": "Shown under the name in the comparison table.",
+					"value_type": "Value type",
+					"value_type_description": "Locked while plans store a value: their values would no longer read.",
+					"unit": "Unit",
+					"unit_description": "Shown after the number, in each language: 100 GB. Write singular | plural for a unit that agrees with it: project | projects.",
+					"used_by": "Used by",
+					"is_detail_row": "Comparison table",
+					"is_detail_row_description": "Keeps the table short. Visitors expand it to see this row.",
+					"is_detail_row_label": "Hide behind “See full detail”",
+					"tooltip": "Tooltip",
+					"tooltip_description": "Optional hint shown next to the feature in the comparison table.",
+					"order": "Order",
+					"order_description": "Position in the comparison table."
+				},
+				"placeholder": {
+					"display_name": "Storage",
+					"tooltip": "Counted across all projects, including backups",
+					"unit": "GB"
+				},
+				"form": {
+					"new_title": "Create feature",
+					"new_description": "A row of the comparison table plans switch on or limit.",
+					"edit_title": "Edit feature",
+					"edit_description": "Changes show on the pricing page at once."
+				},
+				"empty": {
+					"title": "No features yet",
+					"description": "Features are what plans switch on or limit, row by row in the comparison table."
+				},
+				"dialog": {
+					"delete": {
+						"title": "Delete {name}?",
+						"description": "No plan uses it. The row disappears from the comparison table. This can’t be undone.",
+						"confirm": "Delete feature",
+						"blocked_title": "{name} is used by {count} plan | {name} is used by {count} plans",
+						"blocked_description": "Deleting it would change what workspaces on those plans can do. Switch it off on each plan first, or hide it from the comparison table instead.",
+						"impact_plans": "Plans with a value",
+						"impact_workspaces": "Workspaces relying on it"
+					}
+				}
+			}
+		}
+	}
+}

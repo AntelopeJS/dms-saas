@@ -43,7 +43,7 @@ describe("admin user invoice filters", () => {
     expect(meta.endpoints.select.options?.pluckMode).toBe("select");
   });
 
-  it("builds a cross-instance membership existence query correlated to the invoice", () => {
+  it("builds a cross-instance ownership existence query correlated to the invoice", () => {
     const ctx = Object.assign(request(""), { this: controller });
     const row = ValueProxy.constant({ _instance: "workspace,with-comma" });
     const predicate = meta.filters.userId(
@@ -71,7 +71,16 @@ describe("admin user invoice filters", () => {
     ]);
     const condition = membership.build()[4].args[0]
       .args[1] as ValueProxy<boolean>;
-    const comparison = condition.build().at(-1);
+    const conditionStages = condition.build();
+    expect(conditionStages.slice(1, 3)).toMatchObject([
+      { stage: "obj_index", args: expect.arrayContaining(["isTenantOwner"]) },
+      { stage: "eq", args: [true] },
+    ]);
+    const ownership = conditionStages.at(-1)!;
+    expect(ownership.stage).toBe("and");
+    const comparison = (ownership.args[0] as ValueProxy<boolean>)
+      .build()
+      .at(-1);
     expect(comparison?.stage).toBe("eq");
     expect(comparison?.args[0].build()).toEqual(row.key("_instance").build());
   });
@@ -97,7 +106,7 @@ describe("admin user invoice filters", () => {
     expect(total.build().at(-1)?.stage).toBe("count");
   });
 
-  it("combines the virtual user filter with the mandatory invoice scope", () => {
+  it("lists invoices and credit notes alike", () => {
     const ctx = Object.assign(
       request("filter_userId=is:user&filter_documentType=is:credit_note"),
       {
@@ -112,9 +121,6 @@ describe("admin user invoice filters", () => {
       },
     );
 
-    expect(params.filters).toEqual({
-      documentType: ["invoice", "eq"],
-      userId: ["user", "is"],
-    });
+    expect(params.filters).toEqual({ userId: ["user", "is"] });
   });
 });

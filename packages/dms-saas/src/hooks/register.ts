@@ -15,6 +15,7 @@ import { ensureLegalDocumentsSingleton } from "../routes";
 import { resumePendingPlanMigrations } from "../workers";
 import { backfillDefaultSubscriptions } from "../workspaces/default-plan";
 import { exportSaasTenantData } from "./tenant-export";
+import { ensureBillingSettingsRow } from "../operator-billing/billing-settings-store";
 
 function throwDatabaseInitializationFailures(
   results: PromiseSettledResult<unknown>[],
@@ -71,7 +72,10 @@ export function registerSaasHookListeners(): void {
     return undefined;
   });
   RegisterHook(Hook.DATABASE_INITIALIZED, async () => {
-    await ensureLegalDocumentsSingleton();
+    await Promise.all([
+      ensureLegalDocumentsSingleton(),
+      ensureBillingSettingsRow(),
+    ]);
     const results = await Promise.allSettled([
       resumePendingPlanMigrations(),
       // The backfill publishes the billing state of every workspace it

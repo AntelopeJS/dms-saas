@@ -8,6 +8,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import { recomputeTenantBillingState } from "../billing-state";
 import type {
+  Invoice,
   InvoiceLine,
   InvoiceStatus,
   TenantSubscription,
@@ -20,7 +21,11 @@ import {
   stripeSecondsToDate as optionalStripeDate,
 } from "../utils";
 import { getStripeClient } from "./client";
-import { readInvoiceTax, requireInvoiceId } from "./payload-shapes";
+import {
+  readInvoiceTax,
+  readStripeId,
+  requireInvoiceId,
+} from "./payload-shapes";
 
 export const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 export const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
@@ -105,8 +110,41 @@ export async function resolveInvoiceLines(
   return lines.map(toInvoiceLine);
 }
 
+/** Where Stripe stands with collecting an invoice: what the operator list reads. */
+export type InvoiceCollectionState = Pick<
+  Invoice,
+  | "amountPaid"
+  | "attemptCount"
+  | "nextPaymentAttemptAt"
+  | "dueAt"
+  | "autoFinalizesAt"
+  | "latestRevisionStripeId"
+>;
+
+/** The collection state of a document nobody collects: a credit note. */
+export const NO_COLLECTION_STATE: InvoiceCollectionState = {
+  amountPaid: 0,
+  attemptCount: 0,
+  nextPaymentAttemptAt: null,
+  dueAt: null,
+  autoFinalizesAt: null,
+  latestRevisionStripeId: null,
+};
+
+function toCollectionState(invoice: Stripe.Invoice): InvoiceCollectionState {
+  return {
+    amountPaid: invoice.amount_paid,
+    attemptCount: invoice.attempt_count,
+    nextPaymentAttemptAt: optionalStripeDate(invoice.next_payment_attempt),
+    dueAt: optionalStripeDate(invoice.due_date),
+    autoFinalizesAt: optionalStripeDate(invoice.automatically_finalizes_at),
+    latestRevisionStripeId: readStripeId(invoice.latest_revision),
+  };
+}
+
 function toInvoicePayload(invoice: Stripe.Invoice, lines: InvoiceLine[]) {
   return {
+    ...toCollectionState(invoice),
     documentType: "invoice" as const,
     stripeInvoiceId: requireInvoiceId(invoice),
     stripeCreditNoteId: null,

@@ -18,7 +18,10 @@ import {
   vi,
 } from "vitest";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
-import { startPaidCheckout } from "../src/routes/tenant/tenant-plan-checkout";
+import {
+  isTrialOfferedOnChange,
+  startPaidCheckout,
+} from "../src/routes/tenant/tenant-plan-checkout";
 import {
   cancelPendingCheckout,
   describePendingCheckout,
@@ -557,5 +560,38 @@ describe("abandoned checkout recovery", () => {
 
     const retained = await checkout.request.tenantSubscriptionModel.findOne();
     expect(retained?.domainTransition?.operationId).toBe(checkout.operationId);
+  });
+});
+
+describe("trial offered in the plan comparison", () => {
+  it("offers the plan's trial to an owner who never had one", async () => {
+    const { newPlan, subscription, user } = await checkoutRequest();
+
+    await expect(
+      isTrialOfferedOnChange(newPlan, subscription, user.email),
+    ).resolves.toBe(true);
+  });
+
+  it("offers no trial once the owner's trial is taken", async () => {
+    const { newPlan, subscription, user, tenantId } = await checkoutRequest();
+    await GetModel(TrialIdentityModel).reserve(
+      trialIdentityId("email", hashEmail(user.email)),
+      tenantId,
+    );
+
+    await expect(
+      isTrialOfferedOnChange(newPlan, subscription, user.email),
+    ).resolves.toBe(false);
+  });
+
+  it("offers no trial on a change of a live Stripe subscription", async () => {
+    const { newPlan, subscription, user } = await checkoutRequest();
+    const subscribed = Object.assign(subscription!, {
+      stripeSubscriptionId: "sub_live",
+    });
+
+    await expect(
+      isTrialOfferedOnChange(newPlan, subscribed, user.email),
+    ).resolves.toBe(false);
   });
 });

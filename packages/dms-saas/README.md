@@ -34,6 +34,38 @@ playground frontend during backend development, use `pnpm frontend:dev`; this
 dispatches through the core CLI as `ajs dms dev`. The playground connects to
 MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, either in the
 environment or in `playground/.env`.
+Sign-in with GitHub and Google is wired to `GITHUB_CLIENT_ID`,
+`GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, read the
+same way: a provider's button appears on the login and register screens once
+both of its values are set, with
+`http://localhost:3001/auth/oauth/<provider>/callback` registered as its
+callback URL.
+
+### Playground data set
+
+On its first start against an empty database, the playground writes a data set
+to review every screen with: sign in as `admin@example.com` with the password
+`Playground-Admin-1!` (a platform admin who also owns the `acme` workspace).
+Every other seeded account, platform admins `hugo@antelope.io` and
+`sofia@antelope.io` and the workspace owners and members, uses the same
+password.
+
+It holds the feature and plan catalogue (Free, Starter, Pro, Team, Business
+per seat, Enterprise yearly and hidden, Growth 2024 retired), thirteen
+workspaces in every billing state (active, trialing, free, complimentary with
+and without an end date, past due, pending payment, suspended, cancelled) with
+their members and pending invitations, invoices in every status, credit notes,
+plan migrations, segments, internal notes, billing rules and legal documents.
+Dates are relative to the first start, and Stripe ids are fake: nothing calls
+Stripe for them.
+
+The seed lives in `playground/src/seed` and runs once: the platform admin
+account, written last, marks it complete. Drop the database to start over. On
+each later start it only adds newly registered permissions to the seeded plans,
+so pages added to the module stay visible to workspace owners. Segment counts
+appear after the first segment recompute (every 15 minutes), and the running
+plan migration turns to "reconciliation required" on the next restart, as an
+interrupted migration does.
 
 ## Completing a registration that entered without a workspace
 
@@ -127,7 +159,7 @@ Two module options shape it:
 
 | Value | Behaviour |
 | --- | --- |
-| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer and a free subscription on that card, and the free-workspace-per-card cap applies. |
+| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer holding that card and a free subscription — a local one while the free plan is off Stripe, which the upgrade checkout replaces on that customer — and the free-workspace-per-card cap applies. |
 | `optional` | The card step is shown, and the visitor may choose to add a card later. Without a card the workspace is card-less, as under `none`. |
 | `none` | The card step is never shown, `GET /api/saas/register/setup-intent` answers `400 saas.errors.registration.payment_method_disabled`, and Stripe is never called: the workspace gets a local free subscription with no Stripe customer, which the upgrade checkout creates when the owner first pays. A card sent anyway is ignored. |
 
@@ -693,7 +725,10 @@ export class WorkspaceRegistriesController extends PageController("registries", 
 
 Extensions of the existing tenant billing page register components through
 stable page and anchor identifiers. They do not import the page controller,
-which would load the module's page registration graph.
+which would load the module's page registration graph. An anchor names a block
+(`tenantBillingPage.components.planCard`) wherever the page lays it out: the
+plan card sits in a two-column grid, and a block placed after it stacks under
+it in the same column.
 
 ```ts
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";

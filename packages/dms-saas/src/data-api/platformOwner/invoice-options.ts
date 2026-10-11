@@ -1,6 +1,6 @@
 import { assert } from "@antelopejs/interface-api-util";
-import type { Parameters } from "@antelopejs/interface-data-api/components";
 import type { TableViewGuards } from "@antelopejs/interface-dms/base/types/guards";
+import type { TableScope } from "./table-scope";
 
 const HTTP_NOT_FOUND = 404;
 const INVOICE_DOCUMENT_TYPE = "invoice";
@@ -8,7 +8,7 @@ const INVOICE_DOCUMENT_TYPE = "invoice";
 /** Mandatory invoice constraint, merged with request filters by Data API. */
 export const INVOICE_LIST_OPTIONS = {
   filters: { documentType: [INVOICE_DOCUMENT_TYPE, "eq"] },
-} satisfies Parameters.ListParameters;
+} satisfies TableScope;
 
 /** Only invoice rows are readable; credit-note projections are not found. */
 export const INVOICE_GUARDS: TableViewGuards = {

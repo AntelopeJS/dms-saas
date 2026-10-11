@@ -3,6 +3,10 @@ import Stripe from "stripe";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TrialIdentityModel } from "../workspaces/db/trial-identity.model";
 import { SUBSCRIPTION_BILLING_MODE } from "./billing-mode";
+import {
+  rememberCustomerLocale,
+  toStripePreferredLocales,
+} from "./customer-locale";
 import { getStripeClient } from "./client";
 
 const MISSING_RESOURCE_CODE = "resource_missing";
@@ -49,6 +53,8 @@ export interface WorkspaceCheckoutSessionInput {
   operationId?: string;
   tenantId: string;
   ownerEmail: string;
+  /** The owner's language, the one Stripe words a new customer's documents in. */
+  ownerLanguage?: string;
   stripePriceId: string;
   trialDays?: number;
   successUrl: string;
@@ -80,6 +86,7 @@ export interface TenantCheckoutCustomerInput {
   operationId?: string;
   tenantId: string;
   ownerEmail: string;
+  ownerLanguage?: string;
   companyName?: string | null;
 }
 
@@ -101,12 +108,14 @@ export async function createTenantCheckoutCustomer(
     {
       email: input.ownerEmail,
       name: input.companyName ?? undefined,
+      preferred_locales: toStripePreferredLocales(input.ownerLanguage),
       metadata: { tenantId: input.tenantId },
     },
     input.operationId
       ? { idempotencyKey: `checkout-customer:${input.operationId}` }
       : undefined,
   );
+  rememberCustomerLocale(customer.id, input.ownerLanguage);
   return customer.id;
 }
 
@@ -166,6 +175,7 @@ async function resolveCheckoutCustomerId(
     operationId: input.operationId,
     tenantId: input.tenantId,
     ownerEmail: input.ownerEmail,
+    ownerLanguage: input.ownerLanguage,
   });
 }
 

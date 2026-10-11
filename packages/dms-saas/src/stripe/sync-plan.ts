@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import type {
   Plan,
@@ -8,14 +7,12 @@ import type {
   PlanStripeProductTerms,
   PlanStripeSyncedTerms,
 } from "../db";
-import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
-  DEFAULT_STRIPE_TAX_CODE,
-} from "../db";
+import { DEFAULT_STRIPE_TAX_CODE } from "../db";
 import { getStripeClient } from "./client";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
+import { toMinorUnits } from "../utils/money";
 
-const PRICE_MULTIPLIER = 100;
+/** Minor units per major unit of a plan price, as its Stripe price is created. */
 const SEAT_USAGE_TYPE = "licensed" as const;
 const PRICE_TAX_BEHAVIOR = "exclusive" as const;
 const IDEMPOTENCY_KEY_PREFIX = "dms-saas:plan-sync";
@@ -36,11 +33,8 @@ interface PlanStripeLink {
 
 /** The Stripe tax code products are created with, from the billing settings. */
 export async function resolveProductTaxCode(): Promise<string> {
-  const billingSettingsModel = GetModel(BillingSettingsModel);
-  const settings = await billingSettingsModel.get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
-  return settings?.stripeTaxCode || DEFAULT_STRIPE_TAX_CODE;
+  const settings = await loadBillingSettings();
+  return settings.stripeTaxCode || DEFAULT_STRIPE_TAX_CODE;
 }
 
 /**
@@ -66,7 +60,7 @@ function planStripeTerms(plan: Plan, taxCode: string): PlanStripeSyncedTerms {
       taxCode,
     },
     price: {
-      unitAmount: Math.round(plan.price * PRICE_MULTIPLIER),
+      unitAmount: toMinorUnits(plan.price, plan.currency),
       currency: plan.currency.toLowerCase(),
       interval: plan.interval,
       billingMode: plan.billingMode,

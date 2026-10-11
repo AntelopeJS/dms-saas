@@ -18,7 +18,7 @@ import { isComplimentarySubscription } from "@antelopejs/interface-dms-saas/bill
 
 const HTTP_FORBIDDEN = 403;
 const HTTP_BAD_GATEWAY = 502;
-const TENANT_MEMBER_REQUIRED = "Tenant member required";
+const TENANT_MEMBER_REQUIRED = "error.tenant_member_required";
 const PROVIDER_UNAVAILABLE =
   "saas.errors.billing.customer_balance_provider_unavailable";
 
@@ -77,3 +77,6 @@ export async function GetUpcomingInvoicePreview(
   await assertAuthorizedTenant(scope);
   return getUpcomingInvoicePreview(scope.tenantId);
 }
+
+/** Implements the billing state recomputation interface. */
+export { recomputeTenantBillingState as RecomputeTenantBillingState } from "../../billing-state";

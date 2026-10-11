@@ -82,7 +82,8 @@ async function resolveInviteSeatAvailability({
     : SEAT_LIMIT_INVITE_UNAVAILABLE;
 }
 
-async function syncSeatsAfterChange(
+/** Bring the billed seat quantity of a per-seat workspace up to date. */
+export async function syncSeatsAfterChange(
   tenantId: string,
   idempotencyKey: string,
   releasedInviteeEmail?: string,

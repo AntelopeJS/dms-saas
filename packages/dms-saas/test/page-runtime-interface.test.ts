@@ -4,9 +4,11 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 const pageRegistration = vi.hoisted(() => {
   const modulesCategory = { location: "/modules" };
   const settingsCategory = { location: "/settings" };
+  const workspaceSettingsCategory = { fullId: "settings.workspace" };
   return {
     modulesCategory,
     settingsCategory,
+    workspaceSettingsCategory,
     Category: vi.fn((id, options) => ({
       ...options,
       id,
@@ -30,11 +32,12 @@ vi.mock("@antelopejs/interface-dms/page", () => ({
   },
   modulesCategory: pageRegistration.modulesCategory,
   settingsCategory: pageRegistration.settingsCategory,
+  workspaceSettingsCategory: pageRegistration.workspaceSettingsCategory,
 }));
 
 import * as pagesImplementation from "../src/implementations/dms-saas/pages";
 import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
-import { saasModule, workspaceSettingsCategory } from "../src/pages/module";
+import { saasModule } from "../src/pages/module";
 
 beforeAll(() => {
   ImplementInterface(pagesInterface, pagesImplementation);
@@ -50,26 +53,15 @@ describe("page runtime interface", () => {
       icon: "i-ph-buildings",
       landingPage: "dashboard",
     });
-    expect(pageRegistration.Category).toHaveBeenCalledOnce();
-    expect(pageRegistration.Category).toHaveBeenCalledWith("workspace", {
-      category: pageRegistration.settingsCategory,
-      displayName: "$saas.workspace.settings.title",
-      urlSlug: "workspace",
-      icon: "i-ph-buildings",
-      order: 2,
-    });
+    // The workspace settings category is the DMS's own: registering a
+    // second `settings.workspace` would collide with it.
+    expect(pageRegistration.Category).not.toHaveBeenCalled();
   });
 
   it("returns the canonical registered objects", async () => {
     await expect(pagesInterface.GetPlatformSaasModule()).resolves.toBe(
       saasModule,
     );
-    await expect(pagesInterface.GetWorkspaceSettingsCategory()).resolves.toBe(
-      workspaceSettingsCategory,
-    );
     expect(pagesInterface.platformSaasModule).not.toBe(saasModule);
-    expect(pagesInterface.workspaceSettingsCategory).not.toBe(
-      workspaceSettingsCategory,
-    );
   });
 });

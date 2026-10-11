@@ -13,6 +13,7 @@ const HTTP_BAD_REQUEST = 400;
 const ADMISSION_MODES = ["open", "invitation-only"];
 const DEFAULT_UPCOMING_INVOICE_PREVIEW_CACHE_TTL_SECONDS = 3600;
 const MS_PER_SECOND = 1000;
+const DEFAULT_REPORTING_CURRENCY = "EUR";
 
 let runtimeConfig: DmsSaasConfig | null = null;
 
@@ -106,6 +107,13 @@ export function getUpcomingInvoicePreviewCacheTtlMs(): number {
     runtimeConfig?.upcomingInvoicePreviewCacheTtlSeconds ??
     DEFAULT_UPCOMING_INVOICE_PREVIEW_CACHE_TTL_SECONDS;
   return seconds * MS_PER_SECOND;
+}
+
+/** Uppercase ISO 4217 code the back office reports recurring revenue in. */
+export function getReportingCurrency(): string {
+  return (
+    runtimeConfig?.reportingCurrency ?? DEFAULT_REPORTING_CURRENCY
+  ).toUpperCase();
 }
 
 export function getAllowedRedirectHosts(): string[] {

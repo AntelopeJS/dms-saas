@@ -72,6 +72,7 @@ function toPreviewLine(line: Stripe.InvoiceLineItem): UpcomingInvoiceLine {
     periodEnd: toIsoDate(line.period.end),
     isProration: isProrationLine(line),
     usageLineKey: line.metadata?.[LINE_KEY_METADATA] ?? null,
+    productId: line.pricing?.price_details?.product ?? null,
   };
 }
 

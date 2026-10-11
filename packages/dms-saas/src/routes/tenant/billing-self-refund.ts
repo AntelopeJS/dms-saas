@@ -6,18 +6,17 @@ import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import type Stripe from "stripe";
 import type { BillingSettings, TenantSubscription } from "../../db";
-import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
-  TenantSubscriptionModel,
-} from "../../db";
+import { BillingSettingsModel, TenantSubscriptionModel } from "../../db";
 import {
   computeUnusedPortionCents,
   getStripeClient,
   nowInStripeSeconds,
 } from "../../stripe";
+import { CREDIT_NOTE_METADATA } from "../../operator-billing/credit-note-request";
 import { MS_PER_DAY } from "../../utils/time";
+import { loadBillingSettings } from "../../operator-billing/billing-settings-store";
 
+const MONEY_BACK_REASON = "money_back_guarantee";
 const HTTP_FORBIDDEN = 403;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
@@ -60,40 +59,114 @@ const REASON_TO_ERROR: Record<string, RefundErrorMapping> = {
   },
 };
 
-interface EligibleInvoice {
+export interface EligibleInvoice {
   id: string;
   amountPaid: number;
+  /** What is left to refund: the amount paid less the credit notes on it. */
+  refundable: number;
   created: number;
   periodStart: number | null;
   periodEnd: number | null;
   currency: string | null;
 }
 
-interface RefundEligibility {
+export interface RefundEligibility {
   eligible: boolean;
   reason: string | null;
   windowDays: number;
   mode: string | null;
+  /** The first paid invoice, also when its window is over. */
   invoice: EligibleInvoice | null;
+  /**
+   * Every payment the guarantee refunds: those made within the window, the
+   * first one included. Empty once the window is over.
+   */
+  payments: EligibleInvoice[];
 }
 
-interface RefundEligibilityResponse {
+/** What the money-back guarantee card shows, eligible or not. */
+export interface RefundEligibilityResponse {
   eligible: boolean;
   reason: string | null;
   windowDays: number;
   mode: string | null;
   refundAmount: number | null;
   currency: string | null;
+  /** How many payments the refund gives back, while it can be claimed. */
+  paymentsCount: number;
+  /** When the first payment the guarantee covers was made. */
+  firstPaymentAt: Date | null;
+  /** When the window closes (or closed), counted from the first payment. */
+  windowEndsAt: Date | null;
+  /** When the workspace's one refund was requested. */
+  refundedAt: Date | null;
 }
 
-async function getFirstPaidInvoice(
+/** One credit note of a refund: what it gives back on which invoice. */
+interface InvoiceRefund {
+  invoiceId: string;
+  amount: number;
+}
+
+function isCharged(invoice: Stripe.Invoice): boolean {
+  return invoice.amount_paid > 0;
+}
+
+function createdAt(invoice: Stripe.Invoice): number {
+  return invoice.created ?? 0;
+}
+
+/**
+ * The oldest of `invoices` that took money. A trial opens with a paid invoice
+ * of zero, which is no payment: the guarantee covers the first real charge.
+ *
+ * @param invoices Paid invoices, in any order
+ */
+export function firstChargedInvoice(
+  invoices: Stripe.Invoice[],
+): Stripe.Invoice | null {
+  return invoices
+    .filter(isCharged)
+    .reduce<Stripe.Invoice | null>(
+      (oldest, invoice) =>
+        !oldest || createdAt(invoice) < createdAt(oldest) ? invoice : oldest,
+      null,
+    );
+}
+
+/**
+ * The payments the guarantee gives back: every invoice that took money
+ * within `windowDays` of the first one, oldest first. An upgrade paid in the
+ * window is refunded with the first payment, since the refund stops the
+ * subscription it paid for.
+ *
+ * @param invoices Paid invoices, in any order
+ */
+export function chargedInvoicesInWindow(
+  invoices: Stripe.Invoice[],
+  windowDays: number,
+): Stripe.Invoice[] {
+  const first = firstChargedInvoice(invoices);
+  if (!first) return [];
+  const windowEnd = windowEndOf(createdAt(first), windowDays).getTime();
+  return invoices
+    .filter(
+      (invoice) =>
+        isCharged(invoice) && createdAt(invoice) * MS_PER_SECOND <= windowEnd,
+    )
+    .sort((left, right) => createdAt(left) - createdAt(right));
+}
+
+/**
+ * Every paid invoice of the customer. Stripe returns them newest-first, one
+ * page at a time: a customer with more than a page still gets their true
+ * first invoice instead of the oldest of the last 100.
+ */
+async function listPaidInvoices(
   stripeCustomerId: string,
-): Promise<Stripe.Invoice | null> {
+): Promise<Stripe.Invoice[]> {
   const stripe = getStripeClient();
-  // Stripe returns invoices newest-first. Page through every paid invoice and
-  // keep the oldest one, so customers with more than one page of invoices
-  // still get their true first invoice instead of the oldest of the last 100.
-  let oldest: Stripe.Invoice | null = null;
+  const invoices: Stripe.Invoice[] = [];
   let startingAfter: string | undefined;
   for (;;) {
     const page = await stripe.invoices.list({
@@ -102,16 +175,12 @@ async function getFirstPaidInvoice(
       limit: STRIPE_INVOICES_FETCH_LIMIT,
       starting_after: startingAfter,
     });
-    for (const invoice of page.data) {
-      if (!oldest || (invoice.created ?? 0) < (oldest.created ?? 0)) {
-        oldest = invoice;
-      }
-    }
+    invoices.push(...page.data);
     const lastId = page.data[page.data.length - 1]?.id;
     if (!page.has_more || !lastId) break;
     startingAfter = lastId;
   }
-  return oldest;
+  return invoices;
 }
 
 function toEligibleInvoice(invoice: Stripe.Invoice): EligibleInvoice {
@@ -119,36 +188,63 @@ function toEligibleInvoice(invoice: Stripe.Invoice): EligibleInvoice {
   return {
     id: invoice.id as string,
     amountPaid: invoice.amount_paid,
-    created: invoice.created ?? 0,
+    refundable: Math.max(
+      0,
+      invoice.amount_paid - (invoice.post_payment_credit_notes_amount ?? 0),
+    ),
+    created: createdAt(invoice),
     periodStart: line?.period?.start ?? null,
     periodEnd: line?.period?.end ?? null,
     currency: invoice.currency ?? null,
   };
 }
 
-function isWithinWindow(invoiceCreated: number, windowDays: number): boolean {
-  const cutoff = Date.now() - windowDays * MS_PER_DAY;
-  return invoiceCreated * MS_PER_SECOND >= cutoff;
+function windowEndOf(invoiceCreated: number, windowDays: number): Date {
+  return new Date(invoiceCreated * MS_PER_SECOND + windowDays * MS_PER_DAY);
 }
 
-function computeRefundAmount(invoice: EligibleInvoice, mode: string): number {
-  if (mode === FULL_REFUND_MODE) return invoice.amountPaid;
-  return computeUnusedPortionCents(
+function isWithinWindow(invoiceCreated: number, windowDays: number): boolean {
+  return windowEndOf(invoiceCreated, windowDays).getTime() >= Date.now();
+}
+
+/**
+ * What one payment gives back. Prorated, each invoice returns the unused
+ * part of the period it paid for: an upgrade invoice already nets the old
+ * plan's unused time, so the sum is the unused time at the current price.
+ */
+function computeInvoiceRefund(invoice: EligibleInvoice, mode: string): number {
+  if (mode === FULL_REFUND_MODE) return invoice.refundable;
+  const unused = computeUnusedPortionCents(
     invoice.amountPaid,
     invoice.periodStart,
     invoice.periodEnd,
     nowInStripeSeconds(),
   );
+  return Math.min(unused, invoice.refundable);
+}
+
+function planRefunds(eligibility: RefundEligibility): InvoiceRefund[] {
+  const mode = eligibility.mode ?? FULL_REFUND_MODE;
+  return eligibility.payments
+    .map((payment) => ({
+      invoiceId: payment.id,
+      amount: computeInvoiceRefund(payment, mode),
+    }))
+    .filter((refund) => refund.amount > 0);
+}
+
+function totalOf(refunds: InvoiceRefund[]): number {
+  return refunds.reduce((total, refund) => total + refund.amount, 0);
 }
 
 async function resolveRefundEligibility(
-  settings: BillingSettings | undefined,
+  settings: BillingSettings,
   subscription: TenantSubscription | undefined,
 ): Promise<RefundEligibility> {
-  const windowDays = settings?.moneyBackGuaranteeWindowDays ?? 0;
-  const mode = settings?.moneyBackGuaranteeMode ?? null;
-  const base = { windowDays, mode, invoice: null };
-  if (!settings?.moneyBackGuaranteeEnabled) {
+  const windowDays = settings.moneyBackGuaranteeWindowDays;
+  const mode = settings.moneyBackGuaranteeMode;
+  const base = { windowDays, mode, invoice: null, payments: [] };
+  if (!settings.moneyBackGuaranteeEnabled) {
     return { eligible: false, reason: REASON_NOT_ENABLED, ...base };
   }
   if (!subscription?.stripeCustomerId || !subscription.stripeSubscriptionId) {
@@ -157,74 +253,95 @@ async function resolveRefundEligibility(
   if (subscription.refundRequestedAt) {
     return { eligible: false, reason: REASON_ALREADY_PROCESSED, ...base };
   }
-  const stripeInvoice = await getFirstPaidInvoice(
-    subscription.stripeCustomerId,
-  );
+  const paidInvoices = await listPaidInvoices(subscription.stripeCustomerId);
+  const stripeInvoice = firstChargedInvoice(paidInvoices);
   if (!stripeInvoice?.id || !stripeInvoice.created) {
     return { eligible: false, reason: REASON_NO_INVOICE, ...base };
   }
   const invoice = toEligibleInvoice(stripeInvoice);
   if (!isWithinWindow(invoice.created, windowDays)) {
-    return { eligible: false, reason: REASON_WINDOW_EXPIRED, ...base };
+    return { ...base, eligible: false, reason: REASON_WINDOW_EXPIRED, invoice };
   }
-  return { eligible: true, reason: null, windowDays, mode, invoice };
+  const payments = chargedInvoicesInWindow(paidInvoices, windowDays).map(
+    toEligibleInvoice,
+  );
+  return { ...base, eligible: true, reason: null, invoice, payments };
+}
+
+/**
+ * The guarantee as the owner reads it: the amount only while it can still be
+ * claimed, the window's dates whenever a first payment is known.
+ */
+export function toEligibilityResponse(
+  eligibility: RefundEligibility,
+  refundedAt: Date | null,
+): RefundEligibilityResponse {
+  const { invoice, windowDays } = eligibility;
+  const refunds = eligibility.eligible ? planRefunds(eligibility) : [];
+  return {
+    eligible: eligibility.eligible,
+    reason: eligibility.reason,
+    windowDays,
+    mode: eligibility.mode,
+    refundAmount: eligibility.eligible ? totalOf(refunds) : null,
+    currency: invoice?.currency ?? null,
+    paymentsCount: refunds.length,
+    firstPaymentAt: invoice ? new Date(invoice.created * MS_PER_SECOND) : null,
+    windowEndsAt: invoice ? windowEndOf(invoice.created, windowDays) : null,
+    refundedAt,
+  };
 }
 
 async function issueRefundAndCancel(
   subscriptionId: string,
   stripeSubscriptionId: string,
-  invoiceId: string,
-  refundAmount: number,
+  refunds: InvoiceRefund[],
 ): Promise<void> {
   const stripe = getStripeClient();
   // Cancel first so the irreversible action (returning money) happens last. If
   // the cancel fails, no money has left yet; the caller releases the refund
-  // claim so the request can be retried. Both calls use deterministic
-  // idempotency keys, so a retry never double-cancels or double-refunds.
+  // claim so the request can be retried. Every call uses a deterministic
+  // idempotency key, so a retry never double-cancels or double-refunds.
   await stripe.subscriptions.cancel(stripeSubscriptionId, undefined, {
     idempotencyKey: `cancel-self-refund:${subscriptionId}`,
   });
-  await stripe.creditNotes.create(
-    {
-      invoice: invoiceId,
-      amount: refundAmount,
-      refund_amount: refundAmount,
-      memo: "Money-back guarantee self-service refund",
-      reason: "order_change",
-    },
-    { idempotencyKey: `refund-self:${subscriptionId}` },
-  );
+  for (const refund of refunds) {
+    await stripe.creditNotes.create(
+      {
+        invoice: refund.invoiceId,
+        amount: refund.amount,
+        refund_amount: refund.amount,
+        memo: "Money-back guarantee self-service refund",
+        reason: "order_change",
+        metadata: { [CREDIT_NOTE_METADATA.reason]: MONEY_BACK_REASON },
+      },
+      { idempotencyKey: `refund-self:${subscriptionId}:${refund.invoiceId}` },
+    );
+  }
 }
 
 export class SaasBillingSelfRefundController extends Controller(
   "/api/saas/billing",
 ) {
+  /**
+   * Read under the access gate too: once the refund cancelled the
+   * subscription the workspace is blocked, and the money-back card still has
+   * to say when it was refunded.
+   */
   @Get("/refund-eligibility")
   async getRefundEligibility(
-    @AuthTenantOwner() _user: User,
+    @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Model(BillingSettingsModel) billingSettingsModel: BillingSettingsModel,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<RefundEligibilityResponse> {
-    const settings = await billingSettingsModel.get(
-      BILLING_SETTINGS_SINGLETON_ID,
-    );
+    const settings = await loadBillingSettings(billingSettingsModel);
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
-    const refundAmount = eligibility.invoice
-      ? computeRefundAmount(
-          eligibility.invoice,
-          eligibility.mode ?? FULL_REFUND_MODE,
-        )
-      : null;
-    return {
-      eligible: eligibility.eligible,
-      reason: eligibility.reason,
-      windowDays: eligibility.windowDays,
-      mode: eligibility.mode,
-      refundAmount,
-      currency: eligibility.invoice?.currency ?? null,
-    };
+    return toEligibilityResponse(
+      eligibility,
+      subscription?.refundRequestedAt ?? null,
+    );
   }
 
   @Post("/refund-self")
@@ -234,9 +351,7 @@ export class SaasBillingSelfRefundController extends Controller(
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
   ) {
-    const settings = await billingSettingsModel.get(
-      BILLING_SETTINGS_SINGLETON_ID,
-    );
+    const settings = await loadBillingSettings(billingSettingsModel);
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
     const error = eligibility.eligible
@@ -258,19 +373,15 @@ export class SaasBillingSelfRefundController extends Controller(
     );
     assert(claimed, HTTP_CONFLICT, "saas.errors.refund.already_processed");
 
-    const refundAmount = computeRefundAmount(
-      eligibility.invoice,
-      eligibility.mode ?? FULL_REFUND_MODE,
-    );
+    const refunds = planRefunds(eligibility);
     try {
       await issueRefundAndCancel(
         subscription._id,
         subscription.stripeSubscriptionId,
-        eligibility.invoice.id,
-        refundAmount,
+        refunds,
       );
     } catch (error) {
-      // Release the claim so a partial failure (e.g. cancel succeeded but the
+      // Release the claim so a partial failure (e.g. cancel succeeded but a
       // credit note call threw) can be retried. The deterministic idempotency
       // keys make the retry safe against double-cancel/double-refund.
       await tenantSubscriptionModel
@@ -278,6 +389,6 @@ export class SaasBillingSelfRefundController extends Controller(
         .catch(() => {});
       throw error;
     }
-    return { refunded: refundAmount };
+    return { refunded: totalOf(refunds) };
   }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { Plan } from "../src/db";
+import { isDowngrade } from "../src/plans";
 import {
-  isFreePlan,
   isPlanDowngrade,
   type PlanPricing,
 } from "../frontend-vue/app/composables/usePlanDowngrade";
@@ -39,8 +40,30 @@ describe("plan downgrade detection", () => {
     expect(isPlanDowngrade(null, STARTER, true)).toBe(false);
   });
 
-  it("recognises a free plan", () => {
-    expect(isFreePlan(FREE)).toBe(true);
-    expect(isFreePlan(STARTER)).toBe(false);
+  it("counts the seats of a per-seat plan", () => {
+    const business: PlanPricing = {
+      price: 49,
+      interval: "month",
+      billingMode: "seat",
+    };
+    const team: PlanPricing = { price: 150, interval: "month" };
+
+    expect(isPlanDowngrade(business, team, true, 6)).toBe(true);
+    expect(isPlanDowngrade(business, team, true, 2)).toBe(false);
+    expect(isPlanDowngrade(team, business, true, 6)).toBe(false);
+  });
+});
+
+describe("server plan downgrade", () => {
+  const plan = (fields: Partial<Plan>): Plan =>
+    ({ interval: "month", billingMode: "flat", ...fields }) as Plan;
+
+  it("compares what the workspace pays for the seats it uses", () => {
+    const business = plan({ price: 49, billingMode: "seat" });
+    const team = plan({ price: 150 });
+
+    expect(isDowngrade(business, team, 6)).toBe(true);
+    expect(isDowngrade(business, team, 2)).toBe(false);
+    expect(isDowngrade(business, team)).toBe(false);
   });
 });

@@ -3,3 +3,4 @@ export * from "./data-export";
 export * from "./general";
 export * from "./members-seat-quota";
 export * from "./workspace-suspended";
+export * from "./owner-only";

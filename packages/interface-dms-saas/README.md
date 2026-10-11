@@ -62,6 +62,25 @@ synced in `paymentProviderRefs.stripeSyncedTerms`. See
 
 ## Upgrading
 
+### Tenant billing page anchors
+
+The plan, next invoice, payment method and money-back cards of the tenant
+billing page now share a two-column grid (`overview`), so `planCard`,
+`paymentMethod` and `refundButton` are no longer top-level fields of the page.
+The names in `tenantBillingPage.components` are unchanged, and
+`RegisterTenantBillingPageExtension` maps each one to its position through
+`tenantBillingPageAnchorPaths`: a block registered after `planCard` still lands
+right under the plan card, in its column. Upgrade this package together with
+`@antelopejs/dms-saas`, since an earlier build of it anchors on the old
+top-level fields, which the DMS no longer finds (the block is then appended at
+the end of the page). Code that anchors with the DMS's own
+`@RegisterPageExtension` must pass the path, as in
+`.after(tenantBillingPageAnchorPaths.planCard)`.
+
+The permission ids of those four cards follow their position
+(`settings.workspace.billing.overview.plan.current.planCard`, and so on), so a
+plan or role granting them needs the new ids.
+
 ### Rows written by earlier builds
 
 The data contract no longer tolerates rows that predate the current fields:

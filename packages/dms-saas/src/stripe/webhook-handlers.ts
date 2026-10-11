@@ -6,12 +6,11 @@ import type {
   TenantBillingAddress,
   TenantBillingInfo,
   TenantCustomerType,
+  TenantSubscription,
   TenantSubscriptionStatus,
   VatVerificationStatus,
 } from "../db";
 import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
   InvoiceModel,
   RefundModel,
   TenantBillingInfoModel,
@@ -36,6 +35,7 @@ import {
   insertOrUpdateById,
   stripeSecondsToDate as optionalStripeDate,
 } from "../utils";
+import { withBillingIdentityLock } from "../workspaces/billing-identity-lock";
 import { getStripeClient } from "./client";
 import {
   fetchPrimaryTaxId,
@@ -47,6 +47,7 @@ import {
   readSubscriptionPeriodEnd,
   requireInvoiceId,
 } from "./payload-shapes";
+import { isPendingUpdatePayment } from "./pending-update";
 import { computeUnusedPortionCents, nowInStripeSeconds } from "./proration";
 import {
   ACTIVE_STATUS,
@@ -58,12 +59,21 @@ import {
   updateSubscriptionStatus,
   upsertInvoice,
 } from "./webhook-shared";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
 const BUSINESS_CUSTOMER_TYPE: TenantCustomerType = "business";
 const SUSPENDED_STATUS: TenantSubscriptionStatus = "suspended";
 const CANCELLED_STATUS: TenantSubscriptionStatus = "cancelled";
 const REACTIVATABLE_STATUSES = new Set<TenantSubscriptionStatus>([
   PAST_DUE_STATUS,
+  SUSPENDED_STATUS,
+]);
+/**
+ * States a failed charge must not move back to past_due: only a payment
+ * reopens a suspended workspace, and nothing reopens a cancelled one.
+ */
+const STATUSES_KEPT_ON_PAYMENT_FAILURE = new Set<TenantSubscriptionStatus>([
+  CANCELLED_STATUS,
   SUSPENDED_STATUS,
 ]);
 const PAYMENT_FAILED_ICON = "i-ph-x-circle";
@@ -73,7 +83,8 @@ const TRIAL_ENDING_ICON = "i-ph-hourglass";
 const TRIAL_ENDED_BLOCKED_ICON = "i-ph-prohibit";
 
 const SINGLE_INVOICE_FETCH_LIMIT = 1;
-const AUTO_PRORATA_METADATA_KEY = "saasAutoProrataOf";
+/** Marks the credit note a cancellation's prorated refund issued, by subscription. */
+export const AUTO_PRORATA_METADATA_KEY = "saasAutoProrataOf";
 
 const TRIAL_BLOCKED_STRIPE_STATUSES = new Set<string>([
   "past_due",
@@ -137,15 +148,22 @@ export async function handleInvoicePaymentFailed(
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
   await upsertInvoice(invoice, tenant._id);
+  if (await isPendingUpdatePayment(invoice)) return;
   // The final dunning failure and the cancellation race with no ordering
   // guarantee: a late payment_failed must not resurrect a cancelled mirror
   // into past_due — the retention cron would never find the tenant again and
-  // the auto-suspend cron would park it suspended for good.
+  // the auto-suspend cron would park it suspended for good. Stripe keeps
+  // retrying after the grace period suspended the workspace, and a failed
+  // retry must not lift the suspension either.
   const localSubscription = await GetModel(
     TenantSubscriptionModel,
     tenant._id,
   ).findOne();
-  if (localSubscription?.status === CANCELLED_STATUS) return;
+  if (
+    localSubscription &&
+    STATUSES_KEPT_ON_PAYMENT_FAILURE.has(localSubscription.status)
+  )
+    return;
   await updateSubscriptionStatus(tenant._id, PAST_DUE_STATUS);
   const invoiceId = requireInvoiceId(invoice);
   emitAutomationEvent("saas.payment-failed", {
@@ -167,19 +185,30 @@ export async function handleInvoicePaymentFailed(
   });
 }
 
+/**
+ * Whether the money-back refund already settled this subscription. The
+ * refund is recorded once per workspace, so one claimed before a cancelled
+ * workspace subscribed again concerns the subscription Stripe ended then.
+ */
+function wasRefundedOnSubscription(
+  local: TenantSubscription | undefined,
+  subscription: Stripe.Subscription,
+): boolean {
+  if (!local?.refundRequestedAt) return false;
+  const startedAt = optionalStripeDate(subscription.start_date);
+  return !startedAt || new Date(local.refundRequestedAt) >= startedAt;
+}
+
 async function applyAutoProrataIfEnabled(
   customerId: string,
   tenantId: string,
   subscription: Stripe.Subscription,
 ): Promise<void> {
-  const billingSettingsModel = GetModel(BillingSettingsModel);
-  const settings = await billingSettingsModel.get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
-  if (!settings?.autoProrataOnCancelEnabled) return;
+  const settings = await loadBillingSettings();
+  if (!settings.autoProrataOnCancelEnabled) return;
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const localSubscription = await tenantSubscriptionModel.findOne();
-  if (localSubscription?.refundRequestedAt) return;
+  if (wasRefundedOnSubscription(localSubscription, subscription)) return;
   const stripe = getStripeClient();
   const invoices = await stripe.invoices.list({
     customer: customerId,
@@ -226,6 +255,20 @@ async function applyAutoProrataIfEnabled(
   );
 }
 
+/**
+ * Whether the workspace no longer bills on the deleted subscription: an
+ * operator's complimentary grant or a migration to a free plan cancels it
+ * once the workspace points elsewhere. Its deletion is not the workspace
+ * churning.
+ */
+async function isSubscriptionAlreadyLeft(
+  tenantId: string,
+  stripeSubscriptionId: string,
+): Promise<boolean> {
+  const local = await GetModel(TenantSubscriptionModel, tenantId).findOne();
+  return !!local && local.stripeSubscriptionId !== stripeSubscriptionId;
+}
+
 export async function handleSubscriptionDeleted(
   event: Stripe.Event,
 ): Promise<void> {
@@ -234,6 +277,7 @@ export async function handleSubscriptionDeleted(
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
+  if (await isSubscriptionAlreadyLeft(tenant._id, subscription.id)) return;
   // A cycle-end cancellation parked behind a free plan is a completed
   // downgrade, not a churn: no cancellation status, no prorata, no notice.
   if (await applyPendingFreePlanOnCancellation(tenant._id)) return;
@@ -345,7 +389,16 @@ export async function handleCustomerUpdated(
   const customer = event.data.object as Stripe.Customer;
   const tenant = await findTenantByCustomerId(customer.id);
   if (!tenant) return;
-  const billingInfoModel = GetModel(TenantBillingInfoModel, tenant._id);
+  await withBillingIdentityLock(tenant._id, () =>
+    mirrorCustomerBilling(tenant._id, customer),
+  );
+}
+
+async function mirrorCustomerBilling(
+  tenantId: string,
+  customer: Stripe.Customer,
+): Promise<void> {
+  const billingInfoModel = GetModel(TenantBillingInfoModel, tenantId);
   const existing = await billingInfoModel.findOne();
   if (!existing) return;
   const isBusiness = existing.customerType === BUSINESS_CUSTOMER_TYPE;

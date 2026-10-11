@@ -12,26 +12,7 @@ import {
 import {
   MODULES_ROOT_DEFINITION,
   SAAS_MODULE_DEFINITION,
-  SETTINGS_ROOT_DEFINITION,
-  WORKSPACE_SETTINGS_CATEGORY_DEFINITION,
 } from "./page-definitions";
-
-/**
- * Workspace settings descriptor for synchronous page declarations.
- * Use {@link GetWorkspaceSettingsCategory} when canonical runtime identity is
- * required.
- */
-export const workspaceSettingsCategory: CategoryInfo = {
-  ...WORKSPACE_SETTINGS_CATEGORY_DEFINITION,
-  category: SETTINGS_ROOT_DEFINITION,
-  urlTransparent: false,
-  hidden: undefined,
-  bypassTenantAccessGate: undefined,
-};
-
-/** Resolve the workspace settings category registered by the SaaS runtime. */
-export const GetWorkspaceSettingsCategory =
-  InterfaceFunction<() => CategoryInfo>();
 
 /** Stable identifiers for the tenant billing page and its extension anchors. */
 export const tenantBillingPage = {
@@ -52,6 +33,26 @@ export const tenantBillingPage = {
 /** Component key owned by the tenant billing page. */
 export type TenantBillingPageComponentKey =
   (typeof tenantBillingPage.components)[keyof typeof tenantBillingPage.components];
+
+/**
+ * Where each public anchor of the tenant billing page sits in its layout: the
+ * component key, then every child id down to the block. The plan, next
+ * invoice, payment method and money-back cards share a two-column grid, each
+ * in a stack of its own so a block injected beside one lands in its column
+ * instead of adding a column to the grid. Extensions keep naming the anchor
+ * (`tenantBillingPage.components.planCard`); this is what they resolve to.
+ */
+export const tenantBillingPageAnchorPaths: Readonly<
+  Record<TenantBillingPageComponentKey, readonly string[]>
+> = {
+  freeAccessBanner: ["freeAccessBanner"],
+  pastDueAlert: ["pastDueAlert"],
+  planCard: ["overview", "plan", "current", "planCard"],
+  paymentMethod: ["overview", "payment", "method", "paymentMethod"],
+  refundButton: ["overview", "payment", "guarantee", "refundButton"],
+  billingForm: ["billingForm"],
+  table: ["invoices", "table"],
+};
 
 /** Fields shared by anchored and appended tenant billing page extensions. */
 export interface TenantBillingPageExtensionComponentBase {
@@ -142,11 +143,9 @@ function toPageExtensionComponent(
     side: input.side ?? "end",
     order: input.order ?? 0,
   };
-  // `anchorPath` is what the DMS reads -- extension-assembly takes its first
-  // segment as the anchor key. The conditional spread this replaces set
-  // `anchorKey`, a property PageExtensionComponent does not declare, so every
-  // anchored extension was silently appended at the end of the page instead.
-  if (input.anchorKey) component.anchorPath = [input.anchorKey];
+  if (input.anchorKey) {
+    component.anchorPath = tenantBillingPageAnchorPaths[input.anchorKey];
+  }
   return component;
 }
 

@@ -23,7 +23,7 @@ vi.mock("../src/workers", () => ({
   applyPlanDowngradeCleanup: (...args: unknown[]) => harness.cleanup(...args),
 }));
 
-import { finalizeImmediateChange } from "../src/routes/tenant/tenant-plan-ops";
+import { finalizeImmediateChange } from "../src/plan-changes/immediate";
 
 const plan = {
   _id: "growth-plan",

@@ -198,6 +198,14 @@ export class TenantSubscriptionModel extends BasicDataModel(
     return this.table.getAll(planId, "planId").count().run();
   }
 
+  /** The subscriptions whose deferred plan change lands on `planId`. */
+  async findByPendingPlan(planId: string): Promise<TenantSubscription[]> {
+    const rows = await this.table.getAll(planId, "pendingPlanId").run();
+    return rows
+      .map((row) => TenantSubscriptionModel.fromDatabase(row))
+      .filter((row): row is TenantSubscription => row !== undefined);
+  }
+
   async claimSelfRefund(subscriptionId: string): Promise<boolean> {
     const existing = await this.get(subscriptionId);
     if (!existing || existing.refundRequestedAt) return false;

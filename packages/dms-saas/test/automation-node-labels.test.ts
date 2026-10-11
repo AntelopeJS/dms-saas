@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readLocale } from "./helpers/locales";
 import { describe, expect, it, vi } from "vitest";
 
 const registrations = vi.hoisted(() => ({
@@ -32,11 +32,6 @@ interface CatalogNode {
 
 const LOCALE_PATHS = ["saas-en-GB.json", "saas-fr-FR.json"];
 const LABEL_PREFIX = "$saas.automation.";
-
-function readLocale(path: string): LocaleTree {
-  const url = new URL(`../frontend-vue/i18n/locales/${path}`, import.meta.url);
-  return JSON.parse(readFileSync(url, "utf-8")) as LocaleTree;
-}
 
 function translate(locale: LocaleTree, label: string): unknown {
   return label

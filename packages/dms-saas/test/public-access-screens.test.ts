@@ -60,12 +60,15 @@ describe("legal pages", () => {
 describe("login page sign-up link", () => {
   const registered: AuthLink[] = [];
 
-  async function runPlugin(admissionMode?: string): Promise<void> {
+  async function runPlugin(
+    admissionMode?: string,
+    publicScreens?: string[],
+  ): Promise<void> {
     vi.resetModules();
     registered.length = 0;
     vi.stubGlobal("defineDmsPlugin", (setup: PluginSetup) => setup);
     vi.stubGlobal("useDmsRuntimeConfig", () => ({
-      public: { dmsSaas: { admissionMode } },
+      public: { dmsSaas: { admissionMode, publicScreens } },
     }));
     vi.stubGlobal("registerAuthLink", (link: AuthLink) =>
       registered.push(link),
@@ -78,16 +81,27 @@ describe("login page sign-up link", () => {
     vi.unstubAllGlobals();
   });
 
-  it("offers sign-up while registration is open", async () => {
+  it("offers sign-up and pricing while registration is open", async () => {
     await runPlugin("open");
 
     expect(registered).toEqual([
       expect.objectContaining({ page: "login", to: "/register" }),
+      expect.objectContaining({ page: "login", to: "/pricing" }),
     ]);
   });
 
-  it("hides it when admission is by invitation only", async () => {
+  it("hides sign-up when admission is by invitation only", async () => {
     await runPlugin("invitation-only");
+
+    expect(registered.map((link) => link.to)).toEqual(["/pricing"]);
+  });
+
+  it("links only to the bundled screens the deployment serves", async () => {
+    await runPlugin("open", ["pricing"]);
+
+    expect(registered.map((link) => link.to)).toEqual(["/pricing"]);
+
+    await runPlugin("open", []);
 
     expect(registered).toEqual([]);
   });

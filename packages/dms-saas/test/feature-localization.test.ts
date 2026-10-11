@@ -4,7 +4,9 @@ import { localizeFeature } from "@antelopejs/interface-dms-saas/plans";
 
 const TEXTS = {
   displayName: { en: "Members", fr: "Membres" },
+  description: { en: "People per workspace", fr: "Personnes par espace" },
   tooltip: { en: "People in the workspace" },
+  unit: { en: "member | members", fr: "membre | membres" },
 };
 
 function storedFeature() {
@@ -22,7 +24,11 @@ describe("feature localization", () => {
 
   it("reads the texts in the requested locale", () => {
     const feature = localizeFeature(storedFeature(), "fr");
-    expect(feature.displayName).toBe("Membres");
+    expect(feature).toMatchObject({
+      displayName: "Membres",
+      description: "Personnes par espace",
+      unit: "membre | membres",
+    });
   });
 
   it("falls back to English where the locale has no value", () => {

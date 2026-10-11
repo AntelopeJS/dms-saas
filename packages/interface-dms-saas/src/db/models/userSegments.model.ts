@@ -4,7 +4,7 @@ import {
   GetModel,
 } from "@antelopejs/interface-database-decorators";
 import type { Segment } from "../tables/segments.table";
-import { SegmentModel } from "./segments.model";
+import { SegmentModel, type SegmentEvaluationStats } from "./segments.model";
 import {
   UserSegment,
   userSegmentsTableName,
@@ -74,6 +74,7 @@ export class UserSegmentModel extends BasicDataModel(
     segment: Segment,
     userIds: readonly string[],
     evaluatedAt: Date,
+    stats: SegmentEvaluationStats = {},
   ): Promise<void> {
     const generation = randomUUID();
     const members = [...new Set(userIds)];
@@ -100,6 +101,7 @@ export class UserSegmentModel extends BasicDataModel(
       generation,
       members.length,
       evaluatedAt,
+      stats,
     );
     await this.cleanupUnpublishable(segment._id);
   }

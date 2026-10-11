@@ -165,3 +165,12 @@ export async function notifyAllPlatformOwners(
     payload,
   );
 }
+
+/** Delivers to one user, as `notifyTenantMembers` does to a workspace. */
+export async function notifyUser(
+  userId: string,
+  subject: NotificationSubjectInfo,
+  payload: SaasNotificationPayload,
+): Promise<void> {
+  await deliverNotification(async () => [userId], subject, payload);
+}

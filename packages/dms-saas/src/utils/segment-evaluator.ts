@@ -13,11 +13,17 @@ export type SegmentNode =
 
 type FieldKind = SegmentValueKind | "unknown";
 
-function isGroup(node: SegmentNode): node is SegmentConditionGroup {
+/** Whether a node is a group of conditions joined by AND / OR. */
+export function isSegmentGroup(
+  node: SegmentNode,
+): node is SegmentConditionGroup {
   return (node as SegmentConditionGroup).logical !== undefined;
 }
 
-function isWorkspaceRef(node: SegmentNode): node is SegmentWorkspaceRef {
+/** Whether a node is a condition on the user's workspaces. */
+export function isSegmentWorkspaceRef(
+  node: SegmentNode,
+): node is SegmentWorkspaceRef {
   return (node as SegmentWorkspaceRef).kind === "workspaceRef";
 }
 
@@ -131,32 +137,43 @@ function evaluateCondition(
 }
 
 /**
- * Evaluate a workspaceRef node against a user projection: the projection must
- * expose its workspaces under `workspaces`, each entry carrying an `isOwner`
- * flag. `role: "owner"` restricts the pool to owned workspaces before the
- * quantifier applies; an empty pool never matches, whatever the quantifier.
+ * The workspaces a workspaceRef node reads on a user projection: the ones
+ * listed under `workspaces`, only the owned ones (`isOwner`) for
+ * `role: "owner"`.
+ */
+export function segmentWorkspacePool(
+  node: SegmentWorkspaceRef,
+  target: Record<string, unknown>,
+): Record<string, unknown>[] {
+  const all = Array.isArray(target.workspaces)
+    ? (target.workspaces as Record<string, unknown>[])
+    : [];
+  return node.role === "owner" ? all.filter((w) => w.isOwner === true) : all;
+}
+
+/**
+ * Evaluate a workspaceRef node against a user projection. `role: "owner"`
+ * restricts the pool to owned workspaces before the quantifier applies; an
+ * empty pool never matches, whatever the quantifier.
  */
 function evaluateWorkspaceRef(
   node: SegmentWorkspaceRef,
   target: Record<string, unknown>,
 ): boolean {
-  const all = Array.isArray(target.workspaces)
-    ? (target.workspaces as Record<string, unknown>[])
-    : [];
-  const workspaces =
-    node.role === "owner" ? all.filter((w) => w.isOwner === true) : all;
+  const workspaces = segmentWorkspacePool(node, target);
   if (workspaces.length === 0) return false;
   return node.quantifier === "all"
     ? workspaces.every((w) => evaluateSegmentGroup(node.conditions, w))
     : workspaces.some((w) => evaluateSegmentGroup(node.conditions, w));
 }
 
-function evaluateNode(
+/** Evaluate any node of a segment's tree against a projection. */
+export function evaluateSegmentNode(
   node: SegmentNode,
   target: Record<string, unknown>,
 ): boolean {
-  if (isWorkspaceRef(node)) return evaluateWorkspaceRef(node, target);
-  if (isGroup(node)) return evaluateSegmentGroup(node, target);
+  if (isSegmentWorkspaceRef(node)) return evaluateWorkspaceRef(node, target);
+  if (isSegmentGroup(node)) return evaluateSegmentGroup(node, target);
   return evaluateCondition(node, target);
 }
 
@@ -165,7 +182,9 @@ export function evaluateSegmentGroup(
   target: Record<string, unknown>,
 ): boolean {
   if (!group?.conditions?.length) return false;
-  const results = group.conditions.map((node) => evaluateNode(node, target));
+  const results = group.conditions.map((node) =>
+    evaluateSegmentNode(node, target),
+  );
   return group.logical === "or"
     ? results.some(Boolean)
     : results.every(Boolean);

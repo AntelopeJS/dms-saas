@@ -30,10 +30,13 @@ import {
   readStripeId,
   readSubscriptionPeriodEnd,
   reconcileStripeTaxId,
+  rememberCustomerLocale,
   toStripeAddress,
+  toStripePreferredLocales,
   toTenantBillingAddress,
 } from "../stripe";
 import { hashEmail, insertOrUpdateById, stripeSecondsToDate } from "../utils";
+import { createDefaultMemberRole } from "./default-member-role";
 import { resolveDefaultPlan } from "./default-plan";
 import { isFreePlan } from "./free-plan";
 import { buildSubscriptionCreateParams } from "./subscription-create-params";
@@ -42,6 +45,7 @@ import {
   recordProvisioningState,
   reserveTrialIdentities,
 } from "./provisioning-state";
+import { isPlanOfferedTo } from "../plans/plan-audience";
 export { rollbackWorkspaceProvisioning } from "./provisioning-rollback";
 
 const HTTP_BAD_REQUEST = 400;
@@ -49,6 +53,7 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
+const PENDING_PAYMENT_STATUS: TenantSubscriptionStatus = "pending_payment";
 
 export type WorkspaceCustomerType = "individual" | "business";
 
@@ -66,8 +71,17 @@ export interface WorkspaceBillingProfile {
 export interface WorkspaceProvisioningPayload extends WorkspaceBillingProfile {
   workspaceName: string;
   planId: string;
-  /** Absent for a card-less workspace, which only a free plan allows. */
+  /**
+   * Absent for a card-less workspace, which only a free plan allows, or a
+   * workspace that awaits its first payment.
+   */
   paymentMethodId?: string;
+  /**
+   * The workspace opens on its paid plan waiting for its first payment, made
+   * through Checkout, as one an operator creates for its owner to pay. No
+   * Stripe object is created here.
+   */
+  awaitsFirstPayment?: boolean;
   /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else. Opaque here: dms-saas never reads it, never
@@ -99,6 +113,8 @@ export interface CardDetails {
 
 export interface WorkspaceProvisioningInput {
   userId: string;
+  /** The owner's language, for what the workspace is set up with in words. */
+  ownerLanguage?: string;
   payload: WorkspaceProvisioningPayload;
   stripeCustomerProfile: StripeCustomerProfile;
   card: CardDetails;
@@ -111,7 +127,7 @@ export interface ProvisionedWorkspace {
 }
 
 interface CreatedSubscription {
-  /** Null for a card-less workspace, which has no Stripe side at all. */
+  /** Null for a workspace on a local free subscription, card or not. */
   stripeSubscriptionId: string | null;
   /** Null exactly when `stripeSubscriptionId` is. */
   startedAt: Date | null;
@@ -169,7 +185,7 @@ export async function ensurePlanIsAvailableForCustomer(
     "saas.errors.plan.not_available",
   );
   assert(
-    plan.audience === "any" || plan.audience === customerType,
+    isPlanOfferedTo(plan, customerType),
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );
@@ -178,20 +194,31 @@ export async function ensurePlanIsAvailableForCustomer(
 
 const NO_CARD: CardDetails = { fingerprint: null, billingAddress: undefined };
 
+const LOCAL_SUBSCRIPTION: CreatedSubscription = {
+  stripeSubscriptionId: null,
+  startedAt: null,
+  isTrialing: false,
+  currentPeriodEnd: null,
+  latestInvoiceId: null,
+};
+
 /**
  * A workspace without a card stays entirely local: the upgrade checkout
  * creates the Stripe customer the day one is needed.
  */
 const CARDLESS_BILLING: ProvisionedBilling = {
   stripeCustomerId: null,
-  subscription: {
-    stripeSubscriptionId: null,
-    startedAt: null,
-    isTrialing: false,
-    currentPeriodEnd: null,
-    latestInvoiceId: null,
-  },
+  subscription: LOCAL_SUBSCRIPTION,
 };
+
+/**
+ * A free plan that was never linked to a Stripe price has nothing to
+ * subscribe to on Stripe: its workspaces hold a local free subscription, and
+ * the upgrade checkout opens the Stripe one on the customer created here.
+ */
+function isBilledOffStripe(plan: Plan): boolean {
+  return isFreePlan(plan) && !plan.paymentProviderRefs?.stripePriceId;
+}
 
 /**
  * Read once by the caller: the inherited billing address and the trial
@@ -234,10 +261,10 @@ export async function resolveRegistrationPlan(): Promise<Plan> {
 }
 
 async function createStripeCustomer(
-  profile: StripeCustomerProfile,
+  input: WorkspaceProvisioningInput,
   paymentMethodId: string,
-  handles: WorkspaceProvisioningHandles,
 ): Promise<string> {
+  const { stripeCustomerProfile: profile, handles } = input;
   const stripe = getStripeClient();
   // Set rather than spread: a customer without a VAT number carries no
   // `vatNumber` key at all, which is what Stripe's metadata expects.
@@ -254,10 +281,12 @@ async function createStripeCustomer(
           ? profile.companyName
           : profile.fallbackName,
       address: toStripeAddress(profile.address),
+      preferred_locales: toStripePreferredLocales(input.ownerLanguage),
       metadata: { ...metadata, provisioningAttempt: handles.tenantId ?? "" },
     },
     { idempotencyKey: `provisioning-customer:${handles.tenantId}` },
   );
+  rememberCustomerLocale(customer.id, input.ownerLanguage);
   // Recorded before the follow-up calls: a failed attach (declined or already
   // attached card) must still leave the rollback able to delete the customer
   // and the PII it carries.
@@ -418,6 +447,15 @@ function initialPaidUsagePeriods(
   return [{ stripeSubscriptionId, start: startedAt, end: null }];
 }
 
+/** The status a new subscription starts in. */
+function initialStatus(
+  payload: WorkspaceProvisioningPayload,
+  subscription: CreatedSubscription,
+): TenantSubscriptionStatus {
+  if (payload.awaitsFirstPayment) return PENDING_PAYMENT_STATUS;
+  return subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS;
+}
+
 /**
  * Both rows are keyed by the tenant id, like every other writer of them. The
  * default-plan backfill may cover the workspace between its creation and this
@@ -428,7 +466,7 @@ async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
   const { tenantId, payload, subscription } = input;
   const subscriptionPatch = {
     planId: payload.planId,
-    status: subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS,
+    status: initialStatus(payload, subscription),
     isComplimentary: false,
     paidUsagePeriods: initialPaidUsagePeriods(subscription),
     stripeCustomerId: input.stripeCustomerId,
@@ -462,10 +500,9 @@ async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
 }
 
 async function createOwnedTenant(
-  workspaceName: string,
-  userId: string,
-  handles: WorkspaceProvisioningHandles,
+  input: WorkspaceProvisioningInput,
 ): Promise<string> {
+  const { userId, handles } = input;
   const tenantId = handles.tenantId;
   if (!tenantId)
     throw new Error("Provisioning intent must precede tenant creation");
@@ -474,7 +511,7 @@ async function createOwnedTenant(
     await GetModel(TenantModel).insert([
       {
         _id: tenantId,
-        name: workspaceName,
+        name: input.payload.workspaceName,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -483,6 +520,7 @@ async function createOwnedTenant(
       roleIds: [],
       isTenantOwner: true,
     });
+    await createDefaultMemberRole(tenantId, input.ownerLanguage);
     return tenantId;
   });
 }
@@ -494,9 +532,12 @@ export async function provisionWorkspace(
   const plan = await loadBillablePlan(input.payload.planId);
   assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_available");
   // Nothing can be charged without a card, so only a free plan goes on
-  // without one — checked before any durable state is written.
+  // without one, or a workspace whose first payment goes through Checkout —
+  // checked before any durable state is written.
   assert(
-    input.payload.paymentMethodId || isFreePlan(plan),
+    input.payload.paymentMethodId ||
+      isFreePlan(plan) ||
+      input.payload.awaitsFirstPayment,
     HTTP_BAD_REQUEST,
     "saas.errors.workspace.payment_method_required",
   );
@@ -520,11 +561,10 @@ async function provisionStripeBilling(
   paymentMethodId: string,
 ): Promise<ProvisionedBilling> {
   const { stripeCustomerProfile, handles } = input;
-  const stripeCustomerId = await createStripeCustomer(
-    stripeCustomerProfile,
-    paymentMethodId,
-    handles,
-  );
+  const stripeCustomerId = await createStripeCustomer(input, paymentMethodId);
+  if (isBilledOffStripe(plan)) {
+    return { stripeCustomerId, subscription: LOCAL_SUBSCRIPTION };
+  }
   const subscription = await createSubscription({
     stripeCustomerId,
     plan,
@@ -546,11 +586,7 @@ async function runProvisioning(
     ? await provisionStripeBilling(input, plan, payload.paymentMethodId)
     : CARDLESS_BILLING;
 
-  const tenantId = await createOwnedTenant(
-    payload.workspaceName,
-    userId,
-    handles,
-  );
+  const tenantId = await createOwnedTenant(input);
   await runTenantLifecycleOperation(tenantId, () =>
     insertTenantRecords({
       tenantId,

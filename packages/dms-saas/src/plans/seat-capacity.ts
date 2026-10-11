@@ -6,6 +6,7 @@ import {
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
+import type { Plan } from "../db";
 
 /** A platform owner holding a membership to support the workspace. */
 export interface PlatformSupportMember {
@@ -109,17 +110,22 @@ function listPlatformSupport(
  * successor before deleting it, so invitations are counted per invitee: the
  * two incarnations of a resent invitation hold a single seat.
  * `releasedInviteeEmail` leaves out the seat of an invitee whose invitation is
- * about to be replaced, since the replacement takes that seat over.
+ * about to be replaced or deleted, `departingUserIds` the members about to be
+ * removed: the DMS runs its removal hooks before it deletes.
  */
 export async function getSeatUsage(
   tenantId: string,
   releasedInviteeEmail?: string,
+  departingUserIds: readonly string[] = [],
 ): Promise<SeatUsage> {
-  const [members, invites, owners] = await Promise.all([
+  const [allMembers, invites, owners] = await Promise.all([
     GetModel(TenantMemberModel, tenantId).listAll(),
     GetModel(UserInviteModel, tenantId).getAll(),
     loadPlatformOwners(),
   ]);
+  const members = allMembers.filter(
+    (member) => !departingUserIds.includes(member.userId),
+  );
   const nowMs = Date.now();
   const pendingInvitees = new Set(
     invites
@@ -146,6 +152,25 @@ export async function countOccupiedSeats(
 ): Promise<number> {
   const usage = await getSeatUsage(tenantId, releasedInviteeEmail);
   return usage.occupied;
+}
+
+const SEAT_BILLING_MODE = "seat";
+const FLAT_SEATS = 1;
+
+/**
+ * The seats a price comparison between plans counts: those the workspace
+ * uses when one of the plans bills per seat, and none to read otherwise.
+ *
+ * @param plans The plans compared; a missing one is skipped
+ */
+export async function countSeatsToCompare(
+  tenantId: string,
+  plans: ReadonlyArray<Pick<Plan, "billingMode"> | null | undefined>,
+): Promise<number> {
+  const isPerSeat = plans.some(
+    (plan) => plan?.billingMode === SEAT_BILLING_MODE,
+  );
+  return isPerSeat ? countOccupiedSeats(tenantId) : FLAT_SEATS;
 }
 
 export function hasSeatCapacity(

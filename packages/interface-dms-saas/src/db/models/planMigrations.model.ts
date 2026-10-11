@@ -7,6 +7,9 @@ import {
 import {
   PlanMigration,
   type PlanMigrationSnapshot,
+  type PlanMigrationStage,
+  isPlanMigrationExecuting,
+  planMigrationStageOf,
   planMigrationsTableName,
 } from "../tables/planMigrations.table";
 
@@ -26,6 +29,7 @@ export class PlanMigrationModel extends BasicDataModel(
       ...row,
       revision: randomUUID(),
       tenantOutcomes: [],
+      stage: planMigrationStageOf(row.status ?? "pending"),
     });
     return super.insert(
       Array.isArray(rows) ? rows.map(initialize) : initialize(rows),
@@ -62,18 +66,43 @@ export class PlanMigrationModel extends BasicDataModel(
     return this.persist(job, { status: "reconciliation_required" });
   }
 
+  /**
+   * Rewrite a migration no executor works on (an operator resolving a
+   * workspace, or closing the migration), under the observed revision; a
+   * concurrent change wins and returns false.
+   */
+  async updateSettled(
+    job: PlanMigration,
+    patch: Partial<PlanMigration>,
+  ): Promise<boolean> {
+    if (isPlanMigrationExecuting(job.status)) return false;
+    return this.persist(job, patch);
+  }
+
+  /**
+   * Admit one retry of a settled migration: it runs again under the observed
+   * revision, so two retries started together execute once.
+   */
+  async reopen(job: PlanMigration): Promise<boolean> {
+    if (isPlanMigrationExecuting(job.status)) return false;
+    return this.persist(job, { status: "running", completedAt: null });
+  }
+
   private async persist(
     job: PlanMigration,
     patch: Partial<PlanMigration>,
   ): Promise<boolean> {
     const nextRevision = randomUUID();
+    const written: Partial<PlanMigration> = patch.status
+      ? { ...patch, stage: planMigrationStageOf(patch.status) }
+      : patch;
     const outcome = await this.table
       .atomicMutation(job._id, {
         type: "update",
         revisionField: "revision",
         expectedRevision: job.revision,
         nextRevision,
-        patch,
+        patch: written,
       })
       .run();
     if (outcome === "unknown")
@@ -81,7 +110,7 @@ export class PlanMigrationModel extends BasicDataModel(
         "Migration acknowledgement unknown; reconciliation required",
       );
     if (outcome !== "applied") return false;
-    Object.assign(job, patch, { revision: nextRevision });
+    Object.assign(job, written, { revision: nextRevision });
     return true;
   }
 
@@ -95,19 +124,27 @@ export class PlanMigrationModel extends BasicDataModel(
       .filter((row): row is PlanMigration => row !== undefined);
   }
 
-  /** Advisory UI check; subscription admission remains the concurrency boundary. */
-  async existsPendingOrRunningForPlan(fromPlanId: string): Promise<boolean> {
+  /**
+   * Advisory UI check, true while a migration of the plan runs or waits for an
+   * operator; subscription admission remains the concurrency boundary.
+   */
+  async existsUnsettledForPlan(fromPlanId: string): Promise<boolean> {
     const count = await this.table
       .getAll(fromPlanId, "fromPlanId")
-      .filter((row) =>
-        row
-          .key("status")
-          .eq("pending")
-          .or(row.key("status").eq("running"))
-          .or(row.key("status").eq("reconciliation_required")),
-      )
+      .filter((row) => row.key("stage").ne("done"))
       .count()
       .run();
     return count > 0;
+  }
+
+  /** Migrations in a stage, newest first. */
+  async findByStage(stage: PlanMigrationStage): Promise<PlanMigration[]> {
+    const rows = await this.table.getAll(stage, "stage").run();
+    return rows
+      .map((row) => PlanMigrationModel.fromDatabase(row))
+      .filter((row): row is PlanMigration => row !== undefined)
+      .sort(
+        (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+      );
   }
 }

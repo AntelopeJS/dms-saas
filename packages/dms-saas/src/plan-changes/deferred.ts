@@ -13,10 +13,11 @@ import {
 import { syncStripeSeatQuantity } from "../plans/seat-sync";
 import { getStripeClient } from "../stripe/client";
 import {
-  resetSubscriptionPendingState,
-  scheduleSubscriptionDowngrade,
-  setSubscriptionCancelAtPeriodEnd,
-} from "../stripe/plan-schedule";
+  establishPendingTarget,
+  pendingTargetOf,
+  releasePendingOnStripe,
+  toPendingPatch,
+} from "./pending-target";
 import { applyPlanDowngradeCleanup } from "../workers/plan-migration";
 
 const ACTIVE_STATUS = "active" as const;
@@ -36,28 +37,6 @@ export interface ScheduleDeferredChangeParams {
   tenantId: string;
   subscription: TenantSubscription;
   targetPlan: Plan;
-}
-
-function toPendingPatch(
-  planId: string | null,
-  effectiveAt: Date | null,
-): Partial<TenantSubscription> {
-  return {
-    pendingPlanId: planId,
-    pendingPlanChangeAt: effectiveAt,
-    updatedAt: new Date(),
-  };
-}
-
-/** Stripe side of dropping a parked downgrade. The guard matters: without a
- * parked change there is nothing to lift, and resetting blindly would undo a
- * cancellation set outside the console. */
-async function releasePendingOnStripe(
-  subscription: TenantSubscription,
-): Promise<void> {
-  if (!subscription.pendingPlanId) return;
-  if (!subscription.stripeSubscriptionId) return;
-  await resetSubscriptionPendingState(subscription.stripeSubscriptionId);
 }
 
 export async function clearPendingPlanChange(
@@ -91,34 +70,6 @@ export async function clearPendingPlanChange(
   );
 }
 
-async function resolveSeatQuantity(
-  tenantId: string,
-  plan: Plan,
-): Promise<number | undefined> {
-  if (plan.billingMode !== "seat") return undefined;
-  return countOccupiedSeats(tenantId);
-}
-
-/** Establish the provider target while the caller retains subscription admission. */
-async function establishPendingTarget(
-  tenantId: string,
-  subscription: TenantSubscription,
-  targetPlan: Plan,
-): Promise<Date | null> {
-  const stripeSubscriptionId = subscription.stripeSubscriptionId as string;
-  const stripePriceId = targetPlan.paymentProviderRefs?.stripePriceId;
-
-  if (!stripePriceId) {
-    return setSubscriptionCancelAtPeriodEnd(stripeSubscriptionId, true);
-  }
-
-  return scheduleSubscriptionDowngrade({
-    stripeSubscriptionId,
-    stripePriceId,
-    quantity: await resolveSeatQuantity(tenantId, targetPlan),
-  });
-}
-
 /** Retain intent on failure; compensating an ambiguous provider request is unsafe. */
 export async function scheduleDeferredPlanChange(
   params: ScheduleDeferredChangeParams,
@@ -137,7 +88,7 @@ export async function scheduleDeferredPlanChange(
   const effectiveAt = await establishPendingTarget(
     tenantId,
     subscription,
-    targetPlan,
+    pendingTargetOf(targetPlan),
   );
   await model.completeTransition(
     subscription._id,

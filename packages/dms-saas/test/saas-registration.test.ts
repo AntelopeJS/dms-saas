@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readLocale } from "./helpers/locales";
 import { describe, expect, it } from "vitest";
 import {
   firstMissingRegistrationRequirement,
@@ -16,11 +16,6 @@ const MET_REQUIREMENTS: RegistrationRequirements = {
   isPaymentReady: true,
   hasAcceptedLegal: true,
 };
-
-function readLocale(file: string): LocaleTree {
-  const url = new URL(`../frontend-vue/i18n/locales/${file}`, import.meta.url);
-  return JSON.parse(readFileSync(url, "utf-8")) as LocaleTree;
-}
 
 function lookup(tree: LocaleTree, key: string): unknown {
   return key
@@ -44,7 +39,7 @@ describe("firstMissingRegistrationRequirement", () => {
     };
 
     expect(firstMissingRegistrationRequirement(requirements)).toBe(
-      "saas.register.error.no_payment",
+      "saas.public.register.error.card_required",
     );
   });
 
@@ -66,7 +61,7 @@ describe("firstMissingRegistrationRequirement", () => {
     };
 
     expect(firstMissingRegistrationRequirement(requirements)).toBe(
-      "saas.register.error.legal_required",
+      "saas.public.register.error.legal_required",
     );
   });
 });
@@ -146,7 +141,7 @@ describe("registration copy", () => {
     (file) => {
       const pattern = lookup(
         readLocale(file),
-        "saas.register.default_workspace_name",
+        "saas.public.register.default_workspace_name",
       );
 
       expect(pattern).toEqual(expect.stringContaining("{name}"));

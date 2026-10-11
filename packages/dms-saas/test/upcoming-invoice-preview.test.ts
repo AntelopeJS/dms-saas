@@ -207,6 +207,11 @@ function planLine(taxMinorUnits: number): Stripe.InvoiceLineItem {
   return {
     description: "1 × Pro (at €29.00 / month)",
     amount: 2900,
+    pricing: {
+      type: "price_details",
+      price_details: { price: "price_pro", product: "prod_pro" },
+      unit_amount_decimal: "2900",
+    },
     taxes: [exclusiveTax(taxMinorUnits)],
     quantity: 1,
     period: { start: seconds(CYCLE_END), end: seconds(NEXT_CYCLE_END) },
@@ -392,6 +397,7 @@ describe("upcoming invoice preview pricing", () => {
           periodEnd: NEXT_CYCLE_END.toISOString(),
           isProration: false,
           usageLineKey: null,
+          productId: "prod_pro",
         },
       ],
       hasMoreLines: false,

@@ -122,6 +122,33 @@ beforeEach(() => {
   tables.RefundModel.rows.clear();
 });
 
+describe("Stripe invoice collection state", () => {
+  it("mirrors what Stripe is doing to collect the invoice", async () => {
+    const retryAt = 1_790_300_000;
+    await upsertInvoice(
+      {
+        ...stripeInvoice("open"),
+        amount_paid: 1_000,
+        attempt_count: 2,
+        next_payment_attempt: retryAt,
+        due_date: null,
+        automatically_finalizes_at: null,
+        latest_revision: { id: "in_2" },
+      } as unknown as Stripe.Invoice,
+      "tenant-a",
+    );
+
+    expect(tables.InvoiceModel.rows.get("in_1")).toMatchObject({
+      amountPaid: 1_000,
+      attemptCount: 2,
+      nextPaymentAttemptAt: new Date(retryAt * 1_000),
+      dueAt: null,
+      autoFinalizesAt: null,
+      latestRevisionStripeId: "in_2",
+    });
+  });
+});
+
 describe("Stripe invoice mirror keys", () => {
   it("keeps concurrent events of one invoice to a single row", async () => {
     await Promise.all([

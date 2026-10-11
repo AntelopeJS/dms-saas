@@ -4,9 +4,34 @@ import {
   type BillingState,
   TenantBillingState,
   tenantBillingStateTableName,
+  type WorkspaceDirectoryFields,
 } from "../tables/tenantBillingState.table";
 
 const DELETE_ATTEMPTS = 3;
+
+/** The directory row of a workspace deleted before it was ever published. */
+const DELETED_WORKSPACE_DIRECTORY: WorkspaceDirectoryFields = {
+  planId: null,
+  planName: null,
+  planInterval: null,
+  planBillingMode: null,
+  planUnitAmountMinor: null,
+  currency: null,
+  seats: 0,
+  members: 0,
+  pendingPlanId: null,
+  isComplimentary: false,
+  mrrMinor: 0,
+  previousMrrMinor: 0,
+  reportingMrr: 0,
+  renewalKind: null,
+  renewsAt: null,
+  stateSince: null,
+  ownerStatus: "none",
+  ownerNeverJoined: false,
+  ownerName: null,
+  ownerEmail: null,
+};
 
 /** Data access for tenant billing access state. */
 export class TenantBillingStateModel extends BasicDataModel(
@@ -19,14 +44,18 @@ export class TenantBillingStateModel extends BasicDataModel(
     return this.get(tenantId);
   }
 
-  /** Publishes against the snapshot read before deriving the billing state. */
+  /**
+   * Publishes against the snapshot read before deriving the billing state,
+   * with the directory fields derived alongside it.
+   */
   async upsertForTenant(
     tenantId: string,
     billingState: BillingState,
     existing: TenantBillingState | undefined,
+    directory: WorkspaceDirectoryFields,
   ): Promise<boolean> {
     if (existing?.deletedAt) return true;
-    return this.publish(tenantId, existing, billingState, null);
+    return this.publish(tenantId, existing, billingState, null, directory);
   }
 
   private async publish(
@@ -34,11 +63,23 @@ export class TenantBillingStateModel extends BasicDataModel(
     existing: TenantBillingState | undefined,
     billingState: BillingState,
     deletedAt: Date | null,
+    directory?: WorkspaceDirectoryFields,
   ): Promise<boolean> {
     const revision = randomUUID();
-    const patch = { tenantId, billingState, updatedAt: new Date(), deletedAt };
+    const patch = {
+      ...directory,
+      tenantId,
+      billingState,
+      updatedAt: new Date(),
+      deletedAt,
+    };
     if (!existing)
-      return this.insertPublication({ _id: tenantId, ...patch, revision });
+      return this.insertPublication({
+        ...DELETED_WORKSPACE_DIRECTORY,
+        _id: tenantId,
+        ...patch,
+        revision,
+      });
     const outcome = await this.table
       .atomicMutation(tenantId, {
         type: "update",
@@ -64,6 +105,17 @@ export class TenantBillingStateModel extends BasicDataModel(
     const current = await this.get(row._id);
     if (!current) throw new Error("Billing publication was not persisted");
     return current.revision === row.revision;
+  }
+
+  /** The live directory rows of a plan's workspaces. */
+  async findByPlan(planId: string): Promise<TenantBillingState[]> {
+    const rows = await this.table
+      .getAll(planId, "planId")
+      .filter((row) => row.key("deletedAt").eq(null))
+      .run();
+    return rows
+      .map((row) => TenantBillingStateModel.fromDatabase(row))
+      .filter((row): row is TenantBillingState => row !== undefined);
   }
 
   async countByState(billingState: BillingState): Promise<number> {

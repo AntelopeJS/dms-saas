@@ -35,16 +35,22 @@ import { TenantSubscriptionModel, PlanModel } from "../src/db";
 import { SaasRegisterApiController } from "../src/routes/public/register";
 import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
-import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
+import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
 
 const stripe = vi.hoisted(() => ({ called: vi.fn() }));
+// The DMS permission registry is not wired here: the role is created against
+// it in production, and its own test covers what it holds.
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async () => "member-role",
+}));
 vi.mock("../src/stripe/client", () => ({
   getStripeClient: () => {
     stripe.called();
     throw new Error("No Stripe call permitted in complimentary admission");
   },
 }));
-vi.mock("../src/billing-state", () => ({
+vi.mock("../src/billing-state", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/billing-state")>()),
   recomputeTenantBillingState: async () => undefined,
 }));
 vi.mock("../src/data-api", async () => ({
@@ -168,7 +174,7 @@ async function oauthLogin(
       providerId: "google",
       body: { code: "test", state, state_cookie: state, invite },
       userAgent: "test",
-      ip: "127.0.0.1",
+      origin: { ip: "127.0.0.1" },
     });
   } finally {
     vi.unstubAllGlobals();
@@ -271,7 +277,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
       isDeleted: false,
     });
     const admin = { _id: randomUUID(), owner: true, language: "en" } as User;
-    const controller = new SaasWorkspacesListController();
+    const controller = new SaasWorkspacesAdminController();
     controller.planModel = plans;
     controller.tenantModel = GetModel(TenantModel);
     const email = `${randomUUID()}@example.test`;
@@ -279,6 +285,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
       name: "Invited workspace",
       ownerEmail: email,
       planId,
+      access: "complimentary",
     });
     expect(created.owner.kind).toBe("invited");
     if (created.owner.kind !== "invited")

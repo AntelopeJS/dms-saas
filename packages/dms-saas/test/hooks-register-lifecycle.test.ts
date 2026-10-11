@@ -47,6 +47,9 @@ vi.mock("../src/pages/module", () => ({ SAAS_MODULE_ID: "dms-saas" }));
 vi.mock("../src/plans/stripe-sync", () => ({
   startPlanReconciliation: hookDoubles.startPlanReconciliation,
 }));
+vi.mock("../src/operator-billing/billing-settings-store", () => ({
+  ensureBillingSettingsRow: vi.fn(async () => undefined),
+}));
 vi.mock("../src/routes", () => ({
   ensureLegalDocumentsSingleton: hookDoubles.ensureLegalDocumentsSingleton,
 }));

@@ -11,6 +11,8 @@ export interface DmsSaasStripeConfig {
  */
 export interface DmsSaasPublicScreensConfig {
   register?: boolean;
+  /** The public plan catalogue on `/pricing`, linked from sign-in. */
+  pricing?: boolean;
 }
 
 export type PublicScreenId = keyof DmsSaasPublicScreensConfig;
@@ -73,4 +75,9 @@ export interface DmsSaasConfig {
    * billing identity and invoice changes invalidate it sooner.
    */
   upcomingInvoicePreviewCacheTtlSeconds?: number;
+  /**
+   * ISO 4217 code the back office reports recurring revenue in. Amounts in
+   * other currencies are shown apart, never converted. Defaults to `EUR`.
+   */
+  reportingCurrency?: string;
 }

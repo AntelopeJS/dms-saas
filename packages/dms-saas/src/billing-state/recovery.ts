@@ -1,21 +1,17 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
-import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
-  DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
-  type Invoice,
-  InvoiceModel,
-  type TenantSubscription,
-} from "../db";
+import { type Invoice, InvoiceModel, type TenantSubscription } from "../db";
 import { getStripeClient } from "../stripe/client";
 import { MS_PER_DAY, stripeSecondsToDate } from "../utils/time";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
 export interface PaymentMethodSummary {
   brand: string;
   last4: string;
   expMonth: number;
   expYear: number;
+  /** Cardholder name Stripe collected with the card, when it has one. */
+  holderName: string | null;
 }
 
 export interface UnpaidInvoiceRef {
@@ -26,12 +22,15 @@ export interface UnpaidInvoiceRef {
 }
 
 export interface UnpaidInvoiceSummary extends UnpaidInvoiceRef {
+  /** Mirror row id, which the owner's pay-invoice request names. */
+  invoiceId: string;
   failedAt: Date | null;
   nextRetryAt: Date | null;
   suspendAt: Date | null;
 }
 
-function toCardSummary(
+/** Brand, last four digits, expiry and holder of a card payment method. */
+export function toCardSummary(
   paymentMethod: Stripe.PaymentMethod | null,
 ): PaymentMethodSummary | null {
   const card = paymentMethod?.card;
@@ -41,6 +40,7 @@ function toCardSummary(
     last4: card.last4,
     expMonth: card.exp_month,
     expYear: card.exp_year,
+    holderName: paymentMethod?.billing_details?.name ?? null,
   };
 }
 
@@ -68,14 +68,11 @@ async function resolveSuspendAt(
   pastDueSince: Date | null,
 ): Promise<Date | null> {
   if (!pastDueSince) return null;
-  const billingSettingsModel = GetModel(BillingSettingsModel);
-  const settings = await billingSettingsModel.get(
-    BILLING_SETTINGS_SINGLETON_ID,
+  const settings = await loadBillingSettings();
+  if (!settings.autoSuspendEnabled) return null;
+  return new Date(
+    pastDueSince.getTime() + settings.autoSuspendDelayDays * MS_PER_DAY,
   );
-  if (!settings?.autoSuspendEnabled) return null;
-  const delayDays =
-    settings.autoSuspendDelayDays ?? DEFAULT_AUTO_SUSPEND_DELAY_DAYS;
-  return new Date(pastDueSince.getTime() + delayDays * MS_PER_DAY);
 }
 
 async function fetchNextRetryAt(stripeInvoiceId: string): Promise<Date | null> {
@@ -125,6 +122,7 @@ export async function buildUnpaidInvoiceSummary(
   ]);
   return {
     ...toUnpaidInvoiceRef(invoice),
+    invoiceId: invoice._id,
     failedAt: subscription.pastDueSince ?? null,
     nextRetryAt,
     suspendAt,

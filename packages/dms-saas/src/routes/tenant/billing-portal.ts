@@ -25,10 +25,15 @@ import {
   type UnpaidInvoiceSummary,
 } from "../../billing-state";
 import { isAllowedRedirectUrl } from "../../config";
-import type { TenantSubscriptionStatus } from "../../db";
+import type { TenantSubscription, TenantSubscriptionStatus } from "../../db";
 import { TenantSubscriptionModel } from "../../db";
-import { getStripeClient } from "../../stripe";
+import { fetchScheduledCancellation, getStripeClient } from "../../stripe";
+import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
 import { isComplimentarySubscription } from "../../workspaces/complimentary";
+import {
+  findWorkspaceOwnerContact,
+  type WorkspaceOwnerContact,
+} from "../../workspaces/owner-contact";
 
 const HTTP_BAD_REQUEST = 400;
 const RECOVERABLE_STATUSES = new Set<TenantSubscriptionStatus>([
@@ -40,12 +45,54 @@ interface PortalSessionBody {
   returnUrl: string;
 }
 
-interface BillingStatus {
+interface OwnerBillingDetails {
+  paymentMethod: PaymentMethodSummary | null;
+  unpaidInvoice: UnpaidInvoiceSummary | null;
+  /** When the subscription stops on its own; null while it renews. */
+  scheduledCancellationAt: Date | null;
+}
+
+interface BillingStatus extends OwnerBillingDetails {
   hasStripeCustomer: boolean;
   status: TenantSubscriptionStatus | null;
   isTenantOwner: boolean;
-  paymentMethod: PaymentMethodSummary | null;
-  unpaidInvoice: UnpaidInvoiceSummary | null;
+  /** Who members are told to ask about an unpaid invoice. */
+  workspaceOwner: WorkspaceOwnerContact | null;
+}
+
+const NO_OWNER_DETAILS: OwnerBillingDetails = {
+  paymentMethod: null,
+  unpaidInvoice: null,
+  scheduledCancellationAt: null,
+};
+
+/**
+ * A parked downgrade to a free plan is carried by Stripe as a cycle-end
+ * cancellation too; only one without a parked plan is the owner leaving. A
+ * cancelled workspace has nothing left to schedule.
+ */
+function readsCancellation(subscription: TenantSubscription): boolean {
+  return (
+    !!liveStripeSubscriptionId(subscription) && !subscription.pendingPlanId
+  );
+}
+
+async function loadOwnerDetails(
+  tenantId: string,
+  subscription: TenantSubscription,
+): Promise<OwnerBillingDetails> {
+  const needsRecovery = RECOVERABLE_STATUSES.has(subscription.status);
+  const [paymentMethod, unpaidInvoice, scheduledCancellationAt] =
+    await Promise.all([
+      subscription.stripeCustomerId
+        ? fetchDefaultPaymentMethod(subscription.stripeCustomerId)
+        : null,
+      needsRecovery ? buildUnpaidInvoiceSummary(tenantId, subscription) : null,
+      readsCancellation(subscription)
+        ? fetchScheduledCancellation(subscription.stripeSubscriptionId ?? "")
+        : null,
+    ]);
+  return { paymentMethod, unpaidInvoice, scheduledCancellationAt };
 }
 
 interface WorkspaceAccess {
@@ -94,9 +141,9 @@ export class SaasBillingPortalController extends Controller(
   }
 
   /**
-   * Billing surface payload for the workspace billing page. Card details and
-   * the settlement link are owner-only: members see the status and nothing
-   * more.
+   * Billing surface payload for the workspace billing page and the past-due
+   * banner. Card details, the unpaid invoice and the scheduled cancellation
+   * are owner-only: members see the status and who to ask.
    */
   @Get("/status")
   async getStatus(
@@ -108,31 +155,23 @@ export class SaasBillingPortalController extends Controller(
     tenantMemberModel: TenantMemberModel,
   ): Promise<BillingStatus> {
     const tenantId = getRequestTenantId(ctx);
-    const subscription = await tenantSubscriptionModel.findOne();
-    const membership = await tenantMemberModel.getByUser(user._id);
+    const [subscription, membership, workspaceOwner] = await Promise.all([
+      tenantSubscriptionModel.findOne(),
+      tenantMemberModel.getByUser(user._id),
+      findWorkspaceOwnerContact(tenantId),
+    ]);
     const isTenantOwner = !!membership?.isTenantOwner;
+    const isComplimentary = isComplimentarySubscription(subscription);
     const base = {
-      hasStripeCustomer:
-        !!subscription?.stripeCustomerId &&
-        !isComplimentarySubscription(subscription),
+      hasStripeCustomer: !!subscription?.stripeCustomerId && !isComplimentary,
       status: subscription?.status ?? null,
       isTenantOwner,
+      workspaceOwner,
     };
-    if (
-      !subscription ||
-      !isTenantOwner ||
-      isComplimentarySubscription(subscription)
-    ) {
-      return { ...base, paymentMethod: null, unpaidInvoice: null };
+    if (!subscription || !isTenantOwner || isComplimentary) {
+      return { ...base, ...NO_OWNER_DETAILS };
     }
-    const needsRecovery = RECOVERABLE_STATUSES.has(subscription.status);
-    const [paymentMethod, unpaidInvoice] = await Promise.all([
-      subscription.stripeCustomerId
-        ? fetchDefaultPaymentMethod(subscription.stripeCustomerId)
-        : null,
-      needsRecovery ? buildUnpaidInvoiceSummary(tenantId, subscription) : null,
-    ]);
-    return { ...base, paymentMethod, unpaidInvoice };
+    return { ...base, ...(await loadOwnerDetails(tenantId, subscription)) };
   }
 
   @Post("/portal-session")

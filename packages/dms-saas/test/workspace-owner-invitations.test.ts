@@ -29,15 +29,28 @@ import {
   vi,
 } from "vitest";
 import { setRuntimeConfig } from "../src/config";
-import { PlanModel } from "../src/db";
+import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
-import { workspacesDataAPI } from "../src/data-api/platformOwner/workspaces";
 import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
-import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
+import { loadDirectoryOwner } from "../src/billing-state/directory";
+import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
+import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
 import { SaasWorkspaceInvitationsController } from "../src/routes/platformOwner/workspace-invitations";
-import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 
-vi.mock("../src/billing-state", () => ({
+// The DMS permission registry is not wired here: the role is created against
+// it in production, and its own test covers what it holds.
+vi.mock("../src/workspaces/default-member-role", () => ({
+  createDefaultMemberRole: async () => "member-role",
+}));
+const notified = vi.hoisted(() => ({
+  notifyUser: vi.fn(async () => undefined),
+}));
+vi.mock("../src/notifications", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/notifications")>()),
+  notifyUser: notified.notifyUser,
+}));
+vi.mock("../src/billing-state", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/billing-state")>()),
   recomputeTenantBillingState: async () => undefined,
 }));
 vi.mock("../src/data-api", async () => ({
@@ -93,6 +106,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  notified.notifyUser.mockClear();
   sendInviteEmail.mockReset();
   sendInviteEmail.mockResolvedValue(undefined);
   setRuntimeConfig({
@@ -110,15 +124,8 @@ const operator = {
   language: "en",
 } as User;
 
-function listController(): SaasWorkspacesListController {
-  const controller = new SaasWorkspacesListController();
-  controller.planModel = GetModel(PlanModel);
-  controller.tenantModel = GetModel(TenantModel);
-  return controller;
-}
-
-function detailController(): SaasWorkspacesController {
-  const controller = new SaasWorkspacesController();
+function adminController(): SaasWorkspacesAdminController {
+  const controller = new SaasWorkspacesAdminController();
   controller.planModel = GetModel(PlanModel);
   controller.tenantModel = GetModel(TenantModel);
   controller.userModel = GetModel(UserModel);
@@ -144,10 +151,11 @@ async function insertPlan(): Promise<string> {
 }
 
 async function createWorkspaceFor(ownerEmail: string, by: User = operator) {
-  return listController().createWorkspace(by, {
+  return adminController().createWorkspace(by, {
     name: WORKSPACE_NAME,
     ownerEmail,
     planId: await insertPlan(),
+    access: "complimentary",
   });
 }
 
@@ -172,6 +180,13 @@ async function journalFor(tenantId: string) {
   return actions.filter((action) => action.action.startsWith("invitation."));
 }
 
+/** The journal past the creation's own invitation e-mail. */
+async function journalAfterCreation(tenantId: string) {
+  return (await journalFor(tenantId)).filter(
+    (action) => action.action !== "invitation.send",
+  );
+}
+
 function signupLinkOf(invite: Pick<UserInvite, "token" | "email">): string {
   const params = new URLSearchParams({
     token: invite.token,
@@ -187,17 +202,38 @@ describe("back-office workspace creation for a new owner", () => {
       owner.inviteId,
     );
 
-    expect(sendInviteEmail).toHaveBeenCalledWith(
-      email,
-      owner.token,
-      undefined,
-      {
-        workspaceName: WORKSPACE_NAME,
-        inviterName: "Olivia Operator",
-        language: "en",
-      },
+    await vi.waitFor(() =>
+      expect(sendInviteEmail).toHaveBeenCalledWith(
+        email,
+        owner.token,
+        undefined,
+        {
+          workspaceName: WORKSPACE_NAME,
+          inviterName: "Olivia Operator",
+          language: "en",
+        },
+      ),
     );
     expect(created).toMatchObject({ email, asTenantOwner: true });
+    await vi.waitFor(async () =>
+      expect(await journalFor(tenantId)).toEqual([
+        expect.objectContaining({
+          action: "invitation.send",
+          status: "succeeded",
+          details: expect.objectContaining({ email, emailDelivery: "sent" }),
+        }),
+      ]),
+    );
+    expect(notified.notifyUser).not.toHaveBeenCalled();
+  });
+
+  it("answers before the invitation e-mail leaves", async () => {
+    sendInviteEmail.mockReturnValue(new Promise<void>(() => undefined));
+
+    const created = await createWorkspaceFor(`${randomUUID()}@example.test`);
+
+    expect(created.invitationEmail).toBe("sending");
+    expect(created.owner.kind).toBe("invited");
   });
 
   it("writes the invitation in the stored invitation language", async () => {
@@ -207,11 +243,13 @@ describe("back-office workspace creation for a new owner", () => {
     const created = await createWorkspaceFor(email, frenchOperator);
 
     expect((await storedInvite(created.tenantId)).language).toBe("fr");
-    expect(sendInviteEmail).toHaveBeenCalledWith(
-      email,
-      expect.any(String),
-      undefined,
-      expect.objectContaining({ language: "fr" }),
+    await vi.waitFor(() =>
+      expect(sendInviteEmail).toHaveBeenCalledWith(
+        email,
+        expect.any(String),
+        undefined,
+        expect.objectContaining({ language: "fr" }),
+      ),
     );
   });
 
@@ -221,26 +259,43 @@ describe("back-office workspace creation for a new owner", () => {
 
     await createWorkspaceFor(email, namelessOperator);
 
-    expect(sendInviteEmail).toHaveBeenCalledWith(
-      email,
-      expect.any(String),
-      undefined,
-      expect.objectContaining({
-        workspaceName: WORKSPACE_NAME,
-        inviterName: undefined,
-      }),
+    await vi.waitFor(() =>
+      expect(sendInviteEmail).toHaveBeenCalledWith(
+        email,
+        expect.any(String),
+        undefined,
+        expect.objectContaining({
+          workspaceName: WORKSPACE_NAME,
+          inviterName: undefined,
+        }),
+      ),
     );
   });
 
-  it("surfaces a failed invitation email instead of reporting success", async () => {
+  it("tells the operator afterwards that the invitation e-mail did not leave", async () => {
     sendInviteEmail.mockRejectedValue(new Error("render failed: 401"));
     const email = `${randomUUID()}@example.test`;
 
     const created = await createWorkspaceFor(email);
 
-    expect(created.invitationEmail).toBe("failed");
-    expect(created.owner.kind).toBe("invited");
+    expect(created.invitationEmail).toBe("sending");
     expect(await storedInvite(created.tenantId)).toMatchObject({ email });
+    await vi.waitFor(() =>
+      expect(notified.notifyUser).toHaveBeenCalledWith(
+        operator._id,
+        expect.objectContaining({ id: "saas.invitation_email_failed" }),
+        expect.objectContaining({
+          params: { workspace: WORKSPACE_NAME, email },
+          linkTo: `/modules/saas/customers/workspaces/${created.tenantId}`,
+        }),
+      ),
+    );
+    expect(await journalFor(created.tenantId)).toEqual([
+      expect.objectContaining({
+        action: "invitation.send",
+        details: expect.objectContaining({ emailDelivery: "failed" }),
+      }),
+    ]);
   });
 
   it("sends no invitation when the owner already has an account", async () => {
@@ -260,29 +315,14 @@ describe("back-office workspace creation for a new owner", () => {
   });
 });
 
-interface OwnerColumns {
-  owner: unknown;
-  ownerStatus: unknown;
-}
-
-/** The owner and owner status cells the workspaces table shows for a tenant. */
-async function ownerColumnsOf(tenantId: string): Promise<OwnerColumns> {
-  const row = { table: { _id: tenantId } };
-  const read = (key: "owner" | "ownerStatus") =>
-    Object.getOwnPropertyDescriptor(
-      workspacesDataAPI.prototype,
-      key,
-    )!.get!.call(row);
-  return { owner: await read("owner"), ownerStatus: await read("ownerStatus") };
-}
-
-describe("workspace owner columns", () => {
+describe("workspace owner in the directory", () => {
   it("shows the invitee while the owner invitation is pending", async () => {
     const { email, tenantId } = await createInvitedWorkspace();
 
-    expect(await ownerColumnsOf(tenantId)).toEqual({
-      owner: email,
-      ownerStatus: "invitation_pending",
+    expect(await loadDirectoryOwner(tenantId)).toEqual({
+      status: "invited",
+      name: null,
+      email,
     });
   });
 
@@ -292,13 +332,14 @@ describe("workspace owner columns", () => {
       expiresAt: new Date(Date.now() - DAY_MS),
     });
 
-    expect(await ownerColumnsOf(tenantId)).toEqual({
-      owner: email,
-      ownerStatus: "invitation_expired",
+    expect(await loadDirectoryOwner(tenantId)).toEqual({
+      status: "expired",
+      name: null,
+      email,
     });
   });
 
-  it("shows the owners once one has joined", async () => {
+  it("shows the owner once they joined", async () => {
     const { tenantId } = await createInvitedWorkspace();
     const ownerId = randomUUID();
     await GetModel(UserModel).insert({
@@ -312,9 +353,10 @@ describe("workspace owner columns", () => {
       isTenantOwner: true,
     });
 
-    expect(await ownerColumnsOf(tenantId)).toEqual({
-      owner: "joined@example.test",
-      ownerStatus: "joined",
+    expect(await loadDirectoryOwner(tenantId)).toEqual({
+      status: "joined",
+      name: "Joined",
+      email: "joined@example.test",
     });
   });
 
@@ -323,9 +365,10 @@ describe("workspace owner columns", () => {
       { name: "Orphan", createdAt: new Date(), updatedAt: new Date() },
     ]);
 
-    expect(await ownerColumnsOf(tenantId!)).toEqual({
-      owner: "—",
-      ownerStatus: "none",
+    expect(await loadDirectoryOwner(tenantId!)).toEqual({
+      status: "none",
+      name: null,
+      email: null,
     });
   });
 });
@@ -345,11 +388,15 @@ describe("pending invitations listed on the workspace detail", () => {
   it("counts the owner invitation beside the members in the detail header", async () => {
     const { tenantId } = await createInvitedWorkspace();
 
-    const detail = await detailController().getDetail(operator, tenantId);
+    const overview = await new SaasWorkspaceDetailController().overview(
+      operator,
+      tenantId,
+    );
 
-    expect(detail).toMatchObject({
-      membersCount: 0,
-      pendingInvitationsCount: 1,
+    expect(overview).toMatchObject({
+      members: 0,
+      pendingInvitations: 1,
+      ownerStatus: "invited",
     });
   });
 
@@ -359,9 +406,12 @@ describe("pending invitations listed on the workspace detail", () => {
       expiresAt: new Date(Date.now() - DAY_MS),
     });
 
-    const detail = await detailController().getDetail(operator, tenantId);
+    const overview = await new SaasWorkspaceDetailController().overview(
+      operator,
+      tenantId,
+    );
 
-    expect(detail.pendingInvitationsCount).toBe(0);
+    expect(overview.pendingInvitations).toBe(0);
   });
 });
 
@@ -377,7 +427,7 @@ describe("copy invitation link", () => {
     );
 
     expect(result.link).toBe(signupLinkOf(invite));
-    const [journaled] = await journalFor(tenantId);
+    const [journaled] = await journalAfterCreation(tenantId);
     expect(journaled).toMatchObject({
       action: "invitation.link_copy",
       actorId: operator._id,
@@ -455,10 +505,147 @@ describe("resend invitation from the back office", () => {
       body: "saas.errors.invitations.email_not_sent",
     });
     expect((await storedInvite(tenantId)).token).not.toBe(owner.token);
-    const [journaled] = await journalFor(tenantId);
+    const [journaled] = await journalAfterCreation(tenantId);
     expect(journaled).toMatchObject({
       action: "invitation.resend",
       details: { emailDelivery: "failed" },
+    });
+  });
+});
+
+async function insertPaidPlan(): Promise<string> {
+  const planId = randomUUID();
+  await GetModel(PlanModel).insert({
+    _id: planId,
+    name: "Pro",
+    price: 29,
+    currency: "eur",
+    interval: "month",
+    billingMode: "flat",
+    audience: "any",
+    paymentProviderRefs: { stripePriceId: "price_pro" },
+    isActive: true,
+    isDeleted: false,
+  });
+  return planId;
+}
+
+async function subscriptionOf(tenantId: string) {
+  return GetModel(TenantSubscriptionModel, tenantId).findOne();
+}
+
+describe("access model of a workspace created by an operator", () => {
+  it("leaves the workspace waiting for its owner's first payment on the chosen plan", async () => {
+    const planId = await insertPaidPlan();
+
+    const created = await adminController().createWorkspace(operator, {
+      name: WORKSPACE_NAME,
+      ownerEmail: `${randomUUID()}@example.test`,
+      planId,
+      access: "owner_pays",
+    });
+
+    expect(created.access).toBe("owner_pays");
+    expect(await subscriptionOf(created.tenantId)).toMatchObject({
+      planId,
+      status: "pending_payment",
+      isComplimentary: false,
+      freeUntil: null,
+      stripeSubscriptionId: null,
+    });
+  });
+
+  it("refuses to let an owner pay for a plan Stripe does not bill", async () => {
+    const failure = await adminController()
+      .createWorkspace(operator, {
+        name: WORKSPACE_NAME,
+        ownerEmail: `${randomUUID()}@example.test`,
+        planId: await insertPlan(),
+        access: "owner_pays",
+      })
+      .catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      status: 400,
+      body: "saas.errors.workspace_create.owner_pays_needs_paid_plan",
+    });
+  });
+
+  it("grants complimentary access until the chosen date", async () => {
+    const freeUntil = new Date(Date.now() + 30 * DAY_MS);
+
+    const created = await adminController().createWorkspace(operator, {
+      name: WORKSPACE_NAME,
+      ownerEmail: `${randomUUID()}@example.test`,
+      planId: await insertPaidPlan(),
+      access: "complimentary",
+      freeUntil: freeUntil.toISOString(),
+    });
+
+    expect(await subscriptionOf(created.tenantId)).toMatchObject({
+      status: "active",
+      isComplimentary: true,
+      freeUntil,
+    });
+  });
+
+  it("requires the operator to choose the access model", async () => {
+    const failure = await adminController()
+      .createWorkspace(operator, {
+        name: WORKSPACE_NAME,
+        ownerEmail: `${randomUUID()}@example.test`,
+        planId: await insertPlan(),
+      })
+      .catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      status: 400,
+      body: "saas.errors.workspace_create.access",
+    });
+  });
+});
+
+describe("owner e-mail lookup", () => {
+  it("names an existing account and the workspaces it belongs to", async () => {
+    const email = `${randomUUID()}@example.test`;
+    await GetModel(UserModel).insert({
+      _id: randomUUID(),
+      email,
+      name: "Nina Sharp",
+      language: "en",
+    });
+
+    await expect(
+      adminController().lookUpOwnerEmail(operator, email.toUpperCase()),
+    ).resolves.toEqual({ kind: "existing", name: "Nina Sharp", workspaces: 0 });
+  });
+
+  it("announces an invitation for a new e-mail", async () => {
+    await expect(
+      adminController().lookUpOwnerEmail(
+        operator,
+        `${randomUUID()}@example.test`,
+      ),
+    ).resolves.toEqual({ kind: "new", invitationDays: 7 });
+  });
+});
+
+describe("complimentary access over a paid subscription", () => {
+  it("is refused until the operator acknowledges the cancellation", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const subscription = await subscriptionOf(tenantId);
+    await GetModel(TenantSubscriptionModel, tenantId).update(
+      subscription!._id,
+      { stripeSubscriptionId: "sub_paid", isComplimentary: false },
+    );
+
+    const failure = await adminController()
+      .grantFreeAccess(operator, tenantId, { planId: await insertPaidPlan() })
+      .catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      status: 400,
+      body: "saas.errors.workspace.cancellation_not_acknowledged",
     });
   });
 });

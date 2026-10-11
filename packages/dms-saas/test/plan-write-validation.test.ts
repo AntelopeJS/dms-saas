@@ -41,6 +41,7 @@ function planModel(store: PlanStore): PlanModel {
       return [PLAN_ID];
     }),
     get: vi.fn(async () => store.current),
+    findNotDeleted: vi.fn(async () => (store.current ? [store.current] : [])),
     update: vi.fn(async (_id: string, update: PlanWrite) => {
       store.current = { ...store.current, ...update } as Plan;
     }),

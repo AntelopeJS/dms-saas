@@ -1,56 +1,98 @@
-import { Controller, JSONBody, Post } from "@antelopejs/interface-api";
-import { assert } from "@antelopejs/interface-api-util";
+import {
+  Controller,
+  Get,
+  JSONBody,
+  Parameter,
+  Post,
+} from "@antelopejs/interface-api";
+import { assert, assertValidation } from "@antelopejs/interface-api-util";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import type { ZodError } from "zod";
 import { InvoiceModel } from "../../db";
+import {
+  buildCreditNoteParams,
+  buildCreditNotePreview,
+  type CreditNotePreview,
+  type IssueCreditNoteBody,
+  issueCreditNoteBodySchema,
+  loadInvoice,
+  resolveCreditAllowance,
+} from "../../operator-billing";
 import { getStripeClient } from "../../stripe";
 
 const HTTP_BAD_REQUEST = 400;
-const HTTP_NOT_FOUND = 404;
-const INVOICE_DOCUMENT_TYPE = "invoice";
+const HTTP_CONFLICT = 409;
 
-interface IssueCreditNoteBody {
-  invoiceId: string;
+/** What issuing a credit note answers: the note Stripe created. */
+export interface IssuedCreditNote {
+  stripeCreditNoteId: string;
+  number: string;
   amount: number;
-  mode: "credit_to_balance" | "refund";
-  reason: string;
+  currency: string;
+}
+
+function parseBody(body: unknown): IssueCreditNoteBody {
+  return assertValidation(
+    body,
+    (value) => issueCreditNoteBodySchema.parse(value),
+    (error) => (error as ZodError).issues,
+  );
 }
 
 export class SaasCreditNotesIssueController extends Controller(
   "/api/saas/credit-notes",
 ) {
+  /** The credit note dialog's data for one invoice row. */
+  @Get("/preview/:invoiceId")
+  async preview(
+    @AuthOwnerOnly() _user: User,
+    @Parameter("invoiceId", "param") invoiceId: string,
+    @Model(InvoiceModel, CROSS_INSTANCE) invoiceModel: InvoiceModel,
+  ): Promise<CreditNotePreview> {
+    const loaded = await loadInvoice(invoiceModel, invoiceId);
+    return buildCreditNotePreview(loaded);
+  }
+
+  /**
+   * Issues a credit note against a paid or open invoice, never above what is
+   * left to credit: the invoice total less the credit notes already issued.
+   */
   @Post("/issue")
   async issue(
-    @AuthOwnerOnly() _user: User,
-    @JSONBody() body: IssueCreditNoteBody,
+    @AuthOwnerOnly() user: User,
+    @JSONBody() rawBody: unknown,
     @Model(InvoiceModel, CROSS_INSTANCE) invoiceModel: InvoiceModel,
-  ) {
-    const invoice = await invoiceModel.get(body.invoiceId);
+  ): Promise<IssuedCreditNote> {
+    const body = parseBody(rawBody);
+    const loaded = await loadInvoice(invoiceModel, body.invoiceId);
+    const { allowance } = await resolveCreditAllowance(loaded);
     assert(
-      invoice?.documentType === INVOICE_DOCUMENT_TYPE,
-      HTTP_NOT_FOUND,
-      "saas.errors.invoice.not_found",
+      !allowance.blockReason,
+      HTTP_CONFLICT,
+      `saas.errors.credit_note.blocked.${allowance.blockReason}`,
     );
     assert(
-      body.amount > 0 && body.amount <= invoice.amount,
+      allowance.modes.includes(body.mode),
       HTTP_BAD_REQUEST,
-      "saas.errors.invoice.invalid_amount",
+      "saas.errors.credit_note.mode_not_allowed",
     );
-    const stripe = getStripeClient();
-    const isRefund = body.mode === "refund";
-    const creditNote = await stripe.creditNotes.create({
-      invoice: invoice.stripeInvoiceId,
-      amount: body.amount,
-      refund_amount: isRefund ? body.amount : undefined,
-      credit_amount: isRefund ? undefined : body.amount,
-      memo: body.reason,
-      reason: "order_change",
-    });
+    assert(
+      body.amount <= allowance.creditable,
+      HTTP_BAD_REQUEST,
+      "saas.errors.credit_note.above_creditable",
+    );
+    const creditNote = await getStripeClient().creditNotes.create(
+      buildCreditNoteParams(loaded.invoice.stripeInvoiceId, body, user),
+      { idempotencyKey: `saas-credit-note:${body.requestId}` },
+    );
     return {
       stripeCreditNoteId: creditNote.id,
       number: creditNote.number,
+      amount: creditNote.amount,
+      currency: creditNote.currency,
     };
   }
 }

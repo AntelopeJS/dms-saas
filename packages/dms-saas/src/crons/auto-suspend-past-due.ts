@@ -2,34 +2,27 @@ import { Logging } from "@antelopejs/interface-core/logging";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import cron, { type ScheduledTask } from "node-cron";
-import {
-  BILLING_SETTINGS_SINGLETON_ID,
-  BillingSettingsModel,
-  DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
-  TenantSubscriptionModel,
-} from "../db";
+import { TenantSubscriptionModel } from "../db";
 import { getRowInstance } from "../utils";
 import { MS_PER_DAY } from "../utils/time";
 import { deliverSubscriptionCronNotifications } from "./subscription-notifications";
+import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
 const CRON_NAME = "auto-suspend-past-due";
 const CRON_SCHEDULE = "0 1 * * *";
 
 async function run(): Promise<void> {
-  const billingSettingsModel = GetModel(BillingSettingsModel);
   const tenantSubscriptionModel = GetModel(
     TenantSubscriptionModel,
     CROSS_INSTANCE,
   );
 
-  const settings = await billingSettingsModel.get(
-    BILLING_SETTINGS_SINGLETON_ID,
-  );
-  if (!settings || !settings.autoSuspendEnabled) return;
+  const settings = await loadBillingSettings();
+  if (!settings.autoSuspendEnabled) return;
 
-  const delayDays =
-    settings.autoSuspendDelayDays ?? DEFAULT_AUTO_SUSPEND_DELAY_DAYS;
-  const cutoff = new Date(Date.now() - delayDays * MS_PER_DAY);
+  const cutoff = new Date(
+    Date.now() - settings.autoSuspendDelayDays * MS_PER_DAY,
+  );
 
   const toSuspend =
     await tenantSubscriptionModel.findPastDueSinceBefore(cutoff);

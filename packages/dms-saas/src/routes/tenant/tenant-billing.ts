@@ -32,6 +32,7 @@ import {
   findMissingBillingIdentityFields,
   parseBillingIdentity,
 } from "../../workspaces/billing-identity";
+import { withBillingIdentityLock } from "../../workspaces/billing-identity-lock";
 import { isComplimentarySubscription } from "../../workspaces/complimentary";
 import {
   fetchPrimaryTaxId,
@@ -41,9 +42,9 @@ import {
   toVatVerificationStatus,
 } from "../../stripe";
 import { insertOrUpdateById } from "../../utils";
+import { isPlanOfferedTo } from "../../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
-const ANY_AUDIENCE = "any";
 const SETTLED_VAT_STATUSES = new Set<VatVerificationStatus>([
   "verified",
   "unverified",
@@ -61,10 +62,16 @@ interface StoredBillingInfo {
 interface BillingInfoResponse extends StoredBillingInfo {
   /** Required fields still missing; drives the "to complete" badge. */
   missingFields: BillingIdentityField[];
+  /** When the identity was last saved; null before the first save. */
+  updatedAt: Date | null;
 }
 
 interface BillingInfoValues extends StoredBillingInfo {
   updatedAt: Date;
+}
+
+interface DatedBillingInfo extends StoredBillingInfo {
+  updatedAt?: Date | null;
 }
 
 const EMPTY_BILLING_INFO: StoredBillingInfo = {
@@ -76,7 +83,7 @@ const EMPTY_BILLING_INFO: StoredBillingInfo = {
   address: null,
 };
 
-function toResponse(info: StoredBillingInfo): BillingInfoResponse {
+function toResponse(info: DatedBillingInfo): BillingInfoResponse {
   return {
     customerType: info.customerType,
     companyName: info.companyName,
@@ -88,6 +95,7 @@ function toResponse(info: StoredBillingInfo): BillingInfoResponse {
       ...info,
       address: info.address ?? undefined,
     }),
+    updatedAt: info.updatedAt ?? null,
   };
 }
 
@@ -117,7 +125,7 @@ async function assertCustomerTypeFitsPlan(
   if (!subscription?.planId) return;
   const plan = await GetModel(PlanModel).get(subscription.planId);
   assert(
-    !plan || plan.audience === ANY_AUDIENCE || plan.audience === customerType,
+    !plan || isPlanOfferedTo(plan, customerType),
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );
@@ -227,26 +235,24 @@ export class SaasTenantBillingController extends Controller(
     subscriptionModel: TenantSubscriptionModel,
   ): Promise<BillingInfoResponse> {
     const identity = parseBillingIdentity(body);
-    const info = await billingModel.findOne();
-    const subscription = await subscriptionModel.findOne();
-    await assertCustomerTypeFitsPlan(identity.customerType, subscription);
-    const vatVerificationStatus =
-      subscription?.stripeCustomerId &&
-      !isComplimentarySubscription(subscription)
-        ? await this.syncStripe(
-            subscription.stripeCustomerId,
-            user.name,
-            identity,
-          )
-        : null;
-    const values = buildBillingInfoValues(identity, vatVerificationStatus);
-    await persistBillingInfo(
-      billingModel,
-      info,
-      getRequestTenantId(ctx),
-      values,
-    );
-    const updated = await billingModel.findOne();
-    return toResponse(updated ?? values);
+    const tenantId = getRequestTenantId(ctx);
+    return withBillingIdentityLock(tenantId, async () => {
+      const info = await billingModel.findOne();
+      const subscription = await subscriptionModel.findOne();
+      await assertCustomerTypeFitsPlan(identity.customerType, subscription);
+      const vatVerificationStatus =
+        subscription?.stripeCustomerId &&
+        !isComplimentarySubscription(subscription)
+          ? await this.syncStripe(
+              subscription.stripeCustomerId,
+              user.name,
+              identity,
+            )
+          : null;
+      const values = buildBillingInfoValues(identity, vatVerificationStatus);
+      await persistBillingInfo(billingModel, info, tenantId, values);
+      const updated = await billingModel.findOne();
+      return toResponse(updated ?? values);
+    });
   }
 }

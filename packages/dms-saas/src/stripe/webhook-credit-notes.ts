@@ -25,6 +25,7 @@ import {
   formatAmount,
   INVOICE_LINES_PAGE_SIZE,
   type MirroredCreditNote,
+  NO_COLLECTION_STATE,
   upsertInvoice,
 } from "./webhook-shared";
 
@@ -81,7 +82,25 @@ function isCreditNoteType(value: string): value is CreditNoteType {
   return KNOWN_CREDIT_NOTE_TYPES.has(value);
 }
 
+/**
+ * How a credit note after payment reached the customer: Stripe types it
+ * `post_payment` whether it refunded the card or credited the balance, and
+ * operators tell the two apart.
+ */
+function resolveSettlementType(
+  creditNote: Stripe.CreditNote,
+): CreditNoteType | null {
+  const isRefunded = readCreditNoteRefundId(creditNote) !== null;
+  const isCredited = !!creditNote.customer_balance_transaction;
+  if (isRefunded && isCredited) return "mixed";
+  if (isRefunded) return "refund";
+  if (isCredited) return "credit_to_balance";
+  return null;
+}
+
 function resolveCreditNoteType(creditNote: Stripe.CreditNote): CreditNoteType {
+  const settlement = resolveSettlementType(creditNote);
+  if (settlement) return settlement;
   return isCreditNoteType(creditNote.type)
     ? creditNote.type
     : FALLBACK_CREDIT_NOTE_TYPE;
@@ -133,6 +152,7 @@ function buildCreditNoteInvoicePayload(
 ) {
   const tax = resolveCreditNoteTax(creditNote);
   return {
+    ...NO_COLLECTION_STATE,
     documentType: "credit_note" as const,
     stripeInvoiceId: invoice.stripeInvoiceId,
     stripeCreditNoteId: creditNote.id,

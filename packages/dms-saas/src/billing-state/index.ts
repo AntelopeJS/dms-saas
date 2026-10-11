@@ -6,9 +6,18 @@ import {
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../db";
+import {
+  type DirectoryDepartures,
+  loadWorkspaceDirectoryFields,
+} from "./directory";
 
+import { registerPastDueBanners } from "./past-due-banner";
+import { registerTrialEndingBanners } from "./trial-ending-banner";
+
+export * from "./directory";
 export * from "./past-due-banner";
 export * from "./recovery";
+export * from "./trial-ending-banner";
 
 const ACTIVE_STATUS = "active";
 const FREE_STATE: BillingState = "free";
@@ -27,8 +36,16 @@ export function deriveBillingState(
   return subscription.status;
 }
 
+/**
+ * Publishes the tenant's billing state and its workspace directory row (plan,
+ * seats, MRR, renewal, owner), derived from the records as they are now.
+ *
+ * @param tenantId The workspace
+ * @param departures Members and invitee being removed, not deleted yet
+ */
 export async function recomputeTenantBillingState(
   tenantId: string,
+  departures: DirectoryDepartures = {},
 ): Promise<void> {
   const model = GetModel(TenantBillingStateModel);
   for (let attempt = 0; attempt < PUBLICATION_ATTEMPTS; attempt++) {
@@ -39,12 +56,16 @@ export async function recomputeTenantBillingState(
       tenantId,
     ).findOne();
     if (subscription?.deletionStartedAt) return;
+    const billingState = deriveBillingState(subscription);
+    const directory = await loadWorkspaceDirectoryFields(
+      tenantId,
+      billingState,
+      subscription,
+      existing,
+      departures,
+    );
     if (
-      await model.upsertForTenant(
-        tenantId,
-        deriveBillingState(subscription),
-        existing,
-      )
+      await model.upsertForTenant(tenantId, billingState, existing, directory)
     )
       return;
   }
@@ -59,4 +80,10 @@ export async function recomputeAllTenantBillingStates(): Promise<void> {
     if (!tenant._id) continue;
     await recomputeTenantBillingState(tenant._id);
   }
+}
+
+/** The billing strips of the dashboard layout: past due, trial ending. */
+export function registerBillingLayoutBanners(): void {
+  registerPastDueBanners();
+  registerTrialEndingBanners();
 }

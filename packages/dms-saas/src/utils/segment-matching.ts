@@ -11,6 +11,7 @@ import {
   UserModel,
 } from "@antelopejs/interface-dms/auth/db";
 import {
+  type BillingState,
   type Invoice,
   InvoiceModel,
   type Plan,
@@ -19,6 +20,7 @@ import {
   SegmentModel,
   type TenantBillingInfo,
   TenantBillingInfoModel,
+  TenantBillingStateModel,
   type TenantSubscription,
   TenantSubscriptionModel,
   UserSegmentModel,
@@ -36,7 +38,8 @@ export interface WorkspaceProjection {
   name: string;
   createdAt: Date;
   ageInDays: number;
-  status: TenantSubscription["status"] | null;
+  /** The workspace's status, as the rest of the module names it. */
+  status: BillingState | TenantSubscription["status"] | null;
   hasSubscription: boolean;
   hasStripeCustomer: boolean;
   isOnTrial: boolean;
@@ -57,6 +60,7 @@ interface ProjectionInputs {
   subscription: TenantSubscription | undefined;
   billingInfo: TenantBillingInfo | undefined;
   plan: Plan | null;
+  billingState?: BillingState | null;
   membersCount: number;
   invoices: Invoice[];
   now: Date;
@@ -96,8 +100,10 @@ export function buildWorkspaceProjection(
     invoices,
     now,
   } = inputs;
-  const status = subscription?.status ?? null;
-  const isBilled = status ? ACTIVE_STATUSES.has(status) : false;
+  const subscriptionStatus = subscription?.status ?? null;
+  const isBilled = subscriptionStatus
+    ? ACTIVE_STATUSES.has(subscriptionStatus)
+    : false;
   const mrr = isBilled && plan ? plan.price : 0;
   const { totalRevenue, lastInvoiceAt } = projectInvoices(invoices);
 
@@ -106,10 +112,10 @@ export function buildWorkspaceProjection(
     name: tenant.name,
     createdAt: tenant.createdAt,
     ageInDays: diffInDays(new Date(tenant.createdAt), now),
-    status,
+    status: inputs.billingState ?? subscriptionStatus,
     hasSubscription: !!subscription,
     hasStripeCustomer: !!subscription?.stripeCustomerId,
-    isOnTrial: status === TRIALING_STATUS,
+    isOnTrial: subscriptionStatus === TRIALING_STATUS,
     isFreeAccess:
       !!subscription?.freeUntil && new Date(subscription.freeUntil) > now,
     planId: subscription?.planId ?? null,
@@ -124,12 +130,29 @@ export function buildWorkspaceProjection(
   };
 }
 
+/** What every workspace projection of one load shares. */
+export interface ProjectionLookups {
+  plansById?: ReadonlyMap<string, Plan>;
+  billingStatesByTenant?: ReadonlyMap<string, BillingState>;
+}
+
+async function billingStateOf(
+  tenantId: string,
+  lookups: ProjectionLookups,
+): Promise<BillingState | null> {
+  const known = lookups.billingStatesByTenant?.get(tenantId);
+  if (known) return known;
+  const row = await GetModel(TenantBillingStateModel).findByTenant(tenantId);
+  return row?.billingState ?? null;
+}
+
 export async function loadWorkspaceProjection(
   tenant: Tenant,
   planModel: PlanModel,
   now: Date = new Date(),
-  plansById?: ReadonlyMap<string, Plan>,
+  lookups: ProjectionLookups = {},
 ): Promise<WorkspaceProjection> {
+  const { plansById } = lookups;
   const tenantId = tenant._id;
   const subscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const billingInfoModel = GetModel(TenantBillingInfoModel, tenantId);
@@ -156,6 +179,7 @@ export async function loadWorkspaceProjection(
     subscription,
     billingInfo,
     plan,
+    billingState: await billingStateOf(tenantId, lookups),
     membersCount: members.length,
     invoices,
     now,
@@ -169,17 +193,23 @@ export async function loadAllTenantProjections(
   now: Date = new Date(),
 ): Promise<WorkspaceProjection[]> {
   const tenantModel = GetModel(TenantModel, CROSS_INSTANCE);
-  const [tenants, plans] = await Promise.all([
+  const [tenants, plans, billingStates] = await Promise.all([
     tenantModel.getAll(),
     planModel.getAll(),
+    GetModel(TenantBillingStateModel).getAll(),
   ]);
-  const plansById = new Map(plans.map((p) => [p._id, p]));
+  const lookups: ProjectionLookups = {
+    plansById: new Map(plans.map((p) => [p._id, p])),
+    billingStatesByTenant: new Map(
+      billingStates.map((row) => [row.tenantId, row.billingState]),
+    ),
+  };
   const projections: WorkspaceProjection[] = [];
   for (let i = 0; i < tenants.length; i += PROJECTION_CONCURRENCY) {
     const batch = tenants.slice(i, i + PROJECTION_CONCURRENCY);
     const results = await Promise.all(
       batch.map((tenant) =>
-        loadWorkspaceProjection(tenant, planModel, now, plansById),
+        loadWorkspaceProjection(tenant, planModel, now, lookups),
       ),
     );
     projections.push(...results);
@@ -210,18 +240,38 @@ export type UserProjection = {
   workspaces: UserWorkspaceProjection[];
 };
 
-interface UserMembership {
+/** A user's membership in a workspace, as a projection reads it. */
+export interface UserMembership {
   tenantId: string;
   isTenantOwner: boolean;
 }
 
-function buildUserProjection(
+/**
+ * The latest of the user's own activity stamp and the activity of their
+ * sessions: a session is deleted once inactive, the stamp stays.
+ */
+function latestActivity(
+  user: User,
+  sessionActivity: Date | undefined,
+): Date | undefined {
+  const stamp = user.lastActiveAt ? new Date(user.lastActiveAt) : undefined;
+  if (!stamp) return sessionActivity;
+  if (!sessionActivity) return stamp;
+  return stamp > sessionActivity ? stamp : sessionActivity;
+}
+
+/**
+ * The projection of one user, from their memberships and the projections of
+ * the workspaces they belong to.
+ */
+export function buildUserProjection(
   user: User,
   memberships: readonly UserMembership[],
-  lastActiveAt: Date | undefined,
+  sessionActivity: Date | undefined,
   workspacesById: ReadonlyMap<string, WorkspaceProjection>,
   now: Date,
 ): UserProjection {
+  const lastActiveAt = latestActivity(user, sessionActivity);
   const workspaces = memberships
     .map((m) => {
       const projection = workspacesById.get(m.tenantId);
@@ -325,22 +375,36 @@ export async function recomputeSegments(
   const userSegmentModel = GetModel(UserSegmentModel);
 
   const now = new Date();
+  const loadStartedAt = performance.now();
   const userProjections = await loadAllUserProjections(planModel, now);
+  // Every segment of the run shares the projections' load time.
+  const loadMs = performance.now() - loadStartedAt;
 
   for (let i = 0; i < segments.length; i += SEGMENT_RECOMPUTE_CONCURRENCY) {
     const batch = segments.slice(i, i + SEGMENT_RECOMPUTE_CONCURRENCY);
     await Promise.all(
       batch.map(async (segment) => {
-        const matchedIds = userProjections
-          .filter((projection) =>
-            evaluateSegmentGroup(segment.conditions, projection),
-          )
-          .map((projection) => projection._id);
-
-        await userSegmentModel.replaceForSegment(segment, matchedIds, now);
+        const evaluationStartedAt = performance.now();
+        const matchedIds = matchingUserIds(segment.conditions, userProjections);
+        const durationMs = Math.round(
+          loadMs + performance.now() - evaluationStartedAt,
+        );
+        await userSegmentModel.replaceForSegment(segment, matchedIds, now, {
+          durationMs,
+        });
       }),
     );
   }
+}
+
+/** Ids of the users whose projection the conditions match. */
+function matchingUserIds(
+  conditions: Segment["conditions"],
+  userProjections: readonly UserProjection[],
+): string[] {
+  return userProjections
+    .filter((projection) => evaluateSegmentGroup(conditions, projection))
+    .map((projection) => projection._id);
 }
 
 export async function recomputeAllSegments(): Promise<void> {

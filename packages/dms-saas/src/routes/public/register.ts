@@ -31,22 +31,44 @@ import {
   assertRegistrationCardAccepted,
   resolveRegistrationPaymentMethodId,
 } from "../../config";
-import type { Plan } from "../../db";
+import { type Plan, PlanModel } from "../../db";
 import { createCardSetupIntent } from "../../stripe";
+import {
+  CONTENT_LANGUAGE_HEADER,
+  requestLocale,
+} from "../../utils/content-language";
 import type {
+  CardDetails,
   WorkspaceBillingProfile,
+  WorkspaceCustomerType,
   WorkspaceProvisioningHandles,
   WorkspaceProvisioningInput,
 } from "../../workspaces";
 import {
   assertRegistrationExtras,
+  cardMayBackFreeWorkspace,
+  isFreePerCardPolicyActive,
+  isFreePlan,
   provisionWorkspace,
   resolveCardDetails,
+  resolveFreeWorkspacesPerCard,
   resolveRegistrationPlan,
   rollbackWorkspaceProvisioning,
 } from "../../workspaces";
+import {
+  findPlanByReference,
+  loadPublicBillingRules,
+  loadPublicPlanCatalog,
+  type PublicBillingRules,
+  type PublicPlan,
+} from "./public-plan-catalog";
+import type { TenantPlanFeature } from "../../plans";
+import { isPlanOfferedTo } from "../../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
+const HTTP_CONFLICT = 409;
+/** A registration starts as an individual; the upgrade flow collects a business. */
+const REGISTRATION_CUSTOMER_TYPE: WorkspaceCustomerType = "individual";
 const AUTH_KEY_BYTES = 32;
 /** Renamable from the workspace settings; the screens send a localised one. */
 const DEFAULT_WORKSPACE_NAME = "My workspace";
@@ -59,6 +81,12 @@ const DEFAULT_WORKSPACE_NAME = "My workspace";
 interface RegistrationPayload {
   workspaceName?: string;
   paymentMethodId?: string;
+  /**
+   * The paid plan chosen on Pricing. The workspace opens on it, waiting for
+   * its first payment, when the card already backs every free workspace the
+   * billing rules allow it.
+   */
+  requestedPlanId?: string;
   /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else.
@@ -80,12 +108,15 @@ interface FinalizeBody extends RegistrationPayload {
 interface AdmittedRegistration {
   plan: Plan;
   paymentMethodId: string | undefined;
+  card: CardDetails;
+  awaitsFirstPayment: boolean;
 }
 
 interface RegistrationAccount {
   userId: string;
   email: string;
   name: string;
+  language: string | undefined;
 }
 
 interface PendingRegistrationBody {
@@ -115,6 +146,18 @@ interface RegisterResult {
   tenantId: string;
 }
 
+/**
+ * What the sign-up screens show about the plan: the one the workspace opens
+ * on, and the paid plan the visitor picked on the pricing page, reviewed on
+ * Billing right after.
+ */
+interface RegistrationPlanSummary {
+  plan: PublicPlan;
+  requestedPlan: PublicPlan | null;
+  features: TenantPlanFeature[];
+  rules: PublicBillingRules;
+}
+
 function generateAuthKey(): string {
   return randomBytes(AUTH_KEY_BYTES).toString("hex");
 }
@@ -133,8 +176,64 @@ function assertRegistrationPassword(password: unknown): void {
 }
 
 /**
+ * Whether the registration's card may back one more free workspace, under
+ * the billing rules' free workspaces per card, like a workspace created from
+ * the app. A card-less registration has no fingerprint to count.
+ */
+async function registrationCardMayBackFreeWorkspace(
+  card: CardDetails,
+): Promise<boolean> {
+  if (!card.fingerprint) return true;
+  const limit = await resolveFreeWorkspacesPerCard();
+  if (!isFreePerCardPolicyActive(limit)) return true;
+  return cardMayBackFreeWorkspace(card.fingerprint, limit);
+}
+
+/**
+ * The paid plan chosen on Pricing, when a workspace may open on it waiting
+ * for its first payment: public, priced, billed by Stripe, and offered to an
+ * individual, the customer type a registration starts as.
+ */
+async function resolveRequestedPaidPlan(
+  reference: unknown,
+): Promise<Plan | null> {
+  const publicPlans = await GetModel(PlanModel).findPubliclyVisible();
+  const plan = findPlanByReference(publicPlans, reference);
+  const isPayable =
+    !!plan &&
+    plan.isActive &&
+    !plan.isDeleted &&
+    !isFreePlan(plan) &&
+    !!plan.paymentProviderRefs?.stripePriceId &&
+    isPlanOfferedTo(plan, REGISTRATION_CUSTOMER_TYPE);
+  return isPayable ? plan : null;
+}
+
+/**
+ * The registration of a card already backing every free workspace it may:
+ * refused, unless a paid plan was chosen on Pricing. The workspace then
+ * opens on that plan waiting for its first payment, made through Checkout,
+ * and the card is left out — it backs no free workspace, and Checkout asks
+ * for the one that pays.
+ */
+async function admitPendingPaymentRegistration(
+  body: RegistrationPayload,
+  card: CardDetails,
+): Promise<AdmittedRegistration> {
+  const plan = await resolveRequestedPaidPlan(body.requestedPlanId);
+  assert(plan, HTTP_CONFLICT, "saas.errors.workspace.free_card_limit_reached");
+  return {
+    plan,
+    paymentMethodId: undefined,
+    card: { fingerprint: null, billingAddress: card.billingAddress },
+    awaitsFirstPayment: true,
+  };
+}
+
+/**
  * Validate a registration against the deployment before anything is created:
- * the card policy, the extras bounds, and the free plan it will land on.
+ * the card policy and the card's free workspaces, the extras bounds, and the
+ * plan it will land on.
  */
 async function admitRegistration(
   body: RegistrationPayload,
@@ -143,7 +242,12 @@ async function admitRegistration(
     body.paymentMethodId,
   );
   assertRegistrationExtras(body.extras);
-  return { plan: await resolveRegistrationPlan(), paymentMethodId };
+  const plan = await resolveRegistrationPlan();
+  const card = await resolveCardDetails(paymentMethodId);
+  if (!(await registrationCardMayBackFreeWorkspace(card))) {
+    return admitPendingPaymentRegistration(body, card);
+  }
+  return { plan, paymentMethodId, card, awaitsFirstPayment: false };
 }
 
 /**
@@ -157,18 +261,20 @@ async function buildRegistrationProvisioning(
   admitted: AdmittedRegistration,
   handles: WorkspaceProvisioningHandles,
 ): Promise<WorkspaceProvisioningInput> {
-  const card = await resolveCardDetails(admitted.paymentMethodId);
+  const { card } = admitted;
   const billingProfile: WorkspaceBillingProfile = {
-    customerType: "individual",
+    customerType: REGISTRATION_CUSTOMER_TYPE,
     address: card.billingAddress,
   };
   return {
     userId: account.userId,
+    ownerLanguage: account.language,
     payload: {
       ...billingProfile,
       workspaceName: body.workspaceName?.trim() || DEFAULT_WORKSPACE_NAME,
       planId: admitted.plan._id,
       paymentMethodId: admitted.paymentMethodId,
+      awaitsFirstPayment: admitted.awaitsFirstPayment,
       extras: body.extras,
     },
     stripeCustomerProfile: {
@@ -190,11 +296,17 @@ export class SaasRegisterApiController extends Controller(
   @Model(SessionModel)
   declare sessionModel: SessionModel;
 
+  @Model(PlanModel)
+  declare planModel: PlanModel;
+
   @Parameter("user-agent", "header")
   declare userAgent: string;
 
   @Parameter("x-forwarded-for", "header")
   declare forwardedFor: string;
+
+  @Parameter(CONTENT_LANGUAGE_HEADER, "header")
+  declare contentLanguage: unknown;
 
   private async ensureEmailAvailable(email: string): Promise<void> {
     const existing = await this.userModel.getByEmail(email);
@@ -219,6 +331,7 @@ export class SaasRegisterApiController extends Controller(
         password: body.password,
         authKey: generateAuthKey(),
         owner: false,
+        language: requestLocale(this.contentLanguage),
         createdAt: new Date(),
       },
     ]);
@@ -258,6 +371,40 @@ export class SaasRegisterApiController extends Controller(
     };
   }
 
+  /**
+   * The plan a registration opens the workspace on, plus the one the visitor
+   * chose on the pricing page when it is another public plan. Registration
+   * lands on the default plan, unless the card already backs every free
+   * workspace it may: the chosen paid plan then opens it, waiting for its
+   * first payment (see `admitPendingPaymentRegistration`).
+   *
+   * @param reference Slug or id of the chosen plan, from `?plan=`
+   * @param language Reader's locale, for the feature labels
+   */
+  @Get("/plan")
+  async describeRegistrationPlan(
+    @Parameter("plan", "query") reference: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+  ): Promise<RegistrationPlanSummary> {
+    assertAdmissionOpen();
+    const [plan, publicPlans, rules] = await Promise.all([
+      resolveRegistrationPlan(),
+      this.planModel.findPubliclyVisible(),
+      loadPublicBillingRules(),
+    ]);
+    const requested = findPlanByReference(publicPlans, reference);
+    const isAnotherPlan = !!requested && requested._id !== plan._id;
+    const shown = isAnotherPlan && requested ? [plan, requested] : [plan];
+    const catalog = await loadPublicPlanCatalog(shown, requestLocale(language));
+    const byId = new Map(catalog.plans.map((entry) => [entry._id, entry]));
+    return {
+      plan: byId.get(plan._id) ?? catalog.plans[0]!,
+      requestedPlan: isAnotherPlan ? (byId.get(requested._id) ?? null) : null,
+      features: catalog.features,
+      rules,
+    };
+  }
+
   @Get("/setup-intent")
   async createSetupIntent(): Promise<SetupIntentResponse> {
     assertAdmissionOpen();
@@ -279,6 +426,7 @@ export class SaasRegisterApiController extends Controller(
         userId: handles.userId,
         email: body.email,
         name: body.name,
+        language: requestLocale(this.contentLanguage),
       };
       const { tenantId } = await provisionWorkspace(
         await buildRegistrationProvisioning(account, body, admitted, handles),
@@ -339,7 +487,12 @@ export class SaasRegisterApiController extends Controller(
 
     const handles: WorkspaceProvisioningHandles = { userId: user._id };
     try {
-      const account = { userId: user._id, email: user.email, name: user.name };
+      const account = {
+        userId: user._id,
+        email: user.email,
+        name: user.name,
+        language: user.language || requestLocale(this.contentLanguage),
+      };
       const { tenantId } = await provisionWorkspace(
         await buildRegistrationProvisioning(account, body, admitted, handles),
       );

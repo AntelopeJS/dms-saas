@@ -1,10 +1,18 @@
+import { INVOICE_ROW_ACTIONS } from "../invoices";
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import {
+  ActivityFeed,
+  Card,
+  FieldRow,
   Grid,
   GridRow,
-  HStack,
+  KeyValueList,
+  Section,
+  StatGroup,
   Tab,
+  type TabItem,
   TableView,
+  TabVariant,
   VStack,
 } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
@@ -16,122 +24,200 @@ import {
   membersDataAPI,
 } from "../../../data-api";
 import { SaasWorkspacesListController } from "./index";
+import { permissionMeta } from "./shared";
+import { NO_ROW_ACTIONS } from "../../block-meta";
 
-const NO_ROW_ACTIONS = {
-  add: false,
-  delete: false,
-  edit: false,
-  details: false,
-  duplicate: false,
-  archive: false,
-  copyLink: false,
-} as const;
+const D = "$saas.workspace_detail";
+const API = "/api/saas/workspaces/{{params.id}}";
+const INVITATION_API = "/api/saas/workspaces/{_instance}/invitations/{_id}";
+const FACTS = 5;
+const LATEST_INVOICES = 3;
+const TAB_STATE_KEY = "workspace-tab";
+
+const TAB_ITEMS: TabItem[] = [
+  { label: `${D}.tabs.overview`, icon: "i-ph-squares-four", slot: "overview" },
+  { label: `${D}.tabs.invoices`, icon: "i-ph-receipt", slot: "invoices" },
+  {
+    label: `${D}.tabs.credit_notes`,
+    icon: "i-ph-arrow-u-down-left",
+    slot: "creditNotes",
+  },
+  { label: `${D}.tabs.members`, icon: "i-ph-users", slot: "members" },
+  { label: `${D}.tabs.activity`, icon: "i-ph-pulse", slot: "activity" },
+];
+
+/** A link opening a tab of this page: the query its `Tab` keeps, by index. */
+function tabLink(slot: string): string {
+  const index = TAB_ITEMS.findIndex((item) => item.slot === slot);
+  return `?${TAB_STATE_KEY}=${index}`;
+}
 
 const ROUTE_FILTER_TENANT = { id: { field: "_instance" } };
 
-const INVITATION_ACTIONS_URL =
-  "/api/saas/workspaces/{_instance}/invitations/{_id}";
+// The workspace is the page: its column would repeat on every row.
+const WITHOUT_WORKSPACE_COLUMN = { hidden: ["workspaceName"] };
 
-const invitationLink = CustomComponent("DmsSaasWorkspaceInvitationLink");
+// The same actions as the Invoices page: credit only paid and open invoices.
+const invoiceRowActions = {
+  ...NO_ROW_ACTIONS,
+  custom: INVOICE_ROW_ACTIONS,
+};
 
-const invitationTable = TableView(invitationsDataAPI, {
-  caption: "$saas.workspaces.invitations.caption",
-  rowActions: {
-    ...NO_ROW_ACTIONS,
-    custom: [
-      {
-        label: "$saas.workspaces.invitations.action.resend",
-        icon: "i-ph-arrow-clockwise",
-        target: {
-          type: "api",
-          url: `${INVITATION_ACTIONS_URL}/resend`,
-          method: "POST",
-          successMessage: "$saas.workspaces.invitations.action.resend_success",
-          confirm: {
-            title: "$saas.workspaces.invitations.action.resend_confirm_title",
-            description:
-              "$saas.workspaces.invitations.action.resend_confirm_description",
-            confirmColor: "primary",
-          },
-        },
-      },
-      {
-        label: "$saas.workspaces.invitations.action.copy_link",
-        icon: "i-ph-link",
-        target: {
-          type: "modal",
-          size: "lg",
-          component: invitationLink,
-          title: "$saas.workspaces.invitations.link.title",
-          description: "$saas.workspaces.invitations.link.description",
-        },
-      },
-    ],
-  },
-  routeParamFilters: ROUTE_FILTER_TENANT,
-});
-
-const detailHeader = CustomComponent("DmsSaasWorkspaceDetailHeader").meta({
-  name: "$saas.workspaces.detail",
-  icon: "i-ph-building",
-});
-
-const joinButton = CustomComponent("DmsSaasWorkspaceJoinButton").meta({
-  name: "$saas.workspaces.join.button",
-  icon: "i-ph-user-plus",
-});
-
-const summary = CustomComponent("DmsSaasWorkspaceSummaryCard").meta({
-  name: "$saas.workspaces.summary.title",
-  icon: "i-ph-building",
-});
-
-const billing = CustomComponent("DmsSaasWorkspaceBillingInfo").meta({
-  name: "$saas.workspaces.billing_section",
-  icon: "i-ph-credit-card",
-});
-
-const suspendButton = CustomComponent("DmsSaasWorkspaceSuspendButton").meta({
-  name: "$saas.workspaces.admin.suspend",
-  icon: "i-ph-prohibit",
-});
-
-const compButton = CustomComponent("DmsSaasWorkspaceCompAccessButton").meta({
-  name: "$saas.workspaces.admin.comp.title",
-  icon: "i-ph-gift",
-});
-
-const operatorActions = CustomComponent("DmsSaasWorkspaceOperatorActions").meta(
-  {
-    name: "$saas.workspaces.operator.title",
-    icon: "i-ph-shield-check",
-  },
-);
-
-const tabs = Tab({
-  items: [
+const invitationRowActions = {
+  ...NO_ROW_ACTIONS,
+  custom: [
     {
-      label: "$saas.workspaces.tabs.invoices",
-      icon: "i-ph-receipt",
-      slot: "invoices",
+      label: `${D}.invitations.resend`,
+      icon: "i-ph-arrow-clockwise",
+      target: {
+        type: "api" as const,
+        url: `${INVITATION_API}/resend`,
+        method: "POST" as const,
+        successMessage: `${D}.invitations.resend_success`,
+      },
+      confirm: {
+        title: `${D}.invitations.resend_title`,
+        description: `${D}.invitations.resend_description`,
+        color: "primary" as const,
+      },
     },
     {
-      label: "$saas.workspaces.tabs.credit_notes",
-      icon: "i-ph-arrow-u-down-left",
-      slot: "creditNotes",
+      label: `${D}.invitations.copy_link`,
+      icon: "i-ph-link",
+      target: {
+        type: "modal" as const,
+        size: "lg" as const,
+        component: CustomComponent("DmsSaasWorkspaceInvitationLink").meta(
+          permissionMeta("invitation_link", "i-ph-link"),
+        ),
+        title: `${D}.invitations.link_title`,
+      },
     },
     {
-      label: "$saas.workspaces.tabs.members",
-      icon: "i-ph-users",
-      slot: "members",
+      label: `${D}.invitations.revoke`,
+      icon: "i-ph-x-circle",
+      color: "error" as const,
+      target: {
+        type: "api" as const,
+        url: `${INVITATION_API}/revoke`,
+        method: "POST" as const,
+        successMessage: `${D}.invitations.revoke_success`,
+      },
+      confirm: {
+        title: `${D}.invitations.revoke_title`,
+        description: `${D}.invitations.revoke_description`,
+        color: "error" as const,
+        confirmLabel: `${D}.invitations.revoke`,
+      },
     },
   ],
+};
+
+const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
+  .child(
+    "billingInfo",
+    KeyValueList({
+      title: `${D}.billing.title`,
+      fetchUrl: `${API}/billing-info`,
+      columns: 2,
+      empty: { title: `${D}.billing.empty` },
+    }).meta(permissionMeta("billing_info", "i-ph-identification-card")),
+  )
+  .child(
+    "subscription",
+    ActivityFeed({
+      title: `${D}.timeline.title`,
+      fetchUrl: `${API}/subscription-timeline`,
+      groupByDay: false,
+      empty: { title: `${D}.timeline.empty` },
+    }).meta(
+      permissionMeta("subscription_timeline", "i-ph-clock-counter-clockwise"),
+    ),
+  )
+  .child(
+    "latestInvoices",
+    // A compact table draws no caption: the card titles it and links to
+    // every invoice.
+    Card({
+      title: `${D}.invoices.latest`,
+      padded: false,
+      actions: [
+        {
+          label: `${D}.invoices.see_all`,
+          to: tabLink("invoices"),
+          icon: "i-ph-arrow-right",
+        },
+      ],
+    })
+      .child(
+        "table",
+        TableView(invoicesDataAPI, {
+          caption: `${D}.invoices.latest`,
+          layout: "compact",
+          pageSize: LATEST_INVOICES,
+          defaultSort: { field: "issuedAt", desc: true },
+          columns: WITHOUT_WORKSPACE_COLUMN,
+          rowActions: invoiceRowActions,
+          routeParamFilters: ROUTE_FILTER_TENANT,
+        }),
+      )
+      .meta(permissionMeta("latest_invoices", "i-ph-receipt")),
+  )
+  .child(
+    "recentActivity",
+    ActivityFeed({
+      title: `${D}.activity.recent`,
+      fetchUrl: `${API}/activity?limit=short&flat=true`,
+      groupByDay: false,
+      empty: { title: `${D}.activity.empty` },
+      actions: [
+        {
+          label: `${D}.activity.see_all`,
+          to: tabLink("activity"),
+          icon: "i-ph-arrow-right",
+        },
+      ],
+    }).meta(permissionMeta("recent_activity", "i-ph-pulse")),
+  )
+  .meta(permissionMeta("overview", "i-ph-squares-four"));
+
+const members = VStack({ spacing: "1.5rem", alignment: "stretch" })
+  .child(
+    "memberTable",
+    TableView(membersDataAPI, {
+      caption: `${D}.members.title`,
+      rowActions: NO_ROW_ACTIONS,
+      defaultSort: { field: "joinedAt" },
+      routeParamFilters: ROUTE_FILTER_TENANT,
+    }),
+  )
+  .child(
+    "invitationTable",
+    TableView(invitationsDataAPI, {
+      caption: `${D}.invitations.title`,
+      rowActions: invitationRowActions,
+      routeParamFilters: ROUTE_FILTER_TENANT,
+      emptyStates: { firstRun: { title: `${D}.invitations.empty` } },
+    }),
+  )
+  .meta(permissionMeta("members", "i-ph-users"));
+
+const tabs = Tab({
+  items: TAB_ITEMS,
+  variant: TabVariant.link,
+  badgesUrl: `${API}/tab-counts`,
+  persistState: true,
+  stateKey: TAB_STATE_KEY,
 })
+  .meta(permissionMeta("tabs", "i-ph-tabs"))
+  .child("overview", overview, { slot: "overview" })
   .child(
     "invoiceTable",
     TableView(invoicesDataAPI, {
-      caption: "$saas.invoices.title",
-      rowActions: NO_ROW_ACTIONS,
+      caption: `${D}.invoices.title`,
+      defaultSort: { field: "issuedAt", desc: true },
+      columns: WITHOUT_WORKSPACE_COLUMN,
+      rowActions: invoiceRowActions,
       routeParamFilters: ROUTE_FILTER_TENANT,
     }),
     { slot: "invoices" },
@@ -139,40 +225,73 @@ const tabs = Tab({
   .child(
     "creditNoteTable",
     TableView(creditNotesDataAPI, {
-      caption: "$saas.credit_notes.title",
+      caption: `${D}.credit_notes.title`,
+      defaultSort: { field: "issuedAt", desc: true },
+      columns: WITHOUT_WORKSPACE_COLUMN,
       rowActions: NO_ROW_ACTIONS,
       routeParamFilters: ROUTE_FILTER_TENANT,
     }),
     { slot: "creditNotes" },
   )
+  .child("members", members, { slot: "members" })
   .child(
-    "members",
-    VStack({ spacing: "1.5rem", alignment: "stretch" })
-      .child(
-        "memberTable",
-        TableView(membersDataAPI, {
-          caption: "$saas.workspaces.tabs.members",
-          rowActions: NO_ROW_ACTIONS,
-          routeParamFilters: ROUTE_FILTER_TENANT,
-        }),
-      )
-      .child("invitationTable", invitationTable),
-    { slot: "members" },
+    "activity",
+    ActivityFeed({
+      title: `${D}.activity.title`,
+      fetchUrl: `${API}/activity`,
+      empty: { title: `${D}.activity.empty` },
+    }).meta(permissionMeta("activity", "i-ph-pulse")),
+    { slot: "activity" },
   );
 
-const notes = CustomComponent("DmsSaasPlatformNotes")
-  .options({ targetType: "workspace" })
-  .meta({
-    name: "$saas.notes.title",
-    icon: "i-ph-note-pencil",
-  });
+const sidebar = VStack({ spacing: "1.5rem", alignment: "stretch" })
+  .child(
+    "operatorActions",
+    CustomComponent("DmsSaasWorkspaceOperatorActions").meta(
+      permissionMeta("operator_actions", "i-ph-shield-check"),
+    ),
+  )
+  .child(
+    "credit",
+    KeyValueList({
+      title: `${D}.credit.title`,
+      fetchUrl: `${API}/available-credit`,
+      dense: true,
+      skeletonCount: 1,
+      empty: { title: `${D}.credit.empty` },
+    }).meta(permissionMeta("available_credit", "i-ph-coins")),
+  )
+  .child(
+    "notes",
+    CustomComponent("DmsSaasPlatformNotes")
+      .options({ targetType: "workspace" })
+      .meta(permissionMeta("notes", "i-ph-note-pencil")),
+  )
+  .child(
+    "danger",
+    Section({ title: `${D}.danger.title`, danger: true }).child(
+      "suspend",
+      FieldRow({
+        label: `${D}.danger.suspend_label`,
+        description: `${D}.danger.suspend_description`,
+      })
+        .child(
+          "button",
+          CustomComponent("DmsSaasWorkspaceSuspendButton").meta(
+            permissionMeta("suspend_button", "i-ph-prohibit"),
+          ),
+        )
+        .meta(permissionMeta("suspend_row", "i-ph-prohibit")),
+    ),
+  )
+  .meta(permissionMeta("sidebar", "i-ph-sidebar-simple"));
 
 @RegisterPage()
 export class SaasWorkspaceDetailController extends PageController(
   "detail",
   {
-    displayName: "$saas.workspaces.detail",
-    description: "$saas.workspaces.detail_description",
+    displayName: `${D}.title`,
+    description: `${D}.description`,
     category: SaasWorkspacesListController,
     urlSlug: ":id",
     icon: "i-ph-building",
@@ -180,30 +299,25 @@ export class SaasWorkspaceDetailController extends PageController(
   },
   DefaultLayout({ fullWidth: true, hideHeader: true }),
 ) {
-  static layout = VStack({ spacing: "1.5rem", alignment: "stretch" })
+  static header = CustomComponent("DmsSaasWorkspaceDetailHeader").meta(
+    permissionMeta("header", "i-ph-building"),
+  );
+
+  static facts = StatGroup({
+    layout: "joined",
+    columns: FACTS,
+    skeletonCount: FACTS,
+    label: `${D}.facts.label`,
+    fetchUrl: `${API}/facts`,
+  }).meta(permissionMeta("facts", "i-ph-squares-four"));
+
+  static body = Grid({ gap: "1.5rem" })
     .child(
-      "header",
-      HStack({ alignment: "center", spacing: "0.75rem", wrap: true })
-        .child("title", detailHeader)
-        .child("compButton", compButton)
-        .child("suspendButton", suspendButton)
-        .child("joinButton", joinButton),
+      "row",
+      GridRow()
+        .child("main", tabs, { colSpan: 2 })
+        .child("sidebar", sidebar, { colSpan: 1 })
+        .meta(permissionMeta("body_row", "i-ph-rows")),
     )
-    .child("summary", summary)
-    .child(
-      "body",
-      Grid({ gap: "1.5rem" }).child(
-        "row",
-        GridRow()
-          .child("main", tabs, { colSpan: 2 })
-          .child(
-            "sidebar",
-            VStack({ spacing: "1.5rem", alignment: "stretch" })
-              .child("operatorActions", operatorActions)
-              .child("billing", billing)
-              .child("notes", notes),
-            { colSpan: 1 },
-          ),
-      ),
-    );
+    .meta(permissionMeta("body", "i-ph-layout"));
 }

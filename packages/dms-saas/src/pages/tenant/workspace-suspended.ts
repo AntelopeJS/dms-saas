@@ -13,13 +13,17 @@ import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
 export class SaasWorkspaceSuspendedController extends PageController(
   "workspace-suspended",
   {
-    displayName: "$saas.workspace_suspended.title",
-    description: "$saas.workspace_suspended.description",
+    displayName: "$saas.public.suspended.page_title",
+    description: "$saas.public.suspended.page_description",
     category: pagesCategory,
     authOnly: true,
     hidden: true,
   },
   EmptyLayout(),
 ) {
-  static content = CustomComponent("DmsSaasWorkspaceSuspended");
+  static content = CustomComponent("DmsSaasWorkspaceSuspended").meta({
+    name: "$saas.permissions.public.workspace_suspended",
+    description: "$saas.permissions.public.workspace_suspended_description",
+    icon: "i-ph-lock-simple",
+  });
 }
