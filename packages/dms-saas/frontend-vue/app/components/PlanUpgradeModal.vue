@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { SENTENCE_DAY_FORMAT } from '../build/day-formats'
 import { checkoutHeadingCase } from '../build/plan-change-heading'
 
 const props = defineProps<{
@@ -15,10 +16,6 @@ const open = defineModel<boolean>('open', { default: false })
 
 const KEY_PREFIX = 'saas.tenant_billing.plan_change.checkout'
 const PREVIEW_DEBOUNCE_MS = 400
-const DAY_FORMAT: Intl.DateTimeFormatOptions = {
-	day: 'numeric',
-	month: 'short',
-}
 
 const toast = useToast()
 const { t, locale } = useI18n()
@@ -48,7 +45,7 @@ const charge = computed(() => preview.value?.charge ?? null)
 const tax = computed(() => charge.value?.taxes[0] ?? null)
 const isTrial = computed(() => !!preview.value?.isTrial)
 const firstChargeOn = computed(() =>
-	formatDate(preview.value?.trialEndsAt, locale.value, DAY_FORMAT),
+	formatDate(preview.value?.trialEndsAt, locale.value, SENTENCE_DAY_FORMAT),
 )
 const planLabel = computed(() =>
 	props.plan
@@ -182,9 +179,7 @@ async function confirm(): Promise<void> {
 	<UModal
 		v-model:open="open"
 		:title="$t(`${KEY_PREFIX}.${headingCase}_title`, headingParams)"
-		:description="
-			$t(`${KEY_PREFIX}.${headingCase}_description`, headingParams)
-		"
+		:description="$t(`${KEY_PREFIX}.${headingCase}_description`, headingParams)"
 		:ui="{ content: 'max-w-2xl' }"
 	>
 		<template #body>

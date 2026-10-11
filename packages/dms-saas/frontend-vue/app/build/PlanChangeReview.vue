@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { LABEL_DAY_FORMAT, SENTENCE_DAY_FORMAT } from './day-formats'
 import { planChangeHeadingCase } from './plan-change-heading'
 
 interface SummaryRow {
@@ -22,10 +23,6 @@ const props = defineProps<{
 const emit = defineEmits<{ back: []; done: [] }>()
 
 const KEY_PREFIX = 'saas.tenant_billing.plan_change.review'
-const DAY_FORMAT: Intl.DateTimeFormatOptions = {
-	day: 'numeric',
-	month: 'short',
-}
 
 const { t, locale } = useI18n()
 const toast = useToast()
@@ -53,7 +50,11 @@ const diff = computed(() =>
 )
 
 function day(value: string | null | undefined): string {
-	return formatDate(value, locale.value, DAY_FORMAT) ?? ''
+	return formatDate(value, locale.value, LABEL_DAY_FORMAT) ?? ''
+}
+
+function sentenceDay(value: string | null | undefined): string {
+	return formatDate(value, locale.value, SENTENCE_DAY_FORMAT) ?? ''
 }
 
 function money(minorUnits: number | null | undefined): string {
@@ -93,8 +94,8 @@ const heading = computed(() => {
 	const params = {
 		plan: props.plan.name,
 		current: props.currentPlanName ?? '',
-		date: day(preview.value?.effectiveAt),
-		trialEnd: day(preview.value?.trialEndsAt),
+		date: sentenceDay(preview.value?.effectiveAt),
+		trialEnd: sentenceDay(preview.value?.trialEndsAt),
 	}
 	return {
 		title: t(`${KEY_PREFIX}.${headingCase.value}_title`, params),
@@ -145,7 +146,7 @@ const renewalSentence = computed(() => {
 	if (!current) return ''
 	return t(`${KEY_PREFIX}.renewal`, {
 		amount: money(current.renewal.amountExcludingTaxMinorUnits),
-		date: day(current.renewal.at),
+		date: sentenceDay(current.renewal.at),
 		interval: planIntervalLabel(current.renewal.interval),
 	})
 })
@@ -195,7 +196,9 @@ async function confirm(): Promise<void> {
 		)
 		toast.add({
 			title: result.scheduled
-				? t(`${KEY_PREFIX}.scheduled`, { date: day(result.effectiveAt) })
+				? t(`${KEY_PREFIX}.scheduled`, {
+						date: sentenceDay(result.effectiveAt),
+					})
 				: t(`${KEY_PREFIX}.applied`, { plan: props.plan.name }),
 			color: 'success',
 			icon: 'i-ph-check-circle',
@@ -330,7 +333,10 @@ onMounted(() => {
 			</template>
 		</UAlert>
 
-		<div v-else-if="preview && !isFreeSwitch" class="flex flex-col gap-2 text-sm">
+		<div
+			v-else-if="preview && !isFreeSwitch"
+			class="flex flex-col gap-2 text-sm"
+		>
 			<p class="text-muted text-xs font-semibold uppercase">
 				{{ linesEyebrow }}
 			</p>
@@ -356,14 +362,18 @@ onMounted(() => {
 				<span class="tabular-nums">{{ money(dueToday) }}</span>
 			</div>
 			<p v-if="preview.isTrial" class="text-muted">
-				{{ $t(`${KEY_PREFIX}.trial`, { date: day(preview.trialEndsAt) }) }}
+				{{
+					$t(`${KEY_PREFIX}.trial`, {
+						date: sentenceDay(preview.trialEndsAt),
+					})
+				}}
 			</p>
 			<p class="text-muted">{{ renewalSentence }}</p>
 			<p v-if="isDowngrade" class="text-muted">
 				<UIcon name="i-ph-info" class="me-1 align-middle" />
 				{{
 					$t(`${KEY_PREFIX}.cancel_any_time`, {
-						date: day(preview.effectiveAt),
+						date: sentenceDay(preview.effectiveAt),
 					})
 				}}
 			</p>

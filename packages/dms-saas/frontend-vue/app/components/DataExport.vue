@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { SENTENCE_DAY_FORMAT } from '../build/day-formats'
 
 /** Query parameter a delivered export link carries, set by the DMS. */
 const EXPORT_JOB_QUERY_PARAM = 'exportJob'
@@ -8,10 +9,6 @@ const POLL_INTERVAL_MS = 2000
 const FULL_PROGRESS = 100
 /** Statuses saying the archive is gone for good, not momentarily unreachable. */
 const GONE_STATUSES = new Set([404, 410])
-const DAY_FORMAT: Intl.DateTimeFormatOptions = {
-	day: 'numeric',
-	month: 'short',
-}
 const TIME_FORMAT: Intl.DateTimeFormatOptions = {
 	hour: '2-digit',
 	minute: '2-digit',
@@ -40,7 +37,7 @@ const progress = computed(() =>
 const isFinishedPartial = computed(() => !!finished.value?.result?.partial)
 
 function formatDay(value: string | undefined): string {
-	return formatDate(value, locale.value, DAY_FORMAT) ?? '—'
+	return formatDate(value, locale.value, SENTENCE_DAY_FORMAT) ?? '—'
 }
 
 function formatTime(value: string | undefined): string {
@@ -87,7 +84,9 @@ async function downloadFinished(): Promise<void> {
 // few connections per host are all held and the rest of the app stalls.
 let isReadingStatus = false
 
-async function readRunningStatus(jobId: string): Promise<ExportJobStatus | null> {
+async function readRunningStatus(
+	jobId: string,
+): Promise<ExportJobStatus | null> {
 	if (isReadingStatus) return null
 	isReadingStatus = true
 	try {

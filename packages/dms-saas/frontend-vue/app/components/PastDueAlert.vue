@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import PayInvoiceDialog from '../build/PayInvoiceDialog.vue'
+import { LABEL_DAY_FORMAT, SENTENCE_DAY_FORMAT } from '../build/day-formats'
 
 interface TimelineStep {
 	key: string
@@ -12,10 +13,6 @@ interface TimelineStep {
 const SUSPENDED_STATUS = 'suspended'
 const UNPAID_STATUSES = new Set(['past_due', SUSPENDED_STATUS])
 const KEY_PREFIX = 'saas.tenant_billing.past_due'
-const DAY_FORMAT: Intl.DateTimeFormatOptions = {
-	day: 'numeric',
-	month: 'short',
-}
 
 const { data, error, load, refresh } = useBillingStatus()
 const { formatMinorUnits } = useMoneyFormat()
@@ -32,7 +29,11 @@ const isMemberNotice = computed(
 )
 
 function day(value: string | null | undefined): string | null {
-	return formatDate(value, locale.value, DAY_FORMAT)
+	return formatDate(value, locale.value, LABEL_DAY_FORMAT)
+}
+
+function sentenceDay(value: string | null | undefined): string | null {
+	return formatDate(value, locale.value, SENTENCE_DAY_FORMAT)
 }
 
 const amountLabel = computed(() =>
@@ -53,7 +54,9 @@ const title = computed(() =>
 const summary = computed(() => {
 	if (isSuspended.value)
 		return t(`${KEY_PREFIX}.suspended_summary`, subject.value)
-	const failedOn = day(invoice.value?.failedAt)
+	const failedOn = sentenceDay(invoice.value?.failedAt)
+	const retryOn = sentenceDay(invoice.value?.nextRetryAt)
+	const suspendOn = sentenceDay(invoice.value?.suspendAt)
 	const sentences = [
 		failedOn
 			? t(`${KEY_PREFIX}.summary_with_date`, {
@@ -61,12 +64,8 @@ const summary = computed(() => {
 					date: failedOn,
 				})
 			: t(`${KEY_PREFIX}.summary`, subject.value),
-		day(invoice.value?.nextRetryAt) &&
-			t(`${KEY_PREFIX}.next_retry`, { date: day(invoice.value?.nextRetryAt) }),
-		day(invoice.value?.suspendAt) &&
-			t(`${KEY_PREFIX}.suspend_warning`, {
-				date: day(invoice.value?.suspendAt),
-			}),
+		retryOn && t(`${KEY_PREFIX}.next_retry`, { date: retryOn }),
+		suspendOn && t(`${KEY_PREFIX}.suspend_warning`, { date: suspendOn }),
 	]
 	return sentences.filter(Boolean).join(' ')
 })
