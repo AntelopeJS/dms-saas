@@ -17,7 +17,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 function modeOf(value: unknown): NumberMode {
 	if (value === UNLIMITED) return 'unlimited'
@@ -40,6 +40,11 @@ watch(
 			limit.value = value
 		}
 	},
+)
+
+// A unit stored `singular | plural` reads in the form the typed limit takes.
+const unitLabel = computed(() =>
+	props.unit ? agreeUnit(props.unit, limit.value ?? MIN_LIMIT, locale.value) : '',
 )
 
 const limitError = computed(() =>
@@ -110,7 +115,9 @@ function setBoolean(next: string | number | undefined): void {
 					:highlight="!!limitError"
 					@update:model-value="setLimit"
 				/>
-				<span v-if="unit" class="text-muted text-xs">{{ unit }}</span>
+				<span v-if="unitLabel" class="text-muted text-xs">{{
+					unitLabel
+				}}</span>
 			</div>
 		</div>
 		<DmsSegmented
