@@ -10,6 +10,7 @@ import {
   needsAttention,
 } from "./migration-detail";
 import { dateTimeParam } from "./migration-blocks";
+import type { UncertainResolution } from "../workers/plan-migration-resolution";
 
 const K = "saas.catalog.migrations.detail";
 const FIRST_ATTEMPT = 1;
@@ -175,4 +176,25 @@ export function stripeReadingItems(reading: StripeReading): KeyValueListItem[] {
       value: `$${K}.verdict_${reading.stripePlan}`,
     },
   ];
+}
+
+/**
+ * What the reading tells the operator to do, as the verdict words it: Stripe
+ * bills the new plan, so the workspace moved; it bills the old one or
+ * nothing, so it can be retried. Another price, or no reading, is for the
+ * operator to look into first.
+ */
+const RESOLUTION_BY_SIDE: Record<StripeSide, UncertainResolution | null> = {
+  target: "moved",
+  source: "not_moved",
+  none: "not_moved",
+  other: null,
+  unavailable: null,
+};
+
+/** The settlement a Stripe reading points to, if it points to one. */
+export function recommendedResolution(
+  reading: StripeReading,
+): UncertainResolution | null {
+  return RESOLUTION_BY_SIDE[reading.stripePlan];
 }

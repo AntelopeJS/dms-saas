@@ -17,14 +17,13 @@ import { countOccupiedSeats, syncStripeSeatQuantity } from "../plans";
 import { publishMigrationChange } from "../plans/migration-realtime";
 import { redirectPendingPlanChange } from "../plan-changes/pending-target";
 import { getStripeClient } from "../stripe/client";
+import { isDefinitiveStripeRejection } from "../stripe/workspace-checkout";
 import { getRowInstance } from "../utils";
 
 const ALL_PERMISSIONS = "*";
 const ICON_MIGRATION = "i-ph-stack";
 const PRORATION_BEHAVIOR = "create_prorations" as const;
 const FIRST_ATTEMPT = 1;
-/** The type stripe-node gives an error Stripe raised for a declined card. */
-const DECLINED_PAYMENT_ERROR_TYPE = "StripeCardError";
 const UNKNOWN_FAILURE = "Reconciliation required";
 const NOT_REACHED_ERROR = "Not reached before the migration stopped";
 /** What the owners are told: moved now, or their scheduled change redirected. */
@@ -73,12 +72,34 @@ export function settledMigrationStatus(
   return "completed";
 }
 
-function isDeclinedPayment(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { type?: unknown }).type === DECLINED_PAYMENT_ERROR_TYPE
-  );
+/**
+ * Stripe refused the plan change outright — a declined card, an archived
+ * price, a subscription gone: the request had no effect, so the workspace did
+ * not move and a retry is safe. Raised for the provider change alone; a
+ * refusal after it (the seat sync) leaves a workspace that did move.
+ */
+class ProviderChangeRefusedError extends Error {
+  constructor(readonly cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = "ProviderChangeRefusedError";
+  }
+}
+
+function isRefusedMove(error: unknown): boolean {
+  return error instanceof ProviderChangeRefusedError;
+}
+
+async function changeProviderPlanOrRefuse(
+  work: WorkspaceMigration,
+): Promise<void> {
+  try {
+    await changeProviderPlan(work);
+  } catch (error) {
+    if (isDefinitiveStripeRejection(error)) {
+      throw new ProviderChangeRefusedError(error);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -239,7 +260,7 @@ async function applyWorkspaceMigration(
   work: WorkspaceMigration,
 ): Promise<void> {
   if (work.isScheduledChange) return redirectScheduledChange(work);
-  await changeProviderPlan(work);
+  await changeProviderPlanOrRefuse(work);
   const subscriptionModel = GetModel(TenantSubscriptionModel, work.tenantId);
   const freePlanPatch: Partial<TenantSubscription> = work.target.stripePriceId
     ? {}
@@ -344,10 +365,10 @@ async function admitWorkspace(
 }
 
 /**
- * Stripe refused the change outright (a declined card): nothing moved, so the
- * workspace's intent is released and it can be retried under a new operation.
+ * Stripe refused the change outright: nothing moved, so the workspace's
+ * intent is released and it can be retried under a new operation.
  */
-async function releaseDeclinedMove(work: WorkspaceMigration): Promise<void> {
+async function releaseRefusedMove(work: WorkspaceMigration): Promise<void> {
   await GetModel(TenantSubscriptionModel, work.tenantId).completeTransition(
     work.subscription._id,
     work.operationId,
@@ -364,7 +385,7 @@ async function migrateTenant(
   try {
     await applyWorkspaceMigration(work);
   } catch (error) {
-    if (isDeclinedPayment(error)) await releaseDeclinedMove(work);
+    if (isRefusedMove(error)) await releaseRefusedMove(work);
     throw error;
   }
   if (job.notifyMembers) {
@@ -405,7 +426,7 @@ async function processTenantInJob(
   } catch (error) {
     await recordTenantOutcome(job, {
       tenantId,
-      status: isDeclinedPayment(error) ? "failed" : "reconciliation_required",
+      status: isRefusedMove(error) ? "failed" : "reconciliation_required",
       error: error instanceof Error ? error.message : String(error),
       seatQuantity:
         job.tenantOutcomes.find((row) => row.tenantId === tenantId)

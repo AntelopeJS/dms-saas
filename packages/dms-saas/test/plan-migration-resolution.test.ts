@@ -6,6 +6,7 @@ import {
 } from "@antelopejs/interface-database-decorators";
 import { construct, destroy } from "@antelopejs/mongodb";
 import { MongoMemoryReplSet } from "mongodb-memory-server-core";
+import Stripe from "stripe";
 import {
   afterAll,
   afterEach,
@@ -43,6 +44,10 @@ vi.mock("../src/plans", () => ({
   countOccupiedSeats: async () => 2,
   syncStripeSeatQuantity: async () => undefined,
 }));
+const stripe = vi.hoisted(() => ({
+  subscriptions: { cancel: vi.fn(async () => ({})) },
+}));
+vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
 
 const SETUP_TIMEOUT_MS = 60_000;
 const OPERATOR = "operator";
@@ -70,12 +75,27 @@ afterAll(async () => {
   }
 });
 
-/** A Stripe refusal as stripe-node raises it for a declined card. */
-function declinedCard(): Error {
-  return Object.assign(new Error("Your card was declined."), {
-    type: "StripeCardError",
-  });
-}
+/** Stripe refusals as stripe-node raises them: the request had no effect. */
+const STRIPE_REFUSALS = [
+  [
+    "a declined card",
+    () =>
+      new Stripe.errors.StripeCardError({
+        type: "card_error",
+        message: "Your card was declined.",
+        statusCode: 402,
+      }),
+  ],
+  [
+    "an archived price",
+    () =>
+      new Stripe.errors.StripeInvalidRequestError({
+        type: "invalid_request_error",
+        message: "The price specified is inactive.",
+        statusCode: 400,
+      }),
+  ],
+] as const;
 
 async function createJob(): Promise<PlanMigration> {
   const fromPlanId = randomUUID();
@@ -107,13 +127,16 @@ async function createJob(): Promise<PlanMigration> {
   return job;
 }
 
-async function createSubscription(planId: string): Promise<string> {
+async function createSubscription(
+  planId: string,
+  stripeSubscriptionId: string | null = null,
+): Promise<string> {
   const tenantId = randomUUID();
   await GetModel(TenantSubscriptionModel, tenantId).insert({
     _id: randomUUID(),
     planId,
     status: "active",
-    stripeSubscriptionId: null,
+    stripeSubscriptionId,
   });
   return tenantId;
 }
@@ -172,39 +195,56 @@ describe("plan migration resolution on the production Mongo provider", () => {
     });
   });
 
-  it("marks a declined move as failed, releases it and retries it under a new operation", async () => {
+  it.each(STRIPE_REFUSALS)(
+    "marks a move Stripe refused for %s as failed, releases it and retries it under a new operation",
+    async (_reason, refusalOf) => {
+      const job = await createJob();
+      const tenantId = await createSubscription(job.fromPlanId, "sub_refused");
+      stripe.subscriptions.cancel.mockRejectedValueOnce(refusalOf());
+      await processPlanMigrationJob(job._id);
+
+      const failed = await load(job._id);
+      expect(failed).toMatchObject({
+        status: "failed",
+        stage: "needs_attention",
+        tenantOutcomes: [
+          expect.objectContaining({ status: "failed", attempt: 1 }),
+        ],
+      });
+      expect(await subscriptionOf(tenantId)).toMatchObject({
+        planId: job.fromPlanId,
+        domainTransition: null,
+      });
+      expect(migrationAbilities(failed, migrationTotals(failed))).toEqual({
+        canResolve: false,
+        canRetry: true,
+        canReconcile: true,
+      });
+
+      await retryFailedPlanMigrationWorkspaces(job._id);
+      expect(await load(job._id)).toMatchObject({
+        status: "completed",
+        processedWorkspaces: 1,
+        tenantOutcomes: [
+          expect.objectContaining({ status: "succeeded", attempt: 2 }),
+        ],
+      });
+      expect((await subscriptionOf(tenantId))?.planId).toBe(job.toPlanId);
+    },
+  );
+
+  it("keeps a Stripe refusal after the plan changed as uncertain", async () => {
     const job = await createJob();
     const tenantId = await createSubscription(job.fromPlanId);
-    failNextMove(tenantId, declinedCard());
+    failNextMove(tenantId, STRIPE_REFUSALS[1][1]());
     await processPlanMigrationJob(job._id);
 
-    const failed = await load(job._id);
-    expect(failed).toMatchObject({
-      status: "failed",
-      stage: "needs_attention",
-      tenantOutcomes: [
-        expect.objectContaining({ status: "failed", attempt: 1 }),
-      ],
-    });
-    expect(await subscriptionOf(tenantId)).toMatchObject({
-      planId: job.fromPlanId,
-      domainTransition: null,
-    });
-    expect(migrationAbilities(failed, migrationTotals(failed))).toEqual({
-      canResolve: false,
-      canRetry: true,
-      canReconcile: true,
-    });
-
-    await retryFailedPlanMigrationWorkspaces(job._id);
     expect(await load(job._id)).toMatchObject({
-      status: "completed",
-      processedWorkspaces: 1,
+      status: "reconciliation_required",
       tenantOutcomes: [
-        expect.objectContaining({ status: "succeeded", attempt: 2 }),
+        expect.objectContaining({ status: "reconciliation_required" }),
       ],
     });
-    expect((await subscriptionOf(tenantId))?.planId).toBe(job.toPlanId);
   });
 
   it("settles an uncertain move the operator read as moved in Stripe", async () => {

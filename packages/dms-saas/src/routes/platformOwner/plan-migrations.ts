@@ -38,6 +38,7 @@ import {
 import {
   type MigrationWorkspaceRow,
   filterWorkspaceRows,
+  recommendedResolution,
   stripeReadingItems,
 } from "../../plans/migration-workspaces";
 import {
@@ -71,6 +72,12 @@ const URLS = { api: MIGRATIONS_API, list: MIGRATIONS_PAGE };
 const TEXTS = "$saas.catalog.migrations";
 
 /** What a list block (`StatGroup`, `KeyValueList`, …) reads from its route. */
+/** The Stripe check drawer: the reading, and what it tells the operator to do. */
+interface StripeReadingPayload extends ItemsPayload<KeyValueListItem> {
+  resolution: UncertainResolution | null;
+  stripeUrl: string | null;
+}
+
 interface ItemsPayload<T> {
   items: T[];
 }
@@ -185,15 +192,22 @@ export class SaasPlanMigrationsController extends Controller(MIGRATIONS_API) {
     return { items: migrationJournalItems(await this.context(id)) };
   }
 
-  /** What Stripe and the DMS each say about a workspace, read now. */
+  /**
+   * What Stripe and the DMS each say about a workspace, read now, with the
+   * settlement it points to and where to check it in Stripe.
+   */
   @Get("/:id/workspaces/:tenantId/stripe")
   async stripeReading(
     @AuthOwnerOnly() _user: User,
     @Parameter("id") id: string,
     @Parameter("tenantId") tenantId: string,
-  ): Promise<ItemsPayload<KeyValueListItem>> {
+  ): Promise<StripeReadingPayload> {
     const reading = await readStripe(await this.load(id), tenantId);
-    return { items: stripeReadingItems(reading) };
+    return {
+      items: stripeReadingItems(reading),
+      resolution: recommendedResolution(reading),
+      stripeUrl: reading.stripeUrl,
+    };
   }
 
   @Get("/:id/dialogs/retry")
