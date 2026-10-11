@@ -41,13 +41,13 @@ import {
 
 const COLUMN = "$saas.workspaces.column";
 // The seven visible columns fit a 1440px screen without scrolling.
-const NAME_COLUMN_SIZE = 220;
+const NAME_COLUMN_SIZE = 190;
 const STATUS_COLUMN_SIZE = 130;
-const PLAN_COLUMN_SIZE = 170;
-const MRR_COLUMN_SIZE = 110;
-const OWNER_COLUMN_SIZE = 160;
-const RENEWS_COLUMN_SIZE = 150;
-const CREATED_COLUMN_SIZE = 120;
+const PLAN_COLUMN_SIZE = 155;
+const MRR_COLUMN_SIZE = 100;
+const OWNER_COLUMN_SIZE = 185;
+const RENEWS_COLUMN_SIZE = 170;
+const CREATED_COLUMN_SIZE = 130;
 
 // Every directory field is read off the workspace's billing state row, which
 // is keyed by the tenant id: one join per column, sortable and filterable in

@@ -48,11 +48,13 @@ const VALUE_TYPE_OPTIONS = FEATURE_VALUE_TYPES.map((value) => ({
 
 const DESCRIPTION_ROWS = 2;
 // The visible columns fit a 1440px screen without scrolling.
-const NAME_COLUMN_SIZE = 260;
-const KEY_COLUMN_SIZE = 180;
-const COMPARISON_COLUMN_SIZE = 200;
-const SHORT_COLUMN_SIZE = 100;
-const ORDER_COLUMN_SIZE = 80;
+const NAME_COLUMN_SIZE = 235;
+const KEY_COLUMN_SIZE = 160;
+const COMPARISON_COLUMN_SIZE = 180;
+const SHORT_COLUMN_SIZE = 110;
+const VALUE_TYPE_COLUMN_SIZE = 150;
+const UNIT_COLUMN_SIZE = 90;
+const ORDER_COLUMN_SIZE = 110;
 
 interface FeatureRowInstance {
   table: Feature;
@@ -148,7 +150,7 @@ export class featuresDataAPI extends DataController(
       display: "cards",
     }),
     filterable: true,
-    size: SHORT_COLUMN_SIZE,
+    size: VALUE_TYPE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadWrite)
   declare valueType: string;
@@ -162,7 +164,7 @@ export class featuresDataAPI extends DataController(
     type: new DefaultDataTypes.StringType({
       placeholder: `${TEXTS}.placeholder.unit`,
     }),
-    size: SHORT_COLUMN_SIZE,
+    size: UNIT_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadWrite)
   declare unit: string | null;

@@ -30,12 +30,12 @@ import { composed, countParam, dotList } from "../../i18n/composed-text";
 import { getSegmentNamesCached } from "../../utils";
 
 const ACTIVE_NOW_MS = 5 * 60 * 1000;
-const IDENTITY_COLUMN_SIZE = 260;
+const IDENTITY_COLUMN_SIZE = 245;
 // The six visible columns fit a 1440px screen without scrolling.
-const ROLE_COLUMN_SIZE = 160;
-const SEGMENTS_COLUMN_SIZE = 200;
-const REGULAR_COLUMN_SIZE = 140;
-const DATE_COLUMN_SIZE = 120;
+const ROLE_COLUMN_SIZE = 170;
+const SEGMENTS_COLUMN_SIZE = 190;
+const REGULAR_COLUMN_SIZE = 155;
+const DATE_COLUMN_SIZE = 125;
 
 interface UserRowInstance {
   table: { _id: string };

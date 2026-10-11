@@ -139,7 +139,7 @@ export class invoicesDataAPI extends DataController(
     type: new DefaultDataTypes.StringType(),
     display: new DefaultDisplays.TwoLineDisplay({ subField: "planDetail" }),
     filterable: true,
-    size: 200,
+    size: 190,
   })
   @Joined({ table: Tenant, localKey: "_instance", remoteField: "name" })
   @Access(AccessMode.ReadOnly)
@@ -168,7 +168,7 @@ export class invoicesDataAPI extends DataController(
   @Column({
     name: `${COLUMN}.amount`,
     type: new MoneyCentsType(),
-    size: 110,
+    size: 120,
   })
   @Access(AccessMode.ReadOnly)
   declare total: number;
@@ -261,7 +261,7 @@ export class invoicesDataAPI extends DataController(
   @Column({
     name: `${COLUMN}.credited`,
     type: new MoneyCentsType(),
-    size: 110,
+    size: 120,
   })
   @Access(AccessMode.ReadOnly)
   get credited(): PromiseLike<number | null> {
