@@ -178,7 +178,8 @@ const VISIBILITY_FIELDS: FormField[] = [
     id: "order",
     label: `${TEXTS}.field.order`,
     description: `${TEXTS}.field.order_description`,
-    type: new DefaultDataTypes.NumberType({ min: 0, step: 1 }),
+    // Reordering the plans list writes fractional, possibly negative values.
+    type: new DefaultDataTypes.NumberType(),
   },
   {
     id: "borderLabel",

@@ -212,7 +212,7 @@
 					"is_public": "Publique",
 					"is_public_description": "Affichée sur la page de tarifs et à l’inscription. Les offres masquées sont attribuées par un administrateur de la plateforme.",
 					"order": "Position",
-					"order_description": "Position sur la page de tarifs, à partir de 0. Se change aussi en déplaçant les cartes sur la page Offres.",
+					"order_description": "Position sur la page de tarifs : la plus petite vient en premier. Se change aussi en déplaçant les cartes sur la page Offres.",
 					"badge": "Badge de mise en avant",
 					"badge_description": "Court libellé en haut de la carte, comme « Populaire ». Laissez vide pour aucun.",
 					"badge_color": "Couleur du badge",

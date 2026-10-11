@@ -212,7 +212,7 @@
 					"is_public": "Public",
 					"is_public_description": "Listed on the pricing page and at sign-up. Hidden plans are assigned by a platform admin.",
 					"order": "Position",
-					"order_description": "Position on the pricing page, from 0. Also changed by dragging cards on the Plans page.",
+					"order_description": "Position on the pricing page: lower comes first. Also changed by dragging cards on the Plans page.",
 					"badge": "Highlight badge",
 					"badge_description": "Short label on top of the card, like “Popular”. Leave empty for none.",
 					"badge_color": "Badge colour",

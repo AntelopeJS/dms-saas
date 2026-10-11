@@ -263,7 +263,9 @@ export class featuresDataAPI extends DataController(
   @Column({
     name: `${TEXTS}.column.order`,
     description: `${TEXTS}.column.order_description`,
-    type: new DefaultDataTypes.NumberType({ min: 0, step: 1 }),
+    // A move by hand takes the value between its neighbours', or one step
+    // before the first: fractional, possibly negative.
+    type: new DefaultDataTypes.NumberType(),
     size: ORDER_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadWrite)
