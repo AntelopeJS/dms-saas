@@ -1,6 +1,6 @@
 import { assert } from "@antelopejs/interface-api-util";
 import type { TableViewGuards } from "@antelopejs/interface-dms/base/types/guards";
-import { type TableScope, scopedCountBatch } from "./table-scope";
+import type { TableScope } from "./table-scope";
 
 const HTTP_NOT_FOUND = 404;
 const INVOICE_DOCUMENT_TYPE = "invoice";
@@ -20,6 +20,3 @@ export const INVOICE_GUARDS: TableViewGuards = {
     );
   },
 };
-
-/** The tab counters' batch count, restricted to invoice rows as the list is. */
-export const INVOICE_COUNT_BATCH = scopedCountBatch(INVOICE_LIST_OPTIONS);

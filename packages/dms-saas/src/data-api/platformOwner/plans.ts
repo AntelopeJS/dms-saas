@@ -41,11 +41,7 @@ import {
   valueText,
 } from "../../i18n/composed-text";
 import { toMinorUnits } from "../../utils/money";
-import {
-  type TableScope,
-  scopedCountBatch,
-  withTableScope,
-} from "./table-scope";
+import { type TableScope, withTableScope } from "./table-scope";
 
 const TEXTS = "$saas.catalog.plans";
 
@@ -122,7 +118,7 @@ export class plansDataAPI extends DataController(
     list: withCatalogueScope(TableViewRoutes.List),
     select: withCatalogueScope(TableViewRoutes.Select),
     count: withCatalogueScope(TableViewRoutes.Count),
-    countBatch: scopedCountBatch(PLAN_CATALOGUE_SCOPE),
+    countBatch: withCatalogueScope(TableViewRoutes.CountBatch),
     edit: TableViewRoutes.Edit,
     ...TableViewRoutes.ExportRoutes,
     exportStart: withCatalogueScope(TableViewRoutes.ExportRoutes.exportStart),

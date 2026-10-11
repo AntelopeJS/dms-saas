@@ -47,11 +47,7 @@ import {
 import { invoiceStatusDetail, invoiceWorkspaceDetail } from "./invoice-cells";
 import { HiddenStringFilter } from "./hidden-filter";
 import { withTableScope } from "./table-scope";
-import {
-  INVOICE_COUNT_BATCH,
-  INVOICE_GUARDS,
-  INVOICE_LIST_OPTIONS,
-} from "./invoice-options";
+import { INVOICE_GUARDS, INVOICE_LIST_OPTIONS } from "./invoice-options";
 import {
   invoiceCreditedAmount,
   invoiceRow,
@@ -81,7 +77,7 @@ export class invoicesDataAPI extends DataController(
     list: withInvoiceScope(TableViewRoutes.List),
     select: withInvoiceScope(TableViewRoutes.Select),
     count: withInvoiceScope(TableViewRoutes.Count),
-    countBatch: INVOICE_COUNT_BATCH,
+    countBatch: withInvoiceScope(TableViewRoutes.CountBatch),
     ...TableViewRoutes.ExportRoutes,
     exportStart: withInvoiceScope(TableViewRoutes.ExportRoutes.exportStart),
   },
