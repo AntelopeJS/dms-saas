@@ -365,7 +365,10 @@
           "total_today": "Total à payer aujourd'hui",
           "trial": "Votre essai continue : le premier prélèvement a lieu le {date}.",
           "cancel_any_time": "Annulez le changement à tout moment avant le {date}.",
-          "back": "Retour"
+          "back": "Retour",
+          "resubscribe_title": "Restaurer l'espace sur {plan}",
+          "resubscribe_description": "Il rouvre aujourd'hui avec ses membres et ses données. Rien n'est facturé.",
+          "confirm_resubscribe": "Restaurer sur {plan}"
         },
         "checkout": {
           "upgrade_title": "Passer {workspace} à {plan}",

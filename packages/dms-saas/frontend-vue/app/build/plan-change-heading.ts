@@ -2,11 +2,13 @@
  * Which words head a plan change: "Upgrade" only fits a plan that costs
  * more, paid now. A plan at the same price is a switch, a change during a
  * trial charges nothing today, and a cancelled workspace choosing a plan
- * again resubscribes.
+ * again resubscribes — through Checkout for a paid plan, through the review
+ * for a free one.
  */
 
 /** What the review step of a plan change is titled after. */
 export type PlanChangeHeadingCase =
+	| 'resubscribe'
 	| 'free'
 	| 'downgrade'
 	| 'trial'
@@ -49,12 +51,15 @@ function costsTheSame(
  * @param change The priced change, null while it is being priced
  * @param current The plan in force
  * @param target The plan chosen
+ * @param isResubscription The workspace was cancelled and comes back
  */
 export function planChangeHeadingCase(
 	change: PricedChange | null,
 	current: ComparablePlanPrice | null,
 	target: ComparablePlanPrice,
+	isResubscription = false,
 ): PlanChangeHeadingCase {
+	if (isResubscription) return 'resubscribe'
 	if (change && KINDS_NAMED_BY_THEMSELVES.has(change.kind))
 		return change.kind as PlanChangeHeadingCase
 	if (change?.isTrial) return 'trial'

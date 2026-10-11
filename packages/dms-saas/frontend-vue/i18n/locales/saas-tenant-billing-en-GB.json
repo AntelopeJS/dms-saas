@@ -365,7 +365,10 @@
           "total_today": "Total due today",
           "trial": "Your trial continues: the first charge is on {date}.",
           "cancel_any_time": "Cancel the downgrade any time before {date}.",
-          "back": "Back"
+          "back": "Back",
+          "resubscribe_title": "Restore the workspace on {plan}",
+          "resubscribe_description": "It reopens today with its members and data. Nothing is billed.",
+          "confirm_resubscribe": "Restore on {plan}"
         },
         "checkout": {
           "upgrade_title": "Upgrade {workspace} to {plan}",

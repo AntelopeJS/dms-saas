@@ -15,6 +15,8 @@ const props = defineProps<{
 	currentPlanName: string | null
 	features: TenantPlanFeature[]
 	allowBack: boolean
+	/** The workspace was cancelled: choosing a plan reopens it. */
+	isResubscription?: boolean
 }>()
 
 const emit = defineEmits<{ back: []; done: [] }>()
@@ -79,7 +81,12 @@ const dueToday = computed(() => {
 })
 
 const headingCase = computed(() =>
-	planChangeHeadingCase(preview.value, props.currentPlan, props.plan),
+	planChangeHeadingCase(
+		preview.value,
+		props.currentPlan,
+		props.plan,
+		props.isResubscription,
+	),
 )
 
 const heading = computed(() => {
@@ -145,6 +152,8 @@ const renewalSentence = computed(() => {
 
 const confirmLabel = computed(() => {
 	if (isDowngrade.value) return t(`${KEY_PREFIX}.confirm_downgrade`)
+	if (headingCase.value === 'resubscribe')
+		return t(`${KEY_PREFIX}.confirm_resubscribe`, { plan: props.plan.name })
 	if (isFreeSwitch.value)
 		return t(`${KEY_PREFIX}.confirm_free`, { plan: props.plan.name })
 	if (preview.value?.isTrial)

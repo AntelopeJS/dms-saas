@@ -220,6 +220,7 @@ watch(open, (isOpen) => {
 				:current-plan="currentPlan"
 				:current-plan-name="currentPlanName"
 				:features="features"
+				:is-resubscription="isResubscription"
 				allow-back
 				@back="reviewPlanId = null"
 				@done="finishReview"
