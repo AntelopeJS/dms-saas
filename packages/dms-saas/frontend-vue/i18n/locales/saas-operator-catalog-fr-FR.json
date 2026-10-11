@@ -385,6 +385,7 @@
 				"attention": {
 					"uncertain": "Des espaces de travail n’ont pas été déplacés, dont au moins un dans un état Stripe incertain : vérifiez-le dans Stripe avant de relancer.",
 					"failed": "Des espaces de travail n’ont pas été déplacés. Relancez-les, ou marquez la migration comme rapprochée.",
+					"state": "{count} sur {total} non déplacé | {count} sur {total} non déplacés",
 					"empty_title": "Rien à traiter",
 					"empty_description": "Chaque migration a déplacé ses espaces de travail ou a été rapprochée."
 				},

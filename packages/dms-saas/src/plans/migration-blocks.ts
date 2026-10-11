@@ -24,6 +24,7 @@ import { STATUS_TONES } from "../utils/status-vocabulary";
 import {
   type MigrationDetailContext,
   type MigrationPlanRef,
+  type MigrationTotals,
   type MigrationWorkspaceView,
   firstUncertain,
 } from "./migration-detail";
@@ -51,6 +52,14 @@ const BANNER_TONES = new Set<string>([
 export interface MigrationDetailUrls {
   api: string;
   list: string;
+}
+
+/** "2 of 5 not moved": the state line of a migration's attention card. */
+export function attentionState(totals: MigrationTotals): ComposedText {
+  return composed("saas.catalog.migrations.attention.state", {
+    count: countParam(totals.notMoved),
+    total: countParam(totals.captured),
+  });
 }
 
 /** A date and its time, written in the reader's language. */

@@ -24,6 +24,7 @@ import {
   migrationTotals,
 } from "../../plans/migration-detail";
 import {
+  attentionState,
   migrationChangeItems,
   migrationHeader,
   migrationJournalItems,
@@ -297,7 +298,7 @@ async function attentionCard(migration: PlanMigration): Promise<NavCardItem> {
     icon: "i-ph-warning-circle",
     iconTone: totals.uncertain > 0 ? "error" : "warning",
     to: `${MIGRATIONS_PAGE}/${migration._id}`,
-    state: `${totals.notMoved} / ${totals.captured}`,
+    state: attentionState(totals),
     stateTone: totals.uncertain > 0 ? "error" : "warning",
   };
 }
