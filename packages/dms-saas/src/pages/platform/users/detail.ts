@@ -119,6 +119,7 @@ const segmentMatches = CustomComponent("DmsSaasUserSegmentMatches").meta(
 const tabs = Tab({
   persistState: true,
   stateKey: "tab",
+  badgesUrl: `${USER_API}/tab-counts`,
   items: [
     {
       label: "$saas.users.tabs.workspaces",

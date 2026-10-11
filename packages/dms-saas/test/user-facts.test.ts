@@ -4,6 +4,7 @@ import {
   type UserSecurity,
   userFactItems,
   userSecurityItems,
+  userTabCounts,
 } from "../src/users";
 import { LOCALES, missingKeys } from "./helpers/composed-text";
 
@@ -106,5 +107,15 @@ describe("user facts", () => {
       userSecurityItems(bare),
     ];
     expect(missingKeys(payloads, code)).toEqual([]);
+  });
+});
+
+describe("user tab counts", () => {
+  it("counts the workspaces, the documents billed as owner and the segments", () => {
+    expect(userTabCounts({ ...USER, segmentCount: 2 }, 5)).toEqual({
+      workspaces: 2,
+      billing: 5,
+      segments: 2,
+    });
   });
 });

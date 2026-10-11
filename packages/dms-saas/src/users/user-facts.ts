@@ -193,3 +193,29 @@ export function userSecurityItems(security: UserSecurity): KeyValueListItem[] {
     verificationItem(security),
   ];
 }
+
+/** The counts on the user page's tabs, by tab slot. */
+export interface UserTabCounts {
+  workspaces: number;
+  billing: number;
+  segments: number;
+}
+
+/**
+ * What each tab of the user page holds: the workspaces they belong to, the
+ * invoices and credit notes of the workspaces they own, the segments they
+ * match.
+ *
+ * @param user The user
+ * @param billedDocuments Invoices and credit notes of the workspaces they own
+ */
+export function userTabCounts(
+  user: UserDetail,
+  billedDocuments: number,
+): UserTabCounts {
+  return {
+    workspaces: user.workspaces.length,
+    billing: billedDocuments,
+    segments: user.segmentCount,
+  };
+}
