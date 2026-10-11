@@ -204,8 +204,6 @@
 					"billing_mode_description": "Per seat bills every member; seat changes are prorated.",
 					"trial_days": "Free trial (days)",
 					"trial_days_description": "No card needed during the trial. Set 0 for none.",
-					"access": "Access & features",
-					"access_description": "The plan it builds on, its feature values and its permissions.",
 					"max_members": "Maximum members",
 					"max_members_description": "Workspaces already above the cap keep everyone but can’t invite more.",
 					"members_unit": "members",

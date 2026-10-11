@@ -204,8 +204,6 @@
 					"billing_mode_description": "Par siège facture chaque membre ; les changements de sièges sont proratisés.",
 					"trial_days": "Essai gratuit (jours)",
 					"trial_days_description": "Aucune carte requise pendant l’essai. Mettez 0 pour aucun.",
-					"access": "Accès et fonctionnalités",
-					"access_description": "L’offre sur laquelle elle s’appuie, ses valeurs de fonctionnalités et ses permissions.",
 					"max_members": "Membres maximum",
 					"max_members_description": "Les espaces de travail déjà au-delà de la limite gardent tout le monde mais ne peuvent plus inviter.",
 					"members_unit": "membres",

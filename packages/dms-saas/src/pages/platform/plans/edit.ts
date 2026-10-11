@@ -130,10 +130,10 @@ const PRICING_FIELDS: FormField[] = [
 ];
 
 const ACCESS_FIELDS: FormField[] = [
+  // No label: the section already says "Access & features", and an
+  // unlabelled row lets the matrix span it, as the segment rules do.
   {
     id: "inheritance",
-    label: `${TEXTS}.field.access`,
-    description: `${TEXTS}.field.access_description`,
     type: new PlanAccessType({
       catalogUrl: `${PLANS_ENDPOINT}/catalog`,
       permissionsTreeUrl: `${PLANS_ENDPOINT}/permissions-tree`,
