@@ -25,6 +25,7 @@ import {
   Searchable,
   Select,
   TableViewRoutes,
+  type Tone,
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { ReadonlyBehaviorType } from "@antelopejs/interface-dms/base/types";
@@ -32,6 +33,7 @@ import {
   FEATURE_VALUE_TYPES,
   Feature,
   FeatureModel,
+  type FeatureValueType,
   PlanModel,
 } from "../../db";
 import { plansUsingFeature } from "../../plans/feature-usage";
@@ -40,11 +42,27 @@ import { CONTENT_LANGUAGE_HEADER } from "../../utils/content-language";
 
 const TEXTS = "$saas.catalog.features";
 
+interface ValueTypeLook {
+  icon: string;
+  tone: Tone;
+}
+
+const VALUE_TYPE_LOOKS: Record<FeatureValueType, ValueTypeLook> = {
+  boolean: { icon: "i-ph-toggle-right", tone: "success" },
+  number: { icon: "i-ph-hash", tone: "primary" },
+  string: { icon: "i-ph-text-t", tone: "warning" },
+};
+
 const VALUE_TYPE_OPTIONS = FEATURE_VALUE_TYPES.map((value) => ({
   label: `${TEXTS}.value_type.${value}`,
   description: `${TEXTS}.value_type.${value}_description`,
+  icon: VALUE_TYPE_LOOKS[value].icon,
   value,
 }));
+
+const VALUE_TYPE_TONES = Object.fromEntries(
+  FEATURE_VALUE_TYPES.map((value) => [value, VALUE_TYPE_LOOKS[value].tone]),
+);
 
 const DESCRIPTION_ROWS = 2;
 // The visible columns fit a 1440px screen without scrolling, scrollbar included.
@@ -149,6 +167,7 @@ export class featuresDataAPI extends DataController(
       items: VALUE_TYPE_OPTIONS,
       display: "cards",
     }),
+    display: new DefaultDisplays.StatusPillDisplay({ tones: VALUE_TYPE_TONES }),
     filterable: true,
     size: VALUE_TYPE_COLUMN_SIZE,
   })
