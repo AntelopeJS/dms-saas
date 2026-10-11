@@ -7,7 +7,11 @@ import {
   moneyParam,
   valueText,
 } from "../i18n/composed-text";
-import type { CatalogueUsage, PlanUsage } from "./catalogue-usage";
+import {
+  type CatalogueUsage,
+  emptyPlanUsage,
+  type PlanUsage,
+} from "./catalogue-usage";
 
 /** MRR of the plans billed in one currency. */
 export interface CurrencyMrr {
@@ -37,17 +41,7 @@ export interface CatalogueSummary {
 type SummarisedPlan = Pick<Plan, "_id" | "name" | "isActive" | "isPublic">;
 
 function usageOf(usage: CatalogueUsage, plan: SummarisedPlan): PlanUsage {
-  return (
-    usage.byPlan.get(plan._id) ?? {
-      workspaces: 0,
-      paying: 0,
-      trialing: 0,
-      free: 0,
-      seats: 0,
-      members: 0,
-      mrr: 0,
-    }
-  );
+  return usage.byPlan.get(plan._id) ?? emptyPlanUsage();
 }
 
 function sumOf(

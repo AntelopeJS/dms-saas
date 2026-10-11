@@ -36,8 +36,8 @@ type PlanTableOptions = NonNullable<
 >;
 type PlanRowActions = NonNullable<PlanTableOptions["rowActions"]>["custom"];
 
-const isInUse = { field: "workspaceCount", notEquals: 0 } as const;
-const isUnused = { field: "workspaceCount", equals: 0 } as const;
+const isInUse = { field: "boundWorkspaceCount", notEquals: 0 } as const;
+const isUnused = { field: "boundWorkspaceCount", equals: 0 } as const;
 
 /**
  * The menu of a plan, the same in the table and on the cards: duplicate,
@@ -217,7 +217,7 @@ export class SaasPlansController extends PageController(
       duplicate: false,
       copyLink: false,
       hasSelection: HAS_SELECTION,
-      // The rules read listed values (`workspaceCount` is a number on the
+      // The rules read listed values (`boundWorkspaceCount` is a number on the
       // row), which the controller types as the getters computing them.
       // oxlint-disable-next-line anti-slop/no-chained-type-assertions
       custom: PLAN_ROW_ACTIONS as unknown as PlanRowActions,

@@ -51,7 +51,8 @@
 				"unpaid_invoice_blocks_cancellation": "Une facture est impayée. Payez-la avant de résilier l'abonnement.",
 				"invalid_feature_value": "Une valeur ne correspond pas à sa fonctionnalité : une limite vaut au moins 1, Désactivée vaut 0 et Illimitée −1.",
 				"invalid_member_cap": "La limite de membres doit être d’au moins 1, ou illimitée.",
-				"retire_confirm_mismatch": "Saisissez la clé de l’offre exactement comme affichée pour confirmer."
+				"retire_confirm_mismatch": "Saisissez la clé de l’offre exactement comme affichée pour confirmer.",
+				"has_scheduled_changes": "Des espaces de travail doivent passer à cette offre. Retirez-la pour reporter leur changement sur une autre offre."
 			},
 			"workspace": {
 				"not_found": "Espace introuvable",

@@ -51,7 +51,8 @@
 				"unpaid_invoice_blocks_cancellation": "An invoice is unpaid. Pay it before cancelling the subscription.",
 				"invalid_feature_value": "A feature value doesn’t fit its feature: a limit must be at least 1, Off is 0 and Unlimited is −1.",
 				"invalid_member_cap": "The member cap must be at least 1, or unlimited.",
-				"retire_confirm_mismatch": "Type the plan’s key exactly as shown to confirm."
+				"retire_confirm_mismatch": "Type the plan’s key exactly as shown to confirm.",
+				"has_scheduled_changes": "Workspaces are scheduled to switch to this plan. Retire it to move their change to another plan."
 			},
 			"workspace": {
 				"not_found": "Workspace not found",

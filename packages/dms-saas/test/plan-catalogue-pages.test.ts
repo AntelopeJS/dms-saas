@@ -104,7 +104,7 @@ describe("the plans page", () => {
     });
     expect(byLabel("delete")).toMatchObject({
       confirm: { from: "/api/saas/plan-dialogs/{_id}/delete" },
-      rule: { field: "workspaceCount", equals: 0 },
+      rule: { field: "boundWorkspaceCount", equals: 0 },
     });
   });
 

@@ -488,11 +488,21 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   async remove(@AuthOwnerOnly() _user: User, @Parameter("id") id: string) {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
-    const workspaceCount = await this.tenantSubscriptionModel.countByPlan(id);
+    const [workspaceCount, scheduled] = await Promise.all([
+      this.tenantSubscriptionModel.countByPlan(id),
+      this.tenantSubscriptionModel.findByPendingPlan(id),
+    ]);
     assert(
       workspaceCount === 0,
       HTTP_CONFLICT,
       "saas.errors.plan.has_workspaces",
+    );
+    // A scheduled change onto the plan is only redirected by its retirement:
+    // deleting it would leave the Stripe schedule billing its archived price.
+    assert(
+      scheduled.every((subscription) => subscription.planId === id),
+      HTTP_CONFLICT,
+      "saas.errors.plan.has_scheduled_changes",
     );
     // Stripe first: a failure there leaves the plan as it was.
     await archivePlanStripeProduct(plan);

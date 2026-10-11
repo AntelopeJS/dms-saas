@@ -11,8 +11,9 @@ import { FeatureModel, type Plan, PlanModel } from "../../db";
 import { localizeFeature } from "../../plans";
 import { plansUsingFeature } from "../../plans/feature-usage";
 import {
-  type PlanUsage,
+  emptyPlanUsage,
   loadCatalogueUsage,
+  type PlanUsage,
 } from "../../plans/catalogue-usage";
 import { formatMoney } from "../../plans/money";
 import {
@@ -25,16 +26,6 @@ const TEXTS = "$saas.catalog.plans.dialog";
 const FEATURE_TEXTS = "$saas.catalog.features.dialog.delete";
 const STRIPE_ID_PREVIEW_LENGTH = 12;
 const ELLIPSIS = "…";
-
-const NO_USAGE: PlanUsage = {
-  workspaces: 0,
-  paying: 0,
-  trialing: 0,
-  free: 0,
-  seats: 0,
-  members: 0,
-  mrr: 0,
-};
 
 function shortStripeId(id: string): string {
   return id.length > STRIPE_ID_PREVIEW_LENGTH
@@ -84,18 +75,20 @@ export function stopSellingDialog(
 }
 
 /**
- * "Delete plan Nonprofit?": only for a plan no workspace uses; otherwise the
- * dialog explains that it must be retired first.
+ * "Delete plan Nonprofit?": only for a plan no workspace uses nor is scheduled
+ * to switch to; otherwise the dialog explains that it must be retired first,
+ * the retirement redirecting those scheduled changes.
  */
 export function deletePlanDialog(
   plan: Plan,
   usage: PlanUsage,
 ): ConfirmDialogSerialized {
-  if (usage.workspaces > 0) {
+  const bound = usage.workspaces + usage.scheduled;
+  if (bound > 0) {
     return serializeConfirmDialog({
       title: `${TEXTS}.delete.blocked_title`,
       description: `${TEXTS}.delete.blocked_description`,
-      params: { name: plan.name, count: usage.workspaces },
+      params: { name: plan.name, count: bound },
       icon: "i-ph-trash",
       color: "error",
       blocked: true,
@@ -223,7 +216,7 @@ export class SaasPlanDialogsController extends Controller(
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
     const usage = await loadCatalogueUsage();
-    return [plan, usage.byPlan.get(id) ?? NO_USAGE];
+    return [plan, usage.byPlan.get(id) ?? emptyPlanUsage()];
   }
 
   @Get("/:id/stop-selling")

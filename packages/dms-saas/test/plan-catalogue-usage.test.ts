@@ -35,6 +35,7 @@ function row(overrides: Partial<PlanUsageRow>): PlanUsageRow {
     isComplimentary: false,
     seats: 1,
     members: 1,
+    pendingPlanId: null,
     ...overrides,
   };
 }
@@ -82,7 +83,7 @@ describe("catalogue usage", () => {
   const usage = summariseCatalogueUsage(
     [pro, business, free],
     [
-      row({ tenantId: "a", planId: "pro" }),
+      row({ tenantId: "a", planId: "pro", pendingPlanId: "free" }),
       row({ tenantId: "b", planId: "pro", status: "trialing" }),
       row({ tenantId: "c", planId: "pro", isComplimentary: true }),
       row({ tenantId: "d", planId: "business", seats: 4, members: 3 }),
@@ -100,6 +101,14 @@ describe("catalogue usage", () => {
       mrr: 29,
     });
     expect(usage.byPlan.get("free")).toMatchObject({ free: 1, mrr: 0 });
+  });
+
+  it("counts on a plan the workspaces scheduled to switch to it", () => {
+    expect(usage.byPlan.get("free")).toMatchObject({
+      workspaces: 1,
+      scheduled: 1,
+    });
+    expect(usage.byPlan.get("pro")).toMatchObject({ scheduled: 0 });
   });
 
   it("bills a per-seat plan for its seats", () => {

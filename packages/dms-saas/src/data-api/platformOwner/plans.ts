@@ -274,6 +274,18 @@ export class plansDataAPI extends DataController(
     return usageOf(this).then((usage) => usage?.workspaces ?? 0);
   }
 
+  /**
+   * Workspaces holding the plan or scheduled to switch to it: a plan bound to
+   * any is retired, which moves them, rather than deleted.
+   */
+  @Listable(["_id"])
+  @Access(AccessMode.ReadOnly)
+  get boundWorkspaceCount(): Promise<number> {
+    return usageOf(this).then(
+      (usage) => (usage?.workspaces ?? 0) + (usage?.scheduled ?? 0),
+    );
+  }
+
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get payingCount(): Promise<number> {

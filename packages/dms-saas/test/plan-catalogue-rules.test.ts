@@ -30,6 +30,7 @@ const NO_USAGE = {
   seats: 0,
   members: 0,
   mrr: 0,
+  scheduled: 0,
 };
 
 function plan(overrides: Partial<Plan>): Plan {
@@ -225,6 +226,12 @@ describe("catalogue dialogs", () => {
     expect(
       deletePlanDialog(plan({}), { ...NO_USAGE, workspaces: 12 }),
     ).toMatchObject({ blocked: true, params: { count: 12 } });
+  });
+
+  it("counts the workspaces scheduled to switch to the plan as using it", () => {
+    expect(
+      deletePlanDialog(plan({}), { ...NO_USAGE, workspaces: 1, scheduled: 2 }),
+    ).toMatchObject({ blocked: true, params: { count: 3 } });
   });
 
   it("names the Stripe product archived with an unused plan", () => {

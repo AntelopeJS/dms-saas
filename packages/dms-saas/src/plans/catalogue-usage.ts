@@ -43,6 +43,8 @@ export interface PlanUsageRow {
   seats: number;
   /** Members in the workspace, platform support aside. */
   members: number;
+  /** Plan a scheduled change moves the workspace to at renewal. */
+  pendingPlanId: string | null;
 }
 
 /** What one plan weighs in the catalogue. */
@@ -55,6 +57,8 @@ export interface PlanUsage {
   members: number;
   /** Normalised monthly recurring revenue, in the plan's currency. */
   mrr: number;
+  /** Workspaces on another plan scheduled to switch to this one at renewal. */
+  scheduled: number;
 }
 
 /** Usage of every plan, and the MRR of the catalogue per currency. */
@@ -95,7 +99,8 @@ export function normalisedMonthlyAmount(plan: MrrPlan, seats: number): number {
   );
 }
 
-function emptyUsage(): PlanUsage {
+/** The usage of a plan no workspace holds nor is scheduled to switch to. */
+export function emptyPlanUsage(): PlanUsage {
   return {
     workspaces: 0,
     paying: 0,
@@ -104,6 +109,7 @@ function emptyUsage(): PlanUsage {
     seats: 0,
     members: 0,
     mrr: 0,
+    scheduled: 0,
   };
 }
 
@@ -128,7 +134,7 @@ function addRow(usage: PlanUsage, plan: MrrPlan, row: PlanUsageRow): void {
 
 /**
  * Counts each plan's workspaces (paying, in trial, free), seats and members,
- * and its normalised MRR (Q23: yearly ÷ 12, per seat × seats, trials,
+ * the workspaces scheduled to switch to it, and its normalised MRR (Q23: yearly ÷ 12, per seat × seats, trials,
  * complimentary access and free plans excluded). Rows of an unknown plan are
  * left out.
  *
@@ -140,11 +146,16 @@ export function summariseCatalogueUsage(
   rows: PlanUsageRow[],
 ): CatalogueUsage {
   const plansById = new Map(plans.map((plan) => [plan._id, plan]));
-  const byPlan = new Map(plans.map((plan) => [plan._id, emptyUsage()]));
+  const byPlan = new Map(plans.map((plan) => [plan._id, emptyPlanUsage()]));
   for (const row of rows) {
     const plan = plansById.get(row.planId);
     const usage = byPlan.get(row.planId);
     if (plan && usage) addRow(usage, plan, row);
+    const scheduledUsage =
+      row.pendingPlanId && row.pendingPlanId !== row.planId
+        ? byPlan.get(row.pendingPlanId)
+        : undefined;
+    if (scheduledUsage) scheduledUsage.scheduled += 1;
   }
   const mrrByCurrency = new Map<string, number>();
   for (const plan of plans) {
@@ -186,6 +197,7 @@ async function toUsageRow(
     isComplimentary: !!subscription.isComplimentary,
     seats: seatUsage.occupied,
     members: seatUsage.members,
+    pendingPlanId: subscription.pendingPlanId ?? null,
   };
 }
 

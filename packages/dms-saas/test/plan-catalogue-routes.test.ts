@@ -37,6 +37,8 @@ const CATALOGUE = [
 interface Store {
   plans: Map<string, Plan>;
   workspaces: number;
+  /** Plans of the workspaces scheduled to switch to the plan. */
+  scheduledFrom: string[];
 }
 
 function storedPlan(overrides: Partial<Plan>): Plan {
@@ -77,6 +79,12 @@ function plansController(store: Store): SaasPlansApiController {
   } as unknown as FeatureModel;
   controller.tenantSubscriptionModel = {
     countByPlan: vi.fn(async () => store.workspaces),
+    findByPendingPlan: vi.fn(async (planId: string) =>
+      store.scheduledFrom.map((fromPlanId) => ({
+        planId: fromPlanId,
+        pendingPlanId: planId,
+      })),
+    ),
   } as unknown as TenantSubscriptionModel;
   return controller;
 }
@@ -96,6 +104,7 @@ function storeWith(...plans: Plan[]): Store {
   return {
     plans: new Map(plans.map((plan) => [plan._id, plan])),
     workspaces: 0,
+    scheduledFrom: [],
   };
 }
 
@@ -167,6 +176,16 @@ describe("deleting a plan", () => {
   it("refuses while a workspace uses it, touching nothing", async () => {
     const store = { ...storeWith(storedPlan({})), workspaces: 2 };
     await refusal(() => plansController(store).remove(OWNER, PLAN_ID));
+    expect(stripe.archivePlanStripeProduct).not.toHaveBeenCalled();
+    expect(store.plans.get(PLAN_ID)?.isDeleted).toBe(false);
+  });
+
+  it("refuses while a workspace is scheduled to switch to it", async () => {
+    const store = { ...storeWith(storedPlan({})), scheduledFrom: ["pro"] };
+    const error = await refusal(() =>
+      plansController(store).remove(OWNER, PLAN_ID),
+    );
+    expect(error.getStatus()).toBe(409);
     expect(stripe.archivePlanStripeProduct).not.toHaveBeenCalled();
     expect(store.plans.get(PLAN_ID)?.isDeleted).toBe(false);
   });
