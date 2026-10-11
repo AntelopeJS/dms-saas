@@ -1,14 +1,8 @@
 {
 	"common": {
-		"cancel": "Cancel",
-		"load_more": "Load more"
+		"cancel": "Cancel"
 	},
 	"saas": {
-		"admission": {
-			"complimentary_reduction": "Complimentary access (100%)",
-			"total": "Total",
-			"plan_managed": "Your plan is managed by an administrator during complimentary access."
-		},
 		"menu": {
 			"overview": "Overview",
 			"customers": "Customers",
@@ -77,7 +71,6 @@
 				"invalid_operation_id": "The operation identifier is invalid.",
 				"idempotency_mismatch": "This operation identifier was already used with different values.",
 				"operation_in_progress": "This operation is already in progress.",
-				"tenant_busy": "Another operator action is running for this workspace. Try again shortly.",
 				"stripe_subscription_required": "A Stripe-backed subscription is required.",
 				"plan_already_applied": "This plan is already applied.",
 				"paid_plan_required": "Select a paid plan synchronized with Stripe.",
@@ -91,8 +84,7 @@
 				"upgrade_not_eligible": "This plan is not an immediate upgrade this workspace can take."
 			},
 			"lifecycle": {
-				"consumer_failed": "A required workspace service did not accept the lifecycle change.",
-				"delivery_in_progress": "The lifecycle change is already being delivered."
+				"consumer_failed": "A required workspace service did not accept the lifecycle change."
 			},
 			"user": {
 				"not_found": "User not found",
@@ -112,7 +104,6 @@
 			},
 			"billing": {
 				"country_required": "Billing country is required",
-				"info_not_found": "Billing information not found",
 				"invalid_return_url": "Invalid return URL",
 				"identity_incomplete": "Some required billing fields are missing or invalid.",
 				"checkout_rejected": "The payment provider could not open the payment page. Nothing was charged and your plan is unchanged. Try again later or contact support.",
@@ -220,25 +211,6 @@
 				"owner_pays_needs_paid_plan": "Only a paid plan synced with Stripe can be paid by its owner."
 			}
 		},
-		"register": {
-			"field": {
-				"company_name": "Company name",
-				"vat_number": "VAT number",
-				"country": "Country",
-				"address_line1": "Address",
-				"postal_code": "Postal code",
-				"city": "City"
-			},
-			"billing_address": "Billing address",
-			"customer_type": {
-				"label": "Customer type",
-				"individual": "Individual",
-				"business": "Business"
-			},
-			"error": {
-				"no_payment": "Payment method required"
-			}
-		},
 		"legal": {
 			"terms_of_use": "Terms of use",
 			"terms_and_conditions": "Terms and conditions",
@@ -249,38 +221,16 @@
 			"description": "Plans, workspaces, billing and customer lifecycle."
 		},
 		"plans": {
-			"trial_days": "{days} days free trial",
-			"cycle": {
-				"month": "month",
-				"year": "year"
-			},
 			"seat_limit": {
 				"invite_unavailable": "All the seats of your plan are taken. Upgrade your plan to invite more members."
 			}
 		},
 		"workspaces": {
 			"column": {
-				"name": "Name",
 				"created_at": "Created"
-			},
-			"create": {
-				"button": "Create workspace",
-				"title": "Create a workspace",
-				"field": {
-					"name": "Workspace name",
-					"plan": "Plan"
-				},
-				"error": {
-					"name": "Name is required.",
-					"plan": "Plan is required."
-				},
-				"placeholder": {
-					"name": "Acme Corp"
-				}
 			}
 		},
 		"invoices": {
-			"title": "Invoices",
 			"column": {
 				"number": "Number",
 				"type": "Type",
@@ -289,17 +239,10 @@
 				"credit_note_type": "Credit note mode",
 				"memo": "Memo",
 				"voided_at": "Voided at",
-				"workspace": "Workspace",
-				"amount": "Amount",
 				"status": "Status",
 				"issued_at": "Issued at",
 				"period": "Period",
-				"subtotal": "Subtotal",
-				"tax": "Tax",
-				"total": "Total",
-				"lines": "Line items",
-				"total_excl_tax": "Total excl. tax",
-				"total_incl_tax": "Total incl. tax"
+				"lines": "Line items"
 			},
 			"actions": {
 				"download_pdf": "Download PDF",
@@ -321,13 +264,7 @@
 				"empty": "No line item."
 			}
 		},
-		"credit_notes": {
-			"title": "Credit notes"
-		},
 		"workspace": {
-			"settings": {
-				"title": "Workspace settings"
-			},
 			"plan": {
 				"unlimited": "Unlimited",
 				"units": {
@@ -363,8 +300,6 @@
 			}
 		},
 		"common": {
-			"yes": "Yes",
-			"no": "No",
 			"load_failed": "Failed to load this section.",
 			"retry": "Retry"
 		},

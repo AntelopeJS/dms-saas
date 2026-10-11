@@ -312,10 +312,7 @@
       "invoices": {
         "title": "Factures",
         "latest": "Dernières factures",
-        "see_all": "Toutes les factures",
-        "download_pdf": "Télécharger le PDF",
-        "open_in_stripe": "Ouvrir dans Stripe",
-        "issue_credit_note": "Émettre un avoir…"
+        "see_all": "Toutes les factures"
       },
       "credit_notes": {
         "title": "Avoirs"
@@ -515,8 +512,7 @@
       },
       "error": {
         "load": "Impossible de charger les notes",
-        "create": "La note n'a pas pu être ajoutée.",
-        "delete": "La note n'a pas pu être supprimée."
+        "create": "La note n'a pas pu être ajoutée."
       }
     },
     "permissions": {

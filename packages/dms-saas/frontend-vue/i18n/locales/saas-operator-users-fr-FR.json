@@ -19,7 +19,6 @@
       "never_active": "Jamais",
       "owner_of": "Propriétaire de l'espace de travail {workspaces}",
       "no_platform_role": "Aucun rôle plateforme",
-      "workspace_owner_badge": "Propriétaire de l'espace de travail",
       "empty": {
         "title": "Aucun utilisateur pour l'instant",
         "description": "Les utilisateurs apparaissent ici dès qu'ils s'inscrivent ou sont invités dans un espace de travail."

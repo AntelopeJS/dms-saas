@@ -312,10 +312,7 @@
       "invoices": {
         "title": "Invoices",
         "latest": "Latest invoices",
-        "see_all": "All invoices",
-        "download_pdf": "Download PDF",
-        "open_in_stripe": "Open in Stripe",
-        "issue_credit_note": "Issue credit note…"
+        "see_all": "All invoices"
       },
       "credit_notes": {
         "title": "Credit notes"
@@ -515,8 +512,7 @@
       },
       "error": {
         "load": "Couldn't load the notes",
-        "create": "The note could not be added.",
-        "delete": "The note could not be deleted."
+        "create": "The note could not be added."
       }
     },
     "permissions": {

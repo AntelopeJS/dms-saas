@@ -19,7 +19,6 @@
       "never_active": "Never",
       "owner_of": "Workspace owner of {workspaces}",
       "no_platform_role": "No platform role",
-      "workspace_owner_badge": "Workspace owner",
       "empty": {
         "title": "No user yet",
         "description": "Users appear here once they sign up or are invited to a workspace."

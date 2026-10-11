@@ -1,14 +1,8 @@
 {
 	"common": {
-		"cancel": "Annuler",
-		"load_more": "Charger plus"
+		"cancel": "Annuler"
 	},
 	"saas": {
-		"admission": {
-			"complimentary_reduction": "Accès offert (100 %)",
-			"total": "Total",
-			"plan_managed": "Votre offre est gérée par un administrateur pendant l’accès offert."
-		},
 		"menu": {
 			"overview": "Aperçu",
 			"customers": "Clients",
@@ -77,7 +71,6 @@
 				"invalid_operation_id": "L'identifiant de l'opération est invalide.",
 				"idempotency_mismatch": "Cet identifiant d'opération a déjà été utilisé avec des valeurs différentes.",
 				"operation_in_progress": "Cette opération est déjà en cours.",
-				"tenant_busy": "Une autre action opérateur est en cours pour cet espace de travail. Réessayez dans un instant.",
 				"stripe_subscription_required": "Un abonnement géré par Stripe est requis.",
 				"plan_already_applied": "Cette offre est déjà appliquée.",
 				"paid_plan_required": "Sélectionnez une offre payante synchronisée avec Stripe.",
@@ -91,8 +84,7 @@
 				"upgrade_not_eligible": "Cette offre n'est pas une montée en gamme immédiate possible pour cet espace."
 			},
 			"lifecycle": {
-				"consumer_failed": "Un service requis de l'espace de travail n'a pas accepté le changement de cycle de vie.",
-				"delivery_in_progress": "Le changement de cycle de vie est déjà en cours de livraison."
+				"consumer_failed": "Un service requis de l'espace de travail n'a pas accepté le changement de cycle de vie."
 			},
 			"user": {
 				"not_found": "Utilisateur introuvable",
@@ -112,7 +104,6 @@
 			},
 			"billing": {
 				"country_required": "Le pays de facturation est requis",
-				"info_not_found": "Informations de facturation introuvables",
 				"invalid_return_url": "URL de retour invalide",
 				"identity_incomplete": "Des champs de facturation obligatoires sont manquants ou invalides.",
 				"checkout_rejected": "Le prestataire de paiement n'a pas pu ouvrir la page de paiement. Rien n'a été débité et votre offre est inchangée. Réessayez plus tard ou contactez le support.",
@@ -220,25 +211,6 @@
 				"owner_pays_needs_paid_plan": "Seule une offre payante synchronisée avec Stripe peut être payée par son propriétaire."
 			}
 		},
-		"register": {
-			"field": {
-				"company_name": "Raison sociale",
-				"vat_number": "Numéro de TVA",
-				"country": "Pays",
-				"address_line1": "Adresse",
-				"postal_code": "Code postal",
-				"city": "Ville"
-			},
-			"billing_address": "Adresse de facturation",
-			"customer_type": {
-				"label": "Type de client",
-				"individual": "Particulier",
-				"business": "Professionnel"
-			},
-			"error": {
-				"no_payment": "Méthode de paiement requise"
-			}
-		},
 		"legal": {
 			"terms_of_use": "Conditions d'utilisation",
 			"terms_and_conditions": "Conditions générales de vente",
@@ -249,38 +221,16 @@
 			"description": "Offres, espaces de travail, facturation et cycle de vie client."
 		},
 		"plans": {
-			"trial_days": "{days} jours d'essai gratuit",
-			"cycle": {
-				"month": "mois",
-				"year": "an"
-			},
 			"seat_limit": {
 				"invite_unavailable": "Tous les sièges de votre offre sont occupés. Passez à une offre supérieure pour inviter d'autres membres."
 			}
 		},
 		"workspaces": {
 			"column": {
-				"name": "Nom",
 				"created_at": "Créé le"
-			},
-			"create": {
-				"button": "Créer un espace de travail",
-				"title": "Créer un espace de travail",
-				"field": {
-					"name": "Nom de l'espace de travail",
-					"plan": "Offre"
-				},
-				"error": {
-					"name": "Le nom est obligatoire.",
-					"plan": "L'offre est obligatoire."
-				},
-				"placeholder": {
-					"name": "Acme Corp"
-				}
 			}
 		},
 		"invoices": {
-			"title": "Factures",
 			"column": {
 				"number": "Numéro",
 				"type": "Type",
@@ -289,17 +239,10 @@
 				"credit_note_type": "Mode de l'avoir",
 				"memo": "Note",
 				"voided_at": "Annulé le",
-				"workspace": "Espace de travail",
-				"amount": "Montant",
 				"status": "Statut",
 				"issued_at": "Émise le",
 				"period": "Période",
-				"subtotal": "Total HT",
-				"tax": "TVA",
-				"total": "Total TTC",
-				"lines": "Lignes",
-				"total_excl_tax": "Total HT",
-				"total_incl_tax": "Total TTC"
+				"lines": "Lignes"
 			},
 			"actions": {
 				"download_pdf": "Télécharger PDF",
@@ -321,13 +264,7 @@
 				"empty": "Aucune ligne."
 			}
 		},
-		"credit_notes": {
-			"title": "Notes de crédit"
-		},
 		"workspace": {
-			"settings": {
-				"title": "Paramètres de l'espace de travail"
-			},
 			"plan": {
 				"unlimited": "Illimité",
 				"units": {
@@ -363,8 +300,6 @@
 			}
 		},
 		"common": {
-			"yes": "Oui",
-			"no": "Non",
 			"load_failed": "Impossible de charger cette section.",
 			"retry": "Réessayer"
 		},
