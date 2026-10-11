@@ -60,7 +60,7 @@ export const tenantBillingPageAnchorPaths: Readonly<
   paymentMethod: ["overview", "payment", "method", "paymentMethod"],
   refundButton: ["overview", "payment", "guarantee", "refundButton"],
   billingForm: ["billingForm"],
-  table: ["table"],
+  table: ["invoices", "table"],
 };
 
 /** Fields shared by anchored and appended tenant billing page extensions. */

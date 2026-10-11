@@ -24,7 +24,7 @@ const PAGE_FIELDS = [
   "pastDueAlert",
   "overview",
   "billingForm",
-  "table",
+  "invoices",
 ] as const;
 
 async function ownLayout(): Promise<Layout> {
@@ -136,7 +136,7 @@ describe("tenant billing page layout", () => {
       "overview",
       "billingForm",
       "spendProtection",
-      "table",
+      "invoices",
     ]);
   });
 });

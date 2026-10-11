@@ -5,6 +5,7 @@ import {
   Grid,
   GridRow,
   KeyValueList,
+  Section,
   TableView,
   VStack,
 } from "@antelopejs/interface-dms/base";
@@ -79,6 +80,81 @@ const refundButton = CustomComponent("DmsSaasRefundButton").meta(
   permissionMeta("money_back", "i-ph-arrow-counter-clockwise"),
 );
 
+/** Every invoice and credit note of the workspace, newest first. */
+const invoiceTable = TableView(tenantInvoicesDataAPI, {
+  caption: `${KEY_PREFIX}.invoices.caption`,
+  layout: "compact",
+  tabs: INVOICE_TABS,
+  defaultSort: { field: "issuedAt", desc: true },
+  emptyStates: {
+    firstRun: {
+      title: `${KEY_PREFIX}.invoices.empty_title`,
+      description: `${KEY_PREFIX}.invoices.empty_description`,
+      icon: "i-ph-receipt",
+    },
+    error: {
+      title: `${KEY_PREFIX}.invoices.error_title`,
+      description: `${KEY_PREFIX}.invoices.error_description`,
+    },
+  },
+  // The page bypasses the tenant access gate; without this mirror the
+  // table's own data routes still 403 and the invoices of a suspended
+  // workspace render empty on the one page meant to settle them.
+  bypassTenantAccessGate: true,
+  rowActions: {
+    add: false,
+    copyLink: true,
+    delete: false,
+    duplicate: false,
+    details: { isEnabled: true, isVisible: true },
+    edit: false,
+    custom: [
+      {
+        label: `${KEY_PREFIX}.pay.action`,
+        icon: "i-ph-credit-card",
+        rule: {
+          and: [
+            { field: "documentType", equals: "invoice" },
+            { field: "status", equals: "open" },
+          ],
+        },
+        isVisible: true,
+        showLabel: true,
+        color: "primary",
+        target: {
+          type: "modal",
+          size: "sm",
+          title: `${KEY_PREFIX}.pay.action`,
+          component: CustomComponent("DmsSaasPayInvoiceModal").meta(
+            permissionMeta("pay_invoice", "i-ph-credit-card"),
+          ),
+        },
+      },
+      {
+        label: "$saas.invoices.actions.download_pdf",
+        icon: "i-ph-file-pdf",
+        rule: { field: "invoicePdfUrl", notEquals: null },
+        target: {
+          type: "external",
+          url: "{invoicePdfUrl}",
+          newTab: true,
+        },
+      },
+      {
+        label: "$saas.invoices.actions.open_on_stripe",
+        icon: "i-ph-arrow-square-out",
+        rule: { field: "hostedInvoiceUrl", notEquals: null },
+        target: {
+          type: "external",
+          url: "{hostedInvoiceUrl}",
+          newTab: true,
+        },
+      },
+    ],
+  },
+  formContainer: { type: "page" },
+}).meta(permissionMeta("invoices", "i-ph-receipt"));
+
 /**
  * One cell of the overview grid: the block in a stack of its own, so a block
  * an extension anchors beside it (`tenantBillingPageAnchorPaths`) stacks in
@@ -151,77 +227,10 @@ export class SaasTenantBillingController extends PageController(
     permissionMeta("billing_information", "i-ph-identification-card"),
   );
 
-  static table = TableView(tenantInvoicesDataAPI, {
-    caption: `${KEY_PREFIX}.invoices.caption`,
-    layout: "compact",
-    tabs: INVOICE_TABS,
-    defaultSort: { field: "issuedAt", desc: true },
-    emptyStates: {
-      firstRun: {
-        title: `${KEY_PREFIX}.invoices.empty_title`,
-        description: `${KEY_PREFIX}.invoices.empty_description`,
-        icon: "i-ph-receipt",
-      },
-      error: {
-        title: `${KEY_PREFIX}.invoices.error_title`,
-        description: `${KEY_PREFIX}.invoices.error_description`,
-      },
-    },
-    // The page bypasses the tenant access gate; without this mirror the
-    // table's own data routes still 403 and the invoices of a suspended
-    // workspace render empty on the one page meant to settle them.
-    bypassTenantAccessGate: true,
-    rowActions: {
-      add: false,
-      copyLink: true,
-      delete: false,
-      duplicate: false,
-      details: { isEnabled: true, isVisible: true },
-      edit: false,
-      custom: [
-        {
-          label: `${KEY_PREFIX}.pay.action`,
-          icon: "i-ph-credit-card",
-          rule: {
-            and: [
-              { field: "documentType", equals: "invoice" },
-              { field: "status", equals: "open" },
-            ],
-          },
-          isVisible: true,
-          showLabel: true,
-          color: "primary",
-          target: {
-            type: "modal",
-            size: "sm",
-            title: `${KEY_PREFIX}.pay.action`,
-            component: CustomComponent("DmsSaasPayInvoiceModal").meta(
-              permissionMeta("pay_invoice", "i-ph-credit-card"),
-            ),
-          },
-        },
-        {
-          label: "$saas.invoices.actions.download_pdf",
-          icon: "i-ph-file-pdf",
-          rule: { field: "invoicePdfUrl", notEquals: null },
-          target: {
-            type: "external",
-            url: "{invoicePdfUrl}",
-            newTab: true,
-          },
-        },
-        {
-          label: "$saas.invoices.actions.open_on_stripe",
-          icon: "i-ph-arrow-square-out",
-          rule: { field: "hostedInvoiceUrl", notEquals: null },
-          target: {
-            type: "external",
-            url: "{hostedInvoiceUrl}",
-            newTab: true,
-          },
-        },
-      ],
-    },
-    formContainer: { type: "page" },
-  }).meta(permissionMeta("invoices", "i-ph-receipt"));
+  // A compact table draws no caption: the section titles it, as the
+  // design heads every block of the page.
+  static invoices = Section({
+    title: `${KEY_PREFIX}.invoices.caption`,
+    card: false,
+  }).child("table", invoiceTable);
 }
