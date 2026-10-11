@@ -1,3 +1,5 @@
+import { GetMetadata } from "@antelopejs/interface-core";
+import { TableViewMeta } from "@antelopejs/interface-dms/base";
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import type {
   Component,
@@ -63,6 +65,18 @@ describe("users list", () => {
       { from: "/api/saas/platform-owners/{_id}/promote-confirm" },
       { from: "/api/saas/platform-owners/{_id}/demote-confirm" },
     ]);
+  });
+});
+
+describe("users list columns", () => {
+  const columns = GetMetadata(saasUsersDataAPI, TableViewMeta).columns;
+
+  it("draws the platform role as a pill on admins, filtered on the flag", () => {
+    expect(columns.owner?.isVisible).toBe(false);
+    expect(columns.owner?.filterable).toBe(true);
+    expect(columns.platformRole?.display).toMatchObject({
+      options: { exclusive: { field: "owner", icon: "i-ph-shield-check" } },
+    });
   });
 });
 

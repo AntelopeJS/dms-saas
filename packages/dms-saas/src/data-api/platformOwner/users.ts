@@ -168,20 +168,35 @@ export class saasUsersDataAPI extends DataController(
   @Sortable()
   @Exported()
   @Column({
-    name: "$saas.users.column.platform_role",
+    name: "$saas.users.column.platform_admin",
     type: new DefaultDataTypes.BooleanType(),
     filterable: true,
-    display: new DefaultDisplays.IndicatorDisplay({
-      onLabel: "$saas.status.platform_role.admin",
-      offLabel: "$saas.status.platform_role.none",
-      onIcon: "i-ph-shield-check",
-      onTone: "primary",
-      offTone: "dimmed",
+    isVisible: false,
+  })
+  @Access(AccessMode.ReadOnly)
+  declare owner: boolean;
+
+  // The role reads as a pill on admins and a dash on everyone else: the
+  // pill is drawn from `owner`, the getter only gives the column a value that
+  // is never a pill of its own.
+  @Listable(["_id"])
+  @Column({
+    name: "$saas.users.column.platform_role",
+    type: new DefaultDataTypes.StringType(),
+    display: new DefaultDisplays.PillsDisplay({
+      exclusive: {
+        field: "owner",
+        label: "$saas.status.platform_role.admin",
+        icon: "i-ph-shield-check",
+      },
+      emptyLabel: "$saas.status.platform_role.none",
     }),
     size: ROLE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
-  declare owner: boolean;
+  get platformRole(): null {
+    return null;
+  }
 
   @Select()
   @Listable()

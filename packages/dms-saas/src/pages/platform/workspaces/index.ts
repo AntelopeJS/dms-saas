@@ -163,7 +163,7 @@ export class SaasWorkspacesListController extends PageController(
         duplicate: false,
         archive: false,
         copyLink: true,
-          details: { isEnabled: true, label: `${ROW}.open` },
+        details: { isEnabled: true, label: `${ROW}.open` },
         custom: [
           {
             label: `${ROW}.grant_free_access`,

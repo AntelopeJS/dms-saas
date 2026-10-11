@@ -28,6 +28,7 @@
         "user": "User",
         "email": "Email",
         "platform_role": "Platform role",
+        "platform_admin": "Platform admin",
         "email_verified": "Email verified",
         "workspaces": "Workspaces",
         "segments": "Segments",
