@@ -63,6 +63,10 @@ export interface WorkspaceDirectoryFields {
   currency: string | null;
   /** Seats Stripe bills: members and pending invitations, support excluded. */
   seats: number;
+  /** Members of the workspace, platform support excluded. */
+  members: number;
+  /** Plan a scheduled change moves the workspace to at renewal. */
+  pendingPlanId: string | null;
   isComplimentary: boolean;
   /** Normalised monthly recurring revenue; 0 when nothing is billed. */
   mrrMinor: number;
@@ -114,6 +118,7 @@ export class TenantBillingState
   @Field("date")
   declare deletedAt: Date | null;
 
+  @Index()
   @Field("string")
   declare planId: string | null;
 
@@ -134,6 +139,13 @@ export class TenantBillingState
 
   @Field("number")
   declare seats: number;
+
+  @Field("number")
+  declare members: number;
+
+  @Index()
+  @Field("string")
+  declare pendingPlanId: string | null;
 
   @Field("boolean")
   declare isComplimentary: boolean;

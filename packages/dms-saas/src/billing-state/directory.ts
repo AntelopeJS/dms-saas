@@ -17,7 +17,7 @@ import {
   planUnitAmountMinor,
   reportingMajorUnits,
 } from "../metrics/normalised-mrr";
-import { countOccupiedSeats } from "../plans/seat-capacity";
+import { type SeatUsage, getSeatUsage } from "../plans/seat-capacity";
 import { MS_PER_DAY } from "../utils/time";
 import {
   findPendingOwnerInvite,
@@ -44,7 +44,7 @@ export interface DirectoryInputs {
   billingState: BillingState;
   subscription: TenantSubscription | undefined;
   plan: Plan | null;
-  seats: number;
+  seats: SeatUsage;
   owner: DirectoryOwner;
   policy: DirectoryPolicy;
   existing: TenantBillingState | undefined;
@@ -149,11 +149,13 @@ export function buildWorkspaceDirectoryFields(
     billingState,
     isComplimentary,
     plan,
-    billedSeats: seats,
+    billedSeats: seats.occupied,
   });
   return {
     ...planFields(plan),
-    seats,
+    seats: seats.occupied,
+    members: seats.members,
+    pendingPlanId: subscription?.pendingPlanId ?? null,
     isComplimentary,
     mrrMinor: mrr.amountMinor,
     previousMrrMinor: resolvePreviousMrr(inputs),
@@ -223,7 +225,7 @@ export async function loadWorkspaceDirectoryFields(
     subscription?.planId
       ? GetModel(PlanModel).get(subscription.planId)
       : undefined,
-    countOccupiedSeats(tenantId),
+    getSeatUsage(tenantId),
     loadDirectoryOwner(tenantId, now),
     loadDirectoryPolicy(),
   ]);

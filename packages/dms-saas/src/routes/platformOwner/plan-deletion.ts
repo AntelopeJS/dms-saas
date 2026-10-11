@@ -14,6 +14,7 @@ import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { TenantMemberModel, TenantModel } from "@antelopejs/interface-dms/db";
 import {
+  type BillingState,
   type Feature,
   FeatureModel,
   type Plan,
@@ -23,7 +24,6 @@ import {
   type ResolvedPlanInheritance,
   PlanMigrationModel,
   PlanModel,
-  type TenantSubscription,
   TenantSubscriptionModel,
 } from "../../db";
 import {
@@ -79,7 +79,7 @@ interface RetireWorkspace {
   tenantId: string;
   name: string;
   members: number;
-  status: TenantSubscription["status"];
+  status: BillingState;
   renewsAt: Date | null;
 }
 

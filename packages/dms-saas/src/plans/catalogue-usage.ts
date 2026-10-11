@@ -1,43 +1,38 @@
-import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
+  type BillingState,
   type Plan,
-  type TenantSubscription,
-  type TenantSubscriptionStatus,
   PlanModel,
-  TenantSubscriptionModel,
+  type TenantBillingState,
+  TenantBillingStateModel,
 } from "../db";
 import {
+  isBilledState,
   monthlyAmountMinor,
   planUnitAmountMinor,
 } from "../metrics/normalised-mrr";
-import { getRowInstance } from "../utils/row-instance";
-import { getSeatUsage } from "./seat-capacity";
+import { fromMinorUnits } from "../utils/money";
 
-/** Statuses whose subscription is billed: trials and lapsed ones are not. */
-const BILLED_STATUSES: ReadonlySet<TenantSubscriptionStatus> = new Set([
-  "active",
-  "past_due",
-]);
-const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
+const TRIALING_STATE: BillingState = "trialing";
 const CENTS_PRECISION = 100;
-/** How long one read of every subscription serves the plan rows of a page. */
-const USAGE_CACHE_TTL_MS = 5_000;
 
 /** The plan fields normalised MRR reads. */
-export type MrrPlan = Pick<Plan, "price" | "interval" | "billingMode">;
-
-/** The subscription fields normalised MRR reads. */
-export type MrrSubscription = Pick<
-  TenantSubscription,
-  "status" | "isComplimentary"
+export type MrrPlan = Pick<
+  Plan,
+  "price" | "currency" | "interval" | "billingMode"
 >;
+
+/** The billing fields normalised MRR reads. */
+export interface MrrSubscription {
+  status: BillingState;
+  isComplimentary: boolean;
+}
 
 /** One workspace on one plan, as the catalogue counts it. */
 export interface PlanUsageRow {
   tenantId: string;
   planId: string;
-  status: TenantSubscriptionStatus;
+  status: BillingState;
   isComplimentary: boolean;
   /** Seats billed: members and pending invitations, platform support aside. */
   seats: number;
@@ -77,9 +72,7 @@ function roundCents(amount: number): number {
  * lapsed workspaces bring none.
  */
 export function isBilledSubscription(subscription: MrrSubscription): boolean {
-  return (
-    BILLED_STATUSES.has(subscription.status) && !subscription.isComplimentary
-  );
+  return isBilledState(subscription.status) && !subscription.isComplimentary;
 }
 
 /**
@@ -87,7 +80,7 @@ export function isBilledSubscription(subscription: MrrSubscription): boolean {
  * per-seat price times the seats billed.
  */
 export function normalisedMonthlyAmount(plan: MrrPlan, seats: number): number {
-  return (
+  return fromMinorUnits(
     monthlyAmountMinor(
       {
         unitAmountMinor: planUnitAmountMinor(plan),
@@ -95,7 +88,8 @@ export function normalisedMonthlyAmount(plan: MrrPlan, seats: number): number {
         billingMode: plan.billingMode,
       },
       seats,
-    ) / CENTS_PRECISION
+    ),
+    plan.currency,
   );
 }
 
@@ -117,7 +111,7 @@ function addRow(usage: PlanUsage, plan: MrrPlan, row: PlanUsageRow): void {
   usage.workspaces += 1;
   usage.seats += row.seats;
   usage.members += row.members;
-  if (row.status === TRIALING_STATUS) {
+  if (row.status === TRIALING_STATE) {
     usage.trialing += 1;
     return;
   }
@@ -134,8 +128,9 @@ function addRow(usage: PlanUsage, plan: MrrPlan, row: PlanUsageRow): void {
 
 /**
  * Counts each plan's workspaces (paying, in trial, free), seats and members,
- * the workspaces scheduled to switch to it, and its normalised MRR (Q23: yearly ÷ 12, per seat × seats, trials,
- * complimentary access and free plans excluded). Rows of an unknown plan are
+ * the workspaces scheduled to switch to it, and its normalised MRR (yearly
+ * ÷ 12, per seat × seats, trials, complimentary access and free plans
+ * excluded). Rows of an unknown plan are
  * left out.
  *
  * @param plans Plans of the catalogue
@@ -184,66 +179,40 @@ export function planMrrShare(
   return total > 0 ? mrr / total : 0;
 }
 
-async function toUsageRow(
-  subscription: TenantSubscription,
-): Promise<PlanUsageRow | undefined> {
-  if (!subscription.planId) return undefined;
-  const tenantId = getRowInstance(subscription);
-  const seatUsage = await getSeatUsage(tenantId);
+function toUsageRow(row: TenantBillingState): PlanUsageRow | undefined {
+  if (!row.planId || row.deletedAt) return undefined;
   return {
-    tenantId,
-    planId: subscription.planId,
-    status: subscription.status,
-    isComplimentary: !!subscription.isComplimentary,
-    seats: seatUsage.occupied,
-    members: seatUsage.members,
-    pendingPlanId: subscription.pendingPlanId ?? null,
+    tenantId: row.tenantId,
+    planId: row.planId,
+    status: row.billingState,
+    isComplimentary: row.isComplimentary,
+    seats: row.seats,
+    members: row.members,
+    pendingPlanId: row.pendingPlanId,
   };
 }
 
 /**
- * One row per workspace holding a plan, with its seats and members.
+ * One row per workspace holding a plan, with its seats and members, read
+ * from the workspace directory.
  *
  * @param planId Only the workspaces of this plan; every plan without it
  */
 export async function loadPlanUsageRows(
   planId?: string,
 ): Promise<PlanUsageRow[]> {
-  const model = GetModel(TenantSubscriptionModel, CROSS_INSTANCE);
-  const subscriptions = planId
-    ? await model.findByPlan(planId)
-    : await model.getAll();
-  const rows = await Promise.all(subscriptions.map(toUsageRow));
-  return rows.filter((row): row is PlanUsageRow => row !== undefined);
+  const model = GetModel(TenantBillingStateModel);
+  const rows = planId ? await model.findByPlan(planId) : await model.getAll();
+  return rows
+    .map(toUsageRow)
+    .filter((row): row is PlanUsageRow => row !== undefined);
 }
 
-interface CachedUsage {
-  expiresAt: number;
-  usage: Promise<CatalogueUsage>;
-}
-
-let cachedUsage: CachedUsage | undefined;
-
-async function readCatalogueUsage(): Promise<CatalogueUsage> {
+/** {@link summariseCatalogueUsage} over the stored plans and workspaces. */
+export async function loadCatalogueUsage(): Promise<CatalogueUsage> {
   const [plans, rows] = await Promise.all([
     GetModel(PlanModel).findNotDeleted(),
     loadPlanUsageRows(),
   ]);
   return summariseCatalogueUsage(plans, rows);
-}
-
-/**
- * {@link summariseCatalogueUsage} over the stored plans and subscriptions.
- * Every plan row of a listing reads it, so one read serves the rows of a
- * request (and of the few seconds after it).
- */
-export function loadCatalogueUsage(): Promise<CatalogueUsage> {
-  const now = Date.now();
-  if (cachedUsage && cachedUsage.expiresAt > now) return cachedUsage.usage;
-  const usage = readCatalogueUsage();
-  cachedUsage = { expiresAt: now + USAGE_CACHE_TTL_MS, usage };
-  usage.catch(() => {
-    cachedUsage = undefined;
-  });
-  return usage;
 }

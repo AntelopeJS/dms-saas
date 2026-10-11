@@ -18,6 +18,8 @@ const DELETED_WORKSPACE_DIRECTORY: WorkspaceDirectoryFields = {
   planUnitAmountMinor: null,
   currency: null,
   seats: 0,
+  members: 0,
+  pendingPlanId: null,
   isComplimentary: false,
   mrrMinor: 0,
   previousMrrMinor: 0,
@@ -103,6 +105,17 @@ export class TenantBillingStateModel extends BasicDataModel(
     const current = await this.get(row._id);
     if (!current) throw new Error("Billing publication was not persisted");
     return current.revision === row.revision;
+  }
+
+  /** The live directory rows of a plan's workspaces. */
+  async findByPlan(planId: string): Promise<TenantBillingState[]> {
+    const rows = await this.table
+      .getAll(planId, "planId")
+      .filter((row) => row.key("deletedAt").eq(null))
+      .run();
+    return rows
+      .map((row) => TenantBillingStateModel.fromDatabase(row))
+      .filter((row): row is TenantBillingState => row !== undefined);
   }
 
   async countByState(billingState: BillingState): Promise<number> {
