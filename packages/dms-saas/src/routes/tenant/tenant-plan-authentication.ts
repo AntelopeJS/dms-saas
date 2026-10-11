@@ -4,7 +4,9 @@
 // the challenge in the browser; the confirm call then records the plan Stripe
 // now bills, or drops the update when the challenge was not passed. The
 // `customer.subscription.pending_update_applied` webhook records it too, for an
-// owner who closes the page between the challenge and the confirm call.
+// owner who closes the page between the challenge and the confirm call. The
+// confirm call polls Stripe for up to SETTLE_POLL_ATTEMPTS x
+// SETTLE_POLL_INTERVAL_MS (3 s); past that, the webhook records the change.
 
 import { setTimeout as delay } from "node:timers/promises";
 import {
@@ -34,17 +36,14 @@ import {
   isPendingPaymentTaken,
 } from "../../stripe/pending-update";
 import {
-  asCustomerId,
-  findTenantByCustomerId,
-} from "../../stripe/webhook-shared";
+  billedPriceId,
+  recordUnlessAlreadyApplied,
+} from "../../plan-changes/applied-upgrade";
 import {
   type ChangePlanResult,
-  finalizeImmediateChange,
   HTTP_BAD_REQUEST,
   HTTP_CONFLICT,
   loadSellablePlan,
-  newChangeIntent,
-  recordPlanChange,
   UNCHANGED_RESULT_BASE,
 } from "./tenant-plan-ops";
 
@@ -54,24 +53,6 @@ const SETTLE_POLL_INTERVAL_MS = 500;
 
 export interface ConfirmUpgradeBody {
   planId: string;
-}
-
-function billedPriceId(stripeSubscription: Stripe.Subscription): string | null {
-  return stripeSubscription.items.data[0]?.price?.id ?? null;
-}
-
-/** Records the plan Stripe applied once the upgrade's invoice was paid. */
-async function recordAppliedUpgrade(
-  tenantId: string,
-  subscription: TenantSubscription,
-  plan: Plan,
-  model: TenantSubscriptionModel,
-): Promise<void> {
-  const intent = newChangeIntent(plan);
-  await model.beginTransition(subscription, intent);
-  await recordPlanChange(subscription, plan, intent.operationId, model);
-  await finalizeImmediateChange(tenantId, subscription, plan);
-  await model.completeTransition(subscription._id, intent.operationId, {});
 }
 
 /**
@@ -109,21 +90,6 @@ async function settlePendingUpgrade(
   );
 }
 
-/** The confirm call and the webhook may race; the loser finds the plan set. */
-async function recordUnlessAlreadyApplied(
-  tenantId: string,
-  subscription: TenantSubscription,
-  plan: Plan,
-  model: TenantSubscriptionModel,
-): Promise<void> {
-  await recordAppliedUpgrade(tenantId, subscription, plan, model).catch(
-    async (error: unknown) => {
-      const current = await model.findOne();
-      if (current?.planId !== plan._id) throw error;
-    },
-  );
-}
-
 /** What the owner's browser calls once the 3D Secure challenge is over. */
 export async function confirmOwnerUpgrade(
   tenantId: string,
@@ -152,32 +118,6 @@ export async function confirmOwnerUpgrade(
   );
   await recordUnlessAlreadyApplied(tenantId, subscription, plan, model);
   return applied;
-}
-
-async function findPlanByPrice(priceId: string | null): Promise<Plan | null> {
-  if (!priceId) return null;
-  const plans = await GetModel(PlanModel).findNotDeleted();
-  return (
-    plans.find((plan) => plan.paymentProviderRefs?.stripePriceId === priceId) ??
-    null
-  );
-}
-
-/** Stripe applied a paid upgrade the confirm call may never have reported. */
-export async function handleSubscriptionPendingUpdateApplied(
-  event: Stripe.Event,
-): Promise<void> {
-  const stripeSubscription = event.data.object as Stripe.Subscription;
-  const customerId = asCustomerId(stripeSubscription.customer);
-  if (!customerId) return;
-  const tenant = await findTenantByCustomerId(customerId);
-  if (!tenant) return;
-  const model = GetModel(TenantSubscriptionModel, tenant._id);
-  const subscription = await model.findOne();
-  if (subscription?.stripeSubscriptionId !== stripeSubscription.id) return;
-  const plan = await findPlanByPrice(billedPriceId(stripeSubscription));
-  if (!plan || plan._id === subscription.planId) return;
-  await recordUnlessAlreadyApplied(tenant._id, subscription, plan, model);
 }
 
 export class SaasTenantPlanAuthenticationController extends Controller(

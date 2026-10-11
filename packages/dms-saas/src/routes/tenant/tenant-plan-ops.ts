@@ -2,7 +2,6 @@
 // to keep both files under the size the linter allows. They are also called
 // directly by the operator actions, which is why they stay exported.
 
-import { randomUUID } from "node:crypto";
 import { HTTPResult } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
@@ -19,14 +18,16 @@ import {
 } from "../../db";
 import {
   clearPendingPlanChange,
+  finalizeImmediateChange,
+  newChangeIntent,
   type PendingPlanChange,
+  recordPlanChange,
   scheduleDeferredPlanChange,
 } from "../../plan-changes";
 import {
   countOccupiedSeats,
   ensurePlanStripeRefs,
   fitsWithinSeatLimit,
-  syncStripeSeatQuantity,
   type TenantPlanFeature,
   type TenantPlanView,
 } from "../../plans";
@@ -36,7 +37,6 @@ import {
   discardPendingUpdate,
   readPendingChallengeSecret,
 } from "../../stripe/pending-update";
-import { applyPlanDowngradeCleanup } from "../../workers";
 import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
 
 export const HTTP_NOT_FOUND = 404;
@@ -254,39 +254,6 @@ export async function assertSeatLimit(
   );
 }
 
-/** Points the workspace at the plan Stripe now bills, under the admitted intent. */
-export async function recordPlanChange(
-  subscription: TenantSubscription,
-  newPlan: Plan,
-  operationId: string,
-  tenantSubscriptionModel: TenantSubscriptionModel,
-): Promise<void> {
-  await tenantSubscriptionModel.updateDuringTransition(
-    subscription._id,
-    operationId,
-    {
-      planId: newPlan._id,
-      updatedAt: new Date(),
-    },
-  );
-}
-
-/** Complete retryable work that follows an immediate plan write. */
-export async function finalizeImmediateChange(
-  tenantId: string,
-  subscription: TenantSubscription,
-  newPlan: Plan,
-): Promise<void> {
-  await applyPlanDowngradeCleanup(tenantId, newPlan);
-  await syncStripeSeatQuantity({
-    tenantId,
-    plan: newPlan,
-    stripeSubscriptionId: subscription.stripeSubscriptionId,
-    idempotencyKey: `seat-sync:change-plan:${tenantId}:${subscription._id}:${newPlan._id}`,
-  });
-  await recomputeTenantBillingState(tenantId);
-}
-
 /**
  * What the subscription item is billed for on the new plan: a seat plan
  * bills the occupied seats, a flat plan one unit — set with the price, or a
@@ -433,15 +400,6 @@ interface ImmediateChangeAdmission {
   tenantId: string;
   intent: SubscriptionTransition;
   model: TenantSubscriptionModel;
-}
-
-export function newChangeIntent(newPlan: Plan): SubscriptionTransition {
-  return {
-    operationId: randomUUID(),
-    kind: "change_plan",
-    targetPlanId: newPlan._id,
-    requestedAt: new Date(),
-  };
 }
 
 /**

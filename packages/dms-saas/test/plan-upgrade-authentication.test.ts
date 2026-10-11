@@ -55,10 +55,8 @@ vi.mock("../src/stripe/client", () => ({
   }),
 }));
 
-import {
-  confirmOwnerUpgrade,
-  handleSubscriptionPendingUpdateApplied,
-} from "../src/routes/tenant/tenant-plan-authentication";
+import { handleSubscriptionPendingUpdateApplied } from "../src/plan-changes/applied-upgrade";
+import { confirmOwnerUpgrade } from "../src/routes/tenant/tenant-plan-authentication";
 
 const SUBSCRIPTION = {
   _id: "tenant-a",

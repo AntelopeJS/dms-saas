@@ -1,7 +1,7 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import { StripeWebhookEventModel } from "../db";
-import { handleSubscriptionPendingUpdateApplied } from "../routes/tenant/tenant-plan-authentication";
+import { handleSubscriptionPendingUpdateApplied } from "../plan-changes/applied-upgrade";
 import { invalidatePreviewForStripeEvent } from "../upcoming-invoice/invalidation";
 import {
   handleChargeRefundUpdated,

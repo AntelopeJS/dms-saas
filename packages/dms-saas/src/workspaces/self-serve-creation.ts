@@ -43,7 +43,7 @@ export interface WorkspaceCreatePlanOption {
   _id: string;
   name: string;
   description: string;
-  /** Minor units, as stored. */
+  /** Major units, as plans store it (`49` euros). */
   price: number;
   currency: string;
   interval: PlanInterval;
