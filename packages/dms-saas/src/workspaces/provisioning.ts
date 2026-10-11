@@ -45,6 +45,7 @@ import {
   recordProvisioningState,
   reserveTrialIdentities,
 } from "./provisioning-state";
+import { isPlanOfferedTo } from "../plans/plan-audience";
 export { rollbackWorkspaceProvisioning } from "./provisioning-rollback";
 
 const HTTP_BAD_REQUEST = 400;
@@ -184,7 +185,7 @@ export async function ensurePlanIsAvailableForCustomer(
     "saas.errors.plan.not_available",
   );
   assert(
-    plan.audience === "any" || plan.audience === customerType,
+    isPlanOfferedTo(plan, customerType),
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );

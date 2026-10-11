@@ -36,6 +36,7 @@ import {
   toOperatorCommandResult,
 } from "./journal";
 import type { OperatorActionDetails, OperatorCommandResult } from "./types";
+import { isPlanOfferedTo } from "../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
@@ -162,9 +163,7 @@ export function isEligibleManualUpgradeTarget(
   customerType: string | null | undefined,
   occupiedSeats: number,
 ): boolean {
-  const hasAudience =
-    !!customerType &&
-    (target.audience === "any" || target.audience === customerType);
+  const hasAudience = !!customerType && isPlanOfferedTo(target, customerType);
   return (
     target._id !== current._id &&
     target.isActive &&

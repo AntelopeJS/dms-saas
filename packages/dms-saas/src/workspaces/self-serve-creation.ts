@@ -23,8 +23,8 @@ import {
   assertBillingCountry,
   type CardDetails,
   type WorkspaceBillingProfile,
-  type WorkspaceCustomerType,
 } from "./provisioning";
+import { isPlanOfferedTo } from "../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
 const NO_TRIAL_DAYS = 0;
@@ -77,10 +77,6 @@ export function cardRequirementOf(
   return isFreePerCardPolicyActive(freeWorkspacesPerCard)
     ? "verification"
     : "none";
-}
-
-function isOfferedTo(plan: Plan, customerType: WorkspaceCustomerType): boolean {
-  return plan.audience === "any" || plan.audience === customerType;
 }
 
 function toPlanOption(
@@ -167,7 +163,7 @@ export async function buildWorkspaceCreateOptions(
   ]);
   return {
     plans: plans
-      .filter((plan) => isOfferedTo(plan, profile.customerType))
+      .filter((plan) => isPlanOfferedTo(plan, profile.customerType))
       .sort((a, b) => a.order - b.order)
       .map((plan) => toPlanOption(plan, limit, hasUsedTrial)),
     freePerCard: await resolveFreePerCardRule(user._id, limit),

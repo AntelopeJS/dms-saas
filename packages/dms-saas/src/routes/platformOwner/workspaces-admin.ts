@@ -51,6 +51,7 @@ import {
   type OwnerLookup,
   validateWorkspaceInput,
 } from "../../workspaces/operator-creation";
+import { isPlanOfferedTo } from "../../plans/plan-audience";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -59,7 +60,6 @@ const HTTP_CONFLICT = 409;
 const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 
 const COMP_ICON = "i-ph-gift";
-const ANY_AUDIENCE = "any";
 
 const NOTIF_COMP_TITLE =
   "$saas.notifications.payload.complimentary_access_granted.title";
@@ -192,8 +192,7 @@ async function assertPlanIsAvailableForTenant(
     tenantId,
   ).findOne();
   assert(
-    plan.audience === ANY_AUDIENCE ||
-      plan.audience === billingInfo?.customerType,
+    isPlanOfferedTo(plan, billingInfo?.customerType),
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );

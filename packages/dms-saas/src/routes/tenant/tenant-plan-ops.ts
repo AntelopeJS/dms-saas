@@ -38,6 +38,7 @@ import {
   readPendingChallengeSecret,
 } from "../../stripe/pending-update";
 import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
+import { isPlanOfferedTo } from "../../plans/plan-audience";
 
 export const HTTP_NOT_FOUND = 404;
 export const HTTP_BAD_REQUEST = 400;
@@ -189,17 +190,6 @@ export async function loadSellablePlan(
   return newPlan;
 }
 
-/** The audience of a plan sold to every customer type. */
-export const ANY_PLAN_AUDIENCE = "any";
-
-/** Whether a plan is sold to a customer type: its own, or any type. */
-export function isPlanForCustomerType(
-  plan: Pick<Plan, "audience">,
-  customerType: string,
-): boolean {
-  return plan.audience === ANY_PLAN_AUDIENCE || plan.audience === customerType;
-}
-
 /** A plan reserved to one customer type is not sold to the other. */
 export function assertPlanAudience(
   plan: Plan,
@@ -211,7 +201,7 @@ export function assertPlanAudience(
     "saas.errors.plan.customer_type_unknown",
   );
   assert(
-    isPlanForCustomerType(plan, customerType),
+    isPlanOfferedTo(plan, customerType),
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );

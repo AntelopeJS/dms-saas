@@ -42,9 +42,9 @@ import {
   toVatVerificationStatus,
 } from "../../stripe";
 import { insertOrUpdateById } from "../../utils";
+import { isPlanOfferedTo } from "../../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
-const ANY_AUDIENCE = "any";
 const SETTLED_VAT_STATUSES = new Set<VatVerificationStatus>([
   "verified",
   "unverified",
@@ -125,7 +125,7 @@ async function assertCustomerTypeFitsPlan(
   if (!subscription?.planId) return;
   const plan = await GetModel(PlanModel).get(subscription.planId);
   assert(
-    !plan || plan.audience === ANY_AUDIENCE || plan.audience === customerType,
+    !plan || isPlanOfferedTo(plan, customerType),
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );

@@ -14,6 +14,7 @@ import {
 } from "../workspaces/operator-view";
 import { OperatorActionModel } from "./db/operator-action.model";
 import type { OperatorAction } from "./db/operator-action.table";
+import { isPlanOfferedTo } from "../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
 const MONTHS_PER_YEAR = 12;
@@ -184,13 +185,6 @@ function toComplimentaryOption(
   };
 }
 
-function isOfferedTo(
-  plan: Plan,
-  customerType: string | null | undefined,
-): boolean {
-  return plan.audience === "any" || plan.audience === customerType;
-}
-
 /** The Stripe subscription it ends and the MRR it stops, with the plans on offer. */
 export async function loadComplimentaryImpact(
   tenantId: string,
@@ -213,7 +207,7 @@ export async function loadComplimentaryImpact(
     seats: view.seats.occupied,
     owner: ownerOf(view),
     plans: plans
-      .filter((plan) => isOfferedTo(plan, customerType))
+      .filter((plan) => isPlanOfferedTo(plan, customerType))
       .map((plan) => toComplimentaryOption(plan, view.seats.occupied)),
   };
 }

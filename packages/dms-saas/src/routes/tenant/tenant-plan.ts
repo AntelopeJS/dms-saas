@@ -64,13 +64,11 @@ import {
   UNCHANGED_RESULT_BASE,
   assertSeatLimit,
   type ChangePlanBody,
-  ANY_PLAN_AUDIENCE,
   type ChangePlanResult,
   type CurrentPlanResult,
   dropPendingChange,
   insertFreeSubscription,
   isPaidPlan,
-  isPlanForCustomerType,
   loadAndValidateTargetPlan,
   loadSellablePlan,
   type OfferedPlanView,
@@ -94,6 +92,7 @@ import {
   type PendingCheckoutResult,
 } from "./tenant-plan-checkout-recovery";
 import { resubscribeOnFreePlan } from "./tenant-plan-resubscription";
+import { ANY_PLAN_AUDIENCE, isPlanOfferedTo } from "../../plans/plan-audience";
 
 const PRORATION_DATE_MAX_AGE_SECONDS = 3600;
 const MS_PER_SECOND = 1000;
@@ -142,7 +141,7 @@ async function toOfferedPlanView(
     isOfferedToCustomerType:
       !plan ||
       !reader.customerType ||
-      isPlanForCustomerType(plan, reader.customerType),
+      isPlanOfferedTo(plan, reader.customerType),
   };
 }
 

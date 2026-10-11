@@ -63,6 +63,7 @@ import {
   type PublicPlan,
 } from "./public-plan-catalog";
 import type { TenantPlanFeature } from "../../plans";
+import { isPlanOfferedTo } from "../../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
@@ -204,7 +205,7 @@ async function resolveRequestedPaidPlan(
     !plan.isDeleted &&
     !isFreePlan(plan) &&
     !!plan.paymentProviderRefs?.stripePriceId &&
-    (plan.audience === "any" || plan.audience === REGISTRATION_CUSTOMER_TYPE);
+    isPlanOfferedTo(plan, REGISTRATION_CUSTOMER_TYPE);
   return isPayable ? plan : null;
 }
 

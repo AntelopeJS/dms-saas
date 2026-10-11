@@ -14,7 +14,7 @@ import {
   TenantSubscriptionModel,
 } from "../src/db";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
-import { isPlanForCustomerType } from "../src/routes/tenant/tenant-plan-ops";
+import { isPlanOfferedTo } from "../src/plans/plan-audience";
 
 const harness = vi.hoisted(() => ({ tenantId: "" }));
 vi.mock("@antelopejs/interface-dms/request-tenant", () => ({
@@ -122,9 +122,7 @@ describe("plans offered to the workspace's customer type", () => {
   });
 
   it("sells an any-audience plan to both types", () => {
-    expect(isPlanForCustomerType({ audience: "any" }, "individual")).toBe(true);
-    expect(isPlanForCustomerType({ audience: "business" }, "individual")).toBe(
-      false,
-    );
+    expect(isPlanOfferedTo({ audience: "any" }, "individual")).toBe(true);
+    expect(isPlanOfferedTo({ audience: "business" }, "individual")).toBe(false);
   });
 });
