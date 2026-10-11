@@ -497,7 +497,7 @@ onMounted(loadImpact)
 			<template v-else-if="step === 2">
 				<div class="grid gap-5 lg:grid-cols-[1fr_280px]">
 					<div class="flex flex-col gap-4">
-						<FormRows>
+						<FormRows has-required>
 							<FormFieldRow
 								:label="$t('saas.catalog.retire.move_to')"
 								:help="
@@ -505,6 +505,7 @@ onMounted(loadImpact)
 										? $t(`saas.catalog.retire.price_${preparation.price.kind}`)
 										: undefined
 								"
+								required
 							>
 								<template #default="{ id }">
 									<DmsSelect
