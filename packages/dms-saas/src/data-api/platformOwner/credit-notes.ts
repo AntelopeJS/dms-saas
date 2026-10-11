@@ -24,7 +24,7 @@ import {
   TableViewRoutes,
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
-import { CreditNote, CreditNoteModel } from "../../db";
+import { CreditNote, CreditNoteModel, type CreditNoteType } from "../../db";
 import { MoneyCentsType, statusPillDisplay, statusType } from "../../utils";
 import {
   CREDIT_NOTE_REASONS,
@@ -44,6 +44,17 @@ const REASON_TYPE = new DefaultDataTypes.SelectType({
     value: reason,
   })),
 });
+
+const DEFAULT_TYPE_ICON = "i-ph-receipt-x";
+
+/** The tile beside a credit note's number says how it credits the invoice. */
+const TYPE_ICONS: Record<CreditNoteType, string> = {
+  pre_payment: "i-ph-file-minus",
+  post_payment: "i-ph-receipt-x",
+  credit_to_balance: "i-ph-wallet",
+  refund: "i-ph-arrow-u-down-left",
+  mixed: "i-ph-arrows-split",
+};
 
 /** Every workspace's credit notes, for platform admins. */
 @RegisterDataController()
@@ -78,7 +89,8 @@ export class creditNotesDataAPI extends DataController(
     name: `${COLUMN}.number`,
     type: new DefaultDataTypes.StringType(),
     display: new DefaultDisplays.IdentityDisplay({
-      icon: "i-ph-receipt-x",
+      icon: DEFAULT_TYPE_ICON,
+      iconField: "typeIcon",
       subtitleField: "invoiceNumber",
     }),
     filterable: true,
@@ -97,6 +109,12 @@ export class creditNotesDataAPI extends DataController(
   @Listable()
   @Access(AccessMode.ReadOnly)
   declare invoiceId: string;
+
+  @Listable(["type"])
+  @Access(AccessMode.ReadOnly)
+  get typeIcon(): string | null {
+    return TYPE_ICONS[creditNoteRow(this).type as CreditNoteType] ?? null;
+  }
 
   @Listable(["_instance", "invoiceId"])
   @Exported()

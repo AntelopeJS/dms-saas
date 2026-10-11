@@ -17,4 +17,21 @@ describe("features table", () => {
     };
     expect(type.options.items.every((item) => item.icon)).toBe(true);
   });
+
+  it("draws each feature's tile with the icon of its value type", () => {
+    const valueTypeIcon = Object.getOwnPropertyDescriptor(
+      featuresDataAPI.prototype,
+      "valueTypeIcon",
+    )?.get;
+
+    expect(columns.displayName?.display).toMatchObject({
+      options: { iconField: "valueTypeIcon" },
+    });
+    expect(valueTypeIcon?.call({ table: { valueType: "number" } })).toBe(
+      "i-ph-hash",
+    );
+    expect(valueTypeIcon?.call({ table: { valueType: "string" } })).toBe(
+      "i-ph-text-t",
+    );
+  });
 });

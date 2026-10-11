@@ -78,8 +78,12 @@ interface FeatureRowInstance {
   table: Feature;
 }
 
+function featureRowOf(self: unknown): Feature {
+  return (self as FeatureRowInstance).table;
+}
+
 function featureIdOf(self: unknown): string {
-  return (self as FeatureRowInstance).table._id;
+  return featureRowOf(self)._id;
 }
 
 /**
@@ -114,13 +118,21 @@ export class featuresDataAPI extends DataController(
       placeholder: `${TEXTS}.placeholder.display_name`,
     }),
     display: new DefaultDisplays.IdentityDisplay({
-      icon: "i-ph-toggle-right",
+      icon: VALUE_TYPE_LOOKS.boolean.icon,
+      iconField: "valueTypeIcon",
       subtitleField: "description",
     }),
     size: NAME_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadWrite)
   declare displayName: string;
+
+  /** The tile beside the name: the icon of the feature's value type. */
+  @Listable(["valueType"])
+  @Access(AccessMode.ReadOnly)
+  get valueTypeIcon(): string | null {
+    return VALUE_TYPE_LOOKS[featureRowOf(this).valueType]?.icon ?? null;
+  }
 
   @Select()
   @Listable()
