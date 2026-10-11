@@ -14,7 +14,9 @@ import { Model } from "@antelopejs/interface-database-decorators";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthUser } from "@antelopejs/interface-dms/auth";
 import {
+  type BlockText,
   Column,
+  DefaultDisplays,
   Exported,
   Searchable,
   Select,
@@ -26,6 +28,7 @@ import { Invoice, InvoiceModel } from "../../db";
 import {
   BillingDocumentType,
   BillingPeriodType,
+  billingDocumentLine,
   InvoiceLinesType,
   MoneyCentsType,
   PAYMENT_FAILED_STATUS,
@@ -44,7 +47,7 @@ interface PaymentStatusRowInstance {
 
 // Sized so the columns and the inline "Pay invoice" fit the settings
 // page without truncating a header or a pill.
-const NUMBER_COLUMN_SIZE = 120;
+const NUMBER_COLUMN_SIZE = 165;
 const PERIOD_COLUMN_SIZE = 130;
 const AMOUNT_COLUMN_SIZE = 120;
 const TAX_COLUMN_SIZE = 80;
@@ -61,6 +64,17 @@ const PAYMENT_STATUS_TYPE = new DefaultDataTypes.SelectType({
     },
   ],
 });
+
+/** The invoice fields its document line is read from. */
+type DocumentRow = Pick<Invoice, "documentType" | "parentInvoiceNumber">;
+
+interface DocumentRowInstance {
+  table: DocumentRow;
+}
+
+function documentRowOf(self: unknown): DocumentRow {
+  return (self as DocumentRowInstance).table;
+}
 
 function paymentStatusRowOf(self: unknown): PaymentStatusRow {
   return (self as PaymentStatusRowInstance).table;
@@ -125,11 +139,19 @@ export class tenantInvoicesDataAPI extends DataController(
   @Column({
     name: "$saas.invoices.column.number",
     type: new DefaultDataTypes.StringType(),
+    display: new DefaultDisplays.TwoLineDisplay({ subField: "documentLine" }),
     filterable: true,
     size: NUMBER_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
   declare number: string | null;
+
+  /** "Invoice", or "Credit note · for INV-0042", under the number. */
+  @Listable(["documentType", "parentInvoiceNumber"])
+  @Access(AccessMode.ReadOnly)
+  get documentLine(): BlockText {
+    return billingDocumentLine(documentRowOf(this));
+  }
 
   @Select()
   @Column({
