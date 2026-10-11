@@ -188,7 +188,10 @@ describe("tenant customer balance interface", () => {
 
     await expect(
       billingInterface.GetTenantCustomerBalance(SCOPE),
-    ).rejects.toMatchObject({ status: 403 });
+    ).rejects.toMatchObject({
+      status: 403,
+      body: "error.tenant_member_required",
+    });
     expect(harness.retrieveBalance).not.toHaveBeenCalled();
   });
 
