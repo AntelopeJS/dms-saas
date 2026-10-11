@@ -11,6 +11,7 @@ import {
   StatGroup,
   Tab,
   TableView,
+  TabVariant,
   VStack,
 } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
@@ -217,6 +218,7 @@ const TAB_ITEMS = [
 
 const tabs = Tab({
   items: TAB_ITEMS,
+  variant: TabVariant.link,
   badgesUrl: `${API}/tab-counts`,
   persistState: true,
   stateKey: "workspace-tab",
