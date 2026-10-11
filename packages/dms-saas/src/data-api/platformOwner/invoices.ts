@@ -137,7 +137,9 @@ export class invoicesDataAPI extends DataController(
   @Column({
     name: `${COLUMN}.workspace`,
     type: new DefaultDataTypes.StringType(),
-    display: new DefaultDisplays.TwoLineDisplay({ subField: "planDetail" }),
+    display: new DefaultDisplays.IdentityDisplay({
+      subtitleField: "planDetail",
+    }),
     filterable: true,
     size: 190,
   })
