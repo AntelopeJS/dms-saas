@@ -78,6 +78,10 @@ describe("users list columns", () => {
       options: { exclusive: { field: "owner", icon: "i-ph-shield-check" } },
     });
   });
+
+  it("writes the creation date with its year", () => {
+    expect(columns.createdAt?.display).toBeUndefined();
+  });
 });
 
 describe("pages of the area", () => {

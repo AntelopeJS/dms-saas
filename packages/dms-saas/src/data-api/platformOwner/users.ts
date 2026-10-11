@@ -292,10 +292,6 @@ export class saasUsersDataAPI extends DataController(
   @Column({
     name: "$saas.users.column.created_at",
     type: new DefaultDataTypes.DateType(),
-    display: new DefaultDisplays.RelativeDateDisplay({
-      style: "day",
-      tone: "muted",
-    }),
     size: DATE_COLUMN_SIZE,
   })
   @Access(AccessMode.ReadOnly)
