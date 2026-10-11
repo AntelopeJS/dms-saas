@@ -77,3 +77,6 @@ export async function GetUpcomingInvoicePreview(
   await assertAuthorizedTenant(scope);
   return getUpcomingInvoicePreview(scope.tenantId);
 }
+
+/** Implements the billing state recomputation interface. */
+export { recomputeTenantBillingState as RecomputeTenantBillingState } from "../../billing-state";

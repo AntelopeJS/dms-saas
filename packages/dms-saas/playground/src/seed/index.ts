@@ -32,7 +32,7 @@ import {
   writeSegments,
 } from "./writers/platform";
 import { isPlaygroundSeeded, writeUsers } from "./writers/users";
-import { writeWorkspaces } from "./writers/workspaces";
+import { publishBillingStates, writeWorkspaces } from "./writers/workspaces";
 
 const LOG_PREFIX = "[playground:seed]";
 
@@ -48,6 +48,7 @@ async function writeDataSet(): Promise<void> {
   await writePlatformNotes(PLATFORM_NOTES);
   await writePlanMigrations(PLAN_MIGRATIONS, permissions);
   await writeUsers([PLATFORM_ADMIN]);
+  await publishBillingStates([DEFAULT_WORKSPACE, ...WORKSPACES]);
 }
 
 async function seedPlayground(): Promise<void> {

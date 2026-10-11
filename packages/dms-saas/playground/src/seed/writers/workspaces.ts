@@ -1,11 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
-  type BillingState,
   type PaidUsagePeriod,
-  type TenantSubscription,
   TenantBillingInfoModel,
-  TenantBillingStateModel,
   TenantSubscriptionModel,
   type VatVerificationStatus,
 } from "@antelopejs/interface-dms-saas/db";
@@ -15,6 +11,7 @@ import {
   TenantModel,
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
+import { RecomputeTenantBillingState } from "@antelopejs/interface-dms-saas/billing";
 import type {
   DayOffset,
   SeedBillingProfile,
@@ -28,8 +25,6 @@ import { dayFrom, insertMissing, optionalDayFrom, type SeedRow } from "./rows";
 const MEMBER_ROLE_SUFFIX = "member";
 const INVITE_TOKEN_BYTES = 32;
 const INVITE_LANGUAGE = "en";
-const ACTIVE_STATUS = "active";
-const FREE_STATE: BillingState = "free";
 const VAT_VERIFIED: VatVerificationStatus = "verified";
 
 /** Tenant rows share one collection, so their ids carry the tenant. */
@@ -130,37 +125,6 @@ function toBillingInfoRow(
   };
 }
 
-/** The rule of dms-saas `deriveBillingState`: a local, Stripe-less plan reads as free. */
-function deriveBillingState(subscription: TenantSubscription): BillingState {
-  if (
-    subscription.status === ACTIVE_STATUS &&
-    !subscription.stripeSubscriptionId
-  ) {
-    return FREE_STATE;
-  }
-  return subscription.status;
-}
-
-/**
- * Publishes the billing state the way dms-saas does. Its own recompute ran
- * before this seed in the same start, and its cron repeats it every 15
- * minutes with the same outcome.
- */
-async function publishBillingState(tenantId: string): Promise<void> {
-  const subscription = await GetModel(
-    TenantSubscriptionModel,
-    tenantId,
-  ).findOne();
-  if (!subscription) return;
-  const states = GetModel(TenantBillingStateModel);
-  const existing = await states.findByTenant(tenantId);
-  await states.upsertForTenant(
-    tenantId,
-    deriveBillingState(subscription),
-    existing,
-  );
-}
-
 async function writeWorkspace(
   workspace: SeedWorkspace,
   permissions: string[],
@@ -197,7 +161,6 @@ async function writeWorkspace(
       id,
     );
   }
-  await publishBillingState(id);
 }
 
 /**
@@ -211,5 +174,18 @@ export async function writeWorkspaces(
 ): Promise<void> {
   for (const workspace of workspaces) {
     await writeWorkspace(workspace, permissions);
+  }
+}
+
+/**
+ * Publishes the billing state and directory row of every workspace through
+ * dms-saas, once their owners and invoices exist: its own recompute ran
+ * before this seed in the same start.
+ */
+export async function publishBillingStates(
+  workspaces: SeedWorkspace[],
+): Promise<void> {
+  for (const workspace of workspaces) {
+    await RecomputeTenantBillingState(workspace.id);
   }
 }
