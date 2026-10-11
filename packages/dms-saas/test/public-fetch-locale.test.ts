@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, ref } from "../frontend-vue/node_modules/vue";
 import {
   onPublicLocaleChange,
   usePublicFetch,
@@ -14,7 +13,15 @@ interface CreatedFetchOptions {
   onRequest: (context: FetchRequestContext) => void;
 }
 
-const locale = ref("en");
+const watchers = vi.hoisted(() => [] as Array<() => void>);
+
+vi.mock("../frontend-vue/node_modules/vue/index.mjs", () => ({
+  watch: (_source: unknown, callback: () => void) => {
+    watchers.push(callback);
+  },
+}));
+
+const locale = { value: "en" };
 let created: CreatedFetchOptions | undefined;
 
 function requestHeaders(): Headers {
@@ -52,12 +59,11 @@ describe("public fetch", () => {
     expect(requestHeaders().get("x-content-language")).toBe("fr");
   });
 
-  it("reloads a screen's data when the reader switches language", async () => {
+  it("reloads a screen's data when the reader switches language", () => {
     const reload = vi.fn();
     onPublicLocaleChange(reload);
 
-    locale.value = "fr";
-    await nextTick();
+    for (const callback of watchers) callback();
 
     expect(reload).toHaveBeenCalledTimes(1);
   });
