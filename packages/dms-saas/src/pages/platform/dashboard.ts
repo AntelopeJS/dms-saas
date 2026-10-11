@@ -187,6 +187,7 @@ export class SaasDashboardController extends PageController(
               valueFormat: "currency",
               valuePrecision: "native",
               showRank: true,
+              showBar: true,
               skeletonCount: 4,
               emptyLabel: `${K}.plans.empty`,
             }),
