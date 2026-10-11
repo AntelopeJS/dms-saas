@@ -89,6 +89,7 @@ export class workspacesDataAPI extends DataController(
     select: TableViewRoutes.Select,
     count: TableViewRoutes.Count,
     countBatch: TableViewRoutes.CountBatch,
+    summary: TableViewRoutes.Summary,
   },
   Controller("/api/saas/tables/workspaces"),
 ) {
@@ -168,6 +169,17 @@ export class workspacesDataAPI extends DataController(
   @directoryField("mrrMinor")
   @Access(AccessMode.ReadOnly)
   declare mrrMinor: number;
+
+  /** What the footer totals: the MRR billed in the reporting currency. */
+  @Listable(["_id"])
+  @Column({
+    name: `${COLUMN}.reporting_mrr`,
+    type: new DefaultDataTypes.NumberType(),
+    isVisible: false,
+  })
+  @directoryField("reportingMrr")
+  @Access(AccessMode.ReadOnly)
+  declare reportingMrr: number;
 
   @Listable(["_id"])
   @Searchable()

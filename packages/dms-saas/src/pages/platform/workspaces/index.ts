@@ -12,7 +12,11 @@ import { WORKSPACE_STATUS_ORDER } from "../../../utils/status-vocabulary";
 import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
 import { WORKSPACES_PAGE_PATH } from "../paths";
-import { CREATE_WORKSPACE_BUTTON, permissionMeta } from "./shared";
+import {
+  CREATE_WORKSPACE_BUTTON,
+  permissionMeta,
+  withReportingCurrencyTotals,
+} from "./shared";
 
 const W = "$saas.workspaces";
 const ROW = `${W}.row_actions`;
@@ -115,70 +119,82 @@ export class SaasWorkspacesListController extends PageController(
     fetchUrl: "/api/saas/workspaces/directory-headline",
   }).meta(permissionMeta("list_headline", "i-ph-squares-four"));
 
-  static table = TableView(workspacesDataAPI, {
-    caption: `${W}.caption`,
-    searchPlaceholder: `${W}.search_placeholder`,
-    labelKey: "name",
-    pageSize: PAGE_SIZE,
-    tabs: STATUS_TABS,
-    views: { items: VIEWS, layout: "menu" },
-    quickFilters: [
-      { field: "planName", icon: "i-ph-stack" },
-      { field: "ownerStatus", icon: "i-ph-user-circle" },
-    ],
-    // Largest accounts first, as an operator scans the directory.
-    defaultSort: { field: "mrrMinor", desc: true },
-    queryParamFilters: { plan: { field: "planId" } },
-    footer: { countLabel: `${W}.footer_count` },
-    emptyStates: {
-      firstRun: {
-        title: `${W}.empty.first_run_title`,
-        description: `${W}.empty.first_run_description`,
-        icon: "i-ph-buildings",
-      },
-      filtered: {
-        title: `${W}.empty.filtered_title`,
-        description: `${W}.empty.filtered_description`,
-      },
-    },
-    rowActions: {
-      add: false,
-      edit: false,
-      delete: false,
-      duplicate: false,
-      archive: false,
-      copyLink: true,
-      details: { isEnabled: true, label: `${ROW}.open` },
-      custom: [
-        {
-          label: `${ROW}.grant_free_access`,
-          icon: "i-ph-gift",
-          rule: { field: "billingState", notIn: ["cancelled"] },
-          target: { type: "page", url: `${ROW_DETAIL}complimentary` },
-        },
-        {
-          label: `${ROW}.join`,
-          icon: "i-ph-user-plus",
-          target: {
-            type: "api",
-            url: `${ROW_API}/join`,
-            method: "POST",
-            successMessage: "$saas.workspace_detail.join.success",
-          },
-          confirm: { from: `${ROW_API}/join-confirmation` },
-        },
-        {
-          label: `${ROW}.suspend`,
-          icon: "i-ph-prohibit",
-          color: "error",
-          rule: { field: "billingState", notIn: ["suspended", "cancelled"] },
-          target: { type: "page", url: `${ROW_DETAIL}suspend` },
-        },
+  static table = withReportingCurrencyTotals(
+    TableView(workspacesDataAPI, {
+      caption: `${W}.caption`,
+      searchPlaceholder: `${W}.search_placeholder`,
+      labelKey: "name",
+      pageSize: PAGE_SIZE,
+      tabs: STATUS_TABS,
+      views: { items: VIEWS, layout: "menu" },
+      quickFilters: [
+        { field: "planName", icon: "i-ph-stack" },
+        { field: "ownerStatus", icon: "i-ph-user-circle" },
       ],
-    },
-    formContainer: {
-      type: "page",
-      pages: { details: { urlSlug: ":id", customPage: true } },
-    },
-  });
+      // Largest accounts first, as an operator scans the directory.
+      defaultSort: { field: "mrrMinor", desc: true },
+      queryParamFilters: { plan: { field: "planId" } },
+      footer: {
+        countLabel: `${W}.footer_count`,
+        summary: [
+          {
+            label: `${W}.footer_mrr`,
+            field: "reportingMrr",
+            op: "sum",
+            format: { style: "currency" },
+          },
+        ],
+      },
+      emptyStates: {
+        firstRun: {
+          title: `${W}.empty.first_run_title`,
+          description: `${W}.empty.first_run_description`,
+          icon: "i-ph-buildings",
+        },
+        filtered: {
+          title: `${W}.empty.filtered_title`,
+          description: `${W}.empty.filtered_description`,
+        },
+      },
+      rowActions: {
+        add: false,
+        edit: false,
+        delete: false,
+        duplicate: false,
+        archive: false,
+        copyLink: true,
+          details: { isEnabled: true, label: `${ROW}.open` },
+        custom: [
+          {
+            label: `${ROW}.grant_free_access`,
+            icon: "i-ph-gift",
+            rule: { field: "billingState", notIn: ["cancelled"] },
+            target: { type: "page", url: `${ROW_DETAIL}complimentary` },
+          },
+          {
+            label: `${ROW}.join`,
+            icon: "i-ph-user-plus",
+            target: {
+              type: "api",
+              url: `${ROW_API}/join`,
+              method: "POST",
+              successMessage: "$saas.workspace_detail.join.success",
+            },
+            confirm: { from: `${ROW_API}/join-confirmation` },
+          },
+          {
+            label: `${ROW}.suspend`,
+            icon: "i-ph-prohibit",
+            color: "error",
+            rule: { field: "billingState", notIn: ["suspended", "cancelled"] },
+            target: { type: "page", url: `${ROW_DETAIL}suspend` },
+          },
+        ],
+      },
+      formContainer: {
+        type: "page",
+        pages: { details: { urlSlug: ":id", customPage: true } },
+      },
+    }),
+  );
 }

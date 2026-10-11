@@ -7,7 +7,17 @@ import { WORKSPACE_STATUS_ORDER } from "../src/utils/status-vocabulary";
 interface SerializedTable {
   options?: {
     tabs?: { id: string; filter?: { accessorKey: string; value?: string } }[];
-    views?: { items: { id: string; filters?: { accessorKey: string }[] }[] };
+    views?: {
+      items: { id: string; filters?: { accessorKey: string }[] }[];
+      layout?: string;
+    };
+    footer?: {
+      summary?: {
+        field?: string;
+        op: string;
+        format?: { currency?: string };
+      }[];
+    };
     defaultSort?: { field: string; desc?: boolean };
   };
 }
@@ -60,6 +70,24 @@ describe("workspace list", () => {
         expect(DIRECTORY_COLUMNS).toContain(filter.accessorKey);
       }
     }
+  });
+
+  it("totals the listed MRR in the reporting currency", async () => {
+    const filter = SaasWorkspacesListController.table.onFilterCallback;
+    const filtered = (await filter?.(
+      new Set(),
+      table.options,
+      "table",
+      {} as never,
+    )) as SerializedTable["options"];
+
+    expect(filtered?.footer?.summary).toEqual([
+      expect.objectContaining({
+        field: "reportingMrr",
+        op: "sum",
+        format: { style: "currency", currency: "EUR" },
+      }),
+    ]);
   });
 
   it("reads the directory fields as joins the database sorts and filters", () => {

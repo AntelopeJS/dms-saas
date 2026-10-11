@@ -1,4 +1,8 @@
-import type { CustomButton } from "@antelopejs/interface-dms/base";
+import type {
+  CustomButton,
+  TableViewFooterSummarySerialized,
+  TableViewOptionsSerialized,
+} from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import type { ComponentBuilder } from "@antelopejs/interface-dms/component";
 import { getReportingCurrency } from "../../../config";
@@ -39,6 +43,36 @@ export function inReportingCurrency<T extends CurrencyOptions>(
     ...options,
     currencyCode: getReportingCurrency(),
   }));
+}
+
+function inReportingCurrencyFormat(
+  summary: TableViewFooterSummarySerialized,
+): TableViewFooterSummarySerialized {
+  if (summary.format?.style !== "currency") return summary;
+  return {
+    ...summary,
+    format: { ...summary.format, currency: getReportingCurrency() },
+  };
+}
+
+/**
+ * A table whose footer totals money, in the reporting currency: the currency
+ * summaries take its code per request, like the money cards.
+ */
+export function withReportingCurrencyTotals(
+  builder: ComponentBuilder<TableViewOptionsSerialized>,
+): ComponentBuilder<TableViewOptionsSerialized> {
+  return builder.onFilter((_permissions, options) =>
+    options.footer?.summary
+      ? {
+          ...options,
+          footer: {
+            ...options.footer,
+            summary: options.footer.summary.map(inReportingCurrencyFormat),
+          },
+        }
+      : options,
+  );
 }
 
 /**

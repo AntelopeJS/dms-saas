@@ -91,6 +91,7 @@
       "caption": "All workspaces",
       "search_placeholder": "Search name, owner or e-mail",
       "footer_count": "No workspace | 1 workspace | {count} workspaces",
+      "footer_mrr": "MRR",
       "headline": {
         "label": "Revenue and workspaces to act on",
         "mrr_detail": "No paying workspace | 1 paying | {count} paying",
@@ -127,6 +128,7 @@
         "status": "Status",
         "plan": "Plan",
         "mrr": "MRR",
+        "reporting_mrr": "MRR in the reporting currency",
         "owner": "Workspace owner",
         "owner_email": "Owner e-mail",
         "owner_status": "Owner status",

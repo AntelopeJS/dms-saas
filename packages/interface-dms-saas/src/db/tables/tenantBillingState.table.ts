@@ -68,6 +68,11 @@ export interface WorkspaceDirectoryFields {
   mrrMinor: number;
   /** `mrrMinor` before the last change of billing state (what a churn lost). */
   previousMrrMinor: number;
+  /**
+   * `mrrMinor` in major units when `currency` is the reporting currency, else
+   * 0: the figure the directory totals, since no exchange rate is assumed.
+   */
+  reportingMrr: number;
   renewalKind: WorkspaceRenewalKind | null;
   renewsAt: Date | null;
   /** When the current billing state was first observed. */
@@ -139,6 +144,9 @@ export class TenantBillingState
 
   @Field("number")
   declare previousMrrMinor?: number;
+
+  @Field("number")
+  declare reportingMrr?: number;
 
   @Field("string")
   declare renewalKind?: WorkspaceRenewalKind | null;

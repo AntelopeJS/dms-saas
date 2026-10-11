@@ -15,7 +15,12 @@ import {
   type WorkspaceOwnerStatus,
   type WorkspaceRenewalKind,
 } from "../db";
-import { normalisedMrr, planUnitAmountMinor } from "../metrics/normalised-mrr";
+import { getReportingCurrency } from "../config";
+import {
+  normalisedMrr,
+  planUnitAmountMinor,
+  reportingMajorUnits,
+} from "../metrics/normalised-mrr";
 import { countOccupiedSeats } from "../plans/seat-capacity";
 import { MS_PER_DAY } from "../utils/time";
 import {
@@ -46,6 +51,8 @@ export interface DirectoryInputs {
   owner: DirectoryOwner;
   policy: DirectoryPolicy;
   existing: TenantBillingState | undefined;
+  /** The currency the directory totals MRR in (uppercase ISO 4217). */
+  reportingCurrency: string;
   now: Date;
 }
 
@@ -153,6 +160,7 @@ export function buildWorkspaceDirectoryFields(
     isComplimentary,
     mrrMinor: mrr.amountMinor,
     previousMrrMinor: resolvePreviousMrr(inputs),
+    reportingMrr: reportingMajorUnits(mrr, inputs.reportingCurrency),
     renewalKind: renewal?.kind ?? null,
     renewsAt: renewal?.at ?? null,
     stateSince,
@@ -234,6 +242,7 @@ export async function loadWorkspaceDirectoryFields(
     owner,
     policy,
     existing,
+    reportingCurrency: getReportingCurrency(),
     now,
   });
 }

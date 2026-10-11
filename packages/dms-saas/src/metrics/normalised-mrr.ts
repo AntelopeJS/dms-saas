@@ -109,6 +109,19 @@ export function normalisedMrr(input: MrrInput): MinorAmount {
   };
 }
 
+/**
+ * An amount in major units when it is in the reporting currency, else 0: what
+ * a total in the reporting currency adds up, no exchange rate being assumed.
+ */
+export function reportingMajorUnits(
+  amount: MinorAmount,
+  reportingCurrency: string,
+): number {
+  return amount.currency === reportingCurrency
+    ? amount.amountMinor / PLAN_PRICE_MINOR_FACTOR
+    : 0;
+}
+
 function addTo(
   totals: Map<string, number>,
   { currency, amountMinor }: MinorAmount,

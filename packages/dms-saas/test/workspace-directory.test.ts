@@ -45,6 +45,7 @@ function inputs(overrides: Partial<DirectoryInputs> = {}): DirectoryInputs {
     owner: { status: "joined", name: "Margaux Dubois", email: "m@n.eu" },
     policy: { autoSuspendDelayDays: 14, retentionDays: 30 },
     existing: undefined,
+    reportingCurrency: "EUR",
     now: NOW,
     ...overrides,
   };
@@ -61,8 +62,15 @@ describe("workspace directory row", () => {
       currency: "EUR",
       seats: 23,
       mrrMinor: 112_700,
+      reportingMrr: 1_127,
       isComplimentary: false,
     });
+  });
+
+  it("totals MRR billed in another currency apart from the reporting one", () => {
+    expect(
+      buildWorkspaceDirectoryFields(inputs({ reportingCurrency: "USD" })),
+    ).toMatchObject({ mrrMinor: 112_700, reportingMrr: 0 });
   });
 
   it("dates the renewal of a paying workspace", () => {

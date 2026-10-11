@@ -91,6 +91,7 @@
       "caption": "Tous les espaces",
       "search_placeholder": "Rechercher un nom, un propriétaire ou un e-mail",
       "footer_count": "Aucun espace | 1 espace | {count} espaces",
+      "footer_mrr": "MRR",
       "headline": {
         "label": "Revenu et espaces à traiter",
         "mrr_detail": "Aucun espace payant | 1 payant | {count} payants",
@@ -127,6 +128,7 @@
         "status": "Statut",
         "plan": "Offre",
         "mrr": "MRR",
+        "reporting_mrr": "MRR en devise de reporting",
         "owner": "Propriétaire de l'espace",
         "owner_email": "E-mail du propriétaire",
         "owner_status": "Statut du propriétaire",
