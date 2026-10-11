@@ -114,7 +114,7 @@ const accessItems = computed(() => [
 		label: t(`${C}.access.owner_pays`),
 		description: isPaidPlan.value
 			? t(`${C}.access.owner_pays_description`, {
-					price: plan.value ? priceOf(plan.value) : '',
+					price: plan.value ? planPriceLabel(plan.value) : '',
 				})
 			: t(`${C}.access.owner_pays_unavailable`),
 		disabled: !isPaidPlan.value,
@@ -139,7 +139,7 @@ const whatHappens = computed(() => {
 		access.value === 'owner_pays'
 			? t(`${C}.what_happens.owner_pays`, {
 					...base,
-					price: priceOf(plan.value),
+					price: planPriceLabel(plan.value),
 				})
 			: freeUntil.value
 				? t(`${C}.what_happens.complimentary_until`, {
