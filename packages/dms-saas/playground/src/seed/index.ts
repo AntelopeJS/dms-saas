@@ -18,7 +18,6 @@ import {
 import { DEFAULT_WORKSPACE, WORKSPACES } from "./data/workspaces";
 import { writeBillingDocuments } from "./writers/billing";
 
-export * from "./running-migration";
 import {
   grantNewPermissionsToSeededPlans,
   readGrantablePermissions,

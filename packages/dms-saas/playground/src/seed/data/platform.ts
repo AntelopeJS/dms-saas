@@ -62,7 +62,7 @@ export const LEGAL_DOCUMENTS: SeedLegalDocuments = {
  * The migration the playground keeps running: no executor works on it, so
  * dms-saas would mark it interrupted on start (see `keepDemoMigrationRunning`).
  */
-export const RUNNING_DEMO_MIGRATION_ID = "migration-growth-to-business";
+const RUNNING_DEMO_MIGRATION_ID = "migration-growth-to-business";
 
 export const PLAN_MIGRATIONS: SeedPlanMigration[] = [
   {
