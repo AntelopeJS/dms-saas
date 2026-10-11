@@ -32,21 +32,6 @@ function memoryModel(initial?: Row) {
 }
 
 describe("legal document versions", () => {
-  it("counts a document saved before versions as version 1", () => {
-    expect(
-      readLegalDocumentVersions({
-        termsOfUse: "<p>Terms</p>",
-        termsAndConditions: "",
-        privacyPolicy: "",
-        updatedAt: MARCH,
-      }),
-    ).toEqual({
-      termsOfUse: { version: 1, publishedAt: MARCH },
-      termsAndConditions: NEVER,
-      privacyPolicy: NEVER,
-    });
-  });
-
   it("publishes the next version of a changed document only", () => {
     const row = {
       termsOfUse: "<p>v4</p>",
@@ -55,8 +40,8 @@ describe("legal document versions", () => {
       versions: {
         termsOfUse: { version: 4, publishedAt: MARCH },
         privacyPolicy: { version: 5, publishedAt: MARCH },
+        termsAndConditions: NEVER,
       },
-      updatedAt: MARCH,
     };
 
     expect(
@@ -75,7 +60,13 @@ describe("legal document versions", () => {
   it("unpublishes an emptied document without reusing its number", () => {
     const row = {
       termsOfUse: "<p>v2</p>",
-      versions: { termsOfUse: { version: 2, publishedAt: MARCH } },
+      termsAndConditions: "",
+      privacyPolicy: "",
+      versions: {
+        termsOfUse: { version: 2, publishedAt: MARCH },
+        termsAndConditions: NEVER,
+        privacyPolicy: NEVER,
+      },
     };
 
     expect(
@@ -107,7 +98,11 @@ describe("legal document versions", () => {
       termsOfUse: "<p>Terms</p>",
       termsAndConditions: "",
       privacyPolicy: "<p>Privacy</p>",
-      versions: { privacyPolicy: { version: 5, publishedAt: MARCH } },
+      versions: {
+        termsOfUse: { version: 1, publishedAt: MARCH },
+        termsAndConditions: NEVER,
+        privacyPolicy: { version: 5, publishedAt: MARCH },
+      },
       updatedAt: MARCH,
     }).model;
 

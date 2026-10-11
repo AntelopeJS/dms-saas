@@ -3,7 +3,9 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   BILLING_SETTINGS_SINGLETON_ID,
   BillingSettingsModel,
+  LEGAL_DOCUMENT_KEYS,
   LEGAL_DOCUMENTS_SINGLETON_ID,
+  type LegalDocumentVersions,
   LegalDocumentsModel,
   type PlanMigrationFeatureDiff,
   PlanMigrationModel,
@@ -37,16 +39,14 @@ export async function writeBillingSettings(
 const FIRST_LEGAL_VERSION = 1;
 
 /** Each seeded document as published once, now. */
-function firstVersions(
-  documents: SeedLegalDocuments,
-): Record<string, { version: number; publishedAt: Date }> {
+function firstVersions(): LegalDocumentVersions {
   const publishedAt = new Date();
   return Object.fromEntries(
-    Object.keys(documents).map((key) => [
+    LEGAL_DOCUMENT_KEYS.map((key) => [
       key,
       { version: FIRST_LEGAL_VERSION, publishedAt },
     ]),
-  );
+  ) as LegalDocumentVersions;
 }
 
 /**
@@ -58,17 +58,14 @@ export async function writeLegalDocuments(
 ): Promise<void> {
   const model = GetModel(LegalDocumentsModel);
   const existing = await model.get(LEGAL_DOCUMENTS_SINGLETON_ID);
-  const published = { ...documents, versions: firstVersions(documents) };
+  const published = { ...documents, versions: firstVersions() };
   if (!existing) {
     await insertMissing(LegalDocumentsModel, [
       { _id: LEGAL_DOCUMENTS_SINGLETON_ID, ...published },
     ]);
     return;
   }
-  const isBlank =
-    !existing.termsOfUse &&
-    !existing.termsAndConditions &&
-    !existing.privacyPolicy;
+  const isBlank = LEGAL_DOCUMENT_KEYS.every((key) => !existing[key]);
   if (isBlank) await model.update(LEGAL_DOCUMENTS_SINGLETON_ID, published);
 }
 

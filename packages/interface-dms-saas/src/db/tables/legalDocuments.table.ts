@@ -48,12 +48,9 @@ export class LegalDocuments extends Table {
   @Field("string")
   declare privacyPolicy: string;
 
-  /**
-   * Version and publication date of each document. Rows written before the
-   * documents were versioned lack it, or lack a document's entry.
-   */
+  /** Version and publication date of each document. */
   @Field("any")
-  declare versions?: Partial<LegalDocumentVersions>;
+  declare versions: LegalDocumentVersions;
 
   @UpdateTime()
   @Field("date")

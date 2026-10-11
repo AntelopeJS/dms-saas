@@ -1,5 +1,6 @@
 import type {
   BillingSettings,
+  LegalDocumentKey,
   LegalDocuments,
 } from "@antelopejs/interface-dms-saas/db";
 import { PLAN_IDS } from "./catalogue";
@@ -24,7 +25,7 @@ export const BILLING_SETTINGS: SeedBillingSettings = {
   stripeTaxCode: "txcd_10000000",
 };
 
-export type SeedLegalDocuments = Omit<LegalDocuments, "_id" | "updatedAt">;
+export type SeedLegalDocuments = Pick<LegalDocuments, LegalDocumentKey>;
 
 export const LEGAL_DOCUMENTS: SeedLegalDocuments = {
   termsOfUse: [

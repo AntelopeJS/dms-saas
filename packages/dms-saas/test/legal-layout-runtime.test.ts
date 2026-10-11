@@ -28,15 +28,21 @@ describe("LegalLayout Vue runtime", () => {
 });
 
 describe("legalDocumentStamp", () => {
-  it("reads the document's own version when documents are versioned", () => {
+  const NEVER = { version: 0, publishedAt: null };
+
+  it("reads the document's own version and publication date", () => {
     const stamp = legalDocumentStamp(
       {
-        updatedAt: "2026-09-30T00:00:00.000Z",
+        termsOfUse: "",
+        termsAndConditions: "<p>Terms</p>",
+        privacyPolicy: "",
         versions: {
+          termsOfUse: NEVER,
           termsAndConditions: {
             version: 4,
             publishedAt: "2026-09-12T00:00:00.000Z",
           },
+          privacyPolicy: NEVER,
         },
       },
       "termsAndConditions",
@@ -46,22 +52,6 @@ describe("legalDocumentStamp", () => {
       version: 4,
       updatedAt: "2026-09-12T00:00:00.000Z",
     });
-  });
-
-  it("falls back to the save date when versions are missing", () => {
-    expect(
-      legalDocumentStamp(
-        { updatedAt: "2026-09-30T00:00:00.000Z" },
-        "privacyPolicy",
-      ),
-    ).toEqual({ version: null, updatedAt: "2026-09-30T00:00:00.000Z" });
-  });
-
-  it("shows no date for documents never saved", () => {
-    expect(
-      legalDocumentStamp({ updatedAt: new Date(0).toISOString() }, "termsOfUse")
-        .updatedAt,
-    ).toBeNull();
   });
 });
 

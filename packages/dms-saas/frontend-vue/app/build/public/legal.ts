@@ -1,25 +1,24 @@
 import { isInAppPath, LOGIN_PATH, type LegalDocumentField } from './routes'
 
-/** Version of one document, as Billing rules & legal publishes it. */
+/**
+ * Version of one document, as Billing rules & legal publishes it: version 0
+ * and no date while it was never published.
+ */
 export interface LegalDocumentVersion {
 	version: number
-	publishedAt: string
+	publishedAt: string | null
 }
 
-/**
- * `GET /api/saas/legal-documents`. `versions` comes with the versioned
- * documents; a backend without them still answers the texts and one date.
- */
+/** `GET /api/saas/legal-documents`. */
 export interface LegalDocumentsPayload {
-	termsOfUse?: string
-	termsAndConditions?: string
-	privacyPolicy?: string
-	updatedAt?: string | null
-	versions?: Partial<Record<LegalDocumentField, LegalDocumentVersion>>
+	termsOfUse: string
+	termsAndConditions: string
+	privacyPolicy: string
+	versions: Record<LegalDocumentField, LegalDocumentVersion>
 }
 
 export interface LegalDocumentStamp {
-	version: number | null
+	version: number
 	updatedAt: string | null
 }
 
@@ -34,18 +33,8 @@ const HEADING_ID_PREFIX = 'section-'
 const NON_SLUG_CHARACTERS = /[^\p{Letter}\p{Number}]+/gu
 const EDGE_DASHES = /^-+|-+$/g
 const WORD_SEPARATOR = /\s+/
-/** The epoch is what an empty singleton reports before anything is saved. */
-const NEVER_SAVED = 0
-
-function isMeaningfulDate(value: string | null | undefined): value is string {
-	if (!value) return false
-	const time = new Date(value).getTime()
-	return Number.isFinite(time) && time > NEVER_SAVED
-}
-
 /**
- * Version and last update of one document: its own publication when the
- * backend versions documents, else the date the texts were last saved.
+ * Version and publication date of one document.
  *
  * @param payload Legal documents payload
  * @param field Document to stamp
@@ -54,19 +43,8 @@ export function legalDocumentStamp(
 	payload: LegalDocumentsPayload,
 	field: LegalDocumentField,
 ): LegalDocumentStamp {
-	const published = payload.versions?.[field]
-	if (published) {
-		return {
-			version: published.version,
-			updatedAt: isMeaningfulDate(published.publishedAt)
-				? published.publishedAt
-				: null,
-		}
-	}
-	return {
-		version: null,
-		updatedAt: isMeaningfulDate(payload.updatedAt) ? payload.updatedAt : null,
-	}
+	const published = payload.versions[field]
+	return { version: published.version, updatedAt: published.publishedAt }
 }
 
 /**

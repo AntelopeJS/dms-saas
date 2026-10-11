@@ -10,42 +10,28 @@ import {
 export type LegalDocumentTexts = Partial<Record<LegalDocumentKey, string>>;
 
 /** A stored row, as far as versions are concerned. */
-export type VersionedLegalDocuments = Partial<
-  Pick<LegalDocuments, LegalDocumentKey | "versions" | "updatedAt">
+export type VersionedLegalDocuments = Pick<
+  LegalDocuments,
+  LegalDocumentKey | "versions"
 >;
 
 const NEVER_PUBLISHED: LegalDocumentVersion = {
   version: 0,
   publishedAt: null,
 };
-const FIRST_VERSION = 1;
 
 /**
- * A document saved before documents were versioned counts as version 1,
- * published when the row was last written; an empty one was never published.
- */
-function legacyVersion(
-  row: VersionedLegalDocuments,
-  key: LegalDocumentKey,
-): LegalDocumentVersion {
-  if (!row[key]) return NEVER_PUBLISHED;
-  return { version: FIRST_VERSION, publishedAt: row.updatedAt ?? null };
-}
-
-/**
- * The version and publication date of every document of a row.
+ * The version and publication date of every document of a row; every
+ * document is unpublished before the row exists.
  *
  * @param row The stored legal documents, if any
  */
 export function readLegalDocumentVersions(
   row: VersionedLegalDocuments | null | undefined,
 ): LegalDocumentVersions {
-  const source = row ?? {};
+  if (row) return row.versions;
   return Object.fromEntries(
-    LEGAL_DOCUMENT_KEYS.map((key) => [
-      key,
-      source.versions?.[key] ?? legacyVersion(source, key),
-    ]),
+    LEGAL_DOCUMENT_KEYS.map((key) => [key, NEVER_PUBLISHED]),
   ) as LegalDocumentVersions;
 }
 
