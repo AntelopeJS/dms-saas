@@ -173,6 +173,10 @@ function toMigrationRow(
     revision: randomUUID(),
     fromPlanId: migration.fromPlanId,
     toPlanId: migration.toPlanId,
+    // Written at the start of a migration, as the console does: the plans
+    // may be renamed or deleted later, and the list searches these names.
+    fromPlanName: findPlan(migration.fromPlanId).name,
+    toPlanName: target.name,
     status: migration.status,
     stage: planMigrationStageOf(migration.status),
     notifyMembers: true,

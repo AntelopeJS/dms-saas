@@ -34,6 +34,7 @@ import { composed, listDateFormat, valueText } from "../../i18n/composed-text";
 import { dateTimeParam } from "../../plans/migration-blocks";
 import { migrationTotals } from "../../plans/migration-detail";
 import { statusPillDisplay, statusType } from "../../utils/status-vocabulary";
+import { HiddenStringFilter } from "./hidden-filter";
 
 const TEXTS = "$saas.catalog.migrations";
 const ARROW = "→";
@@ -137,12 +138,14 @@ export class planMigrationsDataAPI extends DataController(
   @Select()
   @Listable()
   @Searchable()
+  @HiddenStringFilter()
   @Access(AccessMode.ReadOnly)
   declare fromPlanName: string | null;
 
   @Select()
   @Listable()
   @Searchable()
+  @HiddenStringFilter()
   @Access(AccessMode.ReadOnly)
   declare toPlanName: string | null;
 
