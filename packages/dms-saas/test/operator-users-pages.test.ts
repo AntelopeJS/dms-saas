@@ -61,8 +61,8 @@ describe("users list", () => {
     expect(
       options?.rowActions?.custom?.map((action) => action.confirm),
     ).toEqual([
-      { from: "/api/saas/platform-owners/{_id}/promote-confirm" },
-      { from: "/api/saas/platform-owners/{_id}/demote-confirm" },
+      { from: "/api/saas/platform-owners/{{row._id}}/promote-confirm" },
+      { from: "/api/saas/platform-owners/{{row._id}}/demote-confirm" },
     ]);
   });
 });
@@ -109,9 +109,9 @@ describe("pages of the area", () => {
     expect(
       options?.rowActions?.custom?.map((action) => action.target.url),
     ).toEqual([
-      "/api/saas/segments/{_id}/owners-export/start",
-      "/api/saas/segments/{_id}/evaluate",
-      "/api/saas/segments/{_id}/duplicate",
+      "/api/saas/segments/{{row._id}}/owners-export/start",
+      "/api/saas/segments/{{row._id}}/evaluate",
+      "/api/saas/segments/{{row._id}}/duplicate",
     ]);
   });
 });

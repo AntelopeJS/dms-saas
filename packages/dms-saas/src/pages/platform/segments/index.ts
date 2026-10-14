@@ -5,7 +5,7 @@ import { segmentsDataAPI } from "../../../data-api";
 import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
 
-const SEGMENTS_API = "/api/saas/segments/{_id}";
+const SEGMENTS_API = "/api/saas/segments/{{row._id}}";
 
 @RegisterPage()
 export class SaasSegmentsController extends PageController(

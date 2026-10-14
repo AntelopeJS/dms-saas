@@ -100,10 +100,10 @@ describe("the plans page", () => {
       custom.find((action) => action.label.endsWith(suffix));
 
     expect(byLabel("stop_selling")?.confirm).toEqual({
-      from: "/api/saas/plan-dialogs/{_id}/stop-selling",
+      from: "/api/saas/plan-dialogs/{{row._id}}/stop-selling",
     });
     expect(byLabel("delete")).toMatchObject({
-      confirm: { from: "/api/saas/plan-dialogs/{_id}/delete" },
+      confirm: { from: "/api/saas/plan-dialogs/{{row._id}}/delete" },
       rule: { field: "boundWorkspaceCount", equals: 0 },
     });
   });
@@ -157,7 +157,7 @@ describe("the features page", () => {
     expect(options?.formContainer?.type).toBe("drawer");
     expect(options?.reorder).toEqual({ field: "order" });
     expect(options?.rowActions?.delete).toMatchObject({
-      confirm: { from: "/api/saas/plan-dialogs/features/{_id}/delete" },
+      confirm: { from: "/api/saas/plan-dialogs/features/{{row._id}}/delete" },
     });
   });
 });

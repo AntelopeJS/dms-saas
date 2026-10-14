@@ -20,10 +20,10 @@ import {
 
 const W = "$saas.workspaces";
 const ROW = `${W}.row_actions`;
-const ROW_API = "/api/saas/workspaces/{_id}";
+const ROW_API = "/api/saas/workspaces/{{row._id}}";
 // Money and access dialogs open on the workspace's own page, where its
 // figures stand next to them: the row action names the dialog to open.
-const ROW_DETAIL = `${WORKSPACES_PAGE_PATH}/{_id}?action=`;
+const ROW_DETAIL = `${WORKSPACES_PAGE_PATH}/{{row._id}}?action=`;
 const HEADLINE_FIGURES = 4;
 const PAGE_SIZE = 25;
 // MRR is stored in minor units: 500.00 in the reporting currency.

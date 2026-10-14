@@ -136,7 +136,7 @@ const invoiceTable = TableView(tenantInvoicesDataAPI, {
         rule: { field: "invoicePdfUrl", notEquals: null },
         target: {
           type: "external",
-          url: "{invoicePdfUrl}",
+          url: "{{row.invoicePdfUrl}}",
           newTab: true,
         },
       },
@@ -146,7 +146,7 @@ const invoiceTable = TableView(tenantInvoicesDataAPI, {
         rule: { field: "hostedInvoiceUrl", notEquals: null },
         target: {
           type: "external",
-          url: "{hostedInvoiceUrl}",
+          url: "{{row.hostedInvoiceUrl}}",
           newTab: true,
         },
       },

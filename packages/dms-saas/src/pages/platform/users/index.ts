@@ -6,7 +6,7 @@ import { SAAS_MODULE_ID } from "../../module";
 import { customersCategory } from "../categories";
 
 const USERS_PAGE_SIZE = 25;
-const PLATFORM_OWNERS_API = "/api/saas/platform-owners/{_id}";
+const PLATFORM_OWNERS_API = "/api/saas/platform-owners/{{row._id}}";
 
 const USER_TABS = [
   {

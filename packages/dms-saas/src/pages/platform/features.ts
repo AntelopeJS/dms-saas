@@ -78,7 +78,9 @@ export class SaasFeaturesController extends PageController(
       hasSelection: false,
       delete: {
         isEnabled: true,
-        confirm: { from: `${PLAN_DIALOGS_ENDPOINT}/features/{_id}/delete` },
+        confirm: {
+          from: `${PLAN_DIALOGS_ENDPOINT}/features/{{row._id}}/delete`,
+        },
         successMessage: `${TEXTS}.deleted`,
       },
     },

@@ -20,7 +20,7 @@ import { NO_ROW_ACTIONS, blockMeta } from "../../block-meta";
 
 const PERMISSIONS = "$saas.permissions.users";
 const SPACING = "1.5rem";
-const WORKSPACE_DETAIL_URL = `${WORKSPACES_PAGE_PATH}/{_instance}`;
+const WORKSPACE_DETAIL_URL = `${WORKSPACES_PAGE_PATH}/{{row._instance}}`;
 
 const ROUTE_FILTER_USER = { id: { field: "userId" } };
 const USER_API = "/api/saas/users/{{params.id}}";
@@ -78,13 +78,21 @@ const billingTable = TableView(adminUserInvoicesDataAPI, {
         icon: "i-ph-arrow-square-out",
         isDefault: true,
         rule: { field: "hostedInvoiceUrl", notEquals: null },
-        target: { type: "external", url: "{hostedInvoiceUrl}", newTab: true },
+        target: {
+          type: "external",
+          url: "{{row.hostedInvoiceUrl}}",
+          newTab: true,
+        },
       },
       {
         label: "$saas.users.billing.download_pdf",
         icon: "i-ph-file-pdf",
         rule: { field: "invoicePdfUrl", notEquals: null },
-        target: { type: "external", url: "{invoicePdfUrl}", newTab: true },
+        target: {
+          type: "external",
+          url: "{{row.invoicePdfUrl}}",
+          newTab: true,
+        },
       },
     ],
   },
