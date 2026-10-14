@@ -22,6 +22,9 @@ const DYNAMIC_KEY =
   /\$?([a-z][a-z0-9_]*(?:\.[A-Za-z0-9_]+)*\.)((?:[A-Za-z0-9_.]*\$\{[^}]*\})+[A-Za-z0-9_.]*)/g;
 const ANY_PLACEHOLDER = /\$\{[^}]*\}/;
 const KEY_CHARACTERS = "[A-Za-z0-9_.]*";
+/** A run of key characters: a key is named where a run is it or starts with it. */
+const KEY_RUN = /[A-Za-z0-9_.]+/g;
+const SEGMENT_SEPARATOR = ".";
 const NAMESPACE_DEPTH = 2;
 /** Constant resolutions chained in one file (`D` built from `TEXTS`). */
 const RESOLUTION_PASSES = 3;
@@ -77,8 +80,12 @@ function handedConstants(
 }
 
 interface KeyReferences {
-  /** Every source file, its key constants written out. */
-  text: string;
+  /**
+   * Every run of key characters in the sources (key constants written out),
+   * with each of its dotted heads: one lookup per key in place of one regex
+   * scan of every source per key, which timed out under a loaded runner.
+   */
+  names: Set<string>;
   /** Keys built at runtime, as patterns over the key. */
   patterns: RegExp[];
   /** Prefixes handed whole to code that appends the rest (`statusItems`). */
@@ -86,7 +93,11 @@ interface KeyReferences {
 }
 
 function collectReferences(prefixes: Set<string>): KeyReferences {
-  const references: KeyReferences = { text: "", patterns: [], roots: [] };
+  const references: KeyReferences = {
+    names: new Set(),
+    patterns: [],
+    roots: [],
+  };
   const files = SOURCE_ROOTS.flatMap((root) =>
     sourceFiles(new URL(root, import.meta.url)),
   );
@@ -97,7 +108,7 @@ function collectReferences(prefixes: Set<string>): KeyReferences {
       INTERPOLATION,
       (whole, name: string) => constants.get(name) ?? whole,
     );
-    references.text += `${resolved}\n`;
+    addNames(resolved, references.names);
     references.roots.push(...handedConstants(source, constants, prefixes));
     for (const match of resolved
       .replace(KEY_CONSTANT, "")
@@ -113,6 +124,17 @@ function collectReferences(prefixes: Set<string>): KeyReferences {
   return references;
 }
 
+function addNames(source: string, names: Set<string>): void {
+  for (const [run] of source.matchAll(KEY_RUN)) {
+    names.add(run);
+    let end = run.indexOf(SEGMENT_SEPARATOR);
+    while (end !== -1) {
+      names.add(run.slice(0, end));
+      end = run.indexOf(SEGMENT_SEPARATOR, end + 1);
+    }
+  }
+}
+
 function keyPrefixes(keys: string[]): Set<string> {
   const prefixes = new Set<string>();
   for (const key of keys) {
@@ -124,11 +146,8 @@ function keyPrefixes(keys: string[]): Set<string> {
 }
 
 function isReferenced(key: string, references: KeyReferences): boolean {
-  const literal = new RegExp(
-    `(?<![A-Za-z0-9_.])${escapeRegExp(key)}(?![A-Za-z0-9_])`,
-  );
   return (
-    literal.test(references.text) ||
+    references.names.has(key) ||
     references.roots.some((root) => key.startsWith(`${root}.`)) ||
     references.patterns.some((pattern) => pattern.test(key))
   );
