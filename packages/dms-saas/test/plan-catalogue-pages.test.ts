@@ -56,8 +56,11 @@ describe("the plans page", () => {
     const { options } = await SaasPlansController.table.serialize();
     const card = await planCard();
 
-    expect(options?.displays?.map((display) => display.id)).toEqual(["cards"]);
-    expect(options?.displays?.[0]?.component).toBeUndefined();
+    expect(options?.displays?.map((display) => display.id)).toEqual([
+      "table",
+      "cards",
+    ]);
+    expect(options?.displays?.[1]?.component).toBeUndefined();
     expect(options?.defaultDisplay).toBe("cards");
     expect(card.componentName).toBe("DmsSaasPlanCard");
     expect(card.options?.selectable).toBe(options?.rowActions?.hasSelection);
