@@ -988,6 +988,15 @@ describe("registration card policy", () => {
     });
   }
 
+  const uncappedBillingSettings = modelFakes.BillingSettingsModel;
+
+  /** The per-card rule is off by default; these cases turn it on. */
+  function capFreeWorkspacesPerCard(): void {
+    modelFakes.BillingSettingsModel = () => ({
+      get: async () => ({ maxFreeWorkspacesPerCard: 1 }),
+    });
+  }
+
   function subscriptionOf(tenantId: string): TenantSubscription | undefined {
     return subscriptions.get(tenantId);
   }
@@ -999,6 +1008,7 @@ describe("registration card policy", () => {
 
   afterEach(() => {
     setRuntimeConfig({ stripe: STRIPE_CONFIG });
+    modelFakes.BillingSettingsModel = uncappedBillingSettings;
   });
 
   it("defaults to requiring a card, as before the option existed", async () => {
@@ -1027,6 +1037,7 @@ describe("registration card policy", () => {
 
   it("refuses a card that already backs as many free workspaces as allowed", async () => {
     applyPolicy("required");
+    capFreeWorkspacesPerCard();
     await buildController().register(buildRegisterBody());
 
     await expect(
@@ -1041,6 +1052,7 @@ describe("registration card policy", () => {
 
   it("opens a paid plan chosen on Pricing awaiting its first payment instead", async () => {
     applyPolicy("required");
+    capFreeWorkspacesPerCard();
     await buildController().register(buildRegisterBody());
 
     const result = await buildController().register(
@@ -1060,6 +1072,7 @@ describe("registration card policy", () => {
 
   it("still refuses the card when the plan chosen on Pricing is free", async () => {
     applyPolicy("required");
+    capFreeWorkspacesPerCard();
     await buildController().register(buildRegisterBody());
 
     await expect(

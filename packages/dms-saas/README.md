@@ -159,9 +159,14 @@ Two module options shape it:
 
 | Value | Behaviour |
 | --- | --- |
-| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer holding that card and a free subscription — a local one while the free plan is off Stripe, which the upgrade checkout replaces on that customer — and the free-workspace-per-card cap applies. |
+| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer holding that card and a free subscription — a local one while the free plan is off Stripe, which the upgrade checkout replaces on that customer — and the free-workspace-per-card cap applies when it is on. |
 | `optional` | The card step is shown, and the visitor may choose to add a card later. Without a card the workspace is card-less, as under `none`. |
 | `none` | The card step is never shown, `GET /api/saas/register/setup-intent` answers `400 saas.errors.registration.payment_method_disabled`, and Stripe is never called: the workspace gets a local free subscription with no Stripe customer, which the upgrade checkout creates when the owner first pays. A card sent anyway is ignored. |
+
+The free-workspace-per-card cap ("Free workspaces per card" in the operator
+billing rules) is off by default (`0`): limiting free workspaces per person is
+usually the consuming SaaS's own business rule. An operator may turn it on;
+it then asks a card of every free workspace created in the app.
 
 Under `optional` and `none`, a card-less workspace has no card fingerprint, so
 the free-workspace-per-card cap does not apply to it: the only remaining limit

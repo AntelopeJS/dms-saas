@@ -208,7 +208,7 @@ describe("GET /api/saas/register/plan", () => {
 
     expect(summary.plan._id).toBe("plan-free");
     expect(summary.requestedPlan).toBeNull();
-    expect(summary.rules.maxFreeWorkspacesPerCard).toBe(1);
+    expect(summary.rules.maxFreeWorkspacesPerCard).toBe(0);
   });
 
   it("adds the public plan chosen on Pricing", async () => {

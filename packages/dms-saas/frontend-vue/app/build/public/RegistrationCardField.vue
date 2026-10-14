@@ -32,10 +32,13 @@ const badge = computed(() =>
 		: t('saas.public.card.required'),
 )
 
+// Zero turns the per-card rule off: the card then backs no count to explain.
 const reason = computed(() =>
-	t('saas.public.card.reason', {
-		count: String(props.maxFreeWorkspacesPerCard ?? 1),
-	}),
+	props.maxFreeWorkspacesPerCard
+		? t('saas.public.card.reason', {
+				count: String(props.maxFreeWorkspacesPerCard),
+			})
+		: t('saas.public.card.reason_secured'),
 )
 </script>
 
