@@ -16,54 +16,71 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Three independent jobs instead of one sequence: the wall-clock is the
+# slowest of them (verify-source), not their sum.
 jobs:
-  ubuntu:
+  static:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
 
-      # Before setup-node: `cache: pnpm` needs a pnpm on PATH to locate the
-      # store. The version comes from the root `packageManager` field.
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
-
-      - uses: actions/setup-node@v4
-        with:
-          # .nvmrc is the version of record. oxlint needs at least 22.18 to
-          # read a TypeScript config, which every value there clears.
-          node-version-file: .nvmrc
-          cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            packages/dms-saas/frontend-vue/pnpm-lock.yaml
-
-      # `...` pulls in the workspace interface package the module depends on;
-      # `{.}` adds the root, which owns the shared lint, format and tsconfig
-      # tooling. The playground is the only project that still needs the
-      # private registry, and neither filter reaches it.
-      - run: pnpm install --filter "@antelopejs/dms-saas..." --filter "{.}" --frozen-lockfile
-      - run: pnpm --dir packages/dms-saas/frontend-vue install --frozen-lockfile
-
-      # The module's type-aware lint resolves the interface package through its
-      # built `dist`; without it every imported type degrades to `error` and
-      # the union-type rules fail.
-      - run: pnpm --filter @antelopejs/interface-dms-saas build
+      # Builds the interface package first, then the module. Each `tsc` emit
+      # runs the same tsconfig as that package's `typecheck` script, so the
+      # build is the typecheck: oxlint's type-aware pass degrades to `any` on
+      # a broken tsconfig without failing, and this is what catches it. It
+      # also comes before lint, whose type-aware rules resolve the interface
+      # package through its built `dist`; without it every imported type
+      # degrades to `error` and the union-type rules fail.
+      - run: pnpm --filter @antelopejs/dms-saas build
 
       - run: pnpm --filter @antelopejs/interface-dms-saas lint
       - run: pnpm --filter @antelopejs/dms-saas lint
-      # oxlint's type-aware pass degrades to `any` on a broken tsconfig
-      # without failing, so the typecheck is what catches it.
-      - run: pnpm --filter @antelopejs/interface-dms-saas typecheck
-      - run: pnpm --filter @antelopejs/dms-saas typecheck
       # Unused dependencies only. `pnpm knip:all` also reports dead files and
       # exports, which need a human to confirm, so they stay out of the gate.
       - run: pnpm --filter @antelopejs/interface-dms-saas knip
       - run: pnpm --filter @antelopejs/dms-saas knip
-      # Builds the interface package first, which the module's own build needs.
-      - run: pnpm --filter @antelopejs/dms-saas build
       # Reads the interface package's built `dist` against its `exports` map:
       # no dangling target, no unreachable module, no unexported directory.
       - run: pnpm --filter @antelopejs/interface-dms-saas check:exports
+
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # The Mongo-backed tests pin mongod 8.0.8, a 208 MB download every run
+      # without this; parallel workers also queue on its download lock.
+      # mongodb-memory-server stores it in this home directory by default.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-8.0.8-${{ runner.os }}
+
+      # vitest aliases both packages to their sources: no build needed.
       - run: pnpm --filter @antelopejs/dms-saas test:unit
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
       # Compile the published DMS source together with this frontend module.
       - run: pnpm --filter @antelopejs/dms-saas test:frontend
+
+  # The single check to require on `main`: it keeps the historical job name,
+  # and fails unless every job above succeeded.
+  ubuntu:
+    if: always()
+    needs: [static, unit, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: for result in $RESULTS; do [ "$result" = success ] || exit 1; done
