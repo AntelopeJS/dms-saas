@@ -1,7 +1,10 @@
 import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import { StatGroup, TableView } from "@antelopejs/interface-dms/base";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
-import { CARDS_DISPLAY_ID } from "@antelopejs/interface-dms/base/table-view";
+import {
+  CARDS_DISPLAY_ID,
+  TABLE_DISPLAY_ID,
+} from "@antelopejs/interface-dms/base/table-view";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { ButtonVariant } from "@antelopejs/interface-dms/base/types";
 import type { CustomRowAction } from "@antelopejs/interface-dms/base/types/row-action";
@@ -225,7 +228,10 @@ export class SaasPlansController extends PageController(
         description: `${TEXTS}.empty.error_description`,
       },
     },
-    displays: [{ id: CARDS_DISPLAY_ID, capabilities: { filters: false } }],
+    displays: [
+      { id: TABLE_DISPLAY_ID },
+      { id: CARDS_DISPLAY_ID, capabilities: { filters: false } },
+    ],
     defaultDisplay: CARDS_DISPLAY_ID,
     card: {
       component: CustomComponent("DmsSaasPlanCard").options({
