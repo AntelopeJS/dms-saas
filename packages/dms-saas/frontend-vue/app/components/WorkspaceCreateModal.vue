@@ -4,7 +4,7 @@ import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
 
 /** What choosing a plan asks for, as `GET create-options` words it. */
-type CardRequirement = 'none' | 'payment' | 'verification'
+type CardRequirement = 'none' | 'payment'
 
 interface CreatePlanOption extends PricedPlan {
 	_id: string
@@ -15,14 +15,8 @@ interface CreatePlanOption extends PricedPlan {
 	cardRequirement: CardRequirement
 }
 
-interface FreePerCardRule {
-	limit: number
-	usedBy: string[]
-}
-
 interface CreateOptions {
 	plans: CreatePlanOption[]
-	freePerCard: FreePerCardRule | null
 }
 
 interface ConfirmedPayment {
@@ -58,8 +52,6 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
 /** Server refusals about the card, shown under the card field. */
 const CARD_ERROR_KEYS = new Set([
 	'saas.errors.workspace.payment_method_required',
-	'saas.errors.workspace.free_card_limit_reached',
-	'saas.errors.workspace.creation_in_progress',
 	'saas.errors.billing.country_required',
 ])
 
@@ -109,9 +101,7 @@ const submitLabel = computed(() => {
 })
 
 const cardBadge = computed(() =>
-	requirement.value === 'verification'
-		? t(`${KEYS}.card.verification_only`)
-		: t(`${KEYS}.card.required_for`, { plan: selectedPlan.value?.name ?? '' }),
+	t(`${KEYS}.card.required_for`, { plan: selectedPlan.value?.name ?? '' }),
 )
 
 const chargeSentence = computed(() => {
@@ -133,14 +123,6 @@ const chargeSentence = computed(() => {
 })
 
 function planMeta(plan: CreatePlanOption): string {
-	const rule = options.value?.freePerCard
-	if (plan.cardRequirement === 'verification' && rule?.usedBy.length) {
-		return t(
-			`${KEYS}.free_per_card_used`,
-			{ limit: rule.limit, workspaces: rule.usedBy.join(', ') },
-			rule.limit,
-		)
-	}
 	const parts = [planDescription(plan.description)].filter(Boolean)
 	if (plan.trialDays > 0 && plan.cardRequirement === 'payment') {
 		parts.push(t(`${KEYS}.trial`, { days: plan.trialDays }))
@@ -357,33 +339,17 @@ onMounted(load)
 				<template #label-extra>
 					<DmsStatusPill
 						size="sm"
-						:tone="requirement === 'verification' ? 'info' : 'primary'"
+						tone="primary"
 						:label="cardBadge"
 					/>
 				</template>
-				<p
-					v-if="requirement === 'verification' && options?.freePerCard"
-					class="text-muted mb-2 text-xs"
-				>
-					{{
-						$t(
-							`${KEYS}.card.why_free`,
-							{ limit: options.freePerCard.limit },
-							options.freePerCard.limit,
-						)
-					}}
-				</p>
 				<div
 					:id="PAYMENT_ELEMENT_ID"
 					class="border-default rounded-md border p-3"
 				/>
 				<p class="text-muted mt-1.5 flex items-center gap-1 text-xs">
 					<UIcon name="i-ph-lock-simple" class="size-3.5" />
-					{{
-						requirement === 'verification'
-							? $t(`${KEYS}.card.never_charged`)
-							: $t(`${KEYS}.card.secured`)
-					}}
+					{{ $t(`${KEYS}.card.secured`) }}
 				</p>
 			</FormFieldRow>
 		</FormRows>

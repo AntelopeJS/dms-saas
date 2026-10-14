@@ -47,7 +47,7 @@
 				"required": "Obligatoire",
 				"optional": "Facultative sur {plan}",
 				"free_plan": "l'offre gratuite",
-				"reason": "Enregistrée de façon sécurisée par Stripe. Rien n'est débité sur l'offre gratuite : la carte confirme une personne derrière chaque espace gratuit ({count} par carte).",
+				"reason": "Enregistrée de façon sécurisée par Stripe. Rien n'est débité sur l'offre gratuite.",
 				"later": "Ajouter une carte plus tard",
 				"later_hint": "Elle vous sera demandée avant de passer à une offre payante."
 			},

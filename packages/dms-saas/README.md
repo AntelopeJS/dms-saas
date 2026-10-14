@@ -159,19 +159,18 @@ Two module options shape it:
 
 | Value | Behaviour |
 | --- | --- |
-| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer holding that card and a free subscription — a local one while the free plan is off Stripe, which the upgrade checkout replaces on that customer — and the free-workspace-per-card cap applies. |
+| `required` (default) | The card step is shown and must be completed. The workspace gets a Stripe customer holding that card and a free subscription — a local one while the free plan is off Stripe, which the upgrade checkout replaces on that customer. |
 | `optional` | The card step is shown, and the visitor may choose to add a card later. Without a card the workspace is card-less, as under `none`. |
 | `none` | The card step is never shown, `GET /api/saas/register/setup-intent` answers `400 saas.errors.registration.payment_method_disabled`, and Stripe is never called: the workspace gets a local free subscription with no Stripe customer, which the upgrade checkout creates when the owner first pays. A card sent anyway is ignored. |
 
-Under `optional` and `none`, a card-less workspace has no card fingerprint, so
-the free-workspace-per-card cap does not apply to it: the only remaining limit
-on free workspaces is one account per e-mail address.
+dms-saas does not limit how many free workspaces a card may back: whether a
+free plan stays one per person is the consuming SaaS's own business rule.
 
 The option covers both public entry points — `POST /api/saas/register` and the
 `auth/no-workspace` completion — and nothing else: invitation sign-up never
 asks for a plan or a card, whatever `admissionMode` and
-`registration.paymentMethod` say. Tenant-side workspace creation keeps
-requiring a card.
+`registration.paymentMethod` say. Tenant-side workspace creation asks for a
+card only on a paid plan.
 
 `admissionMode: "invitation-only"` closes public registration: every
 `/api/saas/register` route answers `403 saas.errors.registration_closed` before
@@ -522,8 +521,8 @@ RegisterHook(
   subscription, Stripe customer and, on the password path, the account itself
   are rolled back. That is the point: a workspace that is paid for but missing
   the data its owner filled in is worse than no workspace.
-- It runs while the per-card provisioning lock is held, so a slow listener
-  slows every concurrent signup on that card. Write, do not call out.
+- It runs inside the provisioning transaction, so a slow listener slows the
+  signup it belongs to. Write, do not call out.
 - `extras` reaches both entry points — password registration and the
   OAuth-entry completion — and is absent when the consumer captured nothing.
 - Registration is public and unauthenticated, so `extras` is bounded before it
@@ -909,8 +908,8 @@ therefore owns any product-specific sleep or wake work.
 
 #### Successful workspace creation
 
-Provisioning reserves free-workspace capacity per card and trial eligibility
-per email/card identity before issuing provider effects. Reservations do not
+Provisioning reserves trial eligibility per email/card identity before issuing
+provider effects. Reservations do not
 expire. An unknown provider or persistence outcome keeps the reservation and
 the account for reconciliation; the service never replays opaque provisioning
 hooks or stores their `extras`. Known provider handles and the attempt ID are

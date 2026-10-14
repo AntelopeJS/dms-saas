@@ -103,7 +103,6 @@ describe("billing rules & legal page", () => {
     });
     expect(form.options.sections.map((section) => section.id)).toEqual([
       "unpaid",
-      "free",
       "tax",
       "refunds",
       "legal",
@@ -130,7 +129,6 @@ describe("billing rules & legal page", () => {
       moneyBackGuaranteeWindowDays:
         "$saas.operator_billing.billing_rules.days_unit",
     });
-    expect(suffixes.maxFreeWorkspacesPerCard).toBeUndefined();
   });
 
   it("groups its side navigation under Billing and Legal", () => {
@@ -143,7 +141,6 @@ describe("billing rules & legal page", () => {
       form.options.sections.map((section) => [section.id, section.navGroup]),
     ).toEqual([
       ["unpaid", `${groups}.billing`],
-      ["free", `${groups}.billing`],
       ["tax", `${groups}.billing`],
       ["refunds", `${groups}.billing`],
       ["legal", `${groups}.legal`],

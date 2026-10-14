@@ -219,13 +219,9 @@
           "year": "year"
         },
         "trial": "{days}-day trial",
-        "free_per_card_used": "Free workspaces: {limit} per card, used by {workspaces} | Free workspaces: {limit} per card, used by {workspaces} | Free workspaces: {limit} per card, used by {workspaces}",
         "card": {
           "label": "Card",
-          "verification_only": "Verification only",
           "required_for": "Required for {plan}",
-          "why_free": "Why a card for a free workspace? Each card unlocks one free workspace, so free plans can stay free. It is never charged. | Why a card for a free workspace? Each card unlocks one free workspace, so free plans can stay free. It is never charged. | Why a card for a free workspace? Each card unlocks {limit} free workspaces, so free plans can stay free. It is never charged.",
-          "never_charged": "Never charged on a free plan. Secured by Stripe.",
           "secured": "Secured by Stripe."
         },
         "charge": {

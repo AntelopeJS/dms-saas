@@ -97,12 +97,6 @@ interface RegistrationPayload {
 	name: string
 	workspaceName: string
 	paymentMethodId?: string
-	/**
-	 * The plan chosen on Pricing: the API opens the workspace on it, awaiting
-	 * its first payment, when the card already backs every free workspace it
-	 * may.
-	 */
-	requestedPlanId?: string
 	extras?: Record<string, unknown>
 }
 
@@ -185,7 +179,6 @@ const API_ERROR_FIELDS: Record<string, RegistrationField> = {
 	'saas.errors.user.email_in_use': 'email',
 	'saas.errors.registration.password_policy': 'password',
 	'saas.errors.registration.payment_method_required': 'card',
-	'saas.errors.workspace.free_card_limit_reached': 'card',
 }
 
 /**
@@ -498,7 +491,6 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 			workspaceName: translate(DEFAULT_WORKSPACE_NAME_KEY, {
 				name: form.name.trim(),
 			}),
-			requestedPlanId: plan.summary.value?.requestedPlan?._id,
 			extras: snapshotRegistrationExtras(toValue(options.extras)),
 		}
 	}

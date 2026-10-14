@@ -199,13 +199,6 @@
 						"deleted_effect": "Seulement si le propriétaire de l’espace résilie ; les factures restent archivées"
 					}
 				},
-				"free": {
-					"title": "Espaces de travail gratuits",
-					"description": "Limite les abus de l’offre gratuite en rattachant chaque espace gratuit à une carte de paiement.",
-					"per_card": "Espaces gratuits par carte",
-					"per_card_description": "Quand une carte couvre déjà ce nombre d’espaces gratuits, un nouvel espace avec la même carte demande une offre payante.",
-					"per_card_hint": "De 0 à 100. 0 désactive la règle."
-				},
 				"tax": {
 					"title": "Taxes",
 					"description": "Stripe calcule la TVA selon le pays du client et la catégorie fiscale du produit.",

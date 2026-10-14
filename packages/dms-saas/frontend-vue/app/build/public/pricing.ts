@@ -34,7 +34,6 @@ export interface PublicMoneyBackGuarantee {
 export interface PublicBillingRules {
 	moneyBackGuarantee: PublicMoneyBackGuarantee | null
 	dataRetentionDays: number
-	maxFreeWorkspacesPerCard: number
 }
 
 export interface PublicPricing {

@@ -47,7 +47,7 @@
 				"required": "Required",
 				"optional": "Optional on {plan}",
 				"free_plan": "the free plan",
-				"reason": "Saved securely by Stripe. Nothing is charged on the free plan: the card confirms one person behind each free workspace ({count} per card).",
+				"reason": "Saved securely by Stripe. Nothing is charged on the free plan.",
 				"later": "Add a card later",
 				"later_hint": "You'll be asked for one before moving to a paid plan."
 			},

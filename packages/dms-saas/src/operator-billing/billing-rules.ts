@@ -12,7 +12,6 @@ import { isPlanStripeSyncCurrent } from "../stripe/sync-plan";
 
 const MAX_DELAY_DAYS = 365;
 const MAX_RETENTION_DAYS = 3650;
-const MAX_FREE_WORKSPACES_PER_CARD = 100;
 const MAX_LEGAL_TEXT_LENGTH = 500_000;
 const STRIPE_TAX_CODE_PATTERN = /^txcd_\d{8}$/;
 
@@ -28,7 +27,6 @@ const BILLING_RULES_SETTING_KEYS = [
   "autoSuspendEnabled",
   "autoSuspendDelayDays",
   "dataRetentionDaysAfterCancellation",
-  "maxFreeWorkspacesPerCard",
   "moneyBackGuaranteeEnabled",
   "moneyBackGuaranteeWindowDays",
   "moneyBackGuaranteeMode",
@@ -68,11 +66,6 @@ export const billingRulesBodySchema = z.object({
     0,
     MAX_RETENTION_DAYS,
     "$saas.errors.billing_rules.retention_days",
-  ).optional(),
-  maxFreeWorkspacesPerCard: wholeNumber(
-    0,
-    MAX_FREE_WORKSPACES_PER_CARD,
-    "$saas.errors.billing_rules.free_workspaces_per_card",
   ).optional(),
   moneyBackGuaranteeEnabled: z.boolean().optional(),
   moneyBackGuaranteeWindowDays: wholeNumber(

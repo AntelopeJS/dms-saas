@@ -91,7 +91,6 @@ export interface SeedSubscription {
   status: TenantSubscriptionStatus;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
-  cardFingerprint: string | null;
   currentPeriodEndOn: DayOffset | null;
   freeUntilOn: DayOffset | null;
   pastDueSinceOn: DayOffset | null;

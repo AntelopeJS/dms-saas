@@ -229,9 +229,6 @@ describe("registration fields", () => {
     expect(
       registrationFieldOf("saas.errors.registration.payment_method_required"),
     ).toBe("card");
-    expect(
-      registrationFieldOf("saas.errors.workspace.free_card_limit_reached"),
-    ).toBe("card");
     expect(registrationFieldOf("saas.errors.registration_closed")).toBeNull();
     expect(registrationFieldOf(undefined)).toBeNull();
   });
@@ -244,7 +241,6 @@ describe("registration fields", () => {
       rules: {
         moneyBackGuarantee: null,
         dataRetentionDays: 30,
-        maxFreeWorkspacesPerCard: 1,
       },
     };
 

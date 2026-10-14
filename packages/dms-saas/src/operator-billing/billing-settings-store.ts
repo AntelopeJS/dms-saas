@@ -5,7 +5,6 @@ import {
   BillingSettingsModel,
   DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
   DEFAULT_DATA_RETENTION_DAYS,
-  DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
   DEFAULT_STRIPE_TAX_CODE,
   type RefundProrataMode,
 } from "../db";
@@ -20,7 +19,6 @@ function defaultBillingSettings(now: Date): BillingSettings {
     autoSuspendEnabled: true,
     autoSuspendDelayDays: DEFAULT_AUTO_SUSPEND_DELAY_DAYS,
     dataRetentionDaysAfterCancellation: DEFAULT_DATA_RETENTION_DAYS,
-    maxFreeWorkspacesPerCard: DEFAULT_MAX_FREE_WORKSPACES_PER_CARD,
     moneyBackGuaranteeEnabled: false,
     moneyBackGuaranteeWindowDays: DEFAULT_MONEY_BACK_WINDOW_DAYS,
     moneyBackGuaranteeMode: DEFAULT_REFUND_MODE,

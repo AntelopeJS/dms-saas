@@ -175,18 +175,6 @@ export class TenantSubscriptionModel extends BasicDataModel(
     return row ? TenantSubscriptionModel.fromDatabase(row) : undefined;
   }
 
-  async findByCardFingerprint(
-    cardFingerprint: string,
-  ): Promise<TenantSubscription[]> {
-    const rows = await this.table
-      .getAll(cardFingerprint, "cardFingerprint")
-      .filter((row) => row.key("status").ne(STATUS_CANCELLED))
-      .run();
-    return rows
-      .map((row) => TenantSubscriptionModel.fromDatabase(row))
-      .filter((row): row is TenantSubscription => row !== undefined);
-  }
-
   async findByPlan(planId: string): Promise<TenantSubscription[]> {
     const rows = await this.table.getAll(planId, "planId").run();
     return rows

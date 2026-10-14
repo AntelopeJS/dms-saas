@@ -21,7 +21,6 @@ export const BILLING_SETTINGS: SeedBillingSettings = {
   autoSuspendEnabled: true,
   autoSuspendDelayDays: 14,
   dataRetentionDaysAfterCancellation: 30,
-  maxFreeWorkspacesPerCard: 1,
   moneyBackGuaranteeEnabled: true,
   moneyBackGuaranteeWindowDays: 14,
   moneyBackGuaranteeMode: "prorated",

@@ -42,10 +42,8 @@ import {
   resolveBillingProfileForNewWorkspace,
   resolveCardDetails,
   resolveDataRetentionDays,
-  resolveFreeWorkspacesPerCard,
   resolveSelfServeCardUse,
   rollbackWorkspaceProvisioning,
-  withCardHold,
   workspaceGlanceItems,
 } from "../../workspaces";
 
@@ -104,24 +102,20 @@ async function prepareSelfServeCreation(
   card: CardDetails,
 ): Promise<SelfServeCreationInput> {
   const workspaceName = normalizeWorkspaceName(body.workspaceName);
-  const [billingProfile, freeWorkspacesPerCard] = await Promise.all([
-    resolveBillingProfileForNewWorkspace(
-      user._id,
-      card,
-      getRequestTenantId(ctx),
-    ),
-    resolveFreeWorkspacesPerCard(),
-  ]);
+  const billingProfile = await resolveBillingProfileForNewWorkspace(
+    user._id,
+    card,
+    getRequestTenantId(ctx),
+  );
   const plan = await ensurePlanIsAvailableForCustomer(
     body.planId,
     billingProfile.customerType,
   );
   const cardUse = await resolveSelfServeCardUse({
-    requirement: cardRequirementOf(plan, freeWorkspacesPerCard),
+    requirement: cardRequirementOf(plan),
     paymentMethodId: body.paymentMethodId,
     card,
     billingProfile,
-    freeWorkspacesPerCard,
   });
   return { ...cardUse, workspaceName, planId: body.planId, billingProfile };
 }
@@ -173,8 +167,8 @@ export class SaasWorkspacesController extends Controller(
 
   /**
    * What the creation form offers: the plans the caller may pick, each with
-   * the card it asks for, and the per-card rule of free workspaces. Refuses a
-   * closed admission before anything is filled in.
+   * the card it asks for. Refuses a closed admission before anything is
+   * filled in.
    */
   @Get("/create-options")
   async createOptions(
@@ -191,11 +185,6 @@ export class SaasWorkspacesController extends Controller(
     return createCardSetupIntent();
   }
 
-  /**
-   * The card is read first, to hold it for the whole creation: two creations
-   * racing with one card cannot both pass the per-card count of free
-   * workspaces.
-   */
   @Post("/")
   async createMine(
     @AuthRawUser() user: User,
@@ -204,10 +193,8 @@ export class SaasWorkspacesController extends Controller(
   ): Promise<CreatedWorkspace> {
     assertAdmissionOpen(user.owner);
     const card = await resolveCardDetails(body.paymentMethodId);
-    return withCardHold(card.fingerprint, async () => {
-      const input = await prepareSelfServeCreation(user, ctx, body, card);
-      return provisionSelfServeWorkspace(user, input);
-    });
+    const input = await prepareSelfServeCreation(user, ctx, body, card);
+    return provisionSelfServeWorkspace(user, input);
   }
 
   /**

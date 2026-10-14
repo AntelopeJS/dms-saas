@@ -196,9 +196,6 @@ function errorText(message: string | undefined): string | undefined {
 				:policy="paymentMethodPolicy"
 				:is-visible="isPaymentStepVisible"
 				:plan-name="planSummary?.plan.name ?? null"
-				:max-free-workspaces-per-card="
-					planSummary?.rules.maxFreeWorkspacesPerCard ?? null
-				"
 				:error="errorText(fieldErrors.card)"
 			/>
 

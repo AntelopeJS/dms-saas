@@ -16,12 +16,6 @@ import { applyPlanDowngradeCleanup } from "../../workers";
 import { closePaidUsagePeriods } from "../../workspaces/complimentary";
 import { canResubscribe } from "../../workspaces/first-payment";
 import { DELETION_REQUEST_CLEARED } from "../../workspaces/deletion-request";
-import {
-  assertCardMayBackFreeWorkspace,
-  isFreePerCardPolicyActive,
-  resolveFreeWorkspacesPerCard,
-  withCardHold,
-} from "../../workspaces/free-workspaces-per-card";
 import { releaseAbandonedCheckout } from "./tenant-plan-checkout-recovery";
 import {
   type ChangePlanResult,
@@ -82,25 +76,15 @@ async function loadResumableSubscription(
   return subscription;
 }
 
-/**
- * A card backs only so many free workspaces: a cancelled workspace resting
- * on one counts against it again once it is free.
- */
 async function writeFreeResumption(
   subscription: TenantSubscription,
   plan: Plan,
   model: TenantSubscriptionModel,
 ): Promise<void> {
-  const fingerprint = subscription.cardFingerprint ?? null;
-  const limit = await resolveFreeWorkspacesPerCard();
-  const isCardCounted = !!fingerprint && isFreePerCardPolicyActive(limit);
-  await withCardHold(isCardCounted ? fingerprint : null, async () => {
-    if (isCardCounted) await assertCardMayBackFreeWorkspace(fingerprint, limit);
-    await model.update(
-      subscription._id,
-      freeResumptionPatch(subscription, plan, new Date()),
-    );
-  });
+  await model.update(
+    subscription._id,
+    freeResumptionPatch(subscription, plan, new Date()),
+  );
 }
 
 /**

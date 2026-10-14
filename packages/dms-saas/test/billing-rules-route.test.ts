@@ -111,7 +111,6 @@ describe("billing rules & legal page", () => {
     expect(payload).toMatchObject({
       autoSuspendEnabled: true,
       autoSuspendDelayDays: 14,
-      maxFreeWorkspacesPerCard: 1,
       stripeTaxCode: TAX_CODE,
       termsOfUse: "",
       customerTimeline: {
@@ -158,7 +157,6 @@ describe("billing rules & legal page", () => {
     { autoSuspendDelayDays: 0 },
     { autoSuspendDelayDays: 2.5 },
     { dataRetentionDaysAfterCancellation: -1 },
-    { maxFreeWorkspacesPerCard: -1 },
     { moneyBackGuaranteeWindowDays: 400 },
     { moneyBackGuaranteeMode: "half" },
     { stripeTaxCode: "vat" },
@@ -167,15 +165,6 @@ describe("billing rules & legal page", () => {
 
     expect(error).toMatchObject({ status: 400 });
     expect(settings.state.row).toBeUndefined();
-  });
-
-  it("turns the free-workspaces-per-card rule off with 0", async () => {
-    const payload = await controller.update(ADMIN, {
-      maxFreeWorkspacesPerCard: 0,
-    });
-
-    expect(settings.state.row?.maxFreeWorkspacesPerCard).toBe(0);
-    expect(payload.maxFreeWorkspacesPerCard).toBe(0);
   });
 
   it("carries a new tax category to the plans in the background", async () => {

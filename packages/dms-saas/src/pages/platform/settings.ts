@@ -26,7 +26,6 @@ const PERMISSIONS = "$saas.permissions.billing";
 const BILLING_RULES_URL = "/api/saas/settings/billing";
 const MAX_DAYS = 365;
 const MAX_RETENTION_DAYS = 3650;
-const MAX_FREE_WORKSPACES_PER_CARD = 100;
 
 const LEGAL_DOCUMENT_SLUGS: Record<LegalDocumentKey, string> = {
   termsOfUse: "terms_of_use",
@@ -91,20 +90,6 @@ const unpaidSection: FormSection = {
       "unpaid.timeline",
       "DmsSaasDunningTimeline",
     ),
-  ],
-};
-
-const freeSection: FormSection = {
-  id: "free",
-  label: `${RULES}.free.title`,
-  navGroup: BILLING_NAV_GROUP,
-  description: `${RULES}.free.description`,
-  icon: "i-ph-gift",
-  fields: [
-    countField("maxFreeWorkspacesPerCard", "free.per_card", {
-      min: 0,
-      max: MAX_FREE_WORKSPACES_PER_CARD,
-    }),
   ],
 };
 
@@ -213,13 +198,7 @@ export class SaasSettingsController extends PageController(
     sectionNav: "side",
     submitLabel: `${RULES}.save`,
     successMessage: `${RULES}.saved`,
-    sections: [
-      unpaidSection,
-      freeSection,
-      taxSection,
-      refundSection,
-      legalSection,
-    ],
+    sections: [unpaidSection, taxSection, refundSection, legalSection],
   }).meta({
     name: `${PERMISSIONS}.billing_rules`,
     description: `${PERMISSIONS}.billing_rules_description`,

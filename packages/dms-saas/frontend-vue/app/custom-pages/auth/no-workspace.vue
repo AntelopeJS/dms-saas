@@ -228,7 +228,6 @@ async function submit(): Promise<void> {
 				tenantAssignmentToken: tenantAssignmentToken.value,
 				workspaceName: workspaceName.value.trim(),
 				paymentMethodId,
-				requestedPlanId: plan.summary.value?.requestedPlan?._id,
 			}),
 		})
 		const destination = landingPath()
@@ -386,9 +385,6 @@ onMounted(async () => {
 				:policy="paymentMethodPolicy"
 				:is-visible="isPaymentStepVisible"
 				:plan-name="plan.summary.value?.plan.name ?? null"
-				:max-free-workspaces-per-card="
-					plan.summary.value?.rules.maxFreeWorkspacesPerCard ?? null
-				"
 				:error="errorText(cardError)"
 			/>
 

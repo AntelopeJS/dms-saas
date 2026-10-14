@@ -27,8 +27,6 @@ const store = vi.hoisted(() => ({
   invoices: new Map<string, InvoiceFake[]>(),
   openInvoices: new Map<string, InvoiceFake>(),
   memberships: [] as MembershipFake[],
-  byFingerprint: [] as TenantSubscription[],
-  maxFreeWorkspacesPerCard: undefined as number | undefined,
   usedTrial: false,
 }));
 
@@ -47,7 +45,6 @@ const MODEL_FAKES: Record<string, (tenantId?: string) => unknown> = {
   }),
   TenantSubscriptionModel: (tenantId) => ({
     findOne: async () => store.subscriptions.get(tenantId ?? ""),
-    findByCardFingerprint: async () => store.byFingerprint,
   }),
   TenantMemberModel: (tenantId) => ({
     listAll: async () => store.members.get(tenantId ?? "") ?? [],
@@ -61,12 +58,7 @@ const MODEL_FAKES: Record<string, (tenantId?: string) => unknown> = {
     getAllInvoices: async () => store.invoices.get(tenantId ?? "") ?? [],
     findLatestOpen: async () => store.openInvoices.get(tenantId ?? ""),
   }),
-  BillingSettingsModel: () => ({
-    get: async () =>
-      store.maxFreeWorkspacesPerCard === undefined
-        ? undefined
-        : { maxFreeWorkspacesPerCard: store.maxFreeWorkspacesPerCard },
-  }),
+  BillingSettingsModel: () => ({ get: async () => undefined }),
   TenantBillingInfoModel: () => ({ findOne: async () => undefined }),
   TrialConsumptionModel: () => ({
     existsForIdentity: async () => store.usedTrial,
@@ -98,8 +90,6 @@ vi.mock("../src/workspaces/deletion", () => ({
   resolveDataRetentionDays: async () => 30,
 }));
 
-const { assertCardMayBackFreeWorkspace, listFreeWorkspacesBackedByCard } =
-  await import("../src/workspaces/free-workspaces-per-card");
 const { buildWorkspaceCreateOptions, cardRequirementOf } =
   await import("../src/workspaces/self-serve-creation");
 const { listMyWorkspaces } = await import("../src/workspaces/my-workspaces");
@@ -151,7 +141,6 @@ function subscription(
     planId: FREE._id,
     isComplimentary: false,
     stripeSubscriptionId: null,
-    cardFingerprint: null,
     currentPeriodEnd: null,
     ...overrides,
   } as unknown as TenantSubscription;
@@ -185,8 +174,6 @@ beforeEach(() => {
   store.invoices.clear();
   store.openInvoices.clear();
   store.memberships = [];
-  store.byFingerprint = [];
-  store.maxFreeWorkspacesPerCard = undefined;
   store.usedTrial = false;
   store.users = new Map([
     ["camille", { _id: "camille", name: "Camille Laurent", email: "c@a.test" }],
@@ -194,34 +181,10 @@ beforeEach(() => {
   ]);
 });
 
-describe("free workspaces per card", () => {
-  it("counts the live free workspaces a card backs, not paid or complimentary ones", async () => {
-    store.byFingerprint = [
-      subscription("acme", { planId: FREE._id }),
-      subscription("globex", { planId: FREE._id, isComplimentary: true }),
-      subscription("initech", { planId: PRO._id }),
-    ];
-
-    await expect(listFreeWorkspacesBackedByCard("fp")).resolves.toEqual([
-      "acme",
-    ]);
-  });
-
-  it("refuses the card once it backs as many free workspaces as allowed", async () => {
-    store.byFingerprint = [subscription("acme", { planId: FREE._id })];
-
-    await expect(assertCardMayBackFreeWorkspace("fp", 1)).rejects.toMatchObject(
-      { status: 409, body: "saas.errors.workspace.free_card_limit_reached" },
-    );
-    await expect(assertCardMayBackFreeWorkspace("fp", 2)).resolves.toBe(
-      undefined,
-    );
-  });
-
-  it("asks a card of a free plan only while the rule is on", () => {
-    expect(cardRequirementOf(FREE, 1)).toBe("verification");
-    expect(cardRequirementOf(FREE, 0)).toBe("none");
-    expect(cardRequirementOf(PRO, 0)).toBe("payment");
+describe("card requirement", () => {
+  it("asks a card of a paid plan only", () => {
+    expect(cardRequirementOf(FREE)).toBe("none");
+    expect(cardRequirementOf(PRO)).toBe("payment");
   });
 });
 
@@ -231,7 +194,7 @@ describe("workspace creation options", () => {
 
     expect(options.plans.map((option) => option._id)).toEqual(["free", "pro"]);
     expect(options.plans.map((option) => option.cardRequirement)).toEqual([
-      "verification",
+      "none",
       "payment",
     ]);
     expect(options.plans[1]?.trialDays).toBe(14);
@@ -243,28 +206,6 @@ describe("workspace creation options", () => {
     const options = await buildWorkspaceCreateOptions(user);
 
     expect(options.plans.find((o) => o._id === PRO._id)?.trialDays).toBe(0);
-  });
-
-  it("names the caller's own free workspaces that already rest on a card", async () => {
-    store.maxFreeWorkspacesPerCard = 1;
-    addWorkspace("acme", "acme", [owner("camille")], { cardFingerprint: "fp" });
-    addWorkspace("nocard", "No card", [owner("camille")], {});
-    addWorkspace("theirs", "Theirs", [member("camille")], {
-      cardFingerprint: "fp2",
-    });
-
-    const options = await buildWorkspaceCreateOptions(user);
-
-    expect(options.freePerCard).toEqual({ limit: 1, usedBy: ["acme"] });
-  });
-
-  it("drops the rule when the billing rules turn it off", async () => {
-    store.maxFreeWorkspacesPerCard = 0;
-
-    const options = await buildWorkspaceCreateOptions(user);
-
-    expect(options.freePerCard).toBeNull();
-    expect(options.plans[0]?.cardRequirement).toBe("none");
   });
 });
 

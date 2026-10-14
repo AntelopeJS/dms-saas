@@ -13,7 +13,6 @@ interface RegistrationCardFieldProps {
 	isVisible: boolean
 	/** Name of the plan the workspace opens on. */
 	planName: string | null
-	maxFreeWorkspacesPerCard: number | null
 	error?: string | null
 }
 
@@ -31,12 +30,6 @@ const badge = computed(() =>
 			})
 		: t('saas.public.card.required'),
 )
-
-const reason = computed(() =>
-	t('saas.public.card.reason', {
-		count: String(props.maxFreeWorkspacesPerCard ?? 1),
-	}),
-)
 </script>
 
 <template>
@@ -53,7 +46,7 @@ const reason = computed(() =>
 			v-show="isVisible"
 			name="card"
 			:error="error ?? undefined"
-			:help="reason"
+			:help="$t('saas.public.card.reason')"
 		>
 			<div
 				:id="elementId"

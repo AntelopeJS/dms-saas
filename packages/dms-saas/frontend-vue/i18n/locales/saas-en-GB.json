@@ -56,12 +56,10 @@
 				"access_blocked": "Access to this workspace is restricted by its subscription status",
 				"already_suspended": "Workspace is already suspended",
 				"not_suspended": "Workspace is not suspended",
-				"creation_in_progress": "Another workspace is already being created with this card. Please wait a moment and try again.",
 				"name_required": "The workspace name is required.",
 				"payment_method_required": "A card is required.",
 				"is_cancelled": "This workspace is cancelled.",
 				"name_too_long": "The workspace name is too long: 60 characters at most.",
-				"free_card_limit_reached": "This card already backs as many free workspaces as allowed. Pick a paid plan or use another card.",
 				"delete_confirmation_mismatch": "The name you typed doesn't match the workspace name.",
 				"confirmation_mismatch": "Type the workspace name exactly to confirm.",
 				"cancellation_not_acknowledged": "Confirm that the paid Stripe subscription ends before granting complimentary access.",
@@ -193,7 +191,6 @@
 			"billing_rules": {
 				"suspension_days": "Enter a whole number of days from 1 to 365.",
 				"retention_days": "Enter a whole number of days from 0 to 3650.",
-				"free_workspaces_per_card": "Enter a whole number from 0 to 100.",
 				"refund_window_days": "Enter a whole number of days from 1 to 365.",
 				"tax_code": "A Stripe tax category reads txcd_ followed by 8 digits.",
 				"legal_text_too_long": "This document is too long to be saved."

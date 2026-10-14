@@ -46,12 +46,8 @@ import type {
 } from "../../workspaces";
 import {
   assertRegistrationExtras,
-  cardMayBackFreeWorkspace,
-  isFreePerCardPolicyActive,
-  isFreePlan,
   provisionWorkspace,
   resolveCardDetails,
-  resolveFreeWorkspacesPerCard,
   resolveRegistrationPlan,
   rollbackWorkspaceProvisioning,
 } from "../../workspaces";
@@ -63,10 +59,8 @@ import {
   type PublicPlan,
 } from "./public-plan-catalog";
 import type { TenantPlanFeature } from "../../plans";
-import { isPlanOfferedTo } from "../../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
-const HTTP_CONFLICT = 409;
 /** A registration starts as an individual; the upgrade flow collects a business. */
 const REGISTRATION_CUSTOMER_TYPE: WorkspaceCustomerType = "individual";
 const AUTH_KEY_BYTES = 32;
@@ -81,12 +75,6 @@ const DEFAULT_WORKSPACE_NAME = "My workspace";
 interface RegistrationPayload {
   workspaceName?: string;
   paymentMethodId?: string;
-  /**
-   * The paid plan chosen on Pricing. The workspace opens on it, waiting for
-   * its first payment, when the card already backs every free workspace the
-   * billing rules allow it.
-   */
-  requestedPlanId?: string;
   /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else.
@@ -109,7 +97,6 @@ interface AdmittedRegistration {
   plan: Plan;
   paymentMethodId: string | undefined;
   card: CardDetails;
-  awaitsFirstPayment: boolean;
 }
 
 interface RegistrationAccount {
@@ -176,64 +163,8 @@ function assertRegistrationPassword(password: unknown): void {
 }
 
 /**
- * Whether the registration's card may back one more free workspace, under
- * the billing rules' free workspaces per card, like a workspace created from
- * the app. A card-less registration has no fingerprint to count.
- */
-async function registrationCardMayBackFreeWorkspace(
-  card: CardDetails,
-): Promise<boolean> {
-  if (!card.fingerprint) return true;
-  const limit = await resolveFreeWorkspacesPerCard();
-  if (!isFreePerCardPolicyActive(limit)) return true;
-  return cardMayBackFreeWorkspace(card.fingerprint, limit);
-}
-
-/**
- * The paid plan chosen on Pricing, when a workspace may open on it waiting
- * for its first payment: public, priced, billed by Stripe, and offered to an
- * individual, the customer type a registration starts as.
- */
-async function resolveRequestedPaidPlan(
-  reference: unknown,
-): Promise<Plan | null> {
-  const publicPlans = await GetModel(PlanModel).findPubliclyVisible();
-  const plan = findPlanByReference(publicPlans, reference);
-  const isPayable =
-    !!plan &&
-    plan.isActive &&
-    !plan.isDeleted &&
-    !isFreePlan(plan) &&
-    !!plan.paymentProviderRefs?.stripePriceId &&
-    isPlanOfferedTo(plan, REGISTRATION_CUSTOMER_TYPE);
-  return isPayable ? plan : null;
-}
-
-/**
- * The registration of a card already backing every free workspace it may:
- * refused, unless a paid plan was chosen on Pricing. The workspace then
- * opens on that plan waiting for its first payment, made through Checkout,
- * and the card is left out — it backs no free workspace, and Checkout asks
- * for the one that pays.
- */
-async function admitPendingPaymentRegistration(
-  body: RegistrationPayload,
-  card: CardDetails,
-): Promise<AdmittedRegistration> {
-  const plan = await resolveRequestedPaidPlan(body.requestedPlanId);
-  assert(plan, HTTP_CONFLICT, "saas.errors.workspace.free_card_limit_reached");
-  return {
-    plan,
-    paymentMethodId: undefined,
-    card: { fingerprint: null, billingAddress: card.billingAddress },
-    awaitsFirstPayment: true,
-  };
-}
-
-/**
  * Validate a registration against the deployment before anything is created:
- * the card policy and the card's free workspaces, the extras bounds, and the
- * plan it will land on.
+ * the card policy, the extras bounds, and the plan it will land on.
  */
 async function admitRegistration(
   body: RegistrationPayload,
@@ -244,10 +175,7 @@ async function admitRegistration(
   assertRegistrationExtras(body.extras);
   const plan = await resolveRegistrationPlan();
   const card = await resolveCardDetails(paymentMethodId);
-  if (!(await registrationCardMayBackFreeWorkspace(card))) {
-    return admitPendingPaymentRegistration(body, card);
-  }
-  return { plan, paymentMethodId, card, awaitsFirstPayment: false };
+  return { plan, paymentMethodId, card };
 }
 
 /**
@@ -274,7 +202,6 @@ async function buildRegistrationProvisioning(
       workspaceName: body.workspaceName?.trim() || DEFAULT_WORKSPACE_NAME,
       planId: admitted.plan._id,
       paymentMethodId: admitted.paymentMethodId,
-      awaitsFirstPayment: admitted.awaitsFirstPayment,
       extras: body.extras,
     },
     stripeCustomerProfile: {
@@ -374,9 +301,8 @@ export class SaasRegisterApiController extends Controller(
   /**
    * The plan a registration opens the workspace on, plus the one the visitor
    * chose on the pricing page when it is another public plan. Registration
-   * lands on the default plan, unless the card already backs every free
-   * workspace it may: the chosen paid plan then opens it, waiting for its
-   * first payment (see `admitPendingPaymentRegistration`).
+   * always lands on the default plan; the chosen one is shown, and offered as
+   * the upgrade once the visitor is signed in.
    *
    * @param reference Slug or id of the chosen plan, from `?plan=`
    * @param language Reader's locale, for the feature labels

@@ -53,7 +53,6 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
-const PENDING_PAYMENT_STATUS: TenantSubscriptionStatus = "pending_payment";
 
 export type WorkspaceCustomerType = "individual" | "business";
 
@@ -71,17 +70,8 @@ export interface WorkspaceBillingProfile {
 export interface WorkspaceProvisioningPayload extends WorkspaceBillingProfile {
   workspaceName: string;
   planId: string;
-  /**
-   * Absent for a card-less workspace, which only a free plan allows, or a
-   * workspace that awaits its first payment.
-   */
+  /** Absent for a card-less workspace, which only a free plan allows. */
   paymentMethodId?: string;
-  /**
-   * The workspace opens on its paid plan waiting for its first payment, made
-   * through Checkout, as one an operator creates for its owner to pay. No
-   * Stripe object is created here.
-   */
-  awaitsFirstPayment?: boolean;
   /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else. Opaque here: dms-saas never reads it, never
@@ -159,7 +149,6 @@ interface TenantRecordsInput {
   userId: string;
   payload: WorkspaceProvisioningPayload;
   stripeCustomerId: string | null;
-  cardFingerprint: string | null;
   subscription: CreatedSubscription;
   billingEmail: string;
 }
@@ -449,10 +438,8 @@ function initialPaidUsagePeriods(
 
 /** The status a new subscription starts in. */
 function initialStatus(
-  payload: WorkspaceProvisioningPayload,
   subscription: CreatedSubscription,
 ): TenantSubscriptionStatus {
-  if (payload.awaitsFirstPayment) return PENDING_PAYMENT_STATUS;
   return subscription.isTrialing ? TRIALING_STATUS : ACTIVE_STATUS;
 }
 
@@ -466,13 +453,12 @@ async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
   const { tenantId, payload, subscription } = input;
   const subscriptionPatch = {
     planId: payload.planId,
-    status: initialStatus(payload, subscription),
+    status: initialStatus(subscription),
     isComplimentary: false,
     paidUsagePeriods: initialPaidUsagePeriods(subscription),
     stripeCustomerId: input.stripeCustomerId,
     stripeSubscriptionId: subscription.stripeSubscriptionId,
     currentPeriodEnd: subscription.currentPeriodEnd,
-    cardFingerprint: input.cardFingerprint,
     createdBy: input.userId,
     updatedAt: new Date(),
   };
@@ -532,12 +518,9 @@ export async function provisionWorkspace(
   const plan = await loadBillablePlan(input.payload.planId);
   assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_available");
   // Nothing can be charged without a card, so only a free plan goes on
-  // without one, or a workspace whose first payment goes through Checkout —
-  // checked before any durable state is written.
+  // without one — checked before any durable state is written.
   assert(
-    input.payload.paymentMethodId ||
-      isFreePlan(plan) ||
-      input.payload.awaitsFirstPayment,
+    input.payload.paymentMethodId || isFreePlan(plan),
     HTTP_BAD_REQUEST,
     "saas.errors.workspace.payment_method_required",
   );
@@ -579,7 +562,7 @@ async function provisionStripeBilling(
 async function runProvisioning(
   input: WorkspaceProvisioningInput,
 ): Promise<ProvisionedWorkspace> {
-  const { userId, payload, stripeCustomerProfile, card, handles } = input;
+  const { userId, payload, stripeCustomerProfile, handles } = input;
   const plan = await GetModel(PlanModel).get(payload.planId);
   assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_available");
   const { stripeCustomerId, subscription } = payload.paymentMethodId
@@ -593,7 +576,6 @@ async function runProvisioning(
       userId,
       payload,
       stripeCustomerId,
-      cardFingerprint: card.fingerprint,
       subscription,
       billingEmail: stripeCustomerProfile.email,
     }),

@@ -130,16 +130,6 @@ export class TenantSubscription extends Table {
   @Field("string")
   declare completedCheckoutSessionId: string | null;
 
-  /**
-   * Fingerprint of the card backing this workspace, mirrored from Stripe at
-   * provisioning time. Free workspaces are capped per card and
-   * `TrialConsumption` only records cards that actually consumed a trial, so
-   * the cap needs its own record.
-   */
-  @Index({ crossInstance: true })
-  @Field("string")
-  declare cardFingerprint: string | null;
-
   @Field("date")
   declare currentPeriodEnd: Date | null;
 

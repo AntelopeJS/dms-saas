@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import {
   GetModel,
   RegisterSchema,
@@ -80,7 +79,6 @@ const SETUP_TIMEOUT_MS = 60_000;
 const KEPT_CUSTOMER = "cus_kept";
 const ENDED_SUBSCRIPTION = "sub_ended";
 const NEW_SUBSCRIPTION = "sub_new";
-const CARD = "card-fingerprint";
 const REFUNDED_AT = new Date("2026-09-01T10:00:00Z");
 const PAID_PLAN = PlanModel.fromPlainData({
   _id: "pro",
@@ -177,7 +175,6 @@ async function seedCancelledWorkspace(
     isComplimentary: false,
     stripeCustomerId: KEPT_CUSTOMER,
     stripeSubscriptionId: ENDED_SUBSCRIPTION,
-    cardFingerprint: CARD,
     refundRequestedAt: REFUNDED_AT,
     deletionRequestedAt: REFUNDED_AT,
     deletionRequestedBy: "owner",
@@ -192,18 +189,6 @@ async function seedCancelledWorkspace(
     ...patch,
   });
   return model;
-}
-
-async function seedFreeWorkspaceOnCard(): Promise<void> {
-  const tenantId = randomUUID();
-  await GetModel(TenantSubscriptionModel, tenantId).insert({
-    _id: tenantId,
-    planId: FREE_PLAN._id,
-    status: "active",
-    isComplimentary: false,
-    cardFingerprint: CARD,
-    paidUsagePeriods: [],
-  });
 }
 
 function choosePlan(planId: string, model: TenantSubscriptionModel) {
@@ -322,7 +307,6 @@ describe("a cancelled workspace choosing a plan again", () => {
       planId: PAID_PLAN._id,
       stripeCustomerId: KEPT_CUSTOMER,
       stripeSubscriptionId: NEW_SUBSCRIPTION,
-      cardFingerprint: CARD,
       domainTransition: null,
       deletionRequestedAt: null,
       deletionRequestedBy: null,
@@ -377,44 +361,6 @@ describe("a cancelled workspace choosing a plan again", () => {
     expect(resumed?.paidUsagePeriods[0]?.end).toBeInstanceOf(Date);
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
     expect(harness.assertAccess).not.toHaveBeenCalled();
-  });
-
-  it("refuses a free plan once its card backs as many free workspaces as allowed", async () => {
-    await GetModel(BillingSettingsModel).insert({
-      _id: BILLING_SETTINGS_SINGLETON_ID,
-      maxFreeWorkspacesPerCard: 1,
-    });
-    await seedFreeWorkspaceOnCard();
-    const model = await seedCancelledWorkspace();
-
-    await expect(choosePlan(FREE_PLAN._id, model)).rejects.toMatchObject({
-      status: 409,
-      body: "saas.errors.workspace.free_card_limit_reached",
-    });
-    expect((await model.findOne())?.status).toBe("cancelled");
-  });
-
-  it("counts the reopened workspace against its card afterwards", async () => {
-    await GetModel(BillingSettingsModel).insert({
-      _id: BILLING_SETTINGS_SINGLETON_ID,
-      maxFreeWorkspacesPerCard: 2,
-    });
-    const card = randomUUID();
-    const first = await seedCancelledWorkspace({ cardFingerprint: card });
-    await choosePlan(FREE_PLAN._id, first);
-    const second = await seedCancelledWorkspace({ cardFingerprint: card });
-    await choosePlan(FREE_PLAN._id, second);
-    const third = await seedCancelledWorkspace({ cardFingerprint: card });
-
-    await expect(choosePlan(FREE_PLAN._id, third)).rejects.toMatchObject({
-      status: 409,
-      body: "saas.errors.workspace.free_card_limit_reached",
-    });
-    const onCard = await GetModel(
-      TenantSubscriptionModel,
-      CROSS_INSTANCE,
-    ).findByCardFingerprint(card);
-    expect(onCard.filter((row) => row.status === "active")).toHaveLength(2);
   });
 
   it("leaves a workspace whose deletion was admitted to the retention cron", async () => {

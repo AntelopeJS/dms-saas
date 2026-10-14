@@ -268,10 +268,6 @@ const modelFakes: Record<string, (tenantId?: string) => unknown> = {
   }),
   TenantSubscriptionModel: (tenantId?: string) => ({
     findOne: async () => subscriptions.get(tenantId ?? ""),
-    findByCardFingerprint: async (fingerprint: string) =>
-      [...subscriptions.entries()]
-        .filter(([, row]) => row.cardFingerprint === fingerprint)
-        .map(([instance, row]) => ({ ...row, _instance: instance })),
     beginTransition: async (
       row: TenantSubscription,
       intent: SubscriptionTransition,
@@ -412,7 +408,6 @@ const { SaasRegisterApiController } =
 
 interface RegisterBodyInput {
   extras?: unknown;
-  requestedPlanId?: string;
 }
 
 function buildRegisterBody(input: RegisterBodyInput = {}) {
@@ -1021,55 +1016,20 @@ describe("registration card policy", () => {
     expect(world.stripeCustomers.size).toBe(1);
     expect(subscriptionOf(result.tenantId)).toMatchObject({
       planId: PLAN._id,
-      cardFingerprint: "fp_test",
     });
   });
 
-  it("refuses a card that already backs as many free workspaces as allowed", async () => {
+  it("lets one card back any number of free workspaces", async () => {
     applyPolicy("required");
-    await buildController().register(buildRegisterBody());
+    const first = await buildController().register(buildRegisterBody());
 
-    await expect(
-      buildController().register(buildRegisterBody()),
-    ).rejects.toMatchObject({
-      status: 409,
-      body: "saas.errors.workspace.free_card_limit_reached",
+    const second = await buildController().register(buildRegisterBody());
+
+    expect(subscriptionOf(first.tenantId)).toMatchObject({ planId: PLAN._id });
+    expect(subscriptionOf(second.tenantId)).toMatchObject({
+      planId: PLAN._id,
     });
-    expect(world.users.size).toBe(1);
-    expect(world.stripeCustomers.size).toBe(1);
-  });
-
-  it("opens a paid plan chosen on Pricing awaiting its first payment instead", async () => {
-    applyPolicy("required");
-    await buildController().register(buildRegisterBody());
-
-    const result = await buildController().register(
-      buildRegisterBody({ requestedPlanId: PAID_PLAN._id }),
-    );
-
-    expect(subscriptionOf(result.tenantId)).toMatchObject({
-      planId: PAID_PLAN._id,
-      status: "pending_payment",
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      cardFingerprint: null,
-    });
-    expect(world.stripeCustomers.size).toBe(1);
     expect(world.users.size).toBe(2);
-  });
-
-  it("still refuses the card when the plan chosen on Pricing is free", async () => {
-    applyPolicy("required");
-    await buildController().register(buildRegisterBody());
-
-    await expect(
-      buildController().register(
-        buildRegisterBody({ requestedPlanId: PLAN._id }),
-      ),
-    ).rejects.toMatchObject({
-      status: 409,
-      body: "saas.errors.workspace.free_card_limit_reached",
-    });
   });
 
   it("never calls Stripe under `none`, even when a card is sent", async () => {
@@ -1086,7 +1046,6 @@ describe("registration card policy", () => {
       status: "active",
       stripeCustomerId: null,
       stripeSubscriptionId: null,
-      cardFingerprint: null,
     });
     expect(
       [...deliveries.values()].every((row) => row.status === "succeeded"),
@@ -1128,7 +1087,6 @@ describe("registration card policy", () => {
       expect(subscriptionOf(result.tenantId)).toMatchObject({
         _id: result.tenantId,
         planId: PLAN._id,
-        cardFingerprint: "fp_test",
         stripeCustomerId: expect.any(String),
         stripeSubscriptionId: expect.any(String),
         createdAt: defaultCreatedAt,

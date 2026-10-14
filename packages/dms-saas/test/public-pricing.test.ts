@@ -123,13 +123,11 @@ describe("toPublicBillingRules", () => {
       moneyBackGuaranteeWindowDays: 14,
       moneyBackGuaranteeMode: "prorated",
       dataRetentionDaysAfterCancellation: 60,
-      maxFreeWorkspacesPerCard: 2,
     } as BillingSettings;
 
     expect(toPublicBillingRules(settings)).toEqual({
       moneyBackGuarantee: { windowDays: 14, mode: "prorated" },
       dataRetentionDays: 60,
-      maxFreeWorkspacesPerCard: 2,
     });
     expect(
       toPublicBillingRules({
@@ -208,7 +206,6 @@ describe("GET /api/saas/register/plan", () => {
 
     expect(summary.plan._id).toBe("plan-free");
     expect(summary.requestedPlan).toBeNull();
-    expect(summary.rules.maxFreeWorkspacesPerCard).toBe(1);
   });
 
   it("adds the public plan chosen on Pricing", async () => {

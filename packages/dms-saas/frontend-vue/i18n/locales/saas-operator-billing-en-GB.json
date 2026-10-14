@@ -199,13 +199,6 @@
 						"deleted_effect": "Only if the workspace owner cancels; invoices stay archived"
 					}
 				},
-				"free": {
-					"title": "Free workspaces",
-					"description": "Limits abuse of the free plan by tying each free workspace to a payment card.",
-					"per_card": "Free workspaces per card",
-					"per_card_description": "Once a card backs this many free workspaces, another one with the same card asks for a paid plan.",
-					"per_card_hint": "From 0 to 100. 0 turns the rule off."
-				},
 				"tax": {
 					"title": "Tax",
 					"description": "Stripe calculates VAT from the customer’s country using the product’s tax category.",

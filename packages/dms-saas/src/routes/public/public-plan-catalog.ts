@@ -53,14 +53,13 @@ export interface PublicMoneyBackGuarantee {
 }
 
 /**
- * The billing rules a visitor may read before signing up: the guarantee,
- * how long a closed workspace's data is kept, how many free workspaces a card
- * backs. Dunning delays and tax codes stay on the operator side.
+ * The billing rules a visitor may read before signing up: the guarantee and
+ * how long a closed workspace's data is kept. Dunning delays and tax codes
+ * stay on the operator side.
  */
 export interface PublicBillingRules {
   moneyBackGuarantee: PublicMoneyBackGuarantee | null;
   dataRetentionDays: number;
-  maxFreeWorkspacesPerCard: number;
 }
 
 /**
@@ -109,7 +108,6 @@ export function toPublicBillingRules(
         }
       : null,
     dataRetentionDays: settings.dataRetentionDaysAfterCancellation,
-    maxFreeWorkspacesPerCard: settings.maxFreeWorkspacesPerCard,
   };
 }
 

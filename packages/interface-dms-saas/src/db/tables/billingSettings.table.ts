@@ -12,9 +12,6 @@ export const DEFAULT_AUTO_SUSPEND_DELAY_DAYS = 14;
 
 export const DEFAULT_STRIPE_TAX_CODE = "txcd_10000000";
 
-/** Free workspaces a single card may back, when the setting is unset. */
-export const DEFAULT_MAX_FREE_WORKSPACES_PER_CARD = 1;
-
 /** Days a cancelled workspace's data is kept, when the setting is unset. */
 export const DEFAULT_DATA_RETENTION_DAYS = 30;
 
@@ -35,9 +32,6 @@ export class BillingSettings extends Table {
 
   @Field("number")
   declare dataRetentionDaysAfterCancellation: number;
-
-  @Field("number")
-  declare maxFreeWorkspacesPerCard: number;
 
   @Field("boolean")
   declare moneyBackGuaranteeEnabled: boolean;

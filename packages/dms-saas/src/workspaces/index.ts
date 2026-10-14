@@ -3,7 +3,6 @@ export * from "./default-member-role";
 export * from "./default-plan";
 export * from "./deletion";
 export * from "./free-plan";
-export * from "./free-workspaces-per-card";
 export * from "./invitations";
 export * from "./my-workspaces";
 export * from "./provisioning";

@@ -219,13 +219,9 @@
           "year": "année"
         },
         "trial": "essai de {days} jours",
-        "free_per_card_used": "Espaces gratuits : {limit} par carte, utilisée par {workspaces} | Espaces gratuits : {limit} par carte, utilisée par {workspaces} | Espaces gratuits : {limit} par carte, utilisée par {workspaces}",
         "card": {
           "label": "Carte",
-          "verification_only": "Vérification uniquement",
           "required_for": "Requise pour {plan}",
-          "why_free": "Pourquoi une carte pour un espace gratuit ? Chaque carte ouvre droit à un espace gratuit, pour que les offres gratuites le restent. Elle n'est jamais débitée. | Pourquoi une carte pour un espace gratuit ? Chaque carte ouvre droit à un espace gratuit, pour que les offres gratuites le restent. Elle n'est jamais débitée. | Pourquoi une carte pour un espace gratuit ? Chaque carte ouvre droit à {limit} espaces gratuits, pour que les offres gratuites le restent. Elle n'est jamais débitée.",
-          "never_charged": "Jamais débitée sur une offre gratuite. Sécurisé par Stripe.",
           "secured": "Sécurisé par Stripe."
         },
         "charge": {
