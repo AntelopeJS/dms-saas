@@ -54,7 +54,7 @@ onMounted(() => {
 </script>
 
 <template>
-	<DmsCard :title="$t(`${KEY_PREFIX}.title`)">
+	<DmsCard class="grow" :title="$t(`${KEY_PREFIX}.title`)">
 		<template v-if="data && isTenantOwner && card" #actions>
 			<DmsStatusPill
 				:tone="needsUpdate ? 'warning' : 'success'"

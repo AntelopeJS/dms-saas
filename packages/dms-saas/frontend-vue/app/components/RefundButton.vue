@@ -218,6 +218,7 @@ onMounted(loadIfOffered)
 <template>
 	<DmsCard
 		v-if="isOwner && (isLoading || loadFailed || state)"
+		class="grow"
 		:title="$t(`${KEY_PREFIX}.title`)"
 	>
 		<template v-if="pill" #actions>

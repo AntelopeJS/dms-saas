@@ -439,7 +439,7 @@ watch(
 </script>
 
 <template>
-	<DmsCard :title="$t(`${KEY_PREFIX}.title`)">
+	<DmsCard class="grow" :title="$t(`${KEY_PREFIX}.title`)">
 		<template v-if="canChangePlan && current" #actions>
 			<UButton
 				v-if="canResubscribe"

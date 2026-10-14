@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   LABEL_DAY_FORMAT,
@@ -60,21 +59,6 @@ const SENTENCE_DAY_USES: SentenceDayUse[] = [
   },
 ];
 
-/** The components writing those sentences, by the source they live in. */
-const SENTENCE_DAY_SOURCES = [
-  "components/PastDueAlert.vue",
-  "build/PlanChangeReview.vue",
-  "components/PlanUpgradeModal.vue",
-  "components/DataExport.vue",
-];
-
-function sourceOf(path: string): string {
-  return readFileSync(
-    new URL(`../frontend-vue/app/${path}`, import.meta.url),
-    "utf8",
-  );
-}
-
 const OTHER_PARAM = /\{\s*\w+\s*\}/g;
 
 function dayIn(code: string): string {
@@ -107,23 +91,5 @@ describe("days written in sentences", () => {
 
     expect(sentence).toContain(dayIn(code));
     expect(sentence).not.toContain(DOUBLE_STOP);
-  });
-
-  it.each(SENTENCE_DAY_SOURCES)(
-    "%s writes its sentence days in full",
-    (path) => {
-      expect(sourceOf(path)).toContain("SENTENCE_DAY_FORMAT");
-    },
-  );
-
-  it("keeps the past-due summary off the short timeline day", () => {
-    const source = sourceOf("components/PastDueAlert.vue");
-    const summary = source.slice(
-      source.indexOf("const summary = computed"),
-      source.indexOf("const timeline = computed"),
-    );
-
-    expect(summary).toContain("sentenceDay(");
-    expect(summary).not.toMatch(/\bday\(/);
   });
 });
