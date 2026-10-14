@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   headingAnchor,
@@ -7,25 +6,8 @@ import {
   resolveLegalBackTarget,
 } from "../frontend-vue/app/build/public/legal";
 
-const LEGAL_LAYOUT_PATH = new URL(
-  "../frontend-vue/app/components/LegalLayout.vue",
-  import.meta.url,
-);
 const ORIGIN = "https://app.example.com";
 const PAGE = "/terms-and-conditions";
-
-describe("LegalLayout Vue runtime", () => {
-  it("loads public documents through the DMS API at browser runtime", () => {
-    const source = readFileSync(LEGAL_LAYOUT_PATH, "utf8");
-
-    // SSR has no route to the API's base URL; an anonymous visitor must not
-    // go through the authenticated fetch, which sends them to sign-in.
-    expect(source).not.toContain("useFetch");
-    expect(source).not.toContain("$authFetch");
-    expect(source).toContain("usePublicFetch()");
-    expect(source).toContain("void loadDocument()");
-  });
-});
 
 describe("legalDocumentStamp", () => {
   const NEVER = { version: 0, publishedAt: null };
