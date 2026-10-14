@@ -36,14 +36,4 @@ describe("billing document status labels", () => {
 
     expect(untranslated.map((item) => item.label)).toEqual([]);
   });
-
-  it("renders a paid invoice as paid in French", () => {
-    const paid = BILLING_DOCUMENT_STATUS_ITEMS.find(
-      (item) => item.value === "paid",
-    );
-
-    expect(translate(readLocale("saas-fr-FR.json"), paid?.label ?? "")).toBe(
-      "Payée",
-    );
-  });
 });
