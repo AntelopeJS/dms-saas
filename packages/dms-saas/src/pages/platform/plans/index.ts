@@ -51,20 +51,23 @@ const PLAN_ACTIONS: CustomRowAction[] = [
     id: "duplicate",
     label: `${TEXTS}.action.duplicate`,
     icon: "i-ph-copy",
-    target: { type: "page", url: `${PLANS_PAGE_PATH}/new?duplicate={_id}` },
+    target: {
+      type: "page",
+      url: `${PLANS_PAGE_PATH}/new?duplicate={{row._id}}`,
+    },
   },
   {
     id: "view_workspaces",
     label: `${TEXTS}.action.view_workspaces`,
     icon: "i-ph-buildings",
-    target: { type: "page", url: `${WORKSPACES_PAGE_PATH}?plan={_id}` },
+    target: { type: "page", url: `${WORKSPACES_PAGE_PATH}?plan={{row._id}}` },
     rule: isInUse,
   },
   {
     id: "open_stripe",
     label: `${TEXTS}.action.open_stripe`,
     icon: "i-ph-stripe-logo",
-    target: { type: "external", url: "{stripeProductUrl}", newTab: true },
+    target: { type: "external", url: "{{row.stripeProductUrl}}", newTab: true },
     rule: { field: "stripeProductUrl", notEquals: null },
   },
   {
@@ -74,12 +77,12 @@ const PLAN_ACTIONS: CustomRowAction[] = [
     color: "warning",
     target: {
       type: "api",
-      url: `${PLANS_ENDPOINT}/{_id}`,
+      url: `${PLANS_ENDPOINT}/{{row._id}}`,
       method: "PUT",
       body: { isActive: false },
       successMessage: `${TEXTS}.action.stop_selling_success`,
     },
-    confirm: { from: `${PLAN_DIALOGS_ENDPOINT}/{_id}/stop-selling` },
+    confirm: { from: `${PLAN_DIALOGS_ENDPOINT}/{{row._id}}/stop-selling` },
     rule: { field: "isActive", equals: true },
   },
   {
@@ -88,7 +91,7 @@ const PLAN_ACTIONS: CustomRowAction[] = [
     icon: "i-ph-play",
     target: {
       type: "api",
-      url: `${PLANS_ENDPOINT}/{_id}`,
+      url: `${PLANS_ENDPOINT}/{{row._id}}`,
       method: "PUT",
       body: { isActive: true },
       successMessage: `${TEXTS}.action.put_on_sale_success`,
@@ -115,11 +118,11 @@ const PLAN_ACTIONS: CustomRowAction[] = [
     color: "error",
     target: {
       type: "api",
-      url: `${PLANS_ENDPOINT}/{_id}`,
+      url: `${PLANS_ENDPOINT}/{{row._id}}`,
       method: "DELETE",
       successMessage: `${TEXTS}.action.delete_success`,
     },
-    confirm: { from: `${PLAN_DIALOGS_ENDPOINT}/{_id}/delete` },
+    confirm: { from: `${PLAN_DIALOGS_ENDPOINT}/{{row._id}}/delete` },
     rule: isUnused,
   },
 ];

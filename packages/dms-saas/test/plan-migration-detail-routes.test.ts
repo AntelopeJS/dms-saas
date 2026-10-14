@@ -416,10 +416,10 @@ describe("the migration detail page", () => {
     expect(custom?.map((action) => action.confirm)).toEqual([
       undefined,
       {
-        from: "/api/saas/plan-migrations/{migrationId}/workspaces/{_id}/dialogs/moved",
+        from: "/api/saas/plan-migrations/{{row.migrationId}}/workspaces/{{row._id}}/dialogs/moved",
       },
       {
-        from: "/api/saas/plan-migrations/{migrationId}/workspaces/{_id}/dialogs/not_moved",
+        from: "/api/saas/plan-migrations/{{row.migrationId}}/workspaces/{{row._id}}/dialogs/not_moved",
       },
       undefined,
     ]);

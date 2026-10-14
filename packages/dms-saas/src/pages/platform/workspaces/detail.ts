@@ -29,7 +29,8 @@ import { NO_ROW_ACTIONS } from "../../block-meta";
 
 const D = "$saas.workspace_detail";
 const API = "/api/saas/workspaces/{{params.id}}";
-const INVITATION_API = "/api/saas/workspaces/{_instance}/invitations/{_id}";
+const INVITATION_API =
+  "/api/saas/workspaces/{{row._instance}}/invitations/{{row._id}}";
 const FACTS = 5;
 const LATEST_INVOICES = 3;
 const TAB_STATE_KEY = "workspace-tab";

@@ -91,7 +91,7 @@ export class SaasCreditNotesController extends PageController(
           label: `${TEXT}.actions.download_pdf`,
           icon: "i-ph-file-pdf",
           rule: { field: "pdfUrl", notEquals: null },
-          target: { type: "external", url: "{pdfUrl}", newTab: true },
+          target: { type: "external", url: "{{row.pdfUrl}}", newTab: true },
         },
       ],
     },

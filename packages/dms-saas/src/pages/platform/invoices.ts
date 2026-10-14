@@ -47,12 +47,12 @@ export const INVOICE_ROW_ACTIONS: InvoiceRowActions = [
     label: `${TEXT}.actions.download_pdf`,
     icon: "i-ph-file-pdf",
     rule: { field: "invoicePdfUrl", notEquals: null },
-    target: { type: "external", url: "{invoicePdfUrl}", newTab: true },
+    target: { type: "external", url: "{{row.invoicePdfUrl}}", newTab: true },
   },
   {
     label: `${TEXT}.actions.open_in_stripe`,
     icon: "i-ph-arrow-square-out",
-    target: { type: "external", url: "{stripeUrl}", newTab: true },
+    target: { type: "external", url: "{{row.stripeUrl}}", newTab: true },
   },
   {
     label: `${TEXT}.actions.issue_credit_note`,

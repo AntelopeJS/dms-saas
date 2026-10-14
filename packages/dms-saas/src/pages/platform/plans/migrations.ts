@@ -121,7 +121,7 @@ const DETAIL_API = `${PLAN_MIGRATIONS_ENDPOINT}/{{params.id}}`;
 const DETAIL = `${TEXTS}.detail`;
 const TOTALS_COUNT = 4;
 const JOURNAL_SKELETON_ROWS = 3;
-const ROW_API = `${PLAN_MIGRATIONS_ENDPOINT}/{migrationId}/workspaces/{_id}`;
+const ROW_API = `${PLAN_MIGRATIONS_ENDPOINT}/{{row.migrationId}}/workspaces/{{row._id}}`;
 const OUTCOME_COLUMN_SIZE = 150;
 const NAME_COLUMN_SIZE = 190;
 const STRIPE_COLUMN_SIZE = 215;
@@ -247,7 +247,7 @@ const workspaces = tableViewFromSource({
         label: `${DETAIL}.open_stripe`,
         icon: "i-ph-arrow-square-out",
         rule: { field: "stripeUrl", notEquals: null },
-        target: { type: "external", url: "{stripeUrl}", newTab: true },
+        target: { type: "external", url: "{{row.stripeUrl}}", newTab: true },
       },
     ],
   },
