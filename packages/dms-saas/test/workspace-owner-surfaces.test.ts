@@ -227,6 +227,8 @@ describe("free workspaces per card", () => {
 
 describe("workspace creation options", () => {
   it("offers the plans of the caller's audience, in catalogue order, with their card rule", async () => {
+    store.maxFreeWorkspacesPerCard = 1;
+
     const options = await buildWorkspaceCreateOptions(user);
 
     expect(options.plans.map((option) => option._id)).toEqual(["free", "pro"]);
@@ -256,6 +258,13 @@ describe("workspace creation options", () => {
     const options = await buildWorkspaceCreateOptions(user);
 
     expect(options.freePerCard).toEqual({ limit: 1, usedBy: ["acme"] });
+  });
+
+  it("leaves the rule off by default", async () => {
+    const options = await buildWorkspaceCreateOptions(user);
+
+    expect(options.freePerCard).toBeNull();
+    expect(options.plans[0]?.cardRequirement).toBe("none");
   });
 
   it("drops the rule when the billing rules turn it off", async () => {

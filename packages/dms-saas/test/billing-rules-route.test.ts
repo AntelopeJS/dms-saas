@@ -111,7 +111,7 @@ describe("billing rules & legal page", () => {
     expect(payload).toMatchObject({
       autoSuspendEnabled: true,
       autoSuspendDelayDays: 14,
-      maxFreeWorkspacesPerCard: 1,
+      maxFreeWorkspacesPerCard: 0,
       stripeTaxCode: TAX_CODE,
       termsOfUse: "",
       customerTimeline: {
