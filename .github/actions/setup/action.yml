@@ -1,0 +1,30 @@
+name: setup
+description: pnpm, Node and both lockfiles' dependencies, shared by every ci job.
+
+runs:
+  using: composite
+  steps:
+    # Before setup-node: `cache: pnpm` needs a pnpm on PATH to locate the
+    # store. The version comes from the root `packageManager` field.
+    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+
+    - uses: actions/setup-node@v4
+      with:
+        # .nvmrc is the version of record. oxlint needs at least 22.18 to
+        # read a TypeScript config, which every value there clears.
+        node-version-file: .nvmrc
+        cache: pnpm
+        cache-dependency-path: |
+          pnpm-lock.yaml
+          packages/dms-saas/frontend-vue/pnpm-lock.yaml
+
+    # `...` pulls in the workspace interface package the module depends on;
+    # `{.}` adds the root, which owns the shared lint, format and tsconfig
+    # tooling. The playground is the only project that still needs the
+    # private registry, and neither filter reaches it.
+    - shell: bash
+      run: pnpm install --filter "@antelopejs/dms-saas..." --filter "{.}" --frozen-lockfile
+    # Every job needs it: the frontend eslint, the unit tests that import the
+    # layer's composables (they resolve `vue` from there), and verify-source.
+    - shell: bash
+      run: pnpm --dir packages/dms-saas/frontend-vue install --frozen-lockfile
