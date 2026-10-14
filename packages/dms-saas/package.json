@@ -10,6 +10,7 @@
     "dist",
     "!dist/.tsbuildinfo",
     "frontend-vue",
+    "skills",
     "package.json",
     "README.md",
     "LICENSE"
@@ -86,6 +87,9 @@
     "baseUrl": "dist",
     "implements": [
       "@antelopejs/interface-dms-saas"
+    ],
+    "skills": [
+      "./skills"
     ]
   }
 }

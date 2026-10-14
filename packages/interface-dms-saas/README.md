@@ -58,7 +58,7 @@ A module may seed plans straight into the `db` plan table. It leaves
 links every plan billed through Stripe to a matching Stripe product and price,
 at startup and whenever the plan is offered or billed, and records what it
 synced in `paymentProviderRefs.stripeSyncedTerms`. See
-[Plans and Stripe](../dms-saas/README.md#plans-and-stripe).
+[Plans and Stripe](https://dms.antelopejs.com/docs/modules/saas/stripe#plans-and-stripe).
 
 ## Upgrading
 
@@ -92,4 +92,4 @@ is a required array that alone decides billable usage, and `revision` is
 required on `TenantSubscription`, `Segment`, `UserSegment`, `PlanMigration` and
 `StripeWebhookEvent`, whose revision-fenced writes refuse a row without one.
 Fix such rows before upgrading, as described in the
-[`@antelopejs/dms-saas` upgrade notes](../dms-saas/README.md#upgrading).
+[`@antelopejs/dms-saas` upgrade notes](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
