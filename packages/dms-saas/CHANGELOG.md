@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.5.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.5.0...v0.5.1)
+
+### 🚀 Enhancements
+
+- **billing:** Turn the free-workspaces-per-card rule off by default ([#87](https://github.com/AntelopeJS/dms-saas/pull/87))
+
+### 🩹 Fixes
+
+- **billing:** Stretch overview cards to their row height ([#90](https://github.com/AntelopeJS/dms-saas/pull/90))
+- **saas:** Name row fields with {{row.X}} tokens for dms 0.8 ([#89](https://github.com/AntelopeJS/dms-saas/pull/89))
+
+### 💅 Refactors
+
+- **plans:** List the table display beside the plan cards ([#85](https://github.com/AntelopeJS/dms-saas/pull/85))
+
+### 🤖 CI
+
+- Speed up pipeline ([#88](https://github.com/AntelopeJS/dms-saas/pull/88))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.5.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.4.0...v0.5.0)
