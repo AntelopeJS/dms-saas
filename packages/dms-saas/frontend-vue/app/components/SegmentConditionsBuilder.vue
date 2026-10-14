@@ -52,7 +52,6 @@ watch(
 
 onMounted(() => {
 	draft.conditions.value = state.value
-	void catalog.load()
 })
 
 onBeforeUnmount(() => {

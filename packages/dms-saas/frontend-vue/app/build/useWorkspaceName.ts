@@ -6,8 +6,7 @@ import { computed, type ComputedRef } from 'vue'
  * Empty until the list is loaded.
  */
 export function useWorkspaceName(): ComputedRef<string> {
-	const { workspaces, isLoaded, refresh } = useMyWorkspaces()
-	if (!isLoaded.value) void refresh().catch(() => undefined)
+	const { workspaces } = useMyWorkspaces()
 	return computed(
 		() => workspaces.value.find((workspace) => workspace.isCurrent)?.name ?? '',
 	)

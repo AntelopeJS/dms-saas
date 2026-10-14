@@ -28,21 +28,26 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: PlanAccess] }>()
 
-const { $authFetch } = useAuthFetch()
+const EMPTY_CATALOG: PlanCatalog = {
+	plans: [],
+	features: [],
+	newPlanPermissions: [],
+}
+
 const planCatalog = usePlanCatalog()
+const permissionsTree = useApiData<PermissionNode[]>(
+	props.permissionsTreeUrl ?? '/api/saas/plans/permissions-tree',
+)
 const route = useDmsRoute()
 const { t } = useI18n()
 const { processI18n } = useTranslation()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
-const catalog = ref<PlanCatalog>({
-	plans: [],
-	features: [],
-	newPlanPermissions: [],
-})
-const tree = ref<PermissionNode[]>([])
-const isLoading = ref(true)
-const hasError = ref(false)
+const catalog = computed(() => planCatalog.data.value ?? EMPTY_CATALOG)
+const tree = computed(() => permissionsTree.data.value ?? [])
+const hasError = computed(
+	() => !!planCatalog.error.value || !!permissionsTree.error.value,
+)
 const isPickerOpen = ref(false)
 
 // A new plan starts with no value: no parent, nothing of its own.
@@ -184,34 +189,30 @@ function isBlank(value: PlanAccess): boolean {
 
 // A new plan starts with every permission checked, as the seeded plans hold
 // them, for the operator to uncheck; a duplicate keeps the plan it copies.
+// The form's value changes from the browser: until then a new plan shows the
+// placeholder, on the server as in the browser's first render.
+const isNewBlankPlan = !currentPlanId.value && !route.query.duplicate
+const isSeeding = ref(isNewBlankPlan)
+const isLoading = computed(
+	() =>
+		!hasError.value &&
+		(isSeeding.value || !planCatalog.data.value || !permissionsTree.data.value),
+)
+
 function startNewPlanWithEveryPermission(): void {
-	if (currentPlanId.value || route.query.duplicate) return
-	if (!isBlank(access.value)) return
+	if (!isNewBlankPlan || !isBlank(access.value)) return
 	update({ extraPermissions: catalog.value.newPlanPermissions })
 }
 
 async function load(): Promise<void> {
-	isLoading.value = true
-	hasError.value = false
-	try {
-		const [loadedCatalog, loadedTree] = await Promise.all([
-			planCatalog.refresh(),
-			$authFetch<PermissionNode[]>(
-				props.permissionsTreeUrl ?? '/api/saas/plans/permissions-tree',
-			),
-		])
-		if (!loadedCatalog) throw new Error('catalog unavailable')
-		catalog.value = loadedCatalog
-		tree.value = loadedTree
-		startNewPlanWithEveryPermission()
-	} catch {
-		hasError.value = true
-	} finally {
-		isLoading.value = false
-	}
+	await Promise.all([planCatalog.refresh(), permissionsTree.refresh()])
 }
 
-onMounted(load)
+onMounted(async () => {
+	await Promise.all([planCatalog, permissionsTree])
+	if (planCatalog.data.value) startNewPlanWithEveryPermission()
+	isSeeding.value = false
+})
 </script>
 
 <template>

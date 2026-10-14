@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted } from 'vue'
+import { computed, h } from 'vue'
 import { DATA_EXPORT_PATH, HOME_PATH } from '../build/workspace-paths'
 
 const DELETE_ENDPOINT = '/api/saas/workspaces/current/delete'
@@ -142,8 +142,6 @@ async function openDeleteConfirm(): Promise<void> {
 		onConfirm: () => deleteWorkspace(view),
 	})
 }
-
-onMounted(refresh)
 </script>
 
 <template>
@@ -170,7 +168,7 @@ onMounted(refresh)
 					v-else-if="error && !overview"
 					class="mt-1"
 					:title="$t(`${KEYS}.glance.load_failed`)"
-					@retry="refresh"
+					@retry="refresh()"
 				/>
 				<div v-else class="text-muted mt-0.5 flex flex-col gap-1 text-[12.5px]">
 					<p>{{ deleteSummary }}</p>

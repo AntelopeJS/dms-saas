@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import type { SegmentConditionGroup } from '../build/segments/types'
 
 const props = defineProps<{ routeParams?: Record<string, string> }>()
@@ -22,24 +22,16 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 const SKELETON_ROWS = 2
 
 const { locale } = useI18n()
-const { $authFetch } = useAuthFetch()
 const userId = computed(() => props.routeParams?.id ?? '')
-const matches = ref<SegmentMatch[] | null>(null)
-const hasFailed = ref(false)
+const segments = useApiData<{ items: SegmentMatch[] }>(() =>
+	userId.value ? `/api/saas/users/${userId.value}/segments` : null,
+)
+const matches = computed(() => segments.data.value?.items ?? null)
+const hasFailed = computed(() => !!segments.error.value)
 
-async function load(): Promise<void> {
-	hasFailed.value = false
-	try {
-		const response = await $authFetch<{ items: SegmentMatch[] }>(
-			`/api/saas/users/${userId.value}/segments`,
-		)
-		matches.value = response.items
-	} catch {
-		hasFailed.value = true
-	}
+function load(): Promise<void> {
+	return segments.refresh()
 }
-
-onMounted(load)
 </script>
 
 <template>

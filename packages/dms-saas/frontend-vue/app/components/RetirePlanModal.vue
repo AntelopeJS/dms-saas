@@ -187,12 +187,12 @@ async function loadImpact(): Promise<void> {
 	isLoading.value = true
 	loadError.value = null
 	try {
-		const [loaded, catalog] = await Promise.all([
+		const [loaded] = await Promise.all([
 			$authFetch<RetireImpact>(`${RETIRE_ENDPOINT}/${planId.value}/impact`),
-			planCatalog.load(),
+			planCatalog,
 		])
 		impact.value = loaded
-		features.value = catalog?.features ?? []
+		features.value = planCatalog.data.value?.features ?? []
 	} catch (error) {
 		loadError.value = processApiMessage(readError(error))
 	} finally {

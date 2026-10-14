@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, type Ref, ref } from 'vue'
+import { computed, type Ref } from 'vue'
 import { useLiveFormValues } from '../build/composables/useLiveFormValues'
 import {
 	cardFeatures,
@@ -60,22 +60,26 @@ const props = defineProps<{
 	formKey?: string
 }>()
 
-const { $authFetch } = useAuthFetch()
+const EMPTY_CATALOG: PlanCatalog = {
+	plans: [],
+	features: [],
+	newPlanPermissions: [],
+}
+
 const { t, locale } = useI18n()
 const planDescription = usePlanDescription()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
-const saved = ref<PlanDraft | null>(null)
-const context = ref<EditorContext | null>(null)
-const catalog = ref<PlanCatalog>({
-	plans: [],
-	features: [],
-	newPlanPermissions: [],
-})
-const isLoading = ref(true)
-const hasError = ref(false)
-
 const planId = computed(() => props.routeParams?.id)
+// A new plan has nothing saved and no Stripe context yet.
+const savedPlan = useApiData<PlanDraft>(() =>
+	planId.value ? `${PLANS_ENDPOINT}/${planId.value}` : null,
+)
+const editorContext = useApiData<EditorContext>(() =>
+	planId.value ? `${PLANS_ENDPOINT}/${planId.value}/editor-context` : null,
+)
+const saved = savedPlan.data
+const context = editorContext.data
 // The form declared beside the preview, in the same grid row.
 const formComponentId = computed(() =>
 	props.componentId
@@ -84,6 +88,14 @@ const formComponentId = computed(() =>
 )
 const live = useLiveFormValues(() => formComponentId.value) as Ref<PlanDraft | null>
 const planCatalog = usePlanCatalog()
+const catalog = computed(() => planCatalog.data.value ?? EMPTY_CATALOG)
+const reads = [planCatalog, savedPlan, editorContext]
+const hasError = computed(() => reads.some((read) => !!read.error.value))
+const isLoading = computed(
+	() =>
+		!hasError.value &&
+		(!planCatalog.data.value || reads.some((read) => read.pending.value)),
+)
 const draft = computed<PlanDraft>(() => live.value ?? saved.value ?? {})
 const currency = computed(() => draft.value.currency ?? 'EUR')
 const price = computed(() => Number(draft.value.price ?? 0))
@@ -187,31 +199,8 @@ const isPriceChanged = computed(() => {
 const productUrl = computed(() => context.value?.stripeProductUrl ?? undefined)
 
 async function load(): Promise<void> {
-	isLoading.value = true
-	hasError.value = false
-	try {
-		const [loadedCatalog, plan, editor] = await Promise.all([
-			planCatalog.refresh(),
-			planId.value
-				? $authFetch<PlanDraft>(`${PLANS_ENDPOINT}/${planId.value}`)
-				: null,
-			planId.value
-				? $authFetch<EditorContext>(
-						`${PLANS_ENDPOINT}/${planId.value}/editor-context`,
-					)
-				: null,
-		])
-		if (loadedCatalog) catalog.value = loadedCatalog
-		saved.value = plan
-		context.value = editor
-	} catch {
-		hasError.value = true
-	} finally {
-		isLoading.value = false
-	}
+	await Promise.all(reads.map((read) => read.refresh()))
 }
-
-onMounted(() => void load())
 </script>
 
 <template>

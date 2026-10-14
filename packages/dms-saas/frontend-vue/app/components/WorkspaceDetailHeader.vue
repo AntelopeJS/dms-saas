@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import WorkspaceActionDialogs from '../build/workspace-detail/WorkspaceActionDialogs.vue'
 import { useWorkspaceActions } from '../build/workspace-detail/useWorkspaceActions'
 import { useWorkspaceOverview } from '../build/workspace-detail/useWorkspaceOverview'
-import type { WorkspaceDialog } from '../build/workspace-detail/types'
+import type {
+	WorkspaceDialog,
+	WorkspaceOverview,
+} from '../build/workspace-detail/types'
 import { workspaceInitials } from '../build/public/access'
 
 /**
@@ -146,13 +149,20 @@ const QUERY_ACTIONS: Record<string, () => void> = {
 }
 
 // The list's row menu opens a dialog here: run it once the workspace is
-// loaded, then drop the query so a reload does not open it again.
-watch(overview, async (current) => {
+// loaded (the server may have rendered it already), then drop the query so a
+// reload does not open it again.
+async function runRequestedAction(
+	current: WorkspaceOverview | null,
+): Promise<void> {
 	const requested = route.query[ACTION_QUERY]
 	if (!current || typeof requested !== 'string') return
 	const { [ACTION_QUERY]: _action, ...query } = route.query
 	await router.replace({ query })
 	QUERY_ACTIONS[requested]?.()
+}
+
+onMounted(() => {
+	watch(overview, runRequestedAction, { immediate: true })
 })
 </script>
 

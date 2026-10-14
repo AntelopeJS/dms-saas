@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import {
 	BILLING_PATH,
 	INVITES_PATH,
@@ -99,11 +99,6 @@ const overDescription = computed(() => {
 		excess: t(`${KEYS}.seats_count`, excess),
 	})
 })
-
-// Refetch rather than serve the shared cache: adding a member or an invite
-// lands back on this page, and a stale count would contradict the table right
-// under the block.
-onMounted(refresh)
 </script>
 
 <template>
@@ -120,7 +115,7 @@ onMounted(refresh)
 			<DmsSaasLoadFailure
 				v-else-if="error && !quota"
 				:title="$t(`${KEYS}.load_failed`)"
-				@retry="refresh"
+				@retry="refresh()"
 			/>
 			<template v-else-if="quota">
 				<DmsMeter

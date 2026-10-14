@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { userDisplayName, useUserDetail } from '../build/users/useUserDetail'
 
 // The identity header of the user page: who the user is and how their
@@ -22,8 +22,6 @@ watch(avatarKey, (key) => key && resolve(key), { immediate: true })
 const avatarSrc = computed(() =>
 	avatarKey.value ? getUrl(avatarKey.value) : undefined,
 )
-
-onMounted(() => void detail.refresh())
 </script>
 
 <template>

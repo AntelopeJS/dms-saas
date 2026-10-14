@@ -1,7 +1,7 @@
+import type { DmsAsyncDataResult } from '#dms/frontend-module'
 import type { PlanInterval } from './usePlanIntervalLabel'
 
 const TENANT_PLAN_ENDPOINT = '/api/saas/tenant/plan'
-const TENANT_PLAN_STATE_KEY = 'saas-tenant-plan'
 const TENANT_CHECKOUT_ENDPOINT = `${TENANT_PLAN_ENDPOINT}/checkout`
 const TENANT_PREVIEW_ENDPOINT = `${TENANT_PLAN_ENDPOINT}/preview`
 const TENANT_CANCELLATION_ENDPOINT = `${TENANT_PLAN_ENDPOINT}/cancellation`
@@ -188,12 +188,18 @@ function currentPageUrl(): string {
 
 /** The payload resolves inheritance for every public plan and carries the
  * features catalogue, so the plan card and the free-access banner share it. */
-export function useTenantPlan() {
+export function useTenantPlan(): DmsAsyncDataResult<TenantPlanResponse> {
+	return useApiData<TenantPlanResponse>(TENANT_PLAN_ENDPOINT)
+}
+
+/**
+ * What changes the workspace's plan, and the reads a dialog makes on a click
+ * (a change's preview, the checkout left pending). The plan itself is
+ * `useTenantPlan`'s: refresh it once a change went through.
+ */
+export function useTenantPlanChanges() {
 	const { $authFetch } = useAuthFetch()
 	const { authenticateUpgrade } = useUpgradeAuthentication()
-	const shared = useSharedRequest(TENANT_PLAN_STATE_KEY, () =>
-		$authFetch<TenantPlanResponse>(TENANT_PLAN_ENDPOINT),
-	)
 
 	/**
 	 * `prorationDate` is the reviewed preview's, so the charge matches it. A
@@ -259,7 +265,6 @@ export function useTenantPlan() {
 	}
 
 	return {
-		...shared,
 		changePlan,
 		previewChange,
 		cancelPendingChange,

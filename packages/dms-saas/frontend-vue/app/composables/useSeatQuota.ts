@@ -1,5 +1,6 @@
+import type { DmsAsyncDataResult } from '#dms/frontend-module'
+
 const SEAT_QUOTA_ENDPOINT = '/api/saas/tenant/seats'
-const SEAT_QUOTA_STATE_KEY = 'saas-seat-quota'
 
 export interface PlatformSupportMember {
 	userId: string
@@ -28,9 +29,6 @@ export interface SeatQuotaResponse {
 	platformSupport: PlatformSupportMember[]
 }
 
-export function useSeatQuota(): SharedRequest<SeatQuotaResponse> {
-	const { $authFetch } = useAuthFetch()
-	return useSharedRequest(SEAT_QUOTA_STATE_KEY, () =>
-		$authFetch<SeatQuotaResponse>(SEAT_QUOTA_ENDPOINT),
-	)
+export function useSeatQuota(): DmsAsyncDataResult<SeatQuotaResponse> {
+	return useApiData<SeatQuotaResponse>(SEAT_QUOTA_ENDPOINT)
 }

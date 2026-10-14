@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const KEY_PREFIX = 'saas.tenant_billing.billing_info'
 const DAY_FORMAT: Intl.DateTimeFormatOptions = {
@@ -22,7 +22,8 @@ const toast = useToast()
 const { t, locale } = useI18n()
 const { resolveApiError } = useApiErrorMessage()
 const identity = useBillingIdentity()
-const { data: billingStatus, load: loadBillingStatus } = useBillingStatus()
+const info = useBillingInfo()
+const { data: billingStatus } = useBillingStatus()
 
 /** Saving is owner-only server-side; a member gets the form read-only
  * instead of a save button that can only end in a 403 toast. */
@@ -39,8 +40,8 @@ const hasTriedSubmit = ref(false)
 const invalidFields = computed<BillingIdentityField[]>(() =>
 	hasTriedSubmit.value ? findMissingBillingFields(draft.value) : [],
 )
-const isLoading = ref(true)
-const loadFailed = ref(false)
+const isLoading = computed(() => info.pending.value && !info.data.value)
+const loadFailed = computed(() => !!info.error.value && !info.data.value)
 const isSaving = ref(false)
 
 /** The badge reflects what is stored, not what is being typed. */
@@ -64,16 +65,8 @@ function apply(info: BillingInfoResponse): void {
 	hasTriedSubmit.value = false
 }
 
-async function load(): Promise<void> {
-	isLoading.value = true
-	loadFailed.value = false
-	try {
-		apply(await identity.load())
-	} catch {
-		loadFailed.value = true
-	} finally {
-		isLoading.value = false
-	}
+function load(): Promise<void> {
+	return info.refresh()
 }
 
 function discard(): void {
@@ -93,7 +86,7 @@ async function save(): Promise<void> {
 	}
 	isSaving.value = true
 	try {
-		apply(await identity.save(draft.value))
+		info.data.value = await identity.save(draft.value)
 		toast.add({
 			title: t(`${KEY_PREFIX}.saved`),
 			color: 'success',
@@ -110,10 +103,12 @@ async function save(): Promise<void> {
 	}
 }
 
-onMounted(() => {
-	void loadBillingStatus()
-	return load()
-})
+// The fields are copies of the stored identity, edited in place: copied once
+// it is read (awaited, so the server renders them filled in), then each time
+// it is read or saved again.
+watch(info.data, (stored) => stored && apply(stored))
+await info
+if (info.data.value) apply(info.data.value)
 </script>
 
 <template>

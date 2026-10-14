@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import PayInvoiceDialog from '../build/PayInvoiceDialog.vue'
 import { useWorkspaceName } from '../build/useWorkspaceName'
 
@@ -17,7 +17,7 @@ const DEADLINE_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'long',
 }
 
-const { data, load } = useBillingStatus()
+const { data } = useBillingStatus()
 const workspaceName = useWorkspaceName()
 const { formatMinorUnits } = useMoneyFormat()
 const { open: openPayment } = usePayInvoice()
@@ -63,8 +63,6 @@ const ownerMailto = computed(() =>
 function payInvoice(): void {
 	if (invoice.value) openPayment(invoice.value)
 }
-
-onMounted(load)
 </script>
 
 <template>

@@ -4,7 +4,7 @@
  * how the workspace owner reopens it, whom a member should ask, and the
  * caller's other workspaces. Reachable while the access gate blocks.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
 	ACCESS_REASON_VIEWS,
 	workspaceInitials,
@@ -43,13 +43,18 @@ const { user, clear: clearSession } = useUserSession()
 const { resolveApiError } = useApiErrorMessage()
 const { formatMinorUnits } = useMoneyFormat()
 const { statusView } = useSaasStatus()
-const cachedAccess = useWorkspaceAccessCache()
-const { data: billingStatusState } = useBillingStatus()
-const { data: tenantPlanState } = useTenantPlan()
 
-const access = ref<WorkspaceAccessDetails | null>(null)
-const isLoading = ref(true)
-const loadError = ref<string | null>(null)
+const accessRead = useApiData<WorkspaceAccessDetails>(ACCESS_ENDPOINT)
+const access = accessRead.data
+const isLoading = computed(() => accessRead.pending.value)
+const loadError = computed(() =>
+	accessRead.error.value
+		? resolveApiError(
+				accessRead.error.value,
+				'saas.public.suspended.load_error',
+			)
+		: null,
+)
 const isOpeningPortal = ref(false)
 
 const reason = computed(() => access.value?.reason ?? null)
@@ -152,29 +157,8 @@ const mailtoOwner = computed(() =>
 		: null,
 )
 
-/**
- * Drop the payloads cached while blocked before going back in: an SPA
- * navigation keeps them alive, and Billing would keep announcing a
- * suspension the owner just settled.
- */
-async function enterWorkspace(): Promise<void> {
-	cachedAccess.value = null
-	billingStatusState.value = null
-	tenantPlanState.value = null
-	await navigateDms(HOME_PATH)
-}
-
-async function loadAccess(): Promise<void> {
-	isLoading.value = true
-	loadError.value = null
-	try {
-		access.value = await $authFetch<WorkspaceAccessDetails>(ACCESS_ENDPOINT)
-		if (!access.value.blocked) await enterWorkspace()
-	} catch (error) {
-		loadError.value = resolveApiError(error, 'saas.public.suspended.load_error')
-	} finally {
-		isLoading.value = false
-	}
+function loadAccess(): Promise<void> {
+	return accessRead.refresh()
 }
 
 function payInvoice(): void {
@@ -209,7 +193,18 @@ async function signOut(): Promise<void> {
 	await navigateDms(LOGIN_PATH)
 }
 
-onMounted(loadAccess)
+// A workspace no longer blocked is entered again, from the browser. The
+// billing data read before the suspension is not shown here, so the pages
+// past this one read it afresh.
+onMounted(() => {
+	watch(
+		() => access.value?.blocked,
+		(blocked) => {
+			if (blocked === false) void navigateDms(HOME_PATH)
+		},
+		{ immediate: true },
+	)
+})
 </script>
 
 <template>
