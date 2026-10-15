@@ -17,7 +17,8 @@ const DEADLINE_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'long',
 }
 
-const { data } = useBillingStatus()
+const { data: billingStatus } = useBillingStatus({ server: false })
+const data = useMountedData(billingStatus)
 const workspaceName = useWorkspaceName()
 const { formatMinorUnits } = useMoneyFormat()
 const { open: openPayment } = usePayInvoice()
@@ -76,6 +77,7 @@ function payInvoice(): void {
 		<template v-if="isOwnerStrip">
 			<DmsSaasCustomerPortalButton
 				label-key="saas.tenant_billing.past_due.update_card"
+				is-deferred
 				icon="i-ph-credit-card"
 				variant="ghost"
 				size="xs"

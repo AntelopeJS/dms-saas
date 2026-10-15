@@ -82,9 +82,8 @@ vi.mock("@antelopejs/interface-core/logging", () => ({
   },
 }));
 
-vi.mock("../src/stripe/client", () => ({
-  isStripeConfigured: () => harness.isStripeConfigured,
-  getStripeClient: () => ({
+vi.mock("../src/stripe/client", () => {
+  const client = () => ({
     subscriptions: {
       retrieve: (...args: unknown[]) => harness.retrieveSubscription(...args),
     },
@@ -94,8 +93,13 @@ vi.mock("../src/stripe/client", () => ({
     taxRates: {
       retrieve: (...args: unknown[]) => harness.retrieveTaxRate(...args),
     },
-  }),
-}));
+  });
+  return {
+    isStripeConfigured: () => harness.isStripeConfigured,
+    getStripeClient: client,
+    getStripeReadClient: client,
+  };
+});
 
 vi.mock("../src/stripe/webhook-shared", async (importOriginal) => {
   const actual =

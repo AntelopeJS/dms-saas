@@ -1,3 +1,5 @@
+import type { ApiReadOptions } from './useMountedData'
+
 const BILLING_STATUS_ENDPOINT = '/api/saas/billing/status'
 
 export interface PaymentMethodSummary {
@@ -41,9 +43,12 @@ export interface BillingStatusResponse {
 }
 
 /** Read by most billing blocks and the past-due banner; each call reaches
- * Stripe, so they share one request. */
-export function useBillingStatus(): ApiDataResult<BillingStatusResponse> {
-	return useApiData<BillingStatusResponse>(BILLING_STATUS_ENDPOINT)
+ * Stripe, so they share one request. The layout strips read it with
+ * `server: false` (see `useMountedData`). */
+export function useBillingStatus(
+	options: ApiReadOptions = {},
+): ApiDataResult<BillingStatusResponse> {
+	return useApiData<BillingStatusResponse>(BILLING_STATUS_ENDPOINT, options)
 }
 
 const CARD_EXPIRY_YEAR_MODULO = 100

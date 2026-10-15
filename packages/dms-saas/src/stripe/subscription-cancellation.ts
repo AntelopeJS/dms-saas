@@ -1,7 +1,7 @@
 import { Logging } from "@antelopejs/interface-core/logging";
 import type Stripe from "stripe";
 import { stripeSecondsToDate } from "../utils/time";
-import { getStripeClient } from "./client";
+import { getStripeReadClient } from "./client";
 import { readSubscriptionPeriodEnd } from "./payload-shapes";
 
 const LOG_PREFIX = "[dms-saas:cancellation]";
@@ -34,7 +34,7 @@ export async function fetchScheduledCancellation(
 ): Promise<Date | null> {
   try {
     const subscription =
-      await getStripeClient().subscriptions.retrieve(stripeSubscriptionId);
+      await getStripeReadClient().subscriptions.retrieve(stripeSubscriptionId);
     return readScheduledCancellation(subscription);
   } catch (error) {
     Logging.Warn(
