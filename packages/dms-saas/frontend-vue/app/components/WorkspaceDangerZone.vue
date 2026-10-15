@@ -17,7 +17,7 @@ const { $authFetch } = useAuthFetch()
 const { confirm } = useConfirm()
 const { resolveApiError } = useApiErrorMessage()
 const toast = useToast()
-const { data: overview, error, refresh } = useWorkspaceOverview()
+const { data: overview, status, refresh } = useWorkspaceOverview()
 // The deletion asks for the name as it is now: read again after a rename.
 useWorkspaceRenamed(() => void refresh())
 
@@ -163,9 +163,12 @@ async function openDeleteConfirm(): Promise<void> {
 		</DmsFieldRow>
 		<DmsFieldRow :label="$t(`${KEYS}.delete.title`)">
 			<template #details>
-				<USkeleton v-if="!overview && !error" class="mt-1 h-10 w-full" />
+				<USkeleton
+					v-if="!overview && status !== 'error'"
+					class="mt-1 h-10 w-full"
+				/>
 				<DmsSaasLoadFailure
-					v-else-if="error && !overview"
+					v-else-if="status === 'error' && !overview"
 					class="mt-1"
 					:title="$t(`${KEYS}.glance.load_failed`)"
 					@retry="refresh()"

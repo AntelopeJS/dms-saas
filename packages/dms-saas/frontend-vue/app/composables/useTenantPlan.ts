@@ -1,4 +1,3 @@
-import type { DmsAsyncDataResult } from '#dms/frontend-module'
 import type { PlanInterval } from './usePlanIntervalLabel'
 
 const TENANT_PLAN_ENDPOINT = '/api/saas/tenant/plan'
@@ -188,7 +187,7 @@ function currentPageUrl(): string {
 
 /** The payload resolves inheritance for every public plan and carries the
  * features catalogue, so the plan card and the free-access banner share it. */
-export function useTenantPlan(): DmsAsyncDataResult<TenantPlanResponse> {
+export function useTenantPlan(): ApiDataResult<TenantPlanResponse> {
 	return useApiData<TenantPlanResponse>(TENANT_PLAN_ENDPOINT)
 }
 

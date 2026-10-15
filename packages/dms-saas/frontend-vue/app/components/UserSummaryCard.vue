@@ -27,7 +27,7 @@ const avatarSrc = computed(() =>
 <template>
 	<div class="flex flex-col gap-4">
 		<DmsSaasLoadFailure
-			v-if="detail.error.value && !user"
+			v-if="detail.status.value === 'error' && !user"
 			:title="$t('saas.users.load_failed')"
 			@retry="detail.refresh()"
 		/>

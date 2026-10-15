@@ -41,7 +41,9 @@ export function useSegmentCatalog(
 
 	return {
 		catalog,
-		isLoading: computed(() => !request.data.value && !request.error.value),
+		isLoading: computed(
+			() => !request.data.value && request.status.value !== 'error',
+		),
 		error: request.error,
 		refresh: () => request.refresh(),
 		fieldsOf,

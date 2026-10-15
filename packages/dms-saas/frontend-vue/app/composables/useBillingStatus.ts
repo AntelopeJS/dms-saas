@@ -1,5 +1,3 @@
-import type { DmsAsyncDataResult } from '#dms/frontend-module'
-
 const BILLING_STATUS_ENDPOINT = '/api/saas/billing/status'
 
 export interface PaymentMethodSummary {
@@ -44,7 +42,7 @@ export interface BillingStatusResponse {
 
 /** Read by most billing blocks and the past-due banner; each call reaches
  * Stripe, so they share one request. */
-export function useBillingStatus(): DmsAsyncDataResult<BillingStatusResponse> {
+export function useBillingStatus(): ApiDataResult<BillingStatusResponse> {
 	return useApiData<BillingStatusResponse>(BILLING_STATUS_ENDPOINT)
 }
 

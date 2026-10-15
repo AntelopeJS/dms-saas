@@ -320,7 +320,7 @@ function toggleSale(): void {
 			</div>
 
 			<p
-				v-if="catalog.error.value"
+				v-if="catalog.status.value === 'error'"
 				class="text-muted flex items-center gap-1.5 text-xs"
 			>
 				<UIcon name="i-ph-warning" class="text-warning size-4" />

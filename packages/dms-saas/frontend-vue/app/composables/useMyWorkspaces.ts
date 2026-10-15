@@ -35,7 +35,7 @@ interface MyWorkspacesHandle {
  */
 export function useMyWorkspaces(): MyWorkspacesHandle {
 	const { loggedIn } = useUserSession()
-	const { data, status, error, refresh } = useApiData<MyWorkspace[]>(() =>
+	const { data, status, refresh } = useApiData<MyWorkspace[]>(() =>
 		loggedIn.value ? WORKSPACES_ENDPOINT : null,
 	)
 	const workspaces = computed(() => data.value ?? [])
@@ -47,7 +47,7 @@ export function useMyWorkspaces(): MyWorkspacesHandle {
 				status.value === 'success' ||
 				workspaces.value.length > 0,
 		),
-		hasFailed: computed(() => !!error.value),
+		hasFailed: computed(() => status.value === 'error'),
 		refresh: () => refresh(),
 	}
 }

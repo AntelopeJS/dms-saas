@@ -49,7 +49,7 @@ async function openConfirm(): Promise<void> {
 <template>
 	<DmsCard :title="$t(`${I18N}.title`)">
 		<DmsSaasLoadFailure
-			v-if="detail.error.value && !user"
+			v-if="detail.status.value === 'error' && !user"
 			@retry="detail.refresh()"
 		/>
 		<div v-else-if="!user" class="flex flex-col gap-2">

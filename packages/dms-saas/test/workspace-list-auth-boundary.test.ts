@@ -107,4 +107,17 @@ describe("workspace list authentication boundary", () => {
     expect(list.isLoaded.value).toBe(true);
     expect(list.workspaces.value).toEqual([WORKSPACE_FIXTURE]);
   });
+
+  it("does not show a retry as failed while it runs", () => {
+    const { list, calls } = setupWorkspaceList(true);
+    const call = calls[0]!;
+    call.status.value = "error";
+    call.error.value = new Error("Bad gateway");
+    expect(list.hasFailed.value).toBe(true);
+
+    // A retry keeps the failure in `error` until it answers (as Nuxt does).
+    call.status.value = "pending";
+    expect(list.hasFailed.value).toBe(false);
+    expect(list.isLoaded.value).toBe(false);
+  });
 });

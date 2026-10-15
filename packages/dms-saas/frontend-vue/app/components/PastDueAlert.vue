@@ -14,7 +14,7 @@ const SUSPENDED_STATUS = 'suspended'
 const UNPAID_STATUSES = new Set(['past_due', SUSPENDED_STATUS])
 const KEY_PREFIX = 'saas.tenant_billing.past_due'
 
-const { data, error, refresh } = useBillingStatus()
+const { data, status: readStatus, refresh } = useBillingStatus()
 const { formatMinorUnits } = useMoneyFormat()
 const { open: openPayment } = usePayInvoice()
 const { t, locale } = useI18n()
@@ -130,7 +130,7 @@ function payInvoice(): void {
 
 <template>
 	<DmsSaasLoadFailure
-		v-if="error && !data"
+		v-if="readStatus === 'error' && !data"
 		:title="$t(`${KEY_PREFIX}.load_failed`)"
 		@retry="refresh()"
 	/>

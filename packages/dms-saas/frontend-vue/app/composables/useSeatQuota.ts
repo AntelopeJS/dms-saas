@@ -1,5 +1,3 @@
-import type { DmsAsyncDataResult } from '#dms/frontend-module'
-
 const SEAT_QUOTA_ENDPOINT = '/api/saas/tenant/seats'
 
 export interface PlatformSupportMember {
@@ -29,6 +27,6 @@ export interface SeatQuotaResponse {
 	platformSupport: PlatformSupportMember[]
 }
 
-export function useSeatQuota(): DmsAsyncDataResult<SeatQuotaResponse> {
+export function useSeatQuota(): ApiDataResult<SeatQuotaResponse> {
 	return useApiData<SeatQuotaResponse>(SEAT_QUOTA_ENDPOINT)
 }

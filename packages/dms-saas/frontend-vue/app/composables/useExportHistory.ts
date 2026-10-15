@@ -149,7 +149,7 @@ export function useExportHistory(): ExportHistoryHandle {
 			entries: current?.items ?? [],
 			isLoading: shown.pending.value,
 			hasLoaded: !!current,
-			hasFailed: !!shown.error.value,
+			hasFailed: shown.status.value === 'error',
 			isStarting: isStarting.value,
 			page: current?.page ?? page.value,
 			hasMore: current?.hasMore ?? false,

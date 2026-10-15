@@ -90,7 +90,9 @@ const live = useLiveFormValues(() => formComponentId.value) as Ref<PlanDraft | n
 const planCatalog = usePlanCatalog()
 const catalog = computed(() => planCatalog.data.value ?? EMPTY_CATALOG)
 const reads = [planCatalog, savedPlan, editorContext]
-const hasError = computed(() => reads.some((read) => !!read.error.value))
+const hasError = computed(() =>
+	reads.some((read) => read.status.value === 'error'),
+)
 const isLoading = computed(
 	() =>
 		!hasError.value &&

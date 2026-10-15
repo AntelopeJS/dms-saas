@@ -27,7 +27,7 @@ const segments = useApiData<{ items: SegmentMatch[] }>(() =>
 	userId.value ? `/api/saas/users/${userId.value}/segments` : null,
 )
 const matches = computed(() => segments.data.value?.items ?? null)
-const hasFailed = computed(() => !!segments.error.value)
+const hasFailed = computed(() => segments.status.value === 'error')
 
 function load(): Promise<void> {
 	return segments.refresh()

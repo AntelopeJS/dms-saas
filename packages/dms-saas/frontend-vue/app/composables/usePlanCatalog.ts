@@ -1,4 +1,3 @@
-import type { DmsAsyncDataResult } from '#dms/frontend-module'
 import { type PlanCatalog, PLANS_ENDPOINT } from '../build/plan-catalog'
 
 /**
@@ -6,6 +5,6 @@ import { type PlanCatalog, PLANS_ENDPOINT } from '../build/plan-catalog'
  * for every block of a page: the plan cards, the editor's access matrix and
  * preview, the retire dialog. `refresh` reads the catalogue as it stands now.
  */
-export function usePlanCatalog(): DmsAsyncDataResult<PlanCatalog> {
+export function usePlanCatalog(): ApiDataResult<PlanCatalog> {
 	return useApiData<PlanCatalog>(`${PLANS_ENDPOINT}/catalog`)
 }

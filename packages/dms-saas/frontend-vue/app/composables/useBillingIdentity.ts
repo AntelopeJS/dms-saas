@@ -1,5 +1,3 @@
-import type { DmsAsyncDataResult } from '#dms/frontend-module'
-
 const BILLING_INFO_ENDPOINT = '/api/saas/tenant/billing-info'
 const BUSINESS_CUSTOMER_TYPE = 'business'
 const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/
@@ -127,7 +125,7 @@ function toRequestBody(draft: BillingIdentityDraft) {
 }
 
 /** The workspace billing identity a form shows, read with the page. */
-export function useBillingInfo(): DmsAsyncDataResult<BillingInfoResponse> {
+export function useBillingInfo(): ApiDataResult<BillingInfoResponse> {
 	return useApiData<BillingInfoResponse>(BILLING_INFO_ENDPOINT)
 }
 

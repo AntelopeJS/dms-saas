@@ -66,7 +66,9 @@ export function useUserDetail(
 	return {
 		...request,
 		userId,
-		isLoading: computed(() => !request.data.value && !request.error.value),
+		isLoading: computed(
+			() => !request.data.value && request.status.value !== 'error',
+		),
 	}
 }
 

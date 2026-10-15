@@ -14,7 +14,7 @@ const ERROR_AT_PERCENT = 100
 /** Where the seats stand against the plan's cap. */
 type SeatState = 'unlimited' | 'room' | 'full' | 'over'
 
-const { data: quota, error, refresh } = useSeatQuota()
+const { data: quota, status, refresh } = useSeatQuota()
 const { t } = useI18n()
 
 const seatState = computed<SeatState>(() => {
@@ -107,13 +107,17 @@ const overDescription = computed(() => {
 		:description="$t(`${KEYS}.description`)"
 	>
 		<div class="p-4.5 flex flex-col gap-4">
-			<div v-if="!quota && !error" class="grid gap-1.5" aria-busy="true">
+			<div
+				v-if="!quota && status !== 'error'"
+				class="grid gap-1.5"
+				aria-busy="true"
+			>
 				<USkeleton class="h-4 w-1/3" />
 				<USkeleton class="h-1.5 w-full rounded-full" />
 				<USkeleton class="h-3 w-40" />
 			</div>
 			<DmsSaasLoadFailure
-				v-else-if="error && !quota"
+				v-else-if="status === 'error' && !quota"
 				:title="$t(`${KEYS}.load_failed`)"
 				@retry="refresh()"
 			/>

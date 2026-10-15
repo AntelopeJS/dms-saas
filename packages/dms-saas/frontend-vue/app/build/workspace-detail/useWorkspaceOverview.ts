@@ -15,7 +15,7 @@ export interface WorkspaceOverviewState {
  * card and the suspend button share one read.
  */
 export function useWorkspaceOverview(tenantId: string): WorkspaceOverviewState {
-	const { data, status, error, refresh } = useApiData<WorkspaceOverview>(
+	const { data, status, refresh } = useApiData<WorkspaceOverview>(
 		tenantId ? `/api/saas/workspaces/${tenantId}/overview` : null,
 	)
 	// Each block showing it subscribes: the first refresh reads, the others
@@ -26,7 +26,7 @@ export function useWorkspaceOverview(tenantId: string): WorkspaceOverviewState {
 		isLoading: computed(
 			() => status.value === 'pending' || status.value === 'idle',
 		),
-		hasError: computed(() => !!error.value),
+		hasError: computed(() => status.value === 'error'),
 		load: () => refresh(),
 	}
 }

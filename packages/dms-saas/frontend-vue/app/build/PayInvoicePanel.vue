@@ -160,7 +160,7 @@ function confirm(): void {
 		</template>
 
 		<UAlert
-			v-else-if="billingStatus.error.value"
+			v-else-if="billingStatus.status.value === 'error'"
 			color="error"
 			variant="subtle"
 			icon="i-ph-warning-circle"

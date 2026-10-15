@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useSegmentCatalog } from "../frontend-vue/app/build/segments/useSegmentCatalog";
 import { useUserDetail } from "../frontend-vue/app/build/users/useUserDetail";
 import { useWorkspaceOverview } from "../frontend-vue/app/build/workspace-detail/useWorkspaceOverview";
 import { useExportHistory } from "../frontend-vue/app/composables/useExportHistory";
@@ -127,5 +128,39 @@ describe("readers on useApiData", () => {
 
     expect(pages).toEqual([3, 1]);
     expect(result).toMatchObject({ page: 1, items: [{ jobId: "j1" }] });
+  });
+
+  it("shows a retry as loading, not as the failure it retries", () => {
+    const calls = stubApiData();
+    vi.stubGlobal("usePageLiveRefresh", () => undefined);
+    vi.stubGlobal("useAuthFetch", () => ({ $authFetch: vi.fn() }));
+    vi.stubGlobal("useDmsState", (_key: string, init: () => unknown) =>
+      holder(init()),
+    );
+
+    const detail = useUserDetail(() => ({ id: "u1" }));
+    const catalog = useSegmentCatalog();
+    const overview = useWorkspaceOverview("t1");
+    const history = useExportHistory();
+    const failure = new Error("Bad gateway");
+    for (const call of calls) {
+      call.status.value = "error";
+      call.error.value = failure;
+    }
+    expect(detail.isLoading.value).toBe(false);
+    expect(catalog.isLoading.value).toBe(false);
+    expect(overview.hasError.value).toBe(true);
+    expect(history.state.value.hasFailed).toBe(true);
+
+    // A retry keeps the failure in `error` until it answers (as Nuxt does).
+    for (const call of calls) {
+      call.status.value = "pending";
+      call.pending.value = true;
+    }
+    expect(detail.isLoading.value).toBe(true);
+    expect(catalog.isLoading.value).toBe(true);
+    expect(overview.hasError.value).toBe(false);
+    expect(overview.isLoading.value).toBe(true);
+    expect(history.state.value.hasFailed).toBe(false);
   });
 });

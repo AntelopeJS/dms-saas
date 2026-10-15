@@ -45,8 +45,8 @@ const { formatFeatureValue } = usePlanFeatureFormat()
 
 const catalog = computed(() => planCatalog.data.value ?? EMPTY_CATALOG)
 const tree = computed(() => permissionsTree.data.value ?? [])
-const hasError = computed(
-	() => !!planCatalog.error.value || !!permissionsTree.error.value,
+const hasError = computed(() =>
+	[planCatalog, permissionsTree].some((read) => read.status.value === 'error'),
 )
 const isPickerOpen = ref(false)
 

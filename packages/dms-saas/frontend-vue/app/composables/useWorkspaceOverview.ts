@@ -1,5 +1,3 @@
-import type { DmsAsyncDataResult } from '#dms/frontend-module'
-
 const OVERVIEW_ENDPOINT = '/api/saas/workspaces/current/overview'
 
 /** Seats as the members page counts them; `maxMembers` null when unlimited. */
@@ -51,6 +49,6 @@ export interface WorkspaceOverview {
 }
 
 /** What the General page's danger zone states about deleting the workspace. */
-export function useWorkspaceOverview(): DmsAsyncDataResult<WorkspaceOverview> {
+export function useWorkspaceOverview(): ApiDataResult<WorkspaceOverview> {
 	return useApiData<WorkspaceOverview>(OVERVIEW_ENDPOINT)
 }

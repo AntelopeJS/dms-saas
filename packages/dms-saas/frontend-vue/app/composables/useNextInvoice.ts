@@ -1,5 +1,3 @@
-import type { DmsAsyncDataResult } from '#dms/frontend-module'
-
 const NEXT_INVOICE_ENDPOINT = '/api/saas/tenant/upcoming-invoice'
 
 /** The figures of Stripe's next-invoice preview that cards quote. */
@@ -13,6 +11,6 @@ export interface NextInvoiceSummary {
  * Stripe's preview of the next invoice, shared by the cards quoting its total
  * (plan card, trial strip); the "Next invoice" block reads the full rows.
  */
-export function useNextInvoice(): DmsAsyncDataResult<NextInvoiceSummary> {
+export function useNextInvoice(): ApiDataResult<NextInvoiceSummary> {
 	return useApiData<NextInvoiceSummary>(NEXT_INVOICE_ENDPOINT)
 }
