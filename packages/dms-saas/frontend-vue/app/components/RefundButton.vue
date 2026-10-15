@@ -177,11 +177,6 @@ async function submitRefund(): Promise<void> {
 		color: 'success',
 		icon: 'i-ph-check-circle',
 	})
-	await Promise.all([
-		guarantee.refresh(),
-		tenantPlan.refresh(),
-		billingStatus.refresh(),
-	])
 	refreshPageBlocks()
 }
 

@@ -117,7 +117,7 @@ async function submit(): Promise<void> {
 			body: { content: trimmed.value },
 		})
 		draft.value = ''
-		await load()
+		refreshPageBlocks()
 	} catch (error) {
 		toast.add({
 			color: 'error',
@@ -142,7 +142,7 @@ async function remove(note: PlatformNote): Promise<void> {
 			})
 		},
 	})
-	if (isConfirmed) await load()
+	if (isConfirmed) refreshPageBlocks()
 }
 </script>
 

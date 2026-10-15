@@ -11,16 +11,14 @@ export interface WorkspaceOverviewState {
 
 /**
  * Reads the header of a workspace's detail page, again each time the page
- * refreshes its blocks after an operator action. The header, the operator
- * card and the suspend button share one read.
+ * refreshes its blocks after an operator action (as every `useApiData` read
+ * of the page does). The header, the operator card and the suspend button
+ * share one read.
  */
 export function useWorkspaceOverview(tenantId: string): WorkspaceOverviewState {
 	const { data, status, refresh } = useApiData<WorkspaceOverview>(
 		tenantId ? `/api/saas/workspaces/${tenantId}/overview` : null,
 	)
-	// Each block showing it subscribes: the first refresh reads, the others
-	// join it.
-	usePageLiveRefresh(() => void refresh({ dedupe: 'defer' }))
 	return {
 		overview: data,
 		isLoading: computed(

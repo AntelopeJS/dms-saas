@@ -36,7 +36,6 @@ const { consumeCancelledCheckout } = usePendingCheckout()
 const { workspace, load: loadWorkspace } = useCurrentWorkspace()
 const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
 const workspaceName = useWorkspaceName()
-const myWorkspaces = useMyWorkspaces()
 const route = useDmsRoute()
 const router = useDmsRouter()
 
@@ -253,13 +252,10 @@ function openUpgrade(plan: OfferedPlanView): void {
 	isUpgradeOpen.value = true
 }
 
-// The page's stock blocks (the complimentary banner, the next invoice) and
-// the sidebar switcher, which names the plan, read it too: they read their
-// routes again once it changed.
-async function refresh(): Promise<void> {
-	void nextInvoice.refresh()
-	void myWorkspaces.refresh()
-	await Promise.all([tenantPlan.refresh(), billingStatus.refresh()])
+// The page's refresh reads the plan again, with what shows it elsewhere: the
+// page's stock blocks (the complimentary banner, the next invoice) and the
+// sidebar switcher, which names the plan.
+function refresh(): void {
 	refreshPageBlocks()
 }
 
@@ -275,7 +271,7 @@ async function runAction(
 			color: 'success',
 			icon: 'i-ph-check-circle',
 		})
-		await refresh()
+		refresh()
 	} catch (error) {
 		toast.add({
 			title: resolveApiError(error, 'saas.workspace.plan.change_error'),
@@ -348,7 +344,7 @@ async function cancelSubscription(): Promise<void> {
 				color: 'success',
 				icon: 'i-ph-check-circle',
 			})
-			await refresh()
+			refresh()
 		},
 	})
 }
@@ -359,7 +355,7 @@ async function releaseCancelledCheckout(): Promise<void> {
 	try {
 		const { released } = await consumeCancelledCheckout()
 		if (!released) return
-		await refresh()
+		refresh()
 		toast.add({
 			title: t('saas.workspace.plan.checkout_pending.cancelled'),
 			color: 'info',

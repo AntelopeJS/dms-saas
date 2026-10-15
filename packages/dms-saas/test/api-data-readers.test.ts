@@ -3,6 +3,7 @@ import { useSegmentCatalog } from "../frontend-vue/app/build/segments/useSegment
 import { useUserDetail } from "../frontend-vue/app/build/users/useUserDetail";
 import { useWorkspaceOverview } from "../frontend-vue/app/build/workspace-detail/useWorkspaceOverview";
 import { useExportHistory } from "../frontend-vue/app/composables/useExportHistory";
+import { useOnDemandRead } from "../frontend-vue/app/composables/useOnDemandRead";
 
 // The composables' Vue, without reactivity: a computed reads its getter on
 // each access, so plain `{ value }` holders stand in for refs.
@@ -38,28 +39,38 @@ type Handler = (context: {
 interface ApiDataCall {
   source: unknown;
   handler?: Handler;
+  options?: Record<string, unknown>;
   data: Holder<unknown>;
   status: Holder<string>;
   error: Holder<unknown>;
   pending: Holder<boolean>;
   refresh: ReturnType<typeof vi.fn>;
+  execute: ReturnType<typeof vi.fn>;
 }
 
 function stubApiData(): ApiDataCall[] {
   const calls: ApiDataCall[] = [];
-  vi.stubGlobal("useApiData", (source: unknown, second?: unknown) => {
-    const call: ApiDataCall = {
-      source,
-      handler: typeof second === "function" ? (second as Handler) : undefined,
-      data: holder(null),
-      status: holder("idle"),
-      error: holder(null),
-      pending: holder(false),
-      refresh: vi.fn(async () => undefined),
-    };
-    calls.push(call);
-    return call;
-  });
+  vi.stubGlobal(
+    "useApiData",
+    (source: unknown, second?: unknown, third?: unknown) => {
+      const call: ApiDataCall = {
+        source,
+        handler: typeof second === "function" ? (second as Handler) : undefined,
+        options: (typeof second === "function" ? third : second) as
+          | Record<string, unknown>
+          | undefined,
+        data: holder(null),
+        status: holder("idle"),
+        error: holder(null),
+        pending: holder(false),
+        refresh: vi.fn(async () => undefined),
+        execute: vi.fn(async () => undefined),
+      };
+      calls.push(call);
+      return call;
+    },
+  );
+  vi.stubGlobal("useOnDemandRead", useOnDemandRead);
   return calls;
 }
 
@@ -80,19 +91,18 @@ describe("readers on useApiData", () => {
     expect(read(calls[0]!.source)).toBeNull();
   });
 
-  it("shares one operator overview read, refreshed once per page refresh", () => {
+  it("shares one operator overview read, which the page's refreshes read again", () => {
     const calls = stubApiData();
-    const subscriptions: Array<() => void> = [];
-    vi.stubGlobal("usePageLiveRefresh", (refresh: () => void) => {
-      subscriptions.push(refresh);
-    });
+    const subscribe = vi.fn();
+    vi.stubGlobal("usePageLiveRefresh", subscribe);
 
     const state = useWorkspaceOverview("t1");
     expect(read(calls[0]!.source)).toBe("/api/saas/workspaces/t1/overview");
     expect(state.isLoading.value).toBe(true);
-
-    subscriptions[0]!();
-    expect(calls[0]!.refresh).toHaveBeenCalledWith({ dedupe: "defer" });
+    // useApiData follows the page's refreshes: a refresh of its own would
+    // read it twice.
+    expect(calls[0]!.options).toBeUndefined();
+    expect(subscribe).not.toHaveBeenCalled();
 
     useWorkspaceOverview("");
     expect(read(calls[1]!.source)).toBeNull();

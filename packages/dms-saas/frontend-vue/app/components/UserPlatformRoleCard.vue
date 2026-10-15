@@ -25,7 +25,7 @@ const change = computed<RoleChange>(() =>
 async function runChange(kind: RoleChange): Promise<void> {
 	await $authFetch(`${API}/${detail.userId.value}/${kind}`, { method: 'POST' })
 	toast.add({ color: 'success', title: t(`${I18N}.${kind}d`) })
-	await detail.refresh()
+	refreshPageBlocks()
 }
 
 async function openConfirm(): Promise<void> {

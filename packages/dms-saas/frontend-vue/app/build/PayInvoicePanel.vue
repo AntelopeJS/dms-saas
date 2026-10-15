@@ -21,7 +21,6 @@ const { resolveApiError } = useApiErrorMessage()
 const { formatMinorUnits } = useMoneyFormat()
 const { payWithDefaultCard } = usePayInvoice()
 const billingStatus = useBillingStatus()
-const tenantPlan = useTenantPlan()
 
 const choice = ref<PaymentChoice>('default_card')
 const isPaying = ref(false)
@@ -66,7 +65,7 @@ async function payWithCard(): Promise<void> {
 			color: 'success',
 			icon: 'i-ph-check-circle',
 		})
-		await Promise.all([billingStatus.refresh(), tenantPlan.refresh()])
+		refreshPageBlocks()
 		emit('paid')
 	} catch (error) {
 		failure.value = resolveApiError(error, `${KEY_PREFIX}.error`)
