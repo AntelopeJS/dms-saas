@@ -1,4 +1,5 @@
 import type { DmsAsyncDataResult } from '#dms/frontend-module'
+import type { ApiReadOptions } from './useMountedData'
 
 const BILLING_STATUS_ENDPOINT = '/api/saas/billing/status'
 
@@ -43,9 +44,12 @@ export interface BillingStatusResponse {
 }
 
 /** Read by most billing blocks and the past-due banner; each call reaches
- * Stripe, so they share one request. */
-export function useBillingStatus(): DmsAsyncDataResult<BillingStatusResponse> {
-	return useApiData<BillingStatusResponse>(BILLING_STATUS_ENDPOINT)
+ * Stripe, so they share one request. The layout strips read it with
+ * `server: false` (see `useMountedData`). */
+export function useBillingStatus(
+	options: ApiReadOptions = {},
+): DmsAsyncDataResult<BillingStatusResponse> {
+	return useApiData<BillingStatusResponse>(BILLING_STATUS_ENDPOINT, options)
 }
 
 const CARD_EXPIRY_YEAR_MODULO = 100

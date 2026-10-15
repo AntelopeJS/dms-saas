@@ -11,11 +11,11 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 }
 
 const { data: plan } = useTenantPlan()
-const { data: billingStatus } = useBillingStatus()
+const billingStatus = useMountedData(useBillingStatus({ server: false }).data)
 const { formatMinorUnits } = useMoneyFormat()
 const { t, locale } = useI18n()
 const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
-const { data: nextInvoice } = useNextInvoice()
+const nextInvoice = useMountedData(useNextInvoice({ server: false }).data)
 
 const trialEndsAt = computed(() => plan.value?.currentPeriodEnd ?? null)
 const daysLeft = computed(() =>
@@ -63,6 +63,7 @@ const charge = computed(() => {
 		</UButton>
 		<DmsSaasCustomerPortalButton
 			label-key="saas.tenant_billing.past_due.update_card"
+			is-deferred
 			icon="i-ph-credit-card"
 			size="xs"
 		/>

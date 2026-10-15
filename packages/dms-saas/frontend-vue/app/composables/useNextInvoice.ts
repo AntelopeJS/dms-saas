@@ -1,4 +1,5 @@
 import type { DmsAsyncDataResult } from '#dms/frontend-module'
+import type { ApiReadOptions } from './useMountedData'
 
 const NEXT_INVOICE_ENDPOINT = '/api/saas/tenant/upcoming-invoice'
 
@@ -12,7 +13,10 @@ export interface NextInvoiceSummary {
 /**
  * Stripe's preview of the next invoice, shared by the cards quoting its total
  * (plan card, trial strip); the "Next invoice" block reads the full rows.
+ * The trial strip reads it with `server: false` (see `useMountedData`).
  */
-export function useNextInvoice(): DmsAsyncDataResult<NextInvoiceSummary> {
-	return useApiData<NextInvoiceSummary>(NEXT_INVOICE_ENDPOINT)
+export function useNextInvoice(
+	options: ApiReadOptions = {},
+): DmsAsyncDataResult<NextInvoiceSummary> {
+	return useApiData<NextInvoiceSummary>(NEXT_INVOICE_ENDPOINT, options)
 }
