@@ -3,6 +3,9 @@ import { computed, ref, watch } from 'vue'
 import { HOME_PATH } from '../build/workspace-paths'
 import WorkspaceSwitcherRow from '../build/WorkspaceSwitcherRow.vue'
 
+// Drawn as two roots: attributes have no single element to land on.
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps<{
 	collapsed?: boolean
 }>()

@@ -3,6 +3,10 @@ import { computed } from 'vue'
 import PayInvoiceDialog from '../build/PayInvoiceDialog.vue'
 import { LABEL_DAY_FORMAT, SENTENCE_DAY_FORMAT } from '../build/day-formats'
 
+// Drawn as two roots (the alert, then the payment dialog): the page's block
+// attributes have no single element to land on.
+defineOptions({ inheritAttrs: false })
+
 interface TimelineStep {
 	key: string
 	date: string
