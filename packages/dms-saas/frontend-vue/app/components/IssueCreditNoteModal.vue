@@ -50,14 +50,15 @@ const texts = useCreditNoteTexts({
 	creditedAfter: draft.creditedAfter,
 })
 
+const previewRead = useOnDemandRead<CreditNotePreview>(
+	() => `${PREVIEW_ENDPOINT}/${encodeURIComponent(props.rowData?._id ?? '')}`,
+)
+
 async function load(): Promise<void> {
-	const invoiceId = props.rowData?._id
 	isLoading.value = true
 	loadError.value = null
 	try {
-		preview.value = await $authFetch<CreditNotePreview>(
-			`${PREVIEW_ENDPOINT}/${encodeURIComponent(invoiceId ?? '')}`,
-		)
+		preview.value = await previewRead.read()
 		draft.reset(preview.value)
 	} catch (error) {
 		loadError.value = resolveApiError(error, `${TEXT}.load_failed`)

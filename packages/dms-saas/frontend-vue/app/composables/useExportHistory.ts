@@ -178,14 +178,20 @@ export function useExportHistory(): ExportHistoryHandle {
 		} finally {
 			isStarting.value = false
 			page.value = FIRST_PAGE
-			await newest.refresh()
+			refreshPageBlocks()
 		}
 	}
 
+	const statusJobId = ref<string | null>(null)
+	const statusRead = useOnDemandRead<ExportJobStatus>(() =>
+		statusJobId.value
+			? `${STATUS_ENDPOINT}/${encodeURIComponent(statusJobId.value)}`
+			: null,
+	)
+
 	function readStatus(jobId: string): Promise<ExportJobStatus> {
-		return $authFetch<ExportJobStatus>(
-			`${STATUS_ENDPOINT}/${encodeURIComponent(jobId)}`,
-		)
+		statusJobId.value = jobId
+		return statusRead.read()
 	}
 
 	/**
@@ -197,6 +203,7 @@ export function useExportHistory(): ExportHistoryHandle {
 		jobId: string,
 		naming?: ExportDownloadNaming,
 	): Promise<void> {
+		// A file to save, not data to show: fetched as it is, never kept.
 		const response = await $authFetch.raw(
 			`${DOWNLOAD_ENDPOINT}/${encodeURIComponent(jobId)}`,
 			{ responseType: 'blob' },

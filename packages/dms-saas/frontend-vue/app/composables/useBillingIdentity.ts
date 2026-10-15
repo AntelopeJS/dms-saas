@@ -132,10 +132,9 @@ export function useBillingInfo(): ApiDataResult<BillingInfoResponse> {
 /** Saves the workspace billing identity, and reads it for a dialog on open. */
 export function useBillingIdentity() {
 	const { $authFetch } = useAuthFetch()
-
-	function load(): Promise<BillingInfoResponse> {
-		return $authFetch<BillingInfoResponse>(BILLING_INFO_ENDPOINT)
-	}
+	const { read: load } = useOnDemandRead<BillingInfoResponse>(
+		() => BILLING_INFO_ENDPOINT,
+	)
 
 	function save(draft: BillingIdentityDraft): Promise<BillingInfoResponse> {
 		return $authFetch<BillingInfoResponse>(BILLING_INFO_ENDPOINT, {

@@ -24,6 +24,9 @@ export function useWorkspaceActions(tenantId: string) {
 	const toast = useToast()
 	const { resolveApiError } = useApiErrorMessage()
 	const base = `/api/saas/workspaces/${tenantId}`
+	const impactRead = useOnDemandRead<SuspensionImpact>(
+		() => `${base}/suspension-impact`,
+	)
 
 	function day(value: string): string {
 		return formatDate(value, locale.value, { dateStyle: 'medium' }) ?? value
@@ -98,9 +101,7 @@ export function useWorkspaceActions(tenantId: string) {
 	}
 
 	async function confirmSuspend(): Promise<boolean> {
-		const impact = await $authFetch<SuspensionImpact>(
-			`${base}/suspension-impact`,
-		)
+		const impact = await impactRead.read()
 		const operationId = crypto.randomUUID()
 		return confirm({
 			title: t(`${D}.suspend.title`, { name: impact.workspaceName }),
@@ -144,9 +145,7 @@ export function useWorkspaceActions(tenantId: string) {
 	}
 
 	async function confirmReactivate(): Promise<boolean> {
-		const impact = await $authFetch<SuspensionImpact>(
-			`${base}/suspension-impact`,
-		)
+		const impact = await impactRead.read()
 		const operationId = crypto.randomUUID()
 		return confirm({
 			title: t(`${D}.reactivate.title`, { name: impact.workspaceName }),

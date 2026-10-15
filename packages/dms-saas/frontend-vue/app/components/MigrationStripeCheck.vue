@@ -52,13 +52,15 @@ const resolution = computed(() =>
 	isSettled.value ? null : (reading.value?.resolution ?? null),
 )
 
+const stripeRead = useOnDemandRead<StripeReading>(() =>
+	workspaceApi.value ? `${workspaceApi.value}/stripe` : null,
+)
+
 async function load(): Promise<void> {
 	if (!workspaceApi.value) return
 	loadFailed.value = false
 	try {
-		reading.value = await $authFetch<StripeReading>(
-			`${workspaceApi.value}/stripe`,
-		)
+		reading.value = await stripeRead.read()
 	} catch {
 		loadFailed.value = true
 	}

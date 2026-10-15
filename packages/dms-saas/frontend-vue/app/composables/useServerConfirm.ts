@@ -5,8 +5,9 @@
  * the user confirmed; a dialog that cannot be fetched rejects.
  */
 export function useServerConfirm() {
-	const { $authFetch } = useAuthFetch()
 	const { processI18n } = useTranslation()
+	const dialogUrl = shallowRef<string | null>(null)
+	const dialogRead = useOnDemandRead<ConfirmDialog>(() => dialogUrl.value)
 	const { confirm } = useConfirm()
 
 	function word(
@@ -20,7 +21,8 @@ export function useServerConfirm() {
 		url: string,
 		onConfirm: () => Promise<unknown>,
 	): Promise<boolean> {
-		const dialog = await $authFetch<ConfirmDialog>(url)
+		dialogUrl.value = url
+		const dialog = await dialogRead.read()
 		const params = dialog.params ?? {}
 		return confirm({
 			title: processI18n(dialog.title, params),

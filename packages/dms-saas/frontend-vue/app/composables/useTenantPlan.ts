@@ -187,6 +187,12 @@ function currentPageUrl(): string {
 
 /** The payload resolves inheritance for every public plan and carries the
  * features catalogue, so the plan card and the free-access banner share it. */
+/** What a change's preview is asked for: the plan, and the country to tax. */
+type PreviewQuery = {
+	planId: string
+	country?: string
+}
+
 export function useTenantPlan(): ApiDataResult<TenantPlanResponse> {
 	return useApiData<TenantPlanResponse>(TENANT_PLAN_ENDPOINT)
 }
@@ -199,6 +205,14 @@ export function useTenantPlan(): ApiDataResult<TenantPlanResponse> {
 export function useTenantPlanChanges() {
 	const { $authFetch } = useAuthFetch()
 	const { authenticateUpgrade } = useUpgradeAuthentication()
+	const previewQuery = shallowRef<PreviewQuery | null>(null)
+	const previewRead = useOnDemandRead<PlanChangePreview>(
+		() => (previewQuery.value ? TENANT_PREVIEW_ENDPOINT : null),
+		{ query: () => previewQuery.value ?? undefined },
+	)
+	const checkoutRead = useOnDemandRead<PendingCheckoutResult>(
+		() => TENANT_CHECKOUT_ENDPOINT,
+	)
 
 	/**
 	 * `prorationDate` is the reviewed preview's, so the charge matches it. A
@@ -228,9 +242,8 @@ export function useTenantPlanChanges() {
 		planId: string,
 		country?: string | null,
 	): Promise<PlanChangePreview> {
-		return $authFetch<PlanChangePreview>(TENANT_PREVIEW_ENDPOINT, {
-			query: country ? { planId, country } : { planId },
-		})
+		previewQuery.value = country ? { planId, country } : { planId }
+		return previewRead.read()
 	}
 
 	function cancelPendingChange(): Promise<ChangePlanResult> {
@@ -252,7 +265,7 @@ export function useTenantPlanChanges() {
 	}
 
 	function loadPendingCheckout(): Promise<PendingCheckoutResult> {
-		return $authFetch<PendingCheckoutResult>(TENANT_CHECKOUT_ENDPOINT)
+		return checkoutRead.read()
 	}
 
 	/** Without an operation id, gives up on whatever checkout is pending. */
