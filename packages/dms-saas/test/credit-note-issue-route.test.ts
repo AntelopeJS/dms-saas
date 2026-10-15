@@ -25,15 +25,19 @@ vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
   };
 });
 
-vi.mock("../src/stripe/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/stripe/client")>()),
-  getStripeClient: () => ({
+vi.mock("../src/stripe/client", async (importOriginal) => {
+  const client = () => ({
     invoices: { retrieve: harness.retrieveInvoice },
     creditNotes: { create: harness.createCreditNote },
     customers: { retrieve: harness.retrieveCustomer },
     paymentMethods: { retrieve: harness.retrievePaymentMethod },
-  }),
-}));
+  });
+  return {
+    ...(await importOriginal<typeof import("../src/stripe/client")>()),
+    getStripeClient: client,
+    getStripeReadClient: client,
+  };
+});
 
 import { SaasCreditNotesIssueController } from "../src/routes/platformOwner/credit-notes-issue";
 

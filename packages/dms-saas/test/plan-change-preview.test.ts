@@ -13,9 +13,8 @@ const harness = vi.hoisted(() => ({
 vi.mock("@antelopejs/interface-core/logging", () => ({
   Logging: { Error: vi.fn(), Warn: vi.fn(), Info: vi.fn() },
 }));
-vi.mock("../src/stripe/client", () => ({
-  isStripeConfigured: () => true,
-  getStripeClient: () => ({
+vi.mock("../src/stripe/client", () => {
+  const client = () => ({
     subscriptions: {
       retrieve: (...args: unknown[]) => harness.retrieveSubscription(...args),
     },
@@ -25,8 +24,13 @@ vi.mock("../src/stripe/client", () => ({
     taxRates: {
       retrieve: (...args: unknown[]) => harness.retrieveTaxRate(...args),
     },
-  }),
-}));
+  });
+  return {
+    isStripeConfigured: () => true,
+    getStripeClient: client,
+    getStripeReadClient: client,
+  };
+});
 vi.mock("../src/plans", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/plans")>()),
   countOccupiedSeats: async () => harness.occupiedSeats,

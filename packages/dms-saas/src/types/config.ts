@@ -2,6 +2,14 @@ export interface DmsSaasStripeConfig {
   secretKey: string;
   webhookSecret: string;
   publishableKey: string;
+  /**
+   * How long a Stripe read a page renders (billing status, next invoice, VAT
+   * check) waits, in milliseconds, before the page renders without it.
+   * Defaults to 4000. Writes keep the Stripe SDK's own timeout.
+   */
+  readTimeoutMs?: number;
+  /** How many times such a read is retried on a network failure. Defaults to 0. */
+  readMaxNetworkRetries?: number;
 }
 
 /**

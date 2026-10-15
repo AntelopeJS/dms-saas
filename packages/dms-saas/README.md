@@ -705,6 +705,12 @@ created, finalized, paid or voided, a subscription updated or deleted, or a
 customer updated. `unavailable` results are never cached. Display
 `computedAt` to tell the reader how current the figures are.
 
+The Stripe reads a page renders (this preview, the billing status, the VAT
+check) give up after `stripe.readTimeoutMs` (4000 ms by default) and are not
+retried unless `stripe.readMaxNetworkRetries` says so: a slow Stripe makes the
+preview `unavailable` rather than holding the page. Writes keep the Stripe
+SDK's own timeout and retries.
+
 ### Workspace settings pages
 
 A module adding a page to a workspace's settings takes the side-effect-free
