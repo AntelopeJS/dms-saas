@@ -1,5 +1,4 @@
 const BILLING_STATUS_ENDPOINT = '/api/saas/billing/status'
-const BILLING_STATUS_STATE_KEY = 'saas-billing-status'
 
 export interface PaymentMethodSummary {
 	brand: string
@@ -43,11 +42,8 @@ export interface BillingStatusResponse {
 
 /** Read by most billing blocks and the past-due banner; each call reaches
  * Stripe, so they share one request. */
-export function useBillingStatus(): SharedRequest<BillingStatusResponse> {
-	const { $authFetch } = useAuthFetch()
-	return useSharedRequest(BILLING_STATUS_STATE_KEY, () =>
-		$authFetch<BillingStatusResponse>(BILLING_STATUS_ENDPOINT),
-	)
+export function useBillingStatus(): ApiDataResult<BillingStatusResponse> {
+	return useApiData<BillingStatusResponse>(BILLING_STATUS_ENDPOINT)
 }
 
 const CARD_EXPIRY_YEAR_MODULO = 100

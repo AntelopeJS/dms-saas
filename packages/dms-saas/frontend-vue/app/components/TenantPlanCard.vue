@@ -24,6 +24,7 @@ const { confirm } = useConfirm()
 const { resolveApiError } = useApiErrorMessage()
 const tenantPlan = useTenantPlan()
 const { data, error: loadError } = tenantPlan
+const planChanges = useTenantPlanChanges()
 const billingStatus = useBillingStatus()
 const nextInvoice = useNextInvoice()
 const { formatMajorUnits, formatMinorUnits } = useMoneyFormat()
@@ -39,7 +40,10 @@ const myWorkspaces = useMyWorkspaces()
 const route = useDmsRoute()
 const router = useDmsRouter()
 
-const isLoading = ref(true)
+// The card waits for both reads before it offers an action.
+const isLoading = computed(
+	() => tenantPlan.pending.value || billingStatus.pending.value,
+)
 const isWorking = ref(false)
 const isUpgradeOpen = ref(false)
 const upgradeTarget = ref<OfferedPlanView | null>(null)
@@ -253,11 +257,9 @@ function openUpgrade(plan: OfferedPlanView): void {
 // the sidebar switcher, which names the plan, read it too: they read their
 // routes again once it changed.
 async function refresh(): Promise<void> {
-	isLoading.value = true
 	void nextInvoice.refresh()
-	void myWorkspaces.refresh().catch(() => undefined)
+	void myWorkspaces.refresh()
 	await Promise.all([tenantPlan.refresh(), billingStatus.refresh()])
-	isLoading.value = false
 	refreshPageBlocks()
 }
 
@@ -287,14 +289,14 @@ async function runAction(
 
 function cancelDowngrade(): Promise<void> {
 	return runAction(
-		tenantPlan.cancelPendingChange,
+		planChanges.cancelPendingChange,
 		`${KEY_PREFIX}.downgrade_cancelled`,
 	)
 }
 
 function keepSubscription(): Promise<void> {
 	return runAction(
-		tenantPlan.keepSubscription,
+		planChanges.keepSubscription,
 		`${KEY_PREFIX}.subscription_kept`,
 	)
 }
@@ -335,7 +337,7 @@ async function cancelSubscription(): Promise<void> {
 		body: () => t(`${KEY_PREFIX}.cancel_note`),
 		onConfirm: async () => {
 			try {
-				await tenantPlan.cancelSubscription()
+				await planChanges.cancelSubscription()
 			} catch (error) {
 				throw new Error(
 					resolveApiError(error, 'saas.workspace.plan.change_error'),
@@ -351,12 +353,13 @@ async function cancelSubscription(): Promise<void> {
 	})
 }
 
-/** Back from Stripe's cancel link: the checkout left behind is released
- * before the card loads, so the plan buttons work straight away. */
+/** Back from Stripe's cancel link: the checkout left behind is released, and
+ * the card read again, so the plan buttons work straight away. */
 async function releaseCancelledCheckout(): Promise<void> {
 	try {
 		const { released } = await consumeCancelledCheckout()
 		if (!released) return
+		await refresh()
 		toast.add({
 			title: t('saas.workspace.plan.checkout_pending.cancelled'),
 			color: 'info',
@@ -421,9 +424,7 @@ async function consumeChoosePlanParam(): Promise<void> {
 
 onMounted(async () => {
 	await releaseCancelledCheckout()
-	void nextInvoice.load()
-	await Promise.all([tenantPlan.load(), billingStatus.load()])
-	isLoading.value = false
+	await Promise.all([tenantPlan, billingStatus])
 	await consumeUpgradeParam()
 	await consumeChoosePlanParam()
 })

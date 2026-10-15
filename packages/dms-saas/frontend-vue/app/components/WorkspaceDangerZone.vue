@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted } from 'vue'
+import { computed, h } from 'vue'
 import { DATA_EXPORT_PATH, HOME_PATH } from '../build/workspace-paths'
 
 const DELETE_ENDPOINT = '/api/saas/workspaces/current/delete'
@@ -17,7 +17,7 @@ const { $authFetch } = useAuthFetch()
 const { confirm } = useConfirm()
 const { resolveApiError } = useApiErrorMessage()
 const toast = useToast()
-const { data: overview, error, refresh } = useWorkspaceOverview()
+const { data: overview, status, refresh } = useWorkspaceOverview()
 // The deletion asks for the name as it is now: read again after a rename.
 useWorkspaceRenamed(() => void refresh())
 
@@ -142,8 +142,6 @@ async function openDeleteConfirm(): Promise<void> {
 		onConfirm: () => deleteWorkspace(view),
 	})
 }
-
-onMounted(refresh)
 </script>
 
 <template>
@@ -165,12 +163,15 @@ onMounted(refresh)
 		</DmsFieldRow>
 		<DmsFieldRow :label="$t(`${KEYS}.delete.title`)">
 			<template #details>
-				<USkeleton v-if="!overview && !error" class="mt-1 h-10 w-full" />
+				<USkeleton
+					v-if="!overview && status !== 'error'"
+					class="mt-1 h-10 w-full"
+				/>
 				<DmsSaasLoadFailure
-					v-else-if="error && !overview"
+					v-else-if="status === 'error' && !overview"
 					class="mt-1"
 					:title="$t(`${KEYS}.glance.load_failed`)"
-					@retry="refresh"
+					@retry="refresh()"
 				/>
 				<div v-else class="text-muted mt-0.5 flex flex-col gap-1 text-[12.5px]">
 					<p>{{ deleteSummary }}</p>

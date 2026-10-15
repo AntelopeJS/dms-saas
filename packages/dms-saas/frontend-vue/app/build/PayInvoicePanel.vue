@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 type PaymentChoice = 'default_card' | 'other_card'
 
@@ -83,10 +83,6 @@ function confirm(): void {
 	}
 	void payWithCard()
 }
-
-onMounted(() => {
-	void billingStatus.load()
-})
 </script>
 
 <template>
@@ -164,7 +160,7 @@ onMounted(() => {
 		</template>
 
 		<UAlert
-			v-else-if="billingStatus.error.value"
+			v-else-if="billingStatus.status.value === 'error'"
 			color="error"
 			variant="subtle"
 			icon="i-ph-warning-circle"

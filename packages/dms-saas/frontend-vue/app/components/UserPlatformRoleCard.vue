@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useUserDetail } from '../build/users/useUserDetail'
 
 const props = defineProps<{ routeParams?: Record<string, string> }>()
@@ -44,14 +44,12 @@ async function openConfirm(): Promise<void> {
 		isOpening.value = false
 	}
 }
-
-onMounted(() => void detail.load())
 </script>
 
 <template>
 	<DmsCard :title="$t(`${I18N}.title`)">
 		<DmsSaasLoadFailure
-			v-if="detail.error.value && !user"
+			v-if="detail.status.value === 'error' && !user"
 			@retry="detail.refresh()"
 		/>
 		<div v-else-if="!user" class="flex flex-col gap-2">

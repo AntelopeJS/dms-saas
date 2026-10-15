@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { ButtonProps } from '@nuxt/ui'
 
 const props = withDefaults(
@@ -28,7 +28,7 @@ interface PortalSession {
 
 const { $authFetch } = useAuthFetch()
 const { resolveApiError } = useApiErrorMessage()
-const { data, load } = useBillingStatus()
+const { data } = useBillingStatus()
 const isLoading = ref(false)
 const failure = ref<string | null>(null)
 
@@ -52,8 +52,6 @@ async function openCustomerPortal(): Promise<void> {
 		isLoading.value = false
 	}
 }
-
-onMounted(load)
 </script>
 
 <template>

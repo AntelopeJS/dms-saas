@@ -1,4 +1,4 @@
-import { computed, type ComputedRef } from 'vue'
+import { computed, ref, type ComputedRef } from 'vue'
 
 const EXPORT_ENDPOINT = '/api/saas/data-export'
 const HISTORY_ENDPOINT = `${EXPORT_ENDPOINT}/history`
@@ -7,7 +7,8 @@ const STATUS_ENDPOINT = `${EXPORT_ENDPOINT}/status`
 const DOWNLOAD_ENDPOINT = `${EXPORT_ENDPOINT}/download`
 const HISTORY_PAGE_SIZE = 10
 const FIRST_PAGE = 1
-const STATE_KEY = 'saas-export-history'
+const HISTORY_KEY = 'saas-export-history'
+const STARTING_STATE_KEY = 'saas-export-starting'
 const FILENAME_HEADER_PATTERN = /filename="([^"]+)"/i
 const FALLBACK_EXTENSION = 'zip'
 
@@ -66,18 +67,6 @@ interface ExportHistoryState {
 	hasMore: boolean
 }
 
-function initialState(): ExportHistoryState {
-	return {
-		entries: [],
-		isLoading: false,
-		hasLoaded: false,
-		hasFailed: false,
-		isStarting: false,
-		page: FIRST_PAGE,
-		hasMore: false,
-	}
-}
-
 function parseFilename(header: string | null): string | null {
 	return header?.match(FILENAME_HEADER_PATTERN)?.[1] ?? null
 }
@@ -98,16 +87,14 @@ export function isExportExpired(
 	return !!entry.expiresAt && new Date(entry.expiresAt).getTime() <= nowMs
 }
 
-/** The history reload both blocks of the page share while it runs. */
-let pendingRefresh: Promise<void> | null = null
-
 interface ExportHistoryHandle {
-	state: Ref<ExportHistoryState>
+	/** The page of the history this block shows, read with the page. */
+	state: ComputedRef<ExportHistoryState>
 	/** The export still being built, if the newest page holds one. */
 	running: ComputedRef<ExportHistoryEntry | null>
-	load: (targetPage?: number) => Promise<void>
-	refresh: () => Promise<void>
-	goToPage: (targetPage: number) => Promise<void>
+	/** Reads the newest page again, and the page shown. */
+	load: () => Promise<void>
+	goToPage: (targetPage: number) => void
 	start: () => Promise<void>
 	readStatus: (jobId: string) => Promise<ExportJobStatus>
 	download: (jobId: string, naming?: ExportDownloadNaming) => Promise<void>
@@ -116,74 +103,82 @@ interface ExportHistoryHandle {
 /**
  * The caller's exports of the current workspace, shared by the request card
  * and the history list of the Data export page: one export runs at a time, so
- * both read the same running entry.
+ * both read the same running entry, from the newest page. The history list
+ * pages through the rest; the request card stays on the newest page.
  */
 export function useExportHistory(): ExportHistoryHandle {
 	const { $authFetch } = useAuthFetch()
-	const state = useDmsState<ExportHistoryState>(STATE_KEY, initialState)
-
-	const running = computed(
-		() =>
-			state.value.entries.find(
-				(entry) => entry.status === EXPORT_STATUS.pending,
-			) ?? null,
-	)
+	const isStarting = useDmsState<boolean>(STARTING_STATE_KEY, () => false)
+	const page = ref(FIRST_PAGE)
 
 	/**
 	 * A page past the first that comes back empty falls back to the first
 	 * rather than showing the "no export yet" state, which would be a lie —
 	 * exports expiring under the reader is enough to empty the page they were on.
 	 */
-	async function load(targetPage: number = FIRST_PAGE): Promise<void> {
-		state.value.isLoading = true
-		try {
-			const result = await $authFetch<ExportHistoryPage>(HISTORY_ENDPOINT, {
-				query: { page: targetPage, pageSize: HISTORY_PAGE_SIZE },
-			})
-			if (!result.items.length && result.page > FIRST_PAGE) {
-				return await load(FIRST_PAGE)
-			}
-			Object.assign(state.value, {
-				entries: result.items,
-				page: result.page,
-				hasMore: result.hasMore,
-				hasFailed: false,
-				hasLoaded: true,
-			})
-		} catch {
-			state.value.hasFailed = true
-		} finally {
-			state.value.isLoading = false
+	function readPage(target: () => number) {
+		return useApiData<ExportHistoryPage>(
+			() => `${HISTORY_KEY}:${target()}`,
+			async ({ $authFetch: fetch, signal }) => {
+				const read = (pageNumber: number) =>
+					fetch<ExportHistoryPage>(HISTORY_ENDPOINT, {
+						query: { page: pageNumber, pageSize: HISTORY_PAGE_SIZE },
+						signal,
+					})
+				const result = await read(target())
+				return !result.items.length && result.page > FIRST_PAGE
+					? read(FIRST_PAGE)
+					: result
+			},
+		)
+	}
+
+	const newest = readPage(() => FIRST_PAGE)
+	const shown = readPage(() => page.value)
+
+	const running = computed(
+		() =>
+			newest.data.value?.items.find(
+				(entry) => entry.status === EXPORT_STATUS.pending,
+			) ?? null,
+	)
+
+	const state = computed<ExportHistoryState>(() => {
+		const current = shown.data.value
+		return {
+			entries: current?.items ?? [],
+			isLoading: shown.pending.value,
+			hasLoaded: !!current,
+			hasFailed: shown.status.value === 'error',
+			isStarting: isStarting.value,
+			page: current?.page ?? page.value,
+			hasMore: current?.hasMore ?? false,
 		}
+	})
+
+	async function load(): Promise<void> {
+		await Promise.all(
+			page.value === FIRST_PAGE
+				? [newest.refresh()]
+				: [newest.refresh(), shown.refresh()],
+		)
 	}
 
-	/**
-	 * Reloads the newest page once for every block mounting together: the
-	 * request card and the history are granted apart, so each one loads, but
-	 * a page showing both reads the history a single time.
-	 */
-	function refresh(): Promise<void> {
-		pendingRefresh ??= load().finally(() => {
-			pendingRefresh = null
-		})
-		return pendingRefresh
-	}
-
-	function goToPage(targetPage: number): Promise<void> {
-		if (targetPage < FIRST_PAGE || state.value.isLoading)
-			return Promise.resolve()
-		return load(targetPage)
+	function goToPage(targetPage: number): void {
+		if (targetPage < FIRST_PAGE || shown.pending.value) return
+		page.value = targetPage
 	}
 
 	/** Rejects with the server's refusal, for the caller to word. */
 	async function start(): Promise<void> {
-		if (state.value.isStarting) return
-		state.value.isStarting = true
+		if (isStarting.value) return
+		isStarting.value = true
 		try {
 			await $authFetch(START_ENDPOINT, { method: 'POST' })
 		} finally {
-			state.value.isStarting = false
-			await load()
+			isStarting.value = false
+			page.value = FIRST_PAGE
+			await newest.refresh()
 		}
 	}
 
@@ -223,7 +218,6 @@ export function useExportHistory(): ExportHistoryHandle {
 		state,
 		running,
 		load,
-		refresh,
 		goToPage,
 		start,
 		readStatus,

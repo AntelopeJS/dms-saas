@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 
 const UNPAID_STATUSES = new Set(['past_due', 'suspended'])
 const KEY_PREFIX = 'saas.tenant_billing.payment_method'
@@ -8,8 +8,8 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'short',
 }
 
-const { data, error, load, refresh } = useBillingStatus()
-const { data: plan, load: loadPlan } = useTenantPlan()
+const { data, status: readStatus, refresh } = useBillingStatus()
+const { data: plan } = useTenantPlan()
 const { open: openPlanComparison } = usePlanComparison()
 const { open: openPayment } = usePayInvoice()
 const { locale } = useI18n()
@@ -46,11 +46,6 @@ function payWithAnotherCard(): void {
 		hostedInvoiceUrl: unpaid.hostedInvoiceUrl,
 	})
 }
-
-onMounted(() => {
-	void loadPlan()
-	return load()
-})
 </script>
 
 <template>
@@ -66,15 +61,15 @@ onMounted(() => {
 			/>
 		</template>
 
-		<div v-if="!data && !error" class="flex flex-col gap-3">
+		<div v-if="!data && readStatus !== 'error'" class="flex flex-col gap-3">
 			<USkeleton class="h-14 w-full" />
 			<USkeleton class="h-4 w-2/3" />
 		</div>
 
 		<DmsSaasLoadFailure
-			v-else-if="error && !data"
+			v-else-if="readStatus === 'error' && !data"
 			:title="$t(`${KEY_PREFIX}.load_failed`)"
-			@retry="refresh"
+			@retry="refresh()"
 		/>
 
 		<p v-else-if="!isTenantOwner" class="text-muted text-sm">

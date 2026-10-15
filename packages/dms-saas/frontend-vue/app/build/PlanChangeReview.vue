@@ -27,11 +27,11 @@ const KEY_PREFIX = 'saas.tenant_billing.plan_change.review'
 const { t, locale } = useI18n()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
-const { previewChange, changePlan } = useTenantPlan()
+const { previewChange, changePlan } = useTenantPlanChanges()
 const { offerFor: offerPendingCheckout } = usePendingCheckout()
 const { formatMinorUnits, formatMajorUnits } = useMoneyFormat()
 const { formatFeatureValue } = usePlanFeatureFormat()
-const { data: billingStatus, load: loadBillingStatus } = useBillingStatus()
+const { data: billingStatus } = useBillingStatus()
 const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
 
 const preview = ref<PlanChangePreview | null>(null)
@@ -215,10 +215,7 @@ async function confirm(): Promise<void> {
 	}
 }
 
-onMounted(() => {
-	void loadBillingStatus()
-	void loadPreview()
-})
+onMounted(() => void loadPreview())
 </script>
 
 <template>

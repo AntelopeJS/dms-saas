@@ -20,8 +20,7 @@ const { resolveApiError } = useApiErrorMessage()
 const route = useDmsRoute()
 const router = useDmsRouter()
 const toast = useToast()
-const { state, running, load, refresh, start, readStatus, download } =
-	useExportHistory()
+const { state, running, load, start, readStatus, download } = useExportHistory()
 
 /** The export this visit watched finish, shown until the page is left. */
 const finished = ref<ExportHistoryEntry | null>(null)
@@ -149,8 +148,9 @@ async function consumeDeliveredLink(): Promise<void> {
 	}
 }
 
+// The history is read with the page, on the server too: the browser polls
+// the export it shows running, and downloads the archive a link names.
 onMounted(async () => {
-	await refresh()
 	syncPolling()
 	await consumeDeliveredLink()
 })
