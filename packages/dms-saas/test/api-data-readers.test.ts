@@ -140,6 +140,29 @@ describe("readers on useApiData", () => {
     expect(result).toMatchObject({ page: 1, items: [{ jobId: "j1" }] });
   });
 
+  it("keeps an export starting until the page shows it", async () => {
+    stubApiData();
+    vi.stubGlobal("useAuthFetch", () => ({
+      $authFetch: vi.fn(async () => undefined),
+    }));
+    vi.stubGlobal("useDmsState", (_key: string, init: () => unknown) =>
+      holder(init()),
+    );
+    let finishRefresh: () => void = () => undefined;
+    const refreshPageBlocks = vi.fn(
+      () => new Promise<void>((resolve) => (finishRefresh = resolve)),
+    );
+    vi.stubGlobal("refreshPageBlocks", refreshPageBlocks);
+
+    const history = useExportHistory();
+    const started = history.start();
+    await vi.waitFor(() => expect(refreshPageBlocks).toHaveBeenCalledTimes(1));
+    expect(history.state.value.isStarting).toBe(true);
+    finishRefresh();
+    await started;
+    expect(history.state.value.isStarting).toBe(false);
+  });
+
   it("shows a retry as loading, not as the failure it retries", () => {
     const calls = stubApiData();
     vi.stubGlobal("usePageLiveRefresh", () => undefined);

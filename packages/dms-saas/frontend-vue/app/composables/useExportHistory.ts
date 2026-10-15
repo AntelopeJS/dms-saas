@@ -176,9 +176,10 @@ export function useExportHistory(): ExportHistoryHandle {
 		try {
 			await $authFetch(START_ENDPOINT, { method: 'POST' })
 		} finally {
-			isStarting.value = false
 			page.value = FIRST_PAGE
-			refreshPageBlocks()
+			// The new export is listed before the button comes back.
+			await refreshPageBlocks()
+			isStarting.value = false
 		}
 	}
 

@@ -117,7 +117,8 @@ async function submit(): Promise<void> {
 			body: { content: trimmed.value },
 		})
 		draft.value = ''
-		refreshPageBlocks()
+		// The note is listed before the button comes back.
+		await refreshPageBlocks()
 	} catch (error) {
 		toast.add({
 			color: 'error',

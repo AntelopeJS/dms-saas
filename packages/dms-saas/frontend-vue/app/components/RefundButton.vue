@@ -177,7 +177,8 @@ async function submitRefund(): Promise<void> {
 		color: 'success',
 		icon: 'i-ph-check-circle',
 	})
-	refreshPageBlocks()
+	// The dialog closes once the page shows the refund.
+	await refreshPageBlocks()
 }
 
 async function requestRefund(): Promise<void> {

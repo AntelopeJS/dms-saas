@@ -73,7 +73,8 @@ async function settle(kind: UncertainResolution): Promise<void> {
 	})
 	isSettled.value = true
 	toast.add({ color: 'success', title: t(`${DETAIL}.${kind}_done`) })
-	refreshPageBlocks()
+	// The dialog closes once the page shows the settlement.
+	await refreshPageBlocks()
 }
 
 async function openSettlement(kind: UncertainResolution): Promise<void> {

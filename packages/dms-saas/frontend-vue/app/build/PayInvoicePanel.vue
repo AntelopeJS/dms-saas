@@ -65,7 +65,8 @@ async function payWithCard(): Promise<void> {
 			color: 'success',
 			icon: 'i-ph-check-circle',
 		})
-		refreshPageBlocks()
+		// The invoice shows its new state before the panel reports it paid.
+		await refreshPageBlocks()
 		emit('paid')
 	} catch (error) {
 		failure.value = resolveApiError(error, `${KEY_PREFIX}.error`)
