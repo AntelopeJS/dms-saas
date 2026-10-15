@@ -16,7 +16,7 @@ import { HttpMethod } from "@antelopejs/interface-dms/base/types/http";
 import { WORKSPACE_NAME_MAX_LENGTH } from "../../workspaces/workspace-name";
 import { isWorkspaceOwnerRequest } from "../../workspaces/workspace-owner";
 
-/** Read and renamed here; the switcher refreshes when this form saves. */
+/** Read and renamed here; the switcher takes the new name from the answer. */
 const CURRENT_WORKSPACE_ENDPOINT = "/api/saas/workspaces/current";
 const GLANCE_ENDPOINT = `${CURRENT_WORKSPACE_ENDPOINT}/glance`;
 const GLANCE_ITEMS = 3;

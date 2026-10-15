@@ -25,11 +25,14 @@ interface MyWorkspacesHandle {
 	/** The last read failed; the entries already on screen stay. */
 	hasFailed: ComputedRef<boolean>
 	refresh: () => Promise<void>
+	/** Puts a renamed workspace's new name in the list, without reading it again. */
+	rename: (workspace: RenamedWorkspace) => void
 }
 
 /**
  * Shared between the sidebar switcher and the screens that change what it
- * displays (a rename, a deletion), so a change never waits for a page reload.
+ * displays (a rename, a deletion), so a change never waits for a page reload:
+ * a rename's answer is put in place, a deletion reads the list again.
  * Nothing is read without a session: the public layouts mount the switcher's
  * readers too.
  */
@@ -49,5 +52,11 @@ export function useMyWorkspaces(): MyWorkspacesHandle {
 		),
 		hasFailed: computed(() => status.value === 'error'),
 		refresh: () => refresh(),
+		rename: ({ _id, name }) => {
+			if (!data.value) return
+			data.value = data.value.map((workspace) =>
+				workspace._id === _id ? { ...workspace, name } : workspace,
+			)
+		},
 	}
 }

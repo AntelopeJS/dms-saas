@@ -25,7 +25,8 @@ const canCreateWorkspace = computed(
 			?.admissionMode !== 'invitation-only',
 )
 
-const { workspaces, isLoaded, hasFailed, refresh: load } = useMyWorkspaces()
+const { workspaces, isLoaded, hasFailed, refresh: load, rename } =
+	useMyWorkspaces()
 const isOpen = ref(false)
 const isCreateOpen = ref(false)
 const searchQuery = ref('')
@@ -125,7 +126,7 @@ async function onWorkspaceCreated(
 	}
 }
 
-useWorkspaceRenamed(() => void load())
+useWorkspaceRenamed(rename)
 </script>
 
 <template>

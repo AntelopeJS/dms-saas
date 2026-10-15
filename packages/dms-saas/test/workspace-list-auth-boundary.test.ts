@@ -120,4 +120,24 @@ describe("workspace list authentication boundary", () => {
     expect(list.hasFailed.value).toBe(false);
     expect(list.isLoaded.value).toBe(false);
   });
+
+  it("puts a rename's answer in the list without reading it again", () => {
+    const { list, calls } = setupWorkspaceList(true);
+    const call = calls[0]!;
+    const other = {
+      ...WORKSPACE_FIXTURE,
+      _id: "workspace-2",
+      isCurrent: false,
+    };
+    call.data.value = [WORKSPACE_FIXTURE, other];
+    call.status.value = "success";
+
+    list.rename({ _id: "workspace-1", name: "Renamed" });
+
+    expect(list.workspaces.value).toEqual([
+      { ...WORKSPACE_FIXTURE, name: "Renamed" },
+      other,
+    ]);
+    expect(call.refresh).not.toHaveBeenCalled();
+  });
 });
