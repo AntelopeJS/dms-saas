@@ -4,7 +4,9 @@ import {
   workspaceSettingsCategory,
 } from "@antelopejs/interface-dms/page";
 import {
+  BlockFunctions,
   Form,
+  FormEvents,
   type FormFieldOrGroupSerialized,
   type FormPropsSerialized,
   Section,
@@ -16,7 +18,7 @@ import { HttpMethod } from "@antelopejs/interface-dms/base/types/http";
 import { WORKSPACE_NAME_MAX_LENGTH } from "../../workspaces/workspace-name";
 import { isWorkspaceOwnerRequest } from "../../workspaces/workspace-owner";
 
-/** Read and renamed here; the switcher refreshes when this form saves. */
+/** Read and renamed here; a rename reads the whole page again (see below). */
 const CURRENT_WORKSPACE_ENDPOINT = "/api/saas/workspaces/current";
 const GLANCE_ENDPOINT = `${CURRENT_WORKSPACE_ENDPOINT}/glance`;
 const GLANCE_ITEMS = 3;
@@ -82,6 +84,10 @@ const identityForm = Form({
   successMessage: `${KEYS}.renamed`,
   errorMessage: `${KEYS}.error.rename`,
 })
+  // The name shows elsewhere on the page: in the "At a glance" cards, the
+  // danger zone's typed confirmation and the sidebar switcher. A rename reads
+  // the page's blocks and data again, as any form changing what its page shows.
+  .watch(FormEvents.SUBMIT_SUCCESS, BlockFunctions.REFRESH_PAGE)
   .meta({
     name: `${PERMISSIONS}.identity`,
     description: `${PERMISSIONS}.identity_description`,

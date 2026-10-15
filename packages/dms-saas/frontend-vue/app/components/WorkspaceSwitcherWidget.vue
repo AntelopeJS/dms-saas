@@ -127,8 +127,6 @@ async function onWorkspaceCreated(
 		await load()
 	}
 }
-
-useWorkspaceRenamed(() => void load())
 </script>
 
 <template>

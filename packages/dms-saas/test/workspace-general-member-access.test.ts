@@ -1,7 +1,9 @@
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import type {
-  FormFieldSerialized,
-  FormPropsSerialized,
+import {
+  BlockFunctions,
+  type FormFieldSerialized,
+  FormEvents,
+  type FormPropsSerialized,
 } from "@antelopejs/interface-dms/base";
 import type {
   ComponentBuilder,
@@ -90,6 +92,18 @@ describe("General page for a workspace member", () => {
       maxLength: WORKSPACE_NAME_MAX_LENGTH,
       showCount: true,
     });
+  });
+
+  it("reads the page again after a rename: its glance and danger zone show the name", async () => {
+    const form = await identityForm();
+    const { options } = await form.serialize();
+
+    expect(options.watchActions).toContainEqual(
+      expect.objectContaining({
+        event: FormEvents.SUBMIT_SUCCESS,
+        functionId: BlockFunctions.REFRESH_PAGE,
+      }),
+    );
   });
 
   it("serves the identity form unchanged to an owner", async () => {

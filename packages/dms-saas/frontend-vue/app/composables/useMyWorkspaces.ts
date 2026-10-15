@@ -29,7 +29,8 @@ interface MyWorkspacesHandle {
 
 /**
  * Shared between the sidebar switcher and the screens that change what it
- * displays (a rename, a deletion), so a change never waits for a page reload.
+ * displays (a deletion; a rename reads it again with the rest of the page),
+ * so a change never waits for a page reload.
  * Nothing is read without a session: the public layouts mount the switcher's
  * readers too.
  */
