@@ -233,7 +233,9 @@ async function submit(): Promise<void> {
 		})
 		const destination = landingPath()
 		rememberChosenPlan(null)
-		if (typeof window !== 'undefined') window.location.href = destination
+		// The token is spent: the destination takes this page's place in the
+		// history, so Back does not return to a form that can only fail.
+		if (typeof window !== 'undefined') window.location.replace(destination)
 	} catch (error) {
 		errorMessage.value = resolveApiError(
 			error,
