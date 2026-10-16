@@ -34,7 +34,7 @@ const props = defineProps<{ rowData?: MigrationWorkspaceRow }>()
 const KeyValueListBlock = resolveDmsComponent('dms-key-value-list-block')
 const { $authFetch } = useAuthFetch()
 const { t } = useI18n()
-const { confirmFrom } = useServerConfirm()
+const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
 
@@ -79,9 +79,9 @@ async function settle(kind: UncertainResolution): Promise<void> {
 
 async function openSettlement(kind: UncertainResolution): Promise<void> {
 	try {
-		await confirmFrom(`${workspaceApi.value}/dialogs/${kind}`, () =>
-			settle(kind),
-		)
+		await confirmFrom(`${workspaceApi.value}/dialogs/${kind}`, {
+			onConfirm: () => settle(kind),
+		})
 	} catch (error) {
 		toast.add({
 			color: 'error',
