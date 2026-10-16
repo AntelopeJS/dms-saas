@@ -120,7 +120,7 @@ importers:
         version: 0.2.0(@antelopejs/interface-api-util@0.1.2(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-database-decorators@0.1.7(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-database@0.1.8(@antelopejs/interface-core@0.1.1)))(@antelopejs/interface-database@0.1.8(@antelopejs/interface-core@0.1.1))
       '@antelopejs/interface-dms':
         specifier: '>=0.6.0 <1.0.0'
-        version: 0.6.0(812a9e0655f26c36f63a86ee7b0b1022)
+        version: 0.7.0(812a9e0655f26c36f63a86ee7b0b1022)
     devDependencies:
       '@antelopejs/interface-core':
         specifier: '>=0.1.1 <1.0.0'
@@ -229,18 +229,6 @@ packages:
     resolution: {integrity: sha512-xvaxQ/JRbOuJc9d8hpTLu3EI3xpr4HX12u/PXZE+I8FCutNOJ2D8GcUGM91VsIeU3OuiFoY+p1emlV8q/rjAMQ==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.1.1 <1.0.0'
-
-  '@antelopejs/interface-dms@0.6.0':
-    resolution: {integrity: sha512-6RC6Tgm96tXQFlF2bXfV3vt6n0KjSD625QEs9UEB4StbmbMDJrC2Ui5+YI7XRzsNzH0k3YxxxNfN4uvTeg7RTQ==}
-    peerDependencies:
-      '@antelopejs/interface-api': '>=0.0.13 <1.0.0'
-      '@antelopejs/interface-api-util': '>=0.1.2 <1.0.0'
-      '@antelopejs/interface-auth': '>=0.0.6 <1.0.0'
-      '@antelopejs/interface-core': '>=0.1.1 <1.0.0'
-      '@antelopejs/interface-data-api': '>=0.2.0 <1.0.0'
-      '@antelopejs/interface-database': '>=0.1.8 <1.0.0'
-      '@antelopejs/interface-database-decorators': '>=0.1.7 <1.0.0'
-      '@antelopejs/interface-file-storage': '>=0.1.3 <1.0.0'
 
   '@antelopejs/interface-dms@0.7.0':
     resolution: {integrity: sha512-RISTRXulvJp7VyFSHLgkCfVLvGN4lZTOPo4Fgs3F7UT7s5ZbSSUKBzTCP2Ucr0rlM3DeP57TYvGvapVu1iS2tQ==}
@@ -466,13 +454,6 @@ packages:
 
   '@mongodb-js/saslprep@1.5.4':
     resolution: {integrity: sha512-05UC0jQsjKAOuXQ0H9Ud9vUTJpZIg+n/FinpR30tI5I8pY2inTfPOZ5OF/cg3Ce/N9MoD1xhRCeOsJtuTbFYlw==}
-
-  '@napi-rs/wasm-runtime@1.2.4':
-    resolution: {integrity: sha512-AJxoUD2/15ESHbvpcyjU274nsAPLuOtPHCk0vKJM5pj//Fg/B1FXNWjPnXTT9PymCYYiHo4zPj0ZomXBKhoy7g==}
-    engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
-    peerDependencies:
-      '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
-      '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
 
   '@napi-rs/wasm-runtime@1.2.5':
     resolution: {integrity: sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA==}
@@ -3339,21 +3320,6 @@ snapshots:
       '@antelopejs/interface-core': 0.1.1
     optional: true
 
-  '@antelopejs/interface-dms@0.6.0(812a9e0655f26c36f63a86ee7b0b1022)':
-    dependencies:
-      '@antelopejs/interface-api': 0.0.14(@antelopejs/interface-core@0.1.1)
-      '@antelopejs/interface-api-util': 0.1.2(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)
-      '@antelopejs/interface-auth': 0.0.6(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)
-      '@antelopejs/interface-core': 0.1.1
-      '@antelopejs/interface-data-api': 0.2.0(@antelopejs/interface-api-util@0.1.2(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-database-decorators@0.1.7(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-database@0.1.8(@antelopejs/interface-core@0.1.1)))(@antelopejs/interface-database@0.1.8(@antelopejs/interface-core@0.1.1))
-      '@antelopejs/interface-database': 0.1.8(@antelopejs/interface-core@0.1.1)
-      '@antelopejs/interface-database-decorators': 0.1.7(@antelopejs/interface-api@0.0.14(@antelopejs/interface-core@0.1.1))(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-database@0.1.8(@antelopejs/interface-core@0.1.1))
-      '@antelopejs/interface-file-storage': 0.1.3(@antelopejs/interface-core@0.1.1)
-      jsonwebtoken: 9.0.3
-      randomstring: 1.3.1
-      zod: 3.24.4
-      zod-to-json-schema: 3.24.6(zod@3.24.4)
-
   '@antelopejs/interface-dms@0.7.0(812a9e0655f26c36f63a86ee7b0b1022)':
     dependencies:
       '@antelopejs/interface-api': 0.0.14(@antelopejs/interface-core@0.1.1)
@@ -3606,17 +3572,17 @@ snapshots:
     dependencies:
       sparse-bitfield: 3.0.3
 
-  '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)':
-    dependencies:
-      '@emnapi/core': 1.11.2
-      '@emnapi/runtime': 1.11.2
-      '@tybys/wasm-util': 0.10.4
-    optional: true
-
   '@napi-rs/wasm-runtime@1.2.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
       '@emnapi/core': 1.11.1
       '@emnapi/runtime': 1.11.1
+      '@tybys/wasm-util': 0.10.4
+    optional: true
+
+  '@napi-rs/wasm-runtime@1.2.5(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)':
+    dependencies:
+      '@emnapi/core': 1.11.2
+      '@emnapi/runtime': 1.11.2
       '@tybys/wasm-util': 0.10.4
     optional: true
 
@@ -3815,7 +3781,7 @@ snapshots:
     dependencies:
       '@emnapi/core': 1.11.2
       '@emnapi/runtime': 1.11.2
-      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
+      '@napi-rs/wasm-runtime': 1.2.5(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
     optional: true
 
   '@oxc-resolver/binding-win32-arm64-msvc@11.24.2':
