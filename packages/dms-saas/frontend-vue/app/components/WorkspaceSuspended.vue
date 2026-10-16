@@ -39,7 +39,7 @@ interface PortalSession {
 const { t, locale } = useI18n()
 const toast = useToast()
 const { $authFetch } = useAuthFetch()
-const { user, clear: clearSession } = useUserSession()
+const { user, clear: clearSession } = useDmsUserSession()
 const { resolveApiError } = useApiErrorMessage()
 const { formatMinorUnits } = useMoneyFormat()
 const { statusView } = useSaasStatus()
