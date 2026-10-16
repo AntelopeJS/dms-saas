@@ -14,6 +14,8 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 
 ## Setup checklist
 
+- dms-saas 0.6 requires `@antelopejs/dms` >=0.9 (interface-dms 0.7, renderer `@antelopejs/dms-frontend` 0.6);
+  0.5 is the DMS 0.8 line.
 - `ajs project modules add @antelopejs/dms-saas`; config `stripe.{secretKey,publishableKey,webhookSecret}` from env
   (`envOverrides`). Placeholder keys disable Stripe calls (plan sync skipped).
 - Stripe webhook endpoint → `/api/saas/webhooks/stripe`, API version `2026-08-26.dahlia`.
@@ -21,7 +23,8 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 - `allowedRedirectHosts` for Checkout / billing-portal return URLs (loopback auto-allowed in dev only).
 - A free plan must exist (or `defaultPlanSlug`): registration opens it, and every workspace without a subscription gets it.
 - Options: `admissionMode` (`open` | `invitation-only`), `registration.paymentMethod` (`required` default | `optional` | `none`),
-  `publicScreens.{register,pricing}`, `upcomingInvoicePreviewCacheTtlSeconds`, `reportingCurrency`.
+  `publicScreens.{register,pricing}`, `upcomingInvoicePreviewCacheTtlSeconds`, `reportingCurrency`,
+  `stripe.readTimeoutMs` (4000; Stripe reads a page renders) and `stripe.readMaxNetworkRetries` (0).
 
 ## Plans gate permissions
 
