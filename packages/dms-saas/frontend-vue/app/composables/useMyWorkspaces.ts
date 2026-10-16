@@ -35,7 +35,7 @@ interface MyWorkspacesHandle {
  * readers too.
  */
 export function useMyWorkspaces(): MyWorkspacesHandle {
-	const { loggedIn } = useUserSession()
+	const { loggedIn } = useDmsUserSession()
 	const { data, status, refresh } = useApiData<MyWorkspace[]>(() =>
 		loggedIn.value ? WORKSPACES_ENDPOINT : null,
 	)

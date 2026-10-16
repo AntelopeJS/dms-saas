@@ -3,7 +3,8 @@ import { computed, ref, type ComputedRef } from 'vue'
 const EXPORT_ENDPOINT = '/api/saas/data-export'
 const HISTORY_ENDPOINT = `${EXPORT_ENDPOINT}/history`
 const START_ENDPOINT = `${EXPORT_ENDPOINT}/start`
-const STATUS_ENDPOINT = `${EXPORT_ENDPOINT}/status`
+/** Where an export's progress is read, by job id. */
+export const EXPORT_STATUS_ENDPOINT = `${EXPORT_ENDPOINT}/status`
 const DOWNLOAD_ENDPOINT = `${EXPORT_ENDPOINT}/download`
 const HISTORY_PAGE_SIZE = 10
 const FIRST_PAGE = 1
@@ -96,7 +97,6 @@ interface ExportHistoryHandle {
 	load: () => Promise<void>
 	goToPage: (targetPage: number) => void
 	start: () => Promise<void>
-	readStatus: (jobId: string) => Promise<ExportJobStatus>
 	download: (jobId: string, naming?: ExportDownloadNaming) => Promise<void>
 }
 
@@ -183,18 +183,6 @@ export function useExportHistory(): ExportHistoryHandle {
 		}
 	}
 
-	const statusJobId = ref<string | null>(null)
-	const statusRead = useOnDemandRead<ExportJobStatus>(() =>
-		statusJobId.value
-			? `${STATUS_ENDPOINT}/${encodeURIComponent(statusJobId.value)}`
-			: null,
-	)
-
-	function readStatus(jobId: string): Promise<ExportJobStatus> {
-		statusJobId.value = jobId
-		return statusRead.read()
-	}
-
 	/**
 	 * Takes a job id rather than a history row: a link delivered by e-mail may
 	 * point at an export older than the window the history lists. The id is
@@ -228,7 +216,6 @@ export function useExportHistory(): ExportHistoryHandle {
 		load,
 		goToPage,
 		start,
-		readStatus,
 		download,
 	}
 }
