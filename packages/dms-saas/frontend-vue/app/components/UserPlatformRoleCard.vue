@@ -11,7 +11,7 @@ type RoleChange = 'promote' | 'demote'
 
 const { t } = useI18n()
 const { $authFetch } = useAuthFetch()
-const { confirmFrom } = useServerConfirm()
+const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
 const detail = useUserDetail(() => props.routeParams)
@@ -33,9 +33,9 @@ async function openConfirm(): Promise<void> {
 	const kind = change.value
 	isOpening.value = true
 	try {
-		await confirmFrom(`${API}/${detail.userId.value}/${kind}-confirm`, () =>
-			runChange(kind),
-		)
+		await confirmFrom(`${API}/${detail.userId.value}/${kind}-confirm`, {
+			onConfirm: () => runChange(kind),
+		})
 	} catch (error) {
 		toast.add({
 			color: 'error',

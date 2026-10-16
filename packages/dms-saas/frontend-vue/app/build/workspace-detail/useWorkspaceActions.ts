@@ -20,7 +20,7 @@ export function useWorkspaceActions(tenantId: string) {
 	const { $authFetch } = useAuthFetch()
 	const { t, locale } = useI18n()
 	const { confirm } = useConfirm()
-	const { confirmFrom } = useServerConfirm()
+	const { confirmFrom } = useConfirmFrom()
 	const toast = useToast()
 	const { resolveApiError } = useApiErrorMessage()
 	const base = `/api/saas/workspaces/${tenantId}`
@@ -56,9 +56,11 @@ export function useWorkspaceActions(tenantId: string) {
 	}
 
 	function confirmJoin(): Promise<boolean> {
-		return confirmFrom(`${base}/join-confirmation`, () =>
-			$authFetch(`${base}/join`, { method: 'POST' }),
-		)
+		return confirmFrom(`${base}/join-confirmation`, {
+			onConfirm: async () => {
+				await $authFetch(`${base}/join`, { method: 'POST' })
+			},
+		})
 	}
 
 	function suspensionImpact(impact: SuspensionImpact): ImpactEntry[] {
