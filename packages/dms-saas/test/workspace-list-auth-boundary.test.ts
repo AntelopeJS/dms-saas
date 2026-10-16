@@ -52,7 +52,7 @@ interface ApiDataCall {
 function setupWorkspaceList(isLoggedIn: boolean) {
   const loggedIn = holder(isLoggedIn);
   const calls: ApiDataCall[] = [];
-  vi.stubGlobal("useUserSession", () => ({ loggedIn }));
+  vi.stubGlobal("useDmsUserSession", () => ({ loggedIn }));
   vi.stubGlobal("useApiData", (url: unknown) => {
     const call: ApiDataCall = {
       url,

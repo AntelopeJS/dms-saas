@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.6.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.5.1...v0.6.0)
+
+### 🚀 Enhancements
+
+- ⚠️  Migrate to DMS 0.9 and renderer 0.6 ([#97](https://github.com/AntelopeJS/dms-saas/pull/97))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Migrate to DMS 0.9 and renderer 0.6 ([#97](https://github.com/AntelopeJS/dms-saas/pull/97))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.5.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.5.0...v0.5.1)
