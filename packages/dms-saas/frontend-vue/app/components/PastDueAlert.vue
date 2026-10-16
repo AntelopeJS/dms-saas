@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import PayInvoiceDialog from '../build/PayInvoiceDialog.vue'
 import { LABEL_DAY_FORMAT, SENTENCE_DAY_FORMAT } from '../build/day-formats'
+
+// Drawn as two roots (the alert, then the payment dialog): the page's block
+// attributes have no single element to land on.
+defineOptions({ inheritAttrs: false })
 
 interface TimelineStep {
 	key: string
@@ -14,7 +18,7 @@ const SUSPENDED_STATUS = 'suspended'
 const UNPAID_STATUSES = new Set(['past_due', SUSPENDED_STATUS])
 const KEY_PREFIX = 'saas.tenant_billing.past_due'
 
-const { data, error, load, refresh } = useBillingStatus()
+const { data, status: readStatus, refresh } = useBillingStatus()
 const { formatMinorUnits } = useMoneyFormat()
 const { open: openPayment } = usePayInvoice()
 const { t, locale } = useI18n()
@@ -126,15 +130,13 @@ const DOT_CLASSES: Record<TimelineStep['tone'], string> = {
 function payInvoice(): void {
 	if (invoice.value) openPayment(invoice.value)
 }
-
-onMounted(load)
 </script>
 
 <template>
 	<DmsSaasLoadFailure
-		v-if="error && !data"
+		v-if="readStatus === 'error' && !data"
 		:title="$t(`${KEY_PREFIX}.load_failed`)"
-		@retry="refresh"
+		@retry="refresh()"
 	/>
 
 	<DmsBanner

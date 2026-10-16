@@ -1,5 +1,5 @@
 import { computed, type ComputedRef } from 'vue'
-import type { SharedRequest } from '../../composables/useSharedRequest'
+import type { DmsAsyncData } from '#dms/frontend-module'
 
 /** A workspace of the user, with their place in it. */
 export interface UserWorkspace {
@@ -47,30 +47,28 @@ export interface UserDetail {
 	security: UserSecurity
 }
 
-export interface UserDetailRequest extends SharedRequest<UserDetail> {
+export interface UserDetailRequest extends DmsAsyncData<UserDetail> {
 	userId: ComputedRef<string>
 	isLoading: ComputedRef<boolean>
 }
 
-const STATE_KEY = 'saas-user-detail'
-
 /**
  * The user a platform admin's user page shows, fetched once for the header
- * and the platform role card.
+ * and the platform role card, and again when the page moves to another user.
  */
 export function useUserDetail(
 	routeParams: () => Record<string, string> | undefined,
 ): UserDetailRequest {
-	const { $authFetch } = useAuthFetch()
 	const userId = computed(() => routeParams()?.id ?? '')
-	const request = useSharedRequest<UserDetail>(
-		`${STATE_KEY}:${userId.value}`,
-		() => $authFetch<UserDetail>(`/api/saas/users/${userId.value}`),
+	const request = useApiData<UserDetail>(() =>
+		userId.value ? `/api/saas/users/${userId.value}` : null,
 	)
 	return {
 		...request,
 		userId,
-		isLoading: computed(() => !request.data.value && !request.error.value),
+		isLoading: computed(
+			() => !request.data.value && request.status.value !== 'error',
+		),
 	}
 }
 

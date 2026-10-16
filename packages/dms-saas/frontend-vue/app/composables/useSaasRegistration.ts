@@ -463,6 +463,8 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 	async function mountPaymentElement(): Promise<void> {
 		const publishableKey = saasConfig?.stripePublishableKey
 		if (!publishableKey) return
+		// Not a `useApiData` read: each call creates a SetupIntent, whose client
+		// secret is the card form's alone, never cached nor shared.
 		const setup = await $authFetch<SetupIntentResponse>(SETUP_INTENT_ENDPOINT)
 		if (!setup.clientSecret) return
 		stripeHandle.value = useStripePaymentElement({

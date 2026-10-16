@@ -4,7 +4,7 @@
  * billing answers a visitor needs before signing up. Every plan leads to
  * Register with the plan chosen.
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PricingComparison from '../build/public/PricingComparison.vue'
 import PricingFaq from '../build/public/PricingFaq.vue'
 import {
@@ -20,26 +20,30 @@ import {
 	LOGIN_PATH,
 	registerPathFor,
 } from '../build/public/routes'
-import {
-	onPublicLocaleChange,
-	usePublicFetch,
-} from '../build/public/usePublicFetch'
 import type { PlanInterval } from '../composables/usePlanIntervalLabel'
 
-const PRICING_ENDPOINT = '/api/saas/pricing'
 const SKELETON_CARDS = 3
 
 const { t } = useI18n()
-const publicFetch = usePublicFetch()
 const { resolveApiError } = useApiErrorMessage()
 const config = useDmsRuntimeConfig()
 const saasConfig = config.public.dmsSaas as
 	| DmsSaasPublicRuntimeConfig
 	| undefined
 
-const pricing = ref<PublicPricing | null>(null)
-const isLoading = ref(true)
-const loadError = ref<string | null>(null)
+const pricingRead = usePublicPricing()
+const pricing = computed<PublicPricing | null>(() => pricingRead.data.value)
+// A retry shows the skeleton again, not the failure it replaces.
+const isLoading = computed(
+	() =>
+		!pricing.value &&
+		(pricingRead.status.value === 'pending' || !pricingRead.error.value),
+)
+const loadError = computed(() =>
+	pricingRead.error.value
+		? resolveApiError(pricingRead.error.value, 'saas.public.pricing.load_error')
+		: null,
+)
 const interval = ref<PlanInterval>('month')
 
 const canRegister = isSelfRegistrationOpen(saasConfig)
@@ -99,20 +103,9 @@ watch(intervals, (available) => {
 	}
 })
 
-async function loadPricing(): Promise<void> {
-	isLoading.value = true
-	loadError.value = null
-	try {
-		pricing.value = await publicFetch<PublicPricing>(PRICING_ENDPOINT)
-	} catch (error) {
-		loadError.value = resolveApiError(error, 'saas.public.pricing.load_error')
-	} finally {
-		isLoading.value = false
-	}
+function loadPricing(): void {
+	void pricingRead.refresh()
 }
-
-onMounted(loadPricing)
-onPublicLocaleChange(loadPricing)
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import {
 	type CatalogFeature,
 	type CatalogPlanRow,
@@ -199,7 +199,6 @@ function toggleSale(): void {
 }
 
 // Every card asks as it mounts: the cards of a page share the one request.
-onMounted(catalog.refresh)
 </script>
 
 <template>
@@ -321,7 +320,7 @@ onMounted(catalog.refresh)
 			</div>
 
 			<p
-				v-if="catalog.error.value"
+				v-if="catalog.status.value === 'error'"
 				class="text-muted flex items-center gap-1.5 text-xs"
 			>
 				<UIcon name="i-ph-warning" class="text-warning size-4" />

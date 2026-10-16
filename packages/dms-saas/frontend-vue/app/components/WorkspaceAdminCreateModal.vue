@@ -150,11 +150,18 @@ const whatHappens = computed(() => {
 	return [created, ownerSentence.value].filter(Boolean).join(' ')
 })
 
+const plansRead = useOnDemandRead<PlanOption[]>(() => PLANS_ENDPOINT)
+const lookedUpEmail = ref('')
+const ownerRead = useOnDemandRead<OwnerLookup>(
+	() => (lookedUpEmail.value ? LOOKUP_ENDPOINT : null),
+	{ query: () => ({ email: lookedUpEmail.value }) },
+)
+
 async function loadPlans(): Promise<void> {
 	isLoading.value = true
 	loadError.value = null
 	try {
-		const all = await $authFetch<PlanOption[]>(PLANS_ENDPOINT)
+		const all = await plansRead.read()
 		plans.value = all.filter((option) => option.isActive && !option.isDeleted)
 	} catch (error) {
 		loadError.value = resolveApiError(error, `${C}.load_error`)
@@ -164,12 +171,13 @@ async function loadPlans(): Promise<void> {
 }
 
 async function lookUpOwner(email: string): Promise<void> {
+	lookedUpEmail.value = email
 	try {
-		lookup.value = await $authFetch<OwnerLookup>(LOOKUP_ENDPOINT, {
-			query: { email },
-		})
+		const found = await ownerRead.read()
+		// A newer address was typed while this one was looked up.
+		if (lookedUpEmail.value === email) lookup.value = found
 	} catch {
-		lookup.value = null
+		if (lookedUpEmail.value === email) lookup.value = null
 	}
 }
 

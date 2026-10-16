@@ -78,6 +78,14 @@ const prepareError = ref<string | null>(null)
 const notifyOwners = ref(true)
 const typed = ref('')
 const isSubmitting = ref(false)
+const impactRead = useOnDemandRead<RetireImpact>(() =>
+	planId.value ? `${RETIRE_ENDPOINT}/${planId.value}/impact` : null,
+)
+const preparationRead = useOnDemandRead<RetirePreparation>(() =>
+	planId.value && targetPlanId.value
+		? `${RETIRE_ENDPOINT}/${planId.value}/prepare/${targetPlanId.value}`
+		: null,
+)
 const submitError = ref<string | null>(null)
 const typedError = ref<string | null>(null)
 
@@ -187,12 +195,12 @@ async function loadImpact(): Promise<void> {
 	isLoading.value = true
 	loadError.value = null
 	try {
-		const [loaded, catalog] = await Promise.all([
-			$authFetch<RetireImpact>(`${RETIRE_ENDPOINT}/${planId.value}/impact`),
-			planCatalog.load(),
+		const [loaded] = await Promise.all([
+			impactRead.read(),
+			planCatalog,
 		])
 		impact.value = loaded
-		features.value = catalog?.features ?? []
+		features.value = planCatalog.data.value?.features ?? []
 	} catch (error) {
 		loadError.value = processApiMessage(readError(error))
 	} finally {
@@ -209,9 +217,7 @@ async function prepare(): Promise<void> {
 	isPreparing.value = true
 	prepareError.value = null
 	try {
-		preparation.value = await $authFetch<RetirePreparation>(
-			`${RETIRE_ENDPOINT}/${planId.value}/prepare/${targetPlanId.value}`,
-		)
+		preparation.value = await preparationRead.read()
 	} catch (error) {
 		preparation.value = null
 		prepareError.value = processApiMessage(readError(error))

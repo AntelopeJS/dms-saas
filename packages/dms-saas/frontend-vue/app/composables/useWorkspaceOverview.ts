@@ -1,5 +1,4 @@
 const OVERVIEW_ENDPOINT = '/api/saas/workspaces/current/overview'
-const OVERVIEW_STATE_KEY = 'saas-workspace-overview'
 
 /** Seats as the members page counts them; `maxMembers` null when unlimited. */
 export interface WorkspaceSeatsOverview {
@@ -50,9 +49,6 @@ export interface WorkspaceOverview {
 }
 
 /** What the General page's danger zone states about deleting the workspace. */
-export function useWorkspaceOverview(): SharedRequest<WorkspaceOverview> {
-	const { $authFetch } = useAuthFetch()
-	return useSharedRequest(OVERVIEW_STATE_KEY, () =>
-		$authFetch<WorkspaceOverview>(OVERVIEW_ENDPOINT),
-	)
+export function useWorkspaceOverview(): ApiDataResult<WorkspaceOverview> {
+	return useApiData<WorkspaceOverview>(OVERVIEW_ENDPOINT)
 }

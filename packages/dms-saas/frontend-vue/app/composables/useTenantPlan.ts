@@ -1,7 +1,6 @@
 import type { PlanInterval } from './usePlanIntervalLabel'
 
 const TENANT_PLAN_ENDPOINT = '/api/saas/tenant/plan'
-const TENANT_PLAN_STATE_KEY = 'saas-tenant-plan'
 const TENANT_CHECKOUT_ENDPOINT = `${TENANT_PLAN_ENDPOINT}/checkout`
 const TENANT_PREVIEW_ENDPOINT = `${TENANT_PLAN_ENDPOINT}/preview`
 const TENANT_CANCELLATION_ENDPOINT = `${TENANT_PLAN_ENDPOINT}/cancellation`
@@ -188,11 +187,31 @@ function currentPageUrl(): string {
 
 /** The payload resolves inheritance for every public plan and carries the
  * features catalogue, so the plan card and the free-access banner share it. */
-export function useTenantPlan() {
+/** What a change's preview is asked for: the plan, and the country to tax. */
+type PreviewQuery = {
+	planId: string
+	country?: string
+}
+
+export function useTenantPlan(): ApiDataResult<TenantPlanResponse> {
+	return useApiData<TenantPlanResponse>(TENANT_PLAN_ENDPOINT)
+}
+
+/**
+ * What changes the workspace's plan, and the reads a dialog makes on a click
+ * (a change's preview, the checkout left pending). The plan itself is
+ * `useTenantPlan`'s: refresh it once a change went through.
+ */
+export function useTenantPlanChanges() {
 	const { $authFetch } = useAuthFetch()
 	const { authenticateUpgrade } = useUpgradeAuthentication()
-	const shared = useSharedRequest(TENANT_PLAN_STATE_KEY, () =>
-		$authFetch<TenantPlanResponse>(TENANT_PLAN_ENDPOINT),
+	const previewQuery = shallowRef<PreviewQuery | null>(null)
+	const previewRead = useOnDemandRead<PlanChangePreview>(
+		() => (previewQuery.value ? TENANT_PREVIEW_ENDPOINT : null),
+		{ query: () => previewQuery.value ?? undefined },
+	)
+	const checkoutRead = useOnDemandRead<PendingCheckoutResult>(
+		() => TENANT_CHECKOUT_ENDPOINT,
 	)
 
 	/**
@@ -223,9 +242,8 @@ export function useTenantPlan() {
 		planId: string,
 		country?: string | null,
 	): Promise<PlanChangePreview> {
-		return $authFetch<PlanChangePreview>(TENANT_PREVIEW_ENDPOINT, {
-			query: country ? { planId, country } : { planId },
-		})
+		previewQuery.value = country ? { planId, country } : { planId }
+		return previewRead.read()
 	}
 
 	function cancelPendingChange(): Promise<ChangePlanResult> {
@@ -247,7 +265,7 @@ export function useTenantPlan() {
 	}
 
 	function loadPendingCheckout(): Promise<PendingCheckoutResult> {
-		return $authFetch<PendingCheckoutResult>(TENANT_CHECKOUT_ENDPOINT)
+		return checkoutRead.read()
 	}
 
 	/** Without an operation id, gives up on whatever checkout is pending. */
@@ -259,7 +277,6 @@ export function useTenantPlan() {
 	}
 
 	return {
-		...shared,
 		changePlan,
 		previewChange,
 		cancelPendingChange,

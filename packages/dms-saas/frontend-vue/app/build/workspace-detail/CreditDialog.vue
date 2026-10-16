@@ -73,12 +73,14 @@ const outcome = computed(() => {
 	return `${credit} ${t(`${D}.outcome_invoice`, { date, amount: dropsTo })}`
 })
 
+const optionsRead = useOnDemandRead<OperatorOptions>(
+	() => `/api/saas/workspaces/${props.tenantId}/operator-options`,
+)
+
 async function load(): Promise<void> {
 	loadError.value = null
 	try {
-		options.value = await $authFetch<OperatorOptions>(
-			`/api/saas/workspaces/${props.tenantId}/operator-options`,
-		)
+		options.value = await optionsRead.read()
 	} catch (error) {
 		loadError.value = resolveApiError(error, `${D}.load_error`)
 	}

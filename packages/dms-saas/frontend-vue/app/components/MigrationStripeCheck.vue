@@ -34,7 +34,7 @@ const props = defineProps<{ rowData?: MigrationWorkspaceRow }>()
 const KeyValueListBlock = resolveDmsComponent('dms-key-value-list-block')
 const { $authFetch } = useAuthFetch()
 const { t } = useI18n()
-const { confirmFrom } = useServerConfirm()
+const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
 
@@ -52,13 +52,15 @@ const resolution = computed(() =>
 	isSettled.value ? null : (reading.value?.resolution ?? null),
 )
 
+const stripeRead = useOnDemandRead<StripeReading>(() =>
+	workspaceApi.value ? `${workspaceApi.value}/stripe` : null,
+)
+
 async function load(): Promise<void> {
 	if (!workspaceApi.value) return
 	loadFailed.value = false
 	try {
-		reading.value = await $authFetch<StripeReading>(
-			`${workspaceApi.value}/stripe`,
-		)
+		reading.value = await stripeRead.read()
 	} catch {
 		loadFailed.value = true
 	}
@@ -71,14 +73,15 @@ async function settle(kind: UncertainResolution): Promise<void> {
 	})
 	isSettled.value = true
 	toast.add({ color: 'success', title: t(`${DETAIL}.${kind}_done`) })
-	refreshPageBlocks()
+	// The dialog closes once the page shows the settlement.
+	await refreshPageBlocks()
 }
 
 async function openSettlement(kind: UncertainResolution): Promise<void> {
 	try {
-		await confirmFrom(`${workspaceApi.value}/dialogs/${kind}`, () =>
-			settle(kind),
-		)
+		await confirmFrom(`${workspaceApi.value}/dialogs/${kind}`, {
+			onConfirm: () => settle(kind),
+		})
 	} catch (error) {
 		toast.add({
 			color: 'error',

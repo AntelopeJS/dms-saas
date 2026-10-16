@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useUserDetail } from '../build/users/useUserDetail'
 
 const props = defineProps<{ routeParams?: Record<string, string> }>()
@@ -11,7 +11,7 @@ type RoleChange = 'promote' | 'demote'
 
 const { t } = useI18n()
 const { $authFetch } = useAuthFetch()
-const { confirmFrom } = useServerConfirm()
+const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
 const detail = useUserDetail(() => props.routeParams)
@@ -25,16 +25,17 @@ const change = computed<RoleChange>(() =>
 async function runChange(kind: RoleChange): Promise<void> {
 	await $authFetch(`${API}/${detail.userId.value}/${kind}`, { method: 'POST' })
 	toast.add({ color: 'success', title: t(`${I18N}.${kind}d`) })
-	await detail.refresh()
+	// The dialog closes once the card shows the new role.
+	await refreshPageBlocks()
 }
 
 async function openConfirm(): Promise<void> {
 	const kind = change.value
 	isOpening.value = true
 	try {
-		await confirmFrom(`${API}/${detail.userId.value}/${kind}-confirm`, () =>
-			runChange(kind),
-		)
+		await confirmFrom(`${API}/${detail.userId.value}/${kind}-confirm`, {
+			onConfirm: () => runChange(kind),
+		})
 	} catch (error) {
 		toast.add({
 			color: 'error',
@@ -44,14 +45,12 @@ async function openConfirm(): Promise<void> {
 		isOpening.value = false
 	}
 }
-
-onMounted(() => void detail.load())
 </script>
 
 <template>
 	<DmsCard :title="$t(`${I18N}.title`)">
 		<DmsSaasLoadFailure
-			v-if="detail.error.value && !user"
+			v-if="detail.status.value === 'error' && !user"
 			@retry="detail.refresh()"
 		/>
 		<div v-else-if="!user" class="flex flex-col gap-2">

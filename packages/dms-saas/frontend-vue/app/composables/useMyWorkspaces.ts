@@ -1,3 +1,5 @@
+import { computed, type ComputedRef } from 'vue'
+
 /** One workspace of the switcher, as `GET /api/saas/workspaces/mine` answers it. */
 export interface MyWorkspace {
 	_id: string
@@ -15,42 +17,37 @@ export interface MyWorkspace {
 }
 
 const WORKSPACES_ENDPOINT = '/api/saas/workspaces/mine'
-const STATE_KEY = 'saas-my-workspaces'
 
 interface MyWorkspacesHandle {
-	workspaces: Ref<MyWorkspace[]>
-	isLoaded: Ref<boolean>
+	/** Empty until the list is in, and for a visitor without a session. */
+	workspaces: ComputedRef<MyWorkspace[]>
+	isLoaded: ComputedRef<boolean>
+	/** The last read failed; the entries already on screen stay. */
+	hasFailed: ComputedRef<boolean>
 	refresh: () => Promise<void>
 }
 
 /**
  * Shared between the sidebar switcher and the screens that change what it
  * displays (a rename, a deletion), so a change never waits for a page reload.
+ * Nothing is read without a session: the public layouts mount the switcher's
+ * readers too.
  */
 export function useMyWorkspaces(): MyWorkspacesHandle {
-	const { $authFetch } = useAuthFetch()
-	const { loggedIn } = useUserSession()
-	const workspaces = useDmsState<MyWorkspace[]>(STATE_KEY, () => [])
-	const isLoaded = useDmsState<boolean>(`${STATE_KEY}-loaded`, () => false)
-
-	async function refresh(): Promise<void> {
-		if (!loggedIn.value) {
-			workspaces.value = []
-			isLoaded.value = true
-			return
-		}
-
-		try {
-			workspaces.value = await $authFetch<MyWorkspace[]>(WORKSPACES_ENDPOINT)
-			isLoaded.value = true
-		} catch (error) {
-			// Only the initial load may empty the list — a failed refresh keeps
-			// the entries already on screen rather than making the switcher
-			// disappear.
-			if (!isLoaded.value) workspaces.value = []
-			throw error
-		}
+	const { loggedIn } = useDmsUserSession()
+	const { data, status, refresh } = useApiData<MyWorkspace[]>(() =>
+		loggedIn.value ? WORKSPACES_ENDPOINT : null,
+	)
+	const workspaces = computed(() => data.value ?? [])
+	return {
+		workspaces,
+		isLoaded: computed(
+			() =>
+				!loggedIn.value ||
+				status.value === 'success' ||
+				workspaces.value.length > 0,
+		),
+		hasFailed: computed(() => status.value === 'error'),
+		refresh: () => refresh(),
 	}
-
-	return { workspaces, isLoaded, refresh }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const KEYS = 'saas.workspace.data_export.history'
 const SKELETON_ROWS = 3
@@ -30,8 +30,7 @@ const ROW_TONES: Record<ExportRowState, Tone> = {
 const { t, locale } = useI18n()
 const { resolveApiError } = useApiErrorMessage()
 const toast = useToast()
-const { state, running, load, refresh, goToPage, start, download } =
-	useExportHistory()
+const { state, running, load, goToPage, start, download } = useExportHistory()
 
 const downloadingJobId = ref<string | null>(null)
 
@@ -106,10 +105,6 @@ function requestAnother(): Promise<void> {
 		notifyError(error, 'saas.workspace.data_export.error.start'),
 	)
 }
-
-onMounted(() => {
-	void refresh()
-})
 </script>
 
 <template>

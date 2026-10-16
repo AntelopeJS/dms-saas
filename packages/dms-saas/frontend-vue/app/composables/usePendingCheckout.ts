@@ -30,7 +30,8 @@ export function usePendingCheckout() {
 	)
 	const route = useDmsRoute()
 	const router = useDmsRouter()
-	const { loadPendingCheckout, cancelCheckout, changePlan } = useTenantPlan()
+	const { loadPendingCheckout, cancelCheckout, changePlan } =
+		useTenantPlanChanges()
 
 	/** Raises the prompt when `error` is a pending-checkout refusal. */
 	async function offerFor(error: unknown, planId: string): Promise<boolean> {

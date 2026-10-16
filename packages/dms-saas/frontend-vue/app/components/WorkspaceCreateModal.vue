@@ -161,6 +161,8 @@ async function initStripeElement(): Promise<void> {
 		cardError.value = t(`${KEYS}.error.card_setup`)
 		return
 	}
+	// Not a `useApiData` read: each call creates a SetupIntent, whose client
+	// secret is the card form's alone, never cached nor shared.
 	const setup = await $authFetch<SetupIntent>(SETUP_INTENT_ENDPOINT)
 	stripeHandle.value = useStripePaymentElement({
 		publishableKey: publishableKey.value,
@@ -190,11 +192,13 @@ function ensureCardStep(): Promise<void> {
 
 watch(asksForCard, ensureCardStep)
 
+const optionsRead = useOnDemandRead<CreateOptions>(() => OPTIONS_ENDPOINT)
+
 async function load(): Promise<void> {
 	isLoading.value = true
 	loadError.value = null
 	try {
-		options.value = await $authFetch<CreateOptions>(OPTIONS_ENDPOINT)
+		options.value = await optionsRead.read()
 		selectedPlanId.value ??= options.value.plans[0]?._id ?? null
 	} catch (error) {
 		loadError.value = resolveApiError(error, `${KEYS}.error.load_description`)

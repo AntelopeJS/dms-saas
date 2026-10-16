@@ -20,10 +20,13 @@ export function useWorkspaceActions(tenantId: string) {
 	const { $authFetch } = useAuthFetch()
 	const { t, locale } = useI18n()
 	const { confirm } = useConfirm()
-	const { confirmFrom } = useServerConfirm()
+	const { confirmFrom } = useConfirmFrom()
 	const toast = useToast()
 	const { resolveApiError } = useApiErrorMessage()
 	const base = `/api/saas/workspaces/${tenantId}`
+	const impactRead = useOnDemandRead<SuspensionImpact>(
+		() => `${base}/suspension-impact`,
+	)
 
 	function day(value: string): string {
 		return formatDate(value, locale.value, { dateStyle: 'medium' }) ?? value
@@ -53,9 +56,11 @@ export function useWorkspaceActions(tenantId: string) {
 	}
 
 	function confirmJoin(): Promise<boolean> {
-		return confirmFrom(`${base}/join-confirmation`, () =>
-			$authFetch(`${base}/join`, { method: 'POST' }),
-		)
+		return confirmFrom(`${base}/join-confirmation`, {
+			onConfirm: async () => {
+				await $authFetch(`${base}/join`, { method: 'POST' })
+			},
+		})
 	}
 
 	function suspensionImpact(impact: SuspensionImpact): ImpactEntry[] {
@@ -98,9 +103,7 @@ export function useWorkspaceActions(tenantId: string) {
 	}
 
 	async function confirmSuspend(): Promise<boolean> {
-		const impact = await $authFetch<SuspensionImpact>(
-			`${base}/suspension-impact`,
-		)
+		const impact = await impactRead.read()
 		const operationId = crypto.randomUUID()
 		return confirm({
 			title: t(`${D}.suspend.title`, { name: impact.workspaceName }),
@@ -144,9 +147,7 @@ export function useWorkspaceActions(tenantId: string) {
 	}
 
 	async function confirmReactivate(): Promise<boolean> {
-		const impact = await $authFetch<SuspensionImpact>(
-			`${base}/suspension-impact`,
-		)
+		const impact = await impactRead.read()
 		const operationId = crypto.randomUUID()
 		return confirm({
 			title: t(`${D}.reactivate.title`, { name: impact.workspaceName }),

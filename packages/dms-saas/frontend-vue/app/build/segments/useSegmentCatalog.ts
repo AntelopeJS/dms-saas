@@ -6,7 +6,6 @@ import type {
 } from './types'
 
 export const SEGMENT_FIELDS_URL = '/api/saas/segments/fields'
-const CATALOG_STATE_KEY = 'saas-segment-fields'
 
 const EMPTY_CATALOG: SegmentFieldsCatalog = {
 	fields: [],
@@ -17,9 +16,8 @@ const EMPTY_CATALOG: SegmentFieldsCatalog = {
 export interface SegmentCatalog {
 	catalog: ComputedRef<SegmentFieldsCatalog>
 	isLoading: ComputedRef<boolean>
-	error: Ref<boolean>
-	load: () => Promise<unknown>
-	refresh: () => Promise<unknown>
+	error: Ref<unknown>
+	refresh: () => Promise<void>
 	fieldsOf: (scope: SegmentScope) => SegmentFieldDefinition[]
 	findField: (
 		scope: SegmentScope,
@@ -34,11 +32,7 @@ export interface SegmentCatalog {
 export function useSegmentCatalog(
 	url: string = SEGMENT_FIELDS_URL,
 ): SegmentCatalog {
-	const { $authFetch } = useAuthFetch()
-	const request = useSharedRequest<SegmentFieldsCatalog>(
-		`${CATALOG_STATE_KEY}:${url}`,
-		() => $authFetch<SegmentFieldsCatalog>(url),
-	)
+	const request = useApiData<SegmentFieldsCatalog>(url)
 	const catalog = computed(() => request.data.value ?? EMPTY_CATALOG)
 
 	function fieldsOf(scope: SegmentScope): SegmentFieldDefinition[] {
@@ -47,10 +41,11 @@ export function useSegmentCatalog(
 
 	return {
 		catalog,
-		isLoading: computed(() => !request.data.value && !request.error.value),
+		isLoading: computed(
+			() => !request.data.value && request.status.value !== 'error',
+		),
 		error: request.error,
-		load: request.load,
-		refresh: request.refresh,
+		refresh: () => request.refresh(),
 		fieldsOf,
 		findField: (scope, fieldId) =>
 			fieldsOf(scope).find((field) => field.id === fieldId),

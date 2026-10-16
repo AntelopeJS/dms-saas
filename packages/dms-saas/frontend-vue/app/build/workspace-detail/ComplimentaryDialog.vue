@@ -84,12 +84,14 @@ const submitLabel = computed(() => {
 		: t(`${D}.submit`)
 })
 
+const impactRead = useOnDemandRead<ComplimentaryImpact>(
+	() => `/api/saas/workspaces/${props.tenantId}/complimentary-impact`,
+)
+
 async function load(): Promise<void> {
 	loadError.value = null
 	try {
-		impact.value = await $authFetch<ComplimentaryImpact>(
-			`/api/saas/workspaces/${props.tenantId}/complimentary-impact`,
-		)
+		impact.value = await impactRead.read()
 		planId.value = impact.value.currentPlanId ?? impact.value.plans[0]?.id
 		freeUntil.value = impact.value.freeUntil?.slice(0, 10) ?? ''
 	} catch (error) {

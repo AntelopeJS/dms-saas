@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 
 // Content of the trial-ending layout strip (see registerTrialEndingBanners),
 // shown to the workspace owner 7, 3 and 1 day before the trial ends.
@@ -10,12 +10,12 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'short',
 }
 
-const { data: plan, load: loadPlan } = useTenantPlan()
-const { data: billingStatus, load: loadBillingStatus } = useBillingStatus()
+const { data: plan } = useTenantPlan()
+const billingStatus = useMountedData(useBillingStatus({ server: false }).data)
 const { formatMinorUnits } = useMoneyFormat()
 const { t, locale } = useI18n()
 const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
-const { data: nextInvoice, load: loadNextInvoice } = useNextInvoice()
+const nextInvoice = useMountedData(useNextInvoice({ server: false }).data)
 
 const trialEndsAt = computed(() => plan.value?.currentPeriodEnd ?? null)
 const daysLeft = computed(() =>
@@ -50,12 +50,6 @@ const charge = computed(() => {
 			})
 		: t(`${KEY_PREFIX}.charge`, params)
 })
-
-onMounted(() => {
-	void loadPlan()
-	void loadBillingStatus()
-	void loadNextInvoice()
-})
 </script>
 
 <template>
@@ -69,6 +63,7 @@ onMounted(() => {
 		</UButton>
 		<DmsSaasCustomerPortalButton
 			label-key="saas.tenant_billing.past_due.update_card"
+			is-deferred
 			icon="i-ph-credit-card"
 			size="xs"
 		/>

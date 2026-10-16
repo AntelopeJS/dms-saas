@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 /**
  * Internal notes operators keep on a workspace or a user (`targetType`),
@@ -44,11 +44,28 @@ const baseUrl = computed(
 	() => `/api/saas/platform-notes/${props.targetType}/${targetId.value}`,
 )
 
-const notes = ref<PlatformNote[]>([])
-const total = ref(0)
 const isExpanded = ref(false)
-const isLoading = ref(true)
-const loadError = ref<string | null>(null)
+// The newest notes, or all of them once expanded: the previous ones stay on
+// screen while the longer page loads.
+const page = useApiData<NotesPage>(
+	() => (targetId.value ? baseUrl.value : null),
+	{
+		query: () => ({
+			page: 1,
+			pageSize: isExpanded.value ? ALL_COUNT : PREVIEW_COUNT,
+		}),
+	},
+)
+const notes = computed(() => page.data.value?.items ?? [])
+const total = computed(() => page.data.value?.total ?? 0)
+const isLoading = computed(
+	() => page.status.value === 'pending' || page.status.value === 'idle',
+)
+const loadError = computed(() =>
+	page.error.value
+		? resolveApiError(page.error.value, `${N}.error.load`)
+		: null,
+)
 const isSubmitting = ref(false)
 const draft = ref('')
 
@@ -83,29 +100,12 @@ function when(note: PlatformNote): string {
 	)
 }
 
-async function load(): Promise<void> {
-	if (!targetId.value) return
-	isLoading.value = true
-	loadError.value = null
-	try {
-		const page = await $authFetch<NotesPage>(baseUrl.value, {
-			query: {
-				page: 1,
-				pageSize: isExpanded.value ? ALL_COUNT : PREVIEW_COUNT,
-			},
-		})
-		notes.value = page.items
-		total.value = page.total
-	} catch (error) {
-		loadError.value = resolveApiError(error, `${N}.error.load`)
-	} finally {
-		isLoading.value = false
-	}
+function load(): Promise<void> {
+	return page.refresh()
 }
 
 function showAll(): void {
 	isExpanded.value = true
-	void load()
 }
 
 async function submit(): Promise<void> {
@@ -117,7 +117,8 @@ async function submit(): Promise<void> {
 			body: { content: trimmed.value },
 		})
 		draft.value = ''
-		await load()
+		// The note is listed before the button comes back.
+		await refreshPageBlocks()
 	} catch (error) {
 		toast.add({
 			color: 'error',
@@ -142,10 +143,8 @@ async function remove(note: PlatformNote): Promise<void> {
 			})
 		},
 	})
-	if (isConfirmed) await load()
+	if (isConfirmed) refreshPageBlocks()
 }
-
-onMounted(load)
 </script>
 
 <template>

@@ -5,24 +5,22 @@ export interface CurrentWorkspace {
 }
 
 const CURRENT_ENDPOINT = '/api/saas/workspaces/current'
-const STATE_KEY = 'saas-current-workspace'
 
 interface CurrentWorkspaceHandle {
-	workspace: Ref<CurrentWorkspace | null>
+	workspace: Readonly<Ref<CurrentWorkspace | null>>
 	load: () => Promise<void>
 }
 
 /**
- * The current workspace's identity, read once and shared by the blocks that
- * show it (the plan card names it in its deletion copy).
+ * The current workspace's identity, read when a dialog needs it (the plan
+ * card names it in its cancellation copy).
  */
 export function useCurrentWorkspace(): CurrentWorkspaceHandle {
-	const { $authFetch } = useAuthFetch()
-	const workspace = useDmsState<CurrentWorkspace | null>(STATE_KEY, () => null)
+	const current = useOnDemandRead<CurrentWorkspace>(() => CURRENT_ENDPOINT)
 
 	async function load(): Promise<void> {
-		workspace.value = await $authFetch<CurrentWorkspace>(CURRENT_ENDPOINT)
+		await current.read()
 	}
 
-	return { workspace, load }
+	return { workspace: current.data, load }
 }

@@ -9,14 +9,18 @@ const stripe = vi.hoisted(() => ({
 const view = vi.hoisted(() => ({ load: vi.fn() }));
 const target = vi.hoisted(() => ({ plan: null as unknown }));
 
-vi.mock("../src/stripe/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/stripe/client")>()),
-  getStripeClient: () => ({
+vi.mock("../src/stripe/client", async (importOriginal) => {
+  const client = () => ({
     subscriptions: { retrieve: stripe.retrieve },
     invoices: { createPreview: stripe.createPreview },
     taxRates: { retrieve: vi.fn() },
-  }),
-}));
+  });
+  return {
+    ...(await importOriginal<typeof import("../src/stripe/client")>()),
+    getStripeClient: client,
+    getStripeReadClient: client,
+  };
+});
 vi.mock("../src/workspaces/operator-view", () => ({
   loadWorkspaceOperatorView: view.load,
 }));

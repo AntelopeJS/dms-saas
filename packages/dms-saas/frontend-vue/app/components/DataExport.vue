@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { SENTENCE_DAY_FORMAT } from '../build/day-formats'
 
 /** Query parameter a delivered export link carries, set by the DMS. */
@@ -20,19 +20,34 @@ const { resolveApiError } = useApiErrorMessage()
 const route = useDmsRoute()
 const router = useDmsRouter()
 const toast = useToast()
-const { state, running, load, refresh, start, readStatus, download } =
-	useExportHistory()
+const { state, running, load, start, download } = useExportHistory()
 
 /** The export this visit watched finish, shown until the page is left. */
 const finished = ref<ExportHistoryEntry | null>(null)
 /** The e-mailed link this visit came from, once the server said it is gone. */
 const expiredLinkJobId = ref<string | null>(null)
 const isDownloading = ref(false)
-let pollTimer: ReturnType<typeof setInterval> | null = null
+// The export being built is read again every interval, in the browser, until
+// it is done; a tick waits for a slow answer instead of piling up requests.
+const runningStatus = useApiData<ExportJobStatus>(
+	() =>
+		running.value
+			? `${EXPORT_STATUS_ENDPOINT}/${encodeURIComponent(running.value.jobId)}`
+			: null,
+	{ server: false, refreshInterval: POLL_INTERVAL_MS, refreshOnPageRefresh: false },
+)
 
 const email = computed(() => user.value?.email ?? '')
 const progress = computed(() =>
-	Math.min(FULL_PROGRESS, Math.round(running.value?.progress ?? 0)),
+	Math.min(
+		FULL_PROGRESS,
+		Math.round(
+			(runningStatus.placeholder.value ? null : runningStatus.data.value)
+				?.progress ??
+				running.value?.progress ??
+				0,
+		),
+	),
 )
 const isFinishedPartial = computed(() => !!finished.value?.result?.partial)
 
@@ -79,48 +94,17 @@ async function downloadFinished(): Promise<void> {
 		})
 }
 
-// A tick is skipped while the previous read is still out: a slow status
-// route would otherwise pile up requests every interval, until the browser's
-// few connections per host are all held and the rest of the app stalls.
-let isReadingStatus = false
-
-async function readRunningStatus(
-	jobId: string,
-): Promise<ExportJobStatus | null> {
-	if (isReadingStatus) return null
-	isReadingStatus = true
-	try {
-		return await readStatus(jobId).catch(() => null)
-	} finally {
-		isReadingStatus = false
-	}
-}
-
-async function pollRunning(): Promise<void> {
-	const entry = running.value
-	if (!entry) return
-	const status = await readRunningStatus(entry.jobId)
-	if (!status) return
-	if (status.status === EXPORT_STATUS.pending) {
-		entry.progress = status.progress
-		return
-	}
-	finished.value = { ...entry, ...status }
-	await load()
-}
-
-function stopPolling(): void {
-	if (pollTimer) clearInterval(pollTimer)
-	pollTimer = null
-}
-
-/** One timer at most, following the export being built, if any. */
-function syncPolling(): void {
-	stopPolling()
-	if (running.value) pollTimer = setInterval(pollRunning, POLL_INTERVAL_MS)
-}
-
-watch(() => running.value?.jobId, syncPolling)
+watch(
+	() => runningStatus.data.value,
+	async (status) => {
+		const entry = running.value
+		if (!status || !entry || runningStatus.placeholder.value) return
+		if (status.status === EXPORT_STATUS.pending) return
+		if (finished.value?.jobId === entry.jobId) return
+		finished.value = { ...entry, ...status }
+		await load()
+	},
+)
 
 async function clearDeliveredLink(): Promise<void> {
 	const { [EXPORT_JOB_QUERY_PARAM]: _consumed, ...query } = route.query
@@ -149,13 +133,9 @@ async function consumeDeliveredLink(): Promise<void> {
 	}
 }
 
-onMounted(async () => {
-	await refresh()
-	syncPolling()
-	await consumeDeliveredLink()
-})
-
-onBeforeUnmount(stopPolling)
+// The history is read with the page, on the server too: the browser polls
+// the export it shows running, and downloads the archive a link names.
+onMounted(consumeDeliveredLink)
 </script>
 
 <template>

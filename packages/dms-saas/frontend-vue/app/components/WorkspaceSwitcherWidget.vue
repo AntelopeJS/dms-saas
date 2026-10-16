@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { HOME_PATH } from '../build/workspace-paths'
 import WorkspaceSwitcherRow from '../build/WorkspaceSwitcherRow.vue'
+
+// Drawn as two roots: attributes have no single element to land on.
+defineOptions({ inheritAttrs: false })
 
 const props = defineProps<{
 	collapsed?: boolean
@@ -25,8 +28,7 @@ const canCreateWorkspace = computed(
 			?.admissionMode !== 'invitation-only',
 )
 
-const { workspaces, isLoaded, refresh } = useMyWorkspaces()
-const hasFailed = ref(false)
+const { workspaces, isLoaded, hasFailed, refresh: load } = useMyWorkspaces()
 const isOpen = ref(false)
 const isCreateOpen = ref(false)
 const searchQuery = ref('')
@@ -78,15 +80,6 @@ function initialOf(name: string): string {
 	return (name.trim()[0] ?? '?').toUpperCase()
 }
 
-async function load(): Promise<void> {
-	try {
-		await refresh()
-		hasFailed.value = false
-	} catch {
-		hasFailed.value = true
-	}
-}
-
 function reportSwitchFailure(target: MyWorkspace | string): void {
 	const name = typeof target === 'string' ? target : target.name
 	toast.add({
@@ -136,10 +129,6 @@ async function onWorkspaceCreated(
 }
 
 useWorkspaceRenamed(() => void load())
-
-onMounted(() => {
-	if (!isLoaded.value) void load()
-})
 </script>
 
 <template>

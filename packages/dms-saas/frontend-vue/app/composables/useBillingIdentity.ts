@@ -124,13 +124,17 @@ function toRequestBody(draft: BillingIdentityDraft) {
 	}
 }
 
-/** Reads and saves the workspace billing identity. */
+/** The workspace billing identity a form shows, read with the page. */
+export function useBillingInfo(): ApiDataResult<BillingInfoResponse> {
+	return useApiData<BillingInfoResponse>(BILLING_INFO_ENDPOINT)
+}
+
+/** Saves the workspace billing identity, and reads it for a dialog on open. */
 export function useBillingIdentity() {
 	const { $authFetch } = useAuthFetch()
-
-	function load(): Promise<BillingInfoResponse> {
-		return $authFetch<BillingInfoResponse>(BILLING_INFO_ENDPOINT)
-	}
+	const { read: load } = useOnDemandRead<BillingInfoResponse>(
+		() => BILLING_INFO_ENDPOINT,
+	)
 
 	function save(draft: BillingIdentityDraft): Promise<BillingInfoResponse> {
 		return $authFetch<BillingInfoResponse>(BILLING_INFO_ENDPOINT, {

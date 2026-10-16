@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { ButtonProps } from '@nuxt/ui'
 
 const props = withDefaults(
@@ -10,6 +10,8 @@ const props = withDefaults(
 		variant?: ButtonProps['variant']
 		size?: ButtonProps['size']
 		icon?: string
+		/** Read the billing status in the browser, as a layout strip does. */
+		isDeferred?: boolean
 	}>(),
 	{
 		labelKey: 'saas.tenant_billing.portal.open',
@@ -17,6 +19,7 @@ const props = withDefaults(
 		variant: 'subtle',
 		size: 'md',
 		icon: 'i-ph-arrow-square-out',
+		isDeferred: false,
 	},
 )
 
@@ -28,7 +31,8 @@ interface PortalSession {
 
 const { $authFetch } = useAuthFetch()
 const { resolveApiError } = useApiErrorMessage()
-const { data, load } = useBillingStatus()
+const billingStatus = useBillingStatus({ server: !props.isDeferred }).data
+const data = props.isDeferred ? useMountedData(billingStatus) : billingStatus
 const isLoading = ref(false)
 const failure = ref<string | null>(null)
 
@@ -52,8 +56,6 @@ async function openCustomerPortal(): Promise<void> {
 		isLoading.value = false
 	}
 }
-
-onMounted(load)
 </script>
 
 <template>

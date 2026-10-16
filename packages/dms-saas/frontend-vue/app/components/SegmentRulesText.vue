@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { hasSegmentConditions, parseSegmentGroup } from '../build/segments/tree'
 import { useSegmentCatalog } from '../build/segments/useSegmentCatalog'
 import {
@@ -22,8 +22,6 @@ const words = useSegmentWords(catalog)
 
 const group = computed(() => parseSegmentGroup(props.conditions))
 const parts = computed(() => words.groupParts(group.value, 'user', props.mode))
-
-onMounted(() => void catalog.load())
 </script>
 
 <template>

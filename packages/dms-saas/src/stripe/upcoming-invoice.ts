@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { getStripeClient } from "./client";
+import { getStripeReadClient } from "./client";
 import { readSubscriptionPeriod } from "./payload-shapes";
 
 const MS_PER_SECOND = 1000;
@@ -66,7 +66,7 @@ export async function retrieveStripeSubscriptionCycle(
   subscriptionId: string,
 ): Promise<StripeSubscriptionCycle> {
   const subscription =
-    await getStripeClient().subscriptions.retrieve(subscriptionId);
+    await getStripeReadClient().subscriptions.retrieve(subscriptionId);
   const period = readSubscriptionPeriod(subscription);
   if (period.start === null || period.end === null)
     throw new Error(
@@ -89,7 +89,7 @@ function collectTaxRateIds(invoice: Stripe.Invoice): string[] {
 async function retrieveTaxRates(
   ids: string[],
 ): Promise<Map<string, Stripe.TaxRate>> {
-  const stripe = getStripeClient();
+  const stripe = getStripeReadClient();
   const rates = await Promise.all(
     ids.map((id) => stripe.taxRates.retrieve(id)),
   );
@@ -104,7 +104,7 @@ async function retrieveTaxRates(
 export async function previewStripeInvoice(
   params: Stripe.InvoiceCreatePreviewParams,
 ): Promise<PricedUpcomingInvoice> {
-  const invoice = await getStripeClient().invoices.createPreview(params);
+  const invoice = await getStripeReadClient().invoices.createPreview(params);
   const taxRates = await retrieveTaxRates(collectTaxRateIds(invoice));
   return { invoice, taxRates };
 }

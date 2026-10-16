@@ -64,17 +64,27 @@ const submitLabel = computed(() => {
 		: t(`${D}.submit_next_invoice`, { date: day(figures.billingDate) })
 })
 
+const optionsRead = useOnDemandRead<OperatorOptions>(
+	() => `/api/saas/workspaces/${props.tenantId}/operator-options`,
+)
+
 async function load(): Promise<void> {
 	loadError.value = null
 	try {
-		options.value = await $authFetch<OperatorOptions>(
-			`/api/saas/workspaces/${props.tenantId}/operator-options`,
-		)
+		options.value = await optionsRead.read()
 		planId.value = plans.value[0]?.id
 	} catch (error) {
 		loadError.value = resolveApiError(error, `${D}.load_error`)
 	}
 }
+
+const previewRead = useOnDemandRead<UpgradePreview>(
+	() =>
+		planId.value
+			? `/api/saas/workspaces/${props.tenantId}/upgrade-preview`
+			: null,
+	{ query: () => ({ planId: planId.value }) },
+)
 
 async function loadPreview(): Promise<void> {
 	if (!planId.value) return
@@ -82,10 +92,7 @@ async function loadPreview(): Promise<void> {
 	previewError.value = null
 	preview.value = null
 	try {
-		preview.value = await $authFetch<UpgradePreview>(
-			`/api/saas/workspaces/${props.tenantId}/upgrade-preview`,
-			{ query: { planId: planId.value } },
-		)
+		preview.value = await previewRead.read()
 	} catch (error) {
 		previewError.value = resolveApiError(error, `${D}.preview_error`)
 	} finally {

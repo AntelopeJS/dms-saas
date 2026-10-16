@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 type PaymentChoice = 'default_card' | 'other_card'
 
@@ -21,7 +21,6 @@ const { resolveApiError } = useApiErrorMessage()
 const { formatMinorUnits } = useMoneyFormat()
 const { payWithDefaultCard } = usePayInvoice()
 const billingStatus = useBillingStatus()
-const tenantPlan = useTenantPlan()
 
 const choice = ref<PaymentChoice>('default_card')
 const isPaying = ref(false)
@@ -66,7 +65,8 @@ async function payWithCard(): Promise<void> {
 			color: 'success',
 			icon: 'i-ph-check-circle',
 		})
-		await Promise.all([billingStatus.refresh(), tenantPlan.refresh()])
+		// The invoice shows its new state before the panel reports it paid.
+		await refreshPageBlocks()
 		emit('paid')
 	} catch (error) {
 		failure.value = resolveApiError(error, `${KEY_PREFIX}.error`)
@@ -83,10 +83,6 @@ function confirm(): void {
 	}
 	void payWithCard()
 }
-
-onMounted(() => {
-	void billingStatus.load()
-})
 </script>
 
 <template>
@@ -164,7 +160,7 @@ onMounted(() => {
 		</template>
 
 		<UAlert
-			v-else-if="billingStatus.error.value"
+			v-else-if="billingStatus.status.value === 'error'"
 			color="error"
 			variant="subtle"
 			icon="i-ph-warning-circle"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 
 /** `GET /api/saas/billing/refund-eligibility`. */
 interface RefundEligibility {
@@ -17,6 +17,25 @@ interface RefundEligibility {
 
 type GuaranteeState = 'open' | 'ended' | 'refunded' | 'not_started' | 'blocked'
 
+/** `GET /api/saas/billing/access`, as far as the card reads it. */
+interface WorkspaceAccess {
+	blocked: boolean
+	isTenantOwner: boolean
+}
+
+/** What the card shows, read in one go: the eligibility is the owner's. */
+interface RefundGuarantee {
+	isOwner: boolean
+	isBlocked: boolean
+	eligibility: RefundEligibility | null
+	/** Days the data is kept once the subscription stops. */
+	retentionDays: number
+	/** The owner's eligibility could not be read. */
+	hasFailed: boolean
+}
+
+const ACCESS_ENDPOINT = '/api/saas/billing/access'
+const CURRENT_WORKSPACE_ENDPOINT = '/api/saas/workspaces/current'
 const ELIGIBILITY_ENDPOINT = '/api/saas/billing/refund-eligibility'
 const REFUND_ENDPOINT = '/api/saas/billing/refund-self'
 const KEY_PREFIX = 'saas.tenant_billing.money_back'
@@ -42,13 +61,43 @@ const { resolveApiError } = useApiErrorMessage()
 const { formatMinorUnits } = useMoneyFormat()
 const billingStatus = useBillingStatus()
 const tenantPlan = useTenantPlan()
-const { workspace, load: loadWorkspace } = useCurrentWorkspace()
 
-const eligibility = ref<RefundEligibility | null>(null)
-const isOwner = ref(false)
-const isBlocked = ref(false)
-const isLoading = ref(true)
-const loadFailed = ref(false)
+/**
+ * The eligibility read is owner-only; it stays open while the access gate
+ * blocks the workspace, so a refunded guarantee is still told apart. A failed
+ * access read fails open, as the backend gate still denies every surface.
+ */
+const guarantee = useApiData<RefundGuarantee>(
+	'saas-refund-guarantee',
+	async ({ $authFetch, signal }) => {
+		const access = await $authFetch<WorkspaceAccess>(ACCESS_ENDPOINT, {
+			signal,
+		}).catch(() => null)
+		const isOwner = !!access?.isTenantOwner
+		const read: RefundGuarantee = {
+			isOwner,
+			isBlocked: !!access?.blocked,
+			eligibility: null,
+			retentionDays: 0,
+			hasFailed: false,
+		}
+		if (!isOwner) return read
+		try {
+			const [eligibility, workspace] = await Promise.all([
+				$authFetch<RefundEligibility>(ELIGIBILITY_ENDPOINT, { signal }),
+				$authFetch<CurrentWorkspace>(CURRENT_WORKSPACE_ENDPOINT, { signal }),
+			])
+			return { ...read, eligibility, retentionDays: workspace.retentionDays }
+		} catch {
+			return { ...read, hasFailed: true }
+		}
+	},
+)
+const eligibility = computed(() => guarantee.data.value?.eligibility ?? null)
+const isOwner = computed(() => !!guarantee.data.value?.isOwner)
+const isBlocked = computed(() => !!guarantee.data.value?.isBlocked)
+const isLoading = computed(() => guarantee.pending.value)
+const loadFailed = computed(() => !!guarantee.data.value?.hasFailed)
 
 // A refund blocks the workspace (it cancels the subscription): a refunded
 // guarantee says so before the access gate is mentioned.
@@ -102,7 +151,7 @@ const params = computed(() => ({
 	window: eligibility.value?.windowDays ?? 0,
 	days: daysLeft.value,
 	day: dayOfWindow.value,
-	retention: workspace.value?.retentionDays ?? 0,
+	retention: guarantee.data.value?.retentionDays ?? 0,
 }))
 
 const pill = computed(() => {
@@ -121,34 +170,6 @@ const pill = computed(() => {
 	return null
 })
 
-async function loadEligibility(): Promise<void> {
-	isLoading.value = true
-	loadFailed.value = false
-	try {
-		eligibility.value =
-			await $authFetch<RefundEligibility>(ELIGIBILITY_ENDPOINT)
-	} catch {
-		loadFailed.value = true
-	} finally {
-		isLoading.value = false
-	}
-}
-
-/** The eligibility read is owner-only; it stays open while the access gate
- * blocks the workspace, so a refunded guarantee is still told apart. */
-async function loadIfOffered(): Promise<void> {
-	const access = await loadWorkspaceAccess()
-	isOwner.value = !!access?.isTenantOwner
-	isBlocked.value = !!access?.blocked
-	if (!isOwner.value) {
-		isLoading.value = false
-		return
-	}
-	void loadWorkspace().catch(() => undefined)
-	void tenantPlan.load()
-	await loadEligibility()
-}
-
 async function submitRefund(): Promise<void> {
 	await $authFetch(REFUND_ENDPOINT, { method: 'POST' })
 	toast.add({
@@ -156,16 +177,12 @@ async function submitRefund(): Promise<void> {
 		color: 'success',
 		icon: 'i-ph-check-circle',
 	})
-	await Promise.all([
-		loadEligibility(),
-		tenantPlan.refresh(),
-		billingStatus.refresh(),
-	])
-	refreshPageBlocks()
+	// The dialog closes once the page shows the refund.
+	await refreshPageBlocks()
 }
 
 async function requestRefund(): Promise<void> {
-	await billingStatus.load()
+	await billingStatus
 	const card = billingStatus.data.value?.paymentMethod
 	const members = tenantPlan.data.value?.seats.members ?? 0
 	await confirm({
@@ -211,8 +228,6 @@ async function requestRefund(): Promise<void> {
 		},
 	})
 }
-
-onMounted(loadIfOffered)
 </script>
 
 <template>
@@ -234,7 +249,7 @@ onMounted(loadIfOffered)
 		<DmsSaasLoadFailure
 			v-else-if="loadFailed"
 			:title="$t(`${KEY_PREFIX}.load_failed`)"
-			@retry="loadEligibility"
+			@retry="guarantee.refresh()"
 		/>
 
 		<div v-else-if="state === 'open'" class="flex flex-col gap-4">
