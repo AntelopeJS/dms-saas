@@ -35,6 +35,16 @@ jobs:
       # degrades to `error` and the union-type rules fail.
       - run: pnpm --filter @antelopejs/dms-saas build
 
+      - uses: AntelopeJS/tooling-configs/actions/docs@310e3d861b2da2244902854379176c91e1ebc68e
+        with:
+          files: |
+            README.md
+            packages/dms-saas/README.md
+            packages/dms-saas/docs
+            packages/interface-dms-saas/README.md
+            packages/interface-dms-saas/docs
+          typescript-project: packages/interface-dms-saas/docs/tsconfig.json
+
       - run: pnpm --filter @antelopejs/interface-dms-saas lint
       - run: pnpm --filter @antelopejs/dms-saas lint
       # Unused dependencies only. `pnpm knip:all` also reports dead files and

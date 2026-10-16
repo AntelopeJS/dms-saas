@@ -81,6 +81,7 @@ On DMS 0.8, use `@antelopejs/dms-saas` 0.5. Before upgrading an existing databas
 
 ## Documentation
 
+- [Consumer reference](./packages/interface-dms-saas/docs/1.index.md)
 - [Introduction](https://dms.antelopejs.com/docs/modules/saas/introduction)
 - [Installation](https://dms.antelopejs.com/docs/modules/saas/installation)
 - [Configuration](https://dms.antelopejs.com/docs/modules/saas/configuration)
