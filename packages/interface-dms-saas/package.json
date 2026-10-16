@@ -1,11 +1,23 @@
 {
   "name": "@antelopejs/interface-dms-saas",
   "version": "0.4.0",
-  "description": "Public interfaces for the DMS SaaS module",
+  "description": "AntelopeJS interface for the DMS SaaS module: billing, plans, registration, workspace pages and lifecycle extension points.",
+  "keywords": [
+    "antelopejs",
+    "billing",
+    "dms",
+    "interface",
+    "saas"
+  ],
+  "homepage": "https://dms.antelopejs.com/docs/modules/saas/extending",
+  "bugs": {
+    "url": "https://github.com/AntelopeJS/dms-saas/issues"
+  },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AntelopeJS/dms-saas.git"
+    "url": "git+https://github.com/AntelopeJS/dms-saas.git",
+    "directory": "packages/interface-dms-saas"
   },
   "files": [
     "dist",

@@ -1,15 +1,31 @@
 {
   "name": "@antelopejs/dms-saas",
   "version": "0.6.0",
+  "description": "SaaS module for the AntelopeJS DMS: self-service sign-up and pricing, plans that gate features, Stripe billing, workspace settings and a back office.",
+  "keywords": [
+    "antelopejs",
+    "billing",
+    "dms",
+    "dms-module",
+    "multi-tenant",
+    "saas",
+    "stripe"
+  ],
+  "homepage": "https://dms.antelopejs.com/docs/modules/saas",
+  "bugs": {
+    "url": "https://github.com/AntelopeJS/dms-saas/issues"
+  },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AntelopeJS/dms-saas.git"
+    "url": "git+https://github.com/AntelopeJS/dms-saas.git",
+    "directory": "packages/dms-saas"
   },
   "files": [
     "dist",
     "!dist/.tsbuildinfo",
     "frontend-vue",
+    "skills",
     "package.json",
     "README.md",
     "LICENSE"
@@ -86,6 +102,9 @@
     "baseUrl": "dist",
     "implements": [
       "@antelopejs/interface-dms-saas"
+    ],
+    "skills": [
+      "./skills"
     ]
   }
 }
