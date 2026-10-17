@@ -11,6 +11,7 @@ const stripe = vi.hoisted(() => ({
 
 vi.mock("../src/plans/stripe-sync", () => ({
   syncPlanStripeRefs: stripe.syncPlanStripeRefs,
+  planStripeSyncState: async () => "synced",
 }));
 
 interface PlanStore {

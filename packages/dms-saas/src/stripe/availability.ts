@@ -9,7 +9,8 @@ const LOG_PREFIX = "[dms-saas:stripe]";
 /** Stripe could not serve the request: a bad key, an outage, a rate limit. */
 export const STRIPE_UNAVAILABLE_MESSAGE = "saas.errors.stripe.unavailable";
 /** The deployment runs without a usable Stripe secret key. */
-export const STRIPE_NOT_CONFIGURED_MESSAGE = "saas.errors.stripe.not_configured";
+export const STRIPE_NOT_CONFIGURED_MESSAGE =
+  "saas.errors.stripe.not_configured";
 
 /**
  * The Stripe failures that are the platform's, not the request's: a key
@@ -42,7 +43,10 @@ export function isStripeUnavailableError(error: unknown): boolean {
  */
 export function assertStripeConfigured(): void {
   if (!isStripeConfigured())
-    throw new HTTPResult(HTTP_SERVICE_UNAVAILABLE, STRIPE_NOT_CONFIGURED_MESSAGE);
+    throw new HTTPResult(
+      HTTP_SERVICE_UNAVAILABLE,
+      STRIPE_NOT_CONFIGURED_MESSAGE,
+    );
 }
 
 /**

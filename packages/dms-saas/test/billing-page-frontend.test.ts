@@ -240,7 +240,11 @@ describe("billing formatting", () => {
 });
 
 describe("checkout dialog readiness", () => {
-  const READY = { isLoading: false, hasLoadFailed: false, previewFailure: null };
+  const READY = {
+    isLoading: false,
+    hasLoadFailed: false,
+    previewFailure: null,
+  };
 
   it("offers the payment page once the identity loaded and the change priced", () => {
     expect(canContinueToCheckout(READY)).toBe(true);
