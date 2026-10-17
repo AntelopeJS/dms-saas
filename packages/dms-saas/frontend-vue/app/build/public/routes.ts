@@ -3,7 +3,9 @@ import type {
 	DmsSaasPublicScreenId,
 } from '../../types/runtime-config'
 
-export const LOGIN_PATH = '/auth/login'
+// The DMS's sign-in page is its `auth` page; `/auth/login` is only the route
+// its form posts to, and renders that form inside the console shell.
+export const LOGIN_PATH = '/auth'
 export const REGISTER_PATH = '/register'
 export const PRICING_PATH = '/pricing'
 export const HOME_PATH = '/'

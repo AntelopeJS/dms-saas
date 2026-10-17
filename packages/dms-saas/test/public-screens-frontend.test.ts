@@ -182,9 +182,9 @@ describe("public routes", () => {
       "/settings/workspace/billing?upgrade=plan-pro",
     );
     expect(loginPathThen("/settings/workspace/billing?upgrade=plan-pro")).toBe(
-      "/auth/login?redirect=%2Fsettings%2Fworkspace%2Fbilling%3Fupgrade%3Dplan-pro",
+      "/auth?redirect=%2Fsettings%2Fworkspace%2Fbilling%3Fupgrade%3Dplan-pro",
     );
-    expect(loginPathThen(null)).toBe("/auth/login");
+    expect(loginPathThen(null)).toBe("/auth");
   });
 
   it("keeps redirects on this site", () => {
@@ -249,11 +249,11 @@ describe("registration fields", () => {
     };
 
     expect(registrationLandingPath(summary)).toBe(
-      "/auth/login?redirect=%2Fsettings%2Fworkspace%2Fbilling%3Fupgrade%3Dpro",
+      "/auth?redirect=%2Fsettings%2Fworkspace%2Fbilling%3Fupgrade%3Dpro",
     );
     expect(registrationLandingPath({ ...summary, requestedPlan: null })).toBe(
-      "/auth/login",
+      "/auth",
     );
-    expect(registrationLandingPath(null)).toBe("/auth/login");
+    expect(registrationLandingPath(null)).toBe("/auth");
   });
 });
