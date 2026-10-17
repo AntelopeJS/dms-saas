@@ -1,2 +1,4 @@
 packages:
-  - packages/*
+  - packages/dms-saas
+  - packages/interface-dms-saas
+  - packages/dms-saas/frontend-vue

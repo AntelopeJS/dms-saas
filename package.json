@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.2.0",
   "scripts": {
     "build": "pnpm --filter @antelopejs/dms-saas build",
-    "lint": "pnpm -r lint",
+    "lint": "pnpm --filter @antelopejs/interface-dms-saas lint && pnpm --filter @antelopejs/dms-saas lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @antelopejs/dms-saas test"
   },
