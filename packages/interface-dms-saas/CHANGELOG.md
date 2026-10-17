@@ -1,5 +1,56 @@
 # Changelog
 
+## v0.4.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.4.0...v0.4.1)
+
+### 🚀 Enhancements
+
+- **billing:** Turn the free-workspaces-per-card rule off by default ([#87](https://github.com/AntelopeJS/dms-saas/pull/87))
+- ⚠️  Migrate to DMS 0.9 and renderer 0.6 ([#97](https://github.com/AntelopeJS/dms-saas/pull/97))
+- Let a shared cache keep the public legal pages ([#100](https://github.com/AntelopeJS/dms-saas/pull/100))
+
+### 🩹 Fixes
+
+- **billing:** Stretch overview cards to their row height ([#90](https://github.com/AntelopeJS/dms-saas/pull/90))
+- **saas:** Name row fields with {{row.X}} tokens for dms 0.8 ([#89](https://github.com/AntelopeJS/dms-saas/pull/89))
+- **general:** Read the page again after a rename, so the glance shows the new name ([#98](https://github.com/AntelopeJS/dms-saas/pull/98))
+- **frontend:** Leave the no-workspace page out of the history once its token is spent ([#99](https://github.com/AntelopeJS/dms-saas/pull/99))
+
+### 💅 Refactors
+
+- **plans:** List the table display beside the plan cards ([#85](https://github.com/AntelopeJS/dms-saas/pull/85))
+
+### 📖 Documentation
+
+- Move the README into a user guide, add screenshots and dms-saas skill ([#91](https://github.com/AntelopeJS/dms-saas/pull/91))
+- Streamline agent guidance ([#101](https://github.com/AntelopeJS/dms-saas/pull/101))
+- Establish the saas consumer reference ([#102](https://github.com/AntelopeJS/dms-saas/pull/102))
+- Make dense guide sections easier to scan ([#103](https://github.com/AntelopeJS/dms-saas/pull/103))
+
+### 📦 Build
+
+- **saas:** Require @antelopejs/interface-dms-saas 0.4 ([#82](https://github.com/AntelopeJS/dms-saas/pull/82))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.5.0 ([9535de7](https://github.com/AntelopeJS/dms-saas/commit/9535de7))
+- **release:** @antelopejs/dms-saas v0.5.1 ([4d93687](https://github.com/AntelopeJS/dms-saas/commit/4d93687))
+- **release:** @antelopejs/dms-saas v0.6.0 ([1ed9de9](https://github.com/AntelopeJS/dms-saas/commit/1ed9de9))
+
+### 🤖 CI
+
+- Speed up pipeline ([#88](https://github.com/AntelopeJS/dms-saas/pull/88))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Migrate to DMS 0.9 and renderer 0.6 ([#97](https://github.com/AntelopeJS/dms-saas/pull/97))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+- Alessandro Aloisio ([@alessaloisio](http://github.com/alessaloisio))
+
 ## v0.4.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.3.0...v0.4.0)

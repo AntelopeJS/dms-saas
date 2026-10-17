@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.6.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.6.0...v0.6.1)
+
+### 🚀 Enhancements
+
+- Let a shared cache keep the public legal pages ([#100](https://github.com/AntelopeJS/dms-saas/pull/100))
+
+### 🩹 Fixes
+
+- **general:** Read the page again after a rename, so the glance shows the new name ([#98](https://github.com/AntelopeJS/dms-saas/pull/98))
+- **frontend:** Leave the no-workspace page out of the history once its token is spent ([#99](https://github.com/AntelopeJS/dms-saas/pull/99))
+- **release:** Validate the packed workspace interface range ([#107](https://github.com/AntelopeJS/dms-saas/pull/107))
+
+### 📖 Documentation
+
+- Move the README into a user guide, add screenshots and dms-saas skill ([#91](https://github.com/AntelopeJS/dms-saas/pull/91))
+- Streamline agent guidance ([#101](https://github.com/AntelopeJS/dms-saas/pull/101))
+- Establish the saas consumer reference ([#102](https://github.com/AntelopeJS/dms-saas/pull/102))
+- Make dense guide sections easier to scan ([#103](https://github.com/AntelopeJS/dms-saas/pull/103))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.4.1 ([bb67aa2](https://github.com/AntelopeJS/dms-saas/commit/bb67aa2))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+- Alessandro Aloisio ([@alessaloisio](http://github.com/alessaloisio))
+
 ## v0.6.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.5.1...v0.6.0)
