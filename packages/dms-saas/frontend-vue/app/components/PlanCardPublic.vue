@@ -27,6 +27,7 @@ const props = withDefaults(defineProps<PlanCardPublicProps>(), {
 const { t } = useI18n()
 const { priceLabel, seatExampleLabel, termsLabel } = usePublicPlanFormat()
 const planDescription = usePlanDescription()
+const planText = usePlanDisplayText()
 const { formatFeatureValue } = usePlanFeatureFormat()
 const { processI18n } = useTranslation()
 
@@ -76,7 +77,7 @@ const accentStyle = computed(() =>
 	>
 		<DmsStatusPill
 			v-if="plan.borderLabel"
-			:label="plan.borderLabel"
+			:label="planText(plan.borderLabel)"
 			tone="primary"
 			size="sm"
 			dot="none"
