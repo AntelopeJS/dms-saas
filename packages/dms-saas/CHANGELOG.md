@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.7.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.6.1...v0.7.0)
+
+### 💅 Refactors
+
+- **saas:** ⚠️  Rename workspace lifecycle API to tenant ([#109](https://github.com/AntelopeJS/dms-saas/pull/109))
+
+### 📦 Build
+
+- Include shipped frontend in contributor workspace ([#104](https://github.com/AntelopeJS/dms-saas/pull/104))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.5.0 ([4df8e2d](https://github.com/AntelopeJS/dms-saas/commit/4df8e2d))
+
+#### ⚠️ Breaking Changes
+
+- **saas:** ⚠️  Rename workspace lifecycle API to tenant ([#109](https://github.com/AntelopeJS/dms-saas/pull/109))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.6.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.6.0...v0.6.1)
