@@ -5,6 +5,7 @@ import {
   REGISTRATION_PAYMENT_METHOD_POLICIES,
   type RegistrationPaymentMethodPolicy,
 } from "../types";
+import { isStripeConfigured } from "../stripe/client";
 import { isDevMode } from "./dev-mode";
 
 const REDIRECT_PROTOCOLS = ["http:", "https:"];
@@ -57,8 +58,17 @@ export function setRuntimeConfig(config: DmsSaasConfig): void {
   runtimeConfig = config;
 }
 
-/** Whether public registration asks for a card; invitation sign-up never does. */
+/**
+ * Whether public registration asks for a card; invitation sign-up never does.
+ *
+ * Without a usable Stripe key (missing or a placeholder) no card could be
+ * confirmed, so registration takes none whatever the configured policy:
+ * every registration lands on the free plan, which needs no Stripe object.
+ * The screens read this effective policy, so they never ask Stripe for a
+ * SetupIntent it cannot create.
+ */
 export function getRegistrationPaymentMethodPolicy(): RegistrationPaymentMethodPolicy {
+  if (!isStripeConfigured()) return "none";
   return (
     runtimeConfig?.registration?.paymentMethod ??
     DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY

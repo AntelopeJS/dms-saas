@@ -54,6 +54,7 @@ import {
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
 import { isWorkspaceOwner } from "../../workspaces/workspace-owner";
 import { syncCustomerPreferredLocale } from "../../stripe/customer-locale";
+import { withStripeAvailability } from "../../stripe/availability";
 
 import {
   applyOwnerUpgrade,
@@ -380,18 +381,20 @@ export class SaasTenantPlanController extends Controller(
     const currentPlan = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
-    await syncCustomerPreferredLocale(
-      subscription?.stripeCustomerId,
-      user.language,
-    );
-    return previewPlanChange({
-      tenantId,
-      subscription,
-      currentPlan,
-      target,
-      billingInfo,
-      ownerEmail: user.email,
-      country: asQueryString(country),
+    return withStripeAvailability(async () => {
+      await syncCustomerPreferredLocale(
+        subscription?.stripeCustomerId,
+        user.language,
+      );
+      return previewPlanChange({
+        tenantId,
+        subscription,
+        currentPlan,
+        target,
+        billingInfo,
+        ownerEmail: user.email,
+        country: asQueryString(country),
+      });
     });
   }
 

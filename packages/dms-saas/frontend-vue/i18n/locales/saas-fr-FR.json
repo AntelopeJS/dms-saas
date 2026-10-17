@@ -103,6 +103,10 @@
 				"not_eligible": "Remboursement non disponible",
 				"already_processed": "Remboursement déjà traité"
 			},
+			"stripe": {
+				"unavailable": "Stripe, notre prestataire de paiement, est injoignable pour le moment. Rien n’a été débité ; réessayez dans quelques minutes.",
+				"not_configured": "Les paiements ne sont pas encore configurés sur cette plateforme. Contactez l’opérateur de la plateforme."
+			},
 			"billing": {
 				"country_required": "Le pays de facturation est requis",
 				"invalid_return_url": "URL de retour invalide",
