@@ -82,7 +82,6 @@
     "@antelopejs/mongodb": "1.4.3",
     "@antelopejs/tooling-configs": ">=0.0.9 <1.0.0",
     "@types/node": "^24.0.0",
-    "@types/node-cron": "^3.0.11",
     "knip": "^6.34.0",
     "mongodb-memory-server-core": "^11.0.1",
     "oxfmt": "^0.66.0",

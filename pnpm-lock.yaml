@@ -55,7 +55,7 @@ importers:
         version: 22.6.2(@types/node@24.19.2)
       zod:
         specifier: ^3.24.4
-        version: 3.25.76
+        version: 3.24.4
     devDependencies:
       '@antelopejs/core':
         specifier: 1.16.0
@@ -75,9 +75,6 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
-      '@types/node-cron':
-        specifier: ^3.0.11
-        version: 3.0.11
       knip:
         specifier: ^6.34.0
         version: 6.41.0
@@ -1142,9 +1139,6 @@ packages:
 
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
-
-  '@types/node-cron@3.0.11':
-    resolution: {integrity: sha512-0ikrnug3/IyneSHqCBeslAhlK2aBfYek1fGo4bP4QnZPmiqSGRK+Oy7ZMisLWkesffJvQ1cqAcBnJC+8+nxIAg==}
 
   '@types/node@24.19.2':
     resolution: {integrity: sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==}
@@ -3203,9 +3197,6 @@ packages:
   zod@3.24.4:
     resolution: {integrity: sha512-OdqJE9UDRPwWsrHjLN2F8bPxvwJBK22EHLWtanu0LSYr5YqzsaaW3RMgmjwr8Rypg5k+meEJdSPXJZXE/yqOMg==}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
   zod@4.6.7:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
@@ -3985,8 +3976,6 @@ snapshots:
   '@types/deep-eql@4.0.2': {}
 
   '@types/estree@1.0.9': {}
-
-  '@types/node-cron@3.0.11': {}
 
   '@types/node@24.19.2':
     dependencies:
@@ -6094,7 +6083,5 @@ snapshots:
       zod: 3.24.4
 
   zod@3.24.4: {}
-
-  zod@3.25.76: {}
 
   zod@4.6.7: {}
