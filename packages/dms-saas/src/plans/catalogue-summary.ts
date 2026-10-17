@@ -30,6 +30,11 @@ export interface CatalogueSummary {
   paying: number;
   free: number;
   trialing: number;
+  /**
+   * Workspaces neither paying, free nor in trial: cancelled, suspended,
+   * awaiting a first payment, or on complimentary access.
+   */
+  other: number;
   /** Normalised MRR per currency, the largest first. */
   mrr: CurrencyMrr[];
   /** Plans no longer sold but kept for the workspaces still on them. */
@@ -70,14 +75,19 @@ export function summariseCatalogue(
   const legacyInUse = legacy.filter(
     (plan) => usageOf(usage, plan).workspaces > 0,
   );
+  const workspaces = sumOf(plans, usage, "workspaces");
+  const paying = sumOf(plans, usage, "paying");
+  const free = sumOf(plans, usage, "free");
+  const trialing = sumOf(plans, usage, "trialing");
   return {
     onSale: onSale.length,
     publicOnSale: onSale.filter((plan) => plan.isPublic).length,
     salesLed: onSale.filter((plan) => !plan.isPublic).length,
-    workspaces: sumOf(plans, usage, "workspaces"),
-    paying: sumOf(plans, usage, "paying"),
-    free: sumOf(plans, usage, "free"),
-    trialing: sumOf(plans, usage, "trialing"),
+    workspaces,
+    paying,
+    free,
+    trialing,
+    other: workspaces - paying - free - trialing,
     mrr: [...usage.mrrByCurrency]
       .map(([currency, mrr]) => ({ currency, mrr }))
       .sort((left, right) => right.mrr - left.mrr),
@@ -155,6 +165,7 @@ export function catalogueStatItems(summary: CatalogueSummary): StatGroupItem[] {
         paying: summary.paying,
         free: summary.free,
         trialing: summary.trialing,
+        other: summary.other,
       }),
     },
     mrrItem(summary),

@@ -130,7 +130,7 @@
 					"on_sale": "Offres en vente",
 					"on_sale_detail": "{public} publiques · {sales} sur devis",
 					"workspaces": "Espaces de travail",
-					"workspaces_detail": "{paying} payants · {free} gratuits · {trialing} en essai",
+					"workspaces_detail": "{paying} payants · {free} gratuits · {trialing} en essai · {other} autres",
 					"mrr": "MRR du catalogue",
 					"mrr_detail": "Normalisé · annuel ÷ 12, sièges comptés",
 					"mrr_detail_other": "Normalisé · plus {other}",

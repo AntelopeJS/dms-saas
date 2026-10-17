@@ -228,7 +228,7 @@ describe("dashboard headline and attention queue", () => {
       ["Pro", 519],
     ]);
     expect(writeText(items[1]?.description)).toBe(
-      "2 workspaces · €29.00 / month",
+      "2 paying workspaces · €29.00 / month",
     );
   });
 });

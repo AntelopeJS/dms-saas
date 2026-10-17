@@ -130,7 +130,7 @@
 					"on_sale": "Plans on sale",
 					"on_sale_detail": "{public} public · {sales} sales-led",
 					"workspaces": "Workspaces",
-					"workspaces_detail": "{paying} paying · {free} free · {trialing} in trial",
+					"workspaces_detail": "{paying} paying · {free} free · {trialing} in trial · {other} other",
 					"mrr": "Catalogue MRR",
 					"mrr_detail": "Normalised · yearly ÷ 12, seats counted",
 					"mrr_detail_other": "Normalised · plus {other}",
