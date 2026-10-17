@@ -68,6 +68,7 @@ const EMPTY_CATALOG: PlanCatalog = {
 
 const { t, locale } = useI18n()
 const planDescription = usePlanDescription()
+const planText = usePlanDisplayText()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
 const planId = computed(() => props.routeParams?.id)
@@ -248,7 +249,7 @@ async function load(): Promise<void> {
 							: undefined
 					"
 				>
-					{{ draft.borderLabel }}
+					{{ planText(draft.borderLabel) }}
 				</UBadge>
 				<div>
 					<p class="text-highlighted text-lg font-semibold">
