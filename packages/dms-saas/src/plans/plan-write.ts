@@ -25,6 +25,14 @@ export interface PlanInheritanceInput {
   extraFeatures: Record<string, unknown>;
 }
 
+/** Free-text fields stored trimmed: they are shown and sent to Stripe as is. */
+const TRIMMED_FIELDS = [
+  "name",
+  "slug",
+  "description",
+  "borderLabel",
+] as const satisfies readonly (keyof Plan)[];
+
 export const PLAN_WRITE_FIELDS = [
   "name",
   "slug",
@@ -88,8 +96,9 @@ export function toInheritance(plan: Plan): PlanInheritanceInput {
 }
 
 /**
- * Keeps the writable plan fields of a body, `inheritance` expanded and its
- * permissions completed with the ids they sit under.
+ * Keeps the writable plan fields of a body, `inheritance` expanded, its
+ * free-text fields trimmed and its permissions completed with the ids they
+ * sit under.
  */
 export function pickPlanWrite(body: PlanWriteBody): Partial<Plan> {
   const expanded = expandInheritance(body);
@@ -98,6 +107,10 @@ export function pickPlanWrite(body: PlanWriteBody): Partial<Plan> {
     if (expanded[field] !== undefined) {
       Object.assign(out, { [field]: expanded[field] });
     }
+  }
+  for (const field of TRIMMED_FIELDS) {
+    const value = out[field];
+    if (typeof value === "string") Object.assign(out, { [field]: value.trim() });
   }
   if (out.permissions)
     out.permissions = withPermissionAncestors(out.permissions);

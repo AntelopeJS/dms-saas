@@ -142,6 +142,8 @@
 					"public": "Public",
 					"hidden": "Hidden",
 					"not_on_sale": "Not on sale",
+					"not_on_stripe": "Not on Stripe",
+					"not_on_stripe_hint": "This plan has a price but no Stripe price yet: no workspace can subscribe to it until it syncs.",
 					"legacy": "Legacy",
 					"on_sale": "On sale",
 					"more": "More actions",
@@ -174,7 +176,10 @@
 				"limit_error": "A cap must be at least 1 member. For no cap, tick Unlimited.",
 				"notice": {
 					"price_changed": "A new Stripe price was created",
-					"price_changed_description": "New sign-ups pay the new price. Existing subscribers keep theirs until you migrate them."
+					"price_changed_description": "New sign-ups pay the new price. Existing subscribers keep theirs until you migrate them.",
+					"stripe_not_synced": "Plan saved, but not synced with Stripe",
+					"stripe_not_synced_not_configured": "Stripe is not configured: no workspace can subscribe to this paid plan until it is.",
+					"stripe_not_synced_out_of_sync": "Stripe did not take the change. It is retried the next time the plan is offered or when the server starts; until then the plan cannot be subscribed to at its new terms."
 				},
 				"section": {
 					"identity": "Identity",
