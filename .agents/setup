@@ -123,7 +123,6 @@ install_dependencies() {
   pnpm install --frozen-lockfile
   pnpm build
   pnpm --dir packages/dms-saas/playground install --frozen-lockfile --force --ignore-workspace
-  pnpm --dir packages/dms-saas/frontend-vue install --frozen-lockfile --ignore-scripts
 }
 
 run_step "Install Node.js $NODE_MAJOR" install_node

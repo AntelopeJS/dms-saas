@@ -95,11 +95,15 @@ The guide's sources live in [`packages/dms-saas/docs`](./packages/dms-saas/docs)
 
 ## Contributing
 
-Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. Run the commands below from `packages/dms-saas`. The playground connects to MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, in the environment or in `playground/.env`, and seeds a data set on its first start (sign in as `admin@example.com` / `Playground-Admin-1!`).
+Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. One install from the repository root includes the backend, interface and shipped Vue frontend. The root lockfile covers this workspace; the frontend retains its lockfile for standalone consumers. The playground remains independent: its private dependencies require registry access and are deliberately not installed by CI.
+
+The playground connects to MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, in the environment or in `packages/dms-saas/playground/.env`, and seeds a data set on its first start (sign in as `admin@example.com` / `Playground-Admin-1!`).
 
 ```bash
-pnpm install
-pnpm --dir frontend-vue install
+pnpm install --frozen-lockfile
+# Only for local playground development, with private registry access:
+pnpm --dir packages/dms-saas/playground install --frozen-lockfile --ignore-workspace
+cd packages/dms-saas
 pnpm build
 pnpm dev            # playground backend on http://localhost:5010
 pnpm frontend:dev   # dashboard on http://localhost:3001, in a second terminal

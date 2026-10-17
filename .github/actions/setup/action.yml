@@ -1,5 +1,5 @@
 name: setup
-description: pnpm, Node and both lockfiles' dependencies, shared by every ci job.
+description: pnpm, Node and workspace dependencies, shared by every ci job.
 
 runs:
   using: composite
@@ -21,10 +21,8 @@ runs:
     # `...` pulls in the workspace interface package the module depends on;
     # `{.}` adds the root, which owns the shared lint, format and tsconfig
     # tooling. The playground is the only project that still needs the
-    # private registry, and neither filter reaches it.
-    - shell: bash
-      run: pnpm install --filter "@antelopejs/dms-saas..." --filter "{.}" --frozen-lockfile
+    # private registry, and none of the filters reaches it.
     # Every job needs it: the frontend eslint, the unit tests that import the
     # layer's composables (they resolve `vue` from there), and verify-source.
     - shell: bash
-      run: pnpm --dir packages/dms-saas/frontend-vue install --frozen-lockfile
+      run: pnpm install --filter "@antelopejs/dms-saas..." --filter "{.}" --filter "@antelopejs/dms-saas-frontend-vue" --frozen-lockfile
