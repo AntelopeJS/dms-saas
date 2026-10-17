@@ -33,6 +33,27 @@ export interface OfferedPlans {
 	tooSmall: OfferedPlanView[]
 }
 
+/** Where the checkout dialog stands before it may send the owner to pay. */
+export interface CheckoutReadiness {
+	isLoading: boolean
+	hasLoadFailed: boolean
+	/** Translated reason the preview was refused, null once it priced. */
+	previewFailure: string | null
+}
+
+/**
+ * Whether the checkout dialog may offer the payment page: the identity is
+ * loaded and the plan change was not refused while previewed — the checkout
+ * itself would refuse it for the same reason.
+ */
+export function canContinueToCheckout(readiness: CheckoutReadiness): boolean {
+	return (
+		!readiness.isLoading &&
+		!readiness.hasLoadFailed &&
+		readiness.previewFailure === null
+	)
+}
+
 /**
  * The plan id an arrival link asks to review (`?upgrade=<planId>`), or null.
  * A repeated parameter takes its first non-empty value.
