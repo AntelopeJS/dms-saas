@@ -49,7 +49,12 @@ jobs:
             return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]
           }
           const satisfiesImplementedRange = (version, range) => {
-            const match = /^>=(0\.(\d+)\.\d+) <(0\.(\d+)\.0)$/.exec(range ?? '')
+            // pnpm packs workspace:^ to ^<interface version>, whose stable
+            // 0.x range has the same next-minor cap enforced below.
+            const packedRange = range === 'workspace:^'
+              ? `>=${version} <0.${Number(version.split('.')[1]) + 1}.0`
+              : range
+            const match = /^>=(0\.(\d+)\.\d+) <(0\.(\d+)\.0)$/.exec(packedRange ?? '')
             if (!match || Number(match[4]) !== Number(match[2]) + 1) return false
             return compare(version, match[1]) >= 0 && compare(version, match[3]) < 0
           }
