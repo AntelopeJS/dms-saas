@@ -10,8 +10,8 @@ import {
   emitTenantBeingProvisioned,
   type TenantBeingProvisionedPayload,
 } from "../src/hooks/tenant-provisioning";
-import { internal as lifecycle } from "../src/implementations/dms-saas/workspace-lifecycle";
-import type { WorkspaceLifecycleMessage } from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+import { internal as lifecycle } from "../src/implementations/dms-saas/tenant-lifecycle";
+import type { TenantLifecycleMessage } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import type {
   LifecycleDelivery,
   WorkspaceProvisioningState,
@@ -476,7 +476,7 @@ function listen(
 beforeEach(resetWorld);
 
 afterEach(() => {
-  lifecycle.RegisterWorkspaceLifecycleConsumer.unregister("test.created");
+  lifecycle.RegisterTenantLifecycleConsumer.unregister("test.created");
   for (const handler of listeners.splice(0)) {
     UnregisterHook(Hook.TENANT_BEING_PROVISIONED, handler);
   }
@@ -491,14 +491,14 @@ describe("tenant-being-provisioned hook", () => {
         expect.objectContaining({ provisioningState: "preparing" }),
       ]);
     });
-    const consume = vi.fn(async (message: WorkspaceLifecycleMessage) => {
+    const consume = vi.fn(async (message: TenantLifecycleMessage) => {
       expect(hookFinished).toBe(true);
       expect(world.users.has(owners.get(message.tenantId) ?? "")).toBe(true);
       expect(world.tenantRows.get(message.tenantId)).toBe(2);
       expect(world.paidInvoices.size).toBe(1);
       return { receiptId: message.operationId };
     });
-    lifecycle.RegisterWorkspaceLifecycleConsumer.register("test.created", {
+    lifecycle.RegisterTenantLifecycleConsumer.register("test.created", {
       name: "test.created",
       transitions: ["created"],
       consume,

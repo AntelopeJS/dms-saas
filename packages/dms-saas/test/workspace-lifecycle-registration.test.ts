@@ -1,9 +1,9 @@
 import path from "node:path";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import type * as coreInternalModule from "@antelopejs/interface-core/internal";
-import type * as declarationModule from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+import type * as declarationModule from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import { describe, expect, it, vi } from "vitest";
-import type * as implementationModule from "../src/implementations/dms-saas/workspace-lifecycle";
+import type * as implementationModule from "../src/implementations/dms-saas/tenant-lifecycle";
 
 vi.mock("@antelopejs/interface-core/logging", () => ({
   Logging: { Error: vi.fn() },
@@ -22,9 +22,9 @@ async function loadModules(): Promise<LifecycleModules> {
   return {
     coreInternal: await import("@antelopejs/interface-core/internal"),
     declaration:
-      await import("@antelopejs/interface-dms-saas/workspace-lifecycle"),
+      await import("@antelopejs/interface-dms-saas/tenant-lifecycle"),
     implementation:
-      await import("../src/implementations/dms-saas/workspace-lifecycle"),
+      await import("../src/implementations/dms-saas/tenant-lifecycle"),
   };
 }
 
@@ -42,8 +42,8 @@ function register(
   modules: LifecycleModules,
   name: string,
   receiptId = "receipt",
-): declarationModule.WorkspaceLifecycleConsumerRegistration {
-  return modules.declaration.RegisterWorkspaceLifecycleConsumer({
+): declarationModule.TenantLifecycleConsumerRegistration {
+  return modules.declaration.RegisterTenantLifecycleConsumer({
     name,
     transitions: ["suspended", "reactivation_requested"],
     consume: async () => ({ receiptId }),
@@ -58,7 +58,7 @@ async function receiptId(
   return (await consumer?.consume(undefined as never))?.receiptId;
 }
 
-describe("RegisterWorkspaceLifecycleConsumer", () => {
+describe("RegisterTenantLifecycleConsumer", () => {
   it("holds registrations made before dms-saas attaches", async () => {
     const modules = await loadModules();
 
@@ -105,7 +105,7 @@ describe("RegisterWorkspaceLifecycleConsumer", () => {
   });
 });
 
-describe("UnregisterWorkspaceLifecycleConsumer", () => {
+describe("UnregisterTenantLifecycleConsumer", () => {
   it("removes an attached consumer through its registration handle", async () => {
     const modules = await loadAttachedModules();
     const registration = register(modules, CONSUMER_NAME);
@@ -119,7 +119,7 @@ describe("UnregisterWorkspaceLifecycleConsumer", () => {
     const modules = await loadModules();
     register(modules, CONSUMER_NAME);
 
-    modules.declaration.UnregisterWorkspaceLifecycleConsumer(CONSUMER_NAME);
+    modules.declaration.UnregisterTenantLifecycleConsumer(CONSUMER_NAME);
     attach(modules);
 
     expect(modules.implementation.getWorkspaceLifecycleConsumers()).toEqual([]);
@@ -142,7 +142,7 @@ describe("UnregisterWorkspaceLifecycleConsumer", () => {
     try {
       register(modules, CONSUMER_NAME);
 
-      modules.declaration.internal.RegisterWorkspaceLifecycleConsumer.unregisterModule(
+      modules.declaration.internal.RegisterTenantLifecycleConsumer.unregisterModule(
         "cloud",
       );
 
