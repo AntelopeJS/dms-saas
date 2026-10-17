@@ -17,7 +17,7 @@ The AntelopeJS interface to extend the DMS SaaS module: billing, plans, registra
 - Builds plan projections and catalogues, and normalizes prices.
 - Extends registration and the provisioning of a new workspace.
 - Adds workspace settings categories and blocks to the tenant billing page.
-- Listens to workspace lifecycle events and operator actions, and exposes the canonical SaaS tables and models (`/db`).
+- Listens to tenant lifecycle events and operator actions, and exposes the canonical SaaS tables and models (`/db`).
 
 A module that extends [`@antelopejs/dms-saas`](https://www.npmjs.com/package/@antelopejs/dms-saas) depends on this package, never on the runtime.
 
@@ -29,13 +29,13 @@ pnpm add @antelopejs/interface-dms-saas
 
 ## Quick start
 
-The root entry holds every extension point except `db`, with `invoiceLineItems` and `workspaceLifecycle` as namespaces:
+The root entry holds every extension point except `db`, with `invoiceLineItems` and `tenantLifecycle` as namespaces:
 
 ```ts docs-check
-import { invoiceLineItems, workspaceLifecycle } from "@antelopejs/interface-dms-saas";
+import { invoiceLineItems, tenantLifecycle } from "@antelopejs/interface-dms-saas";
 
 export const usageKey = invoiceLineItems.buildInvoiceLineKey("example.compute", "minutes");
-export const isProvisioningCommitted = workspaceLifecycle.IsWorkspaceProvisioningCommitted;
+export const isProvisioningCommitted = tenantLifecycle.IsTenantProvisioningCommitted;
 ```
 
 Use the [entry-point reference](./docs/1.index.md#entry-points) for supported

@@ -44,7 +44,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 | Show tax-exact next invoice | `GetUpcomingInvoicePreview({ tenantId, userId })` → `available` / `absent` / `unavailable` |
 | Page in workspace settings | `category: workspaceSettingsCategory` (from `/pages`) |
 | Block on the billing page | `RegisterTenantBillingPageExtension({ name, components })` anchored on `tenantBillingPage.components.*` |
-| React to create/suspend/reactivate | `RegisterWorkspaceLifecycleConsumer`; dedupe by `operationId`; gate on `IsWorkspaceProvisioningCommitted` |
+| React to create/suspend/reactivate | `RegisterTenantLifecycleConsumer` from `/tenant-lifecycle` (root namespace `tenantLifecycle`); dedupe by `operationId`; gate on `IsTenantProvisioningCommitted` |
 
 Pages you add stay backend-declared blocks; only the missing block is a `CustomComponent`, with `.meta({ name, description, icon })`.
 
