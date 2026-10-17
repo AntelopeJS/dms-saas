@@ -7,15 +7,15 @@ import {
   Schema,
   ValueProxy,
 } from "@antelopejs/interface-database";
+import { RegisterSchema } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import { describe, expect, it } from "vitest";
 import { adminUserInvoicesDataAPI } from "../src/data-api/platformOwner/admin-user-invoices";
 
 const controller = new adminUserInvoicesDataAPI();
 const meta = GetDataControllerMeta(controller);
-const schema = new Schema(TenantMemberModel.schemaName, {
-  tenant_members: { fields: {}, indexes: { userId: {} } },
-});
+await RegisterSchema(TenantMemberModel.schemaName);
+const schema = Schema.get(TenantMemberModel.schemaName)!;
 const database = schema.instance(CROSS_INSTANCE);
 
 function request(query: string): RequestContext {
