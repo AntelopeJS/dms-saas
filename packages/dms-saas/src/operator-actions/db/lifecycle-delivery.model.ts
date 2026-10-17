@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { AtomicMutationOutcome } from "@antelopejs/interface-database";
 import { BasicDataModel } from "@antelopejs/interface-database-decorators";
-import type { WorkspaceLifecycleReceipt } from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+import type { TenantLifecycleReceipt } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import {
   LifecycleDelivery,
   lifecycleDeliveriesTableName,
@@ -96,7 +96,7 @@ export class LifecycleDeliveryModel extends BasicDataModel(
   /** A competing receipt is terminal; a failed or late writer cannot overwrite it. */
   async markSucceeded(
     delivery: LifecycleDelivery,
-    receipt: WorkspaceLifecycleReceipt,
+    receipt: TenantLifecycleReceipt,
   ): Promise<void> {
     const current = await this.get(delivery._id);
     if (!current) throw new Error("Workspace lifecycle delivery is missing");

@@ -1,11 +1,11 @@
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
-  WorkspaceLifecycleConsumer,
-  WorkspaceLifecycleConsumerRegistration,
-  WorkspaceLifecycleReceipt,
-  WorkspaceLifecycleTransition,
-} from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+  TenantLifecycleConsumer,
+  TenantLifecycleConsumerRegistration,
+  TenantLifecycleReceipt,
+  TenantLifecycleTransition,
+} from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import type { WorkspaceProvisioningState } from "../src/operator-actions/db/lifecycle-delivery.table";
 
 interface Delivery {
@@ -13,7 +13,7 @@ interface Delivery {
   operationId: string;
   tenantId: string;
   consumer: string;
-  transition: WorkspaceLifecycleTransition;
+  transition: TenantLifecycleTransition;
   provisioningInvoiceId: string | null;
   provisioningState: WorkspaceProvisioningState | null;
   status: "pending" | "running" | "succeeded" | "failed";
@@ -66,9 +66,9 @@ vi.mock("../src/stripe/client", () => ({
   }),
 }));
 
-import * as workspaceLifecycleImplementation from "../src/implementations/dms-saas/workspace-lifecycle";
-import * as workspaceLifecycleInterface from "@antelopejs/interface-dms-saas/workspace-lifecycle";
-import { RegisterWorkspaceLifecycleConsumer } from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+import * as tenantLifecycleImplementation from "../src/implementations/dms-saas/tenant-lifecycle";
+import * as tenantLifecycleInterface from "@antelopejs/interface-dms-saas/tenant-lifecycle";
+import { RegisterTenantLifecycleConsumer } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import {
   beginWorkspaceCreation,
   cancelWorkspaceCreated,
@@ -78,12 +78,9 @@ import {
   reconcileWorkspaceLifecycleDeliveries,
 } from "../src/operator-actions/lifecycle-outbox";
 
-ImplementInterface(
-  workspaceLifecycleInterface,
-  workspaceLifecycleImplementation,
-);
+ImplementInterface(tenantLifecycleInterface, tenantLifecycleImplementation);
 
-const registrations: WorkspaceLifecycleConsumerRegistration[] = [];
+const registrations: TenantLifecycleConsumerRegistration[] = [];
 
 function currentDelivery(id: string): Delivery | undefined {
   return harness.deliveries.get(id) as Delivery | undefined;
@@ -154,7 +151,7 @@ function lifecycleDeliveryModel(): object {
       ),
     markSucceeded: async (
       delivery: Delivery,
-      receipt: WorkspaceLifecycleReceipt,
+      receipt: TenantLifecycleReceipt,
     ) => {
       if (harness.failReceiptConsumer === delivery.consumer) {
         harness.failReceiptConsumer = "";
@@ -178,10 +175,10 @@ function lifecycleDeliveryModel(): object {
 
 function registerConsumer(
   name: string,
-  consume: WorkspaceLifecycleConsumer["consume"],
-  transitions: readonly WorkspaceLifecycleTransition[],
-): WorkspaceLifecycleConsumerRegistration {
-  const registration = RegisterWorkspaceLifecycleConsumer({
+  consume: TenantLifecycleConsumer["consume"],
+  transitions: readonly TenantLifecycleTransition[],
+): TenantLifecycleConsumerRegistration {
+  const registration = RegisterTenantLifecycleConsumer({
     name,
     consume,
     transitions,
@@ -208,9 +205,7 @@ describe("workspace lifecycle outbox", () => {
   it("delivers once across concurrent reconcilers and skips a durable receipt on later reconciliation", async () => {
     const effects = new Set<string>();
     const consume = vi.fn(
-      async (
-        message: workspaceLifecycleInterface.WorkspaceLifecycleMessage,
-      ) => {
+      async (message: tenantLifecycleInterface.TenantLifecycleMessage) => {
         effects.add(message.operationId);
         return { receiptId: "created" };
       },
@@ -248,9 +243,7 @@ describe("workspace lifecycle outbox", () => {
   it("replays a lost receipt with the same operation ID so consumers can deduplicate effects", async () => {
     const effects = new Set<string>();
     const consume = vi.fn(
-      async (
-        message: workspaceLifecycleInterface.WorkspaceLifecycleMessage,
-      ) => {
+      async (message: tenantLifecycleInterface.TenantLifecycleMessage) => {
         effects.add(message.operationId);
         return { receiptId: message.operationId };
       },
@@ -267,17 +260,17 @@ describe("workspace lifecycle outbox", () => {
   });
 
   it("closes inventory eligibility before tenant insertion and never reopens a rollback tombstone", async () => {
-    const { IsWorkspaceProvisioningCommitted } = workspaceLifecycleInterface;
-    expect(await IsWorkspaceProvisioningCommitted("legacy")).toBe(true);
+    const { IsTenantProvisioningCommitted } = tenantLifecycleInterface;
+    expect(await IsTenantProvisioningCommitted("legacy")).toBe(true);
     harness.tenantExists = false;
     await beginWorkspaceCreation("tenant-123");
     await reconcileWorkspaceLifecycleDeliveries();
-    expect(await IsWorkspaceProvisioningCommitted("tenant-123")).toBe(false);
+    expect(await IsTenantProvisioningCommitted("tenant-123")).toBe(false);
     harness.tenantExists = true;
     await prepareWorkspaceCreated("tenant-123", "invoice-123");
-    expect(await IsWorkspaceProvisioningCommitted("tenant-123")).toBe(false);
+    expect(await IsTenantProvisioningCommitted("tenant-123")).toBe(false);
     await cancelWorkspaceCreated("tenant-123");
-    expect(await IsWorkspaceProvisioningCommitted("tenant-123")).toBe(false);
+    expect(await IsTenantProvisioningCommitted("tenant-123")).toBe(false);
     await expect(prepareWorkspaceCreated("tenant-123", null)).rejects.toThrow(
       "state changed",
     );
@@ -298,7 +291,7 @@ describe("workspace lifecycle outbox", () => {
     await beginWorkspaceCreation("tenant-123");
     await reconcileWorkspaceLifecycleDeliveries();
     expect(
-      await workspaceLifecycleInterface.IsWorkspaceProvisioningCommitted(
+      await tenantLifecycleInterface.IsTenantProvisioningCommitted(
         "tenant-123",
       ),
     ).toBe(true);
@@ -374,7 +367,7 @@ describe("workspace lifecycle outbox", () => {
   it("persists receipts and skips successful consumers during retry", async () => {
     const firstConsumer = vi.fn(async () => ({ receiptId: "alpha-receipt" }));
     const secondConsumer = vi
-      .fn<() => Promise<WorkspaceLifecycleReceipt>>()
+      .fn<() => Promise<TenantLifecycleReceipt>>()
       .mockRejectedValueOnce(new Error("wake failed"))
       .mockResolvedValue({ receiptId: "beta-receipt" });
     registerConsumer("alpha.consumer", firstConsumer, [

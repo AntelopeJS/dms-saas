@@ -6,7 +6,7 @@ import { RegisterSaasMode } from "@antelopejs/interface-dms/utils/saas-mode";
 import * as billingInterface from "@antelopejs/interface-dms-saas/billing";
 import * as invoiceLineItemsInterface from "@antelopejs/interface-dms-saas/invoice-line-items";
 import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
-import * as workspaceLifecycleInterface from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+import * as tenantLifecycleInterface from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import type { ScheduledTask } from "node-cron";
 import {
   registerOwnerOnlyPermissionsResolver,
@@ -29,7 +29,7 @@ import { registerSaasHookListeners } from "./hooks";
 import * as billingImplementation from "./implementations/dms-saas/billing";
 import * as invoiceLineItemsImplementation from "./implementations/dms-saas/invoice-line-items";
 import * as pagesImplementation from "./implementations/dms-saas/pages";
-import * as workspaceLifecycleImplementation from "./implementations/dms-saas/workspace-lifecycle";
+import * as tenantLifecycleImplementation from "./implementations/dms-saas/tenant-lifecycle";
 import { registerPublicScreens, resolvePublicScreensToRegister } from "./pages";
 import { registerSeatHooks } from "./plans";
 import { initStripeClient } from "./stripe";
@@ -59,10 +59,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
   ImplementInterface(billingInterface, billingImplementation);
   ImplementInterface(invoiceLineItemsInterface, invoiceLineItemsImplementation);
   ImplementInterface(pagesInterface, pagesImplementation);
-  ImplementInterface(
-    workspaceLifecycleInterface,
-    workspaceLifecycleImplementation,
-  );
+  ImplementInterface(tenantLifecycleInterface, tenantLifecycleImplementation);
   await registerPublicScreens(config);
 
   await AddFrontendModule({

@@ -15,8 +15,8 @@ import {
   it,
   vi,
 } from "vitest";
-import * as lifecycleImplementation from "../src/implementations/dms-saas/workspace-lifecycle";
-import * as lifecycleInterface from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+import * as lifecycleImplementation from "../src/implementations/dms-saas/tenant-lifecycle";
+import * as lifecycleInterface from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import { LifecycleDeliveryModel } from "../src/operator-actions/db/lifecycle-delivery.model";
 import {
   dispatchWorkspaceLifecycle,
@@ -31,7 +31,7 @@ const CONTENDERS = 12;
 
 let mongodb: MongoMemoryReplSet;
 let registration:
-  | lifecycleInterface.WorkspaceLifecycleConsumerRegistration
+  | lifecycleInterface.TenantLifecycleConsumerRegistration
   | undefined;
 
 beforeAll(async () => {
@@ -124,12 +124,12 @@ describe("lifecycle delivery concurrency with the MongoDB provider", () => {
     const operationId = randomUUID();
     const effects = new Set<string>();
     const consume = vi.fn(
-      async (message: lifecycleInterface.WorkspaceLifecycleMessage) => {
+      async (message: lifecycleInterface.TenantLifecycleMessage) => {
         effects.add(message.operationId);
         return { receiptId: message.operationId };
       },
     );
-    registration = lifecycleInterface.RegisterWorkspaceLifecycleConsumer({
+    registration = lifecycleInterface.RegisterTenantLifecycleConsumer({
       name: "durable.consumer",
       transitions: ["suspended"],
       consume,
@@ -163,12 +163,12 @@ describe("lifecycle delivery concurrency with the MongoDB provider", () => {
       release = resolve;
     });
     const consume = vi.fn(
-      async (message: lifecycleInterface.WorkspaceLifecycleMessage) => {
+      async (message: lifecycleInterface.TenantLifecycleMessage) => {
         await paused;
         return { receiptId: message.operationId };
       },
     );
-    registration = lifecycleInterface.RegisterWorkspaceLifecycleConsumer({
+    registration = lifecycleInterface.RegisterTenantLifecycleConsumer({
       name: "claimed.consumer",
       transitions: ["suspended"],
       consume,
@@ -195,11 +195,11 @@ describe("lifecycle delivery concurrency with the MongoDB provider", () => {
   it("retakes a claim only once its lease has expired", async () => {
     const model = GetModel(LifecycleDeliveryModel);
     const consume = vi.fn(
-      async (message: lifecycleInterface.WorkspaceLifecycleMessage) => ({
+      async (message: lifecycleInterface.TenantLifecycleMessage) => ({
         receiptId: message.operationId,
       }),
     );
-    registration = lifecycleInterface.RegisterWorkspaceLifecycleConsumer({
+    registration = lifecycleInterface.RegisterTenantLifecycleConsumer({
       name: "stale.consumer",
       transitions: ["suspended"],
       consume,

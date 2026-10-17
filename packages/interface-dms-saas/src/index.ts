@@ -1,7 +1,7 @@
 /**
  * Main entry of the DMS SaaS interface.
  *
- * `./invoice-line-items` and `./workspace-lifecycle` arrive as namespaces
+ * `./invoice-line-items` and `./tenant-lifecycle` arrive as namespaces
  * rather than flat re-exports: each exposes an `internal` proxy namespace, and
  * two `internal` names cannot coexist in one barrel. Their own subpaths remain
  * the direct route to the same symbols.
@@ -16,4 +16,4 @@ export * from "./plans";
 export * from "./provisioning";
 export * from "./registration";
 export * as invoiceLineItems from "./invoice-line-items";
-export * as workspaceLifecycle from "./workspace-lifecycle";
+export * as tenantLifecycle from "./tenant-lifecycle";
