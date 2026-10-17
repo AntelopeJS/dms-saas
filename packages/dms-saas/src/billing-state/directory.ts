@@ -3,6 +3,7 @@ import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import {
   type BillingState,
+  InvoiceModel,
   type Plan,
   PlanModel,
   type TenantBillingState,
@@ -13,6 +14,7 @@ import {
 } from "../db";
 import { getReportingCurrency } from "../config";
 import {
+  monthlyPlanAmountMinor,
   normalisedMrr,
   planUnitAmountMinor,
   reportingMajorUnits,
@@ -57,6 +59,12 @@ export interface DirectoryInputs {
   owner: DirectoryOwner;
   policy: DirectoryPolicy;
   existing: TenantBillingState | undefined;
+  /**
+   * Whether the workspace ever paid an invoice for more than nothing: what
+   * tells a paying customer's cancellation from a trial's. Only read when
+   * the loss is not already known (see {@link shouldLookUpPaidInvoice}).
+   */
+  hasPaidInvoice: boolean;
   /** The currency the directory totals MRR in (uppercase ISO 4217). */
   reportingCurrency: string;
   now: Date;
@@ -74,6 +82,18 @@ interface RenewalContext {
 }
 
 const NO_OWNER: DirectoryOwner = { status: "none", name: null, email: null };
+
+const PAID_INVOICE_STATUS = "paid";
+const INVOICE_DOCUMENT_TYPE = "invoice";
+
+// States a churn is read from: what the workspace paid before them is the
+// loss. A suspension bills nothing but still holds the loss of the paying
+// workspace it stopped, for the cancellation that usually follows.
+const LOSS_STATES: ReadonlySet<BillingState> = new Set([
+  "suspended",
+  "cancelled",
+]);
+const LOSS_HOLDING_STATES: ReadonlySet<BillingState> = new Set(["suspended"]);
 
 const OWNER_STATUS_BY_INVITATION: Record<string, WorkspaceOwnerStatus> = {
   pending: "invited",
@@ -124,11 +144,66 @@ function resolveStateSince(inputs: DirectoryInputs): Date {
   return recorded ? new Date(recorded) : now;
 }
 
+/**
+ * What the workspace paid per month on the plan it is on, when it ever paid:
+ * the loss of a cancellation no earlier publication saw billed (the first
+ * computation of a workspace already cancelled, an import, a row published
+ * by an earlier build).
+ */
+function lastPaidMrr(inputs: DirectoryInputs): number {
+  const { plan, subscription, hasPaidInvoice, seats } = inputs;
+  if (!hasPaidInvoice || !plan || plan.price <= 0) return 0;
+  if (subscription?.isComplimentary === true) return 0;
+  return monthlyPlanAmountMinor(plan, seats.occupied);
+}
+
+/**
+ * The MRR the workspace had before its current state: what a churn lost. A
+ * change of state takes the MRR the last publication had; a suspension
+ * passes on the loss it held; and a loss no publication saw billed comes
+ * from the price last paid.
+ */
 function resolvePreviousMrr(inputs: DirectoryInputs): number {
   const { existing, billingState } = inputs;
-  if (existing && existing.billingState !== billingState)
-    return existing.mrrMinor;
-  return existing?.previousMrrMinor ?? 0;
+  if (!LOSS_STATES.has(billingState)) {
+    if (existing && existing.billingState !== billingState)
+      return existing.mrrMinor;
+    return existing?.previousMrrMinor ?? 0;
+  }
+  if (!existing) return lastPaidMrr(inputs);
+  if (existing.billingState === billingState)
+    return existing.previousMrrMinor || lastPaidMrr(inputs);
+  if (existing.mrrMinor > 0) return existing.mrrMinor;
+  if (!LOSS_HOLDING_STATES.has(existing.billingState)) return 0;
+  return existing.previousMrrMinor || lastPaidMrr(inputs);
+}
+
+/**
+ * Whether {@link resolvePreviousMrr} may need the price last paid: a loss
+ * state whose loss the last publication does not carry. Spares the invoice
+ * read on every other publication.
+ */
+export function shouldLookUpPaidInvoice(
+  billingState: BillingState,
+  existing: TenantBillingState | undefined,
+): boolean {
+  if (!LOSS_STATES.has(billingState)) return false;
+  return !existing?.mrrMinor && !existing?.previousMrrMinor;
+}
+
+/** Whether the workspace ever paid an invoice for more than nothing. */
+async function hasPaidInvoice(tenantId: string): Promise<boolean> {
+  const rows = await GetModel(InvoiceModel, tenantId)
+    .table.getAll(PAID_INVOICE_STATUS, "status")
+    .filter((invoice) =>
+      invoice
+        .key("documentType")
+        .eq(INVOICE_DOCUMENT_TYPE)
+        .and(invoice.key("total").gt(0)),
+    )
+    .slice(0, 1)
+    .run();
+  return rows.length > 0;
 }
 
 function planFields(plan: Plan | null) {
@@ -236,13 +311,16 @@ export async function loadWorkspaceDirectoryFields(
   departures: DirectoryDepartures = {},
 ): Promise<WorkspaceDirectoryFields> {
   const now = new Date();
-  const [plan, seats, owner, policy] = await Promise.all([
+  const [plan, seats, owner, policy, paid] = await Promise.all([
     subscription?.planId
       ? GetModel(PlanModel).get(subscription.planId)
       : undefined,
     getSeatUsage(tenantId, departures.inviteeEmail, departures.userIds),
     loadDirectoryOwner(tenantId, now, departures),
     loadDirectoryPolicy(),
+    shouldLookUpPaidInvoice(billingState, existing)
+      ? hasPaidInvoice(tenantId)
+      : false,
   ]);
   return buildWorkspaceDirectoryFields({
     billingState,
@@ -252,6 +330,7 @@ export async function loadWorkspaceDirectoryFields(
     owner,
     policy,
     existing,
+    hasPaidInvoice: paid,
     reportingCurrency: getReportingCurrency(),
     now,
   });

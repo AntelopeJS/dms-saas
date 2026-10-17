@@ -1,4 +1,5 @@
 import { defineComponent, h, resolveComponent } from 'vue'
+import { formatBillingPeriod } from '../composables/useBillingPeriod'
 import { billingDocumentTypeKey } from '../composables/useBillingDocumentType'
 import { parseInvoiceLines } from '../composables/useInvoiceLines'
 import { formatMinorUnits } from '../composables/useMoneyFormat'
@@ -19,14 +20,6 @@ const InvoiceLinesDisplay = defineComponent({
 
 const PERIOD_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'long',
-	year: 'numeric',
-}
-const RANGE_FORMAT: Intl.DateTimeFormatOptions = {
-	day: 'numeric',
-	month: 'short',
-}
-const RANGE_FORMAT_WITH_YEAR: Intl.DateTimeFormatOptions = {
-	...RANGE_FORMAT,
 	year: 'numeric',
 }
 const NO_VALUE = '—'
@@ -55,10 +48,11 @@ function formatPeriod(
 	if (!from) return NO_VALUE
 	const endField = (options as PeriodOptions | undefined)?.endField
 	const to = endField ? toDate(row?.[endField]) : null
-	if (!to) return new Intl.DateTimeFormat(locale, RANGE_FORMAT).format(from)
-	const isSameYear = from.getFullYear() === to.getFullYear()
-	const format = isSameYear ? RANGE_FORMAT : RANGE_FORMAT_WITH_YEAR
-	return new Intl.DateTimeFormat(locale, format).formatRange(from, to)
+	return formatBillingPeriod(from, to, {
+		formatDay: (date, format) =>
+			regionalDateTimeFormat(locale, format).format(date),
+		dayKey: regionalDayKey,
+	})
 }
 
 /** An amount in minor units, in the row's own currency. */

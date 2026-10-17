@@ -51,6 +51,15 @@ Pages you add stay backend-declared blocks; only the missing block is a `CustomC
 ## Gotchas
 
 - `reconciliation_required` (operator actions, migrations, webhooks) is deliberate: never delete records or replay blindly.
+- Stripe is the only billing path: demos and tests use a Stripe **test** account (`sk_test_`/`pk_test_`) with webhooks
+  forwarded (`stripe listen --forward-to localhost:5010/api/saas/webhooks/stripe`). Webhooks move checkout → active,
+  trial end, failed and recovered payments, cancellation; nothing else advances a trial or a renewal.
+- Without webhooks only the crons move states: 01:00 past due → suspended after `autoSuspendDelayDays` (14) from
+  `pastDueSince`; 02:00 complimentary `freeUntil` passed → past due; 04:30 cancelled → workspace **and data deleted**
+  `dataRetentionDaysAfterCancellation` (30) days after the subscription's last write (`updatedAt`).
+- Direct table seeds (like the playground): keep dates relative to now, an `active` row without `stripeSubscriptionId`
+  is free (0 MRR), fake Stripe ids make Stripe-calling actions fail; call `RecomputeTenantBillingState(tenantId)` after.
+  A workspace first published already cancelled counts churn only when it has a paid invoice above 0.
 - Checkout errors: `422 checkout_rejected` (retry), `503 checkout_unavailable`, `409 checkout_in_progress`.
 - Upgrading old databases needs manual row fixes (`isComplimentary`, `documentType`, `revision`, `paidUsagePeriods`, localized features).
 - Passwords follow the DMS policy: letters, digits and `@$!%*?&` only.
