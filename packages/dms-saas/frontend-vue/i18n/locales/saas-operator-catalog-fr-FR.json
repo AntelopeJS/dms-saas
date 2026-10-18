@@ -10,6 +10,8 @@
 				"editor_preview_description": "Voir la carte de l’offre telle que les clients la voient et son état de synchronisation Stripe pendant l’édition",
 				"migrations_attention": "Migrations à traiter",
 				"migrations_attention_description": "Voir les migrations d’offre qui attendent un opérateur",
+				"migration_toolbar": "Mode direct de la migration",
+				"migration_toolbar_description": "Mettre en pause ou reprendre le suivi en direct d’une migration en cours et voir quand elle a été lue",
 				"migration_header": "En-tête de la migration",
 				"migration_header_description": "Voir où en est une migration d’offre, la relancer, l’exporter ou la clôturer",
 				"migration_totals": "Totaux de la migration",
