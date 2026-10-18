@@ -47,6 +47,8 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 | React to create/suspend/reactivate | `RegisterTenantLifecycleConsumer` from `/tenant-lifecycle` (root namespace `tenantLifecycle`); dedupe by `operationId`; gate on `IsTenantProvisioningCommitted` |
 
 Pages you add stay backend-declared blocks; only the missing block is a `CustomComponent`, with `.meta({ name, description, icon })`.
+A page with a period or live data opens with the DMS page toolbar (`pageToolbar()` / `PageToolbar()` from
+`@antelopejs/interface-dms/base`), as the dashboard (period, `rememberKey: "saas"`, no `live`) and the migration detail (`live`, no period) do.
 
 ## Gotchas
 
