@@ -189,11 +189,6 @@
           "pending": "Verification in progress",
           "unverified": "Not verified"
         },
-        "address_line1": "Address",
-        "postal_code": "Postal code",
-        "city": "City",
-        "country": "Country",
-        "country_placeholder": "Select a country",
         "billing_email": "Billing email",
         "billing_email_hint": "Receives invoices and payment reminders.",
         "sections": {
@@ -219,8 +214,10 @@
           "companyName": "Company name",
           "vatNumber": "VAT number",
           "line1": "Address",
+          "line2": "Address line 2",
           "postalCode": "Postal code",
           "city": "City",
+          "state": "State or province",
           "country": "Country",
           "billingEmail": "Billing email"
         },
@@ -228,7 +225,7 @@
           "customerType": "Choose a customer type.",
           "companyName": "The company name is required.",
           "country": "Choose the billing country.",
-          "line1": "The address is required.",
+          "line1": "The street is required.",
           "postalCode": "The postal code is required.",
           "city": "The city is required.",
           "billingEmail": "Enter a valid email address."

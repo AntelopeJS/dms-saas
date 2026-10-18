@@ -189,11 +189,6 @@
           "pending": "Vérification en cours",
           "unverified": "Non vérifié"
         },
-        "address_line1": "Adresse",
-        "postal_code": "Code postal",
-        "city": "Ville",
-        "country": "Pays",
-        "country_placeholder": "Choisissez un pays",
         "billing_email": "E-mail de facturation",
         "billing_email_hint": "Reçoit les factures et les relances de paiement.",
         "sections": {
@@ -219,8 +214,10 @@
           "companyName": "Raison sociale",
           "vatNumber": "Numéro de TVA",
           "line1": "Adresse",
+          "line2": "Complément d'adresse",
           "postalCode": "Code postal",
           "city": "Ville",
+          "state": "Région ou province",
           "country": "Pays",
           "billingEmail": "E-mail de facturation"
         },
@@ -228,7 +225,7 @@
           "customerType": "Choisissez un type de client.",
           "companyName": "La raison sociale est obligatoire.",
           "country": "Choisissez le pays de facturation.",
-          "line1": "L'adresse est obligatoire.",
+          "line1": "La rue est obligatoire.",
           "postalCode": "Le code postal est obligatoire.",
           "city": "La ville est obligatoire.",
           "billingEmail": "Saisissez une adresse e-mail valide."
