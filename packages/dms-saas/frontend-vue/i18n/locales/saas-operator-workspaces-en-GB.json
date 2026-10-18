@@ -519,6 +519,8 @@
       "workspaces": {
         "create": "Create workspace",
         "create_description": "Create a workspace for a customer and choose how it is paid",
+        "toolbar": "Dashboard toolbar",
+        "toolbar_description": "See when the dashboard figures were last read and read them again",
         "period": "Dashboard period",
         "period_description": "Choose the period the dashboard figures cover",
         "attention": "Needs attention",

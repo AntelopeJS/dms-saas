@@ -357,14 +357,30 @@ describe("dashboard page", () => {
     });
   });
 
+  it("opens on a period bar without live mode, the comparison a toggle", () => {
+    const toolbar =
+      SaasDashboardController.toolbar.serializeSync() as SerializedBlock;
+
+    expect(toolbar.componentName).toBe("dms-page-toolbar-block");
+    expect(toolbar.children.map((child) => child.id)).toEqual(["period"]);
+    expect(findChild(toolbar, "period")?.options).toMatchObject({
+      presets: ["last-30-days", "last-90-days", "ytd"],
+      rangeLabel: "relative",
+      rememberKey: "saas",
+      comparisons: ["none", "previous-period"],
+      comparisonControl: "toggle",
+    });
+  });
+
   it("binds the churn and the paid invoices to the period selector", () => {
-    const period =
-      SaasDashboardController.period.serializeSync() as SerializedBlock;
+    const toolbar =
+      SaasDashboardController.toolbar.serializeSync() as SerializedBlock;
+    const period = findChild(toolbar, "period");
     const figures =
       SaasDashboardController.figures.serializeSync() as SerializedBlock;
     const charts =
       SaasDashboardController.charts.serializeSync() as SerializedBlock;
-    const scope = period.options?.id;
+    const scope = period?.options?.id;
 
     expect(findChild(figures, "churn")?.options).toMatchObject({
       periodScope: scope,

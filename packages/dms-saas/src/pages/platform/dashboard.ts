@@ -9,6 +9,8 @@ import {
   KeyValueList,
   KpiCard,
   NavCardGrid,
+  PAGE_TOOLBAR_PERIOD_DEFAULTS,
+  PageToolbar,
   PeriodSelector,
   StatGroup,
   Tab,
@@ -27,6 +29,8 @@ import {
 
 const API = "/api/saas/dashboard";
 const PERIOD_SCOPE = "saas-dashboard";
+/** The module's pages with a period share the last one chosen. */
+const PERIOD_REMEMBER_KEY = "saas";
 const K = "$saas.dashboard";
 const HEADLINE_FIGURES = 3;
 const ATTENTION_QUEUES = 4;
@@ -67,16 +71,24 @@ export class SaasDashboardController extends PageController(
   },
   DefaultLayout({ fullWidth: true, headerActions: [CREATE_WORKSPACE_BUTTON] }),
 ) {
-  static period = PeriodSelector({
-    id: PERIOD_SCOPE,
-    presets: ["last-30-days", "last-90-days", "ytd"],
-    defaultPreset: "last-30-days",
-    comparisons: ["none", "previous-period"],
-    defaultComparison: "previous-period",
-    variant: "segmented",
-    align: "right",
-    size: "sm",
-  }).meta(permissionMeta("period", "i-ph-calendar"));
+  // No `live`: the bar shows when the figures were read and a refresh button,
+  // then the period and its comparison. Built by hand so the selector keeps
+  // its roles editor name.
+  static toolbar = PageToolbar()
+    .child(
+      "period",
+      PeriodSelector({
+        ...PAGE_TOOLBAR_PERIOD_DEFAULTS,
+        id: PERIOD_SCOPE,
+        rememberKey: PERIOD_REMEMBER_KEY,
+        presets: ["last-30-days", "last-90-days", "ytd"],
+        defaultPreset: "last-30-days",
+        comparisons: ["none", "previous-period"],
+        defaultComparison: "previous-period",
+        comparisonControl: "toggle",
+      }).meta(permissionMeta("period", "i-ph-calendar")),
+    )
+    .meta(permissionMeta("toolbar", "i-ph-sliders-horizontal"));
 
   static attention = NavCardGrid({
     title: `${K}.attention.title`,
