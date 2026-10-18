@@ -36,6 +36,7 @@ vi.mock("../src/stripe/client", async (importOriginal) => {
     ...(await importOriginal<typeof import("../src/stripe/client")>()),
     getStripeClient: client,
     getStripeReadClient: client,
+    isStripeConfigured: () => true,
   };
 });
 
