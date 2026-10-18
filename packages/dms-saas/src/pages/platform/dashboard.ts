@@ -72,8 +72,9 @@ export class SaasDashboardController extends PageController(
   DefaultLayout({ fullWidth: true, headerActions: [CREATE_WORKSPACE_BUTTON] }),
 ) {
   // No `live`: the bar shows when the figures were read and a refresh button,
-  // then the period and its comparison. Built by hand so the selector keeps
-  // its roles editor name.
+  // then the period and a menu of its comparisons. Built by hand so the
+  // selector keeps its roles editor name. `comparisonControl` is spelled out:
+  // older DMS releases draw a toggle whatever the number of comparisons.
   static toolbar = PageToolbar()
     .child(
       "period",
@@ -83,9 +84,9 @@ export class SaasDashboardController extends PageController(
         rememberKey: PERIOD_REMEMBER_KEY,
         presets: ["last-30-days", "last-90-days", "ytd"],
         defaultPreset: "last-30-days",
-        comparisons: ["none", "previous-period"],
+        comparisons: ["previous-period", "previous-year", "none"],
         defaultComparison: "previous-period",
-        comparisonControl: "toggle",
+        comparisonControl: "menu",
       }).meta(permissionMeta("period", "i-ph-calendar")),
     )
     .meta(permissionMeta("toolbar", "i-ph-sliders-horizontal"));

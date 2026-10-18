@@ -35,7 +35,10 @@
         "title": "Factures payées",
         "description": "Encaissé et crédité, dans la devise de reporting",
         "collected": "Encaissé",
-        "credited": "Crédité / remboursé"
+        "credited": "Crédité / remboursé",
+        "collected_previous_period": "Encaissé, période précédente",
+        "collected_previous_year": "Encaissé, année précédente",
+        "collected_compared": "Encaissé, période comparée"
       },
       "by_status": {
         "title": "Espaces par statut",

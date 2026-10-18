@@ -1,4 +1,10 @@
-import { Controller, Get, Parameter } from "@antelopejs/interface-api";
+import {
+  Context,
+  Controller,
+  Get,
+  Parameter,
+  type RequestContext,
+} from "@antelopejs/interface-api";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
@@ -32,8 +38,7 @@ import {
   type ChartCardPayload,
   churnOver,
   paidInvoicesChart,
-  parseComparison,
-  parsePeriod,
+  readPeriodQuery,
 } from "../../metrics/revenue";
 import { workspaceDetailPath } from "../../pages/platform/paths";
 import { migrationTotals } from "../../plans/migration-detail";
@@ -149,15 +154,12 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   @Get("/churn")
   async churn(
     @AuthOwnerOnly() _user: User,
-    @Parameter("from", "query") from: unknown,
-    @Parameter("to", "query") to: unknown,
-    @Parameter("compareFrom", "query") compareFrom: unknown,
-    @Parameter("compareTo", "query") compareTo: unknown,
+    @Context() ctx: RequestContext,
   ): Promise<KpiPayload> {
     const { rows, currency } = await this.summary();
     const mrr = summariseDirectory(rows, new Date(), currency).mrr;
-    const current = churnOver(rows, parsePeriod(from, to), mrr);
-    const comparison = parseComparison(compareFrom, compareTo);
+    const { range, comparison } = readPeriodQuery(ctx.url.searchParams);
+    const current = churnOver(rows, range, mrr);
     if (!comparison) return { value: current.rate };
     const previous = churnOver(rows, comparison, mrr);
     return {
@@ -173,13 +175,11 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   @Get("/paid-invoices")
   async paidInvoices(
     @AuthOwnerOnly() _user: User,
-    @Parameter("from", "query") from: unknown,
-    @Parameter("to", "query") to: unknown,
-    @Parameter("compareFrom", "query") compareFrom: unknown,
-    @Parameter("compareTo", "query") compareTo: unknown,
+    @Context() ctx: RequestContext,
   ): Promise<ChartCardPayload> {
-    const range = parsePeriod(from, to);
-    const comparison = parseComparison(compareFrom, compareTo);
+    const { range, comparison, comparisonMode } = readPeriodQuery(
+      ctx.url.searchParams,
+    );
     const documents = await loadSettledDocuments(
       earliestStart(range, comparison),
     );
@@ -188,6 +188,7 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
       range,
       comparison,
       getReportingCurrency(),
+      comparisonMode,
     );
   }
 

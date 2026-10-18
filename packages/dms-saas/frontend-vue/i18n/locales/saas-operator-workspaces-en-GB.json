@@ -35,7 +35,10 @@
         "title": "Paid invoices",
         "description": "Collected and credited, in the reporting currency",
         "collected": "Collected",
-        "credited": "Credited / refunded"
+        "credited": "Credited / refunded",
+        "collected_previous_period": "Collected, previous period",
+        "collected_previous_year": "Collected, previous year",
+        "collected_compared": "Collected, compared period"
       },
       "by_status": {
         "title": "Workspaces by status",
