@@ -1,4 +1,5 @@
 import { defineComponent, h, resolveComponent } from 'vue'
+import { formatPeriodRange } from '../build/period-range'
 import { billingDocumentTypeKey } from '../composables/useBillingDocumentType'
 import { parseInvoiceLines } from '../composables/useInvoiceLines'
 import { formatMinorUnits } from '../composables/useMoneyFormat'
@@ -21,14 +22,6 @@ const PERIOD_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'long',
 	year: 'numeric',
 }
-const RANGE_FORMAT: Intl.DateTimeFormatOptions = {
-	day: 'numeric',
-	month: 'short',
-}
-const RANGE_FORMAT_WITH_YEAR: Intl.DateTimeFormatOptions = {
-	...RANGE_FORMAT,
-	year: 'numeric',
-}
 const NO_VALUE = '—'
 
 type CellRow = Record<string, unknown> | undefined
@@ -44,7 +37,10 @@ function toDate(value: unknown): Date | null {
 	return Number.isNaN(date.getTime()) ? null : date
 }
 
-/** "Sep 29 – Oct 28", with the years once the period spans two. */
+/**
+ * "Sep 29 – Oct 28", with the years once the period spans two, in the
+ * reader's time zone like every other date of the console.
+ */
 function formatPeriod(
 	start: unknown,
 	locale: string,
@@ -55,10 +51,7 @@ function formatPeriod(
 	if (!from) return NO_VALUE
 	const endField = (options as PeriodOptions | undefined)?.endField
 	const to = endField ? toDate(row?.[endField]) : null
-	if (!to) return new Intl.DateTimeFormat(locale, RANGE_FORMAT).format(from)
-	const isSameYear = from.getFullYear() === to.getFullYear()
-	const format = isSameYear ? RANGE_FORMAT : RANGE_FORMAT_WITH_YEAR
-	return new Intl.DateTimeFormat(locale, format).formatRange(from, to)
+	return formatPeriodRange(from, to, locale, regionalDateTimeFormat)
 }
 
 /** An amount in minor units, in the row's own currency. */
