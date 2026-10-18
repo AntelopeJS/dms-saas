@@ -36,7 +36,8 @@ import {
 import { sumInReportingCurrency } from "../../metrics/normalised-mrr";
 import {
   type ChartCardPayload,
-  churnOver,
+  churnKpi,
+  type KpiCardPayload,
   paidInvoicesChart,
   readPeriodQuery,
 } from "../../metrics/revenue";
@@ -46,19 +47,11 @@ import { MS_PER_DAY } from "../../utils/time";
 import { loadActivitySources } from "../../metrics/activity-sources";
 import type { ItemsPayload } from "./block-payloads";
 
-/** What a `KpiCard` reads from its route. */
-interface KpiPayload {
-  value: number;
-  previousValue?: number;
-  delta?: number;
-}
-
 const OPEN_STATUS = "open";
 // Paid invoices are filtered on their issue date, which an invoice paid late
 // precedes: the window reaches back far enough to catch it.
 const LATE_PAYMENT_LOOKBACK_DAYS = 90;
 const ACTIVITY_LIMIT = 8;
-const PERCENT = 100;
 
 /** The migrations the migrations list shows as needing an operator. */
 async function loadAttentionMigrations(): Promise<MigrationAttention> {
@@ -155,21 +148,10 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   async churn(
     @AuthOwnerOnly() _user: User,
     @Context() ctx: RequestContext,
-  ): Promise<KpiPayload> {
+  ): Promise<KpiCardPayload> {
     const { rows, currency } = await this.summary();
     const mrr = summariseDirectory(rows, new Date(), currency).mrr;
-    const { range, comparison } = readPeriodQuery(ctx.url.searchParams);
-    const current = churnOver(rows, range, mrr);
-    if (!comparison) return { value: current.rate };
-    const previous = churnOver(rows, comparison, mrr);
-    return {
-      value: current.rate,
-      previousValue: previous.rate,
-      delta:
-        previous.rate === 0
-          ? undefined
-          : ((current.rate - previous.rate) / previous.rate) * PERCENT,
-    };
+    return churnKpi(rows, readPeriodQuery(ctx.url.searchParams), mrr);
   }
 
   @Get("/paid-invoices")

@@ -12,6 +12,7 @@ import {
   workspacesHeadline,
 } from "../src/metrics/headline-items";
 import {
+  churnKpi,
   churnOver,
   paidInvoicesChart,
   parseComparison,
@@ -459,6 +460,38 @@ describe("comparison window", () => {
     expect(parseComparison(undefined, undefined, "previous-period")).toBeNull();
   });
 
+  it("compares the churn with the same days a year before, or not at all", () => {
+    const rows = [
+      row({
+        billingState: "cancelled",
+        previousMrrMinor: 5_000,
+        stateSince: new Date("2025-09-20T00:00:00Z"),
+      }),
+      row({
+        tenantId: "h",
+        billingState: "cancelled",
+        previousMrrMinor: 10_000,
+        stateSince: new Date(NOW.getTime() - 2 * DAY_MS),
+      }),
+    ];
+    const mrr = { amountMinor: 40_000, currency: "EUR", otherCurrencies: [] };
+    const query = new URLSearchParams({
+      from: new Date(NOW.getTime() - 29 * DAY_MS).toISOString(),
+      to: NOW.toISOString(),
+      compareFrom: from,
+      compareTo: to,
+    });
+
+    query.set("comparison", "previous-year");
+    expect(churnKpi(rows, readPeriodQuery(query), mrr)).toEqual({
+      value: 20,
+      previousValue: expect.closeTo(100 / 9),
+      delta: expect.closeTo(80),
+    });
+    query.set("comparison", "none");
+    expect(churnKpi(rows, readPeriodQuery(query), mrr)).toEqual({ value: 20 });
+  });
+
   it("finds the churn of the same days a year before", () => {
     const rows = [
       row({
@@ -555,7 +588,7 @@ describe("dashboard page", () => {
     expect(findChild(lists, "tabs")?.options).toMatchObject({ fit: true });
   });
 
-  it("hangs the day's credits under its collected bar", () => {
+  it("hangs the day's credits under its collected bar, the comparison dashed", () => {
     const charts =
       SaasDashboardController.charts.serializeSync() as SerializedBlock;
     const card = findChild(charts, "paidInvoices");
@@ -563,6 +596,7 @@ describe("dashboard page", () => {
     expect(card && findChild(card, "chart")?.options).toMatchObject({
       type: "column",
       stacked: true,
+      comparisonStyle: "dashed",
     });
   });
 

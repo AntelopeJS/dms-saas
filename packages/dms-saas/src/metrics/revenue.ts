@@ -44,6 +44,13 @@ export interface PeriodQuery {
   comparisonMode: string | null;
 }
 
+/** What a `KpiCard` reads from its `fetchUrl`. */
+export interface KpiCardPayload {
+  value: number;
+  previousValue?: number;
+  delta?: number;
+}
+
 /** Cancellations over a period and the MRR they took away. */
 export interface ChurnFigures {
   /** Lost MRR over the MRR the period started with, in percent. */
@@ -312,5 +319,24 @@ export function churnOver(
     rate: base === 0 ? 0 : (lost.amountMinor / base) * PERCENT,
     cancellations: cancelled.length,
     lost,
+  };
+}
+
+/**
+ * The churn rate over the period and, with a comparison window, the rate
+ * over that window and how far it moved: nothing to compare without one.
+ */
+export function churnKpi(
+  rows: DirectoryRow[],
+  period: PeriodQuery,
+  currentMrr: ReportingTotal,
+): KpiCardPayload {
+  const value = churnOver(rows, period.range, currentMrr).rate;
+  if (!period.comparison) return { value };
+  const previousValue = churnOver(rows, period.comparison, currentMrr).rate;
+  return {
+    value,
+    previousValue,
+    delta: percentChange(value, previousValue),
   };
 }

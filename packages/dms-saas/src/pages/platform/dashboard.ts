@@ -155,12 +155,14 @@ export class SaasDashboardController extends PageController(
               // Credits are negative: stacked, they hang under the day's
               // collected bar, which then takes the whole column instead of
               // half of it. `columnWidth` is a fixed pixel width, too wide
-              // for the 90 daily bars of a quarter.
+              // for the 90 daily bars of a quarter. The compared window's
+              // collected money is a dashed line over the bars.
               chart: ChartColumn({
                 xaxisType: "datetime",
                 stacked: true,
                 showLegend: true,
                 color: ["success", "info"],
+                comparisonStyle: "dashed",
               }),
             }),
           ),
