@@ -3,8 +3,10 @@ import type {
   ComponentInfoSerialized,
 } from "@antelopejs/interface-dms/component";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
+import { GetMetadata } from "@antelopejs/interface-core";
+import { SettingsLayout } from "@antelopejs/interface-dms/base/layouts";
 import type { PageExtensionInfo } from "@antelopejs/interface-dms/page";
-import { internal } from "@antelopejs/interface-dms/page";
+import { internal, PageMetadata } from "@antelopejs/interface-dms/page";
 // The DMS's own assembly, so the test places blocks exactly as a page serves
 // them rather than restating its rules.
 import { assembleLayoutComponents } from "@antelopejs/interface-dms/page/internal/extension-assembly";
@@ -91,6 +93,15 @@ async function assemble(own: Layout, info: PageExtensionInfo) {
 }
 
 describe("tenant billing page layout", () => {
+  it("inherits the settings layout like the other workspace settings pages", () => {
+    const meta = GetMetadata(SaasTenantBillingController, PageMetadata);
+
+    expect(meta.layout?.componentName).toBe(SettingsLayout().componentName);
+    expect(meta.layout?.options?.fullWidth).toBeUndefined();
+    // The recovery surface of a blocked workspace keeps bypassing the gate.
+    expect(meta.pageInfo?.bypassTenantAccessGate).toBe(true);
+  });
+
   it("lays the plan, next invoice, payment method and guarantee out in two columns", async () => {
     const own = await ownLayout();
 
