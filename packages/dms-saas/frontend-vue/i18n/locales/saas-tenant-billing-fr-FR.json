@@ -18,7 +18,10 @@
 				"sent_to": "Envoyée à",
 				"last_payment": "Dernier paiement",
 				"paid_on": "Payé le {date}",
-				"subscription_line": "{quantity} × {plan}"
+				"subscription_line": "{quantity} × {plan}",
+				"paid_until": "{plan} payé jusqu'au",
+				"switch_on": "Passage à {plan}",
+				"switch_free_detail": "Pas de renouvellement : {plan} n'est pas facturé"
 			},
 			"invoices": {
 				"caption": "Factures et avoirs",

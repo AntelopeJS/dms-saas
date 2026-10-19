@@ -18,7 +18,10 @@
 				"sent_to": "Sent to",
 				"last_payment": "Last payment",
 				"paid_on": "Paid {date}",
-				"subscription_line": "{quantity} × {plan}"
+				"subscription_line": "{quantity} × {plan}",
+				"paid_until": "{plan} paid until",
+				"switch_on": "Switch to {plan}",
+				"switch_free_detail": "No renewal: {plan} is not billed"
 			},
 			"invoices": {
 				"caption": "Invoices & credit notes",

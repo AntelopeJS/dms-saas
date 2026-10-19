@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { LABEL_DAY_FORMAT, SENTENCE_DAY_FORMAT } from './day-formats'
-import { planChangeHeadingCase } from './plan-change-heading'
+import { planChangeHeadingCase, targetPlanEyebrow } from './plan-change-heading'
 
 interface SummaryRow {
 	key: string
@@ -93,6 +93,15 @@ const headingCase = computed(() =>
 				props.isResubscription,
 			),
 )
+
+const targetEyebrow = computed(() => {
+	const eyebrow = targetPlanEyebrow(preview.value, !!incompatibilities.value)
+	if (eyebrow === 'from_date')
+		return t(`${KEY_PREFIX}.from_date`, {
+			date: day(preview.value?.effectiveAt),
+		})
+	return eyebrow ? t(`${KEY_PREFIX}.${eyebrow}`) : null
+})
 
 const heading = computed(() => {
 	const params = {
@@ -255,14 +264,8 @@ onMounted(() => void loadPreview())
 				<p class="text-muted text-sm">{{ priceOf(currentPlan) }}</p>
 			</DmsCard>
 			<DmsCard :padded="true" selected>
-				<p class="text-muted text-xs">
-					{{
-						isDowngrade
-							? $t(`${KEY_PREFIX}.from_date`, {
-									date: day(preview?.effectiveAt),
-								})
-							: $t(`${KEY_PREFIX}.from_today`)
-					}}
+				<p v-if="targetEyebrow" class="text-muted text-xs">
+					{{ targetEyebrow }}
 				</p>
 				<p class="font-semibold">{{ plan.name }}</p>
 				<p class="text-muted text-sm">{{ priceOf(plan) }}</p>
