@@ -20,18 +20,21 @@ import {
   SegmentModel,
   type TenantBillingInfo,
   TenantBillingInfoModel,
+  type TenantBillingState,
   TenantBillingStateModel,
   type TenantSubscription,
   TenantSubscriptionModel,
   UserSegmentModel,
 } from "../db";
+import { deriveBillingState } from "../billing-state";
+import { type MinorAmount, normalisedMrr } from "../metrics/normalised-mrr";
+import { fromMinorUnits } from "./money";
 import { getRowInstance } from "./row-instance";
 import { evaluateSegmentGroup } from "./segment-evaluator";
 import { MS_PER_DAY } from "./time";
 
 const PAID_STATUS = "paid";
 const TRIALING_STATUS = "trialing";
-const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
 
 export interface WorkspaceProjection {
   _id: string;
@@ -47,6 +50,11 @@ export interface WorkspaceProjection {
   planId: string | null;
   planName: string | null;
   currency: string;
+  /**
+   * Normalised MRR in major units, as the dashboard sums it: yearly prices
+   * divided by 12, seat prices times the billed seats; trials, complimentary
+   * access and workspaces not billed count for 0.
+   */
   mrr: number;
   isPaying: boolean;
   customerType: TenantBillingInfo["customerType"] | null;
@@ -55,12 +63,19 @@ export interface WorkspaceProjection {
   daysSinceLastInvoice: number | null;
 }
 
+/** What a projection reads of a workspace's published directory row. */
+export type WorkspaceDirectoryRow = Pick<
+  TenantBillingState,
+  "billingState" | "mrrMinor" | "currency"
+>;
+
 interface ProjectionInputs {
   tenant: Tenant;
   subscription: TenantSubscription | undefined;
   billingInfo: TenantBillingInfo | undefined;
   plan: Plan | null;
-  billingState?: BillingState | null;
+  /** The workspace's published directory row, when there is one. */
+  directory?: WorkspaceDirectoryRow | null;
   membersCount: number;
   invoices: Invoice[];
   now: Date;
@@ -88,6 +103,31 @@ function projectInvoices(invoices: Invoice[]): {
   return { totalRevenue, lastInvoiceAt };
 }
 
+/**
+ * The MRR the directory published, which the dashboard sums; computed from the
+ * records the same way when the workspace has no published figure yet.
+ */
+function workspaceMrr(inputs: ProjectionInputs): MinorAmount {
+  const { directory, subscription, plan, membersCount } = inputs;
+  if (directory && typeof directory.mrrMinor === "number") {
+    return {
+      amountMinor: directory.mrrMinor,
+      currency: directory.currency ?? "",
+    };
+  }
+  // Pending invitations are not loaded here: seats are the members alone.
+  return normalisedMrr({
+    billingState: directory?.billingState ?? deriveBillingState(subscription),
+    isComplimentary: subscription?.isComplimentary === true,
+    plan,
+    billedSeats: membersCount,
+  });
+}
+
+function toMajorUnits({ amountMinor, currency }: MinorAmount): number {
+  return currency ? fromMinorUnits(amountMinor, currency) : 0;
+}
+
 export function buildWorkspaceProjection(
   inputs: ProjectionInputs,
 ): WorkspaceProjection {
@@ -101,10 +141,7 @@ export function buildWorkspaceProjection(
     now,
   } = inputs;
   const subscriptionStatus = subscription?.status ?? null;
-  const isBilled = subscriptionStatus
-    ? ACTIVE_STATUSES.has(subscriptionStatus)
-    : false;
-  const mrr = isBilled && plan ? plan.price : 0;
+  const mrr = toMajorUnits(workspaceMrr(inputs));
   const { totalRevenue, lastInvoiceAt } = projectInvoices(invoices);
 
   return {
@@ -112,7 +149,7 @@ export function buildWorkspaceProjection(
     name: tenant.name,
     createdAt: tenant.createdAt,
     ageInDays: diffInDays(new Date(tenant.createdAt), now),
-    status: inputs.billingState ?? subscriptionStatus,
+    status: inputs.directory?.billingState ?? subscriptionStatus,
     hasSubscription: !!subscription,
     hasStripeCustomer: !!subscription?.stripeCustomerId,
     isOnTrial: subscriptionStatus === TRIALING_STATUS,
@@ -133,17 +170,18 @@ export function buildWorkspaceProjection(
 /** What every workspace projection of one load shares. */
 export interface ProjectionLookups {
   plansById?: ReadonlyMap<string, Plan>;
-  billingStatesByTenant?: ReadonlyMap<string, BillingState>;
+  directoriesByTenant?: ReadonlyMap<string, WorkspaceDirectoryRow>;
 }
 
-async function billingStateOf(
+async function directoryOf(
   tenantId: string,
   lookups: ProjectionLookups,
-): Promise<BillingState | null> {
-  const known = lookups.billingStatesByTenant?.get(tenantId);
+): Promise<WorkspaceDirectoryRow | null> {
+  const known = lookups.directoriesByTenant?.get(tenantId);
   if (known) return known;
-  const row = await GetModel(TenantBillingStateModel).findByTenant(tenantId);
-  return row?.billingState ?? null;
+  return (
+    (await GetModel(TenantBillingStateModel).findByTenant(tenantId)) ?? null
+  );
 }
 
 export async function loadWorkspaceProjection(
@@ -179,7 +217,7 @@ export async function loadWorkspaceProjection(
     subscription,
     billingInfo,
     plan,
-    billingState: await billingStateOf(tenantId, lookups),
+    directory: await directoryOf(tenantId, lookups),
     membersCount: members.length,
     invoices,
     now,
@@ -193,16 +231,14 @@ export async function loadAllTenantProjections(
   now: Date = new Date(),
 ): Promise<WorkspaceProjection[]> {
   const tenantModel = GetModel(TenantModel, CROSS_INSTANCE);
-  const [tenants, plans, billingStates] = await Promise.all([
+  const [tenants, plans, directories] = await Promise.all([
     tenantModel.getAll(),
     planModel.getAll(),
     GetModel(TenantBillingStateModel).getAll(),
   ]);
   const lookups: ProjectionLookups = {
     plansById: new Map(plans.map((p) => [p._id, p])),
-    billingStatesByTenant: new Map(
-      billingStates.map((row) => [row.tenantId, row.billingState]),
-    ),
+    directoriesByTenant: new Map(directories.map((row) => [row.tenantId, row])),
   };
   const projections: WorkspaceProjection[] = [];
   for (let i = 0; i < tenants.length; i += PROJECTION_CONCURRENCY) {
