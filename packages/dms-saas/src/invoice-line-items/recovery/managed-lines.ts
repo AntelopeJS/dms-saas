@@ -7,14 +7,20 @@ import type Stripe from "stripe";
 import { getStripeClient } from "../../stripe/client";
 import { readInvoiceSubscriptionId } from "../../stripe/payload-shapes";
 import { LINE_KEY_METADATA, LINE_PROVIDER_METADATA } from "../injection";
+import type { InvoiceLineInjection } from "./task.table";
 
 const INVOICE_ITEMS_PAGE_SIZE = 100;
+const MS_PER_SECOND = 1000;
+const DRAFT = "draft";
 
-/** A line this module put, or must put, on an invoice. */
+/** A line this module put, or must put, on an invoice: everything that identifies and prices it. */
 export interface ManagedLine {
+  provider: string;
   lineKey: string;
   amount: number;
   currency: string;
+  periodStart: number;
+  periodEnd: number;
 }
 
 /** One provider's lines accepted for the invoice, or why they cannot be. */
@@ -22,6 +28,13 @@ export interface ProviderSelection {
   accepted: PreparedInvoiceLineItem[];
   invalidKeys: string[];
 }
+
+/** How the managed items on Stripe compare with what the task expects. */
+export type LinesComparison =
+  | "match"
+  | "missing_only"
+  | "duplicate"
+  | "unexpected_or_changed";
 
 /** Every invoice item of the draft, all pages. Foreign items are read, never touched. */
 export async function listInvoiceItems(
@@ -48,9 +61,12 @@ export function managedLinesOf(
         typeof item.metadata?.[LINE_PROVIDER_METADATA] === "string",
     )
     .map((item) => ({
+      provider: item.metadata?.[LINE_PROVIDER_METADATA] as string,
       lineKey: item.metadata?.[LINE_KEY_METADATA] as string,
       amount: item.amount,
-      currency: item.currency,
+      currency: item.currency.toLowerCase(),
+      periodStart: item.period?.start ?? 0,
+      periodEnd: item.period?.end ?? 0,
     }));
 }
 
@@ -74,43 +90,102 @@ export function selectProviderLines(
   };
 }
 
-function canonicalLines(lines: readonly ManagedLine[]): string[] {
-  return lines
-    .map(
-      (line) => `${line.lineKey}=${line.amount} ${line.currency.toLowerCase()}`,
-    )
-    .sort();
+function toSeconds(date: Date): number {
+  return Math.floor(new Date(date).getTime() / MS_PER_SECOND);
 }
 
-/** Whether the managed items on Stripe are exactly the expected ones, once each. */
-export function managedLinesMatch(
-  expected: readonly ManagedLine[],
-  actual: readonly ManagedLine[],
-): boolean {
-  const left = canonicalLines(expected);
-  const right = canonicalLines(actual);
-  return (
-    left.length === right.length && left.every((line, i) => line === right[i])
-  );
+/** The line as the task requires it on Stripe: its window and currency come from the task. */
+export function expectedLine(
+  task: InvoiceLineInjection,
+  provider: string,
+  prepared: PreparedInvoiceLineItem,
+): ManagedLine {
+  return {
+    provider,
+    lineKey: prepared.lineKey,
+    amount: prepared.item.amountCents,
+    currency: task.currency.toLowerCase(),
+    periodStart: toSeconds(task.periodStart),
+    periodEnd: toSeconds(task.periodEnd),
+  };
+}
+
+function canonical(line: ManagedLine): string {
+  return [
+    line.provider,
+    line.lineKey,
+    line.amount,
+    line.currency,
+    line.periodStart,
+    line.periodEnd,
+  ].join("|");
 }
 
 /**
- * What we finalize, in a form a later reader can recompute from Stripe alone:
- * invoice identity, currency, and every managed line's key, amount and
- * currency. A finalized invoice is recognized as ours only by this match.
+ * Compare Stripe's managed items with the expected ones. Only absent keys are
+ * worth waiting for; a key present twice, or present with another amount,
+ * currency, period or provider, is a fact no retry will change.
+ */
+export function compareManagedLines(
+  expected: readonly ManagedLine[],
+  actual: readonly ManagedLine[],
+): LinesComparison {
+  const keys = actual.map((line) => line.lineKey);
+  if (new Set(keys).size !== keys.length) return "duplicate";
+  const wanted = new Map(
+    expected.map((line) => [line.lineKey, canonical(line)]),
+  );
+  for (const line of actual) {
+    if (wanted.get(line.lineKey) !== canonical(line))
+      return "unexpected_or_changed";
+  }
+  return actual.length === expected.length ? "match" : "missing_only";
+}
+
+/**
+ * Why a Stripe invoice is not the one the task was registered for, or null.
+ * Compared with the task — never with an earlier snapshot of the invoice,
+ * which could itself already have been changed.
+ */
+export function identityMismatch(
+  invoice: Stripe.Invoice,
+  task: InvoiceLineInjection,
+): string | null {
+  const customer =
+    typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id;
+  if (invoice.id !== task._id) return "invoice";
+  if (customer !== task.customerId) return "customer";
+  if (readInvoiceSubscriptionId(invoice) !== task.stripeSubscriptionId)
+    return "subscription";
+  if (invoice.currency.toLowerCase() !== task.currency.toLowerCase())
+    return "currency";
+  return null;
+}
+
+/** A draft whose automatic finalization is off. */
+export function isSuspendedDraft(invoice: Stripe.Invoice): boolean {
+  return invoice.status === DRAFT && invoice.auto_advance === false;
+}
+
+/**
+ * What we finalize, recomputable from the task and Stripe alone: the task's
+ * invoice identity and window, and every managed line's provider, key,
+ * amount, currency and period.
  */
 export function invoiceFingerprint(
-  invoice: Stripe.Invoice,
+  task: InvoiceLineInjection,
   lines: readonly ManagedLine[],
 ): string {
   return JSON.stringify({
-    invoice: invoice.id,
-    customer:
-      typeof invoice.customer === "string"
-        ? invoice.customer
-        : invoice.customer?.id,
-    subscription: readInvoiceSubscriptionId(invoice),
-    currency: invoice.currency.toLowerCase(),
-    lines: canonicalLines(lines),
+    invoice: task._id,
+    customer: task.customerId,
+    subscription: task.stripeSubscriptionId,
+    currency: task.currency.toLowerCase(),
+    periodStart: toSeconds(task.periodStart),
+    periodEnd: toSeconds(task.periodEnd),
+    providers: [...task.providerIds].sort(),
+    lines: lines.map(canonical).sort(),
   });
 }

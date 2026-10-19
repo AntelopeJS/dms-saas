@@ -60,6 +60,13 @@ export class InvoiceLineInjection extends Table {
   @Field("string")
   declare source: InvoiceLineInjectionSource;
 
+  /**
+   * Providers whose lines this invoice must carry, fixed at registration. A
+   * provider missing at a later run is waited for, never read as no usage.
+   */
+  @Field("any")
+  declare providerIds: string[];
+
   /** The invoice.created event whose receipt this task takes over, if known. */
   @Field("string")
   declare eventId: string | null;
@@ -70,6 +77,13 @@ export class InvoiceLineInjection extends Table {
 
   @Field("string")
   declare reason: string | null;
+
+  /**
+   * When Stripe was read back with the draft at `auto_advance=false`. Only this
+   * proves the suspension; `needs_operator` can be reached with it unset.
+   */
+  @Field("date")
+  declare suspendedAt: Date | null;
 
   /** Canonical description of the managed lines, set on entering `finalizing`. */
   @Field("string")

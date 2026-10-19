@@ -2,7 +2,6 @@ import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { StripeWebhookEventModel } from "@antelopejs/interface-dms-saas/db";
 import {
-  type InvoiceLineItemsProvider,
   normalizeInvoiceLineItemsResolution,
   type PreparedInvoiceLineItem,
 } from "@antelopejs/interface-dms-saas/invoice-line-items";
@@ -11,10 +10,13 @@ import { getInvoiceLineItemsProviders } from "../../implementations/dms-saas/inv
 import { getStripeClient } from "../../stripe/client";
 import { createInvoiceLineItemWithRetries } from "../injection";
 import {
+  compareManagedLines,
+  expectedLine,
+  identityMismatch,
   invoiceFingerprint,
+  isSuspendedDraft,
   listInvoiceItems,
   type ManagedLine,
-  managedLinesMatch,
   managedLinesOf,
   selectProviderLines,
 } from "./managed-lines";
@@ -94,17 +96,19 @@ function retrieveInvoice(invoiceId: string): Promise<Stripe.Invoice> {
   return getStripeClient().invoices.retrieve(invoiceId);
 }
 
-function isSuspendedDraft(invoice: Stripe.Invoice): boolean {
-  return invoice.status === DRAFT && invoice.auto_advance === false;
-}
-
 function stateOf(invoice: Stripe.Invoice): string {
   return `${invoice.status}/auto_advance=${invoice.auto_advance}`;
 }
 
-/** registered → suspended, confirmed only by reading Stripe back. */
+/** registered → suspended, proven only by reading Stripe back. */
 async function suspend(lease: InvoiceLineInjectionLease): Promise<StepOutcome> {
   const invoiceId = lease.task._id;
+  const before = await retrieveInvoice(invoiceId);
+  const foreign = identityMismatch(before, lease.task);
+  if (foreign)
+    return toOperator(lease, `before_suspension:identity_${foreign}`);
+  if (before.status !== DRAFT)
+    return toOperator(lease, `before_suspension:finalized:${stateOf(before)}`);
   let requestError: string | null = null;
   await holdLease(lease);
   try {
@@ -118,44 +122,59 @@ async function suspend(lease: InvoiceLineInjectionLease): Promise<StepOutcome> {
   }
   const invoice = await retrieveInvoice(invoiceId);
   if (isSuspendedDraft(invoice))
-    return transition(lease, { state: "suspended", lastError: null });
+    return transition(lease, {
+      state: "suspended",
+      suspendedAt: new Date(),
+      lastError: null,
+    });
   if (invoice.status !== DRAFT)
-    return toOperator(lease, `finalized_before_suspension:${stateOf(invoice)}`);
+    return toOperator(lease, `before_suspension:finalized:${stateOf(invoice)}`);
   return retryLater(lease, requestError ?? "suspension_not_visible");
 }
 
 interface ResolvedLines {
+  expected: ManagedLine[];
   accepted: Array<{ provider: string; prepared: PreparedInvoiceLineItem }>;
   blocked: string | null;
-  notReady: string | null;
+  waiting: string | null;
 }
 
-async function resolveAll(
-  task: InvoiceLineInjection,
-  providers: readonly InvoiceLineItemsProvider[],
-): Promise<ResolvedLines> {
-  const resolved: ResolvedLines = {
-    accepted: [],
-    blocked: null,
-    notReady: null,
-  };
-  const context = {
+function contextOf(task: InvoiceLineInjection) {
+  return {
     tenantId: task.tenantId,
     invoiceId: task._id,
     currency: task.currency,
     periodStart: new Date(task.periodStart),
     periodEnd: new Date(task.periodEnd),
   };
-  for (const provider of providers) {
+}
+
+/** Ask every provider the task was registered with; a missing one is waited for. */
+async function resolveAll(task: InvoiceLineInjection): Promise<ResolvedLines> {
+  const resolved: ResolvedLines = {
+    expected: [],
+    accepted: [],
+    blocked: null,
+    waiting: null,
+  };
+  const registered = new Map(
+    getInvoiceLineItemsProviders().map((provider) => [provider.id, provider]),
+  );
+  for (const providerId of task.providerIds) {
+    const provider = registered.get(providerId);
+    if (!provider) {
+      resolved.waiting ??= `provider_missing:${providerId}`;
+      continue;
+    }
     const resolution = normalizeInvoiceLineItemsResolution(
-      await provider.resolve(context),
+      await provider.resolve(contextOf(task)),
     );
     if (resolution.status === "blocked") {
       resolved.blocked = `provider_blocked:${provider.id}:${resolution.reason}`;
       return resolved;
     }
     if (resolution.status === "not_ready") {
-      resolved.notReady ??= `provider_not_ready:${provider.id}:${resolution.reason}`;
+      resolved.waiting ??= `provider_not_ready:${provider.id}:${resolution.reason}`;
       continue;
     }
     const selection = selectProviderLines(provider, resolution.lines);
@@ -163,21 +182,12 @@ async function resolveAll(
       resolved.blocked = `provider_invalid_lines:${provider.id}:${selection.invalidKeys.join(",")}`;
       return resolved;
     }
-    for (const prepared of selection.accepted)
+    for (const prepared of selection.accepted) {
       resolved.accepted.push({ provider: provider.id, prepared });
+      resolved.expected.push(expectedLine(task, provider.id, prepared));
+    }
   }
   return resolved;
-}
-
-function expectedLinesOf(
-  resolved: ResolvedLines,
-  currency: string,
-): ManagedLine[] {
-  return resolved.accepted.map(({ prepared }) => ({
-    lineKey: prepared.lineKey,
-    amount: prepared.item.amountCents,
-    currency,
-  }));
 }
 
 async function createMissingLines(
@@ -192,63 +202,74 @@ async function createMissingLines(
     await holdLease(lease);
     await createInvoiceLineItemWithRetries(
       provider,
-      {
-        customerId: task.customerId,
-        context: {
-          tenantId: task.tenantId,
-          invoiceId: task._id,
-          currency: task.currency,
-          periodStart: new Date(task.periodStart),
-          periodEnd: new Date(task.periodEnd),
-        },
-      },
+      { customerId: task.customerId, context: contextOf(task) },
       prepared,
     );
   }
 }
 
-/** suspended → finalizing once every expected line is read back, and nothing else managed. */
+/** Why a draft may not be touched further, or null when it is still ours and suspended. */
+function draftProblem(
+  invoice: Stripe.Invoice,
+  task: InvoiceLineInjection,
+): string | null {
+  const foreign = identityMismatch(invoice, task);
+  if (foreign) return `identity_${foreign}`;
+  if (!isSuspendedDraft(invoice)) return `left_suspension:${stateOf(invoice)}`;
+  return null;
+}
+
+/** suspended → finalizing once exactly the expected lines are read back. */
 async function injectLines(
   lease: InvoiceLineInjectionLease,
 ): Promise<StepOutcome> {
   const { task } = lease;
-  const invoice = await retrieveInvoice(task._id);
-  if (!isSuspendedDraft(invoice))
-    return toOperator(lease, `left_suspension:${stateOf(invoice)}`);
+  const problem = draftProblem(await retrieveInvoice(task._id), task);
+  if (problem) return toOperator(lease, problem);
   let resolved: ResolvedLines;
   try {
-    resolved = await resolveAll(task, getInvoiceLineItemsProviders());
+    resolved = await resolveAll(task);
   } catch (error) {
     return retryLater(lease, `provider_failed:${errorText(error)}`);
   }
   if (resolved.blocked) return toOperator(lease, resolved.blocked);
-  if (resolved.notReady) return retryLater(lease, resolved.notReady);
-  const expected = expectedLinesOf(resolved, invoice.currency);
+  if (resolved.waiting) return retryLater(lease, resolved.waiting);
   const before = managedLinesOf(await listInvoiceItems(task._id));
-  const mismatched = before.filter(
-    (line) =>
-      !expected.some(
-        (wanted) =>
-          wanted.lineKey === line.lineKey && wanted.amount === line.amount,
-      ),
-  );
-  if (mismatched.length > 0)
-    return toOperator(
-      lease,
-      `foreign_or_changed_managed_lines:${mismatched.map((l) => l.lineKey).join(",")}`,
-    );
+  const beforeComparison = compareManagedLines(resolved.expected, before);
+  if (
+    beforeComparison === "duplicate" ||
+    beforeComparison === "unexpected_or_changed"
+  )
+    return toOperator(lease, `managed_lines_${beforeComparison}`);
   await createMissingLines(lease, resolved, before);
   const after = managedLinesOf(await listInvoiceItems(task._id));
-  if (!managedLinesMatch(expected, after))
+  const comparison = compareManagedLines(resolved.expected, after);
+  if (comparison === "missing_only")
     return retryLater(lease, "managed_lines_not_yet_visible");
+  if (comparison !== "match")
+    return toOperator(lease, `managed_lines_${comparison}`);
   return transition(lease, {
     state: "finalizing",
-    fingerprint: invoiceFingerprint(invoice, after),
+    fingerprint: invoiceFingerprint(task, after),
     lastError: null,
   });
 }
 
-/** finalizing → finalized, recognized only by identity and fingerprint. */
+/** The invoice is ours and still carries exactly what we recorded. */
+async function matchesRecord(
+  invoice: Stripe.Invoice,
+  task: InvoiceLineInjection,
+): Promise<boolean> {
+  if (identityMismatch(invoice, task)) return false;
+  const lines = managedLinesOf(await listInvoiceItems(task._id));
+  return invoiceFingerprint(task, lines) === task.fingerprint;
+}
+
+/**
+ * finalizing → finalized. The draft is re-verified right before the
+ * irreversible call — still ours, still suspended, still exactly the recorded
+ * lines — and the result is recognized only by the same verification.
+ */
 async function finalize(
   lease: InvoiceLineInjectionLease,
 ): Promise<StepOutcome> {
@@ -256,6 +277,10 @@ async function finalize(
   let invoice = await retrieveInvoice(task._id);
   let requestError: string | null = null;
   if (invoice.status === DRAFT) {
+    const problem = draftProblem(invoice, task);
+    if (problem) return toOperator(lease, `before_finalize:${problem}`);
+    if (!(await matchesRecord(invoice, task)))
+      return toOperator(lease, "before_finalize:changed_since_verified");
     await holdLease(lease);
     try {
       await getStripeClient().invoices.finalizeInvoice(
@@ -272,8 +297,7 @@ async function finalize(
     return retryLater(lease, requestError ?? "finalization_not_visible");
   if (!RECOGNIZED_FINAL_STATUSES.has(invoice.status ?? ""))
     return toOperator(lease, `finalized_as:${invoice.status}`);
-  const lines = managedLinesOf(await listInvoiceItems(task._id));
-  if (invoiceFingerprint(invoice, lines) !== task.fingerprint)
+  if (!(await matchesRecord(invoice, task)))
     return toOperator(
       lease,
       `finalized_with_external_changes:${invoice.status}`,
@@ -289,7 +313,7 @@ const STEPS: Partial<Record<InvoiceLineInjectionState, Step>> = {
 
 /** Acknowledge the invoice.created receipt once the draft is known suspended. */
 async function closeWebhookReceipt(task: InvoiceLineInjection): Promise<void> {
-  if (!task.eventId || task.state === "registered") return;
+  if (!task.eventId || !task.suspendedAt) return;
   const staleBefore = new Date(Date.now() - INVOICE_LINE_LEASE_MS);
   await GetModel(StripeWebhookEventModel).resolveTakenOver(
     task.eventId,

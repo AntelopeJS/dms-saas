@@ -97,4 +97,9 @@ export interface DmsSaasConfig {
    * no proof it belongs to this workflow.
    */
   invoiceLineRecoveryDiscoverySince?: string;
+  /**
+   * Invoice line providers every cycle invoice must wait for, even when one is
+   * not registered yet as the invoice is created (module still loading).
+   */
+  invoiceLineRequiredProviders?: string[];
 }

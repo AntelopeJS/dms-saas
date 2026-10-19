@@ -30,6 +30,7 @@ export type NewInvoiceLineInjection = Pick<
   | "periodEnd"
   | "source"
   | "eventId"
+  | "providerIds"
 >;
 
 export function isInvoiceLineInjectionLeasable(
@@ -58,6 +59,7 @@ export class InvoiceLineInjectionModel extends BasicDataModel(
         ...row,
         state: "registered",
         reason: null,
+        suspendedAt: null,
         fingerprint: null,
         revision: randomUUID(),
         leaseId: null,

@@ -52,6 +52,7 @@ const harness = vi.hoisted(() => {
     invoice: string;
     amount: number;
     currency: string;
+    period: { start: number; end: number };
     metadata: Record<string, string>;
   }
   const state = {
@@ -63,6 +64,11 @@ const harness = vi.hoisted(() => {
     calls: { update: 0, finalizeEffects: 0, itemCreates: 0, pay: 0 },
     resolve: (() => []) as (ctx: unknown) => unknown,
     since: null as Date | null,
+    providers: ["cloud"] as string[],
+    otherResolve: (() => []) as (ctx: unknown) => unknown,
+    required: [] as string[],
+    /** Stripe misbehaving on create: duplicate the item, or store another currency. */
+    createQuirk: null as null | "duplicate" | "currency",
   };
   const pause = () => new Promise((r) => setTimeout(r, state.latencyMs));
   const fault = (point: string) => {
@@ -142,6 +148,7 @@ const harness = vi.hoisted(() => {
           invoice: string;
           amount: number;
           currency: string;
+          period: { start: number; end: number };
           metadata: Record<string, string>;
         },
         options: { idempotencyKey: string },
@@ -157,10 +164,13 @@ const harness = vi.hoisted(() => {
           id: `ii_${state.items.length}`,
           invoice: params.invoice,
           amount: params.amount,
-          currency: params.currency,
+          currency: state.createQuirk === "currency" ? "usd" : params.currency,
+          period: params.period,
           metadata: params.metadata,
         };
         state.items.push(item);
+        if (state.createQuirk === "duplicate")
+          state.items.push({ ...item, id: `${item.id}_dup` });
         state.calls.itemCreates += 1;
         state.idempotency.set(options.idempotencyKey, item);
         return item;
@@ -176,13 +186,19 @@ vi.mock("../src/stripe/client", () => ({
   isStripeConfigured: () => true,
 }));
 vi.mock("../src/implementations/dms-saas/invoice-line-items", () => ({
-  getInvoiceLineItemsProviders: () => [
-    { id: "cloud", resolve: (ctx: unknown) => harness.state.resolve(ctx) },
-  ],
+  getInvoiceLineItemsProviders: () =>
+    harness.state.providers.map((id) => ({
+      id,
+      resolve: (ctx: unknown) =>
+        id === "cloud"
+          ? harness.state.resolve(ctx)
+          : harness.state.otherResolve(ctx),
+    })),
 }));
 vi.mock("../src/config", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getInvoiceDiscoverySince: () => harness.state.since,
+  getRequiredInvoiceLineProviders: () => harness.state.required,
 }));
 
 const PERIOD_START = 1_792_266_817; // 2026-10-18T19:53:37Z
@@ -229,6 +245,10 @@ beforeEach(() => {
   state.calls = { update: 0, finalizeEffects: 0, itemCreates: 0, pay: 0 };
   state.resolve = () => LINES;
   state.since = null;
+  state.providers = ["cloud"];
+  state.otherResolve = () => [];
+  state.required = [];
+  state.createQuirk = null;
 });
 
 afterEach(() => {
@@ -392,20 +412,59 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     expect(harness.state.calls.update).toBe(1);
   });
 
-  it("hands a draft Stripe finalized before suspension to an operator", async () => {
+  it("hands a draft Stripe finalized before suspension to an operator, without closing the receipt", async () => {
     const f = await aCycleInvoice();
     harness.state.faults.set("update:before", 1);
-    await expect(
-      dispatchStripeWebhookEvent(invoiceCreated(f)),
-    ).rejects.toThrow();
+    const event = invoiceCreated(f);
+    await expect(dispatchStripeWebhookEvent(event)).rejects.toThrow();
     invoice(f.invoiceId)!.status = "open";
     await runRecovery();
     expect(await task(f.invoiceId)).toMatchObject({
       state: "needs_operator",
-      reason: "finalized_before_suspension:open/auto_advance=true",
+      reason: "before_suspension:finalized:open/auto_advance=true",
+      suspendedAt: null,
     });
+    expect((await receipt(event.id))?.result).toBe("reconciliation_required");
     expect(harness.state.calls.finalizeEffects).toBe(0);
   });
+
+  it.each([
+    [
+      "already finalized",
+      (f: Fixture) => {
+        invoice(f.invoiceId)!.status = "open";
+      },
+      "before_suspension:finalized:open/auto_advance=true",
+    ],
+    [
+      "another customer",
+      (f: Fixture) => {
+        invoice(f.invoiceId)!.customer = "cus_other";
+      },
+      "before_suspension:identity_customer",
+    ],
+  ])(
+    "answers 500 when the draft is unexpected before suspension (%s)",
+    async (_label, mutate, reason) => {
+      const f = await aCycleInvoice();
+      const event = invoiceCreated(f);
+      mutate(f);
+      await expect(dispatchStripeWebhookEvent(event)).rejects.toThrow(
+        "operator required before suspension",
+      );
+      expect(await task(f.invoiceId)).toMatchObject({
+        state: "needs_operator",
+        reason,
+        suspendedAt: null,
+      });
+      await runRecovery();
+      expect((await receipt(event.id))?.result).toBe("reconciliation_required");
+      expect(harness.state.calls).toMatchObject({
+        update: 0,
+        finalizeEffects: 0,
+      });
+    },
+  );
 
   it("recovers a failed task insert through bounded discovery, ignoring foreign, manual and older drafts", async () => {
     const f = await aCycleInvoice();
@@ -528,6 +587,107 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     });
   });
 
+  it.each([
+    [
+      "amount",
+      (item: any) => {
+        item.amount += 1;
+      },
+    ],
+    [
+      "currency",
+      (item: any) => {
+        item.currency = "usd";
+      },
+    ],
+    [
+      "period",
+      (item: any) => {
+        item.period.start += 60;
+      },
+    ],
+    [
+      "provider",
+      (item: any) => {
+        item.metadata.saasLineProvider = "other";
+      },
+    ],
+  ])(
+    "never finalizes a draft whose line %s changed while stopped in finalizing",
+    async (_label, mutate) => {
+      const f = await aCycleInvoice();
+      harness.state.faults.set("finalize:before", 1);
+      await dispatchStripeWebhookEvent(invoiceCreated(f));
+      expect((await task(f.invoiceId))?.state).toBe("finalizing");
+      mutate(harness.state.items.find((i) => i.invoice === f.invoiceId));
+      await runRecovery(2);
+      expect(await task(f.invoiceId)).toMatchObject({
+        state: "needs_operator",
+        reason: "before_finalize:changed_since_verified",
+      });
+      expect(harness.state.calls.finalizeEffects).toBe(0);
+      expect(invoice(f.invoiceId)?.status).toBe("draft");
+    },
+  );
+
+  it.each([
+    [
+      "an extra managed line",
+      (f: Fixture) => {
+        const item = harness.state.items.find(
+          (i) => i.invoice === f.invoiceId,
+        )!;
+        harness.state.items.push({ ...structuredClone(item), id: "ii_extra" });
+      },
+      "before_finalize:changed_since_verified",
+    ],
+    [
+      "automatic advancement turned back on",
+      (f: Fixture) => {
+        invoice(f.invoiceId)!.auto_advance = true;
+      },
+      "before_finalize:left_suspension:draft/auto_advance=true",
+    ],
+    [
+      "another customer",
+      (f: Fixture) => {
+        invoice(f.invoiceId)!.customer = "cus_other";
+      },
+      "before_finalize:identity_customer",
+    ],
+  ])(
+    "never finalizes after %s while stopped in finalizing",
+    async (_label, mutate, reason) => {
+      const f = await aCycleInvoice();
+      harness.state.faults.set("finalize:before", 1);
+      await dispatchStripeWebhookEvent(invoiceCreated(f));
+      mutate(f);
+      await runRecovery();
+      expect(await task(f.invoiceId)).toMatchObject({
+        state: "needs_operator",
+        reason,
+      });
+      expect(harness.state.calls.finalizeEffects).toBe(0);
+    },
+  );
+
+  it.each([
+    ["duplicate", "managed_lines_duplicate"],
+    ["currency", "managed_lines_unexpected_or_changed"],
+  ] as const)(
+    "hands a %s Stripe line to an operator instead of retrying forever",
+    async (quirk, reason) => {
+      const f = await aCycleInvoice();
+      harness.state.createQuirk = quirk;
+      await dispatchStripeWebhookEvent(invoiceCreated(f));
+      expect(await task(f.invoiceId)).toMatchObject({
+        state: "needs_operator",
+        reason,
+      });
+      expect(harness.state.calls.finalizeEffects).toBe(0);
+    },
+  );
+
   it("keeps foreign items untouched and outside the fingerprint", async () => {
     const f = await aCycleInvoice();
     harness.state.items.push({
@@ -535,6 +695,7 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       invoice: f.invoiceId,
       amount: 999,
       currency: "eur",
+      period: { start: 0, end: 0 },
       metadata: {},
     });
     await dispatchStripeWebhookEvent(invoiceCreated(f));
@@ -568,6 +729,80 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     await runRecovery(3);
     expect((await task(waiting.invoiceId))?.state).toBe("suspended");
     expect(harness.state.calls.finalizeEffects).toBe(0);
+  });
+});
+
+describe("invoice line recovery — expected providers", () => {
+  it("waits for a provider that disappeared before the resumption, never finalizing without it", async () => {
+    const f = await aCycleInvoice();
+    harness.state.resolve = () => ({ status: "not_ready", reason: "coverage" });
+    await dispatchStripeWebhookEvent(invoiceCreated(f));
+    expect((await task(f.invoiceId))?.providerIds).toEqual(["cloud"]);
+    harness.state.providers = [];
+    harness.state.resolve = () => LINES;
+    await runRecovery(3);
+    expect(await task(f.invoiceId)).toMatchObject({
+      state: "suspended",
+      lastError: "provider_missing:cloud",
+    });
+    expect(harness.state.calls).toMatchObject({
+      itemCreates: 0,
+      finalizeEffects: 0,
+    });
+    harness.state.providers = ["cloud"];
+    await runRecovery();
+    expect((await task(f.invoiceId))?.state).toBe("finalized");
+    expect(managedKeys(f.invoiceId)).toEqual([
+      "cloud:included-credit=-10",
+      "cloud:usage-cpu-minutes=16",
+    ]);
+  });
+
+  it("bills both providers, and waits while either is missing", async () => {
+    const f = await aCycleInvoice();
+    harness.state.providers = ["cloud", "storage"];
+    harness.state.otherResolve = () => [
+      { key: "volume-gb-hours", description: "Volume", amountCents: 7 },
+    ];
+    harness.state.resolve = () => ({ status: "not_ready", reason: "coverage" });
+    await dispatchStripeWebhookEvent(invoiceCreated(f));
+    expect((await task(f.invoiceId))?.providerIds).toEqual([
+      "cloud",
+      "storage",
+    ]);
+    harness.state.resolve = () => LINES;
+    harness.state.providers = ["cloud"];
+    await runRecovery();
+    expect(await task(f.invoiceId)).toMatchObject({
+      state: "suspended",
+      lastError: "provider_missing:storage",
+    });
+    expect(harness.state.calls.itemCreates).toBe(0);
+    harness.state.providers = ["storage", "cloud"];
+    await runRecovery();
+    expect((await task(f.invoiceId))?.state).toBe("finalized");
+    expect(managedKeys(f.invoiceId)).toEqual([
+      "cloud:included-credit=-10",
+      "cloud:usage-cpu-minutes=16",
+      "storage:volume-gb-hours=7",
+    ]);
+  });
+
+  it("waits for a configured provider not yet registered when invoice.created arrives", async () => {
+    const f = await aCycleInvoice();
+    harness.state.required = ["cloud"];
+    harness.state.providers = [];
+    const event = invoiceCreated(f);
+    await dispatchStripeWebhookEvent(event);
+    expect(await task(f.invoiceId)).toMatchObject({
+      state: "suspended",
+      providerIds: ["cloud"],
+    });
+    expect((await receipt(event.id))?.result).toBe("success");
+    expect(harness.state.calls.finalizeEffects).toBe(0);
+    harness.state.providers = ["cloud"];
+    await runRecovery();
+    expect((await task(f.invoiceId))?.state).toBe("finalized");
   });
 });
 

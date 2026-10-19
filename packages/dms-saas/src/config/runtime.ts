@@ -118,6 +118,11 @@ export function getInvoiceDiscoverySince(): Date | null {
   return Number.isNaN(since.getTime()) ? null : since;
 }
 
+/** Providers a cycle invoice waits for even before they register. */
+export function getRequiredInvoiceLineProviders(): string[] {
+  return runtimeConfig?.invoiceLineRequiredProviders ?? [];
+}
+
 export function getReportingCurrency(): string {
   return (
     runtimeConfig?.reportingCurrency ?? DEFAULT_REPORTING_CURRENCY
