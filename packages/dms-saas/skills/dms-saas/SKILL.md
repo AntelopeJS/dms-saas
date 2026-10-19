@@ -30,6 +30,8 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 
 - The `dms-saas.plan-intersection` resolver keeps, per member, roles ∩ plan; the workspace owner gets every plan
   permission (never `*`). A plan grants exactly the ids it lists: list every component id, not just the page.
+- Role preview (`context?.preview` in a resolver): roles ∩ plan with no owner grant and no owner-only screens, `*` kept
+  only for a `*` role. Resolvers of your own keyed on the user must read the context the same way.
 - New project page or block → add its permission ids to the plans that should get it, or tenants lose it.
 - Seeding plans from code: write name, price, currency, interval, billing mode; leave `paymentProviderRefs` to dms-saas.
 - Features: `displayName` / `tooltip` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys.
