@@ -144,6 +144,9 @@ async function insertPlan(): Promise<string> {
     _id: planId,
     name: "Assigned",
     price: 0,
+    currency: "eur",
+    interval: "month",
+    billingMode: "flat",
     isActive: true,
     isDeleted: false,
   });
@@ -647,5 +650,68 @@ describe("complimentary access over a paid subscription", () => {
       status: 400,
       body: "saas.errors.workspace.cancellation_not_acknowledged",
     });
+  });
+});
+
+describe("complimentary access to a workspace without a customer type", () => {
+  async function insertBusinessPlan(): Promise<string> {
+    const planId = randomUUID();
+    await GetModel(PlanModel).insert({
+      _id: planId,
+      name: "Team",
+      price: 49,
+      currency: "eur",
+      interval: "month",
+      billingMode: "flat",
+      audience: "business",
+      isActive: true,
+      isDeleted: false,
+    });
+    return planId;
+  }
+
+  async function currentPlanIdOf(tenantId: string): Promise<string> {
+    const subscription = await subscriptionOf(tenantId);
+    if (!subscription) throw new Error("Expected a subscription");
+    return subscription.planId;
+  }
+
+  it("offers every plan, the one it is on included", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const businessPlanId = await insertBusinessPlan();
+
+    const impact = await adminController().getComplimentaryImpact(
+      operator,
+      tenantId,
+    );
+
+    const offeredIds = impact.plans.map((plan) => plan.id);
+    expect(offeredIds).toContain(impact.currentPlanId);
+    expect(offeredIds).toContain(businessPlanId);
+  });
+
+  it("still names the plan it is on once that plan is no longer sold", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const planId = await currentPlanIdOf(tenantId);
+    await GetModel(PlanModel).update(planId, { isActive: false });
+
+    const impact = await adminController().getComplimentaryImpact(
+      operator,
+      tenantId,
+    );
+
+    expect(impact.plans.map((plan) => plan.id)).toContain(planId);
+    await expect(
+      adminController().grantFreeAccess(operator, tenantId, { planId }),
+    ).resolves.toMatchObject({ planId });
+  });
+
+  it("grants a plan sold to a single audience", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const planId = await insertBusinessPlan();
+
+    await expect(
+      adminController().grantFreeAccess(operator, tenantId, { planId }),
+    ).resolves.toMatchObject({ planId });
   });
 });

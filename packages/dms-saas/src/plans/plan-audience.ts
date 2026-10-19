@@ -15,3 +15,18 @@ export function isPlanOfferedTo(
 ): boolean {
   return plan.audience === ANY_PLAN_AUDIENCE || plan.audience === customerType;
 }
+
+/**
+ * Whether an operator may put a workspace on a plan. A workspace without a
+ * customer type was never matched to an audience, so every plan is open to
+ * it; one with a type takes the plans sold to that type.
+ *
+ * @param plan The plan
+ * @param customerType The workspace's customer type, when it has one
+ */
+export function isPlanOpenToWorkspace(
+  plan: Pick<Plan, "audience">,
+  customerType: string | null | undefined,
+): boolean {
+  return !customerType || isPlanOfferedTo(plan, customerType);
+}
