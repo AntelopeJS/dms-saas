@@ -460,16 +460,21 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 		serverFieldErrors.value = rest
 	}
 
+	// Not a `useApiData` read: each call creates a SetupIntent, whose client
+	// secret is the card form's alone, never cached nor shared.
+	async function createSetupIntent(): Promise<string | undefined> {
+		const setup = await $authFetch<SetupIntentResponse>(SETUP_INTENT_ENDPOINT)
+		return setup.clientSecret || undefined
+	}
+
 	async function mountPaymentElement(): Promise<void> {
 		const publishableKey = saasConfig?.stripePublishableKey
 		if (!publishableKey) return
-		// Not a `useApiData` read: each call creates a SetupIntent, whose client
-		// secret is the card form's alone, never cached nor shared.
-		const setup = await $authFetch<SetupIntentResponse>(SETUP_INTENT_ENDPOINT)
-		if (!setup.clientSecret) return
+		const clientSecret = await createSetupIntent()
+		if (!clientSecret) return
 		stripeHandle.value = useStripePaymentElement({
 			publishableKey,
-			clientSecret: setup.clientSecret,
+			clientSecret,
 			containerId: paymentElementId,
 			billingEmail: () => form.email,
 		})
@@ -502,6 +507,18 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 			}),
 			requestedPlanId: plan.summary.value?.requestedPlan?._id,
 			extras: snapshotRegistrationExtras(toValue(options.extras)),
+		}
+	}
+
+	// A refusal after the card was confirmed leaves its SetupIntent spent:
+	// the next card must go through a fresh one, or Stripe refuses it with a
+	// bare processing error.
+	async function renewCard(): Promise<void> {
+		try {
+			const clientSecret = await createSetupIntent()
+			if (clientSecret) await stripeHandle.value?.renew(clientSecret)
+		} catch (error) {
+			errorMessage.value = resolveApiError(error, LOAD_ERROR_KEY)
 		}
 	}
 
@@ -549,11 +566,12 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 
 		isSubmitting.value = true
 		let tenantId: string | null = null
+		let paymentMethodId: string | null | undefined
 		try {
 			// Inside the guard: freezing the capture reads the consumer's object,
 			// and a consumer's object is never guaranteed to be serialisable.
 			const submission = captureSubmission()
-			const paymentMethodId = isPaymentStepVisible.value
+			paymentMethodId = isPaymentStepVisible.value
 				? await confirmPaymentMethod()
 				: undefined
 			if (paymentMethodId === null) return null
@@ -570,6 +588,7 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 			// through a flow that would create a second account.
 			if (tenantId) return tenantId
 			reportFailure(error)
+			if (paymentMethodId) await renewCard()
 			return null
 		} finally {
 			isSubmitting.value = false

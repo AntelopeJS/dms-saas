@@ -8,6 +8,8 @@ import { PLAN_UNLIMITED } from '../build/plan-catalog'
 /** Query parameter naming the plan to review on arrival on the billing page. */
 export const UPGRADE_QUERY_PARAM = 'upgrade'
 
+const INCOMPATIBLE_CODE = 'saas.errors.plan.incompatible'
+
 const UNLIMITED_RANK = Number.POSITIVE_INFINITY
 
 /** One feature that differs between two plans. */
@@ -31,6 +33,29 @@ export interface OfferedPlans {
 	offered: OfferedPlanView[]
 	forOtherCustomerType: OfferedPlanView[]
 	tooSmall: OfferedPlanView[]
+}
+
+/** Something the workspace holds that the target plan does not allow. */
+export interface PlanChangeIncompatibility {
+	code: string
+	message: string
+	resource?: string
+}
+
+/**
+ * What the workspace must bring within the target plan before it can move,
+ * read from the 409 a plan change preview or confirmation answers with; null
+ * for any other failure.
+ */
+export function readPlanChangeIncompatibilities(
+	error: unknown,
+): PlanChangeIncompatibility[] | null {
+	const data = (error as { data?: unknown } | undefined)?.data as
+		| { code?: unknown; incompatibilities?: unknown }
+		| undefined
+	if (data?.code !== INCOMPATIBLE_CODE) return null
+	const list = data.incompatibilities
+	return Array.isArray(list) ? (list as PlanChangeIncompatibility[]) : null
 }
 
 /**
