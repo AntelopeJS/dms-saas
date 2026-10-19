@@ -19,7 +19,9 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 - `ajs project modules add @antelopejs/dms-saas`; config `stripe.{secretKey,publishableKey,webhookSecret}` from env
   (`envOverrides`). Placeholder keys disable Stripe calls: plan sync skipped (saving a paid plan warns), registration
   takes no card whatever `registration.paymentMethod` says. Stripe refusing the key or unreachable → handled
-  `503 saas.errors.stripe.unavailable`, not a 500.
+  `503 saas.errors.stripe.unavailable`, not a 500. A new route that calls Stripe wraps its calls in
+  `withStripeAvailability()` and, when it cannot work without Stripe, calls `assertStripeConfigured()` first
+  (`503 saas.errors.stripe.not_configured`) — see `src/stripe/availability.ts`.
 - Stripe webhook endpoint → `/api/saas/webhooks/stripe`, API version `2026-08-26.dahlia`.
 - Frontend server env: `DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize`, else sign-ups stay signed out (403).
 - `allowedRedirectHosts` for Checkout / billing-portal return URLs (loopback auto-allowed in dev only).
