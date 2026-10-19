@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.2
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.1...v0.7.2)
+
+### 🩹 Fixes
+
+- **billing:** Show the refused plan change's violations and renew a spent card intent ([#119](https://github.com/AntelopeJS/dms-saas/pull/119))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.7.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.0...v0.7.1)
