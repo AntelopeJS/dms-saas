@@ -1,4 +1,5 @@
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CreditNote, InvoiceModel } from "../src/db";
 
@@ -8,6 +9,7 @@ interface NamedModel {
 
 const harness = vi.hoisted(() => ({
   models: new Map<string, unknown>(),
+  isStripeConfigured: true,
   retrieveInvoice: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   createCreditNote: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   retrieveCustomer: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
@@ -36,9 +38,13 @@ vi.mock("../src/stripe/client", async (importOriginal) => {
     ...(await importOriginal<typeof import("../src/stripe/client")>()),
     getStripeClient: client,
     getStripeReadClient: client,
-    isStripeConfigured: () => true,
+    isStripeConfigured: () => harness.isStripeConfigured,
   };
 });
+
+vi.mock("@antelopejs/interface-core/logging", () => ({
+  Logging: { Error: vi.fn(), Warn: vi.fn(), Info: vi.fn(), Debug: vi.fn() },
+}));
 
 import { SaasCreditNotesIssueController } from "../src/routes/platformOwner/credit-notes-issue";
 
@@ -76,7 +82,15 @@ async function rejection(promise: Promise<unknown>): Promise<unknown> {
 
 const controller = new SaasCreditNotesIssueController();
 
+function invalidKeyError(): Error {
+  return new Stripe.errors.StripeAuthenticationError({
+    message: "Invalid API Key provided: sk_test_*******lder",
+    type: "authentication_error",
+  });
+}
+
 beforeEach(() => {
+  harness.isStripeConfigured = true;
   invoiceRow = {
     _id: "in_row",
     _instance: TENANT_ID,
@@ -270,5 +284,54 @@ describe("issuing a credit note", () => {
 
     expect(error).toMatchObject({ status: 400 });
     expect(harness.retrieveInvoice).not.toHaveBeenCalled();
+  });
+});
+
+describe("credit notes without a usable Stripe", () => {
+  it("refuses the preview when Stripe is not configured, before any call", async () => {
+    harness.isStripeConfigured = false;
+
+    await expect(
+      controller.preview(ADMIN, "in_row", invoiceModel()),
+    ).rejects.toMatchObject({
+      status: 503,
+      body: "saas.errors.stripe.not_configured",
+    });
+    expect(harness.retrieveInvoice).not.toHaveBeenCalled();
+  });
+
+  it("refuses to issue when Stripe is not configured, before any call", async () => {
+    harness.isStripeConfigured = false;
+
+    await expect(
+      controller.issue(ADMIN, issueBody(), invoiceModel()),
+    ).rejects.toMatchObject({
+      status: 503,
+      body: "saas.errors.stripe.not_configured",
+    });
+    expect(harness.retrieveInvoice).not.toHaveBeenCalled();
+    expect(harness.createCreditNote).not.toHaveBeenCalled();
+  });
+
+  it("answers a handled 503 when Stripe refuses the key on the preview", async () => {
+    harness.retrieveInvoice.mockRejectedValueOnce(invalidKeyError());
+
+    await expect(
+      controller.preview(ADMIN, "in_row", invoiceModel()),
+    ).rejects.toMatchObject({
+      status: 503,
+      body: "saas.errors.stripe.unavailable",
+    });
+  });
+
+  it("answers a handled 503 when Stripe refuses the key on issue", async () => {
+    harness.createCreditNote.mockRejectedValueOnce(invalidKeyError());
+
+    await expect(
+      controller.issue(ADMIN, issueBody(), invoiceModel()),
+    ).rejects.toMatchObject({
+      status: 503,
+      body: "saas.errors.stripe.unavailable",
+    });
   });
 });

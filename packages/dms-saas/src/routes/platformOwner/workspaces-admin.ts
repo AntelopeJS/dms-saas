@@ -36,6 +36,7 @@ import {
   loadComplimentaryImpact,
 } from "../../operator-actions/previews";
 import { getStripeClient } from "../../stripe";
+import { withStripeAvailability } from "../../stripe/availability";
 import { parseFutureDate } from "../../utils";
 import { closePaidUsagePeriods } from "../../workspaces/complimentary";
 import {
@@ -291,8 +292,11 @@ export class SaasWorkspacesAdminController extends Controller(
       body.freeUntil,
       "saas.errors.workspace_create.free_until_past",
     );
-    await runTenantLifecycleOperation(tenantId, () =>
-      upsertFreeSubscription(tenantId, plan._id, freeUntil, user._id),
+    // Ending a paid subscription first cancels it on Stripe.
+    await withStripeAvailability(() =>
+      runTenantLifecycleOperation(tenantId, () =>
+        upsertFreeSubscription(tenantId, plan._id, freeUntil, user._id),
+      ),
     );
     await notifyTenantOwners(tenantId, complimentaryAccessGrantedSubject, {
       icon: COMP_ICON,
