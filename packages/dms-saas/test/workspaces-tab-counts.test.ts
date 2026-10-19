@@ -36,6 +36,7 @@ beforeAll(() => {
     internal: {
       RegisterTenantAccessGate: { register() {}, unregister() {} },
     },
+    EvaluateTenantAccess: async () => [],
     CheckTenantAccess: async () => ({ allowed: true }),
   });
   ImplementInterface(

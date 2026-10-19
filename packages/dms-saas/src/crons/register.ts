@@ -7,6 +7,7 @@ import { scheduleNotifyFreeWorkspacesEndingSoon } from "./notify-free-workspaces
 import { scheduleRecomputeBillingState } from "./recompute-billing-state";
 import { scheduleRecomputeSegments } from "./recompute-segments";
 import { scheduleReconcileWorkspaceLifecycle } from "./reconcile-workspace-lifecycle";
+import { scheduleReconcileGuardedDowngrades } from "./reconcile-guarded-downgrades";
 
 export function registerSaasCrons(): ScheduledTask[] {
   return [
@@ -18,5 +19,6 @@ export function registerSaasCrons(): ScheduledTask[] {
     scheduleRecomputeSegments(),
     scheduleRecomputeBillingState(),
     scheduleReconcileWorkspaceLifecycle(),
+    scheduleReconcileGuardedDowngrades(),
   ];
 }

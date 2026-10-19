@@ -55,6 +55,8 @@ export interface DmsSaasRegistrationConfig {
 
 export interface DmsSaasConfig {
   stripe: DmsSaasStripeConfig;
+  /** Fail closed for deferred changes if this inventory policy is unavailable. */
+  requiredPlanChangePolicy?: string;
   /** Deployment-wide admission policy. Defaults to open; invitations remain available. */
   admissionMode?: "open" | "invitation-only";
   /** Public registration flow settings. Invitation sign-up ignores them. */

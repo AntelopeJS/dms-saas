@@ -17,10 +17,19 @@ export function clipInvoiceUsageWindow(
   const periodStart = new Date(
     Math.max(context.periodStart.getTime(), new Date(period.start).getTime()),
   );
+  const downgrade = subscription.guardedPlanChange;
+  const paidEnd =
+    downgrade?.stripeSubscriptionId === stripeSubscriptionId &&
+    ["scheduled", "effective", "activating", "blocked"].includes(
+      downgrade.phase,
+    )
+      ? new Date(downgrade.effectiveAt).getTime()
+      : context.periodEnd.getTime();
   const periodEnd = new Date(
     Math.min(
       context.periodEnd.getTime(),
       period.end ? new Date(period.end).getTime() : context.periodEnd.getTime(),
+      paidEnd,
     ),
   );
   if (periodStart >= periodEnd) return null;
