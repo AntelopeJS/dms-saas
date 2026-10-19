@@ -8,6 +8,7 @@ import { scheduleRecomputeBillingState } from "./recompute-billing-state";
 import { scheduleRecomputeSegments } from "./recompute-segments";
 import { scheduleReconcileWorkspaceLifecycle } from "./reconcile-workspace-lifecycle";
 import { scheduleReconcileGuardedDowngrades } from "./reconcile-guarded-downgrades";
+import { scheduleReconcileInvoiceLineInjections } from "./reconcile-invoice-line-injections";
 
 export function registerSaasCrons(): ScheduledTask[] {
   return [
@@ -20,5 +21,6 @@ export function registerSaasCrons(): ScheduledTask[] {
     scheduleRecomputeBillingState(),
     scheduleReconcileWorkspaceLifecycle(),
     scheduleReconcileGuardedDowngrades(),
+    scheduleReconcileInvoiceLineInjections(),
   ];
 }

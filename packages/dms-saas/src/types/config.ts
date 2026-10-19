@@ -90,4 +90,11 @@ export interface DmsSaasConfig {
    * other currencies are shown apart, never converted. Defaults to `EUR`.
    */
   reportingCurrency?: string;
+  /**
+   * ISO instant from which cycle renewal drafts of managed subscriptions may
+   * be discovered and taken over when their invoice.created never registered
+   * a line injection task. Unset disables discovery: an older draft carries
+   * no proof it belongs to this workflow.
+   */
+  invoiceLineRecoveryDiscoverySince?: string;
 }

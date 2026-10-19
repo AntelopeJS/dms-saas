@@ -48,9 +48,61 @@ export interface InvoiceLineItemsContext {
   isPreview?: boolean;
 }
 
+/** The provider can bill the window now: these are its lines. */
+export interface InvoiceLineItemsReady {
+  status: "ready";
+  lines: InvoiceLineItem[];
+}
+
+/**
+ * The provider cannot bill the window yet but expects to: the data it reads
+ * is still being produced. The invoice stays a suspended draft and the
+ * provider is asked again later; nothing is invoiced in the meantime.
+ */
+export interface InvoiceLineItemsNotReady {
+  status: "not_ready";
+  reason: string;
+}
+
+/**
+ * The provider will never be able to bill the window on its own — usage
+ * written off, data definitively missing. The invoice stays a suspended draft
+ * for an operator; it is never finalized without the lines.
+ */
+export interface InvoiceLineItemsBlocked {
+  status: "blocked";
+  reason: string;
+}
+
+export type InvoiceLineItemsResolution =
+  | InvoiceLineItemsReady
+  | InvoiceLineItemsNotReady
+  | InvoiceLineItemsBlocked;
+
+/**
+ * Returns the lines to bill, or an explicit resolution. A bare array means
+ * `ready`. A thrown error is a transient failure: the closing invoice is
+ * retried, never finalized without the provider's lines.
+ */
 export type InvoiceLineItemsResolver = (
   context: InvoiceLineItemsContext,
-) => Promise<InvoiceLineItem[]> | InvoiceLineItem[];
+) =>
+  | Promise<InvoiceLineItem[] | InvoiceLineItemsResolution>
+  | InvoiceLineItem[]
+  | InvoiceLineItemsResolution;
+
+/** Reads what a resolver returned as an explicit resolution. */
+export function normalizeInvoiceLineItemsResolution(
+  value: unknown,
+): InvoiceLineItemsResolution {
+  if (Array.isArray(value)) return { status: "ready", lines: value };
+  const candidate = value as Partial<InvoiceLineItemsResolution> | null;
+  if (candidate?.status === "ready" && Array.isArray(candidate.lines))
+    return { status: "ready", lines: candidate.lines };
+  if (candidate?.status === "not_ready" || candidate?.status === "blocked")
+    return { status: candidate.status, reason: String(candidate.reason) };
+  return { status: "ready", lines: [] };
+}
 
 export interface InvoiceLineItemsProvider {
   id: string;
@@ -196,8 +248,11 @@ export namespace internal {
  * priced belong entirely to the provider.
  *
  * Semantics:
- * - Providers run in registration order; one that throws is logged and
- *   skipped, leaving the other providers and the invoice mirror untouched.
+ * - Providers run in registration order. On a closing invoice, the draft is
+ *   first suspended (`auto_advance=false`) and the lines are injected by a
+ *   durable task: a provider that throws or answers `not_ready` is asked
+ *   again later, one that answers `blocked` hands the invoice to an operator.
+ *   The invoice is finalized only once every provider's lines are on it.
  * - Injection is idempotent per (invoice, provider, line key): a replayed
  *   webhook, a redelivery or a concurrent worker never duplicates a line.
  * - `id` namespaces the line keys, so two providers may use the same metric
@@ -207,8 +262,9 @@ export namespace internal {
  *   invoiced. The clash is reported at error level only once dms-saas is
  *   attached: earlier registrations are held in a buffer keyed by `id`, so the
  *   replaced one is already gone by the time dms-saas sees anything.
- * - Resolvers run inside the Stripe webhook request: read pre-aggregated
- *   rollups rather than computing usage on the fly.
+ * - Resolvers run inside the Stripe webhook request or the recovery worker:
+ *   read pre-aggregated rollups rather than computing usage on the fly, and
+ *   return the same lines every time for a closed window.
  * - The registration is held until dms-saas attaches, replayed when dms-saas
  *   is reloaded, and dropped when the registering module is unloaded.
  * - Call during your module's `construct()`, and call
