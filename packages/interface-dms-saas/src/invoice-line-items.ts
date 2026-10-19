@@ -91,7 +91,14 @@ export type InvoiceLineItemsResolver = (
   | InvoiceLineItem[]
   | InvoiceLineItemsResolution;
 
-/** Reads what a resolver returned as an explicit resolution. */
+/** Reason reported for a resolver answer that is not a resolution. */
+export const INVALID_RESOLUTION_REASON = "invalid_resolution";
+
+/**
+ * Reads what a resolver returned as an explicit resolution. Anything that is
+ * neither an array nor a well-formed resolution is `blocked`: an empty bill
+ * must be stated, never inferred from a malformed answer.
+ */
 export function normalizeInvoiceLineItemsResolution(
   value: unknown,
 ): InvoiceLineItemsResolution {
@@ -101,7 +108,7 @@ export function normalizeInvoiceLineItemsResolution(
     return { status: "ready", lines: candidate.lines };
   if (candidate?.status === "not_ready" || candidate?.status === "blocked")
     return { status: candidate.status, reason: String(candidate.reason) };
-  return { status: "ready", lines: [] };
+  return { status: "blocked", reason: INVALID_RESOLUTION_REASON };
 }
 
 export interface InvoiceLineItemsProvider {

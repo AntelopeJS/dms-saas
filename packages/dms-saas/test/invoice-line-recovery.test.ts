@@ -730,6 +730,27 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     expect((await task(waiting.invoiceId))?.state).toBe("suspended");
     expect(harness.state.calls.finalizeEffects).toBe(0);
   });
+  it.each([
+    ["undefined", undefined],
+    ["ready without lines", { status: "ready" }],
+    ["unknown status", { status: "done", lines: [] }],
+  ])(
+    "treats a malformed resolution (%s) as blocked, never as an empty bill",
+    async (_label, answer) => {
+      const f = await aCycleInvoice();
+      harness.state.resolve = () => answer;
+      await dispatchStripeWebhookEvent(invoiceCreated(f));
+      await runRecovery(3);
+      expect(await task(f.invoiceId)).toMatchObject({
+        state: "needs_operator",
+        reason: "provider_blocked:cloud:invalid_resolution",
+      });
+      expect(harness.state.calls).toMatchObject({
+        itemCreates: 0,
+        finalizeEffects: 0,
+      });
+    },
+  );
 });
 
 describe("invoice line recovery — expected providers", () => {
