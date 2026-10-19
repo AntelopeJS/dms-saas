@@ -19,6 +19,12 @@ import {
   toPendingPatch,
 } from "./pending-target";
 import { applyPlanDowngradeCleanup } from "../workers/plan-migration";
+import { hasPlanChangePolicy } from "../implementations/dms-saas/plan-changes";
+import {
+  cancelGuardedFreeChange,
+  scheduleGuardedFreeChange,
+} from "./guarded-free";
+import { reconcileGuardedFreeChange } from "./guarded-landing";
 
 const ACTIVE_STATUS = "active" as const;
 const DUNNING_STATUSES = new Set<TenantSubscription["status"]>([
@@ -44,6 +50,13 @@ export async function clearPendingPlanChange(
   subscription: TenantSubscription,
   operationId?: string,
 ): Promise<void> {
+  if (subscription.guardedPlanChange) {
+    if (operationId)
+      throw new Error(
+        "An existing billing operation cannot override a guarded downgrade",
+      );
+    return cancelGuardedFreeChange(tenantId);
+  }
   if (!subscription.pendingPlanId) return;
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const intentId = operationId ?? randomUUID();
@@ -75,6 +88,9 @@ export async function scheduleDeferredPlanChange(
   params: ScheduleDeferredChangeParams,
 ): Promise<Date | null> {
   const { tenantId, subscription, targetPlan } = params;
+  if (hasPlanChangePolicy() || subscription.guardedPlanChange) {
+    return scheduleGuardedFreeChange(tenantId, targetPlan);
+  }
   if (!subscription.stripeSubscriptionId) return null;
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const operationId = randomUUID();
@@ -245,6 +261,8 @@ export async function reconcilePendingWithStripe(
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const local = await model.findOne();
   if (!local) return;
+  // A provider observation cannot acknowledge or reverse an uncertain emitter.
+  if (local.guardedPlanChange) return;
   if (local.pendingPlanId && !holdsPendingState(stripeSubscription)) {
     // Stripe does not guarantee delivery order: an update emitted before the
     // downgrade was parked can arrive after it. Dropping the parked change is
@@ -270,6 +288,7 @@ export async function applyPendingPlanChangeIfEntered(
 ): Promise<void> {
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await model.findOne();
+  if (subscription?.guardedPlanChange) return;
   const pendingPlan = await loadPendingPlan(subscription);
   if (!subscription || !pendingPlan) return;
   const pendingPriceId = pendingPlan.paymentProviderRefs?.stripePriceId;
@@ -287,6 +306,8 @@ export async function applyPendingFreePlanOnCancellation(
 ): Promise<boolean> {
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await model.findOne();
+  if (subscription?.guardedPlanChange)
+    return reconcileGuardedFreeChange(tenantId);
   const pendingPlan = await loadPendingPlan(subscription);
   if (!subscription || !pendingPlan) return false;
   // Only a genuinely free target may land without a Stripe subscription; a

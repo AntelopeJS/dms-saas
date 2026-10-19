@@ -104,6 +104,10 @@ export class TenantSubscriptionModel extends BasicDataModel(
   ): Promise<void> {
     if (current.deletionStartedAt)
       throw new Error("Subscription deletion has started");
+    if (current.guardedPlanChange)
+      throw new Error(
+        "Guarded downgrade must settle before another billing transition",
+      );
     if (
       current.domainTransition &&
       (current.domainTransition.operationId !== intent.operationId ||
@@ -404,6 +408,7 @@ export class TenantSubscriptionModel extends BasicDataModel(
     if (!current) return undefined;
     if (current.deletionStartedAt) return current;
     if (
+      current.guardedPlanChange ||
       current.domainTransition ||
       current.status !== STATUS_CANCELLED ||
       current.updatedAt >= cutoff

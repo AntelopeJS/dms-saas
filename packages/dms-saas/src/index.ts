@@ -6,6 +6,7 @@ import { RegisterSaasMode } from "@antelopejs/interface-dms/utils/saas-mode";
 import * as billingInterface from "@antelopejs/interface-dms-saas/billing";
 import * as invoiceLineItemsInterface from "@antelopejs/interface-dms-saas/invoice-line-items";
 import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
+import * as planChangesInterface from "@antelopejs/interface-dms-saas/plan-changes";
 import * as tenantLifecycleInterface from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import type { ScheduledTask } from "node-cron";
 import {
@@ -29,6 +30,7 @@ import { registerSaasHookListeners } from "./hooks";
 import * as billingImplementation from "./implementations/dms-saas/billing";
 import * as invoiceLineItemsImplementation from "./implementations/dms-saas/invoice-line-items";
 import * as pagesImplementation from "./implementations/dms-saas/pages";
+import * as planChangesImplementation from "./implementations/dms-saas/plan-changes";
 import * as tenantLifecycleImplementation from "./implementations/dms-saas/tenant-lifecycle";
 import { registerPublicScreens, resolvePublicScreensToRegister } from "./pages";
 import { registerSeatHooks } from "./plans";
@@ -44,6 +46,9 @@ let registeredCronTasks: ScheduledTask[] = [];
 
 export async function construct(config: DmsSaasConfig): Promise<void> {
   setRuntimeConfig(config);
+  planChangesImplementation.setRequiredPlanChangePolicy(
+    config.requiredPlanChangePolicy,
+  );
   // DMS stops treating default-tenant ownership as platform ownership while
   // this registration exists; the core drops it when this module unloads.
   RegisterSaasMode();
@@ -59,6 +64,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
   ImplementInterface(billingInterface, billingImplementation);
   ImplementInterface(invoiceLineItemsInterface, invoiceLineItemsImplementation);
   ImplementInterface(pagesInterface, pagesImplementation);
+  ImplementInterface(planChangesInterface, planChangesImplementation);
   ImplementInterface(tenantLifecycleInterface, tenantLifecycleImplementation);
   await registerPublicScreens(config);
 

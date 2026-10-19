@@ -39,6 +39,7 @@ import {
 } from "../../stripe/pending-update";
 import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
 import { isPlanOfferedTo } from "../../plans/plan-audience";
+import { PlanChangeIncompatibleError } from "../../plan-changes/guarded-free";
 
 export const HTTP_NOT_FOUND = 404;
 export const HTTP_BAD_REQUEST = 400;
@@ -52,6 +53,23 @@ const FLAT_QUANTITY = 1;
 // is paid: a card that needs 3D Secure leaves it pending for the owner to
 // authenticate, where `error_if_incomplete` would refuse it as declined.
 const PAID_UPGRADE_PAYMENT_BEHAVIOR = "pending_if_incomplete" as const;
+
+/** Preserve structured inventory incompatibilities at the HTTP boundary. */
+export async function planChangeResponse<T>(
+  work: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof PlanChangeIncompatibleError) {
+      throw new HTTPResult(HTTP_CONFLICT, {
+        code: "saas.errors.plan.incompatible",
+        incompatibilities: error.incompatibilities,
+      });
+    }
+    throw error;
+  }
+}
 
 export interface ChangePlanBody {
   planId: string;

@@ -62,6 +62,41 @@ export class StripeWebhookEventModel extends BasicDataModel(
       throw new Error(`Webhook completion ${outcome}; reconciliation required`);
   }
 
+  /**
+   * Close an unresolved receipt whose effects a durable task has since taken
+   * over, so Stripe's redeliveries are acknowledged. Only the given type, and
+   * only a receipt that failed or whose admitted attempt is older than
+   * `staleBefore` — a live attempt keeps its own completion.
+   */
+  async resolveTakenOver(
+    eventId: string,
+    type: string,
+    staleBefore: Date,
+    note: string,
+  ): Promise<boolean> {
+    const current = await this.get(eventId);
+    if (!current || current.type !== type) return false;
+    if (TERMINAL_RESULTS.has(current.result)) return true;
+    const isStalePending =
+      current.result === "pending" && current.processedAt < staleBefore;
+    if (current.result !== "reconciliation_required" && !isStalePending)
+      return false;
+    const outcome = await this.table
+      .atomicMutation(eventId, {
+        type: "update",
+        revisionField: "revision",
+        expectedRevision: current.revision,
+        nextRevision: randomUUID(),
+        patch: {
+          result: "success",
+          errorMessage: note,
+          processedAt: new Date(),
+        },
+      })
+      .run();
+    return outcome === "applied";
+  }
+
   /** Retain unresolved attempts indefinitely; fence cleanup of terminal receipts. */
   async deleteProcessedBefore(cutoff: Date): Promise<void> {
     const candidates = await this.table

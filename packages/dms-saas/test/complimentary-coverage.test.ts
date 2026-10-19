@@ -74,6 +74,44 @@ describe("complimentary admission and recovery", () => {
 });
 
 describe("paid usage coverage", () => {
+  it("ends confirmed downgrade coverage at the deadline before reconciliation", () => {
+    const subscription = gift({
+      isComplimentary: false,
+      stripeSubscriptionId: "paid",
+      paidUsagePeriods: [
+        { stripeSubscriptionId: "paid", start: ACTIVATED, end: null },
+      ],
+      guardedPlanChange: {
+        operationId: "downgrade",
+        policyName: "inventory",
+        targetPlanId: "free",
+        stripeSubscriptionId: "paid",
+        requestedAt: ACTIVATED,
+        effectiveAt: REGIFTED,
+        barrierId: "barrier",
+        phase: "scheduled",
+        incompatibilities: [],
+      },
+    });
+    expect(clipInvoiceUsageWindow(FEBRUARY, subscription, "paid")).toEqual({
+      ...FEBRUARY,
+      periodStart: ACTIVATED,
+      periodEnd: REGIFTED,
+    });
+    expect(
+      clipInvoiceUsageWindow(
+        { ...FEBRUARY, periodStart: REGIFTED },
+        subscription,
+        "paid",
+      ),
+    ).toBeNull();
+    subscription.guardedPlanChange!.phase = "preparing";
+    expect(clipInvoiceUsageWindow(FEBRUARY, subscription, "paid")).toEqual({
+      ...FEBRUARY,
+      periodStart: ACTIVATED,
+    });
+  });
+
   it("waives gift and grace usage even after checkout attaches a customer", () => {
     expect(
       clipInvoiceUsageWindow(FEBRUARY, gift({ status: "past_due" }), "paid"),

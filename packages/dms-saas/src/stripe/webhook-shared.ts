@@ -15,6 +15,7 @@ import type {
   TenantSubscriptionStatus,
 } from "../db";
 import { InvoiceModel, TenantSubscriptionModel } from "../db";
+import { isGuardedPlanChangeBlocked } from "../plan-changes/guarded-state";
 import {
   getRowInstance,
   insertOrUpdateById,
@@ -55,6 +56,14 @@ export async function updateSubscriptionStatus(
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await tenantSubscriptionModel.findOne();
   if (!subscription) return;
+  // Paying an old invoice cannot grant an unvalidated Free plan or erase its
+  // incident. Cancellation events for this operation have their own landing.
+  if (
+    subscription.guardedPlanChange &&
+    (status === "cancelled" ||
+      (status === "active" && isGuardedPlanChangeBlocked(subscription)))
+  )
+    return;
   const patch: Partial<TenantSubscription> = {
     status,
     updatedAt: new Date(),

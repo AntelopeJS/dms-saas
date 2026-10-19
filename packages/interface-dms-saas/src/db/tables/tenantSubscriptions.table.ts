@@ -13,6 +13,7 @@ import {
 import { TENANT_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
 import { User } from "@antelopejs/interface-dms/auth/db/tables/users.table";
 import { Plan } from "./plans.table";
+import type { PlanChangeIncompatibility } from "../../plan-changes";
 
 export const tenantSubscriptionsTableName = "tenant_subscriptions";
 
@@ -42,6 +43,31 @@ export interface SubscriptionTransition {
   kind: "suspend" | "reactivate" | "change_plan" | "cancel" | "checkout";
   targetPlanId: string | null;
   requestedAt: Date;
+}
+
+/** Durable deadline and incident evidence for an application-validated Free change. */
+export interface GuardedPlanChange {
+  operationId: string;
+  policyName: string;
+  targetPlanId: string;
+  stripeSubscriptionId: string;
+  requestedAt: Date;
+  effectiveAt: Date;
+  /** Unique for each preparation/landing attempt, never reused after release. */
+  barrierId: string;
+  /** Only inventory-only work may be CAS-aborted after this timestamp. */
+  validationStartedAt?: Date;
+  /** Provider phases never expire or replay solely because a worker timed out. */
+  phase:
+    | "preparing"
+    | "aborting"
+    | "provider_pending"
+    | "scheduled"
+    | "cancel_pending"
+    | "effective"
+    | "activating"
+    | "blocked";
+  incompatibilities: PlanChangeIncompatibility[];
 }
 
 /** Half-open paid usage coverage. All time outside recorded periods is waived. */
@@ -150,6 +176,10 @@ export class TenantSubscription extends Table {
 
   @Field("date")
   declare pendingPlanChangeAt: Date | null;
+
+  /** Kept on failure; neither invoice payment nor policy unload opens this gate. */
+  @Field("any")
+  declare guardedPlanChange: GuardedPlanChange | null;
 
   @Field("any")
   declare domainTransition: SubscriptionTransition | null;

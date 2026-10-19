@@ -17,3 +17,4 @@ export * from "./provisioning";
 export * from "./registration";
 export * as invoiceLineItems from "./invoice-line-items";
 export * as tenantLifecycle from "./tenant-lifecycle";
+export * as planChanges from "./plan-changes";
