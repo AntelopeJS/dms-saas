@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkoutHeadingCase,
   planChangeHeadingCase,
+  targetPlanEyebrow,
 } from "../frontend-vue/app/build/plan-change-heading";
 
 const STARTER = { price: 29, interval: "month", billingMode: "flat" };
@@ -58,4 +59,16 @@ describe("first paid plan checkout heading", () => {
       expect(checkoutHeadingCase(isResubscription, isTrial)).toBe(expected);
     },
   );
+});
+
+describe("plan change review target eyebrow", () => {
+  it.each([
+    ["an upgrade applied today", priced("upgrade"), false, "from_today"],
+    ["a free plan applied today", priced("free"), false, "from_today"],
+    ["a downgrade at the renewal", priced("downgrade"), false, "from_date"],
+    ["a change the workspace does not fit", null, true, null],
+    ["a change not priced yet", null, false, null],
+  ])("dates %s", (_case, change, isRefused, expected) => {
+    expect(targetPlanEyebrow(change, isRefused)).toBe(expected);
+  });
 });
