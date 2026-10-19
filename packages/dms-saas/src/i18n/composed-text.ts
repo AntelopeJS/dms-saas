@@ -32,6 +32,22 @@ export function composed(
   return params ? { key, params } : { key };
 }
 
+/**
+ * Prefix of a stored display string that is an i18n key, per the DMS display
+ * string convention: the rest is the key, without the prefix.
+ */
+const I18N_KEY_PREFIX = "$";
+
+/**
+ * A stored display string as a cell text: a `$`-prefixed i18n key composed
+ * for the browser to translate, anything else as written. A table only
+ * translates a composed text, so a raw key would otherwise show as is.
+ */
+export function displayStringText(value: string): ComposedText | string {
+  if (!value.startsWith(I18N_KEY_PREFIX)) return value;
+  return composed(value.slice(I18N_KEY_PREFIX.length));
+}
+
 /** An amount in minor units of `currency`. */
 export function moneyParam(
   valueMinor: number,

@@ -118,3 +118,26 @@ describe("moving plans by hand", () => {
     expect("reorder" in SaasPlansApiController.prototype).toBe(false);
   });
 });
+
+// The identity cell translates a composed text only: a plan description
+// stored as a `$` key would otherwise show raw in the table.
+describe("the plan's description under its name", () => {
+  function descriptionTextOf(description: string | undefined) {
+    const getter = Object.getOwnPropertyDescriptor(
+      plansDataAPI.prototype,
+      "descriptionText",
+    )?.get;
+    return getter?.call({ table: { description } });
+  }
+
+  it("composes an i18n key for the browser to translate", () => {
+    expect(descriptionTextOf("$cloud.plans.hobby.description")).toEqual({
+      key: "cloud.plans.hobby.description",
+    });
+  });
+
+  it("keeps a description written as is", () => {
+    expect(descriptionTextOf("For small teams")).toBe("For small teams");
+    expect(descriptionTextOf(undefined)).toBe("");
+  });
+});
