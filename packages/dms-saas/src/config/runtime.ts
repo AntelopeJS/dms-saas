@@ -109,7 +109,6 @@ export function getUpcomingInvoicePreviewCacheTtlMs(): number {
   return seconds * MS_PER_SECOND;
 }
 
-/** Uppercase ISO 4217 code the back office reports recurring revenue in. */
 /** Activation instant of draft discovery, or null when discovery is off. */
 export function getInvoiceDiscoverySince(): Date | null {
   const raw = runtimeConfig?.invoiceLineRecoveryDiscoverySince;
@@ -123,6 +122,7 @@ export function getRequiredInvoiceLineProviders(): string[] {
   return runtimeConfig?.invoiceLineRequiredProviders ?? [];
 }
 
+/** Uppercase ISO 4217 code the back office reports recurring revenue in. */
 export function getReportingCurrency(): string {
   return (
     runtimeConfig?.reportingCurrency ?? DEFAULT_REPORTING_CURRENCY

@@ -92,8 +92,11 @@ async function retryLater(
   return "wait";
 }
 
-function retrieveInvoice(invoiceId: string): Promise<Stripe.Invoice> {
-  return getStripeClient().invoices.retrieve(invoiceId);
+/** An answer without an invoice is a failed step to retry, never a mismatch. */
+async function retrieveInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+  const invoice = await getStripeClient().invoices.retrieve(invoiceId);
+  if (!invoice) throw new Error(`Stripe returned no invoice for ${invoiceId}`);
+  return invoice;
 }
 
 function stateOf(invoice: Stripe.Invoice): string {
