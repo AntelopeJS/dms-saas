@@ -146,6 +146,12 @@ export function compareManagedLines(
  * Why a Stripe invoice is not the one the task was registered for, or null.
  * Compared with the task — never with an earlier snapshot of the invoice,
  * which could itself already have been changed.
+ *
+ * The invoice period is deliberately not compared: `period_start`/`period_end`
+ * are not parameters of the Invoice update API, so a draft's period cannot be
+ * edited after `invoice.created`. The task window is that period clipped to
+ * the paid usage, so it is not equal to it by design. What can be edited on a
+ * draft — each line item's `period` and amount — is in the fingerprint.
  */
 export function identityMismatch(
   invoice: Stripe.Invoice,
