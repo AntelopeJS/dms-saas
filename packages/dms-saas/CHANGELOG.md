@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.3
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.2...v0.7.3)
+
+### 🩹 Fixes
+
+- **billing:** Word a pending downgrade on the next invoice card and the review ([#120](https://github.com/AntelopeJS/dms-saas/pull/120))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.7.2
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.1...v0.7.2)
