@@ -1,4 +1,7 @@
-import { RegisterPermissionsResolver } from "@antelopejs/interface-dms/permissions-resolver";
+import {
+  type PermissionsResolverContext,
+  RegisterPermissionsResolver,
+} from "@antelopejs/interface-dms/permissions-resolver";
 import { ownerOnlyPermissionIds } from "../pages/tenant/owner-only";
 import { isWorkspaceOwner } from "../workspaces/workspace-owner";
 
@@ -12,9 +15,13 @@ async function withholdOwnerOnlySurfaces(
   userId: string,
   tenantId: string,
   current: Set<string>,
+  context?: PermissionsResolverContext,
 ): Promise<Set<string>> {
   if (current.has(ALL_PERMISSIONS)) return current;
-  if (await isWorkspaceOwner(userId, tenantId)) return current;
+  // A previewed role is held by a member, never by the owner.
+  const isOwner =
+    !context?.preview && (await isWorkspaceOwner(userId, tenantId));
+  if (isOwner) return current;
   const withheld = new Set(ownerOnlyPermissionIds());
   return new Set([...current].filter((id) => !withheld.has(id)));
 }

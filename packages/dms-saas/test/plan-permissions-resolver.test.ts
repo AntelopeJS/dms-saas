@@ -159,6 +159,74 @@ describe("plan permissions policy", () => {
     },
   );
 
+  describe("in a role preview", () => {
+    function preview(rolePermissions: string[]) {
+      const registration = harness.register.mock.calls[0][0];
+      return registration.resolver(
+        "preview-user",
+        "tenant-a",
+        new Set(rolePermissions),
+        {
+          preview: { rolePermissions: new Set(rolePermissions) },
+        },
+      );
+    }
+
+    it("returns the role unchanged without a plan", async () => {
+      harness.subscription = undefined;
+      expect(await preview(["read", "excluded"])).toEqual(
+        new Set(["read", "excluded"]),
+      );
+    });
+
+    it("keeps the role when the plan is wider", async () => {
+      expect(await preview(["read"])).toEqual(new Set(["read"]));
+    });
+
+    it("caps the role to a narrower plan", async () => {
+      expect(await preview(["read", "write", "excluded"])).toEqual(
+        new Set(["read", "write"]),
+      );
+    });
+
+    it("never takes the owner grant, even for an owner's id", async () => {
+      harness.members.set("tenant-a:preview-user", {
+        isTenantOwner: true,
+        roleIds: [],
+      });
+      expect(await preview([])).toEqual(new Set());
+      expect(harness.getModel).not.toHaveBeenCalledWith(
+        TenantMemberModel,
+        "tenant-a",
+      );
+    });
+
+    it("keeps the wildcard of a wildcard role", async () => {
+      expect(await preview(["*"])).toEqual(new Set(["*"]));
+    });
+
+    it("drops a wildcard the role does not hold", async () => {
+      const registration = harness.register.mock.calls[0][0];
+      expect(
+        await registration.resolver(
+          "preview-user",
+          "tenant-a",
+          new Set(["*", "read"]),
+          {
+            preview: { rolePermissions: new Set(["read"]) },
+          },
+        ),
+      ).toEqual(new Set(["read"]));
+    });
+
+    it("leaves real calls with an empty context unchanged", async () => {
+      const registration = harness.register.mock.calls[0][0];
+      expect(
+        await registration.resolver("user", "tenant-a", new Set(["read"]), {}),
+      ).toEqual(new Set(["read", "write"]));
+    });
+  });
+
   it("retains the pipeline registration contract before downstream projections", () => {
     expect(harness.register).toHaveBeenCalledWith({
       id: "dms-saas.plan-intersection",
