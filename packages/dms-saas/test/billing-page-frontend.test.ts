@@ -24,6 +24,7 @@ import {
   canContinueToCheckout,
   diffPlanFeatures,
   featureRank,
+  readPlanChangeIncompatibilities,
   readUpgradeParam,
   splitOfferedPlans,
 } from "../frontend-vue/app/composables/usePlanChangeReview";
@@ -353,5 +354,37 @@ describe("checkout dialog readiness", () => {
     expect(canContinueToCheckout({ ...READY, hasLoadFailed: true })).toBe(
       false,
     );
+  });
+});
+
+describe("plan change refused by the workspace's inventory", () => {
+  const INCOMPATIBILITY = {
+    code: "projects_per_workspace",
+    resource: "tenant-1",
+    message:
+      "Stored configuration exceeds the target plan: projects_per_workspace",
+  };
+
+  it("reads what the target plan cannot hold from the 409 body", () => {
+    const refusal = {
+      data: {
+        code: "saas.errors.plan.incompatible",
+        incompatibilities: [INCOMPATIBILITY],
+      },
+    };
+
+    expect(readPlanChangeIncompatibilities(refusal)).toEqual([INCOMPATIBILITY]);
+  });
+
+  it("leaves every other failure to the generic error", () => {
+    expect(
+      readPlanChangeIncompatibilities({ data: "saas.errors.plan.invalid" }),
+    ).toBeNull();
+    expect(
+      readPlanChangeIncompatibilities({
+        data: { code: "saas.errors.plan.incompatible" },
+      }),
+    ).toBeNull();
+    expect(readPlanChangeIncompatibilities(new Error("network"))).toBeNull();
   });
 });

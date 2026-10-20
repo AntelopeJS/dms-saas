@@ -16,7 +16,7 @@ import {
   TenantBillingInfoModel,
   TenantSubscriptionModel,
 } from "../db";
-import { injectProvidedInvoiceLineItems } from "../invoice-line-items";
+import { admitCycleInvoice } from "../invoice-line-items";
 import {
   notifyTenantMembers,
   notifyTenantOwners,
@@ -95,11 +95,13 @@ const TRIAL_BLOCKED_STRIPE_STATUSES = new Set<string>([
 export async function handleInvoiceCreated(event: Stripe.Event): Promise<void> {
   const mirrored = await mirrorInvoiceFromEvent(event);
   if (!mirrored) return;
-  await injectProvidedInvoiceLineItems(
-    mirrored.invoice,
-    mirrored.tenantId,
-    mirrored.customerId,
-  );
+  await admitCycleInvoice({
+    invoice: mirrored.invoice,
+    tenantId: mirrored.tenantId,
+    customerId: mirrored.customerId,
+    source: "webhook",
+    eventId: event.id,
+  });
 }
 
 export async function handleInvoiceFinalized(

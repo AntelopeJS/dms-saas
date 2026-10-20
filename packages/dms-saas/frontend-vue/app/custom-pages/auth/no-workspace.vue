@@ -178,18 +178,35 @@ async function loadPendingRegistration(): Promise<void> {
 	}
 }
 
+async function createSetupIntent(): Promise<string | undefined> {
+	const setup = await publicFetch<SetupIntentResponse>(SETUP_INTENT_ENDPOINT)
+	return setup.clientSecret || undefined
+}
+
 async function mountPaymentElement(): Promise<void> {
 	const publishableKey = saasConfig?.stripePublishableKey
 	if (!publishableKey || paymentMethodPolicy === 'none') return
 	try {
-		const setup = await publicFetch<SetupIntentResponse>(SETUP_INTENT_ENDPOINT)
-		if (!setup.clientSecret) return
+		const clientSecret = await createSetupIntent()
+		if (!clientSecret) return
 		stripeHandle.value = useStripePaymentElement({
 			publishableKey,
-			clientSecret: setup.clientSecret,
+			clientSecret,
 			containerId: PAYMENT_ELEMENT_ID,
 			billingEmail: () => pending.value?.email ?? '',
 		})
+	} catch (error) {
+		cardError.value = resolveApiError(error, 'saas.public.register.error.load')
+	}
+}
+
+// A refusal after the card was confirmed leaves its SetupIntent spent: the
+// next card must go through a fresh one, or Stripe refuses it with a bare
+// processing error.
+async function renewCard(): Promise<void> {
+	try {
+		const clientSecret = await createSetupIntent()
+		if (clientSecret) await stripeHandle.value?.renew(clientSecret)
 	} catch (error) {
 		cardError.value = resolveApiError(error, 'saas.public.register.error.load')
 	}
@@ -219,8 +236,9 @@ function validate(): boolean {
 async function submit(): Promise<void> {
 	if (isSubmitting.value || !validate()) return
 	isSubmitting.value = true
+	let paymentMethodId: string | undefined | null
 	try {
-		const paymentMethodId = await confirmPaymentMethod()
+		paymentMethodId = await confirmPaymentMethod()
 		if (paymentMethodId === null) return
 		await $fetch(SESSION_ESTABLISH_ENDPOINT, {
 			method: 'POST',
@@ -241,6 +259,7 @@ async function submit(): Promise<void> {
 			error,
 			'saas.public.register.error.failed',
 		)
+		if (paymentMethodId) await renewCard()
 	} finally {
 		isSubmitting.value = false
 	}

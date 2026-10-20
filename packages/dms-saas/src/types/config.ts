@@ -55,6 +55,8 @@ export interface DmsSaasRegistrationConfig {
 
 export interface DmsSaasConfig {
   stripe: DmsSaasStripeConfig;
+  /** Fail closed for deferred changes if this inventory policy is unavailable. */
+  requiredPlanChangePolicy?: string;
   /** Deployment-wide admission policy. Defaults to open; invitations remain available. */
   admissionMode?: "open" | "invitation-only";
   /** Public registration flow settings. Invitation sign-up ignores them. */
@@ -88,4 +90,16 @@ export interface DmsSaasConfig {
    * other currencies are shown apart, never converted. Defaults to `EUR`.
    */
   reportingCurrency?: string;
+  /**
+   * ISO instant from which cycle renewal drafts of managed subscriptions may
+   * be discovered and taken over when their invoice.created never registered
+   * a line injection task. Unset disables discovery: an older draft carries
+   * no proof it belongs to this workflow.
+   */
+  invoiceLineRecoveryDiscoverySince?: string;
+  /**
+   * Invoice line providers every cycle invoice must wait for, even when one is
+   * not registered yet as the invoice is created (module still loading).
+   */
+  invoiceLineRequiredProviders?: string[];
 }

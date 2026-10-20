@@ -76,6 +76,7 @@ import {
   latestPaidInvoice,
   planNamesByProduct,
   toNextInvoiceRows,
+  withPlanSwitch,
 } from "../src/routes/tenant/tenant-upcoming-invoice";
 import { LOCALES, missingKeys } from "./helpers/composed-text";
 
@@ -666,6 +667,88 @@ describe("next invoice card", () => {
       "Remaining time on Business after 1 Oct 2026",
     );
     for (const code of LOCALES) expect(missingKeys(rows, code)).toEqual([]);
+  });
+
+  it("shows the paid plan's end and the switch to Free when no renewal is coming", () => {
+    const rows = withPlanSwitch(
+      { items: [], totalMinorUnits: null, currency: null, billingDate: null },
+      {
+        currentPlanName: "Hobby",
+        nextPlanName: "Free",
+        isNextPlanFree: true,
+        at: new Date("2026-11-19T19:40:19.000Z"),
+      },
+      {
+        paymentMethod: null,
+        billingEmail: "billing@acme.test",
+        lastPayment: null,
+        planNames: new Map(),
+      },
+    );
+
+    expect(rows.items.map((row) => [row.label, row.value, row.type])).toEqual([
+      [
+        {
+          key: "saas.tenant_billing.next_invoice.paid_until",
+          params: { plan: "Hobby" },
+        },
+        "2026-11-19T19:40:19.000Z",
+        "date",
+      ],
+      [
+        {
+          key: "saas.tenant_billing.next_invoice.switch_on",
+          params: { plan: "Free" },
+        },
+        "2026-11-19T19:40:19.000Z",
+        "date",
+      ],
+      [
+        "$saas.tenant_billing.next_invoice.sent_to",
+        "billing@acme.test",
+        undefined,
+      ],
+    ]);
+    expect(rows.items[1]?.detail).toEqual({
+      key: "saas.tenant_billing.next_invoice.switch_free_detail",
+      params: { plan: "Free" },
+    });
+    expect(rows.billingDate).toBe("2026-11-19T19:40:19.000Z");
+    for (const code of LOCALES) expect(missingKeys(rows, code)).toEqual([]);
+  });
+
+  it("adds the switch after the total when Stripe still prices an invoice", () => {
+    const priced = toNextInvoiceRows(preview, {
+      paymentMethod: null,
+      billingEmail: null,
+      lastPayment: null,
+      planNames: new Map(),
+    });
+    const rows = withPlanSwitch(
+      priced,
+      {
+        currentPlanName: "Business",
+        nextPlanName: "Team",
+        isNextPlanFree: false,
+        at: new Date("2026-10-31T00:00:00.000Z"),
+      },
+      {
+        paymentMethod: null,
+        billingEmail: null,
+        lastPayment: null,
+        planNames: new Map(),
+      },
+    );
+
+    expect(rows.items.map((row) => row.label)).toEqual([
+      ...priced.items.map((row) => row.label),
+      {
+        key: "saas.tenant_billing.next_invoice.switch_on",
+        params: { plan: "Team" },
+      },
+    ]);
+    expect(rows.items.at(-1)?.detail).toBeUndefined();
+    expect(rows.totalMinorUnits).toBe(58800);
   });
 
   it("picks the most recently paid invoice", () => {

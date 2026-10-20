@@ -71,6 +71,8 @@ beforeAll(() => {
     internal: {
       RegisterTenantAccessGate: { register() {}, unregister() {} },
     },
+    EvaluateTenantAccess: async () =>
+      isAllowed ? [] : [{ gateId: "test", code: "test.denied" }],
     CheckTenantAccess: async () =>
       isAllowed ? { allowed: true } : { allowed: false, code: "test.denied" },
   });
