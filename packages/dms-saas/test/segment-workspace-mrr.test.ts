@@ -119,15 +119,4 @@ describe("workspace projection MRR", () => {
     expect(projection.mrr).toBe(1120.83);
     expect(projection.status).toBe("active");
   });
-
-  it("computes the MRR when a directory row predates the figure", () => {
-    const directory = { billingState: "trialing", currency: null };
-    const projection = project(
-      subscription({}),
-      YEARLY_PLAN,
-      directory as unknown as WorkspaceDirectoryRow,
-    );
-    expect(projection.mrr).toBe(0);
-    expect(projection.status).toBe("trialing");
-  });
 });

@@ -105,11 +105,11 @@ function projectInvoices(invoices: Invoice[]): {
 
 /**
  * The MRR the directory published, which the dashboard sums; computed from the
- * records the same way when the workspace has no published figure yet.
+ * records the same way when the workspace has no directory row yet.
  */
 function workspaceMrr(inputs: ProjectionInputs): MinorAmount {
   const { directory, subscription, plan, membersCount } = inputs;
-  if (directory && typeof directory.mrrMinor === "number") {
+  if (directory) {
     return {
       amountMinor: directory.mrrMinor,
       currency: directory.currency ?? "",
@@ -117,7 +117,7 @@ function workspaceMrr(inputs: ProjectionInputs): MinorAmount {
   }
   // Pending invitations are not loaded here: seats are the members alone.
   return normalisedMrr({
-    billingState: directory?.billingState ?? deriveBillingState(subscription),
+    billingState: deriveBillingState(subscription),
     isComplimentary: subscription?.isComplimentary === true,
     plan,
     billedSeats: membersCount,
