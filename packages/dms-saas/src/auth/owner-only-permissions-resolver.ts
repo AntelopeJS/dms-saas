@@ -15,12 +15,12 @@ async function withholdOwnerOnlySurfaces(
   userId: string,
   tenantId: string,
   current: Set<string>,
-  context?: PermissionsResolverContext,
+  context: PermissionsResolverContext,
 ): Promise<Set<string>> {
   if (current.has(ALL_PERMISSIONS)) return current;
   // A previewed role is held by a member, never by the owner.
   const isOwner =
-    !context?.preview && (await isWorkspaceOwner(userId, tenantId));
+    !context.preview && (await isWorkspaceOwner(userId, tenantId));
   if (isOwner) return current;
   const withheld = new Set(ownerOnlyPermissionIds());
   return new Set([...current].filter((id) => !withheld.has(id)));

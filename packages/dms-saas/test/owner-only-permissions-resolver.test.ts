@@ -30,7 +30,7 @@ const MEMBER_GRANTS = [
 
 function resolve(current: string[], userId = "member") {
   const registration = harness.register.mock.calls[0][0];
-  return registration.resolver(userId, "acme", new Set(current));
+  return registration.resolver(userId, "acme", new Set(current), {});
 }
 
 beforeEach(() => {

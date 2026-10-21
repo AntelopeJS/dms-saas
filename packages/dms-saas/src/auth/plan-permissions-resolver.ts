@@ -18,7 +18,7 @@ async function intersectWithPlan(
   userId: string,
   tenantId: string,
   current: Set<string>,
-  context?: PermissionsResolverContext,
+  context: PermissionsResolverContext,
 ): Promise<Set<string>> {
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const planModel = GetModel(PlanModel);
@@ -32,7 +32,7 @@ async function intersectWithPlan(
   const allowed = new Set(resolved.permissions);
   // A role preview shapes the set of an ordinary member holding that role:
   // the owner grant would show the plan instead of the role.
-  const preview = context?.preview;
+  const preview = context.preview;
   if (!preview && !current.has(ALL_PERMISSIONS)) {
     const member = await GetModel(TenantMemberModel, tenantId).getByUser(
       userId,
