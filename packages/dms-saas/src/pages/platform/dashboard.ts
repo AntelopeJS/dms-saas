@@ -9,9 +9,7 @@ import {
   KeyValueList,
   KpiCard,
   NavCardGrid,
-  PAGE_TOOLBAR_PERIOD_DEFAULTS,
-  PageToolbar,
-  PeriodSelector,
+  pageToolbar,
   StatGroup,
   Tab,
   TopListCard,
@@ -72,24 +70,19 @@ export class SaasDashboardController extends PageController(
   DefaultLayout({ fullWidth: true, headerActions: [CREATE_WORKSPACE_BUTTON] }),
 ) {
   // No `live`: the bar shows when the figures were read and a refresh button,
-  // then the period and a menu of its comparisons. Built by hand so the
-  // selector keeps its roles editor name. `comparisonControl` is spelled out:
-  // older DMS releases draw a toggle whatever the number of comparisons.
-  static toolbar = PageToolbar()
-    .child(
-      "period",
-      PeriodSelector({
-        ...PAGE_TOOLBAR_PERIOD_DEFAULTS,
-        id: PERIOD_SCOPE,
-        rememberKey: PERIOD_REMEMBER_KEY,
-        presets: ["last-30-days", "last-90-days", "ytd"],
-        defaultPreset: "last-30-days",
-        comparisons: ["previous-period", "previous-year", "none"],
-        defaultComparison: "previous-period",
-        comparisonControl: "menu",
-      }).meta(permissionMeta("period", "i-ph-calendar")),
-    )
-    .meta(permissionMeta("toolbar", "i-ph-sliders-horizontal"));
+  // then the period, whose comparisons the toolbar offers as a menu. The
+  // selector keeps its roles editor name through `meta`.
+  static toolbar = pageToolbar({
+    live: false,
+    period: {
+      id: PERIOD_SCOPE,
+      rememberKey: PERIOD_REMEMBER_KEY,
+      presets: ["last-30-days", "last-90-days", "ytd"],
+      defaultPreset: "last-30-days",
+      comparisons: ["previous-period", "previous-year", "none"],
+      meta: permissionMeta("period", "i-ph-calendar"),
+    },
+  }).meta(permissionMeta("toolbar", "i-ph-sliders-horizontal"));
 
   static attention = NavCardGrid({
     title: `${K}.attention.title`,
