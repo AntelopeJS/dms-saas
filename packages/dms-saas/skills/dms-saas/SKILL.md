@@ -33,6 +33,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 - New project page or block → add its permission ids to the plans that should get it, or tenants lose it.
 - Seeding plans from code: write name, price, currency, interval, billing mode; leave `paymentProviderRefs` to dms-saas.
 - Features: `displayName` / `tooltip` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys.
+- Plan `description` and `borderLabel` may be `$i18n.key` (translated on every screen); `name` stays plain text.
 
 ## Extension points (`@antelopejs/interface-dms-saas`)
 
