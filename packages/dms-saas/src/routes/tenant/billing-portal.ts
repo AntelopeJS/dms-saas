@@ -182,7 +182,7 @@ export class SaasBillingPortalController extends Controller(
     tenantSubscriptionModel: TenantSubscriptionModel,
   ) {
     assert(
-      isAllowedRedirectUrl(body.returnUrl),
+      await isAllowedRedirectUrl(body.returnUrl),
       HTTP_BAD_REQUEST,
       "saas.errors.billing.invalid_return_url",
     );

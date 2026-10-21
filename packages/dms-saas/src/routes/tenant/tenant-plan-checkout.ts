@@ -97,18 +97,18 @@ function asNonEmptyString(value: unknown): string | null {
     : null;
 }
 
-function validateCheckoutRedirectInput(
+async function validateCheckoutRedirectInput(
   body: ChangePlanBody,
-): CheckoutRedirectInput {
+): Promise<CheckoutRedirectInput> {
   const successUrl = asNonEmptyString(body.successUrl);
   const cancelUrl = asNonEmptyString(body.cancelUrl);
   assert(
-    successUrl && isAllowedRedirectUrl(successUrl),
+    successUrl && (await isAllowedRedirectUrl(successUrl)),
     HTTP_BAD_REQUEST,
     "saas.errors.billing.invalid_return_url",
   );
   assert(
-    cancelUrl && isAllowedRedirectUrl(cancelUrl),
+    cancelUrl && (await isAllowedRedirectUrl(cancelUrl)),
     HTTP_BAD_REQUEST,
     "saas.errors.billing.invalid_return_url",
   );
@@ -346,7 +346,7 @@ async function createAdmittedCheckout(
   request: PlanChangeRequest,
 ): Promise<ChangePlanResult> {
   const { tenantId, newPlan, body, tenantSubscriptionModel } = request;
-  const redirect = validateCheckoutRedirectInput(body);
+  const redirect = await validateCheckoutRedirectInput(body);
   const stripePriceId = newPlan.paymentProviderRefs?.stripePriceId;
   assert(stripePriceId, HTTP_BAD_REQUEST, "saas.errors.plan.no_stripe_price");
   const { subscription, ...attempt } = await admitCheckout(request);
