@@ -192,6 +192,11 @@
 					"pending": "Verification in progress",
 					"unverified": "Not verified"
 				},
+				"address_line1": "Address",
+				"postal_code": "Postal code",
+				"city": "City",
+				"country": "Country",
+				"country_placeholder": "Select a country",
 				"billing_email": "Billing email",
 				"billing_email_hint": "Receives invoices and payment reminders.",
 				"sections": {
@@ -230,12 +235,7 @@
 					"postalCode": "The postal code is required.",
 					"city": "The city is required.",
 					"billingEmail": "Enter a valid email address."
-				},
-				"address_line1": "Address",
-				"postal_code": "Postal code",
-				"city": "City",
-				"country": "Country",
-				"country_placeholder": "Select a country"
+				}
 			},
 			"plan": {
 				"title": "Current plan",
