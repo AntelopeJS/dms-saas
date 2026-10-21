@@ -62,7 +62,8 @@ export interface DirectoryInputs {
   /**
    * Whether the workspace ever paid an invoice for more than nothing: what
    * tells a paying customer's cancellation from a trial's. Only read when
-   * the loss is not already known (see {@link shouldLookUpPaidInvoice}).
+   * the workspace is first published in a loss state (see
+   * {@link shouldLookUpPaidInvoice}).
    */
   hasPaidInvoice: boolean;
   /** The currency the directory totals MRR in (uppercase ISO 4217). */
@@ -146,9 +147,8 @@ function resolveStateSince(inputs: DirectoryInputs): Date {
 
 /**
  * What the workspace paid per month on the plan it is on, when it ever paid:
- * the loss of a cancellation no earlier publication saw billed (the first
- * computation of a workspace already cancelled, an import, a row published
- * by an earlier build).
+ * the loss of a workspace first published already suspended or cancelled
+ * (an import, a seed), which no earlier publication saw billed.
  */
 function lastPaidMrr(inputs: DirectoryInputs): number {
   const { plan, subscription, hasPaidInvoice, seats } = inputs;
@@ -160,8 +160,8 @@ function lastPaidMrr(inputs: DirectoryInputs): number {
 /**
  * The MRR the workspace had before its current state: what a churn lost. A
  * change of state takes the MRR the last publication had; a suspension
- * passes on the loss it held; and a loss no publication saw billed comes
- * from the price last paid.
+ * passes on the loss it held; and a workspace first published in a loss
+ * state takes the price last paid.
  */
 function resolvePreviousMrr(inputs: DirectoryInputs): number {
   const { existing, billingState } = inputs;
@@ -171,24 +171,22 @@ function resolvePreviousMrr(inputs: DirectoryInputs): number {
     return existing?.previousMrrMinor ?? 0;
   }
   if (!existing) return lastPaidMrr(inputs);
-  if (existing.billingState === billingState)
-    return existing.previousMrrMinor || lastPaidMrr(inputs);
+  if (existing.billingState === billingState) return existing.previousMrrMinor;
   if (existing.mrrMinor > 0) return existing.mrrMinor;
   if (!LOSS_HOLDING_STATES.has(existing.billingState)) return 0;
-  return existing.previousMrrMinor || lastPaidMrr(inputs);
+  return existing.previousMrrMinor;
 }
 
 /**
- * Whether {@link resolvePreviousMrr} may need the price last paid: a loss
- * state whose loss the last publication does not carry. Spares the invoice
- * read on every other publication.
+ * Whether {@link resolvePreviousMrr} needs the price last paid: a workspace
+ * first published in a loss state. Spares the invoice read on every other
+ * publication.
  */
 export function shouldLookUpPaidInvoice(
   billingState: BillingState,
   existing: TenantBillingState | undefined,
 ): boolean {
-  if (!LOSS_STATES.has(billingState)) return false;
-  return !existing?.mrrMinor && !existing?.previousMrrMinor;
+  return LOSS_STATES.has(billingState) && !existing;
 }
 
 /** Whether the workspace ever paid an invoice for more than nothing. */

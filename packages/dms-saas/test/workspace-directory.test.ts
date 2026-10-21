@@ -256,8 +256,8 @@ describe("workspace directory churn", () => {
       }),
     );
 
-  // A workspace first published once already cancelled (an import, a seed, a
-  // row from before the directory) lost nothing, and churn stayed at 0.
+  // A workspace first published already cancelled (an import, a seed) has no
+  // earlier publication to read its loss from.
   it("takes the loss of a cancellation first seen cancelled from the price last paid", () => {
     expect(cancelled({ hasPaidInvoice: true })).toMatchObject({
       mrrMinor: 0,
@@ -316,21 +316,7 @@ describe("workspace directory churn", () => {
     expect(row.previousMrrMinor).toBe(0);
   });
 
-  it("completes the loss of a cancellation an earlier build published as nothing", () => {
-    const row = cancelled({
-      hasPaidInvoice: true,
-      existing: {
-        billingState: "cancelled",
-        stateSince: new Date("2026-09-20T00:00:00Z"),
-        mrrMinor: 0,
-        previousMrrMinor: 0,
-      } as TenantBillingState,
-    });
-
-    expect(row.previousMrrMinor).toBe(112_700);
-  });
-
-  it("reads invoices only when the loss of a cancellation or suspension is unknown", () => {
+  it("reads invoices only for a workspace first published suspended or cancelled", () => {
     const known = {
       billingState: "cancelled",
       mrrMinor: 0,
@@ -340,7 +326,7 @@ describe("workspace directory churn", () => {
 
     expect(shouldLookUpPaidInvoice("cancelled", undefined)).toBe(true);
     expect(shouldLookUpPaidInvoice("suspended", undefined)).toBe(true);
-    expect(shouldLookUpPaidInvoice("cancelled", unknown)).toBe(true);
+    expect(shouldLookUpPaidInvoice("cancelled", unknown)).toBe(false);
     expect(shouldLookUpPaidInvoice("cancelled", known)).toBe(false);
     expect(shouldLookUpPaidInvoice("active", undefined)).toBe(false);
     expect(shouldLookUpPaidInvoice("trialing", undefined)).toBe(false);
