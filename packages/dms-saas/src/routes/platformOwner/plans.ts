@@ -80,7 +80,8 @@ const PRICE_TERMS_FIELDS = [
   "billingMode",
 ] as const satisfies readonly (keyof Plan)[];
 const PRICE_CHANGED_NOTICE = "$saas.catalog.editor.notice.price_changed";
-const STRIPE_NOT_SYNCED_NOTICE = "$saas.catalog.editor.notice.stripe_not_synced";
+const STRIPE_NOT_SYNCED_NOTICE =
+  "$saas.catalog.editor.notice.stripe_not_synced";
 const LOG_PREFIX = "[dms-saas:plans]";
 const INVALID_FEATURES_MESSAGE = "$saas.errors.plan.invalid_feature_value";
 const INVALID_MEMBER_CAP_MESSAGE = "$saas.errors.plan.invalid_member_cap";

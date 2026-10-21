@@ -110,7 +110,8 @@ export function pickPlanWrite(body: PlanWriteBody): Partial<Plan> {
   }
   for (const field of TRIMMED_FIELDS) {
     const value = out[field];
-    if (typeof value === "string") Object.assign(out, { [field]: value.trim() });
+    if (typeof value === "string")
+      Object.assign(out, { [field]: value.trim() });
   }
   if (out.permissions)
     out.permissions = withPermissionAncestors(out.permissions);
