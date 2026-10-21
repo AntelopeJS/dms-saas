@@ -67,7 +67,6 @@ const EMPTY_CATALOG: PlanCatalog = {
 }
 
 const { t, locale } = useI18n()
-const planDescription = usePlanDescription()
 const planText = usePlanDisplayText()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
@@ -256,7 +255,7 @@ async function load(): Promise<void> {
 						{{ draft.name || $t('saas.catalog.editor.preview.unnamed') }}
 					</p>
 					<p v-if="draft.description" class="text-muted line-clamp-2 text-sm">
-						{{ planDescription(draft.description) }}
+						{{ planText(draft.description) }}
 					</p>
 				</div>
 				<div>

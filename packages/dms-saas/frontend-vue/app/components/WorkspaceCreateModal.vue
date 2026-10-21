@@ -69,7 +69,7 @@ const { resolveApiError } = useApiErrorMessage()
 const { formatMajorUnits } = useMoneyFormat()
 const planPriceLabel = usePlanPriceLabel()
 const planIntervalLabel = usePlanIntervalLabel(`${KEYS}.interval`)
-const planDescription = usePlanDescription()
+const planText = usePlanDisplayText()
 const config = useDmsRuntimeConfig()
 const { user } = useCurrentUser()
 
@@ -141,7 +141,7 @@ function planMeta(plan: CreatePlanOption): string {
 			rule.limit,
 		)
 	}
-	const parts = [planDescription(plan.description)].filter(Boolean)
+	const parts = [planText(plan.description)].filter(Boolean)
 	if (plan.trialDays > 0 && plan.cardRequirement === 'payment') {
 		parts.push(t(`${KEYS}.trial`, { days: plan.trialDays }))
 	}

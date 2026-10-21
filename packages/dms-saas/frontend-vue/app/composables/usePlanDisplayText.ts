@@ -15,7 +15,3 @@ export function usePlanDisplayText() {
 		text ? processI18n(text) : ''
 }
 
-/** Reader for a plan's catalogue description, see {@link usePlanDisplayText}. */
-export function usePlanDescription() {
-	return usePlanDisplayText()
-}
