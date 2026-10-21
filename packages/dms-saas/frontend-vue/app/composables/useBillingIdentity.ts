@@ -16,11 +16,15 @@ export type BillingIdentityField =
 	| 'billingEmail'
 
 /** The editable billing identity, as the form holds it. */
-export interface BillingIdentityDraft extends BillingAddressDraft {
+export interface BillingIdentityDraft {
 	customerType: CustomerType | null
 	companyName: string
 	vatNumber: string
 	billingEmail: string
+	country: string
+	line1: string
+	postalCode: string
+	city: string
 }
 
 interface BillingAddress {
@@ -84,10 +88,8 @@ export function emptyBillingIdentityDraft(): BillingIdentityDraft {
 		billingEmail: '',
 		country: '',
 		line1: '',
-		line2: '',
 		postalCode: '',
 		city: '',
-		state: '',
 	}
 }
 
@@ -101,10 +103,8 @@ export function toBillingIdentityDraft(
 		billingEmail: info.billingEmail ?? '',
 		country: info.address?.country ?? '',
 		line1: info.address?.line1 ?? '',
-		line2: info.address?.line2 ?? '',
 		postalCode: info.address?.postalCode ?? '',
 		city: info.address?.city ?? '',
-		state: info.address?.state ?? '',
 	}
 }
 
@@ -118,10 +118,8 @@ function toRequestBody(draft: BillingIdentityDraft) {
 		address: {
 			country: draft.country,
 			line1: draft.line1,
-			line2: draft.line2,
 			postalCode: draft.postalCode,
 			city: draft.city,
-			state: draft.state,
 		},
 	}
 }
