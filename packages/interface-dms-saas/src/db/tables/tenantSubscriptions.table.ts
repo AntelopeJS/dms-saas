@@ -166,6 +166,10 @@ export class TenantSubscription extends Table {
   @Field("string")
   declare cardFingerprint: string | null;
 
+  /** Start of the Stripe subscription's current billing period. */
+  @Field("date")
+  declare currentPeriodStart: Date | null;
+
   @Field("date")
   declare currentPeriodEnd: Date | null;
 

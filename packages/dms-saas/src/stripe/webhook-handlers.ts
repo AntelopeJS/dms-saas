@@ -44,7 +44,7 @@ import {
 } from "./customer-billing";
 import {
   readSubscriptionPeriod,
-  readSubscriptionPeriodEnd,
+  readSubscriptionPeriodDates,
   requireInvoiceId,
 } from "./payload-shapes";
 import { isPendingUpdatePayment } from "./pending-update";
@@ -326,9 +326,14 @@ async function persistSubscriptionPeriod(
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const local = await tenantSubscriptionModel.findOne();
   if (!local) return;
-  const currentPeriodEnd = readSubscriptionPeriodEnd(subscription);
-  if (local.currentPeriodEnd?.getTime() === currentPeriodEnd?.getTime()) return;
-  await tenantSubscriptionModel.update(local._id, { currentPeriodEnd });
+  const period = readSubscriptionPeriodDates(subscription);
+  if (
+    local.currentPeriodStart?.getTime() ===
+      period.currentPeriodStart?.getTime() &&
+    local.currentPeriodEnd?.getTime() === period.currentPeriodEnd?.getTime()
+  )
+    return;
+  await tenantSubscriptionModel.update(local._id, period);
 }
 
 async function handleTrialTransition(

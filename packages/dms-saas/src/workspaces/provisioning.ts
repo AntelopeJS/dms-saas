@@ -28,7 +28,9 @@ import { loadBillablePlan } from "../plans/stripe-sync";
 import {
   getStripeClient,
   readStripeId,
-  readSubscriptionPeriodEnd,
+  NO_SUBSCRIPTION_PERIOD,
+  readSubscriptionPeriodDates,
+  type SubscriptionPeriodDates,
   reconcileStripeTaxId,
   rememberCustomerLocale,
   toStripeAddress,
@@ -126,13 +128,12 @@ export interface ProvisionedWorkspace {
   isTrialing: boolean;
 }
 
-interface CreatedSubscription {
+interface CreatedSubscription extends SubscriptionPeriodDates {
   /** Null for a workspace on a local free subscription, card or not. */
   stripeSubscriptionId: string | null;
   /** Null exactly when `stripeSubscriptionId` is. */
   startedAt: Date | null;
   isTrialing: boolean;
-  currentPeriodEnd: Date | null;
   /**
    * The first invoice, left unpaid at creation and settled last. Null when the
    * subscription owes nothing now (a trial), so there is nothing to charge.
@@ -164,16 +165,6 @@ interface TenantRecordsInput {
   billingEmail: string;
 }
 
-export function assertBillingCountry(
-  address: WorkspaceAddressInput | undefined,
-): void {
-  assert(
-    address?.country,
-    HTTP_BAD_REQUEST,
-    "saas.errors.billing.country_required",
-  );
-}
-
 export async function ensurePlanIsAvailableForCustomer(
   planId: string,
   customerType: WorkspaceCustomerType,
@@ -198,7 +189,7 @@ const LOCAL_SUBSCRIPTION: CreatedSubscription = {
   stripeSubscriptionId: null,
   startedAt: null,
   isTrialing: false,
-  currentPeriodEnd: null,
+  ...NO_SUBSCRIPTION_PERIOD,
   latestInvoiceId: null,
 };
 
@@ -386,7 +377,7 @@ async function createSubscription(
     stripeSubscriptionId: subscription.id,
     startedAt: stripeSecondsToDate(subscription.start_date) ?? new Date(),
     isTrialing: grantTrial,
-    currentPeriodEnd: readSubscriptionPeriodEnd(subscription),
+    ...readSubscriptionPeriodDates(subscription),
     latestInvoiceId: readStripeId(subscription.latest_invoice),
   };
 }
@@ -471,6 +462,7 @@ async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {
     paidUsagePeriods: initialPaidUsagePeriods(subscription),
     stripeCustomerId: input.stripeCustomerId,
     stripeSubscriptionId: subscription.stripeSubscriptionId,
+    currentPeriodStart: subscription.currentPeriodStart,
     currentPeriodEnd: subscription.currentPeriodEnd,
     cardFingerprint: input.cardFingerprint,
     createdBy: input.userId,
