@@ -49,7 +49,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 Pages you add stay backend-declared blocks; only the missing block is a `CustomComponent`, with `.meta({ name, description, icon })`.
 A page with a period or live data opens with the DMS page toolbar (`pageToolbar()` / `PageToolbar()` from
 `@antelopejs/interface-dms/base`), as the dashboard (period, `rememberKey: "saas"`, no `live`) and the migration detail (`live`, no period) do.
-A period with figures to compare offers `comparisons: ["previous-period", "previous-year", "none"]` (`defaultComparison: "previous-period"`, `comparisonControl: "menu"`); its routes read the window from `compareFrom` / `compareTo` (`readPeriodQuery`), lay comparison series on the current buckets, and send no delta for `comparison=none`.
+A period with figures to compare offers `comparisons: ["previous-period", "previous-year", "none"]` (through `pageToolbar()`, several comparisons give the menu on `"previous-period"` by default: set neither `defaultComparison` nor `comparisonControl`); its routes read the window from `compareFrom` / `compareTo` (`readPeriodQuery`), lay comparison series on the current buckets, and send no delta for `comparison=none`.
 
 ## Gotchas
 
