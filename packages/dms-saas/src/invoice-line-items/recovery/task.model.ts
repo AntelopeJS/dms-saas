@@ -58,7 +58,7 @@ export class InvoiceLineInjectionModel extends BasicDataModel(
       await this.insert({
         ...row,
         state: "registered",
-        reason: null,
+        usageGaps: [],
         suspendedAt: null,
         fingerprint: null,
         revision: randomUUID(),

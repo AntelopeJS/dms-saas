@@ -19,15 +19,25 @@ import {
   isFreePerCardPolicyActive,
   resolveFreeWorkspacesPerCard,
 } from "./free-workspaces-per-card";
-import {
-  assertBillingCountry,
-  type CardDetails,
-  type WorkspaceBillingProfile,
+import type {
+  CardDetails,
+  WorkspaceAddressInput,
+  WorkspaceBillingProfile,
 } from "./provisioning";
 import { isPlanOfferedTo } from "../plans/plan-audience";
 
 const HTTP_BAD_REQUEST = 400;
 const NO_TRIAL_DAYS = 0;
+
+function assertBillingCountry(
+  address: WorkspaceAddressInput | undefined,
+): void {
+  assert(
+    address?.country,
+    HTTP_BAD_REQUEST,
+    "saas.errors.billing.country_required",
+  );
+}
 const CANCELLED_STATUS = "cancelled";
 const NO_CARD: CardDetails = { fingerprint: null, billingAddress: undefined };
 

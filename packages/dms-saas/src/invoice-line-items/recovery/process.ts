@@ -2,6 +2,9 @@ import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { StripeWebhookEventModel } from "@antelopejs/interface-dms-saas/db";
 import {
+  type InvoiceLineItemsProvider,
+  type InvoiceLineItemsResolution,
+  type InvoiceUsageGap,
   normalizeInvoiceLineItemsResolution,
   type PreparedInvoiceLineItem,
 } from "@antelopejs/interface-dms-saas/invoice-line-items";
@@ -37,6 +40,12 @@ const LOG_PREFIX = "[dms-saas:invoice-line-recovery]";
 export const INVOICE_LINE_LEASE_MS = 5 * 60 * 1000;
 /** A failed or not-ready step is retried by the next cron run after this. */
 const RETRY_AFTER_MS = 5 * 60 * 1000;
+/**
+ * How long after registration lines still missing are waited for; past it
+ * the invoice is finalized with the lines available. Longer than a usage
+ * provider takes to account for, or write off, the last hours of a cycle.
+ */
+export const INVOICE_LINE_DEADLINE_MS = 48 * 60 * 60 * 1000;
 const SUSPEND_KEY_PREFIX = "saas-invoice-suspend";
 const FINALIZE_KEY_PREFIX = "saas-invoice-finalize";
 const INVOICE_CREATED_EVENT = "invoice.created";
@@ -68,11 +77,55 @@ async function transition(
   return "advanced";
 }
 
-function toOperator(lease: InvoiceLineInjectionLease, reason: string) {
-  Logging.Error(
-    `${LOG_PREFIX} invoice ${lease.task._id} of workspace '${lease.task.tenantId}' needs an operator: ${reason}`,
+function isPastDeadline(task: InvoiceLineInjection): boolean {
+  return (
+    Date.now() - new Date(task.createdAt).getTime() >= INVOICE_LINE_DEADLINE_MS
   );
-  return transition(lease, { state: "needs_operator", reason });
+}
+
+/**
+ * Stop adding lines and finalize the invoice as it stands, naming what it
+ * goes without. The fingerprint is dropped: nothing is verified any more.
+ */
+function finalizeAnyway(
+  lease: InvoiceLineInjectionLease,
+  gaps: readonly string[],
+): Promise<StepOutcome> {
+  return transition(lease, {
+    state: "finalizing",
+    fingerprint: null,
+    usageGaps: [...lease.task.usageGaps, ...gaps],
+    lastError: null,
+  });
+}
+
+/**
+ * Logs an invoice finalized with missing usage as one JSON line and tells the
+ * providers it was registered with, so they can raise their alert.
+ */
+function reportUsageGap(task: InvoiceLineInjection): void {
+  const gap: InvoiceUsageGap = {
+    tenantId: task.tenantId,
+    invoiceId: task._id,
+    periodStart: new Date(task.periodStart),
+    periodEnd: new Date(task.periodEnd),
+    reasons: task.usageGaps,
+  };
+  Logging.Error(
+    `${LOG_PREFIX} invoice finalized with missing usage ${JSON.stringify(gap)}`,
+  );
+  const expected = new Set(task.providerIds);
+  for (const provider of getInvoiceLineItemsProviders()) {
+    if (!expected.has(provider.id)) continue;
+    try {
+      provider.onUsageGap?.(gap);
+    } catch (error) {
+      Logging.Warn(
+        `${LOG_PREFIX} provider '${provider.id}' failed to take the usage gap of invoice ${task._id}`,
+        error,
+      );
+    }
+  }
 }
 
 function errorText(error: unknown): string {
@@ -108,10 +161,11 @@ async function suspend(lease: InvoiceLineInjectionLease): Promise<StepOutcome> {
   const invoiceId = lease.task._id;
   const before = await retrieveInvoice(invoiceId);
   const foreign = identityMismatch(before, lease.task);
-  if (foreign)
-    return toOperator(lease, `before_suspension:identity_${foreign}`);
+  if (foreign) return finalizeAnyway(lease, [`identity_mismatch:${foreign}`]);
   if (before.status !== DRAFT)
-    return toOperator(lease, `before_suspension:finalized:${stateOf(before)}`);
+    return finalizeAnyway(lease, [
+      `finalized_before_suspension:${stateOf(before)}`,
+    ]);
   let requestError: string | null = null;
   await holdLease(lease);
   try {
@@ -131,15 +185,19 @@ async function suspend(lease: InvoiceLineInjectionLease): Promise<StepOutcome> {
       lastError: null,
     });
   if (invoice.status !== DRAFT)
-    return toOperator(lease, `before_suspension:finalized:${stateOf(invoice)}`);
+    return finalizeAnyway(lease, [
+      `finalized_before_suspension:${stateOf(invoice)}`,
+    ]);
   return retryLater(lease, requestError ?? "suspension_not_visible");
 }
 
 interface ResolvedLines {
   expected: ManagedLine[];
   accepted: Array<{ provider: string; prepared: PreparedInvoiceLineItem }>;
-  blocked: string | null;
-  waiting: string | null;
+  /** Providers still expected to answer: missing, not ready or failing. */
+  waiting: string[];
+  /** Lines a provider returned that can never be injected. */
+  invalid: string[];
 }
 
 function contextOf(task: InvoiceLineInjection) {
@@ -152,13 +210,29 @@ function contextOf(task: InvoiceLineInjection) {
   };
 }
 
+async function resolveOne(
+  provider: InvoiceLineItemsProvider,
+  task: InvoiceLineInjection,
+): Promise<InvoiceLineItemsResolution> {
+  try {
+    return normalizeInvoiceLineItemsResolution(
+      await provider.resolve(contextOf(task)),
+    );
+  } catch (error) {
+    return {
+      status: "not_ready",
+      reason: `provider_failed:${errorText(error)}`,
+    };
+  }
+}
+
 /** Ask every provider the task was registered with; a missing one is waited for. */
 async function resolveAll(task: InvoiceLineInjection): Promise<ResolvedLines> {
   const resolved: ResolvedLines = {
     expected: [],
     accepted: [],
-    blocked: null,
-    waiting: null,
+    waiting: [],
+    invalid: [],
   };
   const registered = new Map(
     getInvoiceLineItemsProviders().map((provider) => [provider.id, provider]),
@@ -166,25 +240,21 @@ async function resolveAll(task: InvoiceLineInjection): Promise<ResolvedLines> {
   for (const providerId of task.providerIds) {
     const provider = registered.get(providerId);
     if (!provider) {
-      resolved.waiting ??= `provider_missing:${providerId}`;
+      resolved.waiting.push(`provider_missing:${providerId}`);
       continue;
     }
-    const resolution = normalizeInvoiceLineItemsResolution(
-      await provider.resolve(contextOf(task)),
-    );
-    if (resolution.status === "blocked") {
-      resolved.blocked = `provider_blocked:${provider.id}:${resolution.reason}`;
-      return resolved;
-    }
+    const resolution = await resolveOne(provider, task);
     if (resolution.status === "not_ready") {
-      resolved.waiting ??= `provider_not_ready:${provider.id}:${resolution.reason}`;
+      resolved.waiting.push(
+        `provider_not_ready:${provider.id}:${resolution.reason}`,
+      );
       continue;
     }
     const selection = selectProviderLines(provider, resolution.lines);
-    if (selection.invalidKeys.length > 0) {
-      resolved.blocked = `provider_invalid_lines:${provider.id}:${selection.invalidKeys.join(",")}`;
-      return resolved;
-    }
+    if (selection.invalidKeys.length > 0)
+      resolved.invalid.push(
+        `provider_invalid_lines:${provider.id}:${selection.invalidKeys.join(",")}`,
+      );
     for (const prepared of selection.accepted) {
       resolved.accepted.push({ provider: provider.id, prepared });
       resolved.expected.push(expectedLine(task, provider.id, prepared));
@@ -222,38 +292,59 @@ function draftProblem(
   return null;
 }
 
-/** suspended → finalizing once exactly the expected lines are read back. */
+/**
+ * Creates the lines the draft lacks. Past the deadline a line Stripe keeps
+ * refusing is a gap, not a reason to hold the invoice.
+ */
+async function createLinesOrGap(
+  lease: InvoiceLineInjectionLease,
+  resolved: ResolvedLines,
+  existing: readonly ManagedLine[],
+): Promise<string[]> {
+  try {
+    await createMissingLines(lease, resolved, existing);
+    return [];
+  } catch (error) {
+    if (error instanceof LeaseLostError || !isPastDeadline(lease.task))
+      throw error;
+    return [`managed_lines_create_failed:${errorText(error)}`];
+  }
+}
+
+/**
+ * suspended → finalizing once the expected lines are read back; past the
+ * deadline, with whatever lines are available, naming the rest.
+ */
 async function injectLines(
   lease: InvoiceLineInjectionLease,
 ): Promise<StepOutcome> {
   const { task } = lease;
   const problem = draftProblem(await retrieveInvoice(task._id), task);
-  if (problem) return toOperator(lease, problem);
-  let resolved: ResolvedLines;
-  try {
-    resolved = await resolveAll(task);
-  } catch (error) {
-    return retryLater(lease, `provider_failed:${errorText(error)}`);
-  }
-  if (resolved.blocked) return toOperator(lease, resolved.blocked);
-  if (resolved.waiting) return retryLater(lease, resolved.waiting);
+  if (problem) return finalizeAnyway(lease, [problem]);
+  const resolved = await resolveAll(task);
+  if (resolved.waiting.length > 0 && !isPastDeadline(task))
+    return retryLater(lease, resolved.waiting.join("; "));
+  const gaps = [...resolved.waiting, ...resolved.invalid];
   const before = managedLinesOf(await listInvoiceItems(task._id));
   const beforeComparison = compareManagedLines(resolved.expected, before);
   if (
     beforeComparison === "duplicate" ||
     beforeComparison === "unexpected_or_changed"
   )
-    return toOperator(lease, `managed_lines_${beforeComparison}`);
-  await createMissingLines(lease, resolved, before);
+    return finalizeAnyway(lease, [
+      ...gaps,
+      `managed_lines_${beforeComparison}`,
+    ]);
+  gaps.push(...(await createLinesOrGap(lease, resolved, before)));
   const after = managedLinesOf(await listInvoiceItems(task._id));
   const comparison = compareManagedLines(resolved.expected, after);
-  if (comparison === "missing_only")
+  if (comparison === "missing_only" && !isPastDeadline(task))
     return retryLater(lease, "managed_lines_not_yet_visible");
-  if (comparison !== "match")
-    return toOperator(lease, `managed_lines_${comparison}`);
+  if (comparison !== "match") gaps.push(`managed_lines_${comparison}`);
   return transition(lease, {
     state: "finalizing",
     fingerprint: invoiceFingerprint(task, after),
+    usageGaps: [...task.usageGaps, ...gaps],
     lastError: null,
   });
 }
@@ -268,10 +359,39 @@ async function matchesRecord(
   return invoiceFingerprint(task, lines) === task.fingerprint;
 }
 
+/** What changed on a verified draft since its lines were read back. */
+async function draftChanges(
+  invoice: Stripe.Invoice,
+  task: InvoiceLineInjection,
+): Promise<string[]> {
+  if (!task.fingerprint) return [];
+  const problem = draftProblem(invoice, task);
+  if (problem) return [`before_finalize:${problem}`];
+  return (await matchesRecord(invoice, task))
+    ? []
+    : ["before_finalize:changed_since_verified"];
+}
+
 /**
- * finalizing → finalized. The draft is re-verified right before the
- * irreversible call — still ours, still suspended, still exactly the recorded
- * lines — and the result is recognized only by the same verification.
+ * What a finalized invoice carries other than what was recorded; a draft
+ * already found changed is not reported changed twice.
+ */
+async function finalChanges(
+  invoice: Stripe.Invoice,
+  task: InvoiceLineInjection,
+  isRecordTrusted: boolean,
+): Promise<string[]> {
+  if (!RECOGNIZED_FINAL_STATUSES.has(invoice.status ?? ""))
+    return [`finalized_as:${invoice.status}`];
+  if (!isRecordTrusted || !task.fingerprint) return [];
+  if (await matchesRecord(invoice, task)) return [];
+  return [`finalized_with_external_changes:${invoice.status}`];
+}
+
+/**
+ * finalizing → finalized, always. A draft changed since it was verified is
+ * finalized all the same, and the change joins the invoice's usage gaps: a
+ * missing line costs the customer nothing and is fixed at its source.
  */
 async function finalize(
   lease: InvoiceLineInjectionLease,
@@ -279,11 +399,9 @@ async function finalize(
   const { task } = lease;
   let invoice = await retrieveInvoice(task._id);
   let requestError: string | null = null;
+  const gaps: string[] = [];
   if (invoice.status === DRAFT) {
-    const problem = draftProblem(invoice, task);
-    if (problem) return toOperator(lease, `before_finalize:${problem}`);
-    if (!(await matchesRecord(invoice, task)))
-      return toOperator(lease, "before_finalize:changed_since_verified");
+    gaps.push(...(await draftChanges(invoice, task)));
     await holdLease(lease);
     try {
       await getStripeClient().invoices.finalizeInvoice(
@@ -298,14 +416,14 @@ async function finalize(
   }
   if (invoice.status === DRAFT)
     return retryLater(lease, requestError ?? "finalization_not_visible");
-  if (!RECOGNIZED_FINAL_STATUSES.has(invoice.status ?? ""))
-    return toOperator(lease, `finalized_as:${invoice.status}`);
-  if (!(await matchesRecord(invoice, task)))
-    return toOperator(
-      lease,
-      `finalized_with_external_changes:${invoice.status}`,
-    );
-  return transition(lease, { state: "finalized", lastError: null });
+  gaps.push(...(await finalChanges(invoice, task, gaps.length === 0)));
+  await transition(lease, {
+    state: "finalized",
+    usageGaps: [...new Set([...task.usageGaps, ...gaps])],
+    lastError: null,
+  });
+  if (lease.task.usageGaps.length > 0) reportUsageGap(lease.task);
+  return "advanced";
 }
 
 const STEPS: Partial<Record<InvoiceLineInjectionState, Step>> = {
@@ -314,9 +432,10 @@ const STEPS: Partial<Record<InvoiceLineInjectionState, Step>> = {
   finalizing: finalize,
 };
 
-/** Acknowledge the invoice.created receipt once the draft is known suspended. */
+/** Acknowledge the invoice.created receipt once the draft is known suspended or finalized. */
 async function closeWebhookReceipt(task: InvoiceLineInjection): Promise<void> {
-  if (!task.eventId || !task.suspendedAt) return;
+  if (!task.eventId || !(task.suspendedAt || task.state === "finalized"))
+    return;
   const staleBefore = new Date(Date.now() - INVOICE_LINE_LEASE_MS);
   await GetModel(StripeWebhookEventModel).resolveTakenOver(
     task.eventId,
