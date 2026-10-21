@@ -69,7 +69,7 @@
     "@antelopejs/interface-data-api": ">=0.2.2 <1.0.0",
     "@antelopejs/interface-database": ">=0.1.10 <1.0.0",
     "@antelopejs/interface-database-decorators": ">=0.1.9 <1.0.0",
-    "@antelopejs/interface-dms": ">=0.7.4 <1.0.0",
+    "@antelopejs/interface-dms": ">=0.8.0 <1.0.0",
     "@antelopejs/interface-dms-saas": "workspace:^",
     "node-cron": "^4.2.1",
     "stripe": "^22.6.2",
