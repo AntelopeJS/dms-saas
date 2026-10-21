@@ -176,7 +176,6 @@ vi.mock("@antelopejs/interface-core/logging", () => ({
 import {
   ensurePlanStripeRefs,
   loadBillablePlan,
-  planStripeSyncState,
   reconcilePlansWithStripe,
   startPlanReconciliation,
   syncPlanStripeRefs,
@@ -486,17 +485,6 @@ describe("plans that stay off Stripe", () => {
 
     expect(fake.writes).toEqual([]);
     expect(fake.logs.some((log) => log.startsWith("warn:"))).toBe(true);
-  });
-
-  it("reports a paid plan unsellable while Stripe is not configured, a free one off Stripe", async () => {
-    fake.isConfigured = false;
-
-    await expect(planStripeSyncState(seededPlan())).resolves.toBe(
-      "not_configured",
-    );
-    await expect(
-      planStripeSyncState(seededPlan({ _id: "cloud-plan-free", price: 0 })),
-    ).resolves.toBe("off_stripe");
   });
 
   it("skips a plan without a supported interval", async () => {

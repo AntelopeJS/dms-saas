@@ -130,7 +130,7 @@
 					"on_sale": "Offres en vente",
 					"on_sale_detail": "{public} publiques · {sales} sur devis",
 					"workspaces": "Espaces de travail",
-					"workspaces_detail": "{paying} payants · {free} gratuits · {trialing} en essai · {other} autres",
+					"workspaces_detail": "{paying} payants · {free} gratuits · {trialing} en essai",
 					"mrr": "MRR du catalogue",
 					"mrr_detail": "Normalisé · annuel ÷ 12, sièges comptés",
 					"mrr_detail_other": "Normalisé · plus {other}",
@@ -142,8 +142,6 @@
 					"public": "Publique",
 					"hidden": "Masquée",
 					"not_on_sale": "Plus en vente",
-					"not_on_stripe": "Pas sur Stripe",
-					"not_on_stripe_hint": "Cette offre a un prix mais pas encore de prix Stripe : aucun espace ne peut y souscrire avant sa synchronisation.",
 					"legacy": "Ancienne",
 					"on_sale": "En vente",
 					"more": "Plus d’actions",
@@ -176,10 +174,7 @@
 				"limit_error": "Une limite doit être d’au moins 1 membre. Pour aucune limite, cochez Illimité.",
 				"notice": {
 					"price_changed": "Un nouveau prix Stripe a été créé",
-					"price_changed_description": "Les nouvelles inscriptions paient le nouveau prix. Les abonnés actuels gardent le leur jusqu’à leur migration.",
-					"stripe_not_synced": "Offre enregistrée, mais non synchronisée avec Stripe",
-					"stripe_not_synced_not_configured": "Stripe n’est pas configuré : aucun espace ne peut souscrire à cette offre payante tant qu’il ne l’est pas.",
-					"stripe_not_synced_out_of_sync": "Stripe n’a pas pris la modification. Elle est retentée la prochaine fois que l’offre est proposée ou au démarrage du serveur ; d’ici là, l’offre ne peut pas être souscrite à ses nouvelles conditions."
+					"price_changed_description": "Les nouvelles inscriptions paient le nouveau prix. Les abonnés actuels gardent le leur jusqu’à leur migration."
 				},
 				"section": {
 					"identity": "Identité",

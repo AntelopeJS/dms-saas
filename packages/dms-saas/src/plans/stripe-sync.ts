@@ -157,9 +157,8 @@ export function startPlanReconciliation(): void {
 
 /**
  * Where a plan stands with Stripe: in line with its terms, waiting for a sync
- * (a write Stripe has not taken yet, or one it refused), billed off Stripe
- * (free and never linked), or billed on Stripe while Stripe is not
- * configured at all.
+ * (a write Stripe has not taken yet), billed off Stripe (free and never
+ * linked), or Stripe not configured at all.
  */
 export type PlanStripeSyncState =
   | "synced"
@@ -176,8 +175,8 @@ export type PlanStripeSyncState =
 export async function planStripeSyncState(
   plan: Plan,
 ): Promise<PlanStripeSyncState> {
-  if (!isStripeBilledPlan(plan)) return "off_stripe";
   if (!isStripeConfigured()) return "not_configured";
+  if (!isStripeBilledPlan(plan)) return "off_stripe";
   const taxCode = await resolveProductTaxCode();
   return isPlanStripeSyncCurrent(plan, taxCode) ? "synced" : "out_of_sync";
 }

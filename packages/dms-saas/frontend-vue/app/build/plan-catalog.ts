@@ -27,8 +27,6 @@ export interface CatalogPlanRow {
 	resolvedFeatures: CatalogFeatureValue[]
 	stripeProductId: string | null
 	stripeProductUrl: string | null
-	/** Priced, but holding no Stripe price: it cannot be subscribed to. */
-	isMissingStripePrice: boolean
 	updatedAt: string | null
 }
 

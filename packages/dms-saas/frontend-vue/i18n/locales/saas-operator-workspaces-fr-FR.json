@@ -45,7 +45,7 @@
       "plans": {
         "title": "Offres par MRR",
         "subtitle": "MRR normalisé apporté par chaque offre",
-        "description": "Aucun espace payant · {price} | 1 espace payant · {price} | {count} espaces payants · {price}",
+        "description": "Aucun espace · {price} | 1 espace · {price} | {count} espaces · {price}",
         "empty": "Aucune offre n'apporte encore de revenu récurrent.",
         "open_catalogue": "Catalogue"
       },

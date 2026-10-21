@@ -17,7 +17,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 - dms-saas 0.6 requires `@antelopejs/dms` >=0.9 (interface-dms 0.7, renderer `@antelopejs/dms-frontend` 0.6);
   0.5 is the DMS 0.8 line.
 - `ajs project modules add @antelopejs/dms-saas`; config `stripe.{secretKey,publishableKey,webhookSecret}` from env
-  (`envOverrides`). Placeholder keys disable Stripe calls: plan sync skipped (saving a paid plan warns), registration
+  (`envOverrides`). Placeholder keys disable Stripe calls: plan sync skipped, registration
   takes no card whatever `registration.paymentMethod` says. Stripe refusing the key or unreachable → handled
   `503 saas.errors.stripe.unavailable`, not a 500. A new route that calls Stripe wraps its calls in
   `withStripeAvailability()` and, when it cannot work without Stripe, calls `assertStripeConfigured()` first
@@ -37,7 +37,6 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 - New project page or block → add its permission ids to the plans that should get it, or tenants lose it.
 - Seeding plans from code: write name, price, currency, interval, billing mode; leave `paymentProviderRefs` to dms-saas.
 - Features: `displayName` / `tooltip` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys.
-- Plan `description` and `borderLabel` may be `$i18n.key` (translated on every screen); `name` stays plain text.
 
 ## Extension points (`@antelopejs/interface-dms-saas`)
 

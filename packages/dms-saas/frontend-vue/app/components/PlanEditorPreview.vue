@@ -51,7 +51,7 @@ const SYNC_TONES: Record<SyncState, 'success' | 'warning' | 'neutral'> = {
 	synced: 'success',
 	out_of_sync: 'warning',
 	off_stripe: 'neutral',
-	not_configured: 'warning',
+	not_configured: 'neutral',
 }
 
 const props = defineProps<{
@@ -68,7 +68,6 @@ const EMPTY_CATALOG: PlanCatalog = {
 
 const { t, locale } = useI18n()
 const planDescription = usePlanDescription()
-const planText = usePlanDisplayText()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
 const planId = computed(() => props.routeParams?.id)
@@ -249,7 +248,7 @@ async function load(): Promise<void> {
 							: undefined
 					"
 				>
-					{{ planText(draft.borderLabel) }}
+					{{ draft.borderLabel }}
 				</UBadge>
 				<div>
 					<p class="text-highlighted text-lg font-semibold">

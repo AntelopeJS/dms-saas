@@ -9,7 +9,6 @@ import {
   Put,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
-import { Logging } from "@antelopejs/interface-core/logging";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { GetPermissions } from "@antelopejs/interface-dms/permissions";
@@ -80,9 +79,6 @@ const PRICE_TERMS_FIELDS = [
   "billingMode",
 ] as const satisfies readonly (keyof Plan)[];
 const PRICE_CHANGED_NOTICE = "$saas.catalog.editor.notice.price_changed";
-const STRIPE_NOT_SYNCED_NOTICE =
-  "$saas.catalog.editor.notice.stripe_not_synced";
-const LOG_PREFIX = "[dms-saas:plans]";
 const INVALID_FEATURES_MESSAGE = "$saas.errors.plan.invalid_feature_value";
 const INVALID_MEMBER_CAP_MESSAGE = "$saas.errors.plan.invalid_member_cap";
 const INVALID_ACCESS_MESSAGE = "$saas.errors.plan.invalid_access";
@@ -222,40 +218,6 @@ function priceChangeNotice(
     title: PRICE_CHANGED_NOTICE,
     description: `${PRICE_CHANGED_NOTICE}_description`,
     color: "info",
-  };
-}
-
-type PlanWriteNotice = NonNullable<PlanWriteResult["notice"]>;
-
-/**
- * Syncs a plan just written with Stripe. The plan is stored either way: a
- * provider failure is logged and reported through the sync state, not
- * thrown, so the editor says what was saved and what was not. The next offer
- * of the plan, or the boot reconciliation, retries the sync.
- */
-async function syncWrittenPlan(plan: Plan, store: PlanModel): Promise<Plan> {
-  try {
-    return await syncPlanStripeRefs(plan, store);
-  } catch (error) {
-    Logging.Error(`${LOG_PREFIX} plan '${plan._id}' Stripe sync failed`, error);
-    return plan;
-  }
-}
-
-/**
- * The warning a write of a plan Stripe should bill, but does not, deserves:
- * until it holds a Stripe price, no workspace can subscribe to it.
- *
- * @param syncState Where the written plan stands with Stripe
- */
-export function stripeSyncNotice(
-  syncState: PlanStripeSyncState,
-): PlanWriteNotice | undefined {
-  if (syncState === "synced" || syncState === "off_stripe") return undefined;
-  return {
-    title: STRIPE_NOT_SYNCED_NOTICE,
-    description: `${STRIPE_NOT_SYNCED_NOTICE}_${syncState}`,
-    color: "warning",
   };
 }
 
@@ -456,11 +418,8 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     const planId = inserted[0];
     const created = await this.planModel.get(planId);
     assert(created, HTTP_INTERNAL_ERROR, "saas.errors.plan.creation_failed");
-    const synced = await syncWrittenPlan(created, this.planModel);
-    return {
-      _id: planId,
-      notice: stripeSyncNotice(await planStripeSyncState(synced)),
-    };
+    await syncPlanStripeRefs(created, this.planModel);
+    return { _id: planId };
   }
 
   private async nextOrder(): Promise<number> {
@@ -493,13 +452,8 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     }
     await this.planModel.update(id, { ...sanitized, updatedAt: new Date() });
     const updated = await this.planModel.get(id);
-    const synced = updated && (await syncWrittenPlan(updated, this.planModel));
-    const syncNotice =
-      synced && stripeSyncNotice(await planStripeSyncState(synced));
-    return {
-      _id: id,
-      notice: syncNotice || priceChangeNotice(plan, sanitized),
-    };
+    if (updated) await syncPlanStripeRefs(updated, this.planModel);
+    return { _id: id, notice: priceChangeNotice(plan, sanitized) };
   }
 
   @Delete("/:id")

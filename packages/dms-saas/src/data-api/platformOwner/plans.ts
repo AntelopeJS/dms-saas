@@ -381,17 +381,6 @@ export class plansDataAPI extends DataController(
     return planOf(this).paymentProviderRefs?.stripeProductId ?? null;
   }
 
-  /**
-   * A priced plan with no Stripe price yet (Stripe not configured, or the
-   * sync failed): no workspace can subscribe to it until it syncs.
-   */
-  @Listable(["price", "paymentProviderRefs"])
-  @Access(AccessMode.ReadOnly)
-  get isMissingStripePrice(): boolean {
-    const plan = planOf(this);
-    return plan.price > 0 && !plan.paymentProviderRefs?.stripePriceId;
-  }
-
   @Listable(["paymentProviderRefs"])
   @Access(AccessMode.ReadOnly)
   get stripeProductUrl(): string | null {

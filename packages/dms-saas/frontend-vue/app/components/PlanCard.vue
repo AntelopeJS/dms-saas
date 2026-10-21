@@ -43,7 +43,6 @@ const props = withDefaults(
 const { t, locale } = useI18n()
 const { processI18n } = useTranslation()
 const planDescription = usePlanDescription()
-const planText = usePlanDisplayText()
 const { formatFeatureValue } = usePlanFeatureFormat()
 const catalog = usePlanCatalog()
 
@@ -262,21 +261,8 @@ function toggleSale(): void {
 							color="primary"
 							icon="i-ph-star"
 						>
-							{{ planText(plan.borderLabel) }}
+							{{ plan.borderLabel }}
 						</UBadge>
-						<UTooltip
-							v-if="plan.isMissingStripePrice"
-							:text="$t('saas.catalog.plans.card.not_on_stripe_hint')"
-						>
-							<UBadge
-								size="sm"
-								variant="soft"
-								color="warning"
-								icon="i-ph-warning"
-							>
-								{{ $t('saas.catalog.plans.card.not_on_stripe') }}
-							</UBadge>
-						</UTooltip>
 					</div>
 					<p class="text-muted text-xs">{{ subtitle }}</p>
 				</div>
