@@ -463,10 +463,10 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
         invoice(f.invoiceId)!.customer = "cus_other";
       },
       "identity_mismatch:customer",
-      1,
+      0,
     ],
   ])(
-    "finalizes without lines when the draft is unexpected before suspension (%s)",
+    "closes without lines, never finalizing a foreign draft, when the draft is unexpected before suspension (%s)",
     async (_label, mutate, reason, finalizeEffects) => {
       const f = await aCycleInvoice();
       const event = invoiceCreated(f);
@@ -669,13 +669,6 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       },
       "before_finalize:left_suspension:draft/auto_advance=true",
     ],
-    [
-      "another customer",
-      (f: Fixture) => {
-        invoice(f.invoiceId)!.customer = "cus_other";
-      },
-      "before_finalize:identity_customer",
-    ],
   ])(
     "finalizes anyway after %s while stopped in finalizing",
     async (_label, mutate, reason) => {
@@ -708,6 +701,20 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       expect(harness.state.calls.finalizeEffects).toBe(1);
     },
   );
+
+  it("never finalizes a draft that became another customer's while stopped in finalizing", async () => {
+    const f = await aCycleInvoice();
+    harness.state.faults.set("finalize:before", 1);
+    await dispatchStripeWebhookEvent(invoiceCreated(f));
+    invoice(f.invoiceId)!.customer = "cus_other";
+    await runRecovery();
+    expect(await task(f.invoiceId)).toMatchObject({
+      state: "finalized",
+      usageGaps: ["identity_mismatch:customer"],
+    });
+    expect(harness.state.calls.finalizeEffects).toBe(0);
+    expect(invoice(f.invoiceId)?.status).toBe("draft");
+  });
 
   it("keeps foreign items untouched and outside the fingerprint", async () => {
     const f = await aCycleInvoice();

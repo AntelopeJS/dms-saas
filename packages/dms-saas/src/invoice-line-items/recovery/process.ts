@@ -388,10 +388,26 @@ async function finalChanges(
   return [`finalized_with_external_changes:${invoice.status}`];
 }
 
+/** Closes the task with its gaps reported, and the reasons it was given. */
+async function closeTask(
+  lease: InvoiceLineInjectionLease,
+  gaps: readonly string[],
+): Promise<StepOutcome> {
+  await transition(lease, {
+    state: "finalized",
+    usageGaps: [...new Set([...lease.task.usageGaps, ...gaps])],
+    lastError: null,
+  });
+  if (lease.task.usageGaps.length > 0) reportUsageGap(lease.task);
+  return "advanced";
+}
+
 /**
  * finalizing → finalized, always. A draft changed since it was verified is
  * finalized all the same, and the change joins the invoice's usage gaps: a
- * missing line costs the customer nothing and is fixed at its source.
+ * missing line costs the customer nothing and is fixed at its source. A
+ * draft that is not the registered invoice is never touched: the task is
+ * closed on it, its gap reported.
  */
 async function finalize(
   lease: InvoiceLineInjectionLease,
@@ -400,6 +416,8 @@ async function finalize(
   let invoice = await retrieveInvoice(task._id);
   let requestError: string | null = null;
   const gaps: string[] = [];
+  const foreign = identityMismatch(invoice, task);
+  if (foreign) return closeTask(lease, [`identity_mismatch:${foreign}`]);
   if (invoice.status === DRAFT) {
     gaps.push(...(await draftChanges(invoice, task)));
     await holdLease(lease);
@@ -417,13 +435,7 @@ async function finalize(
   if (invoice.status === DRAFT)
     return retryLater(lease, requestError ?? "finalization_not_visible");
   gaps.push(...(await finalChanges(invoice, task, gaps.length === 0)));
-  await transition(lease, {
-    state: "finalized",
-    usageGaps: [...new Set([...task.usageGaps, ...gaps])],
-    lastError: null,
-  });
-  if (lease.task.usageGaps.length > 0) reportUsageGap(lease.task);
-  return "advanced";
+  return closeTask(lease, gaps);
 }
 
 const STEPS: Partial<Record<InvoiceLineInjectionState, Step>> = {
