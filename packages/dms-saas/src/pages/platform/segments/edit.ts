@@ -102,6 +102,7 @@ export class SaasSegmentNewController extends PageController(
     ...BASE_FORM,
     submitUrl: SEGMENTS_API,
     submitUrlMethod: HttpMethod.post,
+    kind: "create",
     successMessage: `${I18N}.created`,
     redirectOnSuccess: `${SEGMENTS_PAGE_PATH}/{{response._id}}/edit`,
   });

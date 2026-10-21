@@ -277,6 +277,7 @@ export class SaasPlanNewController extends PageController(
       fetchUrl: `${PLANS_ENDPOINT}/{{query.duplicate}}/duplicate`,
       submitUrl: PLANS_ENDPOINT,
       submitUrlMethod: HttpMethod.post,
+      kind: "create",
       submitLabel: `${TEXTS}.create`,
       successMessage: `${TEXTS}.created`,
       backTo: PLANS_PAGE_PATH,
