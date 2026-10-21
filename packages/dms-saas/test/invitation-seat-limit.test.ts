@@ -23,7 +23,7 @@ import {
   decideInvite,
 } from "@antelopejs/interface-dms/invite-resolution";
 import { ExecuteHooks, Hook } from "@antelopejs/interface-dms/hooks";
-import { internal as inviteExtensions } from "@antelopejs/interface-dms/invite-extensions";
+import { ResolveInviteAvailability } from "@antelopejs/interface-dms/invite-extensions/internal/availability";
 import { createUserInviteToken } from "@antelopejs/interface-dms/invites";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
 import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
@@ -597,7 +597,7 @@ describe("seats billed for invitations", () => {
 
 describe("invite action at the plan cap", () => {
   function inviteAvailability(tenantId: string) {
-    return inviteExtensions.ResolveInviteAvailability({
+    return ResolveInviteAvailability({
       tenantId,
       user: operator,
     });
