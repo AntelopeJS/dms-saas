@@ -127,10 +127,9 @@ export class SaasWorkspacesListController extends PageController(
       pageSize: PAGE_SIZE,
       tabs: STATUS_TABS,
       views: { items: VIEWS, layout: "strip" },
-      quickFilters: [
-        { field: "planName", icon: "i-ph-stack" },
-        { field: "ownerStatus", icon: "i-ph-user-circle" },
-      ],
+      // Not planName: a free-text column has no values to pick, and dms#370
+      // refuses it at registration (the toolbar already left it out).
+      quickFilters: [{ field: "ownerStatus", icon: "i-ph-user-circle" }],
       // Largest accounts first, as an operator scans the directory.
       defaultSort: { field: "mrrMinor", desc: true },
       queryParamFilters: { plan: { field: "planId" } },
