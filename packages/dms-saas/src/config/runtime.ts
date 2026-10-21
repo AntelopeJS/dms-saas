@@ -1,4 +1,5 @@
 import { assert } from "@antelopejs/interface-api-util";
+import { GetClientBaseUrl } from "@antelopejs/interface-dms/client-base-url";
 import {
   DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY,
   type DmsSaasConfig,
@@ -129,8 +130,12 @@ export function getReportingCurrency(): string {
   ).toUpperCase();
 }
 
-export function getAllowedRedirectHosts(): string[] {
-  return runtimeConfig?.allowedRedirectHosts ?? [];
+/** The configured hosts, else the host of the dashboard the DMS serves. */
+export async function getAllowedRedirectHosts(): Promise<string[]> {
+  const configured = runtimeConfig?.allowedRedirectHosts;
+  if (configured) return configured;
+  const clientBaseUrl = await GetClientBaseUrl();
+  return clientBaseUrl ? [new URL(clientBaseUrl).host] : [];
 }
 
 /** Public registration is independent of invitation acceptance and account recovery. */
@@ -161,12 +166,12 @@ function isLoopbackUrl(url: URL): boolean {
  * URLs, billing portal return URL).
  *
  * Only http(s) URLs pass. In a development runtime, loopback hosts are
- * accepted without configuration; everything else must match the configured
- * `allowedRedirectHosts` by URL.host.
+ * accepted without configuration; everything else must match
+ * {@link getAllowedRedirectHosts} by URL.host.
  */
-export function isAllowedRedirectUrl(rawUrl: string): boolean {
+export async function isAllowedRedirectUrl(rawUrl: string): Promise<boolean> {
   const parsed = parseRedirectUrl(rawUrl);
   if (!parsed) return false;
   if (isDevMode() && isLoopbackUrl(parsed)) return true;
-  return getAllowedRedirectHosts().includes(parsed.host);
+  return (await getAllowedRedirectHosts()).includes(parsed.host);
 }
