@@ -153,6 +153,7 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
       .child(
         "table",
         TableView(invoicesDataAPI, {
+          realtimeScope: "global",
           caption: `${D}.invoices.latest`,
           layout: "compact",
           pageSize: LATEST_INVOICES,
@@ -186,6 +187,7 @@ const members = VStack({ spacing: "1.5rem", alignment: "stretch" })
   .child(
     "memberTable",
     TableView(membersDataAPI, {
+      realtimeScope: "global",
       caption: `${D}.members.title`,
       rowActions: NO_ROW_ACTIONS,
       defaultSort: { field: "joinedAt" },
@@ -195,6 +197,7 @@ const members = VStack({ spacing: "1.5rem", alignment: "stretch" })
   .child(
     "invitationTable",
     TableView(invitationsDataAPI, {
+      realtimeScope: "global",
       caption: `${D}.invitations.title`,
       rowActions: invitationRowActions,
       routeParamFilters: ROUTE_FILTER_TENANT,
@@ -215,6 +218,7 @@ const tabs = Tab({
   .child(
     "invoiceTable",
     TableView(invoicesDataAPI, {
+      realtimeScope: "global",
       caption: `${D}.invoices.title`,
       defaultSort: { field: "issuedAt", desc: true },
       columns: WITHOUT_WORKSPACE_COLUMN,
@@ -226,6 +230,7 @@ const tabs = Tab({
   .child(
     "creditNoteTable",
     TableView(creditNotesDataAPI, {
+      realtimeScope: "global",
       caption: `${D}.credit_notes.title`,
       defaultSort: { field: "issuedAt", desc: true },
       columns: WITHOUT_WORKSPACE_COLUMN,

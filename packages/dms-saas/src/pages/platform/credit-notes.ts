@@ -66,6 +66,7 @@ export class SaasCreditNotesController extends PageController(
   });
 
   static table = TableView(creditNotesDataAPI, {
+    realtimeScope: "global",
     caption: `${TEXT}.caption`,
     searchPlaceholder: `${TEXT}.search`,
     defaultSort: { field: "issuedAt", desc: true },

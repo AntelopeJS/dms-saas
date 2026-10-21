@@ -168,6 +168,7 @@ export class SaasPlansController extends PageController(
   });
 
   static table = TableView(plansDataAPI, {
+    realtimeScope: "global",
     labelKey: "name",
     searchPlaceholder: `${TEXTS}.search`,
     defaultSort: { field: "order" },

@@ -53,6 +53,7 @@ export class SaasFeaturesController extends PageController(
   }),
 ) {
   static table = TableView(featuresDataAPI, {
+    realtimeScope: "global",
     caption: `${TEXTS}.caption`,
     labelKey: "displayName",
     searchPlaceholder: `${TEXTS}.search`,

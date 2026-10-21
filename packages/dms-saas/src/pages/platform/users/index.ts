@@ -42,6 +42,7 @@ export class SaasUsersListController extends PageController(
   DefaultLayout({ fullWidth: true }),
 ) {
   static table = TableView(saasUsersDataAPI, {
+    realtimeScope: "global",
     caption: "$saas.users.caption",
     labelKey: "name",
     searchPlaceholder: "$saas.users.search_placeholder",

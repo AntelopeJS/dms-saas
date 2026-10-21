@@ -82,6 +82,7 @@ export class SaasPlanMigrationsController extends PageController(
   });
 
   static table = TableView(planMigrationsDataAPI, {
+    realtimeScope: "global",
     caption: `${TEXTS}.caption`,
     labelKey: "title",
     searchPlaceholder: `${TEXTS}.search`,

@@ -43,6 +43,7 @@ const facts = StatGroup({
 }).meta(described("facts", "i-ph-squares-four"));
 
 const workspaceTable = TableView(adminUserWorkspacesDataAPI, {
+  realtimeScope: "global",
   layout: "compact",
   labelKey: "name",
   rowActions: {
@@ -68,6 +69,7 @@ const workspaceTable = TableView(adminUserWorkspacesDataAPI, {
 }).meta(described("workspaces", "i-ph-buildings"));
 
 const billingTable = TableView(adminUserInvoicesDataAPI, {
+  realtimeScope: "global",
   layout: "compact",
   labelKey: "number",
   rowActions: {

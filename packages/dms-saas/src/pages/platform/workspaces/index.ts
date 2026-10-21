@@ -121,6 +121,7 @@ export class SaasWorkspacesListController extends PageController(
 
   static table = withReportingCurrencyTotals(
     TableView(workspacesDataAPI, {
+      realtimeScope: "global",
       caption: `${W}.caption`,
       searchPlaceholder: `${W}.search_placeholder`,
       labelKey: "name",
