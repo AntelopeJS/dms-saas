@@ -108,7 +108,6 @@ export class SaasInvoicesController extends PageController(
   });
 
   static table = TableView(invoicesDataAPI, {
-    realtimeScope: "global",
     caption: `${TEXT}.caption`,
     searchPlaceholder: `${TEXT}.search`,
     defaultSort: { field: "issuedAt", desc: true },

@@ -21,7 +21,6 @@ export class SaasSegmentsController extends PageController(
   DefaultLayout({ fullWidth: true }),
 ) {
   static table = TableView(segmentsDataAPI, {
-    realtimeScope: "global",
     caption: "$saas.segments.caption",
     labelKey: "name",
     defaultSort: { field: "name" },
