@@ -31,6 +31,7 @@
     "LICENSE"
   ],
   "main": "dist/index.js",
+  "dmsFrontend": "dist/frontend-module.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
