@@ -2,8 +2,10 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import { RegisterTenantAccessGate } from "@antelopejs/interface-dms/tenant-access";
 import type { TenantSubscriptionStatus } from "../db";
 import { TenantSubscriptionModel } from "../db";
+import { isGuardedPlanChangeBlocked } from "../plan-changes/guarded-state";
 
 const GATE_ID = "dms-saas.subscription-status";
+export const PLAN_CHANGE_ACCESS_GATE_ID = "dms-saas.plan-change";
 const GATE_ORDER = 100;
 
 export const BLOCKING_STATUSES = new Set<TenantSubscriptionStatus>([
@@ -25,7 +27,11 @@ export async function isTenantSubscriptionBlocked(
 ): Promise<{ blocked: boolean; status?: TenantSubscriptionStatus }> {
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await tenantSubscriptionModel.findOne();
-  if (subscription && BLOCKING_STATUSES.has(subscription.status)) {
+  if (
+    subscription &&
+    (BLOCKING_STATUSES.has(subscription.status) ||
+      isGuardedPlanChangeBlocked(subscription))
+  ) {
     return { blocked: true, status: subscription.status };
   }
   return { blocked: false, status: subscription?.status };
@@ -36,8 +42,22 @@ export function registerSubscriptionAccessGate(): void {
     id: GATE_ID,
     order: GATE_ORDER,
     gate: async (_userId, tenantId) => {
-      const { blocked } = await isTenantSubscriptionBlocked(tenantId);
-      if (blocked) {
+      const { status } = await isTenantSubscriptionBlocked(tenantId);
+      if (status && BLOCKING_STATUSES.has(status)) {
+        return { allowed: false, code: WORKSPACE_ACCESS_BLOCKED_CODE };
+      }
+      return { allowed: true };
+    },
+  });
+  RegisterTenantAccessGate({
+    id: PLAN_CHANGE_ACCESS_GATE_ID,
+    order: GATE_ORDER,
+    gate: async (_userId, tenantId) => {
+      const subscription = await GetModel(
+        TenantSubscriptionModel,
+        tenantId,
+      ).findOne();
+      if (subscription && isGuardedPlanChangeBlocked(subscription)) {
         return { allowed: false, code: WORKSPACE_ACCESS_BLOCKED_CODE };
       }
       return { allowed: true };

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   JSONBody,
+  Parameter,
   Post,
   Put,
   type RequestContext,
@@ -20,6 +21,10 @@ import { type User } from "@antelopejs/interface-dms/auth/db";
 import type { StatGroupItem } from "@antelopejs/interface-dms/base";
 import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
+import {
+  CONTENT_LANGUAGE_HEADER,
+  requestLocale,
+} from "../../utils/content-language";
 import type {
   CardDetails,
   MyWorkspaceRow,
@@ -180,9 +185,14 @@ export class SaasWorkspacesController extends Controller(
   async createOptions(
     @AuthRawUser() user: User,
     @Context() ctx: RequestContext,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language?: unknown,
   ): Promise<WorkspaceCreateOptions> {
     assertAdmissionOpen(user.owner);
-    return buildWorkspaceCreateOptions(user, getRequestTenantId(ctx));
+    return buildWorkspaceCreateOptions(
+      user,
+      requestLocale(language),
+      getRequestTenantId(ctx),
+    );
   }
 
   @Get("/setup-intent")

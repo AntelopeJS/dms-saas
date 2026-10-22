@@ -2,6 +2,8 @@ import {
   CreationTime,
   Field,
   Index,
+  LocalizationModifier,
+  Localized,
   RegisterTable,
   Relation,
   Table,
@@ -10,6 +12,12 @@ import {
 import { CORE_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
 
 export const plansTableName = "plans";
+
+/** Locale a localized plan text falls back to when the reader's is missing. */
+export const PLAN_FALLBACK_LOCALE = "en";
+
+/** Plan text written once per locale, e.g. `{ en: "For teams", fr: "Pour les équipes" }`. */
+export type PlanLocalizedText = Record<string, string>;
 
 export const PLAN_AUDIENCES = ["any", "individual", "business"] as const;
 export type PlanAudience = (typeof PLAN_AUDIENCES)[number];
@@ -25,7 +33,7 @@ export interface PlanFeatureValue {
   value: unknown;
 }
 
-/** Plan fields a Stripe product carries. */
+/** Plan fields a Stripe product carries, in {@link PLAN_FALLBACK_LOCALE}. */
 export interface PlanStripeProductTerms {
   name: string;
   description: string;
@@ -60,15 +68,30 @@ export interface PlanProviderRefs {
   stripeSyncedTerms?: PlanStripeSyncedTerms;
 }
 
+/** Plan fields written once per locale and read in the caller's. */
+export const PLAN_LOCALIZED_FIELDS: Array<keyof Plan> = [
+  "name",
+  "description",
+  "borderLabel",
+];
+
 /** A member cap or feature limit no workspace reaches. */
 export const PLAN_UNLIMITED = -1;
 
-/** Commercial plan offered to SaaS workspaces. */
+/**
+ * Commercial plan offered to SaaS workspaces.
+ *
+ * `name`, `description` and `borderLabel` are texts the operator writes:
+ * localized, read after `plan.localize(locale)` (`PlanModel` reads them in
+ * {@link PLAN_FALLBACK_LOCALE}), written through `localize("*")` with one
+ * value per locale.
+ */
 @RegisterTable(plansTableName, CORE_SCHEMA_NAME)
-export class Plan extends Table {
+export class Plan extends Table.with(LocalizationModifier) {
   @Field("string")
   declare _id: string;
 
+  @Localized({ fallbackLocale: PLAN_FALLBACK_LOCALE })
   @Field("string")
   declare name: string;
 
@@ -76,6 +99,7 @@ export class Plan extends Table {
   @Field("string")
   declare slug: string;
 
+  @Localized({ fallbackLocale: PLAN_FALLBACK_LOCALE })
   @Field("string")
   declare description: string;
 
@@ -122,6 +146,7 @@ export class Plan extends Table {
   @Field("string")
   declare borderColor: string | null;
 
+  @Localized({ fallbackLocale: PLAN_FALLBACK_LOCALE })
   @Field("string")
   declare borderLabel: string | null;
 

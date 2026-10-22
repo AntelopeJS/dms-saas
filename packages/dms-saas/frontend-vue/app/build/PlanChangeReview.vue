@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { LABEL_DAY_FORMAT, SENTENCE_DAY_FORMAT } from './day-formats'
-import { planChangeHeadingCase } from './plan-change-heading'
+import { planChangeHeadingCase, targetPlanEyebrow } from './plan-change-heading'
 
 interface SummaryRow {
 	key: string
@@ -37,6 +37,8 @@ const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
 const preview = ref<PlanChangePreview | null>(null)
 const isLoading = ref(true)
 const loadFailure = ref<string | null>(null)
+/** What the workspace holds beyond the target plan: the change is refused until it is brought within. */
+const incompatibilities = ref<PlanChangeIncompatibility[] | null>(null)
 const isSubmitting = ref(false)
 const submitFailure = ref<string | null>(null)
 
@@ -82,13 +84,24 @@ const dueToday = computed(() => {
 })
 
 const headingCase = computed(() =>
-	planChangeHeadingCase(
-		preview.value,
-		props.currentPlan,
-		props.plan,
-		props.isResubscription,
-	),
+	incompatibilities.value
+		? 'incompatible'
+		: planChangeHeadingCase(
+				preview.value,
+				props.currentPlan,
+				props.plan,
+				props.isResubscription,
+			),
 )
+
+const targetEyebrow = computed(() => {
+	const eyebrow = targetPlanEyebrow(preview.value, !!incompatibilities.value)
+	if (eyebrow === 'from_date')
+		return t(`${KEY_PREFIX}.from_date`, {
+			date: day(preview.value?.effectiveAt),
+		})
+	return eyebrow ? t(`${KEY_PREFIX}.${eyebrow}`) : null
+})
 
 const heading = computed(() => {
 	const params = {
@@ -177,10 +190,15 @@ const canConfirm = computed(
 async function loadPreview(): Promise<void> {
 	isLoading.value = true
 	loadFailure.value = null
+	incompatibilities.value = null
 	try {
 		preview.value = await previewChange(props.plan._id)
 	} catch (error) {
-		loadFailure.value = resolveApiError(error, `${KEY_PREFIX}.load_failed`)
+		preview.value = null
+		incompatibilities.value = readPlanChangeIncompatibilities(error)
+		if (!incompatibilities.value) {
+			loadFailure.value = resolveApiError(error, `${KEY_PREFIX}.load_failed`)
+		}
 	} finally {
 		isLoading.value = false
 	}
@@ -206,6 +224,12 @@ async function confirm(): Promise<void> {
 		emit('done')
 	} catch (error) {
 		if (await offerPendingCheckout(error, props.plan._id)) return
+		// The inventory changed between the review and the confirmation.
+		incompatibilities.value = readPlanChangeIncompatibilities(error)
+		if (incompatibilities.value) {
+			preview.value = null
+			return
+		}
 		submitFailure.value = resolveApiError(
 			error,
 			'saas.workspace.plan.change_error',
@@ -240,14 +264,8 @@ onMounted(() => void loadPreview())
 				<p class="text-muted text-sm">{{ priceOf(currentPlan) }}</p>
 			</DmsCard>
 			<DmsCard :padded="true" selected>
-				<p class="text-muted text-xs">
-					{{
-						isDowngrade
-							? $t(`${KEY_PREFIX}.from_date`, {
-									date: day(preview?.effectiveAt),
-								})
-							: $t(`${KEY_PREFIX}.from_today`)
-					}}
+				<p v-if="targetEyebrow" class="text-muted text-xs">
+					{{ targetEyebrow }}
 				</p>
 				<p class="font-semibold">{{ plan.name }}</p>
 				<p class="text-muted text-sm">{{ priceOf(plan) }}</p>
@@ -309,6 +327,36 @@ onMounted(() => void loadPreview())
 			<USkeleton class="h-4 w-full" />
 			<USkeleton class="h-6 w-1/2" />
 		</div>
+
+		<UAlert
+			v-else-if="incompatibilities"
+			color="warning"
+			variant="subtle"
+			icon="i-ph-prohibit"
+			:title="$t(`${KEY_PREFIX}.incompatible_list`, { plan: plan.name })"
+		>
+			<template #description>
+				<ul class="flex list-disc flex-col gap-1 ps-4">
+					<li
+						v-for="(issue, index) in incompatibilities"
+						:key="`${issue.code}-${issue.resource ?? index}`"
+					>
+						{{ issue.message }}
+					</li>
+				</ul>
+			</template>
+			<template #actions>
+				<UButton
+					color="warning"
+					variant="soft"
+					size="xs"
+					icon="i-ph-arrow-clockwise"
+					@click="loadPreview"
+				>
+					{{ $t(`${KEY_PREFIX}.check_again`) }}
+				</UButton>
+			</template>
+		</UAlert>
 
 		<UAlert
 			v-else-if="loadFailure"
@@ -399,6 +447,7 @@ onMounted(() => void loadPreview())
 				{{ $t(`${KEY_PREFIX}.back`) }}
 			</UButton>
 			<UButton
+				v-if="!incompatibilities"
 				:color="isDowngrade ? 'warning' : 'primary'"
 				:icon="isDowngrade ? 'i-ph-calendar-check' : 'i-ph-lock-simple'"
 				:disabled="!canConfirm"

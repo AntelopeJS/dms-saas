@@ -54,6 +54,12 @@ interface SetupConfirmation {
 
 interface StripePaymentElementHandle {
   confirmAndGetPaymentMethod: () => Promise<ConfirmResult>;
+  /**
+   * Swap in a fresh SetupIntent. A confirmed SetupIntent is spent: Stripe
+   * refuses to confirm it again with another card, so a form that keeps the
+   * visitor after a confirmed card was refused must call this first.
+   */
+  renew: (clientSecret: string) => Promise<void>;
 }
 
 const UNKNOWN_STRIPE_ERROR = "Stripe could not confirm the card";
@@ -99,6 +105,22 @@ export function useStripePaymentElement(
 ): StripePaymentElementHandle {
   let stripeInstance: any = null;
   let elementsInstance: any = null;
+  let paymentElement: any = null;
+
+  function mountPaymentElement(clientSecret: string): void {
+    paymentElement?.destroy();
+    // Payment method types are fixed server-side on the SetupIntent: Stripe
+    // rejects `paymentMethodTypes` next to a `clientSecret`, since it only
+    // applies to an Elements instance created in deferred-intent `mode`.
+    elementsInstance = stripeInstance.elements({ clientSecret });
+    paymentElement = elementsInstance.create("payment", {
+      wallets: { applePay: "never", googlePay: "never" },
+      fields: {
+        billingDetails: { address: "auto", name: "auto", email: "never" },
+      },
+    });
+    paymentElement.mount(`#${options.containerId}`);
+  }
 
   async function init(): Promise<void> {
     const { loadStripe } = await import("@stripe/stripe-js");
@@ -106,19 +128,12 @@ export function useStripePaymentElement(
     if (!stripeInstance) {
       return;
     }
-    // Payment method types are fixed server-side on the SetupIntent: Stripe
-    // rejects `paymentMethodTypes` next to a `clientSecret`, since it only
-    // applies to an Elements instance created in deferred-intent `mode`.
-    elementsInstance = stripeInstance.elements({
-      clientSecret: options.clientSecret,
-    });
-    const paymentElement = elementsInstance.create("payment", {
-      wallets: { applePay: "never", googlePay: "never" },
-      fields: {
-        billingDetails: { address: "auto", name: "auto", email: "never" },
-      },
-    });
-    paymentElement.mount(`#${options.containerId}`);
+    mountPaymentElement(options.clientSecret);
+  }
+
+  async function renew(clientSecret: string): Promise<void> {
+    await ready;
+    if (stripeInstance) mountPaymentElement(clientSecret);
   }
 
   async function confirmAndGetPaymentMethod(): Promise<ConfirmResult> {
@@ -139,11 +154,12 @@ export function useStripePaymentElement(
   }
 
   onUnmounted(() => {
+    paymentElement = null;
     elementsInstance = null;
     stripeInstance = null;
   });
 
-  void init();
+  const ready = init();
 
-  return { confirmAndGetPaymentMethod };
+  return { confirmAndGetPaymentMethod, renew };
 }

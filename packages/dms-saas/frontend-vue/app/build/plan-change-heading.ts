@@ -79,3 +79,22 @@ export function checkoutHeadingCase(
 	if (isResubscription) return 'resubscribe'
 	return isTrial ? 'trial' : 'upgrade'
 }
+
+/** When the chosen plan starts, as its card in the review says it. */
+export type TargetPlanEyebrow = 'from_today' | 'from_date'
+
+/**
+ * The eyebrow of the chosen plan's card: from today, or from the renewal for
+ * a downgrade; none until the change is priced, and none for a change the
+ * workspace does not fit, which starts on no date at all.
+ *
+ * @param change The priced change, null while it is priced or once refused
+ * @param isRefused The workspace holds more than the chosen plan allows
+ */
+export function targetPlanEyebrow(
+	change: PricedChange | null,
+	isRefused: boolean,
+): TargetPlanEyebrow | null {
+	if (isRefused || !change) return null
+	return change.kind === 'downgrade' ? 'from_date' : 'from_today'
+}

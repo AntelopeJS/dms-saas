@@ -9,7 +9,11 @@ import {
   PlanModel,
   type RefundProrataMode,
 } from "../../db";
-import { buildTenantPlanCatalog, type TenantPlanFeature } from "../../plans";
+import {
+  buildTenantPlanCatalog,
+  localizePlan,
+  type TenantPlanFeature,
+} from "../../plans";
 import { loadBillingSettings } from "../../operator-billing/billing-settings-store";
 
 /**
@@ -66,13 +70,16 @@ export interface PublicBillingRules {
 /**
  * Projects a plan for the public screens.
  *
- * @param plan Plan read from the catalogue
+ * @param catalogued Plan read from the catalogue
  * @param featureValues Its feature values, inheritance resolved
+ * @param locale Reader's locale its texts are read in
  */
 function toPublicPlan(
-  plan: Plan,
+  catalogued: Plan,
   featureValues: Record<string, unknown>,
+  locale: string,
 ): PublicPlan {
+  const plan = localizePlan(catalogued, locale);
   return {
     _id: plan._id,
     slug: plan.slug,
@@ -151,7 +158,7 @@ export async function loadPublicPlanCatalog(
   return {
     plans: catalog.plans.flatMap((view) => {
       const plan = plansById.get(view._id);
-      return plan ? [toPublicPlan(plan, view.featureValues)] : [];
+      return plan ? [toPublicPlan(plan, view.featureValues, locale)] : [];
     }),
     features: catalog.features,
   };

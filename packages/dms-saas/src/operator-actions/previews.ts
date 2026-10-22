@@ -15,6 +15,7 @@ import {
 import { OperatorActionModel } from "./db/operator-action.model";
 import type { OperatorAction } from "./db/operator-action.table";
 import { isPlanOpenToWorkspace } from "../plans/plan-audience";
+import { localizePlan } from "@antelopejs/interface-dms-saas/plans";
 
 const HTTP_BAD_REQUEST = 400;
 const MONTHS_PER_YEAR = 12;
@@ -172,10 +173,11 @@ export async function loadSuspensionImpact(
 function toComplimentaryOption(
   plan: Plan,
   seats: number,
+  locale: string,
 ): ComplimentaryPlanOption {
   return {
     id: plan._id,
-    name: plan.name,
+    name: localizePlan(plan, locale).name,
     unitAmountMinor: planUnitAmountMinor(plan),
     currency: plan.currency.toUpperCase(),
     interval: plan.interval,
@@ -207,9 +209,15 @@ function complimentaryPlans(
   return shouldAddCurrent ? [currentPlan, ...offered] : offered;
 }
 
-/** The Stripe subscription it ends and the MRR it stops, with the plans on offer. */
+/**
+ * The Stripe subscription it ends and the MRR it stops, with the plans on offer.
+ *
+ * @param tenantId Workspace the dialog is for
+ * @param locale Reader's locale the plan names are read in
+ */
 export async function loadComplimentaryImpact(
   tenantId: string,
+  locale: string,
 ): Promise<ComplimentaryImpact> {
   const view = await loadWorkspaceOperatorView(tenantId);
   const [plans, preview] = await Promise.all([
@@ -229,7 +237,7 @@ export async function loadComplimentaryImpact(
     seats: view.seats.occupied,
     owner: ownerOf(view),
     plans: complimentaryPlans(plans, view.plan, customerType).map((plan) =>
-      toComplimentaryOption(plan, view.seats.occupied),
+      toComplimentaryOption(plan, view.seats.occupied, locale),
     ),
   };
 }

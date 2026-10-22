@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.5.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.5.0...v0.5.1)
+
+### 🚀 Enhancements
+
+- **billing:** Guarded Free downgrade and durable invoice line recovery ([#116](https://github.com/AntelopeJS/dms-saas/pull/116))
+
+### 🩹 Fixes
+
+- **public:** Send sign-in links to the DMS sign-in page ([#84](https://github.com/AntelopeJS/dms-saas/pull/84))
+
+### 📖 Documentation
+
+- Clarify learning paths and illustrate real outcomes ([#110](https://github.com/AntelopeJS/dms-saas/pull/110))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.7.0 ([d4585ab](https://github.com/AntelopeJS/dms-saas/commit/d4585ab))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.5.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.4.1...v0.5.0)

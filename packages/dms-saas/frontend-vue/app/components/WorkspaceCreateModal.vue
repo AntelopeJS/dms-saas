@@ -69,7 +69,6 @@ const { resolveApiError } = useApiErrorMessage()
 const { formatMajorUnits } = useMoneyFormat()
 const planPriceLabel = usePlanPriceLabel()
 const planIntervalLabel = usePlanIntervalLabel(`${KEYS}.interval`)
-const planDescription = usePlanDescription()
 const config = useDmsRuntimeConfig()
 const { user } = useCurrentUser()
 
@@ -141,7 +140,7 @@ function planMeta(plan: CreatePlanOption): string {
 			rule.limit,
 		)
 	}
-	const parts = [planDescription(plan.description)].filter(Boolean)
+	const parts = [plan.description].filter(Boolean)
 	if (plan.trialDays > 0 && plan.cardRequirement === 'payment') {
 		parts.push(t(`${KEYS}.trial`, { days: plan.trialDays }))
 	}
@@ -154,6 +153,13 @@ function selectPlan(plan: CreatePlanOption): void {
 	submitError.value = null
 }
 
+// Not a `useApiData` read: each call creates a SetupIntent, whose client
+// secret is the card form's alone, never cached nor shared.
+async function createSetupIntent(): Promise<string> {
+	const setup = await $authFetch<SetupIntent>(SETUP_INTENT_ENDPOINT)
+	return setup.clientSecret
+}
+
 async function initStripeElement(): Promise<void> {
 	if (!publishableKey.value) {
 		// A missing key would render an empty card box and fail every submit
@@ -161,12 +167,10 @@ async function initStripeElement(): Promise<void> {
 		cardError.value = t(`${KEYS}.error.card_setup`)
 		return
 	}
-	// Not a `useApiData` read: each call creates a SetupIntent, whose client
-	// secret is the card form's alone, never cached nor shared.
-	const setup = await $authFetch<SetupIntent>(SETUP_INTENT_ENDPOINT)
+	const clientSecret = await createSetupIntent()
 	stripeHandle.value = useStripePaymentElement({
 		publishableKey: publishableKey.value,
-		clientSecret: setup.clientSecret,
+		clientSecret,
 		containerId: PAYMENT_ELEMENT_ID,
 		billingEmail: () => user.value?.email ?? '',
 	})
@@ -240,13 +244,25 @@ function reportSubmitError(error: unknown): void {
 	submitError.value = message
 }
 
+// The card was confirmed, then the creation refused (another card is needed,
+// a creation already running): its SetupIntent is spent, and confirming it
+// again with the next card fails with a bare Stripe processing error.
+async function renewCard(): Promise<void> {
+	try {
+		await stripeHandle.value?.renew(await createSetupIntent())
+	} catch (error) {
+		cardError.value = resolveApiError(error, `${KEYS}.error.card_setup`)
+	}
+}
+
 async function submit(): Promise<void> {
 	if (isSubmitting.value || !validate()) return
 	cardError.value = null
 	submitError.value = null
 	isSubmitting.value = true
+	let payment: ConfirmedPayment | null = null
 	try {
-		const payment = await confirmCard()
+		payment = await confirmCard()
 		if (!payment.isConfirmed) return
 		const name = workspaceName.value.trim()
 		const created = await $authFetch<CreatedWorkspace>(CREATE_ENDPOINT, {
@@ -260,6 +276,7 @@ async function submit(): Promise<void> {
 		props.onSuccessCallback?.(created.tenantId, name)
 	} catch (error) {
 		reportSubmitError(error)
+		if (payment?.paymentMethodId) await renewCard()
 	} finally {
 		isSubmitting.value = false
 	}

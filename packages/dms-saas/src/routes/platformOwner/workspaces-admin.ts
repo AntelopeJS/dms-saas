@@ -52,6 +52,10 @@ import {
   validateWorkspaceInput,
 } from "../../workspaces/operator-creation";
 import { isPlanOpenToWorkspace } from "../../plans/plan-audience";
+import {
+  CONTENT_LANGUAGE_HEADER,
+  requestLocale,
+} from "../../utils/content-language";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -274,8 +278,9 @@ export class SaasWorkspacesAdminController extends Controller(
   async getComplimentaryImpact(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ComplimentaryImpact> {
-    return loadComplimentaryImpact(tenantId);
+    return loadComplimentaryImpact(tenantId, requestLocale(language));
   }
 
   @Post("/:tenantId/grant-free-access")

@@ -1,6 +1,8 @@
 import { BasicDataModel } from "@antelopejs/interface-database-decorators";
 import {
   Plan,
+  PLAN_FALLBACK_LOCALE,
+  PLAN_LOCALIZED_FIELDS,
   type PlanFeatureValue,
   plansTableName,
 } from "../tables/plans.table";
@@ -12,15 +14,45 @@ export interface ResolvedPlanInheritance {
   features: PlanFeatureValue[];
 }
 
-/** Data access and inheritance resolution for SaaS plans. */
+/** A plan with its localized texts unlocked in the fallback locale. */
+function inFallbackLocale(plan: Plan): Plan {
+  return plan.localize(PLAN_FALLBACK_LOCALE, PLAN_LOCALIZED_FIELDS);
+}
+
+function readPlans(rows: unknown[]): Plan[] {
+  return rows
+    .map((row) => PlanModel.fromDatabase(row))
+    .filter((row): row is Plan => row !== undefined)
+    .map(inFallbackLocale);
+}
+
+/**
+ * Data access and inheritance resolution for SaaS plans.
+ *
+ * Every read returns plans whose localized texts (`name`, `description`,
+ * `borderLabel`) are unlocked in {@link PLAN_FALLBACK_LOCALE}, the language
+ * Stripe, journals and e-mails without a reader use. A screen re-reads them in
+ * its reader's locale with `localizePlan()` from `/plans`.
+ */
 export class PlanModel extends BasicDataModel(Plan, plansTableName) {
+  override async get(id: string): Promise<Plan | undefined> {
+    const plan = await super.get(id);
+    return plan && inFallbackLocale(plan);
+  }
+
+  override async getBy(index: keyof Plan, ...keys: unknown[]): Promise<Plan[]> {
+    return (await super.getBy(index, ...keys)).map(inFallbackLocale);
+  }
+
+  override async getAll(): Promise<Plan[]> {
+    return (await super.getAll()).map(inFallbackLocale);
+  }
+
   async findNotDeleted(): Promise<Plan[]> {
     const rows = await this.table
       .filter((row) => row.key("isDeleted").eq(false))
       .run();
-    return rows
-      .map((row) => PlanModel.fromDatabase(row))
-      .filter((row): row is Plan => row !== undefined);
+    return readPlans(rows);
   }
 
   async findActiveNotDeleted(): Promise<Plan[]> {
@@ -29,9 +61,7 @@ export class PlanModel extends BasicDataModel(Plan, plansTableName) {
         row.key("isDeleted").eq(false).and(row.key("isActive").eq(true)),
       )
       .run();
-    return rows
-      .map((row) => PlanModel.fromDatabase(row))
-      .filter((row): row is Plan => row !== undefined);
+    return readPlans(rows);
   }
 
   async findPubliclyVisible(): Promise<Plan[]> {
@@ -44,9 +74,7 @@ export class PlanModel extends BasicDataModel(Plan, plansTableName) {
           .and(row.key("isPublic").eq(true)),
       )
       .run();
-    return rows
-      .map((row) => PlanModel.fromDatabase(row))
-      .filter((row): row is Plan => row !== undefined);
+    return readPlans(rows);
   }
 
   async resolveInheritanceChain(plan: Plan): Promise<Plan[]> {
