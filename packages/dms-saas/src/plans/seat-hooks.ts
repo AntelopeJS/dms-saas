@@ -138,51 +138,71 @@ async function syncSeatsAfterRemoval(
   });
 }
 
+/**
+ * `Hook.MEMBER_BEING_CHANGED` as the seat policy reads it. The interface-dms
+ * on npm (0.7.4) types it without `kind`; the one built from dms main sends
+ * `kind` and leaves `previousIsTenantOwner` out of an `added` change. Typed
+ * for both until interface-dms is released: then read
+ * `MemberChangeHookPayload` and drop this.
+ */
+interface SeatChangePayload {
+  tenantId: string;
+  userId: string;
+  kind?: "added" | "removed" | "roles" | "ownership";
+  isTenantOwner?: boolean;
+  previousIsTenantOwner?: boolean | null;
+  deliveryId?: string;
+}
+
+/** No plan limits roles, and a removal only frees a seat. */
+const SEATLESS_CHANGE_KINDS: ReadonlySet<SeatChangePayload["kind"]> = new Set([
+  "roles",
+  "removed",
+]);
+
+async function enforceSeatOnMemberChange(
+  change: SeatChangePayload,
+): Promise<void> {
+  if (SEATLESS_CHANGE_KINDS.has(change.kind)) return;
+  const { tenantId, userId, deliveryId } = change;
+  const previousIsTenantOwner = change.previousIsTenantOwner ?? null;
+  const constraints = await GetTenantPlanConstraints(tenantId);
+  assert(
+    !constraints.admissionBlocked,
+    409,
+    "Inventory preparation is in progress",
+  );
+  const nextHoldsSeat = !(await isPlatformSupportEntry(
+    userId,
+    change.isTenantOwner === true,
+  ));
+  const heldSeat =
+    previousIsTenantOwner !== null &&
+    !(await isPlatformSupportEntry(userId, previousIsTenantOwner));
+  if (!nextHoldsSeat || heldSeat) return;
+  // Accepted invitations transfer their existing reservation to membership.
+  // They still validate: deliveryId is not a policy bypass.
+  const user = deliveryId ? await GetModel(UserModel).get(userId) : undefined;
+  const occupied = await countOccupiedSeats(tenantId, user?.email);
+  for (const plan of [constraints.currentPlan, constraints.pendingPlan]) {
+    if (plan)
+      assert(
+        fitsWithinSeatLimit(plan.maxMembers, occupied + 1),
+        HTTP_PAYMENT_REQUIRED,
+        "saas.errors.plan.seat_limit_reached",
+      );
+  }
+}
+
 // Platform owners entering a workspace they do not own come to support it,
 // never as one of its seats: they pass the quota and leave the billed
 // quantity untouched. A workspace owner is the customer and always holds one.
 export function registerSeatHooks(): void {
   RegisterInviteAvailability(resolveInviteSeatAvailability);
-  RegisterHook(
-    Hook.MEMBER_BEING_CHANGED,
-    async ({
-      tenantId,
-      userId,
-      isTenantOwner,
-      previousIsTenantOwner,
-      deliveryId,
-    }) => {
-      const constraints = await GetTenantPlanConstraints(tenantId);
-      assert(
-        !constraints.admissionBlocked,
-        409,
-        "Inventory preparation is in progress",
-      );
-      const nextHoldsSeat = !(await isPlatformSupportEntry(
-        userId,
-        isTenantOwner,
-      ));
-      const heldSeat =
-        previousIsTenantOwner !== null &&
-        !(await isPlatformSupportEntry(userId, previousIsTenantOwner));
-      if (!nextHoldsSeat || heldSeat) return undefined;
-      // Accepted invitations transfer their existing reservation to membership.
-      // They still validate: deliveryId is not a policy bypass.
-      const user = deliveryId
-        ? await GetModel(UserModel).get(userId)
-        : undefined;
-      const occupied = await countOccupiedSeats(tenantId, user?.email);
-      for (const plan of [constraints.currentPlan, constraints.pendingPlan]) {
-        if (plan)
-          assert(
-            fitsWithinSeatLimit(plan.maxMembers, occupied + 1),
-            HTTP_PAYMENT_REQUIRED,
-            "saas.errors.plan.seat_limit_reached",
-          );
-      }
-      return undefined;
-    },
-  );
+  RegisterHook(Hook.MEMBER_BEING_CHANGED, async (payload) => {
+    await enforceSeatOnMemberChange(payload);
+    return undefined;
+  });
   RegisterHook(
     Hook.MEMBER_BEING_ADDED,
     async ({ tenantId, userId, isTenantOwner, deliveryId }) => {
