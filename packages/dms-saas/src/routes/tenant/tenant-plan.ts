@@ -38,6 +38,7 @@ import {
   ensurePlanStripeRefs,
   getSeatUsage,
   isDowngrade,
+  localizePlan,
   type TenantPlanView,
 } from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
@@ -197,6 +198,7 @@ export class SaasTenantPlanController extends Controller(
     const offered = await Promise.all(
       withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
+    for (const plan of offered) localizePlan(plan, locale);
     const catalog = await buildTenantPlanCatalog(
       this.planModel,
       this.featureModel,
@@ -252,15 +254,17 @@ export class SaasTenantPlanController extends Controller(
       tenantSubscriptionModel,
     );
     void this.followOwnerLanguage(tenantId, subscription, user);
+    const locale = requestLocale(language);
     const current = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
     const pending = subscription?.pendingPlanId
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
+    for (const plan of [current, pending]) if (plan) localizePlan(plan, locale);
     const billingInfo = await tenantBillingInfoModel.findOne();
     const [catalog, seatUsage] = await Promise.all([
-      this.buildCatalog(current, requestLocale(language), {
+      this.buildCatalog(current, locale, {
         subscription,
         email: user.email,
         customerType: billingInfo?.customerType ?? null,

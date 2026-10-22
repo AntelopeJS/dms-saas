@@ -7,6 +7,7 @@ import {
   LEGAL_DOCUMENTS_SINGLETON_ID,
   type LegalDocumentVersions,
   LegalDocumentsModel,
+  PLAN_FALLBACK_LOCALE as FALLBACK_LOCALE,
   type PlanMigrationFeatureDiff,
   PlanMigrationModel,
   type PlanMigrationTenantOutcome,
@@ -186,8 +187,8 @@ function toMigrationRow(
     toPlanId: migration.toPlanId,
     // Written at the start of a migration, as the console does: the plans
     // may be renamed or deleted later, and the list searches these names.
-    fromPlanName: findPlan(migration.fromPlanId).name,
-    toPlanName: target.name,
+    fromPlanName: findPlan(migration.fromPlanId).name[FALLBACK_LOCALE],
+    toPlanName: target.name[FALLBACK_LOCALE],
     reason: "plan_retired",
     status: migration.status,
     stage: planMigrationStageOf(migration.status),
@@ -196,7 +197,7 @@ function toMigrationRow(
       tenantIds: migration.tenantIds,
       target: {
         planId: target.id,
-        name: target.name,
+        name: target.name[FALLBACK_LOCALE],
         billingMode: target.billingMode,
         stripePriceId: target.stripeKey ? `price_1${target.stripeKey}` : null,
         permissions,

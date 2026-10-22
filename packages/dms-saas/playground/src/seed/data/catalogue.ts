@@ -201,9 +201,11 @@ const P = PLAN_IDS;
 export const PLANS: SeedPlan[] = [
   {
     id: P.free,
-    name: "Free",
-    description:
-      "For trying the platform on a single project, alone or with one teammate.",
+    name: { en: "Free", fr: "Gratuit" },
+    description: {
+      en: "For trying the platform on a single project, alone or with one teammate.",
+      fr: "Pour essayer la plateforme sur un seul projet, seul ou avec un coéquipier.",
+    },
     audience: "any",
     price: 0,
     currency: CURRENCY,
@@ -232,9 +234,11 @@ export const PLANS: SeedPlan[] = [
   },
   {
     id: P.starter,
-    name: "Starter",
-    description:
-      "Freelancers and very small teams shipping their first client projects.",
+    name: { en: "Starter", fr: "Starter" },
+    description: {
+      en: "Freelancers and very small teams shipping their first client projects.",
+      fr: "Indépendants et très petites équipes qui livrent leurs premiers projets clients.",
+    },
     audience: "any",
     price: 9,
     currency: CURRENCY,
@@ -263,9 +267,11 @@ export const PLANS: SeedPlan[] = [
   },
   {
     id: P.pro,
-    name: "Pro",
-    description:
-      "Growing teams that need more projects, automations and the AI assistant.",
+    name: { en: "Pro", fr: "Pro" },
+    description: {
+      en: "Growing teams that need more projects, automations and the AI assistant.",
+      fr: "Équipes en croissance qui ont besoin de plus de projets, d'automatisations et de l'assistant IA.",
+    },
     audience: "any",
     price: 29,
     currency: CURRENCY,
@@ -294,9 +300,11 @@ export const PLANS: SeedPlan[] = [
   },
   {
     id: P.team,
-    name: "Team",
-    description:
-      "One flat price for agencies and product teams up to 25 people.",
+    name: { en: "Team", fr: "Team" },
+    description: {
+      en: "One flat price for agencies and product teams up to 25 people.",
+      fr: "Un prix fixe pour les agences et équipes produit jusqu'à 25 personnes.",
+    },
     audience: "business",
     price: 150,
     currency: CURRENCY,
@@ -325,9 +333,11 @@ export const PLANS: SeedPlan[] = [
   },
   {
     id: P.business,
-    name: "Business",
-    description:
-      "Security, SSO and priority support for companies. Pay for the seats you use.",
+    name: { en: "Business", fr: "Business" },
+    description: {
+      en: "Security, SSO and priority support for companies. Pay for the seats you use.",
+      fr: "Sécurité, SSO et support prioritaire pour les entreprises. Payez les sièges que vous utilisez.",
+    },
     audience: "business",
     price: 49,
     currency: CURRENCY,
@@ -338,7 +348,7 @@ export const PLANS: SeedPlan[] = [
     isPublic: true,
     isActive: true,
     order: 5,
-    borderLabel: "Popular",
+    borderLabel: { en: "Popular", fr: "Populaire" },
     inheritsFromPlanId: null,
     stripeKey: "Business49s",
     features: {
@@ -356,8 +366,11 @@ export const PLANS: SeedPlan[] = [
   },
   {
     id: P.enterprise,
-    name: "Enterprise",
-    description: "Yearly contract with data residency and a 1-hour SLA.",
+    name: { en: "Enterprise", fr: "Enterprise" },
+    description: {
+      en: "Yearly contract with data residency and a 1-hour SLA.",
+      fr: "Contrat annuel avec résidence des données et un SLA d'une heure.",
+    },
     audience: "business",
     price: 828,
     currency: CURRENCY,
@@ -380,9 +393,11 @@ export const PLANS: SeedPlan[] = [
   },
   {
     id: P.growth2024,
-    name: "Growth 2024",
-    description:
-      "Former mid-tier plan. Kept so existing customers are billed; nobody can subscribe to it.",
+    name: { en: "Growth 2024", fr: "Growth 2024" },
+    description: {
+      en: "Former mid-tier plan. Kept so existing customers are billed; nobody can subscribe to it.",
+      fr: "Ancien plan intermédiaire. Conservé pour facturer les clients existants ; plus personne ne peut y souscrire.",
+    },
     audience: "any",
     price: 29,
     currency: CURRENCY,

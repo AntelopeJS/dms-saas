@@ -6,7 +6,7 @@ import type {
   PlanInterval,
   PlanModel,
 } from "./db";
-import { FEATURE_DEFAULT_ORDER } from "./db";
+import { FEATURE_DEFAULT_ORDER, PLAN_LOCALIZED_FIELDS } from "./db";
 
 const MONTHS_PER_INTERVAL: Record<PlanInterval, number> = {
   month: 1,
@@ -97,6 +97,18 @@ export function localizeFeature(feature: Feature, locale: string): Feature {
   return feature.localize(locale, FEATURE_LOCALIZED_FIELDS);
 }
 
+/**
+ * Unlocks a plan's localized texts (`name`, `description`, `borderLabel`)
+ * in one locale, falling back to the plan table's fallback locale where that
+ * one has no value.
+ *
+ * @param plan Plan read from the catalog
+ * @param locale Reader's locale, e.g. `fr`
+ */
+export function localizePlan(plan: Plan, locale: string): Plan {
+  return plan.localize(locale, PLAN_LOCALIZED_FIELDS);
+}
+
 function toPlanFeature(feature: Feature): TenantPlanFeature {
   return {
     featureId: feature._id,
@@ -113,6 +125,7 @@ async function toPlanView(
   planModel: PlanModel,
   plan: Plan,
   knownFeatureIds: Set<string>,
+  locale: string,
 ): Promise<TenantPlanView> {
   const resolved = await planModel.resolveInheritance(plan);
   const featureValues: Record<string, unknown> = {};
@@ -122,7 +135,7 @@ async function toPlanView(
   }
   return {
     _id: plan._id,
-    name: plan.name,
+    name: localizePlan(plan, locale).name,
     price: plan.price,
     currency: plan.currency,
     interval: plan.interval,
@@ -140,7 +153,7 @@ async function toPlanView(
  * @param planModel Plan catalog
  * @param featureModel Feature catalog
  * @param plans Plans to compare
- * @param locale Locale the feature labels and tooltips are read in
+ * @param locale Locale the plan names and feature labels are read in
  */
 export async function buildTenantPlanCatalog(
   planModel: PlanModel,
@@ -151,7 +164,7 @@ export async function buildTenantPlanCatalog(
   const features = await featureModel.getAll();
   const knownFeatureIds = new Set(features.map((feature) => feature._id));
   const views = await Promise.all(
-    plans.map((plan) => toPlanView(planModel, plan, knownFeatureIds)),
+    plans.map((plan) => toPlanView(planModel, plan, knownFeatureIds, locale)),
   );
   return {
     plans: views.sort((left, right) => left.order - right.order),
