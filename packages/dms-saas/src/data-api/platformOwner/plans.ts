@@ -42,7 +42,6 @@ import { stripeDashboardUrl } from "../../stripe/client";
 import {
   composed,
   countParam,
-  displayStringText,
   moneyParam,
   valueText,
 } from "../../i18n/composed-text";
@@ -156,7 +155,7 @@ export class plansDataAPI extends DataController(
     type: new DefaultDataTypes.StringType(),
     display: new DefaultDisplays.IdentityDisplay({
       icon: "i-ph-stack",
-      subtitleField: "descriptionText",
+      subtitleField: "description",
       badges: [
         {
           field: "isPublic",
@@ -180,13 +179,6 @@ export class plansDataAPI extends DataController(
   })
   @Access(AccessMode.ReadOnly)
   declare description: string;
-
-  /** The description under the plan's name, its i18n key translated. */
-  @Listable(["description"])
-  @Access(AccessMode.ReadOnly)
-  get descriptionText(): ComposedText | string {
-    return displayStringText(planOf(this).description ?? "");
-  }
 
   @Listable(["isActive"])
   @Column({
