@@ -42,7 +42,6 @@ const props = withDefaults(
 
 const { t, locale } = useI18n()
 const { processI18n } = useTranslation()
-const planText = usePlanDisplayText()
 const { formatFeatureValue } = usePlanFeatureFormat()
 const catalog = usePlanCatalog()
 
@@ -261,7 +260,7 @@ function toggleSale(): void {
 							color="primary"
 							icon="i-ph-star"
 						>
-							{{ planText(plan.borderLabel) }}
+							{{ plan.borderLabel }}
 						</UBadge>
 						<UTooltip
 							v-if="plan.isMissingStripePrice"
@@ -288,7 +287,7 @@ function toggleSale(): void {
 			</div>
 
 			<p v-if="plan.description" class="text-muted line-clamp-2 text-sm">
-				{{ planText(plan.description) }}
+				{{ plan.description }}
 			</p>
 
 			<div>

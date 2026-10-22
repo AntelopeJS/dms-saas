@@ -44,7 +44,7 @@ types barrel. After direct subscription writes, call
 [`RecomputeTenantBillingState`](./docs/2.billing.md#recomputetenantbillingstate)
 to refresh derived billing and workspace directory state.
 
-A module may seed plans straight into the `db` plan table: it leaves `Plan.paymentProviderRefs` empty and never rewrites it, since dms-saas links every billed plan to Stripe itself. See [Plans and Stripe](https://dms.antelopejs.com/docs/modules/saas/stripe#plans-and-stripe).
+A module may seed plans straight into the `db` plan table: it writes `name`, `description` and `borderLabel` with one value per locale through `localize("*")`, leaves `Plan.paymentProviderRefs` empty and never rewrites it, since dms-saas links every billed plan to Stripe itself. See [Plans and Stripe](https://dms.antelopejs.com/docs/modules/saas/stripe#plans-and-stripe).
 
 ## Compatibility
 

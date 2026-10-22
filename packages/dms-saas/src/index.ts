@@ -1,4 +1,3 @@
-import path from "node:path";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { AddFrontendModule } from "@antelopejs/interface-dms/page";
@@ -20,11 +19,7 @@ import {
 } from "./automation";
 import { registerBillingLayoutBanners } from "./billing-state";
 import { registerWorkspaceDirectoryHooks } from "./billing-state/directory-hooks";
-import {
-  getRegistrationPaymentMethodPolicy,
-  resolveDevMode,
-  setRuntimeConfig,
-} from "./config";
+import { resolveDevMode, setRuntimeConfig } from "./config";
 import { registerSaasCrons } from "./crons";
 import { registerSaasHookListeners } from "./hooks";
 import * as billingImplementation from "./implementations/dms-saas/billing";
@@ -32,7 +27,8 @@ import * as invoiceLineItemsImplementation from "./implementations/dms-saas/invo
 import * as pagesImplementation from "./implementations/dms-saas/pages";
 import * as planChangesImplementation from "./implementations/dms-saas/plan-changes";
 import * as tenantLifecycleImplementation from "./implementations/dms-saas/tenant-lifecycle";
-import { registerPublicScreens, resolvePublicScreensToRegister } from "./pages";
+import { frontendModule } from "./frontend-module";
+import { registerPublicScreens } from "./pages";
 import { registerSeatHooks } from "./plans";
 import { initStripeClient } from "./stripe";
 import type { DmsSaasConfig } from "./types";
@@ -68,27 +64,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
   ImplementInterface(tenantLifecycleInterface, tenantLifecycleImplementation);
   await registerPublicScreens(config);
 
-  await AddFrontendModule({
-    name: "@antelopejs/dms-saas-frontend-vue",
-    sourcePath: path.join(__dirname, "../frontend-vue"),
-    renderer: { name: "vue", version: "3" },
-    priority: 0,
-    // Self-service registration ends on an authenticated user: the finalize
-    // route provisions the workspace and mints the token pair, and the
-    // frontend server seals its session cookie from it. Declaring it here is
-    // what lets `/auth/establish` call it, so no deployment has to name it in
-    // DMS_AUTH_ESTABLISH_ENDPOINTS by hand.
-    authEstablishEndpoints: ["/api/saas/register/finalize"],
-    options: {
-      dmsSaas: {
-        stripePublishableKey: config.stripe.publishableKey,
-        admissionMode: config.admissionMode ?? "open",
-        registrationPaymentMethod: getRegistrationPaymentMethodPolicy(),
-        // Sign-in only links to the bundled screens the deployment serves.
-        publicScreens: resolvePublicScreensToRegister(config),
-      },
-    },
-  });
+  await AddFrontendModule(frontendModule(config));
 }
 
 export async function start(): Promise<void> {

@@ -1,7 +1,6 @@
 {
   "name": "dms-saas-workspace",
   "private": true,
-  "packageManager": "pnpm@10.2.0",
   "scripts": {
     "build": "pnpm --filter @antelopejs/dms-saas build",
     "lint": "pnpm --filter @antelopejs/interface-dms-saas lint && pnpm --filter @antelopejs/dms-saas lint",
@@ -13,5 +12,6 @@
     "oxfmt": "^0.66.0",
     "oxlint": "1.81.0",
     "oxlint-tsgolint": "^7.0.2001"
-  }
+  },
+  "packageManager": "pnpm@10.2.0"
 }

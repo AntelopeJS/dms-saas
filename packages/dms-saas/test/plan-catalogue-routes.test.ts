@@ -15,6 +15,8 @@ import {
   SaasPlansApiController,
   stripeSyncNotice,
 } from "../src/routes/platformOwner/plans";
+import { toPlainData } from "@antelopejs/interface-database-decorators";
+import { planRow } from "./helpers/plan-row";
 
 const stripe = vi.hoisted(() => ({
   syncPlanStripeRefs: vi.fn(async (plan: unknown) => plan),
@@ -62,7 +64,7 @@ interface Store {
 }
 
 function storedPlan(overrides: Partial<Plan>): Plan {
-  return {
+  return planRow({
     _id: PLAN_ID,
     name: "Growth 2024",
     slug: "growth-2024",
@@ -74,7 +76,7 @@ function storedPlan(overrides: Partial<Plan>): Plan {
     isDeleted: false,
     paymentProviderRefs: { stripePriceId: "price_1" },
     ...overrides,
-  } as Plan;
+  });
 }
 
 function planModel(store: Store): PlanModel {
@@ -82,11 +84,15 @@ function planModel(store: Store): PlanModel {
     get: vi.fn(async (id: string) => store.plans.get(id)),
     update: vi.fn(async (id: string, patch: Partial<Plan>) => {
       const current = store.plans.get(id);
-      if (current) store.plans.set(id, { ...current, ...patch } as Plan);
+      if (current)
+        store.plans.set(
+          id,
+          planRow({ ...toPlainData(current), ...toPlainData(patch as Plan) }),
+        );
     }),
     findNotDeleted: vi.fn(async () => [...store.plans.values()]),
     insert: vi.fn(async (rows: Plan[]) => {
-      const created = { ...rows[0], _id: NEW_PLAN_ID } as Plan;
+      const created = planRow({ ...toPlainData(rows[0]), _id: NEW_PLAN_ID });
       store.plans.set(NEW_PLAN_ID, created);
       return [NEW_PLAN_ID];
     }),
@@ -179,7 +185,7 @@ describe("plan writes from the editor", () => {
     const result = await plansController(storeWith(storedPlan({}))).update(
       OWNER,
       PLAN_ID,
-      { name: "Growth" },
+      { name: { en: "Growth" } },
     );
     expect(result.notice).toBeUndefined();
   });
@@ -215,17 +221,17 @@ describe("plan writes from the editor", () => {
     });
   });
 
-  it("stores the text fields trimmed", async () => {
+  it("stores the text fields trimmed, in every locale", async () => {
     const store = storeWith(storedPlan({}));
     await plansController(store).update(OWNER, PLAN_ID, {
-      name: "  Growth ",
-      description: "  For growing teams.  ",
-      borderLabel: " Popular ",
+      name: { en: "  Growth ", fr: " Croissance " },
+      description: { en: "  For growing teams.  " },
+      borderLabel: { en: " Popular ", fr: "Populaire  " },
     });
-    expect(store.plans.get(PLAN_ID)).toMatchObject({
-      name: "Growth",
-      description: "For growing teams.",
-      borderLabel: "Popular",
+    expect(await plansController(store).getOne(OWNER, PLAN_ID)).toMatchObject({
+      name: { en: "Growth", fr: "Croissance" },
+      description: { en: "For growing teams." },
+      borderLabel: { en: "Popular", fr: "Populaire" },
     });
   });
 
@@ -251,7 +257,7 @@ describe("plan writes from the editor", () => {
 });
 
 describe("creating a plan", () => {
-  const NEW_PLAN = { name: "Starter", interval: "month" } as const;
+  const NEW_PLAN = { name: { en: "Starter" }, interval: "month" } as const;
 
   it("keeps the permissions the editor sent", async () => {
     const store = storeWith();
@@ -298,6 +304,31 @@ describe("creating a plan", () => {
       },
     });
     expect(store.plans.get(NEW_PLAN_ID)?.permissions).toEqual([]);
+  });
+
+  it("names the plans in the reader's locale, the fallback one where it has none", async () => {
+    const store = storeWith(
+      storedPlan({ name: { en: "Growth", fr: "Croissance" } as never }),
+      storedPlan({ _id: "solo", name: { en: "Solo" } as never }),
+    );
+    const controller = plansController(store);
+    controller.featureModel = {
+      getAll: vi.fn(async () => []),
+    } as unknown as FeatureModel;
+    const catalog = await controller.editCatalog(OWNER, "fr");
+    expect(catalog.plans.map((plan) => plan.name)).toEqual([
+      "Croissance",
+      "Solo",
+    ]);
+  });
+
+  it("keeps the texts of the other locales when one is rewritten", async () => {
+    const store = storeWith(
+      storedPlan({ name: { en: "Growth", fr: "Croissance" } as never }),
+    );
+    await plansController(store).update(OWNER, PLAN_ID, { price: 29 });
+    const texts = (await plansController(store).getOne(OWNER, PLAN_ID)).name;
+    expect(texts).toEqual({ en: "Growth", fr: "Croissance" });
   });
 
   it("offers the editor every registered permission for a new plan", async () => {

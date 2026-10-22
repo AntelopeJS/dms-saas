@@ -1,6 +1,13 @@
 import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { PLAN_INTERVALS, type Plan, PlanModel } from "../db";
+import {
+  PLAN_FALLBACK_LOCALE,
+  PLAN_INTERVALS,
+  type Plan,
+  PlanModel,
+  type PlanProviderRefs,
+} from "../db";
+import { localizePlan } from "@antelopejs/interface-dms-saas/plans";
 import { getStripeClient, isStripeConfigured } from "../stripe/client";
 import {
   isPlanStripeSyncCurrent,
@@ -50,6 +57,21 @@ function canSyncWithStripe(plan: Plan): boolean {
   );
 }
 
+/**
+ * The plan as `PlanModel` now reads it, with the refs the sync stored. A copy
+ * through the stored row: the plan's texts are accessors a spread would lose.
+ */
+function storedWithRefs(
+  plan: Plan,
+  paymentProviderRefs: PlanProviderRefs,
+): Plan {
+  const stored = PlanModel.fromDatabase({
+    ...PlanModel.toDatabase(plan),
+    paymentProviderRefs,
+  }) as Plan;
+  return localizePlan(stored, PLAN_FALLBACK_LOCALE);
+}
+
 async function syncAndStore(store: PlanRefsStore, plan: Plan): Promise<Plan> {
   const taxCode = await resolveProductTaxCode();
   if (isPlanStripeSyncCurrent(plan, taxCode)) return plan;
@@ -60,10 +82,7 @@ async function syncAndStore(store: PlanRefsStore, plan: Plan): Promise<Plan> {
   Logging.Info(
     `${LOG_PREFIX} plan '${plan._id}' synced with Stripe price ${paymentProviderRefs.stripePriceId}`,
   );
-  // The spread row is an AntelopeJS table class: `Table` declares one field
-  // and a static, no instance methods. There is no prototype to lose.
-  // oxlint-disable-next-line typescript/no-misused-spread
-  return { ...plan, paymentProviderRefs };
+  return storedWithRefs(plan, paymentProviderRefs);
 }
 
 /**

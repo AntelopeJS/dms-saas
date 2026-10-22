@@ -12,6 +12,7 @@ import {
   readInvoiceTax,
   readSubscriptionPeriod,
   readSubscriptionPeriodEnd,
+  readSubscriptionPeriodDates,
 } from "../src/stripe/payload-shapes";
 import { toAvailablePreview } from "../src/upcoming-invoice/mapping";
 
@@ -61,9 +62,10 @@ describe("subscription billing period", () => {
       start: PERIOD_START,
       end: PERIOD_END,
     });
-    expect(readSubscriptionPeriodEnd(basil)).toEqual(
-      new Date(PERIOD_END * MS_PER_SECOND),
-    );
+    expect(readSubscriptionPeriodDates(basil)).toEqual({
+      currentPeriodStart: new Date(PERIOD_START * MS_PER_SECOND),
+      currentPeriodEnd: new Date(PERIOD_END * MS_PER_SECOND),
+    });
   });
 
   it("falls back to the subscription fields of a pre-basil webhook", () => {

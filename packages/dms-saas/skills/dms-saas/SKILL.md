@@ -20,7 +20,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
   (`envOverrides`). Placeholder keys disable Stripe calls (plan sync skipped).
 - Stripe webhook endpoint → `/api/saas/webhooks/stripe`, API version `2026-08-26.dahlia`.
 - Frontend server env: `DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize`, else sign-ups stay signed out (403).
-- `allowedRedirectHosts` for Checkout / billing-portal return URLs (loopback auto-allowed in dev only).
+- `allowedRedirectHosts` for Checkout / billing-portal return URLs: defaults to the DMS `clientBaseUrl` host, a value replaces it (loopback auto-allowed in dev only).
 - A free plan must exist (or `defaultPlanSlug`): registration opens it, and every workspace without a subscription gets it.
 - Options: `admissionMode` (`open` | `invitation-only`), `registration.paymentMethod` (`required` default | `optional` | `none`),
   `publicScreens.{register,pricing}`, `upcomingInvoicePreviewCacheTtlSeconds`, `reportingCurrency`,
@@ -32,6 +32,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
   permission (never `*`). A plan grants exactly the ids it lists: list every component id, not just the page.
 - New project page or block → add its permission ids to the plans that should get it, or tenants lose it.
 - Seeding plans from code: write name, price, currency, interval, billing mode; leave `paymentProviderRefs` to dms-saas.
+  `name`, `description` and `borderLabel` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys; Stripe gets the `en` text.
 - Features: `displayName` / `tooltip` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys.
 - Plan `description` and `borderLabel` may be `$i18n.key` (translated on every screen); `name` stays plain text.
 
