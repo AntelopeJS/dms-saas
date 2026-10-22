@@ -32,6 +32,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
   permission (never `*`). A plan grants exactly the ids it lists: list every component id, not just the page.
 - New project page or block → add its permission ids to the plans that should get it, or tenants lose it.
 - Seeding plans from code: write name, price, currency, interval, billing mode; leave `paymentProviderRefs` to dms-saas.
+  `name`, `description` and `borderLabel` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys; Stripe gets the `en` text.
 - Features: `displayName` / `tooltip` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys.
 
 ## Extension points (`@antelopejs/interface-dms-saas`)

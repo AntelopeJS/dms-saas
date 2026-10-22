@@ -10,7 +10,7 @@ import {
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
-import { Model } from "@antelopejs/interface-database-decorators";
+import { Model, toPlainData } from "@antelopejs/interface-database-decorators";
 import { GetPermissions } from "@antelopejs/interface-dms/permissions";
 import {
   GetRegisteredPageIds,
@@ -22,12 +22,13 @@ import type { StatGroupItem } from "@antelopejs/interface-dms/base";
 import type { Plan } from "../../db";
 import {
   FeatureModel,
+  PLAN_FALLBACK_LOCALE,
   PLAN_INTERVALS,
   PlanModel,
   TenantSubscriptionModel,
   PLAN_UNLIMITED,
 } from "../../db";
-import { localizeFeature } from "../../plans";
+import { localizeFeature, localizePlan } from "../../plans";
 import {
   grantablePermissionIds,
   mapPlanPermissionTree,
@@ -39,12 +40,15 @@ import {
 } from "../../plans/catalogue-summary";
 import { loadCatalogueUsage } from "../../plans/catalogue-usage";
 import {
+  type PlanWrite,
   type PlanWriteBody,
   invalidFeatureValues,
   isValidMemberCap,
   pickPlanWrite,
+  planTexts,
   slugify,
   toInheritance,
+  toPlanRow,
 } from "../../plans/plan-write";
 import {
   type PlanStripeSyncState,
@@ -97,11 +101,11 @@ function assertPlanInterval(value: unknown): asserts value is Plan["interval"] {
   );
 }
 
-function hasStripeSyncChanges(plan: Partial<Plan>): boolean {
+function hasStripeSyncChanges(plan: PlanWrite): boolean {
   return STRIPE_SYNC_FIELDS.some((field) => plan[field] !== undefined);
 }
 
-function changesPriceTerms(current: Plan, write: Partial<Plan>): boolean {
+function changesPriceTerms(current: Plan, write: PlanWrite): boolean {
   return PRICE_TERMS_FIELDS.some(
     (field) => write[field] !== undefined && write[field] !== current[field],
   );
@@ -119,7 +123,7 @@ function readableWrite(body: PlanWriteBody): PlanWriteBody {
   return body;
 }
 
-type PlanWithWorkspaceCount = Plan & { workspaceCount: number };
+type PlanWithWorkspaceCount = Partial<Plan> & { workspaceCount: number };
 
 /** The figures above the catalogue, as its `StatGroup` reads them. */
 interface CatalogueStats {
@@ -210,7 +214,7 @@ async function ensureInheritanceIsAcyclic(
 
 function priceChangeNotice(
   current: Plan,
-  write: Partial<Plan>,
+  write: PlanWrite,
 ): PlanWriteResult["notice"] {
   if (!changesPriceTerms(current, write)) return undefined;
   if (!current.paymentProviderRefs?.stripePriceId) return undefined;
@@ -222,10 +226,9 @@ function priceChangeNotice(
 }
 
 /** A plan's fields as a new plan starts from them, without its identity. */
-function toDuplicateDraft(plan: Plan): Partial<Plan> & PlanWriteBody {
+function toDuplicateDraft(plan: Plan): PlanWriteBody {
   return {
-    name: plan.name,
-    description: plan.description,
+    ...planTexts(plan),
     audience: plan.audience,
     price: plan.price,
     currency: plan.currency,
@@ -236,7 +239,6 @@ function toDuplicateDraft(plan: Plan): Partial<Plan> & PlanWriteBody {
     isPublic: plan.isPublic,
     isActive: plan.isActive,
     borderColor: plan.borderColor,
-    borderLabel: plan.borderLabel,
     inheritance: toInheritance(plan),
   };
 }
@@ -252,17 +254,17 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   declare tenantSubscriptionModel: TenantSubscriptionModel;
 
   @Get("/")
-  async list(@AuthOwnerOnly() _user: User): Promise<PlanWithWorkspaceCount[]> {
+  async list(
+    @AuthOwnerOnly() _user: User,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+  ): Promise<PlanWithWorkspaceCount[]> {
+    const locale = requestLocale(language);
     const plans = await this.planModel.findNotDeleted();
     const counts = await Promise.all(
       plans.map((plan) => this.tenantSubscriptionModel.countByPlan(plan._id)),
     );
     return plans.map((plan, index) => ({
-      // The spread row is an AntelopeJS table class: `Table` declares one
-      // field and a static, no instance methods, and the value is
-      // serialised to JSON on the way out. No prototype to lose.
-      // oxlint-disable-next-line typescript/no-misused-spread
-      ...plan,
+      ...toPlainData(localizePlan(plan, locale)),
       workspaceCount: counts[index],
     }));
   }
@@ -294,7 +296,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
         const resolved = await this.planModel.resolveInheritance(plan);
         return {
           _id: plan._id,
-          name: plan.name,
+          name: localizePlan(plan, locale).name,
           inheritsFromPlanId: plan.inheritsFromPlanId ?? null,
           permissions: resolved.permissions,
           features: resolved.features,
@@ -326,7 +328,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   async duplicate(
     @AuthOwnerOnly() _user: User,
     @Parameter("id") id: string,
-  ): Promise<Partial<Plan> & PlanWriteBody> {
+  ): Promise<PlanWriteBody> {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
     return toDuplicateDraft(plan);
@@ -365,14 +367,12 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   async getOne(@AuthOwnerOnly() _user: User, @Parameter("id") id: string) {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
-    // The spread row is an AntelopeJS table class: `Table` declares one
-    // field and a static, no instance methods, and the value is
-    // serialised to JSON on the way out. No prototype to lose.
-    // oxlint-disable-next-line typescript/no-misused-spread
-    return { ...plan, inheritance: toInheritance(plan) };
+    // The editor writes the texts in every locale: they come unlocked in all.
+    planTexts(plan);
+    return { ...toPlainData(plan), inheritance: toInheritance(plan) };
   }
 
-  private async assertValidAccess(write: Partial<Plan>): Promise<void> {
+  private async assertValidAccess(write: PlanWrite): Promise<void> {
     if (write.maxMembers !== undefined && !isValidMemberCap(write.maxMembers)) {
       throw fieldRefusal(MAX_MEMBERS_FIELD, INVALID_MEMBER_CAP_MESSAGE);
     }
@@ -394,8 +394,9 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     const sanitized = pickPlanWrite(readableWrite(body));
     assertPlanInterval(sanitized.interval);
     await this.assertValidAccess(sanitized);
-    if (!sanitized.slug && sanitized.name) {
-      sanitized.slug = slugify(sanitized.name);
+    const fallbackName = sanitized.name?.[PLAN_FALLBACK_LOCALE];
+    if (!sanitized.slug && fallbackName) {
+      sanitized.slug = slugify(fallbackName);
     }
     await ensureInheritanceIsAcyclic(
       this.planModel,
@@ -403,7 +404,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
       sanitized.inheritsFromPlanId,
     );
     const inserted = await this.planModel.insert([
-      {
+      toPlanRow({
         ...sanitized,
         isActive: sanitized.isActive ?? true,
         isDeleted: false,
@@ -413,7 +414,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
         paymentProviderRefs: {},
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
+      }),
     ]);
     const planId = inserted[0];
     const created = await this.planModel.get(planId);
@@ -450,7 +451,11 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     if (hasStripeSyncChanges(sanitized)) {
       assertPlanInterval(sanitized.interval ?? plan.interval);
     }
-    await this.planModel.update(id, { ...sanitized, updatedAt: new Date() });
+    // The stored texts are one object: a write keeps the ones it does not carry.
+    await this.planModel.update(
+      id,
+      toPlanRow({ ...planTexts(plan), ...sanitized, updatedAt: new Date() }),
+    );
     const updated = await this.planModel.get(id);
     if (updated) await syncPlanStripeRefs(updated, this.planModel);
     return { _id: id, notice: priceChangeNotice(plan, sanitized) };
