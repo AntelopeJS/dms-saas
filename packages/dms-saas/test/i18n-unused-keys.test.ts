@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { flattenLocale, readLocale } from "./helpers/locales";
 
@@ -30,14 +31,14 @@ const NAMESPACE_DEPTH = 2;
 const RESOLUTION_PASSES = 3;
 
 function sourceFiles(path: URL): string[] {
-  if (statSync(path).isFile()) return [path.pathname];
+  if (statSync(path).isFile()) return [fileURLToPath(path)];
   return readdirSync(path, { withFileTypes: true }).flatMap((entry) => {
     const child = new URL(
       `${entry.name}${entry.isDirectory() ? "/" : ""}`,
       path.href.endsWith("/") ? path : `${path.href}/`,
     );
     if (entry.isDirectory()) return sourceFiles(child);
-    return SOURCE_EXTENSION.test(entry.name) ? [child.pathname] : [];
+    return SOURCE_EXTENSION.test(entry.name) ? [fileURLToPath(child)] : [];
   });
 }
 

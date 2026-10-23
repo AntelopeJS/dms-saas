@@ -99,6 +99,13 @@ vi.mock("../src/workspaces/deletion", () => ({
   resolveDataRetentionDays: async () => 30,
 }));
 
+const stripeSetup = vi.hoisted(() => ({ isConfigured: true }));
+
+vi.mock("../src/stripe/client", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  isStripeConfigured: () => stripeSetup.isConfigured,
+}));
+
 const { assertCardMayBackFreeWorkspace, listFreeWorkspacesBackedByCard } =
   await import("../src/workspaces/free-workspaces-per-card");
 const { buildWorkspaceCreateOptions, cardRequirementOf } =
@@ -223,6 +230,16 @@ describe("free workspaces per card", () => {
     expect(cardRequirementOf(FREE, 1)).toBe("verification");
     expect(cardRequirementOf(FREE, 0)).toBe("none");
     expect(cardRequirementOf(PRO, 0)).toBe("payment");
+  });
+
+  it("asks no card of a free plan while Stripe is not configured", () => {
+    stripeSetup.isConfigured = false;
+    try {
+      expect(cardRequirementOf(FREE, 1)).toBe("none");
+      expect(cardRequirementOf(PRO, 1)).toBe("payment");
+    } finally {
+      stripeSetup.isConfigured = true;
+    }
   });
 });
 

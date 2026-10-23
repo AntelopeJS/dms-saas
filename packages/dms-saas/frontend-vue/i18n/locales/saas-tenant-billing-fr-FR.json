@@ -387,6 +387,7 @@
 					"excl_tax": "{amount} HT",
 					"first_charge": "Premier prélèvement de {amount} le {date}, puis chaque {interval}. Résiliez avant le {date} et vous ne payez rien.",
 					"tax_on_stripe": "La TVA est calculée sur la page de paiement de Stripe d'après le pays de facturation.",
+					"preview_failed": "Cette offre ne peut pas être payée pour le moment. Réessayez plus tard ou contactez-nous.",
 					"card_note": "Carte saisie sur la page de paiement sécurisée de Stripe, jamais conservée chez nous.",
 					"confirm": "Continuer vers le paiement sécurisé"
 				}

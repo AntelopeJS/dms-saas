@@ -15,7 +15,6 @@ import {
 } from "@antelopejs/interface-dms/base";
 import type { ComponentBuilder } from "@antelopejs/interface-dms/component";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
-import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { tenantBillingPage } from "@antelopejs/interface-dms-saas/pages";
 import { tenantInvoicesDataAPI } from "../../data-api";
 import { blockMeta } from "../block-meta";
@@ -193,7 +192,9 @@ export class SaasTenantBillingController extends PageController(
     // untouched — a member still sees only what their role allows.
     bypassTenantAccessGate: true,
   },
-  DefaultLayout({ fullWidth: true }),
+  // No layout of its own: like every workspace settings page it inherits the
+  // settings layout (side menu, settings content width), which the overview
+  // grid fits by stacking its cards in one column when the column is narrow.
 ) {
   static freeAccessBanner = Banner({
     fetchUrl: COMPLIMENTARY_BANNER_ENDPOINT,

@@ -13,6 +13,7 @@ import {
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { inviteUserToTenant } from "@antelopejs/interface-dms/invites";
+import { resolveRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import * as auth from "@antelopejs/interface-dms/auth";
 import * as saasMode from "@antelopejs/interface-dms/utils/saas-mode";
 import {
@@ -379,6 +380,10 @@ describe("actual DMS invitation account creation while admission is closed", () 
         headers: { authorization: `Bearer ${ownerResult.access_token}` },
       },
     };
+    // At runtime the route's auth decorator verifies the token and binds its
+    // tenant to the request before the handler runs; dms 0.10 no longer reads
+    // the tenant of an unverified token.
+    expect(await resolveRequestTenantId(ctx as never)).toBe(created.tenantId);
     await expect(
       planController.changePlan(
         owner!,

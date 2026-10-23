@@ -1,7 +1,7 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import { type Invoice, InvoiceModel, type TenantSubscription } from "../db";
-import { getStripeReadClient } from "../stripe/client";
+import { getStripeReadClient, isStripeConfigured } from "../stripe/client";
 import { MS_PER_DAY, stripeSecondsToDate } from "../utils/time";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 
@@ -52,6 +52,8 @@ export function toCardSummary(
 export async function fetchDefaultPaymentMethod(
   stripeCustomerId: string,
 ): Promise<PaymentMethodSummary | null> {
+  // Placeholder keys: the call could only fail. The page shows no card.
+  if (!isStripeConfigured()) return null;
   const stripe = getStripeReadClient();
   const customer = await stripe.customers
     .retrieve(stripeCustomerId, {
@@ -76,6 +78,7 @@ async function resolveSuspendAt(
 }
 
 async function fetchNextRetryAt(stripeInvoiceId: string): Promise<Date | null> {
+  if (!isStripeConfigured()) return null;
   const stripe = getStripeReadClient();
   const invoice = await stripe.invoices
     .retrieve(stripeInvoiceId)
