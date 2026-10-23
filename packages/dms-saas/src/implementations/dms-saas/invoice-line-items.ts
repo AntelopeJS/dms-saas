@@ -1,12 +1,9 @@
 import { Logging } from "@antelopejs/interface-core/logging";
-import type {
-  InvoiceLineItemsProvider,
-  InvoiceLineItemsResolver,
-} from "@antelopejs/interface-dms-saas/invoice-line-items";
+import type { InvoiceLineItemsProvider } from "@antelopejs/interface-dms-saas/invoice-line-items";
 
 const LOG_PREFIX = "[dms-saas:invoice-line-items]";
 
-const resolvers = new Map<string, InvoiceLineItemsResolver>();
+const providers = new Map<string, InvoiceLineItemsProvider>();
 
 // Last writer wins rather than throws: RegisteringProxy records the id before
 // the callback runs, so refusing a collision here would leave the proxy
@@ -14,17 +11,20 @@ const resolvers = new Map<string, InvoiceLineItemsResolver>();
 // its unload, or its stop(), would then drop the provider that is actually
 // serving. A collision is a naming bug in one of the two modules, so it is
 // reported at error level instead.
-function register(providerId: string, resolve: InvoiceLineItemsResolver): void {
-  if (resolvers.has(providerId)) {
+function register(
+  providerId: string,
+  provider: InvoiceLineItemsProvider,
+): void {
+  if (providers.has(providerId)) {
     Logging.Error(
       `${LOG_PREFIX} provider id '${providerId}' is already taken: the previous provider is replaced and its usage lines will no longer be invoiced`,
     );
   }
-  resolvers.set(providerId, resolve);
+  providers.set(providerId, { ...provider, id: providerId });
 }
 
 function unregister(providerId: string): void {
-  resolvers.delete(providerId);
+  providers.delete(providerId);
 }
 
 export namespace internal {
@@ -32,5 +32,5 @@ export namespace internal {
 }
 
 export function getInvoiceLineItemsProviders(): InvoiceLineItemsProvider[] {
-  return [...resolvers].map(([id, resolve]) => ({ id, resolve }));
+  return [...providers.values()];
 }

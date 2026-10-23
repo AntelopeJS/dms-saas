@@ -42,7 +42,6 @@ const props = withDefaults(
 
 const { t, locale } = useI18n()
 const { processI18n } = useTranslation()
-const planDescription = usePlanDescription()
 const { formatFeatureValue } = usePlanFeatureFormat()
 const catalog = usePlanCatalog()
 
@@ -275,7 +274,7 @@ function toggleSale(): void {
 			</div>
 
 			<p v-if="plan.description" class="text-muted line-clamp-2 text-sm">
-				{{ planDescription(plan.description) }}
+				{{ plan.description }}
 			</p>
 
 			<div>

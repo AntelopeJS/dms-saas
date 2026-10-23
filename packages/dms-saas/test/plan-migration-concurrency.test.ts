@@ -20,6 +20,7 @@ import {
   PlanModel,
   TenantSubscriptionModel,
 } from "../src/db";
+import { planRow } from "./helpers/plan-row";
 import type { PlanMigration, TenantSubscription } from "../src/db";
 import {
   processPlanMigrationJob,
@@ -83,15 +84,17 @@ async function createJob(): Promise<PlanMigration> {
   const fromPlanId = randomUUID();
   const toPlanId = randomUUID();
   await GetModel(PlanModel).insert(
-    [fromPlanId, toPlanId].map((_id) => ({
-      _id,
-      name: _id,
-      isActive: true,
-      isDeleted: false,
-      billingMode: "flat",
-      permissions: ["read"],
-      paymentProviderRefs: {},
-    })),
+    [fromPlanId, toPlanId].map((_id) =>
+      planRow({
+        _id,
+        name: _id,
+        isActive: true,
+        isDeleted: false,
+        billingMode: "flat",
+        permissions: ["read"],
+        paymentProviderRefs: {},
+      }),
+    ),
   );
   const [id] = await model.insert({
     fromPlanId,
@@ -231,10 +234,10 @@ describe("migration snapshots on the production Mongo provider", () => {
       async (current, snapshot) => {
         const applied = await begin(current, snapshot);
         lateTenant = await createSubscription(job.fromPlanId);
-        await GetModel(PlanModel).update(job.toPlanId, {
-          name: "Changed after capture",
-          permissions: ["write"],
-        });
+        await GetModel(PlanModel).update(
+          job.toPlanId,
+          planRow({ name: "Changed after capture", permissions: ["write"] }),
+        );
         return applied;
       },
     );

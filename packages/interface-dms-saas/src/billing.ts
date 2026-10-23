@@ -12,6 +12,25 @@ export function isComplimentarySubscription(
   return subscription?.isComplimentary === true;
 }
 
+/** A billing period, half-open: `[start, end)`. */
+export interface TenantBillingPeriod {
+  start: Date;
+  end: Date;
+}
+
+/**
+ * The tenant's current Stripe billing period, clipped to its paid usage the
+ * way renewal invoices clip their usage window: a period opened before the
+ * paid usage started starts with it, and one a guarded downgrade or a closed
+ * paid period ends early ends there. Null for a free or complimentary tenant,
+ * or one whose period dms-saas has not recorded yet. Read-only; storage
+ * errors propagate.
+ */
+export const GetTenantBillingPeriod =
+  InterfaceFunction<
+    (tenantId: string) => Promise<TenantBillingPeriod | null>
+  >();
+
 /** Tenant identity established by a trusted server authentication boundary. */
 export interface TenantCustomerBalanceScope {
   tenantId: string;

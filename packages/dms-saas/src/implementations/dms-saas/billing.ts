@@ -5,6 +5,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import { AssertTenantAccess } from "@antelopejs/interface-dms/tenant-access";
 import type {
+  TenantBillingPeriod,
   TenantCustomerBalance,
   TenantCustomerBalanceAbsenceReason,
   TenantCustomerBalanceScope,
@@ -13,6 +14,7 @@ import type {
 } from "@antelopejs/interface-dms-saas/billing";
 import { TenantSubscriptionModel } from "../../db";
 import { retrieveStripeCustomerBalance } from "../../stripe/customer-balance";
+import { clipInvoiceUsageWindow } from "../../invoice-line-items/billing-window";
 import { getUpcomingInvoicePreview } from "../../upcoming-invoice/preview";
 import { isComplimentarySubscription } from "@antelopejs/interface-dms-saas/billing";
 
@@ -79,4 +81,27 @@ export async function GetUpcomingInvoicePreview(
 }
 
 /** Implements the billing state recomputation interface. */
+/** Implements the tenant billing period read, clipped as renewal invoices are. */
+export async function GetTenantBillingPeriod(
+  tenantId: string,
+): Promise<TenantBillingPeriod | null> {
+  const subscription = await GetModel(
+    TenantSubscriptionModel,
+    tenantId,
+  ).findOne();
+  const { currentPeriodStart, currentPeriodEnd, stripeSubscriptionId } =
+    subscription ?? {};
+  if (!subscription || !stripeSubscriptionId) return null;
+  if (!currentPeriodStart || !currentPeriodEnd) return null;
+  const clipped = clipInvoiceUsageWindow(
+    {
+      periodStart: new Date(currentPeriodStart),
+      periodEnd: new Date(currentPeriodEnd),
+    },
+    subscription,
+    stripeSubscriptionId,
+  );
+  return clipped && { start: clipped.periodStart, end: clipped.periodEnd };
+}
+
 export { recomputeTenantBillingState as RecomputeTenantBillingState } from "../../billing-state";
