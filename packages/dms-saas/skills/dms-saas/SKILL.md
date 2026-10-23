@@ -20,7 +20,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
   (`envOverrides`). Placeholder keys disable Stripe calls (plan sync skipped).
 - Stripe webhook endpoint → `/api/saas/webhooks/stripe`, API version `2026-08-26.dahlia`.
 - Frontend server env: `DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize`, else sign-ups stay signed out (403).
-- `allowedRedirectHosts` for Checkout / billing-portal return URLs (loopback auto-allowed in dev only).
+- `allowedRedirectHosts` for Checkout / billing-portal return URLs: defaults to the DMS `clientBaseUrl` host, a value replaces it (loopback auto-allowed in dev only).
 - A free plan must exist (or `defaultPlanSlug`): registration opens it, and every workspace without a subscription gets it.
 - Options: `admissionMode` (`open` | `invitation-only`), `registration.paymentMethod` (`required` default | `optional` | `none`),
   `publicScreens.{register,pricing}`, `upcomingInvoicePreviewCacheTtlSeconds`, `reportingCurrency`,
@@ -30,8 +30,11 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 
 - The `dms-saas.plan-intersection` resolver keeps, per member, roles ∩ plan; the workspace owner gets every plan
   permission (never `*`). A plan grants exactly the ids it lists: list every component id, not just the page.
+- Role preview (`context.preview` in a resolver): roles ∩ plan with no owner grant and no owner-only screens, `*` kept
+  only for a `*` role. Resolvers of your own keyed on the user must read the context the same way.
 - New project page or block → add its permission ids to the plans that should get it, or tenants lose it.
 - Seeding plans from code: write name, price, currency, interval, billing mode; leave `paymentProviderRefs` to dms-saas.
+  `name`, `description` and `borderLabel` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys; Stripe gets the `en` text.
 - Features: `displayName` / `tooltip` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys.
 
 ## Extension points (`@antelopejs/interface-dms-saas`)

@@ -68,10 +68,10 @@ function expectedProviderIds(): string[] {
 /**
  * invoice.created for a cycle renewal draft.
  *
- * Acknowledges only when the task carries `suspendedAt` — Stripe was read back
- * with the draft at `auto_advance=false`. Every other outcome throws, including
- * an operator hand-off reached before any suspension (the invoice was already
- * finalized or is not the registered one): that receipt stays unresolved and
+ * Acknowledges once the task carries `suspendedAt` — Stripe was read back
+ * with the draft at `auto_advance=false` — or is finalized, which an invoice
+ * already finalized or not the registered one is, with its usage gap
+ * reported. Every other outcome throws: that receipt stays unresolved and
  * visible. Stripe documents that it holds automatic finalization while
  * invoice.created is unacknowledged (up to 72 hours); that is the only
  * protection before suspension is proven, not a guarantee — a durable outage
@@ -84,10 +84,8 @@ export async function admitCycleInvoice(
   const registered = await registerCycleInvoice(admission);
   if (!registered) return;
   const task = await processInvoiceLineInjection(registered._id);
-  if (task?.suspendedAt) return;
-  const why =
-    task?.state === "needs_operator"
-      ? `operator required before suspension (${task.reason})`
-      : `suspension not confirmed yet (${task?.lastError ?? "held by another worker"}); the recovery task retries it`;
-  throw new Error(`Invoice ${registered._id}: ${why}`);
+  if (task?.suspendedAt || task?.state === "finalized") return;
+  throw new Error(
+    `Invoice ${registered._id}: suspension not confirmed yet (${task?.lastError ?? "held by another worker"}); the recovery task retries it`,
+  );
 }

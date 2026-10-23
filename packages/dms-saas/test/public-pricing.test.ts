@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { planRow } from "./helpers/plan-row";
 import type { BillingSettings, Feature, Plan } from "../src/db";
 import {
   findPlanByReference,
@@ -16,7 +17,7 @@ const FEATURE_MEMBERS = {
 } as unknown as Feature;
 
 function plan(overrides: Partial<Plan>): Plan {
-  return {
+  return planRow({
     _id: "plan",
     slug: "plan",
     name: "Plan",
@@ -39,7 +40,7 @@ function plan(overrides: Partial<Plan>): Plan {
     isPublic: true,
     isDeleted: false,
     ...overrides,
-  } as Plan;
+  } as Partial<Plan>);
 }
 
 const FREE = plan({

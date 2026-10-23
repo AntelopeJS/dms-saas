@@ -24,6 +24,7 @@ import {
   reconcileInvoiceLineInjections,
   INVOICE_LINE_LEASE_MS,
 } from "../src/invoice-line-items/recovery";
+import { INVOICE_LINE_DEADLINE_MS } from "../src/invoice-line-items/recovery/process";
 import { dispatchStripeWebhookEvent } from "../src/stripe/webhook-dispatch";
 
 /** Stripe, simulated: only what the recovery calls. Not a statement about real Stripe. */
@@ -67,6 +68,7 @@ const harness = vi.hoisted(() => {
     providers: ["cloud"] as string[],
     otherResolve: (() => []) as (ctx: unknown) => unknown,
     required: [] as string[],
+    gaps: [] as Array<{ provider: string; gap: unknown }>,
     /** Stripe misbehaving on create: duplicate the item, or store another currency. */
     createQuirk: null as null | "duplicate" | "currency",
   };
@@ -193,6 +195,8 @@ vi.mock("../src/implementations/dms-saas/invoice-line-items", () => ({
         id === "cloud"
           ? harness.state.resolve(ctx)
           : harness.state.otherResolve(ctx),
+      onUsageGap: (gap: unknown) =>
+        harness.state.gaps.push({ provider: id, gap }),
     })),
 }));
 vi.mock("../src/config", async (importOriginal) => ({
@@ -248,6 +252,7 @@ beforeEach(() => {
   state.providers = ["cloud"];
   state.otherResolve = () => [];
   state.required = [];
+  state.gaps = [];
   state.createQuirk = null;
 });
 
@@ -332,6 +337,11 @@ const managedKeys = (invoiceId: string) =>
     .sort();
 const invoice = (id: string) => harness.state.invoices.get(id);
 
+function passTheDeadline(): void {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(Date.now() + INVOICE_LINE_DEADLINE_MS + 1_000);
+}
+
 async function runRecovery(times = 1): Promise<void> {
   for (let i = 0; i < times; i += 1)
     await reconcileInvoiceLineInjections(
@@ -412,7 +422,7 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     expect(harness.state.calls.update).toBe(1);
   });
 
-  it("hands a draft Stripe finalized before suspension to an operator, without closing the receipt", async () => {
+  it("records a draft Stripe finalized before suspension as finalized with a gap, and closes the receipt", async () => {
     const f = await aCycleInvoice();
     harness.state.faults.set("update:before", 1);
     const event = invoiceCreated(f);
@@ -420,12 +430,22 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     invoice(f.invoiceId)!.status = "open";
     await runRecovery();
     expect(await task(f.invoiceId)).toMatchObject({
-      state: "needs_operator",
-      reason: "before_suspension:finalized:open/auto_advance=true",
+      state: "finalized",
+      usageGaps: ["finalized_before_suspension:open/auto_advance=true"],
       suspendedAt: null,
     });
-    expect((await receipt(event.id))?.result).toBe("reconciliation_required");
+    expect((await receipt(event.id))?.result).toBe("success");
     expect(harness.state.calls.finalizeEffects).toBe(0);
+    expect(harness.state.gaps).toMatchObject([
+      {
+        provider: "cloud",
+        gap: {
+          tenantId: f.tenantId,
+          invoiceId: f.invoiceId,
+          reasons: ["finalized_before_suspension:open/auto_advance=true"],
+        },
+      },
+    ]);
   });
 
   it.each([
@@ -434,34 +454,34 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       (f: Fixture) => {
         invoice(f.invoiceId)!.status = "open";
       },
-      "before_suspension:finalized:open/auto_advance=true",
+      "finalized_before_suspension:open/auto_advance=true",
+      0,
     ],
     [
       "another customer",
       (f: Fixture) => {
         invoice(f.invoiceId)!.customer = "cus_other";
       },
-      "before_suspension:identity_customer",
+      "identity_mismatch:customer",
+      0,
     ],
   ])(
-    "answers 500 when the draft is unexpected before suspension (%s)",
-    async (_label, mutate, reason) => {
+    "closes without lines, never finalizing a foreign draft, when the draft is unexpected before suspension (%s)",
+    async (_label, mutate, reason, finalizeEffects) => {
       const f = await aCycleInvoice();
       const event = invoiceCreated(f);
       mutate(f);
-      await expect(dispatchStripeWebhookEvent(event)).rejects.toThrow(
-        "operator required before suspension",
-      );
+      await dispatchStripeWebhookEvent(event);
       expect(await task(f.invoiceId)).toMatchObject({
-        state: "needs_operator",
-        reason,
+        state: "finalized",
+        usageGaps: [reason],
         suspendedAt: null,
       });
-      await runRecovery();
-      expect((await receipt(event.id))?.result).toBe("reconciliation_required");
+      expect((await receipt(event.id))?.result).toBe("success");
       expect(harness.state.calls).toMatchObject({
         update: 0,
-        finalizeEffects: 0,
+        itemCreates: 0,
+        finalizeEffects,
       });
     },
   );
@@ -558,7 +578,7 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     ["void", "finalized_as:void"],
     ["uncollectible", "finalized_as:uncollectible"],
   ])(
-    "does not mistake a %s invoice for its success",
+    "reports a %s invoice as a gap, not as its success",
     async (status, reason) => {
       const f = await aCycleInvoice();
       harness.state.faults.set("finalize:before", 1);
@@ -567,13 +587,13 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       invoice(f.invoiceId)!.status = status;
       await runRecovery();
       expect(await task(f.invoiceId)).toMatchObject({
-        state: "needs_operator",
-        reason,
+        state: "finalized",
+        usageGaps: [reason],
       });
     },
   );
 
-  it("does not mistake an externally changed finalized invoice for its success", async () => {
+  it("reports an externally changed finalized invoice as a gap", async () => {
     const f = await aCycleInvoice();
     harness.state.faults.set("finalize:before", 1);
     await dispatchStripeWebhookEvent(invoiceCreated(f));
@@ -582,8 +602,8 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     inv.status = "open";
     await runRecovery();
     expect(await task(f.invoiceId)).toMatchObject({
-      state: "needs_operator",
-      reason: "finalized_with_external_changes:open",
+      state: "finalized",
+      usageGaps: ["finalized_with_external_changes:open"],
     });
   });
 
@@ -613,7 +633,7 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       },
     ],
   ])(
-    "never finalizes a draft whose line %s changed while stopped in finalizing",
+    "finalizes a draft whose line %s changed while stopped in finalizing, reporting the change once",
     async (_label, mutate) => {
       const f = await aCycleInvoice();
       harness.state.faults.set("finalize:before", 1);
@@ -622,11 +642,12 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       mutate(harness.state.items.find((i) => i.invoice === f.invoiceId));
       await runRecovery(2);
       expect(await task(f.invoiceId)).toMatchObject({
-        state: "needs_operator",
-        reason: "before_finalize:changed_since_verified",
+        state: "finalized",
+        usageGaps: ["before_finalize:changed_since_verified"],
       });
-      expect(harness.state.calls.finalizeEffects).toBe(0);
-      expect(invoice(f.invoiceId)?.status).toBe("draft");
+      expect(harness.state.calls.finalizeEffects).toBe(1);
+      expect(invoice(f.invoiceId)?.status).toBe("open");
+      expect(harness.state.gaps).toHaveLength(1);
     },
   );
 
@@ -648,15 +669,8 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       },
       "before_finalize:left_suspension:draft/auto_advance=true",
     ],
-    [
-      "another customer",
-      (f: Fixture) => {
-        invoice(f.invoiceId)!.customer = "cus_other";
-      },
-      "before_finalize:identity_customer",
-    ],
   ])(
-    "never finalizes after %s while stopped in finalizing",
+    "finalizes anyway after %s while stopped in finalizing",
     async (_label, mutate, reason) => {
       const f = await aCycleInvoice();
       harness.state.faults.set("finalize:before", 1);
@@ -664,10 +678,10 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       mutate(f);
       await runRecovery();
       expect(await task(f.invoiceId)).toMatchObject({
-        state: "needs_operator",
-        reason,
+        state: "finalized",
+        usageGaps: [reason],
       });
-      expect(harness.state.calls.finalizeEffects).toBe(0);
+      expect(harness.state.calls.finalizeEffects).toBe(1);
     },
   );
 
@@ -675,18 +689,32 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     ["duplicate", "managed_lines_duplicate"],
     ["currency", "managed_lines_unexpected_or_changed"],
   ] as const)(
-    "hands a %s Stripe line to an operator instead of retrying forever",
+    "finalizes with a %s Stripe line, reporting it, instead of retrying forever",
     async (quirk, reason) => {
       const f = await aCycleInvoice();
       harness.state.createQuirk = quirk;
       await dispatchStripeWebhookEvent(invoiceCreated(f));
       expect(await task(f.invoiceId)).toMatchObject({
-        state: "needs_operator",
-        reason,
+        state: "finalized",
+        usageGaps: [reason],
       });
-      expect(harness.state.calls.finalizeEffects).toBe(0);
+      expect(harness.state.calls.finalizeEffects).toBe(1);
     },
   );
+
+  it("never finalizes a draft that became another customer's while stopped in finalizing", async () => {
+    const f = await aCycleInvoice();
+    harness.state.faults.set("finalize:before", 1);
+    await dispatchStripeWebhookEvent(invoiceCreated(f));
+    invoice(f.invoiceId)!.customer = "cus_other";
+    await runRecovery();
+    expect(await task(f.invoiceId)).toMatchObject({
+      state: "finalized",
+      usageGaps: ["identity_mismatch:customer"],
+    });
+    expect(harness.state.calls.finalizeEffects).toBe(0);
+    expect(invoice(f.invoiceId)?.status).toBe("draft");
+  });
 
   it("keeps foreign items untouched and outside the fingerprint", async () => {
     const f = await aCycleInvoice();
@@ -706,44 +734,52 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     expect((await task(f.invoiceId))?.fingerprint).not.toContain("999");
   });
 
-  it("leaves blocked usage to an operator and not-ready usage suspended, never finalizing either", async () => {
-    const blocked = await aCycleInvoice();
-    harness.state.resolve = () => ({
-      status: "blocked",
-      reason: "written_off_hour",
-    });
-    await dispatchStripeWebhookEvent(invoiceCreated(blocked));
+  it("waits for not-ready usage until the deadline, then finalizes with the lines available and reports the gap", async () => {
+    const f = await aCycleInvoice();
+    harness.state.providers = ["cloud", "storage"];
+    harness.state.otherResolve = () => [
+      { key: "volume-gb-hours", description: "Volume", amountCents: 7 },
+    ];
+    harness.state.resolve = () => ({ status: "not_ready", reason: "coverage" });
+    await dispatchStripeWebhookEvent(invoiceCreated(f));
     await runRecovery(3);
-    expect(await task(blocked.invoiceId)).toMatchObject({
-      state: "needs_operator",
-      reason: "provider_blocked:cloud:written_off_hour",
+    expect(await task(f.invoiceId)).toMatchObject({
+      state: "suspended",
+      lastError: "provider_not_ready:cloud:coverage",
     });
-    expect(invoice(blocked.invoiceId)).toMatchObject({
-      status: "draft",
-      auto_advance: false,
+    expect(harness.state.calls).toMatchObject({
+      itemCreates: 0,
+      finalizeEffects: 0,
     });
 
-    const waiting = await aCycleInvoice();
-    harness.state.resolve = () => ({ status: "not_ready", reason: "coverage" });
-    await dispatchStripeWebhookEvent(invoiceCreated(waiting));
-    await runRecovery(3);
-    expect((await task(waiting.invoiceId))?.state).toBe("suspended");
-    expect(harness.state.calls.finalizeEffects).toBe(0);
+    passTheDeadline();
+    await runRecovery();
+    expect(await task(f.invoiceId)).toMatchObject({
+      state: "finalized",
+      usageGaps: ["provider_not_ready:cloud:coverage"],
+    });
+    expect(managedKeys(f.invoiceId)).toEqual(["storage:volume-gb-hours=7"]);
+    expect(invoice(f.invoiceId)?.status).toBe("open");
+    expect(harness.state.gaps.map((entry) => entry.provider)).toEqual([
+      "cloud",
+      "storage",
+    ]);
   });
+
   it.each([
     ["undefined", undefined],
     ["ready without lines", { status: "ready" }],
-    ["unknown status", { status: "done", lines: [] }],
+    ["unknown status", { status: "blocked", reason: "gone" }],
   ])(
-    "treats a malformed resolution (%s) as blocked, never as an empty bill",
+    "treats a malformed resolution (%s) as not ready, never as an empty bill",
     async (_label, answer) => {
       const f = await aCycleInvoice();
       harness.state.resolve = () => answer;
       await dispatchStripeWebhookEvent(invoiceCreated(f));
       await runRecovery(3);
       expect(await task(f.invoiceId)).toMatchObject({
-        state: "needs_operator",
-        reason: "provider_blocked:cloud:invalid_resolution",
+        state: "suspended",
+        lastError: "provider_not_ready:cloud:invalid_resolution",
       });
       expect(harness.state.calls).toMatchObject({
         itemCreates: 0,
@@ -754,7 +790,7 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
 });
 
 describe("invoice line recovery — expected providers", () => {
-  it("waits for a provider that disappeared before the resumption, never finalizing without it", async () => {
+  it("waits for a provider that disappeared before the resumption, not finalizing without it before the deadline", async () => {
     const f = await aCycleInvoice();
     harness.state.resolve = () => ({ status: "not_ready", reason: "coverage" });
     await dispatchStripeWebhookEvent(invoiceCreated(f));
