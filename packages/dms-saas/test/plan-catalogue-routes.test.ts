@@ -11,9 +11,12 @@ import type {
 } from "../src/db";
 import { SaasPlanDeletionController } from "../src/routes/platformOwner/plan-deletion";
 import type { PlanInheritanceInput } from "../src/plans/plan-write";
+import {
+  SaasPlansApiController,
+  stripeSyncNotice,
+} from "../src/routes/platformOwner/plans";
 import { toPlainData } from "@antelopejs/interface-database-decorators";
 import { planRow } from "./helpers/plan-row";
-import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
 
 const stripe = vi.hoisted(() => ({
   syncPlanStripeRefs: vi.fn(async (plan: unknown) => plan),
@@ -187,6 +190,58 @@ describe("plan writes from the editor", () => {
     expect(result.notice).toBeUndefined();
   });
 
+  it("warns that a paid plan was saved without Stripe when Stripe is not configured", async () => {
+    stripe.planStripeSyncState.mockResolvedValueOnce("not_configured");
+    const result = await plansController(storeWith(storedPlan({}))).update(
+      OWNER,
+      PLAN_ID,
+      { price: 34 },
+    );
+    expect(result.notice).toEqual({
+      title: "$saas.catalog.editor.notice.stripe_not_synced",
+      description:
+        "$saas.catalog.editor.notice.stripe_not_synced_not_configured",
+      color: "warning",
+    });
+  });
+
+  it("keeps the plan saved and warns when Stripe refuses the sync", async () => {
+    const store = storeWith(storedPlan({}));
+    stripe.syncPlanStripeRefs.mockRejectedValueOnce(new Error("Invalid key"));
+    stripe.planStripeSyncState.mockResolvedValueOnce("out_of_sync");
+
+    const result = await plansController(store).update(OWNER, PLAN_ID, {
+      price: 34,
+    });
+
+    expect(store.plans.get(PLAN_ID)?.price).toBe(34);
+    expect(result.notice).toMatchObject({
+      description: "$saas.catalog.editor.notice.stripe_not_synced_out_of_sync",
+      color: "warning",
+    });
+  });
+
+  it("stores the text fields trimmed, in every locale", async () => {
+    const store = storeWith(storedPlan({}));
+    await plansController(store).update(OWNER, PLAN_ID, {
+      name: { en: "  Growth ", fr: " Croissance " },
+      description: { en: "  For growing teams.  " },
+      borderLabel: { en: " Popular ", fr: "Populaire  " },
+    });
+    expect(await plansController(store).getOne(OWNER, PLAN_ID)).toMatchObject({
+      name: { en: "Growth", fr: "Croissance" },
+      description: { en: "For growing teams." },
+      borderLabel: { en: "Popular", fr: "Populaire" },
+    });
+  });
+
+  it.each(["synced", "off_stripe"] as const)(
+    "says nothing of the sync of a plan %s",
+    (state) => {
+      expect(stripeSyncNotice(state)).toBeUndefined();
+    },
+  );
+
   it("returns a plan's values without its identity for a duplicate", async () => {
     const draft = await plansController(
       storeWith(
@@ -215,6 +270,15 @@ describe("creating a plan", () => {
       },
     });
     expect(store.plans.get(NEW_PLAN_ID)?.permissions).toEqual(["settings"]);
+  });
+
+  it("warns when the new paid plan could not be put on Stripe", async () => {
+    stripe.planStripeSyncState.mockResolvedValueOnce("not_configured");
+    const result = await plansController(storeWith()).create(OWNER, NEW_PLAN);
+    expect(result).toMatchObject({
+      _id: NEW_PLAN_ID,
+      notice: { color: "warning" },
+    });
   });
 
   it("refuses an access it cannot read, under its field", async () => {

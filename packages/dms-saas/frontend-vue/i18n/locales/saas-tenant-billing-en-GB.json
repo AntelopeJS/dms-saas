@@ -192,11 +192,6 @@
 					"pending": "Verification in progress",
 					"unverified": "Not verified"
 				},
-				"address_line1": "Address",
-				"postal_code": "Postal code",
-				"city": "City",
-				"country": "Country",
-				"country_placeholder": "Select a country",
 				"billing_email": "Billing email",
 				"billing_email_hint": "Receives invoices and payment reminders.",
 				"sections": {
@@ -225,13 +220,15 @@
 					"postalCode": "Postal code",
 					"city": "City",
 					"country": "Country",
-					"billingEmail": "Billing email"
+					"billingEmail": "Billing email",
+					"line2": "Address line 2",
+					"state": "State or province"
 				},
 				"errors": {
 					"customerType": "Choose a customer type.",
 					"companyName": "The company name is required.",
 					"country": "Choose the billing country.",
-					"line1": "The address is required.",
+					"line1": "The street is required.",
 					"postalCode": "The postal code is required.",
 					"city": "The city is required.",
 					"billingEmail": "Enter a valid email address."
@@ -387,6 +384,7 @@
 					"excl_tax": "{amount} excl. VAT",
 					"first_charge": "First charge {amount} on {date}, then every {interval}. Cancel before {date} and you pay nothing.",
 					"tax_on_stripe": "VAT is computed on Stripe's payment page from the billing country.",
+					"preview_failed": "This plan cannot be paid for right now. Try again later or contact us.",
 					"card_note": "Card entered on Stripe's secure payment page, never stored on our side.",
 					"confirm": "Continue to secure payment"
 				}

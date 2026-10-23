@@ -55,8 +55,11 @@ import {
   requestLocale,
 } from "../../utils/content-language";
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
-import { isWorkspaceOwner } from "../../workspaces/workspace-owner";
-import { syncCustomerPreferredLocale } from "../../stripe/customer-locale";
+import {
+  followOwnerLanguage,
+  syncCustomerPreferredLocale,
+} from "../../stripe/customer-locale";
+import { withStripeAvailability } from "../../stripe/availability";
 
 import {
   applyOwnerUpgrade,
@@ -253,7 +256,7 @@ export class SaasTenantPlanController extends Controller(
       tenantId,
       tenantSubscriptionModel,
     );
-    void this.followOwnerLanguage(tenantId, subscription, user);
+    void followOwnerLanguage(tenantId, subscription, user);
     const locale = requestLocale(language);
     const current = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
@@ -396,18 +399,20 @@ export class SaasTenantPlanController extends Controller(
         previewGuardedFreeChange(tenantId, target),
       );
     }
-    await syncCustomerPreferredLocale(
-      subscription?.stripeCustomerId,
-      user.language,
-    );
-    return previewPlanChange({
-      tenantId,
-      subscription,
-      currentPlan,
-      target,
-      billingInfo,
-      ownerEmail: user.email,
-      country: asQueryString(country),
+    return withStripeAvailability(async () => {
+      await syncCustomerPreferredLocale(
+        subscription?.stripeCustomerId,
+        user.language,
+      );
+      return previewPlanChange({
+        tenantId,
+        subscription,
+        currentPlan,
+        target,
+        billingInfo,
+        ownerEmail: user.email,
+        country: asQueryString(country),
+      });
     });
   }
 
@@ -472,26 +477,6 @@ export class SaasTenantPlanController extends Controller(
         subscription,
         tenantSubscriptionModel,
       }),
-    );
-  }
-
-  /**
-   * Billing is where an owner comes back after changing language: the Stripe
-   * customer follows it from then on, renewals included. A member's language
-   * is not the one the workspace's invoices are written in.
-   */
-  private async followOwnerLanguage(
-    tenantId: string,
-    subscription: TenantSubscription | undefined,
-    user: User,
-  ): Promise<void> {
-    if (!subscription?.stripeCustomerId) return;
-    if (!(await isWorkspaceOwner(user._id, tenantId).catch(() => false))) {
-      return;
-    }
-    await syncCustomerPreferredLocale(
-      subscription.stripeCustomerId,
-      user.language,
     );
   }
 

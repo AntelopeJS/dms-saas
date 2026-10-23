@@ -10,6 +10,8 @@
 				"editor_preview_description": "See the plan card as customers see it and its Stripe sync status while editing",
 				"migrations_attention": "Migrations needing attention",
 				"migrations_attention_description": "See the plan migrations waiting for an operator",
+				"migration_toolbar": "Migration live mode",
+				"migration_toolbar_description": "Pause or resume the live updates of a running migration and see when it was last read",
 				"migration_header": "Migration header",
 				"migration_header_description": "See where a plan migration stands and retry, export or close it",
 				"migration_totals": "Migration totals",
@@ -130,7 +132,7 @@
 					"on_sale": "Plans on sale",
 					"on_sale_detail": "{public} public · {sales} sales-led",
 					"workspaces": "Workspaces",
-					"workspaces_detail": "{paying} paying · {free} free · {trialing} in trial",
+					"workspaces_detail": "{paying} paying · {free} free · {trialing} in trial · {other} other",
 					"mrr": "Catalogue MRR",
 					"mrr_detail": "Normalised · yearly ÷ 12, seats counted",
 					"mrr_detail_other": "Normalised · plus {other}",
@@ -142,6 +144,8 @@
 					"public": "Public",
 					"hidden": "Hidden",
 					"not_on_sale": "Not on sale",
+					"not_on_stripe": "Not on Stripe",
+					"not_on_stripe_hint": "This plan has a price but no Stripe price yet: no workspace can subscribe to it until it syncs.",
 					"legacy": "Legacy",
 					"on_sale": "On sale",
 					"more": "More actions",
@@ -174,7 +178,10 @@
 				"limit_error": "A cap must be at least 1 member. For no cap, tick Unlimited.",
 				"notice": {
 					"price_changed": "A new Stripe price was created",
-					"price_changed_description": "New sign-ups pay the new price. Existing subscribers keep theirs until you migrate them."
+					"price_changed_description": "New sign-ups pay the new price. Existing subscribers keep theirs until you migrate them.",
+					"stripe_not_synced": "Plan saved, but not synced with Stripe",
+					"stripe_not_synced_not_configured": "Stripe is not configured: no workspace can subscribe to this paid plan until it is.",
+					"stripe_not_synced_out_of_sync": "Stripe did not take the change. It is retried the next time the plan is offered or when the server starts; until then the plan cannot be subscribed to at its new terms."
 				},
 				"section": {
 					"identity": "Identity",

@@ -29,6 +29,8 @@ import {
 } from "../../metrics/directory-summary";
 import { workspacesHeadline } from "../../metrics/headline-items";
 import { safeUpcomingInvoice } from "../../operator-actions/previews";
+import { withStripeAvailability } from "../../stripe/availability";
+import { isStripeConfigured } from "../../stripe/client";
 import { retrieveStripeCustomerBalance } from "../../stripe/customer-balance";
 import { stripeObjectUrl } from "../../stripe/dashboard-links";
 import {
@@ -223,8 +225,10 @@ export class SaasWorkspaceDetailController extends Controller(
   ): Promise<ItemsPayload<KeyValueListItem>> {
     const view = await loadWorkspaceOperatorView(tenantId);
     const customerId = view.subscription?.stripeCustomerId;
-    if (!customerId) return { items: [] };
-    const balance = await retrieveStripeCustomerBalance(customerId);
+    if (!customerId || !isStripeConfigured()) return { items: [] };
+    const balance = await withStripeAvailability(() =>
+      retrieveStripeCustomerBalance(customerId),
+    );
     if (balance.status !== "available") return { items: [] };
     const currency = (
       balance.currency ??

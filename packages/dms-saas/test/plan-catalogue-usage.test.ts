@@ -87,17 +87,18 @@ describe("catalogue usage", () => {
       row({ tenantId: "b", planId: "pro", status: "trialing" }),
       row({ tenantId: "c", planId: "pro", isComplimentary: true }),
       row({ tenantId: "d", planId: "business", seats: 4, members: 3 }),
-      row({ tenantId: "e", planId: "free" }),
+      row({ tenantId: "e", planId: "free", status: "free" }),
       row({ tenantId: "f", planId: "deleted-plan" }),
+      row({ tenantId: "g", planId: "pro", status: "cancelled" }),
     ],
   );
 
   it("counts paying, trialing and free workspaces per plan", () => {
     expect(usage.byPlan.get("pro")).toMatchObject({
-      workspaces: 3,
+      workspaces: 4,
       paying: 1,
       trialing: 1,
-      free: 1,
+      free: 0,
       mrr: 29,
     });
     expect(usage.byPlan.get("free")).toMatchObject({ free: 1, mrr: 0 });
@@ -126,6 +127,18 @@ describe("catalogue usage", () => {
   it("gives each plan its share of its currency's MRR", () => {
     expect(planMrrShare(usage, business)).toBeCloseTo(196 / 225);
     expect(planMrrShare(usage, free)).toBe(0);
+  });
+
+  it("counts free the workspaces the dashboard counts free: by billing state", () => {
+    // Complimentary access and a cancelled workspace bring no MRR, yet are
+    // not free: the dashboard files them under their own state.
+    expect(summariseCatalogue([pro, business, free], usage)).toMatchObject({
+      workspaces: 6,
+      paying: 2,
+      free: 1,
+      trialing: 1,
+      other: 2,
+    });
   });
 
   it("summarises the catalogue for the figures above it", () => {
@@ -167,6 +180,7 @@ describe("catalogue usage", () => {
       paying: 2,
       free: 1,
       trialing: 0,
+      other: 0,
       mrr: [
         { currency: "EUR", mrr: 225.5 },
         { currency: "USD", mrr: 49 },

@@ -35,7 +35,10 @@
         "title": "Paid invoices",
         "description": "Collected and credited, in the reporting currency",
         "collected": "Collected",
-        "credited": "Credited / refunded"
+        "credited": "Credited / refunded",
+        "collected_previous_period": "Collected, previous period",
+        "collected_previous_year": "Collected, previous year",
+        "collected_compared": "Collected, compared period"
       },
       "by_status": {
         "title": "Workspaces by status",
@@ -45,7 +48,7 @@
       "plans": {
         "title": "Plans by MRR",
         "subtitle": "Normalised MRR each plan brings",
-        "description": "No workspace · {price} | 1 workspace · {price} | {count} workspaces · {price}",
+        "description": "No paying workspace · {price} | 1 paying workspace · {price} | {count} paying workspaces · {price}",
         "empty": "No plan brings recurring revenue yet.",
         "open_catalogue": "Catalogue"
       },
@@ -519,6 +522,8 @@
       "workspaces": {
         "create": "Create workspace",
         "create_description": "Create a workspace for a customer and choose how it is paid",
+        "toolbar": "Dashboard toolbar",
+        "toolbar_description": "See when the dashboard figures were last read and read them again",
         "period": "Dashboard period",
         "period_description": "Choose the period the dashboard figures cover",
         "attention": "Needs attention",

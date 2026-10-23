@@ -23,7 +23,11 @@ import type {
   TenantSubscription,
 } from "../src/db";
 import { getWorkspaceDeletionOperationId } from "../src/workspaces/deletion";
-import { setRuntimeConfig } from "../src/config";
+import {
+  getRegistrationPaymentMethodPolicy,
+  setRuntimeConfig,
+} from "../src/config";
+import Stripe from "stripe";
 import type { DmsSaasConfig } from "../src/types";
 import {
   isWorkspaceProvisioningCommitted,
@@ -366,9 +370,11 @@ vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
   };
 });
 
+const stripeSetup = vi.hoisted(() => ({ isConfigured: true }));
+
 vi.mock("../src/stripe/client", () => ({
   getStripeClient: () => stripeFake,
-  isStripeConfigured: () => true,
+  isStripeConfigured: () => stripeSetup.isConfigured,
   initStripeClient: () => undefined,
   getStripeWebhookSecret: () => "whsec_test",
 }));
@@ -1009,6 +1015,7 @@ describe("registration card policy", () => {
   afterEach(() => {
     setRuntimeConfig({ stripe: STRIPE_CONFIG });
     modelFakes.BillingSettingsModel = uncappedBillingSettings;
+    stripeSetup.isConfigured = true;
   });
 
   it("defaults to requiring a card, as before the option existed", async () => {
@@ -1237,6 +1244,55 @@ describe("registration card policy", () => {
       body: "saas.errors.registration.payment_method_disabled",
     });
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("registers on the free plan without a card while Stripe is not configured", async () => {
+    applyPolicy("required");
+    stripeSetup.isConfigured = false;
+    const retrieve = vi.spyOn(stripeFake.paymentMethods, "retrieve");
+
+    const result = await buildController().register(cardlessBody());
+
+    expect(getRegistrationPaymentMethodPolicy()).toBe("none");
+    expect(retrieve).not.toHaveBeenCalled();
+    expect(world.stripeCustomers.size).toBe(0);
+    expect(subscriptionOf(result.tenantId)).toMatchObject({
+      planId: PLAN._id,
+      stripeCustomerId: null,
+    });
+  });
+
+  it("answers a handled 503 when Stripe refuses the key for a SetupIntent", async () => {
+    applyPolicy("required");
+    vi.spyOn(stripeFake.setupIntents, "create").mockRejectedValueOnce(
+      new Stripe.errors.StripeAuthenticationError({
+        message: "Invalid API Key provided: sk_test_*******lder",
+        type: "authentication_error",
+      }),
+    );
+
+    await expect(buildController().createSetupIntent()).rejects.toMatchObject({
+      status: 503,
+      body: "saas.errors.stripe.unavailable",
+    });
+  });
+
+  it("answers a handled 503 when registration reaches Stripe and it is down", async () => {
+    applyPolicy("required");
+    vi.spyOn(stripeFake.paymentMethods, "retrieve").mockRejectedValueOnce(
+      new Stripe.errors.StripeConnectionError({
+        message: "An error occurred with our connection to Stripe.",
+        type: "api_error",
+      }),
+    );
+
+    await expect(
+      buildController().register(buildRegisterBody()),
+    ).rejects.toMatchObject({
+      status: 503,
+      body: "saas.errors.stripe.unavailable",
+    });
+    expect(world.users.size).toBe(0);
   });
 
   it("rejects an unknown policy at configuration time", () => {

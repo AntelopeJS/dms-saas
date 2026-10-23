@@ -1,3 +1,4 @@
+export * from "./availability";
 export * from "./billing-mode";
 export * from "./client";
 export * from "./customer-billing";

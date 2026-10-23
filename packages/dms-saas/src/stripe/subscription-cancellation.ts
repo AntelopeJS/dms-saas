@@ -1,7 +1,7 @@
 import { Logging } from "@antelopejs/interface-core/logging";
 import type Stripe from "stripe";
 import { stripeSecondsToDate } from "../utils/time";
-import { getStripeReadClient } from "./client";
+import { getStripeReadClient, isStripeConfigured } from "./client";
 import { readSubscriptionPeriodEnd } from "./payload-shapes";
 
 const LOG_PREFIX = "[dms-saas:cancellation]";
@@ -25,13 +25,15 @@ export function readScheduledCancellation(
 /**
  * The scheduled cancellation of a subscription, read live so a cancellation
  * made in Stripe's portal shows as well. A Stripe outage hides the notice
- * rather than failing the billing page.
+ * rather than failing the billing page; without usable keys nothing is read
+ * nor logged, there being no live subscription to ask about.
  *
  * @param stripeSubscriptionId Subscription to read
  */
 export async function fetchScheduledCancellation(
   stripeSubscriptionId: string,
 ): Promise<Date | null> {
+  if (!isStripeConfigured()) return null;
   try {
     const subscription =
       await getStripeReadClient().subscriptions.retrieve(stripeSubscriptionId);

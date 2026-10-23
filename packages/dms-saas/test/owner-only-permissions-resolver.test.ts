@@ -30,7 +30,7 @@ const MEMBER_GRANTS = [
 
 function resolve(current: string[], userId = "member") {
   const registration = harness.register.mock.calls[0][0];
-  return registration.resolver(userId, "acme", new Set(current));
+  return registration.resolver(userId, "acme", new Set(current), {});
 }
 
 beforeEach(() => {
@@ -61,6 +61,42 @@ describe("owner-only surfaces", () => {
     expect(await resolve(["*", "data-export"])).toEqual(
       new Set(["*", "data-export"]),
     );
+  });
+
+  describe("in a role preview", () => {
+    function preview(current: string[], userId: string) {
+      const registration = harness.register.mock.calls[0][0];
+      return registration.resolver(userId, "acme", new Set(current), {
+        preview: { rolePermissions: new Set(current) },
+      });
+    }
+
+    it("withholds the owner-only surfaces, even for an owner's id", async () => {
+      expect(await preview(MEMBER_GRANTS, "owner")).toEqual(
+        new Set([
+          "general",
+          "general.identity",
+          "general.dangerZone.actions",
+          "data-export.request",
+        ]),
+      );
+    });
+
+    it("leaves a wildcard role untouched", async () => {
+      expect(await preview(["*"], "member")).toEqual(new Set(["*"]));
+    });
+
+    it("leaves an owner's real call with an empty context untouched", async () => {
+      const registration = harness.register.mock.calls[0][0];
+      expect(
+        await registration.resolver(
+          "owner",
+          "acme",
+          new Set(MEMBER_GRANTS),
+          {},
+        ),
+      ).toEqual(new Set(MEMBER_GRANTS));
+    });
   });
 
   it("runs after the plan intersection", () => {

@@ -19,7 +19,12 @@ import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthRawUser } from "@antelopejs/interface-dms/auth";
 import { type User } from "@antelopejs/interface-dms/auth/db";
 import type { StatGroupItem } from "@antelopejs/interface-dms/base";
-import { type CardSetupIntent, createCardSetupIntent } from "../../stripe";
+import {
+  assertStripeConfigured,
+  type CardSetupIntent,
+  createCardSetupIntent,
+  withStripeAvailability,
+} from "../../stripe";
 import { assertAdmissionOpen } from "../../config";
 import {
   CONTENT_LANGUAGE_HEADER,
@@ -198,7 +203,8 @@ export class SaasWorkspacesController extends Controller(
   @Get("/setup-intent")
   async setupIntent(@AuthRawUser() user: User): Promise<CardSetupIntent> {
     assertAdmissionOpen(user.owner);
-    return createCardSetupIntent();
+    assertStripeConfigured();
+    return withStripeAvailability(createCardSetupIntent);
   }
 
   /**
@@ -213,10 +219,12 @@ export class SaasWorkspacesController extends Controller(
     @JSONBody() body: WorkspaceCreateBody,
   ): Promise<CreatedWorkspace> {
     assertAdmissionOpen(user.owner);
-    const card = await resolveCardDetails(body.paymentMethodId);
-    return withCardHold(card.fingerprint, async () => {
-      const input = await prepareSelfServeCreation(user, ctx, body, card);
-      return provisionSelfServeWorkspace(user, input);
+    return withStripeAvailability(async () => {
+      const card = await resolveCardDetails(body.paymentMethodId);
+      return withCardHold(card.fingerprint, async () => {
+        const input = await prepareSelfServeCreation(user, ctx, body, card);
+        return provisionSelfServeWorkspace(user, input);
+      });
     });
   }
 
