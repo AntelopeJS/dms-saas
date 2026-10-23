@@ -54,12 +54,7 @@ function plan(id: string, permissions: string[], parent: string | null): Plan {
 
 function resolve(current: string[], tenantId = "tenant-a") {
   const registration = harness.register.mock.calls[0][0];
-  return registration.resolver(
-    "user",
-    tenantId,
-    new Set(current),
-    {},
-  );
+  return registration.resolver("user", tenantId, new Set(current), {});
 }
 
 beforeEach(() => {
@@ -141,9 +136,9 @@ describe("plan permissions policy", () => {
     plans.set("child", plan("child", [], null));
     const current = new Set(["excluded"]);
     const registration = harness.register.mock.calls[0][0];
-    expect(await registration.resolver("user", "tenant-a", current, {})).toEqual(
-      new Set(),
-    );
+    expect(
+      await registration.resolver("user", "tenant-a", current, {}),
+    ).toEqual(new Set());
     expect(current).toEqual(new Set(["excluded"]));
   });
 
