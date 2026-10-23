@@ -40,6 +40,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 - Seeding plans from code: write name, price, currency, interval, billing mode; leave `paymentProviderRefs` to dms-saas.
   `name`, `description` and `borderLabel` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys; Stripe gets the `en` text.
 - Features: `displayName` / `tooltip` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys.
+- Plan `description` and `borderLabel` may be `$i18n.key` (translated on every screen); `name` stays plain text.
 
 ## Extension points (`@antelopejs/interface-dms-saas`)
 

@@ -54,7 +54,7 @@ const SYNC_TONES: Record<SyncState, 'success' | 'warning' | 'neutral'> = {
 	synced: 'success',
 	out_of_sync: 'warning',
 	off_stripe: 'neutral',
-	not_configured: 'neutral',
+	not_configured: 'warning',
 }
 
 const props = defineProps<{
