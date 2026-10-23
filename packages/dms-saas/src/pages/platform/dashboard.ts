@@ -9,7 +9,7 @@ import {
   KeyValueList,
   KpiCard,
   NavCardGrid,
-  PeriodSelector,
+  pageToolbar,
   StatGroup,
   Tab,
   TopListCard,
@@ -27,6 +27,8 @@ import {
 
 const API = "/api/saas/dashboard";
 const PERIOD_SCOPE = "saas-dashboard";
+/** The module's pages with a period share the last one chosen. */
+const PERIOD_REMEMBER_KEY = "saas";
 const K = "$saas.dashboard";
 const HEADLINE_FIGURES = 3;
 const ATTENTION_QUEUES = 4;
@@ -67,16 +69,20 @@ export class SaasDashboardController extends PageController(
   },
   DefaultLayout({ fullWidth: true, headerActions: [CREATE_WORKSPACE_BUTTON] }),
 ) {
-  static period = PeriodSelector({
-    id: PERIOD_SCOPE,
-    presets: ["last-30-days", "last-90-days", "ytd"],
-    defaultPreset: "last-30-days",
-    comparisons: ["none", "previous-period"],
-    defaultComparison: "previous-period",
-    variant: "segmented",
-    align: "right",
-    size: "sm",
-  }).meta(permissionMeta("period", "i-ph-calendar"));
+  // No `live`: the bar shows when the figures were read and a refresh button,
+  // then the period, whose comparisons the toolbar offers as a menu. The
+  // selector keeps its roles editor name through `meta`.
+  static toolbar = pageToolbar({
+    live: false,
+    period: {
+      id: PERIOD_SCOPE,
+      rememberKey: PERIOD_REMEMBER_KEY,
+      presets: ["last-30-days", "last-90-days", "ytd"],
+      defaultPreset: "last-30-days",
+      comparisons: ["previous-period", "previous-year", "none"],
+      meta: permissionMeta("period", "i-ph-calendar"),
+    },
+  }).meta(permissionMeta("toolbar", "i-ph-sliders-horizontal"));
 
   static attention = NavCardGrid({
     title: `${K}.attention.title`,
@@ -142,12 +148,14 @@ export class SaasDashboardController extends PageController(
               // Credits are negative: stacked, they hang under the day's
               // collected bar, which then takes the whole column instead of
               // half of it. `columnWidth` is a fixed pixel width, too wide
-              // for the 90 daily bars of a quarter.
+              // for the 90 daily bars of a quarter. The compared window's
+              // collected money is a dashed line over the bars.
               chart: ChartColumn({
                 xaxisType: "datetime",
                 stacked: true,
                 showLegend: true,
                 color: ["success", "info"],
+                comparisonStyle: "dashed",
               }),
             }),
           ),

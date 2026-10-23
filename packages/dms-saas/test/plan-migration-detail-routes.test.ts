@@ -395,6 +395,18 @@ describe("the migration dialogs", () => {
 });
 
 describe("the migration detail page", () => {
+  it("opens on a live bar with no period", async () => {
+    const { SaasPlanMigrationDetailController: Page } =
+      await import("../src/pages/platform/plans/migrations");
+    const toolbar = await Page.toolbar.serialize();
+
+    expect(toolbar.componentName).toBe("dms-page-toolbar-block");
+    expect(toolbar.children.map((child) => child.id)).toEqual(["live"]);
+    expect(toolbar.children[0]?.component.componentName).toBe(
+      "dms-live-toggle-block",
+    );
+  });
+
   it("is made of stock blocks reading the routes, refreshed by the migration topic", async () => {
     const { SaasPlanMigrationDetailController: Page } =
       await import("../src/pages/platform/plans/migrations");

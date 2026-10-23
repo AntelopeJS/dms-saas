@@ -10,6 +10,8 @@
 				"editor_preview_description": "See the plan card as customers see it and its Stripe sync status while editing",
 				"migrations_attention": "Migrations needing attention",
 				"migrations_attention_description": "See the plan migrations waiting for an operator",
+				"migration_toolbar": "Migration live mode",
+				"migration_toolbar_description": "Pause or resume the live updates of a running migration and see when it was last read",
 				"migration_header": "Migration header",
 				"migration_header_description": "See where a plan migration stands and retry, export or close it",
 				"migration_totals": "Migration totals",

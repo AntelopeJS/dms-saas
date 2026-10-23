@@ -35,7 +35,10 @@
         "title": "Factures payées",
         "description": "Encaissé et crédité, dans la devise de reporting",
         "collected": "Encaissé",
-        "credited": "Crédité / remboursé"
+        "credited": "Crédité / remboursé",
+        "collected_previous_period": "Encaissé, période précédente",
+        "collected_previous_year": "Encaissé, année précédente",
+        "collected_compared": "Encaissé, période comparée"
       },
       "by_status": {
         "title": "Espaces par statut",
@@ -519,6 +522,8 @@
       "workspaces": {
         "create": "Créer un espace",
         "create_description": "Créer un espace pour un client et choisir comment il est payé",
+        "toolbar": "Barre du tableau de bord",
+        "toolbar_description": "Voir quand les chiffres du tableau de bord ont été lus et les relire",
         "period": "Période du tableau de bord",
         "period_description": "Choisir la période couverte par les chiffres du tableau de bord",
         "attention": "À traiter",

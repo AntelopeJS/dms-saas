@@ -25,6 +25,12 @@ const RETIRE_MODAL_SIZE = "3xl";
 const CATALOGUE_STAT_COUNT = 4;
 // The cards draw a selection checkbox exactly when the grid does.
 const HAS_SELECTION = false;
+// A catalogue sells a handful of plans: two rows of four cards at 1440 px,
+// so the placeholder grid draws as many rows as the loaded one.
+const PAGE_SIZE = 8;
+// A plan card at 1440 px measures 542 to 614 px with its feature list: the
+// placeholder takes the middle so the footer barely moves when cards land.
+const PLAN_CARD_SKELETON_HEIGHT = "580px";
 
 const retirePlanModal = CustomComponent("DmsSaasRetirePlanModal").meta({
   name: `${PERMISSIONS}.retire_plan`,
@@ -170,6 +176,7 @@ export class SaasPlansController extends PageController(
   static table = TableView(plansDataAPI, {
     labelKey: "name",
     searchPlaceholder: `${TEXTS}.search`,
+    pageSize: PAGE_SIZE,
     defaultSort: { field: "order" },
     reorder: { field: "order" },
     tabs: [
@@ -240,6 +247,7 @@ export class SaasPlansController extends PageController(
       component: CustomComponent("DmsSaasPlanCard").options({
         selectable: HAS_SELECTION,
       }),
+      skeletonHeight: PLAN_CARD_SKELETON_HEIGHT,
     },
   });
 }
