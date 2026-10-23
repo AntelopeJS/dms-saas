@@ -4,6 +4,12 @@
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.4...v0.8.0)
 
+### Upgrade notes
+
+- Runs on `@antelopejs/dms` 0.10 (`@antelopejs/interface-dms >=0.8.0`, `@antelopejs/interface-data-api >=0.3.0`) and implements `@antelopejs/interface-dms-saas` 0.6, whose plan texts are localized fields.
+- Block and permission ids: the platform dashboard's period selector moved into the page toolbar, from `<dashboard>.period` to `<dashboard>.toolbar.period`; the migration detail gains `<detail>.toolbar` and `<detail>.toolbar.live`. A custom operator role that granted `period` must be granted `toolbar` and `toolbar.period` again ([#112](https://github.com/AntelopeJS/dms-saas/pull/112)).
+- i18n keys removed: `saas.tenant_billing.billing_info.address_line1`, `postal_code`, `city`, `country` and `country_placeholder` (the billing address uses the DMS address input, [#124](https://github.com/AntelopeJS/dms-saas/pull/124)). A project that overrides them can drop its overrides.
+
 ### 🚀 Enhancements
 
 - **config:** Default allowedRedirectHosts to the dashboard's host ([#129](https://github.com/AntelopeJS/dms-saas/pull/129))
