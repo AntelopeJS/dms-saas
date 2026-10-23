@@ -16,17 +16,20 @@ interface PlanAccess {
 	extraFeatures: Record<string, unknown>
 }
 
+/** A plan text as the editor holds it: one value per locale. */
+type PlanText = Record<string, string>
+
 /** The plan fields the preview reads, saved or as typed. */
 interface PlanDraft {
-	name?: string
-	description?: string
+	name?: PlanText | null
+	description?: PlanText | null
 	price?: number
 	currency?: string
 	interval?: 'month' | 'year'
 	billingMode?: 'flat' | 'seat'
 	trialDays?: number
 	maxMembers?: number
-	borderLabel?: string | null
+	borderLabel?: PlanText | null
 	borderColor?: string | null
 	inheritance?: PlanAccess | null
 }
@@ -66,8 +69,10 @@ const EMPTY_CATALOG: PlanCatalog = {
 	newPlanPermissions: [],
 }
 
+// Locale the server reads a plan text in when the reader's has none.
+const PLAN_FALLBACK_LOCALE = 'en'
+
 const { t, locale } = useI18n()
-const planDescription = usePlanDescription()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
 const planId = computed(() => props.routeParams?.id)
@@ -99,6 +104,15 @@ const isLoading = computed(
 		(!planCatalog.data.value || reads.some((read) => read.pending.value)),
 )
 const draft = computed<PlanDraft>(() => live.value ?? saved.value ?? {})
+
+/** A plan text as the cards show it: the reader's locale, else the fallback one. */
+function textOf(value: PlanText | null | undefined): string {
+	return value?.[locale.value] || value?.[PLAN_FALLBACK_LOCALE] || ''
+}
+
+const name = computed(() => textOf(draft.value.name))
+const description = computed(() => textOf(draft.value.description))
+const badge = computed(() => textOf(draft.value.borderLabel))
 const currency = computed(() => draft.value.currency ?? 'EUR')
 const price = computed(() => Number(draft.value.price ?? 0))
 const interval = computed(() => draft.value.interval ?? 'month')
@@ -132,7 +146,7 @@ const terms = computed(() => {
 const cta = computed(() =>
 	trialDays.value > 0
 		? t('saas.catalog.editor.preview.start_trial')
-		: t('saas.catalog.editor.preview.choose', { name: draft.value.name || '' }),
+		: t('saas.catalog.editor.preview.choose', { name: name.value }),
 )
 
 const resolvedFeatures = computed(() => {
@@ -232,13 +246,13 @@ async function load(): Promise<void> {
 				v-else
 				class="border-default relative flex flex-col gap-3 rounded-xl border p-4"
 				:style="
-					draft.borderLabel
+					badge
 						? { borderColor: draft.borderColor || undefined }
 						: undefined
 				"
 			>
 				<UBadge
-					v-if="draft.borderLabel"
+					v-if="badge"
 					class="absolute -top-2.5 left-4"
 					size="sm"
 					icon="i-ph-star"
@@ -248,14 +262,14 @@ async function load(): Promise<void> {
 							: undefined
 					"
 				>
-					{{ draft.borderLabel }}
+					{{ badge }}
 				</UBadge>
 				<div>
 					<p class="text-highlighted text-lg font-semibold">
-						{{ draft.name || $t('saas.catalog.editor.preview.unnamed') }}
+						{{ name || $t('saas.catalog.editor.preview.unnamed') }}
 					</p>
-					<p v-if="draft.description" class="text-muted line-clamp-2 text-sm">
-						{{ planDescription(draft.description) }}
+					<p v-if="description" class="text-muted line-clamp-2 text-sm">
+						{{ description }}
 					</p>
 				</div>
 				<div>

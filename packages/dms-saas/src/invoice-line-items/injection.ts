@@ -8,9 +8,8 @@ import type {
   SkippedInvoiceLineItem,
   SkippedLineItemReason,
 } from "@antelopejs/interface-dms-saas/invoice-line-items";
-import { selectInvoiceLineItemsToCreate } from "@antelopejs/interface-dms-saas/invoice-line-items";
+import { normalizeInvoiceLineItemsResolution } from "@antelopejs/interface-dms-saas/invoice-line-items";
 import type Stripe from "stripe";
-import { getInvoiceLineItemsProviders } from "../implementations/dms-saas/invoice-line-items";
 import { getStripeClient } from "../stripe/client";
 import {
   readInvoiceSubscriptionId,
@@ -21,14 +20,13 @@ import { clipInvoiceUsageWindow } from "./billing-window";
 
 /** Stripe metadata key carrying the `<provider id>:<key>` of a usage line. */
 export const LINE_KEY_METADATA = "saasLineKey";
-const LINE_PROVIDER_METADATA = "saasLineProvider";
+/** Stripe metadata key carrying the provider id of a usage line. */
+export const LINE_PROVIDER_METADATA = "saasLineProvider";
 const LINE_QUANTITY_METADATA = "saasLineQuantity";
 const LINE_UNIT_METADATA = "saasLineUnit";
 const IDEMPOTENCY_KEY_PREFIX = "saas-invoice-line";
 const CYCLE_RENEWAL_BILLING_REASON = "subscription_cycle";
 const DRAFT_INVOICE_STATUS = "draft";
-const INVOICE_ITEMS_PAGE_SIZE = 100;
-const INVOICE_ITEMS_HARD_CAP = 250;
 const CREATE_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 250;
 const MS_PER_SECOND = 1000;
@@ -39,7 +37,7 @@ const REPORTED_SKIP_REASONS = new Set<SkippedLineItemReason>([
   "duplicate_key",
 ]);
 
-interface InvoiceInjectionTarget {
+export interface InvoiceInjectionTarget {
   customerId: string;
   context: InvoiceLineItemsContext;
 }
@@ -49,7 +47,8 @@ interface ProviderResolution {
   failures: number;
 }
 
-function canInjectIntoInvoice(invoice: Stripe.Invoice): boolean {
+/** A cycle renewal draft: the only invoice usage lines are injected into. */
+export function canInjectIntoInvoice(invoice: Stripe.Invoice): boolean {
   if (invoice.billing_reason !== CYCLE_RENEWAL_BILLING_REASON) return false;
   if (invoice.status === DRAFT_INVOICE_STATUS) return true;
   Logging.Warn(
@@ -66,7 +65,8 @@ function toStripeSeconds(date: Date): number {
   return Math.floor(date.getTime() / MS_PER_SECOND);
 }
 
-async function buildInjectionTarget(
+/** The clipped paid-usage window of an invoice, or null when nothing is billable. */
+export async function buildInjectionTarget(
   invoice: Stripe.Invoice,
   tenantId: string,
   customerId: string,
@@ -89,28 +89,24 @@ async function buildInjectionTarget(
   return context ? { customerId, context } : null;
 }
 
-async function fetchInjectedLineKeys(invoiceId: string): Promise<Set<string>> {
-  const stripe = getStripeClient();
-  const items = await stripe.invoiceItems
-    .list({ invoice: invoiceId, limit: INVOICE_ITEMS_PAGE_SIZE })
-    .autoPagingToArray({ limit: INVOICE_ITEMS_HARD_CAP });
-  const keys = items
-    .map((item) => item.metadata?.[LINE_KEY_METADATA])
-    .filter((key): key is string => typeof key === "string");
-  return new Set(keys);
-}
-
-/** Run one provider, turning a throw into a logged failure count. */
+/**
+ * Run one provider for a quote, turning a throw — or an answer other than
+ * `ready`, which a quote cannot wait for — into a logged failure count.
+ */
 export async function resolveProviderLineItems(
   provider: InvoiceLineItemsProvider,
   context: InvoiceLineItemsContext,
 ): Promise<ProviderResolution> {
   try {
-    const lineItems = await provider.resolve(context);
-    return {
-      lineItems: Array.isArray(lineItems) ? lineItems : [],
-      failures: 0,
-    };
+    const resolution = normalizeInvoiceLineItemsResolution(
+      await provider.resolve(context),
+    );
+    if (resolution.status === "ready")
+      return { lineItems: resolution.lines, failures: 0 };
+    Logging.Info(
+      `${LOG_PREFIX} provider '${provider.id}' is ${resolution.status} on invoice ${context.invoiceId}: ${resolution.reason}`,
+    );
+    return { lineItems: [], failures: 1 };
   } catch (error) {
     Logging.Error(
       `${LOG_PREFIX} provider '${provider.id}' failed on invoice ${context.invoiceId}`,
@@ -181,7 +177,8 @@ function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function createInvoiceLineItemWithRetries(
+/** Create one managed line on a draft, idempotent per invoice and line key. */
+export async function createInvoiceLineItemWithRetries(
   providerId: string,
   target: InvoiceInjectionTarget,
   prepared: PreparedInvoiceLineItem,
@@ -198,75 +195,5 @@ async function createInvoiceLineItemWithRetries(
       );
       await delay(RETRY_DELAY_MS);
     }
-  }
-}
-
-async function injectProviderLineItems(
-  provider: InvoiceLineItemsProvider,
-  target: InvoiceInjectionTarget,
-  injectedKeys: Set<string>,
-): Promise<number> {
-  const { context } = target;
-  const resolution = await resolveProviderLineItems(provider, context);
-  const selection = selectInvoiceLineItemsToCreate(
-    provider.id,
-    resolution.lineItems,
-    injectedKeys,
-  );
-  reportSkippedLineItems(provider.id, context.invoiceId, selection.skipped);
-  // A structurally unusable line is usage that will never be billed — a
-  // float-cents bug would otherwise underbill every cycle behind a green
-  // webhook. It counts as a failure so the event surfaces it; duplicates and
-  // zero amounts stay silent drops, as the contract documents.
-  const invalidLines = selection.skipped.filter(
-    (line) => line.reason === "invalid",
-  ).length;
-  let failures = resolution.failures + invalidLines;
-  for (const prepared of selection.accepted) {
-    try {
-      await createInvoiceLineItemWithRetries(provider.id, target, prepared);
-      injectedKeys.add(prepared.lineKey);
-    } catch (error) {
-      failures += 1;
-      Logging.Error(
-        `${LOG_PREFIX} could not invoice line '${prepared.lineKey}' on invoice ${context.invoiceId}`,
-        error,
-      );
-    }
-  }
-  return failures;
-}
-
-/**
- * Push the registered providers' lines onto a Stripe cycle renewal invoice
- * while it is still a draft, so they are billed on finalization.
- *
- * Runs only on `subscription_cycle` draft invoices: the first invoice of a
- * subscription and one-off invoices carry no closed usage period.
- *
- * Throws once every provider and every line has been attempted, so a partial
- * injection surfaces on the webhook event rather than silently underbilling
- * the cycle. The caller has already mirrored the invoice by then, and every
- * line is idempotent, so Stripe's redelivery cannot double-charge.
- */
-export async function injectProvidedInvoiceLineItems(
-  invoice: Stripe.Invoice,
-  tenantId: string,
-  customerId: string,
-): Promise<void> {
-  const providers = getInvoiceLineItemsProviders();
-  if (providers.length === 0) return;
-  if (!canInjectIntoInvoice(invoice)) return;
-  const target = await buildInjectionTarget(invoice, tenantId, customerId);
-  if (!target) return;
-  const injectedKeys = await fetchInjectedLineKeys(target.context.invoiceId);
-  let failures = 0;
-  for (const provider of providers) {
-    failures += await injectProviderLineItems(provider, target, injectedKeys);
-  }
-  if (failures > 0) {
-    throw new Error(
-      `${failures} usage line(s) could not be invoiced on ${target.context.invoiceId}`,
-    );
   }
 }

@@ -13,6 +13,7 @@ import type {
   TenantSubscriptionModel,
 } from "../../db";
 import { applyPlanDowngradeCleanup } from "../../workers";
+import { NO_SUBSCRIPTION_PERIOD } from "../../stripe/payload-shapes";
 import { closePaidUsagePeriods } from "../../workspaces/complimentary";
 import { canResubscribe } from "../../workspaces/first-payment";
 import { DELETION_REQUEST_CLEARED } from "../../workspaces/deletion-request";
@@ -44,7 +45,7 @@ function freeResumptionPatch(
     status: ACTIVE_STATUS,
     stripeSubscriptionId: null,
     stripeCheckoutSessionId: null,
-    currentPeriodEnd: null,
+    ...NO_SUBSCRIPTION_PERIOD,
     pendingPlanId: null,
     pendingPlanChangeAt: null,
     isComplimentary: false,

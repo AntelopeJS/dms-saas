@@ -31,8 +31,10 @@ import {
   type Plan,
   PlanModel,
   TenantBillingInfoModel,
+  type TenantSubscription,
   TenantSubscriptionModel,
 } from "../../db";
+import { isFreePlan } from "../../workspaces/free-plan";
 import { nextInvoice } from "../../pages/tenant/billing";
 import {
   composed,
@@ -51,6 +53,10 @@ const MASKED_DIGITS = "••••";
 const PAID_ON_KEY = "saas.tenant_billing.next_invoice.paid_on";
 const SUBSCRIPTION_LINE_KEY =
   "saas.tenant_billing.next_invoice.subscription_line";
+const PAID_UNTIL_KEY = "saas.tenant_billing.next_invoice.paid_until";
+const SWITCH_ON_KEY = "saas.tenant_billing.next_invoice.switch_on";
+const SWITCH_FREE_DETAIL_KEY =
+  "saas.tenant_billing.next_invoice.switch_free_detail";
 
 /**
  * The rows of the card, plus the figures the trial notice reads. An empty
@@ -61,6 +67,14 @@ export interface NextInvoiceRows {
   totalMinorUnits: number | null;
   currency: string | null;
   billingDate: string | null;
+}
+
+/** A plan change scheduled for the renewal, as the card announces it. */
+export interface PlanSwitch {
+  currentPlanName: string;
+  nextPlanName: string;
+  isNextPlanFree: boolean;
+  at: Date;
 }
 
 /** What the rows are written from besides the preview itself. */
@@ -218,6 +232,61 @@ export function toNextInvoiceRows(
   };
 }
 
+function switchRow(planSwitch: PlanSwitch): KeyValueListItem {
+  const plan = planSwitch.nextPlanName;
+  return {
+    label: composed(SWITCH_ON_KEY, { plan }),
+    value: planSwitch.at.toISOString(),
+    type: "date",
+    tone: "warning",
+    detail: planSwitch.isNextPlanFree
+      ? composed(SWITCH_FREE_DETAIL_KEY, { plan })
+      : undefined,
+  };
+}
+
+/**
+ * The card of a workspace whose plan changes at the renewal. Stripe prices no
+ * renewal for a paid plan that ends on a free one, so the card says until
+ * when the current plan is paid instead of claiming nothing is running; a
+ * priced invoice keeps its rows, with the switch after its total.
+ */
+export function withPlanSwitch(
+  rows: NextInvoiceRows,
+  planSwitch: PlanSwitch,
+  context: NextInvoiceContext,
+): NextInvoiceRows {
+  if (rows.items.length > 0) {
+    const contextStart = rows.items.findIndex(
+      (row) => row.label === `${KEY_PREFIX}.total`,
+    );
+    const at = contextStart < 0 ? rows.items.length : contextStart + 1;
+    return {
+      ...rows,
+      items: [
+        ...rows.items.slice(0, at),
+        switchRow(planSwitch),
+        ...rows.items.slice(at),
+      ],
+    };
+  }
+  const at = planSwitch.at.toISOString();
+  return {
+    items: [
+      {
+        label: composed(PAID_UNTIL_KEY, { plan: planSwitch.currentPlanName }),
+        value: at,
+        type: "date",
+      },
+      switchRow(planSwitch),
+      ...contextRows(context),
+    ],
+    totalMinorUnits: null,
+    currency: null,
+    billingDate: at,
+  };
+}
+
 /** The most recent invoice the customer paid. */
 export function latestPaidInvoice(invoices: Invoice[]): Invoice | null {
   return invoices
@@ -242,7 +311,29 @@ export function planNamesByProduct(plans: Plan[]): Map<string, string> {
   );
 }
 
-async function loadContext(tenantId: string): Promise<NextInvoiceContext> {
+interface LoadedContext {
+  context: NextInvoiceContext;
+  planSwitch: PlanSwitch | null;
+}
+
+function scheduledSwitch(
+  subscription: TenantSubscription | undefined,
+  plans: Plan[],
+): PlanSwitch | null {
+  const { planId, pendingPlanId, pendingPlanChangeAt } = subscription ?? {};
+  if (!pendingPlanId || !pendingPlanChangeAt) return null;
+  const current = plans.find((plan) => plan._id === planId);
+  const next = plans.find((plan) => plan._id === pendingPlanId);
+  if (!current || !next) return null;
+  return {
+    currentPlanName: current.name,
+    nextPlanName: next.name,
+    isNextPlanFree: isFreePlan(next),
+    at: new Date(pendingPlanChangeAt),
+  };
+}
+
+async function loadContext(tenantId: string): Promise<LoadedContext> {
   const [subscription, billingInfo, invoices, plans] = await Promise.all([
     GetModel(TenantSubscriptionModel, tenantId).findOne(),
     GetModel(TenantBillingInfoModel, tenantId).findOne(),
@@ -253,10 +344,13 @@ async function loadContext(tenantId: string): Promise<NextInvoiceContext> {
     ? await fetchDefaultPaymentMethod(subscription.stripeCustomerId)
     : null;
   return {
-    paymentMethod,
-    billingEmail: billingInfo?.billingEmail ?? null,
-    lastPayment: latestPaidInvoice(invoices),
-    planNames: planNamesByProduct(plans),
+    context: {
+      paymentMethod,
+      billingEmail: billingInfo?.billingEmail ?? null,
+      lastPayment: latestPaidInvoice(invoices),
+      planNames: planNamesByProduct(plans),
+    },
+    planSwitch: scheduledSwitch(subscription, plans),
   };
 }
 
@@ -275,14 +369,17 @@ export class SaasTenantUpcomingInvoiceController extends Controller(
   ): Promise<NextInvoiceRows> {
     const tenantId = getRequestTenantId(ctx);
     const preview = await getUpcomingInvoicePreview(tenantId);
-    if (preview.status === "absent") return NOTHING_TO_INVOICE;
     if (preview.status === "unavailable") {
       throw new HTTPResult(
         HTTP_SERVICE_UNAVAILABLE,
         "saas.errors.billing.preview_unavailable",
       );
     }
-    const context = await loadContext(tenantId);
-    return toNextInvoiceRows(preview, context);
+    const { context, planSwitch } = await loadContext(tenantId);
+    const rows =
+      preview.status === "absent"
+        ? NOTHING_TO_INVOICE
+        : toNextInvoiceRows(preview, context);
+    return planSwitch ? withPlanSwitch(rows, planSwitch, context) : rows;
   }
 }

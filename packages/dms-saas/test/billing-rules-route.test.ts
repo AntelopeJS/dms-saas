@@ -6,6 +6,7 @@ import type {
   Plan,
   PlanModel,
 } from "../src/db";
+import { planRow } from "./helpers/plan-row";
 
 const harness = vi.hoisted(() => ({
   isStripeConfigured: vi.fn(() => true),
@@ -46,9 +47,9 @@ function memoryModel(initial?: Row) {
   };
 }
 
-function syncedPlan(taxCode: string): Plan {
-  return {
-    _id: "pro",
+function syncedPlan(taxCode: string, id = "pro"): Plan {
+  return planRow({
+    _id: id,
     name: "Pro",
     description: "",
     price: 29,
@@ -68,7 +69,7 @@ function syncedPlan(taxCode: string): Plan {
         },
       },
     },
-  } as unknown as Plan;
+  } as Partial<Plan>);
 }
 
 let settings: ReturnType<typeof memoryModel>;
@@ -86,8 +87,8 @@ beforeEach(() => {
   controller.planModel = {
     findActiveNotDeleted: async () => [
       syncedPlan(TAX_CODE),
-      { ...syncedPlan("txcd_99999999"), _id: "team" },
-      { _id: "free", price: 0, paymentProviderRefs: {} },
+      syncedPlan("txcd_99999999", "team"),
+      planRow({ _id: "free", price: 0, paymentProviderRefs: {} }),
     ],
   } as unknown as PlanModel;
   harness.isStripeConfigured.mockReturnValue(true);

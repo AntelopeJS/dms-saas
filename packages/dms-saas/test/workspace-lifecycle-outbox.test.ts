@@ -202,6 +202,34 @@ beforeEach(() => {
 });
 
 describe("workspace lifecycle outbox", () => {
+  it("preserves guarded provenance after receipt loss and rejects reassignment", async () => {
+    const consume = vi.fn(
+      async (
+        _message: workspaceLifecycleInterface.WorkspaceLifecycleMessage,
+      ) => ({ receiptId: "receipt" }),
+    );
+    registerConsumer("guarded.consumer", consume, ["reactivation_requested"]);
+    const message: workspaceLifecycleInterface.WorkspaceLifecycleMessage = {
+      tenantId: "tenant-123",
+      operationId: "delivery",
+      planChangeOperationId: "downgrade-root",
+      transition: "reactivation_requested",
+      requestedAt: new Date(),
+    };
+    harness.failReceiptConsumer = "guarded.consumer";
+    await expect(dispatchWorkspaceLifecycle(message)).rejects.toThrow();
+    await reconcileWorkspaceLifecycleDeliveries();
+    expect(consume).toHaveBeenCalledTimes(2);
+    expect(consume.mock.calls[0][0]).toEqual(message);
+    expect(consume.mock.calls[1][0]).toEqual(message);
+    await expect(
+      dispatchWorkspaceLifecycle({
+        ...message,
+        planChangeOperationId: "different-root",
+      }),
+    ).rejects.toThrow("conflicting content");
+  });
+
   it("delivers once across concurrent reconcilers and skips a durable receipt on later reconciliation", async () => {
     const effects = new Set<string>();
     const consume = vi.fn(

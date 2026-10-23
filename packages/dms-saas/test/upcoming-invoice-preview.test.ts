@@ -267,10 +267,10 @@ function registerProvider(
   id: string,
   resolve: (context: InvoiceLineItemsContext) => unknown,
 ): void {
-  lineItemsRegistry.RegisterInvoiceLineItemsProvider.register(
+  lineItemsRegistry.RegisterInvoiceLineItemsProvider.register(id, {
     id,
-    resolve as never,
-  );
+    resolve: resolve as never,
+  });
 }
 
 beforeAll(async () => {
