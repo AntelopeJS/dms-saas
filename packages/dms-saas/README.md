@@ -64,8 +64,8 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 
 | Package | Version |
 | --- | --- |
-| `@antelopejs/dms` | `>=0.9.6 <1.0.0` |
-| `@antelopejs/interface-dms` | `>=0.7.4 <1.0.0` |
+| `@antelopejs/dms` | `>=0.10.0 <1.0.0` |
+| `@antelopejs/interface-dms` | `>=0.8.0 <1.0.0` |
 | `@antelopejs/dms-frontend` (renderer) | `>=0.6.0 <0.7.0` |
 | `@antelopejs/interface-dms-saas` | `>=0.5.1 <0.6.0` |
 | Stripe API version | `2026-08-26.dahlia` |
