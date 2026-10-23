@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { TenantSubscription } from "../src/db";
 import {
   activatePaidUsage,
@@ -8,6 +8,19 @@ import {
   isComplimentarySubscription,
 } from "../src/workspaces/complimentary";
 import { clipInvoiceUsageWindow } from "../src/invoice-line-items/billing-window";
+import { GetTenantBillingPeriod } from "../src/implementations/dms-saas/billing";
+
+const stored = vi.hoisted(() => ({
+  subscription: undefined as unknown,
+}));
+
+vi.mock(
+  "@antelopejs/interface-database-decorators",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    GetModel: () => ({ findOne: async () => stored.subscription }),
+  }),
+);
 
 const CREATED = new Date("2026-01-01T00:00:00Z");
 const EXPIRED = new Date("2026-02-05T12:34:00Z");
@@ -74,6 +87,44 @@ describe("complimentary admission and recovery", () => {
 });
 
 describe("paid usage coverage", () => {
+  it("ends confirmed downgrade coverage at the deadline before reconciliation", () => {
+    const subscription = gift({
+      isComplimentary: false,
+      stripeSubscriptionId: "paid",
+      paidUsagePeriods: [
+        { stripeSubscriptionId: "paid", start: ACTIVATED, end: null },
+      ],
+      guardedPlanChange: {
+        operationId: "downgrade",
+        policyName: "inventory",
+        targetPlanId: "free",
+        stripeSubscriptionId: "paid",
+        requestedAt: ACTIVATED,
+        effectiveAt: REGIFTED,
+        barrierId: "barrier",
+        phase: "scheduled",
+        incompatibilities: [],
+      },
+    });
+    expect(clipInvoiceUsageWindow(FEBRUARY, subscription, "paid")).toEqual({
+      ...FEBRUARY,
+      periodStart: ACTIVATED,
+      periodEnd: REGIFTED,
+    });
+    expect(
+      clipInvoiceUsageWindow(
+        { ...FEBRUARY, periodStart: REGIFTED },
+        subscription,
+        "paid",
+      ),
+    ).toBeNull();
+    subscription.guardedPlanChange!.phase = "preparing";
+    expect(clipInvoiceUsageWindow(FEBRUARY, subscription, "paid")).toEqual({
+      ...FEBRUARY,
+      periodStart: ACTIVATED,
+    });
+  });
+
   it("waives gift and grace usage even after checkout attaches a customer", () => {
     expect(
       clipInvoiceUsageWindow(FEBRUARY, gift({ status: "past_due" }), "paid"),
@@ -144,5 +195,62 @@ describe("paid usage coverage", () => {
       stripeSubscriptionId: "uncovered",
     });
     expect(clipInvoiceUsageWindow(FEBRUARY, uncovered, "uncovered")).toBeNull();
+  });
+});
+
+describe("GetTenantBillingPeriod", () => {
+  const PERIOD_START = new Date("2026-02-01T08:00:00Z");
+  const PERIOD_END = new Date("2026-03-01T08:00:00Z");
+  const paid = (overrides: Partial<TenantSubscription> = {}) =>
+    gift({
+      isComplimentary: false,
+      stripeSubscriptionId: "paid",
+      currentPeriodStart: PERIOD_START,
+      currentPeriodEnd: PERIOD_END,
+      paidUsagePeriods: [
+        { stripeSubscriptionId: "paid", start: ACTIVATED, end: null },
+      ],
+      ...overrides,
+    });
+
+  it("starts the current period when its paid usage started", async () => {
+    stored.subscription = paid();
+    expect(await GetTenantBillingPeriod("tenant")).toEqual({
+      start: ACTIVATED,
+      end: PERIOD_END,
+    });
+  });
+
+  it("ends the current period at a confirmed downgrade", async () => {
+    stored.subscription = paid({
+      paidUsagePeriods: [
+        { stripeSubscriptionId: "paid", start: CREATED, end: null },
+      ],
+      guardedPlanChange: {
+        operationId: "downgrade",
+        policyName: "inventory",
+        targetPlanId: "free",
+        stripeSubscriptionId: "paid",
+        requestedAt: ACTIVATED,
+        effectiveAt: REGIFTED,
+        barrierId: "barrier",
+        phase: "scheduled",
+        incompatibilities: [],
+      },
+    });
+    expect(await GetTenantBillingPeriod("tenant")).toEqual({
+      start: PERIOD_START,
+      end: REGIFTED,
+    });
+  });
+
+  it.each([
+    ["complimentary", () => paid({ isComplimentary: true })],
+    ["free", () => paid({ stripeSubscriptionId: null })],
+    ["not yet recorded", () => paid({ currentPeriodStart: null })],
+    ["missing", () => undefined],
+  ])("is null for a %s subscription", async (_label, subscription) => {
+    stored.subscription = subscription();
+    expect(await GetTenantBillingPeriod("tenant")).toBeNull();
   });
 });

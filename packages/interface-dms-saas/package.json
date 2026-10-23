@@ -1,6 +1,6 @@
 {
   "name": "@antelopejs/interface-dms-saas",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "AntelopeJS interface for the DMS SaaS module: billing, plans, registration, workspace pages and lifecycle extension points.",
   "keywords": [
     "antelopejs",
@@ -70,8 +70,8 @@
     "prepack": "pnpm run build"
   },
   "dependencies": {
-    "@antelopejs/interface-data-api": ">=0.2.2 <1.0.0",
-    "@antelopejs/interface-dms": ">=0.7.2 <1.0.0"
+    "@antelopejs/interface-data-api": ">=0.3.0 <1.0.0",
+    "@antelopejs/interface-dms": ">=0.8.0 <1.0.0"
   },
   "devDependencies": {
     "@antelopejs/interface-core": ">=0.2.4 <1.0.0",

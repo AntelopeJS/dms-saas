@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { type FunctionalComponent, computed, resolveComponent } from 'vue'
+import {
+	type FunctionalComponent,
+	computed,
+	ref,
+	resolveComponent,
+	watch,
+} from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
-
-type AddressField = Extract<
-	BillingIdentityField,
-	'line1' | 'postalCode' | 'city'
->
-
-interface AddressFieldRow {
-	id: AddressField
-	/** Key of the label, under the billing info texts. */
-	label: string
-	autocomplete: string
-}
 
 /** The props of a group: a titled row of the card, or a stretch of rows. */
 interface GroupBindings {
@@ -55,25 +49,23 @@ const VAT_BADGE_TONES: Record<VatVerificationStatus, VatBadgeTone> = {
 	unverified: 'warning',
 }
 const KEY_PREFIX = 'saas.tenant_billing.billing_info'
-const STREET_FIELD: AddressFieldRow = {
-	id: 'line1',
-	label: 'address_line1',
-	autocomplete: 'address-line1',
-}
-const LOCALITY_FIELDS: AddressFieldRow[] = [
-	{ id: 'postalCode', label: 'postal_code', autocomplete: 'postal-code' },
-	{ id: 'city', label: 'city', autocomplete: 'address-level2' },
+/** The required fields the address input holds, in its order. */
+const ADDRESS_FIELDS: BillingIdentityField[] = [
+	'line1',
+	'postalCode',
+	'city',
+	'country',
 ]
+/** The DMS address input's street search (its default geocoder). */
+const ADDRESS_AUTOCOMPLETE = { enabled: true }
 // Compact, the groups follow each other as one list of rows: a hairline
 // above each group but the first, as between its rows.
 const COMPACT_GROUP_CLASS = 'border-muted border-t first:border-t-0'
 
 // Side by side once the row has room, as the settings design pairs fields
-// (company name and VAT number; postal code, city and country).
+// (company name and VAT number).
 const CLUSTER_CLASS = '@container'
 const PAIR_GRID_CLASS = 'grid gap-3 @min-[420px]:grid-cols-2'
-const TRIPLE_GRID_CLASS =
-	'grid gap-3 @min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.4fr)]'
 
 // Literal, so the build resolves the DMS field row at compile time.
 const DmsFieldRowComponent = resolveComponent('DmsFieldRow')
@@ -90,21 +82,54 @@ const clusterWrapper = computed(() =>
 	props.sectioned ? 'div' : SlotPassthrough,
 )
 
-const { countryItems } = useBillingCountries()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const isBusiness = computed(() => draft.value.customerType === 'business')
-const countryLabel = computed(
-	() =>
-		countryItems.value.find((item) => item.value === draft.value.country)
-			?.label ?? '',
+const countryLabel = computed(() =>
+	draft.value.country
+		? formatBillingCountry(draft.value.country, locale.value)
+		: '',
 )
+
+// The address input edits its own value, the street split in parts; the
+// draft keeps the stored street line. Its value is read back from the draft
+// only when the draft changed from elsewhere (loaded, discarded): re-split
+// as the user types, a number typed in the street box would jump to the
+// number box under the cursor.
+const address = ref<AddressInputValue>(toAddressInputValue(draft.value))
+
+function hasDraftAddress(next: BillingAddressDraft): boolean {
+	return (Object.keys(next) as (keyof BillingAddressDraft)[]).every(
+		(field) => next[field] === draft.value[field],
+	)
+}
+
+function updateAddress(value: AddressInputValue | null | undefined): void {
+	if (!value) return
+	address.value = value
+	draft.value = {
+		...draft.value,
+		...fromAddressInputValue(value, draft.value),
+	}
+}
+
+watch(draft, () => {
+	if (hasDraftAddress(fromAddressInputValue(address.value, draft.value)))
+		return
+	address.value = toAddressInputValue(draft.value)
+})
 
 function fieldError(field: BillingIdentityField): string | undefined {
 	return props.invalidFields?.includes(field)
 		? t(`${KEY_PREFIX}.errors.${field}`)
 		: undefined
 }
+
+/** Every missing part of the address, one message each. */
+const addressError = computed(() => {
+	const messages = ADDRESS_FIELDS.map(fieldError).filter(Boolean)
+	return messages.length > 0 ? messages.join(' ') : undefined
+})
 
 function selectCustomerType(customerType: CustomerType): void {
 	if (props.isLocked) return
@@ -228,61 +253,24 @@ function cluster(className: string): ClusterBindings {
 
 		<component :is="groupWrapper" v-bind="group('address')">
 			<FormFieldRow
-				:label="$t(`${KEY_PREFIX}.${STREET_FIELD.label}`)"
-				:error="fieldError(STREET_FIELD.id)"
+				:label="sectioned ? undefined : $t(`${KEY_PREFIX}.sections.address.title`)"
+				:description="
+					sectioned ? undefined : $t(`${KEY_PREFIX}.sections.address.description`)
+				"
+				:error="addressError"
 				:stacked="sectioned"
 				required
 			>
 				<template #default="{ id }">
-					<DmsInputText
+					<DmsInputAddress
 						:id="id"
-						v-model="draft[STREET_FIELD.id]"
-						:autocomplete="STREET_FIELD.autocomplete"
+						:model-value="address"
+						:autocomplete="ADDRESS_AUTOCOMPLETE"
 						:disabled="isLocked"
-						class="w-full"
+						@update:model-value="updateAddress"
 					/>
 				</template>
 			</FormFieldRow>
-			<component :is="clusterWrapper" v-bind="cluster(CLUSTER_CLASS)">
-				<component :is="clusterWrapper" v-bind="cluster(TRIPLE_GRID_CLASS)">
-					<FormFieldRow
-						v-for="field in LOCALITY_FIELDS"
-						:key="field.id"
-						:label="$t(`${KEY_PREFIX}.${field.label}`)"
-						:error="fieldError(field.id)"
-						:stacked="sectioned"
-						required
-					>
-						<template #default="{ id }">
-							<DmsInputText
-								:id="id"
-								v-model="draft[field.id]"
-								:autocomplete="field.autocomplete"
-								:disabled="isLocked"
-								class="w-full"
-							/>
-						</template>
-					</FormFieldRow>
-					<FormFieldRow
-						:label="$t(`${KEY_PREFIX}.country`)"
-						:error="fieldError('country')"
-						:stacked="sectioned"
-						required
-					>
-						<template #default="{ id }">
-							<USelectMenu
-								:id="id"
-								v-model="draft.country"
-								:items="countryItems"
-								value-key="value"
-								:disabled="isLocked"
-								:placeholder="$t(`${KEY_PREFIX}.country_placeholder`)"
-								class="w-full"
-							/>
-						</template>
-					</FormFieldRow>
-				</component>
-			</component>
 		</component>
 
 		<component :is="groupWrapper" v-bind="group('email')">

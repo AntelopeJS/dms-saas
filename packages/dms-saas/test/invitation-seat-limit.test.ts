@@ -2,6 +2,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
+import * as planChangesInterface from "@antelopejs/interface-dms-saas/plan-changes";
+import * as planChangesImplementation from "../src/implementations/dms-saas/plan-changes";
 import {
   GetModel,
   RegisterSchema,
@@ -21,7 +23,7 @@ import {
   decideInvite,
 } from "@antelopejs/interface-dms/invite-resolution";
 import { ExecuteHooks, Hook } from "@antelopejs/interface-dms/hooks";
-import { internal as inviteExtensions } from "@antelopejs/interface-dms/invite-extensions";
+import { ResolveInviteAvailability } from "@antelopejs/interface-dms/invite-extensions/internal/availability";
 import { createUserInviteToken } from "@antelopejs/interface-dms/invites";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
 import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
@@ -97,6 +99,7 @@ const operator = {
 } as User;
 
 beforeAll(async () => {
+  ImplementInterface(planChangesInterface, planChangesImplementation);
   // DMS answers isSaasMode() from the registrations it holds, so wire its
   // implementation in and declare SaaS mode the way construct() does.
   ImplementInterface(
@@ -307,6 +310,7 @@ describe("platform owners supporting a full workspace", () => {
       joined: true,
     });
 
+    expect(await planChangesInterface.CountOccupiedSeats(tenantId)).toBe(1);
     expect(await getSeatUsage(tenantId)).toEqual({
       members: 0,
       pendingInvites: 1,
@@ -593,7 +597,7 @@ describe("seats billed for invitations", () => {
 
 describe("invite action at the plan cap", () => {
   function inviteAvailability(tenantId: string) {
-    return inviteExtensions.ResolveInviteAvailability({
+    return ResolveInviteAvailability({
       tenantId,
       user: operator,
     });

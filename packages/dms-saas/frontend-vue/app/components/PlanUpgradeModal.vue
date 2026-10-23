@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { SENTENCE_DAY_FORMAT } from '../build/day-formats'
 import { checkoutHeadingCase } from '../build/plan-change-heading'
+import { canContinueToCheckout } from '../composables/usePlanChangeReview'
 
 const props = defineProps<{
 	plan: OfferedPlanView | null
@@ -38,6 +39,9 @@ const loadFailed = ref(false)
 const isSubmitting = ref(false)
 const preview = ref<PlanChangePreview | null>(null)
 const isPricing = ref(false)
+// A refused preview (a plan Stripe does not bill yet, Stripe unreachable)
+// would be refused again at checkout: say why, and offer no payment.
+const previewFailure = ref<string | null>(null)
 let pricingTimer: ReturnType<typeof setTimeout> | null = null
 
 const currency = computed(() => preview.value?.currency ?? props.plan?.currency)
@@ -72,6 +76,14 @@ const headingParams = computed(() => ({
 	date: firstChargeOn.value ?? '',
 }))
 
+const canContinue = computed(() =>
+	canContinueToCheckout({
+		isLoading: isLoading.value,
+		hasLoadFailed: loadFailed.value,
+		previewFailure: previewFailure.value,
+	}),
+)
+
 const dueToday = computed(() => {
 	if (isTrial.value) return formatMinorUnits(0, currency.value)
 	return charge.value
@@ -98,8 +110,13 @@ async function price(): Promise<void> {
 	isPricing.value = true
 	try {
 		preview.value = await previewChange(plan._id, draft.value.country || null)
-	} catch {
+		previewFailure.value = null
+	} catch (error) {
 		preview.value = null
+		previewFailure.value = resolveApiError(
+			error,
+			`${KEY_PREFIX}.preview_failed`,
+		)
 	} finally {
 		isPricing.value = false
 	}
@@ -118,6 +135,7 @@ watch(
 	async (isOpen) => {
 		if (!isOpen) return
 		preview.value = null
+		previewFailure.value = null
 		await loadIdentity()
 		void price()
 	},
@@ -261,11 +279,35 @@ async function confirm(): Promise<void> {
 								})
 							}}
 						</p>
-						<p v-else-if="!charge && !isPricing" class="text-muted">
+						<p
+							v-else-if="!charge && !isPricing && !previewFailure"
+							class="text-muted"
+						>
 							{{ $t(`${KEY_PREFIX}.tax_on_stripe`) }}
 						</p>
 					</div>
 				</DmsCard>
+
+				<UAlert
+					v-if="previewFailure"
+					color="error"
+					variant="subtle"
+					icon="i-ph-warning-circle"
+					:title="previewFailure"
+				>
+					<template #actions>
+						<UButton
+							color="error"
+							variant="soft"
+							size="xs"
+							icon="i-ph-arrow-clockwise"
+							:loading="isPricing"
+							@click="price"
+						>
+							{{ $t('saas.common.retry') }}
+						</UButton>
+					</template>
+				</UAlert>
 
 				<p class="text-muted flex items-center gap-2 text-sm">
 					<UIcon name="i-ph-lock-simple" />
@@ -285,7 +327,7 @@ async function confirm(): Promise<void> {
 					color="primary"
 					icon="i-ph-lock-simple"
 					:loading="isSubmitting"
-					:disabled="isLoading || loadFailed"
+					:disabled="!canContinue"
 				>
 					{{ $t(`${KEY_PREFIX}.confirm`) }}
 				</UButton>

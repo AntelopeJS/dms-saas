@@ -48,7 +48,7 @@
       "plans": {
         "title": "Plans by MRR",
         "subtitle": "Normalised MRR each plan brings",
-        "description": "No workspace · {price} | 1 workspace · {price} | {count} workspaces · {price}",
+        "description": "No paying workspace · {price} | 1 paying workspace · {price} | {count} paying workspaces · {price}",
         "empty": "No plan brings recurring revenue yet.",
         "open_catalogue": "Catalogue"
       },

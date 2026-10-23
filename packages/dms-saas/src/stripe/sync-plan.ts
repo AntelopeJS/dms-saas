@@ -7,7 +7,12 @@ import type {
   PlanStripeProductTerms,
   PlanStripeSyncedTerms,
 } from "../db";
-import { DEFAULT_STRIPE_TAX_CODE } from "../db";
+import {
+  DEFAULT_STRIPE_TAX_CODE,
+  PLAN_FALLBACK_LOCALE,
+  PlanModel,
+} from "../db";
+import { localizePlan } from "@antelopejs/interface-dms-saas/plans";
 import { getStripeClient } from "./client";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 import { toMinorUnits } from "../utils/money";
@@ -17,7 +22,6 @@ const SEAT_USAGE_TYPE = "licensed" as const;
 const PRICE_TAX_BEHAVIOR = "exclusive" as const;
 const IDEMPOTENCY_KEY_PREFIX = "dms-saas:plan-sync";
 const RESOURCE_MISSING_CODE = "resource_missing";
-const I18N_KEY_PREFIX = "$";
 
 /** What a Stripe price or product holds today, when it can be read back. */
 interface StripeHeldTerms {
@@ -38,25 +42,28 @@ export async function resolveProductTaxCode(): Promise<string> {
 }
 
 /**
- * Stripe shows a product description to customers as written: a `$` i18n key
- * has no text Stripe could show, so the product carries none.
+ * The plan's name and description in the fallback locale, read from a copy:
+ * the caller may hold the plan unlocked in its reader's locale.
  */
-function stripeProductDescription(description: string | undefined): string {
-  if (!description || description.startsWith(I18N_KEY_PREFIX)) return "";
-  return description;
+function fallbackTexts(plan: Plan): Pick<Plan, "name" | "description"> {
+  const copy = PlanModel.fromDatabase(PlanModel.toDatabase(plan)) as Plan;
+  const { name, description } = localizePlan(copy, PLAN_FALLBACK_LOCALE);
+  return { name, description };
 }
 
 /**
- * The terms a plan's Stripe product and price must carry.
+ * The terms a plan's Stripe product and price must carry. A Stripe product
+ * holds one text: the plan's name and description in the fallback locale.
  *
  * @param plan Plan as stored
  * @param taxCode Stripe tax code products are created with
  */
 function planStripeTerms(plan: Plan, taxCode: string): PlanStripeSyncedTerms {
+  const { name, description } = fallbackTexts(plan);
   return {
     product: {
-      name: plan.name,
-      description: stripeProductDescription(plan.description),
+      name,
+      description: description ?? "",
       taxCode,
     },
     price: {

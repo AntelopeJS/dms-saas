@@ -1,5 +1,6 @@
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { planRow } from "./helpers/plan-row";
 import type { Plan, TenantSubscription } from "../src/db";
 
 interface MemberFake {
@@ -98,6 +99,13 @@ vi.mock("../src/workspaces/deletion", () => ({
   resolveDataRetentionDays: async () => 30,
 }));
 
+const stripeSetup = vi.hoisted(() => ({ isConfigured: true }));
+
+vi.mock("../src/stripe/client", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  isStripeConfigured: () => stripeSetup.isConfigured,
+}));
+
 const { assertCardMayBackFreeWorkspace, listFreeWorkspacesBackedByCard } =
   await import("../src/workspaces/free-workspaces-per-card");
 const { buildWorkspaceCreateOptions, cardRequirementOf } =
@@ -127,7 +135,7 @@ const DAY_MS = 86_400_000;
 const user = { _id: "camille", email: "camille@acme.test" } as User;
 
 function plan(overrides: Partial<Plan>): Plan {
-  return {
+  return planRow({
     audience: "any",
     trialDays: 0,
     maxMembers: -1,
@@ -137,7 +145,7 @@ function plan(overrides: Partial<Plan>): Plan {
     description: "",
     isComplimentary: false,
     ...overrides,
-  } as Plan;
+  } as Partial<Plan>);
 }
 
 function subscription(
@@ -223,13 +231,23 @@ describe("free workspaces per card", () => {
     expect(cardRequirementOf(FREE, 0)).toBe("none");
     expect(cardRequirementOf(PRO, 0)).toBe("payment");
   });
+
+  it("asks no card of a free plan while Stripe is not configured", () => {
+    stripeSetup.isConfigured = false;
+    try {
+      expect(cardRequirementOf(FREE, 1)).toBe("none");
+      expect(cardRequirementOf(PRO, 1)).toBe("payment");
+    } finally {
+      stripeSetup.isConfigured = true;
+    }
+  });
 });
 
 describe("workspace creation options", () => {
   it("offers the plans of the caller's audience, in catalogue order, with their card rule", async () => {
     store.maxFreeWorkspacesPerCard = 1;
 
-    const options = await buildWorkspaceCreateOptions(user);
+    const options = await buildWorkspaceCreateOptions(user, "en");
 
     expect(options.plans.map((option) => option._id)).toEqual(["free", "pro"]);
     expect(options.plans.map((option) => option.cardRequirement)).toEqual([
@@ -242,7 +260,7 @@ describe("workspace creation options", () => {
   it("offers no trial to an e-mail that already used one", async () => {
     store.usedTrial = true;
 
-    const options = await buildWorkspaceCreateOptions(user);
+    const options = await buildWorkspaceCreateOptions(user, "en");
 
     expect(options.plans.find((o) => o._id === PRO._id)?.trialDays).toBe(0);
   });
@@ -255,13 +273,13 @@ describe("workspace creation options", () => {
       cardFingerprint: "fp2",
     });
 
-    const options = await buildWorkspaceCreateOptions(user);
+    const options = await buildWorkspaceCreateOptions(user, "en");
 
     expect(options.freePerCard).toEqual({ limit: 1, usedBy: ["acme"] });
   });
 
   it("leaves the rule off by default", async () => {
-    const options = await buildWorkspaceCreateOptions(user);
+    const options = await buildWorkspaceCreateOptions(user, "en");
 
     expect(options.freePerCard).toBeNull();
     expect(options.plans[0]?.cardRequirement).toBe("none");
@@ -270,7 +288,7 @@ describe("workspace creation options", () => {
   it("drops the rule when the billing rules turn it off", async () => {
     store.maxFreeWorkspacesPerCard = 0;
 
-    const options = await buildWorkspaceCreateOptions(user);
+    const options = await buildWorkspaceCreateOptions(user, "en");
 
     expect(options.freePerCard).toBeNull();
     expect(options.plans[0]?.cardRequirement).toBe("none");

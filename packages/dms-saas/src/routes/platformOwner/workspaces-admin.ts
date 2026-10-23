@@ -36,6 +36,7 @@ import {
   loadComplimentaryImpact,
 } from "../../operator-actions/previews";
 import { getStripeClient } from "../../stripe";
+import { withStripeAvailability } from "../../stripe/availability";
 import { parseFutureDate } from "../../utils";
 import { closePaidUsagePeriods } from "../../workspaces/complimentary";
 import {
@@ -52,6 +53,10 @@ import {
   validateWorkspaceInput,
 } from "../../workspaces/operator-creation";
 import { isPlanOfferedTo } from "../../plans/plan-audience";
+import {
+  CONTENT_LANGUAGE_HEADER,
+  requestLocale,
+} from "../../utils/content-language";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -270,8 +275,9 @@ export class SaasWorkspacesAdminController extends Controller(
   async getComplimentaryImpact(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ComplimentaryImpact> {
-    return loadComplimentaryImpact(tenantId);
+    return loadComplimentaryImpact(tenantId, requestLocale(language));
   }
 
   @Post("/:tenantId/grant-free-access")
@@ -291,8 +297,11 @@ export class SaasWorkspacesAdminController extends Controller(
       body.freeUntil,
       "saas.errors.workspace_create.free_until_past",
     );
-    await runTenantLifecycleOperation(tenantId, () =>
-      upsertFreeSubscription(tenantId, plan._id, freeUntil, user._id),
+    // Ending a paid subscription first cancels it on Stripe.
+    await withStripeAvailability(() =>
+      runTenantLifecycleOperation(tenantId, () =>
+        upsertFreeSubscription(tenantId, plan._id, freeUntil, user._id),
+      ),
     );
     await notifyTenantOwners(tenantId, complimentaryAccessGrantedSubject, {
       icon: COMP_ICON,

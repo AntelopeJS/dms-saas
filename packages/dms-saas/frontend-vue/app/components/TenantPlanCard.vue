@@ -29,7 +29,6 @@ const billingStatus = useBillingStatus()
 const nextInvoice = useNextInvoice()
 const { formatMajorUnits, formatMinorUnits } = useMoneyFormat()
 const { statusView } = useSaasStatus()
-const planDescription = usePlanDescription()
 const { formatFeatureValue } = usePlanFeatureFormat()
 const comparison = usePlanComparison()
 const { consumeCancelledCheckout } = usePendingCheckout()
@@ -98,7 +97,7 @@ const pill = computed(() => {
 
 const summary = computed(() => {
 	if (current.value?.description)
-		return planDescription(current.value.description)
+		return current.value.description
 	const view = data.value?.available.find(
 		(plan) => plan._id === current.value?._id,
 	)

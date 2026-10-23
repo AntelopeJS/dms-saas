@@ -1,4 +1,4 @@
-import { Controller } from "@antelopejs/interface-api";
+import { Controller, Parameter } from "@antelopejs/interface-api";
 import {
   DataController,
   RegisterDataController,
@@ -9,9 +9,14 @@ import {
   Filter,
   Listable,
   ModelReference,
+  ModifierKey,
   Sortable,
 } from "@antelopejs/interface-data-api/metadata";
-import { GetModel, Model } from "@antelopejs/interface-database-decorators";
+import {
+  GetModel,
+  LocalizationModifier,
+  Model,
+} from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import {
   Column,
@@ -42,6 +47,7 @@ import {
 } from "../../i18n/composed-text";
 import { toMinorUnits } from "../../utils/money";
 import { type TableScope, withTableScope } from "./table-scope";
+import { CONTENT_LANGUAGE_HEADER } from "../../utils/content-language";
 
 const TEXTS = "$saas.catalog.plans";
 
@@ -128,6 +134,10 @@ export class plansDataAPI extends DataController(
   @ModelReference()
   @Model(PlanModel)
   declare model: PlanModel;
+
+  @Parameter(CONTENT_LANGUAGE_HEADER, "header")
+  @ModifierKey(LocalizationModifier)
+  declare language: string;
 
   @Select()
   @Listable()
@@ -379,6 +389,17 @@ export class plansDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   get stripeProductId(): string | null {
     return planOf(this).paymentProviderRefs?.stripeProductId ?? null;
+  }
+
+  /**
+   * A priced plan with no Stripe price yet (Stripe not configured, or the
+   * sync failed): no workspace can subscribe to it until it syncs.
+   */
+  @Listable(["price", "paymentProviderRefs"])
+  @Access(AccessMode.ReadOnly)
+  get isMissingStripePrice(): boolean {
+    const plan = planOf(this);
+    return plan.price > 0 && !plan.paymentProviderRefs?.stripePriceId;
   }
 
   @Listable(["paymentProviderRefs"])

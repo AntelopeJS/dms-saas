@@ -41,6 +41,10 @@ export class LifecycleDelivery extends Table {
   @Field("string")
   declare transition: TenantLifecycleTransition;
 
+  /** Durable provenance survives retries and receipt loss. */
+  @Field("string")
+  declare planChangeOperationId: string | null;
+
   @Field("string")
   declare provisioningInvoiceId: string | null;
 

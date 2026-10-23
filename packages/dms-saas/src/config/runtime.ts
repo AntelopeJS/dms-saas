@@ -1,10 +1,12 @@
 import { assert } from "@antelopejs/interface-api-util";
+import { GetClientBaseUrl } from "@antelopejs/interface-dms/client-base-url";
 import {
   DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY,
   type DmsSaasConfig,
   REGISTRATION_PAYMENT_METHOD_POLICIES,
   type RegistrationPaymentMethodPolicy,
 } from "../types";
+import { isStripeConfigured } from "../stripe/client";
 import { isDevMode } from "./dev-mode";
 
 const REDIRECT_PROTOCOLS = ["http:", "https:"];
@@ -57,8 +59,17 @@ export function setRuntimeConfig(config: DmsSaasConfig): void {
   runtimeConfig = config;
 }
 
-/** Whether public registration asks for a card; invitation sign-up never does. */
+/**
+ * Whether public registration asks for a card; invitation sign-up never does.
+ *
+ * Without a usable Stripe key (missing or a placeholder) no card could be
+ * confirmed, so registration takes none whatever the configured policy:
+ * every registration lands on the free plan, which needs no Stripe object.
+ * The screens read this effective policy, so they never ask Stripe for a
+ * SetupIntent it cannot create.
+ */
 export function getRegistrationPaymentMethodPolicy(): RegistrationPaymentMethodPolicy {
+  if (!isStripeConfigured()) return "none";
   return (
     runtimeConfig?.registration?.paymentMethod ??
     DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY
@@ -109,6 +120,19 @@ export function getUpcomingInvoicePreviewCacheTtlMs(): number {
   return seconds * MS_PER_SECOND;
 }
 
+/** Activation instant of draft discovery, or null when discovery is off. */
+export function getInvoiceDiscoverySince(): Date | null {
+  const raw = runtimeConfig?.invoiceLineRecoveryDiscoverySince;
+  if (!raw) return null;
+  const since = new Date(raw);
+  return Number.isNaN(since.getTime()) ? null : since;
+}
+
+/** Providers a cycle invoice waits for even before they register. */
+export function getRequiredInvoiceLineProviders(): string[] {
+  return runtimeConfig?.invoiceLineRequiredProviders ?? [];
+}
+
 /** Uppercase ISO 4217 code the back office reports recurring revenue in. */
 export function getReportingCurrency(): string {
   return (
@@ -116,8 +140,12 @@ export function getReportingCurrency(): string {
   ).toUpperCase();
 }
 
-export function getAllowedRedirectHosts(): string[] {
-  return runtimeConfig?.allowedRedirectHosts ?? [];
+/** The configured hosts, else the host of the dashboard the DMS serves. */
+export async function getAllowedRedirectHosts(): Promise<string[]> {
+  const configured = runtimeConfig?.allowedRedirectHosts;
+  if (configured) return configured;
+  const clientBaseUrl = await GetClientBaseUrl();
+  return clientBaseUrl ? [new URL(clientBaseUrl).host] : [];
 }
 
 /** Public registration is independent of invitation acceptance and account recovery. */
@@ -148,12 +176,12 @@ function isLoopbackUrl(url: URL): boolean {
  * URLs, billing portal return URL).
  *
  * Only http(s) URLs pass. In a development runtime, loopback hosts are
- * accepted without configuration; everything else must match the configured
- * `allowedRedirectHosts` by URL.host.
+ * accepted without configuration; everything else must match
+ * {@link getAllowedRedirectHosts} by URL.host.
  */
-export function isAllowedRedirectUrl(rawUrl: string): boolean {
+export async function isAllowedRedirectUrl(rawUrl: string): Promise<boolean> {
   const parsed = parseRedirectUrl(rawUrl);
   if (!parsed) return false;
   if (isDevMode() && isLoopbackUrl(parsed)) return true;
-  return getAllowedRedirectHosts().includes(parsed.host);
+  return (await getAllowedRedirectHosts()).includes(parsed.host);
 }

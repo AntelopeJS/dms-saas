@@ -30,12 +30,15 @@ import {
   TenantSubscriptionModel,
 } from "../../db";
 import { toPendingPlanChange } from "../../plan-changes";
+import { hasPlanChangePolicy } from "../../implementations/dms-saas/plan-changes";
+import { previewGuardedFreeChange } from "../../plan-changes/guarded-free";
 import {
   buildTenantPlanCatalog,
   countSeatsToCompare,
   ensurePlanStripeRefs,
   getSeatUsage,
   isDowngrade,
+  localizePlan,
   type TenantPlanView,
 } from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
@@ -52,8 +55,11 @@ import {
   requestLocale,
 } from "../../utils/content-language";
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
-import { isWorkspaceOwner } from "../../workspaces/workspace-owner";
-import { syncCustomerPreferredLocale } from "../../stripe/customer-locale";
+import {
+  followOwnerLanguage,
+  syncCustomerPreferredLocale,
+} from "../../stripe/customer-locale";
+import { withStripeAvailability } from "../../stripe/availability";
 
 import {
   applyOwnerUpgrade,
@@ -74,6 +80,7 @@ import {
   loadSellablePlan,
   type OfferedPlanView,
   type PlanChangeRequest,
+  planChangeResponse,
   scheduleDowngrade,
   startsPaidCheckout,
 } from "./tenant-plan-ops";
@@ -194,6 +201,7 @@ export class SaasTenantPlanController extends Controller(
     const offered = await Promise.all(
       withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
+    for (const plan of offered) localizePlan(plan, locale);
     const catalog = await buildTenantPlanCatalog(
       this.planModel,
       this.featureModel,
@@ -248,16 +256,18 @@ export class SaasTenantPlanController extends Controller(
       tenantId,
       tenantSubscriptionModel,
     );
-    void this.followOwnerLanguage(tenantId, subscription, user);
+    void followOwnerLanguage(tenantId, subscription, user);
+    const locale = requestLocale(language);
     const current = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
     const pending = subscription?.pendingPlanId
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
+    for (const plan of [current, pending]) if (plan) localizePlan(plan, locale);
     const billingInfo = await tenantBillingInfoModel.findOne();
     const [catalog, seatUsage] = await Promise.all([
-      this.buildCatalog(current, requestLocale(language), {
+      this.buildCatalog(current, locale, {
         subscription,
         email: user.email,
         customerType: billingInfo?.customerType ?? null,
@@ -380,18 +390,29 @@ export class SaasTenantPlanController extends Controller(
     const currentPlan = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
-    await syncCustomerPreferredLocale(
-      subscription?.stripeCustomerId,
-      user.language,
-    );
-    return previewPlanChange({
-      tenantId,
-      subscription,
-      currentPlan,
-      target,
-      billingInfo,
-      ownerEmail: user.email,
-      country: asQueryString(country),
+    if (
+      hasPlanChangePolicy() &&
+      subscription?.stripeSubscriptionId &&
+      !isPaidPlan(target)
+    ) {
+      await planChangeResponse(() =>
+        previewGuardedFreeChange(tenantId, target),
+      );
+    }
+    return withStripeAvailability(async () => {
+      await syncCustomerPreferredLocale(
+        subscription?.stripeCustomerId,
+        user.language,
+      );
+      return previewPlanChange({
+        tenantId,
+        subscription,
+        currentPlan,
+        target,
+        billingInfo,
+        ownerEmail: user.email,
+        country: asQueryString(country),
+      });
     });
   }
 
@@ -430,41 +451,32 @@ export class SaasTenantPlanController extends Controller(
     if (subscription?.planId === body.planId && !choosesAnew) {
       return this.resolveSamePlanRequest(tenantId, subscription);
     }
+    assert(
+      !subscription?.guardedPlanChange,
+      HTTP_CONFLICT,
+      "Resolve the pending downgrade before choosing another plan",
+    );
     if (!isRecovery && startsPaidCheckout(newPlan, subscription)) {
       assertBillingIdentityComplete(billingInfo);
     }
-    await syncCustomerPreferredLocale(
-      subscription?.stripeCustomerId,
-      user.language,
-    );
-
-    return this.routePlanChange({
-      tenantId,
-      user,
-      newPlan,
-      body,
-      subscription,
-      tenantSubscriptionModel,
-    });
-  }
-
-  /**
-   * Billing is where an owner comes back after changing language: the Stripe
-   * customer follows it from then on, renewals included. A member's language
-   * is not the one the workspace's invoices are written in.
-   */
-  private async followOwnerLanguage(
-    tenantId: string,
-    subscription: TenantSubscription | undefined,
-    user: User,
-  ): Promise<void> {
-    if (!subscription?.stripeCustomerId) return;
-    if (!(await isWorkspaceOwner(user._id, tenantId).catch(() => false))) {
-      return;
+    // Guarded scheduling must validate before any provider mutation, including
+    // this cosmetic customer update. Billing page reads still sync the locale.
+    if (!hasPlanChangePolicy() || !subscription?.stripeSubscriptionId) {
+      await syncCustomerPreferredLocale(
+        subscription?.stripeCustomerId,
+        user.language,
+      );
     }
-    await syncCustomerPreferredLocale(
-      subscription.stripeCustomerId,
-      user.language,
+
+    return planChangeResponse(() =>
+      this.routePlanChange({
+        tenantId,
+        user,
+        newPlan,
+        body,
+        subscription,
+        tenantSubscriptionModel,
+      }),
     );
   }
 

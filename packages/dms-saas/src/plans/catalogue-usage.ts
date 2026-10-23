@@ -14,6 +14,7 @@ import {
 import { fromMinorUnits } from "../utils/money";
 
 const TRIALING_STATE: BillingState = "trialing";
+const FREE_STATE: BillingState = "free";
 const CENTS_PRECISION = 100;
 
 /** The plan fields normalised MRR reads. */
@@ -42,7 +43,12 @@ export interface PlanUsageRow {
   pendingPlanId: string | null;
 }
 
-/** What one plan weighs in the catalogue. */
+/**
+ * What one plan weighs in the catalogue. The buckets are the dashboard's: a
+ * workspace is paying when it brings MRR, trialing or free by its billing
+ * state. Cancelled, suspended, awaiting a first payment or complimentary, it
+ * counts in `workspaces` only.
+ */
 export interface PlanUsage {
   workspaces: number;
   paying: number;
@@ -123,11 +129,12 @@ function addRow(usage: PlanUsage, plan: MrrPlan, row: PlanUsageRow): void {
     usage.mrr = roundCents(usage.mrr + amount);
     return;
   }
-  usage.free += 1;
+  if (row.status === FREE_STATE) usage.free += 1;
 }
 
 /**
- * Counts each plan's workspaces (paying, in trial, free), seats and members,
+ * Counts each plan's workspaces (paying, in trial, free — see
+ * {@link PlanUsage}), seats and members,
  * the workspaces scheduled to switch to it, and its normalised MRR (yearly
  * ÷ 12, per seat × seats, trials, complimentary access and free plans
  * excluded). Rows of an unknown plan are
@@ -179,8 +186,13 @@ export function planMrrShare(
   return total > 0 ? mrr / total : 0;
 }
 
+/**
+ * A live workspace's directory row, the one the dashboard reads too: keyed by
+ * its tenant, not deleted, holding a plan.
+ */
 function toUsageRow(row: TenantBillingState): PlanUsageRow | undefined {
-  if (!row.planId || row.deletedAt) return undefined;
+  if (!row.planId || row.deletedAt || row._id !== row.tenantId)
+    return undefined;
   return {
     tenantId: row.tenantId,
     planId: row.planId,
