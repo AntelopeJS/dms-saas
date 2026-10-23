@@ -1,4 +1,10 @@
-import { Controller, Get, Parameter } from "@antelopejs/interface-api";
+import {
+  Context,
+  Controller,
+  Get,
+  Parameter,
+  type RequestContext,
+} from "@antelopejs/interface-api";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
@@ -30,10 +36,10 @@ import {
 import { sumInReportingCurrency } from "../../metrics/normalised-mrr";
 import {
   type ChartCardPayload,
-  churnOver,
+  churnKpi,
+  type KpiCardPayload,
   paidInvoicesChart,
-  parseComparison,
-  parsePeriod,
+  readPeriodQuery,
 } from "../../metrics/revenue";
 import { workspaceDetailPath } from "../../pages/platform/paths";
 import { migrationTotals } from "../../plans/migration-detail";
@@ -41,19 +47,11 @@ import { MS_PER_DAY } from "../../utils/time";
 import { loadActivitySources } from "../../metrics/activity-sources";
 import type { ItemsPayload } from "./block-payloads";
 
-/** What a `KpiCard` reads from its route. */
-interface KpiPayload {
-  value: number;
-  previousValue?: number;
-  delta?: number;
-}
-
 const OPEN_STATUS = "open";
 // Paid invoices are filtered on their issue date, which an invoice paid late
 // precedes: the window reaches back far enough to catch it.
 const LATE_PAYMENT_LOOKBACK_DAYS = 90;
 const ACTIVITY_LIMIT = 8;
-const PERCENT = 100;
 
 /** The migrations the migrations list shows as needing an operator. */
 async function loadAttentionMigrations(): Promise<MigrationAttention> {
@@ -149,37 +147,21 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   @Get("/churn")
   async churn(
     @AuthOwnerOnly() _user: User,
-    @Parameter("from", "query") from: unknown,
-    @Parameter("to", "query") to: unknown,
-    @Parameter("compareFrom", "query") compareFrom: unknown,
-    @Parameter("compareTo", "query") compareTo: unknown,
-  ): Promise<KpiPayload> {
+    @Context() ctx: RequestContext,
+  ): Promise<KpiCardPayload> {
     const { rows, currency } = await this.summary();
     const mrr = summariseDirectory(rows, new Date(), currency).mrr;
-    const current = churnOver(rows, parsePeriod(from, to), mrr);
-    const comparison = parseComparison(compareFrom, compareTo);
-    if (!comparison) return { value: current.rate };
-    const previous = churnOver(rows, comparison, mrr);
-    return {
-      value: current.rate,
-      previousValue: previous.rate,
-      delta:
-        previous.rate === 0
-          ? undefined
-          : ((current.rate - previous.rate) / previous.rate) * PERCENT,
-    };
+    return churnKpi(rows, readPeriodQuery(ctx.url.searchParams), mrr);
   }
 
   @Get("/paid-invoices")
   async paidInvoices(
     @AuthOwnerOnly() _user: User,
-    @Parameter("from", "query") from: unknown,
-    @Parameter("to", "query") to: unknown,
-    @Parameter("compareFrom", "query") compareFrom: unknown,
-    @Parameter("compareTo", "query") compareTo: unknown,
+    @Context() ctx: RequestContext,
   ): Promise<ChartCardPayload> {
-    const range = parsePeriod(from, to);
-    const comparison = parseComparison(compareFrom, compareTo);
+    const { range, comparison, comparisonMode } = readPeriodQuery(
+      ctx.url.searchParams,
+    );
     const documents = await loadSettledDocuments(
       earliestStart(range, comparison),
     );
@@ -188,6 +170,7 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
       range,
       comparison,
       getReportingCurrency(),
+      comparisonMode,
     );
   }
 

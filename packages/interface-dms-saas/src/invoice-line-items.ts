@@ -57,32 +57,21 @@ export interface InvoiceLineItemsReady {
 /**
  * The provider cannot bill the window yet but expects to: the data it reads
  * is still being produced. The invoice stays a suspended draft and the
- * provider is asked again later; nothing is invoiced in the meantime.
+ * provider is asked again later, until the finalization deadline: the invoice
+ * is then finalized without this provider's lines (see {@link InvoiceUsageGap}).
  */
 export interface InvoiceLineItemsNotReady {
   status: "not_ready";
   reason: string;
 }
 
-/**
- * The provider will never be able to bill the window on its own — usage
- * written off, data definitively missing. The invoice stays a suspended draft
- * for an operator; it is never finalized without the lines.
- */
-export interface InvoiceLineItemsBlocked {
-  status: "blocked";
-  reason: string;
-}
-
 export type InvoiceLineItemsResolution =
   | InvoiceLineItemsReady
-  | InvoiceLineItemsNotReady
-  | InvoiceLineItemsBlocked;
+  | InvoiceLineItemsNotReady;
 
 /**
  * Returns the lines to bill, or an explicit resolution. A bare array means
- * `ready`. A thrown error is a transient failure: the closing invoice is
- * retried, never finalized without the provider's lines.
+ * `ready`. A thrown error is a transient failure, retried like `not_ready`.
  */
 export type InvoiceLineItemsResolver = (
   context: InvoiceLineItemsContext,
@@ -96,7 +85,7 @@ export const INVALID_RESOLUTION_REASON = "invalid_resolution";
 
 /**
  * Reads what a resolver returned as an explicit resolution. Anything that is
- * neither an array nor a well-formed resolution is `blocked`: an empty bill
+ * neither an array nor a well-formed resolution is `not_ready`: an empty bill
  * must be stated, never inferred from a malformed answer.
  */
 export function normalizeInvoiceLineItemsResolution(
@@ -106,14 +95,33 @@ export function normalizeInvoiceLineItemsResolution(
   const candidate = value as Partial<InvoiceLineItemsResolution> | null;
   if (candidate?.status === "ready" && Array.isArray(candidate.lines))
     return { status: "ready", lines: candidate.lines };
-  if (candidate?.status === "not_ready" || candidate?.status === "blocked")
-    return { status: candidate.status, reason: String(candidate.reason) };
-  return { status: "blocked", reason: INVALID_RESOLUTION_REASON };
+  if (candidate?.status === "not_ready")
+    return { status: "not_ready", reason: String(candidate.reason) };
+  return { status: "not_ready", reason: INVALID_RESOLUTION_REASON };
+}
+
+/**
+ * A cycle invoice finalized without every line it should carry: a provider
+ * still not ready at the deadline, lines Stripe refused, or a draft changed
+ * outside dms-saas. The missing usage is never billed; the gap is reported so
+ * the system that left it gets fixed.
+ *
+ * Each reason starts with a stable code (`provider_not_ready`,
+ * `managed_lines_unexpected_or_changed`, ...) followed by `:` and its detail.
+ */
+export interface InvoiceUsageGap {
+  tenantId: string;
+  invoiceId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  reasons: string[];
 }
 
 export interface InvoiceLineItemsProvider {
   id: string;
   resolve: InvoiceLineItemsResolver;
+  /** Told of every invoice it was asked to bill that was finalized with a gap. */
+  onUsageGap?: (gap: InvoiceUsageGap) => void;
 }
 
 export const LINE_KEY_SEPARATOR = ":";
@@ -241,7 +249,7 @@ export function selectInvoiceLineItemsToCreate(
 
 export namespace internal {
   export const RegisterInvoiceLineItemsProvider = new RegisteringProxy<
-    (providerId: string, resolve: InvoiceLineItemsResolver) => void
+    (providerId: string, provider: InvoiceLineItemsProvider) => void
   >();
 }
 
@@ -258,8 +266,9 @@ export namespace internal {
  * - Providers run in registration order. On a closing invoice, the draft is
  *   first suspended (`auto_advance=false`) and the lines are injected by a
  *   durable task: a provider that throws or answers `not_ready` is asked
- *   again later, one that answers `blocked` hands the invoice to an operator.
- *   The invoice is finalized only once every provider's lines are on it.
+ *   again later. The invoice is always finalized: with every provider's
+ *   lines once they are on it, or past the deadline with the lines available,
+ *   reporting the gap to `onUsageGap`.
  * - Injection is idempotent per (invoice, provider, line key): a replayed
  *   webhook, a redelivery or a concurrent worker never duplicates a line.
  * - `id` namespaces the line keys, so two providers may use the same metric
@@ -285,10 +294,7 @@ export function RegisterInvoiceLineItemsProvider(
       `An invoice line items provider id cannot contain '${LINE_KEY_SEPARATOR}' (got '${provider.id}').`,
     );
   }
-  internal.RegisterInvoiceLineItemsProvider.register(
-    provider.id,
-    provider.resolve,
-  );
+  internal.RegisterInvoiceLineItemsProvider.register(provider.id, provider);
 }
 
 /**

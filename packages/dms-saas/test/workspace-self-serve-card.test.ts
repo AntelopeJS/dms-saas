@@ -51,6 +51,11 @@ vi.mock("../src/config", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/config")>()),
   assertAdmissionOpen: () => undefined,
 }));
+// The per-card rule only asks for a card Stripe can verify.
+vi.mock("../src/stripe/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/stripe/client")>()),
+  isStripeConfigured: () => true,
+}));
 vi.mock("@antelopejs/interface-dms/request-tenant", () => ({
   getRequestTenantId: () => "tenant-current",
 }));

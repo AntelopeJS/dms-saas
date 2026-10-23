@@ -58,6 +58,7 @@ const IDENTITY_FIELDS: FormField[] = [
     label: `${TEXTS}.field.name`,
     description: `${TEXTS}.field.name_description`,
     type: new DefaultDataTypes.StringType({ maxLength: NAME_MAX_LENGTH }),
+    localized: true,
     required: true,
   },
   {
@@ -68,6 +69,7 @@ const IDENTITY_FIELDS: FormField[] = [
       textarea: true,
       rows: DESCRIPTION_TEXTAREA_ROWS,
     }),
+    localized: true,
   },
   {
     id: "audience",
@@ -186,6 +188,7 @@ const VISIBILITY_FIELDS: FormField[] = [
     label: `${TEXTS}.field.badge`,
     description: `${TEXTS}.field.badge_description`,
     type: new DefaultDataTypes.StringType({ maxLength: BADGE_MAX_LENGTH }),
+    localized: true,
   },
   {
     id: "borderColor",

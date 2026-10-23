@@ -7,6 +7,7 @@ import {
   GridRow,
   KeyValueList,
   NavCardGrid,
+  pageToolbar,
   StatGroup,
   TableView,
   type TableViewSourceColumn,
@@ -128,6 +129,8 @@ const STRIPE_COLUMN_SIZE = 215;
 const REASON_COLUMN_SIZE = 210;
 const TIME_COLUMN_SIZE = 150;
 const ATTENTION_GROUP = "attention";
+/** Seconds between two reads of one block while workspaces move. */
+const LIVE_MAX_RATE = 5;
 
 /** Name, description and icon of a block as the roles editor lists it. */
 function detailMeta(key: string, icon: string) {
@@ -277,7 +280,8 @@ const journal = ActivityFeed({
  * One migration: where it stands and what can be done (the header), its
  * counts, every captured workspace with the actions it allows, what changes
  * for a moved workspace, and its journal. Every block reads its route, and
- * reads it again when a migration changes (`PLAN_MIGRATION_TOPIC`).
+ * reads it again when a migration changes (`PLAN_MIGRATION_TOPIC`), under the
+ * page's Direct / Pause bar: a running migration can be paused to read it.
  */
 @RegisterPage()
 export class SaasPlanMigrationDetailController extends PageController(
@@ -289,9 +293,15 @@ export class SaasPlanMigrationDetailController extends PageController(
     urlSlug: ":id",
     icon: "i-ph-arrows-clockwise",
     hidden: true,
+    live: { maxRate: LIVE_MAX_RATE },
   },
   DefaultLayout({ fullWidth: true, hideHeader: true }),
 ) {
+  // No period: the bar is the Direct / Pause toggle and the last update.
+  static toolbar = pageToolbar({ period: false }).meta(
+    detailMeta("toolbar", "i-ph-broadcast"),
+  );
+
   static header = Banner({
     fetchUrl: `${DETAIL_API}/header`,
     realtimeTopic: PLAN_MIGRATION_TOPIC,

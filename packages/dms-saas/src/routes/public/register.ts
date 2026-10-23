@@ -32,7 +32,11 @@ import {
   resolveRegistrationPaymentMethodId,
 } from "../../config";
 import { type Plan, PlanModel } from "../../db";
-import { createCardSetupIntent } from "../../stripe";
+import {
+  assertStripeConfigured,
+  createCardSetupIntent,
+  withStripeAvailability,
+} from "../../stripe";
 import {
   CONTENT_LANGUAGE_HEADER,
   requestLocale,
@@ -405,18 +409,27 @@ export class SaasRegisterApiController extends Controller(
     };
   }
 
+  /**
+   * The SetupIntent the card field confirms. Answers 503 with
+   * `saas.errors.stripe.not_configured` when the deployment has no usable
+   * Stripe key, and with `saas.errors.stripe.unavailable` when Stripe refuses
+   * the key or cannot be reached.
+   */
   @Get("/setup-intent")
   async createSetupIntent(): Promise<SetupIntentResponse> {
     assertAdmissionOpen();
     assertRegistrationCardAccepted();
-    return createCardSetupIntent();
+    assertStripeConfigured();
+    return withStripeAvailability(createCardSetupIntent);
   }
 
   @Post("/")
   async register(@JSONBody() body: RegisterBody): Promise<RegisterResult> {
     assertAdmissionOpen();
     assertRegistrationPassword(body.password);
-    const admitted = await admitRegistration(body);
+    const admitted = await withStripeAvailability(() =>
+      admitRegistration(body),
+    );
     await this.ensureEmailAvailable(body.email);
 
     const handles: WorkspaceProvisioningHandles = {};
@@ -428,8 +441,10 @@ export class SaasRegisterApiController extends Controller(
         name: body.name,
         language: requestLocale(this.contentLanguage),
       };
-      const { tenantId } = await provisionWorkspace(
-        await buildRegistrationProvisioning(account, body, admitted, handles),
+      const { tenantId } = await withStripeAvailability(async () =>
+        provisionWorkspace(
+          await buildRegistrationProvisioning(account, body, admitted, handles),
+        ),
       );
       return { userId: handles.userId, tenantId };
     } catch (error) {
@@ -479,7 +494,9 @@ export class SaasRegisterApiController extends Controller(
   @Post("/finalize")
   async finalize(@JSONBody() body: FinalizeBody): Promise<AuthResponse> {
     assertAdmissionOpen();
-    const admitted = await admitRegistration(body);
+    const admitted = await withStripeAvailability(() =>
+      admitRegistration(body),
+    );
     const { user } = await validateTenantAssignmentToken(
       body.tenant_assignment_token,
     );
@@ -493,8 +510,10 @@ export class SaasRegisterApiController extends Controller(
         name: user.name,
         language: user.language || requestLocale(this.contentLanguage),
       };
-      const { tenantId } = await provisionWorkspace(
-        await buildRegistrationProvisioning(account, body, admitted, handles),
+      const { tenantId } = await withStripeAvailability(async () =>
+        provisionWorkspace(
+          await buildRegistrationProvisioning(account, body, admitted, handles),
+        ),
       );
       return await this.issueAuthResponse(user, tenantId);
     } catch (error) {

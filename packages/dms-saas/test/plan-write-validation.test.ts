@@ -2,8 +2,10 @@ import { HTTPResult } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { formatPlanIntervalLabel } from "../frontend-vue/app/composables/usePlanIntervalLabel";
+import { toPlainData } from "@antelopejs/interface-database-decorators";
 import type { Plan, PlanModel } from "../src/db";
 import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
+import { planRow } from "./helpers/plan-row";
 
 const stripe = vi.hoisted(() => ({
   syncPlanStripeRefs: vi.fn(async (plan: unknown) => plan),
@@ -11,17 +13,11 @@ const stripe = vi.hoisted(() => ({
 
 vi.mock("../src/plans/stripe-sync", () => ({
   syncPlanStripeRefs: stripe.syncPlanStripeRefs,
+  planStripeSyncState: async () => "synced",
 }));
 
 interface PlanStore {
   current?: Plan;
-}
-
-interface PlanWrite {
-  interval?: unknown;
-  name?: string;
-  price?: number;
-  isActive?: boolean;
 }
 
 type AsyncOperation = () => Promise<unknown>;
@@ -32,18 +28,21 @@ const INVALID_INTERVAL_ERROR = "saas.errors.plan.invalid_interval";
 
 function planModel(store: PlanStore): PlanModel {
   return {
-    insert: vi.fn(async (rows: PlanWrite[]) => {
-      store.current = {
+    insert: vi.fn(async (rows: Plan[]) => {
+      store.current = planRow({
         _id: PLAN_ID,
         paymentProviderRefs: {},
-        ...rows[0],
-      } as Plan;
+        ...toPlainData(rows[0]),
+      });
       return [PLAN_ID];
     }),
     get: vi.fn(async () => store.current),
     findNotDeleted: vi.fn(async () => (store.current ? [store.current] : [])),
-    update: vi.fn(async (_id: string, update: PlanWrite) => {
-      store.current = { ...store.current, ...update } as Plan;
+    update: vi.fn(async (_id: string, update: Plan) => {
+      store.current = planRow({
+        ...toPlainData(store.current as Plan),
+        ...toPlainData(update),
+      });
     }),
   } as unknown as PlanModel;
 }
@@ -70,21 +69,21 @@ beforeEach(() => {
 describe("plan interval writes", () => {
   it("rejects a plan created without an interval", async () => {
     await expectInvalidInterval(() =>
-      controller({}).create(OWNER, { name: "Free" }),
+      controller({}).create(OWNER, { name: { en: "Free" } }),
     );
   });
 
   it("rejects an interval outside the supported values", async () => {
     await expectInvalidInterval(() =>
       controller({}).create(OWNER, {
-        name: "Weekly",
+        name: { en: "Weekly" },
         interval: "week",
       } as never),
     );
   });
 
   it("rejects an unsupported interval on update", async () => {
-    const plan = { _id: PLAN_ID, name: "Monthly", interval: "month" } as Plan;
+    const plan = planRow({ _id: PLAN_ID, name: "Monthly", interval: "month" });
 
     await expectInvalidInterval(() =>
       controller({ current: plan }).update(OWNER, PLAN_ID, {
@@ -94,7 +93,7 @@ describe("plan interval writes", () => {
   });
 
   it("requires a valid interval before Stripe-backed fields change", async () => {
-    const plan = { _id: PLAN_ID, name: "Custom" } as Plan;
+    const plan = planRow({ _id: PLAN_ID, name: "Custom" });
 
     await expectInvalidInterval(() =>
       controller({ current: plan }).update(OWNER, PLAN_ID, {
@@ -104,7 +103,7 @@ describe("plan interval writes", () => {
   });
 
   it("accepts a write that leaves the Stripe-backed fields alone", async () => {
-    const plan = { _id: PLAN_ID, name: "Custom" } as Plan;
+    const plan = planRow({ _id: PLAN_ID, name: "Custom" });
     const store = { current: plan };
 
     await expect(
@@ -121,7 +120,7 @@ describe("plan writes and Stripe", () => {
     const store: PlanStore = {};
 
     await controller(store).create(OWNER, {
-      name: "Hobby",
+      name: { en: "Hobby" },
       price: 5,
       interval: "month",
     } as never);
@@ -134,12 +133,12 @@ describe("plan writes and Stripe", () => {
   });
 
   it("syncs an updated plan as written, not as it was", async () => {
-    const plan = {
+    const plan = planRow({
       _id: PLAN_ID,
-      name: "Hobby",
+      name: { en: "Hobby" },
       price: 5,
       interval: "month",
-    } as Plan;
+    });
     const store = { current: plan };
 
     await controller(store).update(OWNER, PLAN_ID, { price: 6 });

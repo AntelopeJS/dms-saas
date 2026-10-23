@@ -192,11 +192,6 @@
 					"pending": "Vérification en cours",
 					"unverified": "Non vérifié"
 				},
-				"address_line1": "Adresse",
-				"postal_code": "Code postal",
-				"city": "Ville",
-				"country": "Pays",
-				"country_placeholder": "Choisissez un pays",
 				"billing_email": "E-mail de facturation",
 				"billing_email_hint": "Reçoit les factures et les relances de paiement.",
 				"sections": {
@@ -225,13 +220,15 @@
 					"postalCode": "Code postal",
 					"city": "Ville",
 					"country": "Pays",
-					"billingEmail": "E-mail de facturation"
+					"billingEmail": "E-mail de facturation",
+					"line2": "Complément d'adresse",
+					"state": "Région ou province"
 				},
 				"errors": {
 					"customerType": "Choisissez un type de client.",
 					"companyName": "La raison sociale est obligatoire.",
 					"country": "Choisissez le pays de facturation.",
-					"line1": "L'adresse est obligatoire.",
+					"line1": "La rue est obligatoire.",
 					"postalCode": "Le code postal est obligatoire.",
 					"city": "La ville est obligatoire.",
 					"billingEmail": "Saisissez une adresse e-mail valide."
@@ -387,6 +384,7 @@
 					"excl_tax": "{amount} HT",
 					"first_charge": "Premier prélèvement de {amount} le {date}, puis chaque {interval}. Résiliez avant le {date} et vous ne payez rien.",
 					"tax_on_stripe": "La TVA est calculée sur la page de paiement de Stripe d'après le pays de facturation.",
+					"preview_failed": "Cette offre ne peut pas être payée pour le moment. Réessayez plus tard ou contactez-nous.",
 					"card_note": "Carte saisie sur la page de paiement sécurisée de Stripe, jamais conservée chez nous.",
 					"confirm": "Continuer vers le paiement sécurisé"
 				}

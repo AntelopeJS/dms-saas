@@ -103,6 +103,10 @@
 				"not_eligible": "Refund not available",
 				"already_processed": "Refund already processed"
 			},
+			"stripe": {
+				"unavailable": "Stripe, our payment provider, cannot be reached right now. Nothing was charged; try again in a few minutes.",
+				"not_configured": "Payments are not set up on this platform yet. Contact the platform operator."
+			},
 			"billing": {
 				"country_required": "Billing country is required",
 				"invalid_return_url": "Invalid return URL",

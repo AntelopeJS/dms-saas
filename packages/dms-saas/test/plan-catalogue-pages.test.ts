@@ -35,7 +35,7 @@ interface SerializedCardComponent {
 }
 
 interface CardsDisplayOptions {
-  card?: { component?: SerializedCardComponent };
+  card?: { component?: SerializedCardComponent; skeletonHeight?: string };
 }
 
 /** The card component the plans' cards display draws, as serialized. */
@@ -64,6 +64,18 @@ describe("the plans page", () => {
     expect(options?.defaultDisplay).toBe("cards");
     expect(card.componentName).toBe("DmsSaasPlanCard");
     expect(card.options?.selectable).toBe(options?.rowActions?.hasSelection);
+  });
+
+  // The placeholder grid draws a page of cards as tall as a plan card, so the
+  // footer stands where the loaded catalogue puts it.
+  it("sizes the loading cards like a page of plan cards", async () => {
+    const { options } = await SaasPlansController.table.serialize();
+    const cards = options?.displays?.find((display) => display.id === "cards");
+
+    expect(options?.pageSize).toBe(8);
+    expect(
+      (cards?.options as CardsDisplayOptions | undefined)?.card?.skeletonHeight,
+    ).toBe("580px");
   });
 
   it("names each menu entry, so the cards find the one a control stands for", async () => {
