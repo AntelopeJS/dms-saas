@@ -9,11 +9,11 @@ import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/defa
 import { FormPageLayout } from "@antelopejs/interface-dms/base/layouts";
 import { HttpMethod } from "@antelopejs/interface-dms/base/types/http";
 import {
-  DEFAULT_STRIPE_TAX_CODE,
   LEGAL_DOCUMENT_KEYS,
   type LegalDocumentKey,
   REFUND_PRORATA_MODES,
 } from "../../db";
+import { type BillingRules, defaultBillingRules } from "../../operator-billing";
 import { FormInsightType } from "../../utils";
 import { SAAS_MODULE_ID } from "../module";
 import { configurationCategory } from "./categories";
@@ -40,7 +40,21 @@ interface CountRange {
   suffix?: string;
 }
 
-function countField(id: string, key: string, range: CountRange): FormField {
+/**
+ * A billing rule offers its module default: "Module default · Use default"
+ * while it holds something else. The retention after cancellation does not:
+ * one click there could shorten it, and lowering it deletes workspaces' data.
+ */
+function moduleDefault(id: keyof BillingRules): Partial<FormField> {
+  if (id === "dataRetentionDaysAfterCancellation") return {};
+  return { defaultValue: defaultBillingRules()[id], offersDefault: true };
+}
+
+function countField(
+  id: keyof BillingRules,
+  key: string,
+  range: CountRange,
+): FormField {
   return {
     id,
     label: `${RULES}.${key}`,
@@ -48,15 +62,17 @@ function countField(id: string, key: string, range: CountRange): FormField {
     hint: `${RULES}.${key}_hint`,
     type: new DefaultDataTypes.NumberType({ ...range, step: 1 }),
     required: true,
+    ...moduleDefault(id),
   };
 }
 
-function switchField(id: string, key: string): FormField {
+function switchField(id: keyof BillingRules, key: string): FormField {
   return {
     id,
     label: `${RULES}.${key}`,
     description: `${RULES}.${key}_description`,
     type: new DefaultDataTypes.BooleanType(),
+    ...moduleDefault(id),
   };
 }
 
@@ -120,10 +136,9 @@ const taxSection: FormSection = {
       label: `${RULES}.tax.code`,
       description: `${RULES}.tax.code_description`,
       hint: `${RULES}.tax.code_hint`,
-      type: new DefaultDataTypes.StringType({
-        placeholder: DEFAULT_STRIPE_TAX_CODE,
-      }),
+      type: new DefaultDataTypes.StringType(),
       required: true,
+      ...moduleDefault("stripeTaxCode"),
     },
     insightField("planTaxSync", "tax.plans", "DmsSaasPlanTaxSync"),
   ],
@@ -157,6 +172,7 @@ const refundSection: FormSection = {
         display: "cards",
       }),
       required: true,
+      ...moduleDefault("moneyBackGuaranteeMode"),
     },
     insightField("refundExample", "refunds.example", "DmsSaasRefundExample"),
     switchField("autoProrataOnCancelEnabled", "refunds.on_cancel"),
