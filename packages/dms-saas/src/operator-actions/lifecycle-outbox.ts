@@ -7,11 +7,11 @@ import {
   getWorkspaceLifecycleConsumers,
 } from "./lifecycle-consumers";
 import type {
-  WorkspaceLifecycleConsumer,
-  WorkspaceLifecycleMessage,
-  WorkspaceLifecycleReceipt,
-  WorkspaceLifecycleTransition,
-} from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+  TenantLifecycleConsumer,
+  TenantLifecycleMessage,
+  TenantLifecycleReceipt,
+  TenantLifecycleTransition,
+} from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import { getStripeClient } from "../stripe/client";
 import { LifecycleDeliveryModel } from "./db/lifecycle-delivery.model";
 import type { LifecycleDelivery } from "./db/lifecycle-delivery.table";
@@ -26,8 +26,9 @@ type DeliveryAttempt = "delivered" | "settled" | "held_elsewhere";
 export interface LifecycleDispatchInput {
   tenantId: string;
   operationId: string;
-  transition: WorkspaceLifecycleTransition;
+  transition: TenantLifecycleTransition;
   requestedAt: Date;
+  planChangeOperationId?: string;
 }
 
 export interface LifecycleReconciliationResult {
@@ -42,18 +43,21 @@ function deliveryId(operationId: string, consumer: string): string {
     .digest("hex");
 }
 
-function buildMessage(delivery: LifecycleDelivery): WorkspaceLifecycleMessage {
-  return {
+function buildMessage(delivery: LifecycleDelivery): TenantLifecycleMessage {
+  const message: TenantLifecycleMessage = {
     tenantId: delivery.tenantId,
     operationId: delivery.operationId,
     transition: delivery.transition,
     requestedAt: delivery.requestedAt,
   };
+  if (delivery.planChangeOperationId)
+    message.planChangeOperationId = delivery.planChangeOperationId;
+  return message;
 }
 
 function normalizeReceipt(
-  receipt: WorkspaceLifecycleReceipt,
-): WorkspaceLifecycleReceipt {
+  receipt: TenantLifecycleReceipt,
+): TenantLifecycleReceipt {
   const receiptId = receipt.receiptId?.trim();
   if (!receiptId || receiptId.length > RECEIPT_ID_MAX_LENGTH) {
     throw new Error("Invalid workspace lifecycle receipt");
@@ -78,6 +82,7 @@ function buildDelivery(
     tenantId: input.tenantId,
     consumer,
     transition: input.transition,
+    planChangeOperationId: input.planChangeOperationId ?? null,
     provisioningInvoiceId: null,
     provisioningState:
       consumer === CREATION_INTENT_CONSUMER ? "preparing" : null,
@@ -112,6 +117,8 @@ async function insertDelivery(
     if (
       existing.tenantId !== input.tenantId ||
       existing.transition !== input.transition ||
+      (existing.planChangeOperationId ?? null) !==
+        (input.planChangeOperationId ?? null) ||
       existing.requestedAt.getTime() !== input.requestedAt.getTime()
     )
       throw new Error("Lifecycle delivery identity has conflicting content");
@@ -139,15 +146,15 @@ async function persistDeliveries(
 }
 
 function acceptsTransition(
-  consumer: WorkspaceLifecycleConsumer,
-  transition: WorkspaceLifecycleTransition,
+  consumer: TenantLifecycleConsumer,
+  transition: TenantLifecycleTransition,
 ): boolean {
   return consumer.transitions.includes(transition);
 }
 
 function resolveConsumer(
   delivery: LifecycleDelivery,
-): WorkspaceLifecycleConsumer | undefined {
+): TenantLifecycleConsumer | undefined {
   if (delivery.consumer === CREATION_INTENT_CONSUMER) {
     return {
       name: CREATION_INTENT_CONSUMER,
@@ -163,7 +170,7 @@ function resolveConsumer(
 
 async function consumeCreationIntent(
   delivery: LifecycleDelivery,
-): Promise<WorkspaceLifecycleReceipt> {
+): Promise<TenantLifecycleReceipt> {
   const model = GetModel(LifecycleDeliveryModel);
   const current = await model.get(delivery._id);
   if (!current || current.provisioningState === "preparing") {
@@ -270,7 +277,7 @@ export async function deliverWorkspaceCreated(tenantId: string): Promise<void> {
 async function invokeConsumer(
   model: LifecycleDeliveryModel,
   delivery: LifecycleDelivery,
-  consumer: WorkspaceLifecycleConsumer,
+  consumer: TenantLifecycleConsumer,
 ): Promise<void> {
   try {
     const isDeleted =

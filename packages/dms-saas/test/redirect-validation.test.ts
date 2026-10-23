@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GetClientBaseUrl } from "@antelopejs/interface-dms/client-base-url";
 import { setDevMode } from "../src/config/dev-mode";
 import { isAllowedRedirectUrl, setRuntimeConfig } from "../src/config/runtime";
 import type { DmsSaasConfig } from "../src/types";
@@ -9,7 +10,12 @@ const STRIPE_CONFIG = {
   publishableKey: "pk_test",
 };
 
+vi.mock("@antelopejs/interface-dms/client-base-url", () => ({
+  GetClientBaseUrl: vi.fn(),
+}));
+
 const CONFIGURED_HOST = "app.example.com";
+const CLIENT_HOST = "dashboard.example.com:8443";
 
 const LOOPBACK_URLS = [
   "http://localhost:3000/billing",
@@ -39,72 +45,95 @@ describe("redirect URL validation", () => {
   beforeEach(() => {
     configure(undefined);
     setDevMode(false);
+    vi.mocked(GetClientBaseUrl).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     setDevMode(false);
   });
 
-  it("accepts a configured host", () => {
+  it("accepts a configured host", async () => {
     configure([CONFIGURED_HOST]);
 
-    expect(isAllowedRedirectUrl(`https://${CONFIGURED_HOST}/return`)).toBe(
+    expect(
+      await isAllowedRedirectUrl(`https://${CONFIGURED_HOST}/return`),
+    ).toBe(true);
+  });
+
+  it("rejects an unconfigured host", async () => {
+    configure([CONFIGURED_HOST]);
+
+    expect(await isAllowedRedirectUrl("https://evil.com/return")).toBe(false);
+  });
+
+  it("defaults to the host of the DMS client URL", async () => {
+    vi.mocked(GetClientBaseUrl).mockResolvedValue(`https://${CLIENT_HOST}`);
+
+    expect(await isAllowedRedirectUrl(`https://${CLIENT_HOST}/billing`)).toBe(
       true,
     );
+    expect(
+      await isAllowedRedirectUrl("https://dashboard.example.com/billing"),
+    ).toBe(false);
+    expect(await isAllowedRedirectUrl("https://evil.com/billing")).toBe(false);
   });
 
-  it("rejects an unconfigured host", () => {
+  it("prefers the configured hosts over the DMS client URL", async () => {
+    vi.mocked(GetClientBaseUrl).mockResolvedValue(`https://${CLIENT_HOST}`);
     configure([CONFIGURED_HOST]);
 
-    expect(isAllowedRedirectUrl("https://evil.com/return")).toBe(false);
-  });
-
-  it("rejects everything when nothing is configured", () => {
-    expect(isAllowedRedirectUrl(`https://${CONFIGURED_HOST}/return`)).toBe(
-      false,
+    expect(await isAllowedRedirectUrl(`https://${CONFIGURED_HOST}/`)).toBe(
+      true,
     );
+    expect(await isAllowedRedirectUrl(`https://${CLIENT_HOST}/`)).toBe(false);
   });
 
-  it("rejects non-http protocols even for a configured host", () => {
+  it("rejects everything when nothing is configured", async () => {
+    expect(
+      await isAllowedRedirectUrl(`https://${CONFIGURED_HOST}/return`),
+    ).toBe(false);
+  });
+
+  it("rejects non-http protocols even for a configured host", async () => {
     configure(["localhost:3000"]);
 
-    expect(isAllowedRedirectUrl("ftp://localhost:3000/")).toBe(false);
+    expect(await isAllowedRedirectUrl("ftp://localhost:3000/")).toBe(false);
   });
 
-  it("rejects loopback hosts outside of dev mode", () => {
+  it("rejects loopback hosts outside of dev mode", async () => {
     for (const url of LOOPBACK_URLS) {
-      expect(isAllowedRedirectUrl(url), url).toBe(false);
+      expect(await isAllowedRedirectUrl(url), url).toBe(false);
     }
   });
 
-  it("accepts loopback hosts in dev mode without configuration", () => {
+  it("accepts loopback hosts in dev mode without configuration", async () => {
     setDevMode(true);
 
     for (const url of LOOPBACK_URLS) {
-      expect(isAllowedRedirectUrl(url), url).toBe(true);
+      expect(await isAllowedRedirectUrl(url), url).toBe(true);
     }
   });
 
-  it("still honours the configured hosts in dev mode", () => {
+  it("still honours the configured hosts in dev mode", async () => {
     setDevMode(true);
     configure([CONFIGURED_HOST]);
 
-    expect(isAllowedRedirectUrl(`https://${CONFIGURED_HOST}/return`)).toBe(
-      true,
-    );
+    expect(
+      await isAllowedRedirectUrl(`https://${CONFIGURED_HOST}/return`),
+    ).toBe(true);
   });
 
-  it("rejects urls that only look like loopback ones in dev mode", () => {
+  it("rejects urls that only look like loopback ones in dev mode", async () => {
     setDevMode(true);
 
     for (const url of LOOKALIKE_URLS) {
-      expect(isAllowedRedirectUrl(url), url).toBe(false);
+      expect(await isAllowedRedirectUrl(url), url).toBe(false);
     }
   });
 
-  it("rejects non-loopback hosts in dev mode when not configured", () => {
+  it("rejects non-loopback hosts in dev mode when not configured", async () => {
     setDevMode(true);
 
-    expect(isAllowedRedirectUrl("https://evil.com/return")).toBe(false);
+    expect(await isAllowedRedirectUrl("https://evil.com/return")).toBe(false);
   });
 });

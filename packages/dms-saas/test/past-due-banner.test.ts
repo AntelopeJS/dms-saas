@@ -173,6 +173,20 @@ describe("past-due layout banner registration", () => {
       props: { audience: "member" },
     });
   });
+
+  // The DMS shows banners outside the module area by default: billing state
+  // must also follow the owner into the module back office.
+  it("shows billing banners on every page, module area included", () => {
+    const banners = [
+      PAST_DUE_OWNER_BANNER,
+      PAST_DUE_MEMBER_BANNER,
+      ...TRIAL_ENDING_BANNERS,
+    ];
+
+    expect(banners.map((banner) => banner.scope)).toEqual(
+      banners.map(() => "everywhere"),
+    );
+  });
 });
 
 describe("trial ending reminders", () => {

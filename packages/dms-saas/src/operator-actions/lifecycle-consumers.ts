@@ -1,13 +1,13 @@
 import { Logging } from "@antelopejs/interface-core/logging";
-import type { WorkspaceLifecycleConsumer } from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+import type { TenantLifecycleConsumer } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 
 const LOG_PREFIX = "[dms-saas:workspace-lifecycle]";
-const consumers = new Map<string, WorkspaceLifecycleConsumer>();
+const consumers = new Map<string, TenantLifecycleConsumer>();
 
 // RegisteringProxy changes ownership before calling the implementation. A
 // rejected collision would leave automatic unload cleanup attached to the
 // rejected consumer instead of the active one, so the latest owner must win.
-function register(name: string, consumer: WorkspaceLifecycleConsumer): void {
+function register(name: string, consumer: TenantLifecycleConsumer): void {
   if (consumers.has(name)) {
     Logging.Error(
       `${LOG_PREFIX} consumer name '${name}' is already taken: the previous consumer is replaced`,
@@ -21,11 +21,11 @@ function unregister(name: string): void {
 }
 
 export namespace internal {
-  export const RegisterWorkspaceLifecycleConsumer = { register, unregister };
+  export const RegisterTenantLifecycleConsumer = { register, unregister };
 }
 
 /** Returns registered consumers in deterministic delivery order. */
-export function getWorkspaceLifecycleConsumers(): WorkspaceLifecycleConsumer[] {
+export function getWorkspaceLifecycleConsumers(): TenantLifecycleConsumer[] {
   return [...consumers.values()].sort((left, right) =>
     left.name.localeCompare(right.name),
   );
@@ -34,6 +34,6 @@ export function getWorkspaceLifecycleConsumers(): WorkspaceLifecycleConsumer[] {
 /** Resolves the active registration for a persisted delivery. */
 export function getWorkspaceLifecycleConsumer(
   name: string,
-): WorkspaceLifecycleConsumer | undefined {
+): TenantLifecycleConsumer | undefined {
   return consumers.get(name);
 }

@@ -69,7 +69,7 @@ describe("resolveLegalBackTarget", () => {
 
   it("refuses another origin in ?from=", () => {
     expect(resolveLegalBackTarget("//evil.example", "", ORIGIN, PAGE)).toBe(
-      "/auth/login",
+      "/auth",
     );
   });
 
@@ -82,12 +82,10 @@ describe("resolveLegalBackTarget", () => {
   it("falls back to sign-in for another site or no referrer", () => {
     expect(
       resolveLegalBackTarget(undefined, "https://other.example/", ORIGIN, PAGE),
-    ).toBe("/auth/login");
-    expect(resolveLegalBackTarget(undefined, "", ORIGIN, PAGE)).toBe(
-      "/auth/login",
-    );
+    ).toBe("/auth");
+    expect(resolveLegalBackTarget(undefined, "", ORIGIN, PAGE)).toBe("/auth");
     expect(
       resolveLegalBackTarget(undefined, `${ORIGIN}${PAGE}`, ORIGIN, PAGE),
-    ).toBe("/auth/login");
+    ).toBe("/auth");
   });
 });

@@ -2,6 +2,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   type LayoutBannerComponentInfo,
   type LayoutBannerContext,
+  LayoutBannerScope,
   LayoutBannerVariant,
   RegisterLayoutBanner,
 } from "@antelopejs/interface-dms/layout-banners";
@@ -81,6 +82,8 @@ export const TRIAL_ENDING_BANNERS: LayoutBannerComponentInfo[] =
   TRIAL_REMINDERS.map((reminder) => ({
     key: reminder.key,
     variant: LayoutBannerVariant.INFO,
+    // The trial ends for the whole workspace, module area included.
+    scope: LayoutBannerScope.EVERYWHERE,
     icon: "i-ph-hourglass-medium",
     dismissible: reminder.dismissible,
     component: BANNER_COMPONENT,

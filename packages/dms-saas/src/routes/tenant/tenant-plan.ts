@@ -30,12 +30,15 @@ import {
   TenantSubscriptionModel,
 } from "../../db";
 import { toPendingPlanChange } from "../../plan-changes";
+import { hasPlanChangePolicy } from "../../implementations/dms-saas/plan-changes";
+import { previewGuardedFreeChange } from "../../plan-changes/guarded-free";
 import {
   buildTenantPlanCatalog,
   countSeatsToCompare,
   ensurePlanStripeRefs,
   getSeatUsage,
   isDowngrade,
+  localizePlan,
   type TenantPlanView,
 } from "../../plans";
 import { findMissingBillingIdentityFields } from "../../workspaces/billing-identity";
@@ -74,6 +77,7 @@ import {
   loadSellablePlan,
   type OfferedPlanView,
   type PlanChangeRequest,
+  planChangeResponse,
   scheduleDowngrade,
   startsPaidCheckout,
 } from "./tenant-plan-ops";
@@ -194,6 +198,7 @@ export class SaasTenantPlanController extends Controller(
     const offered = await Promise.all(
       withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
+    for (const plan of offered) localizePlan(plan, locale);
     const catalog = await buildTenantPlanCatalog(
       this.planModel,
       this.featureModel,
@@ -249,15 +254,17 @@ export class SaasTenantPlanController extends Controller(
       tenantSubscriptionModel,
     );
     void this.followOwnerLanguage(tenantId, subscription, user);
+    const locale = requestLocale(language);
     const current = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
     const pending = subscription?.pendingPlanId
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
+    for (const plan of [current, pending]) if (plan) localizePlan(plan, locale);
     const billingInfo = await tenantBillingInfoModel.findOne();
     const [catalog, seatUsage] = await Promise.all([
-      this.buildCatalog(current, requestLocale(language), {
+      this.buildCatalog(current, locale, {
         subscription,
         email: user.email,
         customerType: billingInfo?.customerType ?? null,
@@ -380,6 +387,15 @@ export class SaasTenantPlanController extends Controller(
     const currentPlan = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
+    if (
+      hasPlanChangePolicy() &&
+      subscription?.stripeSubscriptionId &&
+      !isPaidPlan(target)
+    ) {
+      await planChangeResponse(() =>
+        previewGuardedFreeChange(tenantId, target),
+      );
+    }
     await syncCustomerPreferredLocale(
       subscription?.stripeCustomerId,
       user.language,
@@ -430,22 +446,33 @@ export class SaasTenantPlanController extends Controller(
     if (subscription?.planId === body.planId && !choosesAnew) {
       return this.resolveSamePlanRequest(tenantId, subscription);
     }
+    assert(
+      !subscription?.guardedPlanChange,
+      HTTP_CONFLICT,
+      "Resolve the pending downgrade before choosing another plan",
+    );
     if (!isRecovery && startsPaidCheckout(newPlan, subscription)) {
       assertBillingIdentityComplete(billingInfo);
     }
-    await syncCustomerPreferredLocale(
-      subscription?.stripeCustomerId,
-      user.language,
-    );
+    // Guarded scheduling must validate before any provider mutation, including
+    // this cosmetic customer update. Billing page reads still sync the locale.
+    if (!hasPlanChangePolicy() || !subscription?.stripeSubscriptionId) {
+      await syncCustomerPreferredLocale(
+        subscription?.stripeCustomerId,
+        user.language,
+      );
+    }
 
-    return this.routePlanChange({
-      tenantId,
-      user,
-      newPlan,
-      body,
-      subscription,
-      tenantSubscriptionModel,
-    });
+    return planChangeResponse(() =>
+      this.routePlanChange({
+        tenantId,
+        user,
+        newPlan,
+        body,
+        subscription,
+        tenantSubscriptionModel,
+      }),
+    );
   }
 
   /**

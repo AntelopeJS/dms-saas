@@ -1,6 +1,6 @@
-import type { Feature, Plan, PlanFeatureValue } from "../db";
+import type { Feature, Plan, PlanFeatureValue, PlanLocalizedText } from "../db";
 import { withPermissionAncestors } from "./plan-permission-tree";
-import { PLAN_UNLIMITED } from "../db";
+import { PLAN_LOCALIZED_FIELDS, PLAN_UNLIMITED, PlanModel } from "../db";
 
 /**
  * What a number feature holds: `0` turns it off, `-1` makes it
@@ -46,12 +46,27 @@ export const PLAN_WRITE_FIELDS = [
   "isActive",
 ] as const satisfies readonly (keyof Plan)[];
 
+/** The plan texts the operator writes once per locale. */
+type PlanTextField = "name" | "description" | "borderLabel";
+
+/**
+ * A plan's texts with one value per locale, as the editor reads and writes
+ * them. A text is never `null`: a localized field cannot be read back from
+ * one, so an empty text holds empty values (`{ en: "" }`) or is left out.
+ */
+export type PlanTexts = Partial<Record<PlanTextField, PlanLocalizedText>>;
+
+/** A plan write: its fields, texts written one value per locale. */
+export type PlanWrite = Omit<Partial<Plan>, PlanTextField> & PlanTexts;
+
 /** A plan write as the editor and the API send it. */
-export type PlanWriteBody = Partial<
-  Pick<Plan, (typeof PLAN_WRITE_FIELDS)[number]>
-> & {
-  inheritance?: PlanInheritanceInput | null;
-};
+export type PlanWriteBody = Omit<
+  Partial<Pick<Plan, (typeof PLAN_WRITE_FIELDS)[number]>>,
+  PlanTextField
+> &
+  PlanTexts & {
+    inheritance?: PlanInheritanceInput | null;
+  };
 
 function withoutInheritance(body: PlanWriteBody): PlanWriteBody {
   const rest = { ...body };
@@ -91,17 +106,39 @@ export function toInheritance(plan: Plan): PlanInheritanceInput {
  * Keeps the writable plan fields of a body, `inheritance` expanded and its
  * permissions completed with the ids they sit under.
  */
-export function pickPlanWrite(body: PlanWriteBody): Partial<Plan> {
+export function pickPlanWrite(body: PlanWriteBody): PlanWrite {
   const expanded = expandInheritance(body);
-  const out: Partial<Plan> = {};
+  const out: PlanWrite = {};
   for (const field of PLAN_WRITE_FIELDS) {
-    if (expanded[field] !== undefined) {
+    const isText = (PLAN_LOCALIZED_FIELDS as readonly string[]).includes(field);
+    if (isText ? expanded[field] != null : expanded[field] !== undefined) {
       Object.assign(out, { [field]: expanded[field] });
     }
   }
   if (out.permissions)
     out.permissions = withPermissionAncestors(out.permissions);
   return out;
+}
+
+/**
+ * A plan's texts with one value per locale. Leaves the plan unlocked in every
+ * locale (`localize("*")`): read it again with `localizePlan()` to get one.
+ */
+export function planTexts(plan: Plan): PlanTexts {
+  plan.localize("*", PLAN_LOCALIZED_FIELDS);
+  return Object.fromEntries(
+    PLAN_LOCALIZED_FIELDS.map((field) => [field, plan[field]]).filter(
+      ([, text]) => text != null,
+    ),
+  ) as PlanTexts;
+}
+
+/** The plan row a write stores, its texts locked one value per locale. */
+export function toPlanRow(write: PlanWrite): Plan {
+  return PlanModel.fromPlainData(write as Partial<Plan>).localize(
+    "*",
+    PLAN_LOCALIZED_FIELDS,
+  );
 }
 
 /** A URL-safe slug from a plan name: `Growth 2024` → `growth-2024`. */

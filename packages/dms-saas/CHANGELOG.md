@@ -1,5 +1,89 @@
 # Changelog
 
+## v0.7.4
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.3...v0.7.4)
+
+### 🩹 Fixes
+
+- **frontend:** Run on @antelopejs/dms-frontend 0.7 ([#121](https://github.com/AntelopeJS/dms-saas/pull/121))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
+## v0.7.3
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.2...v0.7.3)
+
+### 🩹 Fixes
+
+- **billing:** Word a pending downgrade on the next invoice card and the review ([#120](https://github.com/AntelopeJS/dms-saas/pull/120))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
+## v0.7.2
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.1...v0.7.2)
+
+### 🩹 Fixes
+
+- **billing:** Show the refused plan change's violations and renew a spent card intent ([#119](https://github.com/AntelopeJS/dms-saas/pull/119))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
+## v0.7.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.0...v0.7.1)
+
+### 🚀 Enhancements
+
+- **billing:** Guarded Free downgrade and durable invoice line recovery ([#116](https://github.com/AntelopeJS/dms-saas/pull/116))
+
+### 🩹 Fixes
+
+- **public:** Send sign-in links to the DMS sign-in page ([#84](https://github.com/AntelopeJS/dms-saas/pull/84))
+
+### 📖 Documentation
+
+- Clarify learning paths and illustrate real outcomes ([#110](https://github.com/AntelopeJS/dms-saas/pull/110))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.5.1 ([758ddb1](https://github.com/AntelopeJS/dms-saas/commit/758ddb1))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
+## v0.7.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.6.1...v0.7.0)
+
+### 💅 Refactors
+
+- **saas:** ⚠️  Rename workspace lifecycle API to tenant ([#109](https://github.com/AntelopeJS/dms-saas/pull/109))
+
+### 📦 Build
+
+- Include shipped frontend in contributor workspace ([#104](https://github.com/AntelopeJS/dms-saas/pull/104))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.5.0 ([4df8e2d](https://github.com/AntelopeJS/dms-saas/commit/4df8e2d))
+
+#### ⚠️ Breaking Changes
+
+- **saas:** ⚠️  Rename workspace lifecycle API to tenant ([#109](https://github.com/AntelopeJS/dms-saas/pull/109))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.6.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.6.0...v0.6.1)

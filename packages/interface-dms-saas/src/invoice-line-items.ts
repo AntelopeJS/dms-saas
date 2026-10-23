@@ -48,13 +48,80 @@ export interface InvoiceLineItemsContext {
   isPreview?: boolean;
 }
 
+/** The provider can bill the window now: these are its lines. */
+export interface InvoiceLineItemsReady {
+  status: "ready";
+  lines: InvoiceLineItem[];
+}
+
+/**
+ * The provider cannot bill the window yet but expects to: the data it reads
+ * is still being produced. The invoice stays a suspended draft and the
+ * provider is asked again later, until the finalization deadline: the invoice
+ * is then finalized without this provider's lines (see {@link InvoiceUsageGap}).
+ */
+export interface InvoiceLineItemsNotReady {
+  status: "not_ready";
+  reason: string;
+}
+
+export type InvoiceLineItemsResolution =
+  | InvoiceLineItemsReady
+  | InvoiceLineItemsNotReady;
+
+/**
+ * Returns the lines to bill, or an explicit resolution. A bare array means
+ * `ready`. A thrown error is a transient failure, retried like `not_ready`.
+ */
 export type InvoiceLineItemsResolver = (
   context: InvoiceLineItemsContext,
-) => Promise<InvoiceLineItem[]> | InvoiceLineItem[];
+) =>
+  | Promise<InvoiceLineItem[] | InvoiceLineItemsResolution>
+  | InvoiceLineItem[]
+  | InvoiceLineItemsResolution;
+
+/** Reason reported for a resolver answer that is not a resolution. */
+export const INVALID_RESOLUTION_REASON = "invalid_resolution";
+
+/**
+ * Reads what a resolver returned as an explicit resolution. Anything that is
+ * neither an array nor a well-formed resolution is `not_ready`: an empty bill
+ * must be stated, never inferred from a malformed answer.
+ */
+export function normalizeInvoiceLineItemsResolution(
+  value: unknown,
+): InvoiceLineItemsResolution {
+  if (Array.isArray(value)) return { status: "ready", lines: value };
+  const candidate = value as Partial<InvoiceLineItemsResolution> | null;
+  if (candidate?.status === "ready" && Array.isArray(candidate.lines))
+    return { status: "ready", lines: candidate.lines };
+  if (candidate?.status === "not_ready")
+    return { status: "not_ready", reason: String(candidate.reason) };
+  return { status: "not_ready", reason: INVALID_RESOLUTION_REASON };
+}
+
+/**
+ * A cycle invoice finalized without every line it should carry: a provider
+ * still not ready at the deadline, lines Stripe refused, or a draft changed
+ * outside dms-saas. The missing usage is never billed; the gap is reported so
+ * the system that left it gets fixed.
+ *
+ * Each reason starts with a stable code (`provider_not_ready`,
+ * `managed_lines_unexpected_or_changed`, ...) followed by `:` and its detail.
+ */
+export interface InvoiceUsageGap {
+  tenantId: string;
+  invoiceId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  reasons: string[];
+}
 
 export interface InvoiceLineItemsProvider {
   id: string;
   resolve: InvoiceLineItemsResolver;
+  /** Told of every invoice it was asked to bill that was finalized with a gap. */
+  onUsageGap?: (gap: InvoiceUsageGap) => void;
 }
 
 export const LINE_KEY_SEPARATOR = ":";
@@ -182,7 +249,7 @@ export function selectInvoiceLineItemsToCreate(
 
 export namespace internal {
   export const RegisterInvoiceLineItemsProvider = new RegisteringProxy<
-    (providerId: string, resolve: InvoiceLineItemsResolver) => void
+    (providerId: string, provider: InvoiceLineItemsProvider) => void
   >();
 }
 
@@ -196,8 +263,12 @@ export namespace internal {
  * priced belong entirely to the provider.
  *
  * Semantics:
- * - Providers run in registration order; one that throws is logged and
- *   skipped, leaving the other providers and the invoice mirror untouched.
+ * - Providers run in registration order. On a closing invoice, the draft is
+ *   first suspended (`auto_advance=false`) and the lines are injected by a
+ *   durable task: a provider that throws or answers `not_ready` is asked
+ *   again later. The invoice is always finalized: with every provider's
+ *   lines once they are on it, or past the deadline with the lines available,
+ *   reporting the gap to `onUsageGap`.
  * - Injection is idempotent per (invoice, provider, line key): a replayed
  *   webhook, a redelivery or a concurrent worker never duplicates a line.
  * - `id` namespaces the line keys, so two providers may use the same metric
@@ -207,8 +278,9 @@ export namespace internal {
  *   invoiced. The clash is reported at error level only once dms-saas is
  *   attached: earlier registrations are held in a buffer keyed by `id`, so the
  *   replaced one is already gone by the time dms-saas sees anything.
- * - Resolvers run inside the Stripe webhook request: read pre-aggregated
- *   rollups rather than computing usage on the fly.
+ * - Resolvers run inside the Stripe webhook request or the recovery worker:
+ *   read pre-aggregated rollups rather than computing usage on the fly, and
+ *   return the same lines every time for a closed window.
  * - The registration is held until dms-saas attaches, replayed when dms-saas
  *   is reloaded, and dropped when the registering module is unloaded.
  * - Call during your module's `construct()`, and call
@@ -222,10 +294,7 @@ export function RegisterInvoiceLineItemsProvider(
       `An invoice line items provider id cannot contain '${LINE_KEY_SEPARATOR}' (got '${provider.id}').`,
     );
   }
-  internal.RegisterInvoiceLineItemsProvider.register(
-    provider.id,
-    provider.resolve,
-  );
+  internal.RegisterInvoiceLineItemsProvider.register(provider.id, provider);
 }
 
 /**

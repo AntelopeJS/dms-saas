@@ -9,7 +9,7 @@ import {
 } from "@antelopejs/interface-database-decorators";
 import { CORE_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
 import { Tenant } from "@antelopejs/interface-dms/db/tables/tenants.table";
-import type { WorkspaceLifecycleTransition } from "@antelopejs/interface-dms-saas/workspace-lifecycle";
+import type { TenantLifecycleTransition } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import type { OperatorActionStatus } from "../types";
 
 export const lifecycleDeliveriesTableName = "saas_lifecycle_deliveries";
@@ -39,7 +39,11 @@ export class LifecycleDelivery extends Table {
   declare consumer: string;
 
   @Field("string")
-  declare transition: WorkspaceLifecycleTransition;
+  declare transition: TenantLifecycleTransition;
+
+  /** Durable provenance survives retries and receipt loss. */
+  @Field("string")
+  declare planChangeOperationId: string | null;
 
   @Field("string")
   declare provisioningInvoiceId: string | null;
