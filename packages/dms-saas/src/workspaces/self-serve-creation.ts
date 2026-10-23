@@ -11,6 +11,7 @@ import {
   TenantSubscriptionModel,
   TrialConsumptionModel,
 } from "../db";
+import { isStripeConfigured } from "../stripe/client";
 import { hashEmail } from "../utils";
 import { resolveBillingProfileForNewWorkspace } from "./billing-profile";
 import { isFreePlan } from "./free-plan";
@@ -79,13 +80,18 @@ export interface WorkspaceCreateOptions {
   freePerCard: FreePerCardRule | null;
 }
 
-/** The card requirement of a plan under the current per-card rule. */
+/**
+ * The card requirement of a plan under the current per-card rule. A free
+ * plan asks for none while Stripe is not configured: no card could be
+ * verified, and the workspace needs no Stripe object.
+ */
 export function cardRequirementOf(
   plan: Plan,
   freeWorkspacesPerCard: number,
 ): CardRequirement {
   if (!isFreePlan(plan)) return "payment";
-  return isFreePerCardPolicyActive(freeWorkspacesPerCard)
+  return isStripeConfigured() &&
+    isFreePerCardPolicyActive(freeWorkspacesPerCard)
     ? "verification"
     : "none";
 }

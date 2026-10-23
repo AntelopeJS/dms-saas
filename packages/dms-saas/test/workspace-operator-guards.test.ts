@@ -1,5 +1,6 @@
 import { HTTPResult } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Plan, TenantSubscription } from "../src/db";
 
@@ -7,8 +8,13 @@ const subscriptionModel = vi.hoisted(() => ({ findOne: vi.fn() }));
 const commands = vi.hoisted(() => ({
   suspendWorkspaceCommand: vi.fn(async () => ({ status: "succeeded" })),
   grantBalanceCreditCommand: vi.fn(async () => ({ status: "succeeded" })),
+  manuallyUpgradeWorkspaceCommand: vi.fn(async () => ({
+    status: "succeeded",
+  })),
 }));
 const operatorView = vi.hoisted(() => ({ load: vi.fn() }));
+const stripe = vi.hoisted(() => ({ isConfigured: true }));
+const upgradePreview = vi.hoisted(() => ({ preview: vi.fn() }));
 
 vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
   const original =
@@ -30,6 +36,15 @@ vi.mock("../src/operator-actions", async (importOriginal) => ({
 
 vi.mock("../src/workspaces/operator-view", () => ({
   loadWorkspaceOperatorView: operatorView.load,
+}));
+
+vi.mock("../src/stripe/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/stripe/client")>()),
+  isStripeConfigured: () => stripe.isConfigured,
+}));
+
+vi.mock("../src/operator-actions/upgrade-preview", () => ({
+  previewManualUpgrade: upgradePreview.preview,
 }));
 
 import {
@@ -91,6 +106,7 @@ function operatorController(): SaasWorkspaceOperatorActionsController {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  stripe.isConfigured = true;
 });
 
 describe("Stripe credit ceiling", () => {
@@ -208,5 +224,62 @@ describe("first payment of a workspace its owner pays", () => {
         freeUntil: new Date(Date.now() - 1_000),
       }),
     ).toBe(true);
+  });
+});
+
+describe("operator actions without a usable Stripe", () => {
+  const NOT_CONFIGURED = {
+    status: 503,
+    body: "saas.errors.stripe.not_configured",
+  };
+
+  beforeEach(() => {
+    stripe.isConfigured = false;
+    operatorView.load.mockResolvedValue(view());
+  });
+
+  it("refuses to price an upgrade before Stripe is called", async () => {
+    await expect(
+      operatorController().getUpgradePreview(OPERATOR, TENANT_ID, "plan_pro"),
+    ).rejects.toMatchObject(NOT_CONFIGURED);
+    expect(upgradePreview.preview).not.toHaveBeenCalled();
+  });
+
+  it("answers a handled 503 when Stripe refuses the key on an upgrade preview", async () => {
+    stripe.isConfigured = true;
+    upgradePreview.preview.mockRejectedValueOnce(
+      new Stripe.errors.StripeAuthenticationError({
+        message: "Invalid API Key provided: sk_test_*******lder",
+        type: "authentication_error",
+      }),
+    );
+
+    await expect(
+      operatorController().getUpgradePreview(OPERATOR, TENANT_ID, "plan_pro"),
+    ).rejects.toMatchObject({
+      status: 503,
+      body: "saas.errors.stripe.unavailable",
+    });
+  });
+
+  it("refuses an upgrade before the journal records an attempt", async () => {
+    await expect(
+      operatorController().upgrade(OPERATOR, TENANT_ID, {
+        operationId: OPERATION_ID,
+        planId: "plan_pro",
+      }),
+    ).rejects.toMatchObject(NOT_CONFIGURED);
+    expect(commands.manuallyUpgradeWorkspaceCommand).not.toHaveBeenCalled();
+  });
+
+  it("refuses a balance credit before the journal records an attempt", async () => {
+    await expect(
+      operatorController().grantCredit(OPERATOR, TENANT_ID, {
+        operationId: OPERATION_ID,
+        amountCents: 1_000,
+        reason: "Goodwill",
+      }),
+    ).rejects.toMatchObject(NOT_CONFIGURED);
+    expect(commands.grantBalanceCreditCommand).not.toHaveBeenCalled();
   });
 });

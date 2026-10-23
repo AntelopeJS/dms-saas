@@ -387,6 +387,7 @@
 					"excl_tax": "{amount} excl. VAT",
 					"first_charge": "First charge {amount} on {date}, then every {interval}. Cancel before {date} and you pay nothing.",
 					"tax_on_stripe": "VAT is computed on Stripe's payment page from the billing country.",
+					"preview_failed": "This plan cannot be paid for right now. Try again later or contact us.",
 					"card_note": "Card entered on Stripe's secure payment page, never stored on our side.",
 					"confirm": "Continue to secure payment"
 				}
