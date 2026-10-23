@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildBillingCountryItems } from "../frontend-vue/app/composables/useBillingCountries";
+import {
+  fromAddressInputValue,
+  joinStreetLine,
+  splitStreetLine,
+  toAddressInputValue,
+} from "../frontend-vue/app/composables/useBillingAddress";
+import { formatBillingCountry } from "../frontend-vue/app/composables/useBillingCountries";
 import {
   type BillingIdentityDraft,
   emptyBillingIdentityDraft,
@@ -34,8 +40,10 @@ const COMPLETE_INDIVIDUAL: BillingIdentityDraft = {
   billingEmail: "billing@example.com",
   country: "BE",
   line1: "Rue Antoine Dansaert 12",
+  line2: "",
   postalCode: "1000",
   city: "Brussels",
+  state: "",
 };
 
 describe("billing identity form validation", () => {
@@ -75,17 +83,98 @@ describe("billing identity form validation", () => {
 });
 
 describe("billing countries", () => {
-  it("labels countries with their full name in the given locale", () => {
-    const items = buildBillingCountryItems("fr-FR");
-    expect(items.find((item) => item.value === "BE")?.label).toBe("Belgique");
-    expect(items.find((item) => item.value === "DE")?.label).toBe("Allemagne");
+  it("names a country in the given locale", () => {
+    expect(formatBillingCountry("BE", "fr-FR")).toBe("Belgique");
+    expect(formatBillingCountry("DE", "en-GB")).toBe("Germany");
+  });
+});
+
+describe("billing address input mapping", () => {
+  const STORED = {
+    line1: "Rue de l'Ermitage 41/2",
+    line2: "2e étage",
+    postalCode: "4000",
+    city: "Liège",
+    state: "Wallonie",
+    country: "BE",
+  };
+
+  it("splits the stored street line into the input's parts", () => {
+    expect(toAddressInputValue(STORED)).toEqual({
+      streetName: "Rue de l'Ermitage",
+      houseNumber: "41",
+      boxNumber: "2",
+      addressLine2: "2e étage",
+      postalCode: "4000",
+      city: "Liège",
+      countrySubdivision: "Wallonie",
+      countryCode: "BE",
+    });
   });
 
-  it("sorts countries by their localized name", () => {
-    const labels = buildBillingCountryItems("en-GB").map((item) => item.label);
-    expect(labels).toEqual(
-      [...labels].sort((left, right) => left.localeCompare(right, "en-GB")),
+  it("reads a box named after the number, and a comma before it", () => {
+    expect(splitStreetLine("Rue X, 12 bte 3")).toEqual({
+      streetName: "Rue X",
+      houseNumber: "12",
+      boxNumber: "3",
+    });
+  });
+
+  it("keeps a line with the number first as the street name", () => {
+    expect(splitStreetLine("10 Downing Street")).toEqual({
+      streetName: "10 Downing Street",
+      houseNumber: "",
+      boxNumber: "",
+    });
+  });
+
+  it("joins the parts back into one street line", () => {
+    expect(
+      joinStreetLine({ streetName: "Rue X", houseNumber: "12", boxNumber: "" }),
+    ).toBe("Rue X 12");
+    expect(
+      splitStreetLine(joinStreetLine(splitStreetLine(STORED.line1))),
+    ).toEqual(splitStreetLine(STORED.line1));
+  });
+
+  it("maps a picked address to the stored billing fields", () => {
+    const picked = {
+      streetName: "Boulevard Frère-Orban",
+      houseNumber: "18",
+      boxNumber: "",
+      addressLine2: "",
+      postalCode: "4000",
+      city: "Liège",
+      countrySubdivision: "Liège",
+      countryCode: "be",
+    };
+    expect(fromAddressInputValue(picked, STORED)).toEqual({
+      line1: "Boulevard Frère-Orban 18",
+      line2: "",
+      postalCode: "4000",
+      city: "Liège",
+      state: "Liège",
+      country: "BE",
+    });
+  });
+
+  it("leaves a street line it cannot rebuild as typed when only the city changes", () => {
+    const stored = { ...STORED, line1: "Rue X, 12 bte 3" };
+    const value = { ...toAddressInputValue(stored), city: "Namur" };
+    expect(fromAddressInputValue(value, stored)).toEqual({
+      ...stored,
+      city: "Namur",
+    });
+  });
+
+  it("leaves the required parts of a cleared address to the form's checks", () => {
+    const cleared = fromAddressInputValue(
+      { streetName: "", postalCode: "", city: "", countryCode: "" },
+      STORED,
     );
+    expect(
+      findMissingBillingFields({ ...COMPLETE_INDIVIDUAL, ...cleared }),
+    ).toEqual(["country", "line1", "postalCode", "city"]);
   });
 });
 
