@@ -71,6 +71,8 @@ beforeAll(() => {
     internal: {
       RegisterTenantAccessGate: { register() {}, unregister() {} },
     },
+    EvaluateTenantAccess: async () =>
+      isAllowed ? [] : [{ gateId: "test", code: "test.denied" }],
     CheckTenantAccess: async () =>
       isAllowed ? { allowed: true } : { allowed: false, code: "test.denied" },
   });
@@ -101,15 +103,22 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
   const meta = GetDataControllerMeta(controller);
 
   function get() {
-    return meta.endpoints.get.callback.func.call(
-      controller,
-      request(),
+    const route = meta.endpoints.get.callback;
+    const ctx = request();
+    // The values the runtime resolves for each of the route's declared args,
+    // in order: the data-api Get (context, params), the view check's user,
+    // then presence acquisition's context, session, presence flag and user.
+    const args = [
+      ctx,
       { id: "invoice" },
       OWNER,
+      ctx,
       "session",
       PRESENCE_ACQUIRE,
       OWNER,
-    );
+    ];
+    assert.equal(args.length, route.args.length);
+    return route.func.call(controller, ...args);
   }
 
   it.each(LIST_ROUTES)("merges mandatory and user filters on %s", (route) => {

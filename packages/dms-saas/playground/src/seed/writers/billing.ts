@@ -2,6 +2,7 @@ import {
   CreditNoteModel,
   type InvoiceLine,
   InvoiceModel,
+  PLAN_FALLBACK_LOCALE as FALLBACK_LOCALE,
   RefundModel,
 } from "@antelopejs/interface-dms-saas/db";
 import { PLANS } from "../data/catalogue";
@@ -50,7 +51,7 @@ function toLines(invoice: SeedInvoice): InvoiceLine[] {
 }
 
 function planName(planId: string | null): string | undefined {
-  return PLANS.find((plan) => plan.id === planId)?.name;
+  return PLANS.find((plan) => plan.id === planId)?.name[FALLBACK_LOCALE];
 }
 
 function toInvoiceRow({ invoice, number }: NumberedInvoice): SeedRow {

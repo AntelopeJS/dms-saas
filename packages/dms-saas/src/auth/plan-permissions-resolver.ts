@@ -1,6 +1,9 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
-import { RegisterPermissionsResolver } from "@antelopejs/interface-dms/permissions-resolver";
+import {
+  type PermissionsResolverContext,
+  RegisterPermissionsResolver,
+} from "@antelopejs/interface-dms/permissions-resolver";
 import { PlanModel, TenantSubscriptionModel } from "../db";
 
 const RESOLVER_ID = "dms-saas.plan-intersection";
@@ -15,6 +18,7 @@ async function intersectWithPlan(
   userId: string,
   tenantId: string,
   current: Set<string>,
+  context: PermissionsResolverContext,
 ): Promise<Set<string>> {
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const planModel = GetModel(PlanModel);
@@ -26,7 +30,10 @@ async function intersectWithPlan(
 
   const resolved = await planModel.resolveInheritance(plan);
   const allowed = new Set(resolved.permissions);
-  if (!current.has(ALL_PERMISSIONS)) {
+  // A role preview shapes the set of an ordinary member holding that role:
+  // the owner grant would show the plan instead of the role.
+  const preview = context.preview;
+  if (!preview && !current.has(ALL_PERMISSIONS)) {
     const member = await GetModel(TenantMemberModel, tenantId).getByUser(
       userId,
     );
@@ -35,9 +42,13 @@ async function intersectWithPlan(
       return allowed;
     }
   }
+  const keepsWildcard =
+    !preview || preview.rolePermissions.has(ALL_PERMISSIONS);
   const result = new Set<string>();
   for (const permission of current) {
-    if (permission === ALL_PERMISSIONS || allowed.has(permission)) {
+    const isKept =
+      permission === ALL_PERMISSIONS ? keepsWildcard : allowed.has(permission);
+    if (isKept) {
       result.add(permission);
     }
   }

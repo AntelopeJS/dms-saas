@@ -16,6 +16,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { planRow } from "./helpers/plan-row";
 import type { PlanMigration } from "../src/db";
 import {
   PlanMigrationModel,
@@ -101,15 +102,17 @@ async function createJob(): Promise<PlanMigration> {
   const fromPlanId = randomUUID();
   const toPlanId = randomUUID();
   await GetModel(PlanModel).insert(
-    [fromPlanId, toPlanId].map((_id) => ({
-      _id,
-      name: _id === fromPlanId ? "Starter" : "Team",
-      isActive: true,
-      isDeleted: false,
-      billingMode: "flat",
-      permissions: ["read"],
-      paymentProviderRefs: {},
-    })),
+    [fromPlanId, toPlanId].map((_id) =>
+      planRow({
+        _id,
+        name: _id === fromPlanId ? "Starter" : "Team",
+        isActive: true,
+        isDeleted: false,
+        billingMode: "flat",
+        permissions: ["read"],
+        paymentProviderRefs: {},
+      }),
+    ),
   );
   const model = GetModel(PlanMigrationModel);
   const [id] = await model.insert({

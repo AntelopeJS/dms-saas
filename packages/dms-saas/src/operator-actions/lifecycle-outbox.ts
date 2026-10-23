@@ -28,6 +28,7 @@ export interface LifecycleDispatchInput {
   operationId: string;
   transition: TenantLifecycleTransition;
   requestedAt: Date;
+  planChangeOperationId?: string;
 }
 
 export interface LifecycleReconciliationResult {
@@ -43,12 +44,15 @@ function deliveryId(operationId: string, consumer: string): string {
 }
 
 function buildMessage(delivery: LifecycleDelivery): TenantLifecycleMessage {
-  return {
+  const message: TenantLifecycleMessage = {
     tenantId: delivery.tenantId,
     operationId: delivery.operationId,
     transition: delivery.transition,
     requestedAt: delivery.requestedAt,
   };
+  if (delivery.planChangeOperationId)
+    message.planChangeOperationId = delivery.planChangeOperationId;
+  return message;
 }
 
 function normalizeReceipt(
@@ -78,6 +82,7 @@ function buildDelivery(
     tenantId: input.tenantId,
     consumer,
     transition: input.transition,
+    planChangeOperationId: input.planChangeOperationId ?? null,
     provisioningInvoiceId: null,
     provisioningState:
       consumer === CREATION_INTENT_CONSUMER ? "preparing" : null,
@@ -112,6 +117,8 @@ async function insertDelivery(
     if (
       existing.tenantId !== input.tenantId ||
       existing.transition !== input.transition ||
+      (existing.planChangeOperationId ?? null) !==
+        (input.planChangeOperationId ?? null) ||
       existing.requestedAt.getTime() !== input.requestedAt.getTime()
     )
       throw new Error("Lifecycle delivery identity has conflicting content");

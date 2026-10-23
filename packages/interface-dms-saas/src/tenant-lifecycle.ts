@@ -22,6 +22,8 @@ export interface TenantLifecycleMessage {
   operationId: string;
   transition: TenantLifecycleTransition;
   requestedAt: Date;
+  /** Guarded downgrade provenance; never treat an unauthorized delivery as an ordinary resume. */
+  planChangeOperationId?: string;
 }
 
 /** Durable acknowledgement returned by a required lifecycle consumer. */
