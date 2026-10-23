@@ -54,8 +54,8 @@ The implementation is `@antelopejs/dms-saas >=0.6.0`. The interface declares the
 
 | Package | Range |
 | --- | --- |
-| `@antelopejs/interface-data-api` | `>=0.2.2 <1.0.0` |
-| `@antelopejs/interface-dms` | `>=0.7.4 <1.0.0` |
+| `@antelopejs/interface-data-api` | `>=0.3.0 <1.0.0` |
+| `@antelopejs/interface-dms` | `>=0.8.0 <1.0.0` |
 
 Peer dependencies:
 
