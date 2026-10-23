@@ -1,4 +1,5 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
+import { DEFAULT_TENANT_ID } from "@antelopejs/interface-dms/constants";
 import {
   Hook,
   type TenantDeletionContext,
@@ -13,7 +14,7 @@ import { SAAS_MODULE_ID } from "../pages/module";
 import { startPlanReconciliation } from "../plans/stripe-sync";
 import { ensureLegalDocumentsSingleton } from "../routes";
 import { resumePendingPlanMigrations } from "../workers";
-import { backfillDefaultSubscriptions } from "../workspaces/default-plan";
+import { ensureDefaultSubscription } from "../workspaces/default-plan";
 import { exportSaasTenantData } from "./tenant-export";
 import { ensureBillingSettingsRow } from "../operator-billing/billing-settings-store";
 
@@ -63,6 +64,15 @@ export function registerSaasHookListeners(): void {
       return undefined;
     },
   );
+  // The DMS creates its default tenant outside the signup flow: it gets the
+  // default plan at its creation, as a workspace registered here does. A
+  // catalogue published later reaches it through withDefaultPlanChange.
+  RegisterHook(Hook.TENANT_BEING_PROVISIONED, async ({ tenantId }) => {
+    if (tenantId === DEFAULT_TENANT_ID) {
+      await ensureDefaultSubscription(tenantId);
+    }
+    return undefined;
+  });
   // The plan table is readable only once DMS has registered its schemas, which
   // is what this hook signals; module start() runs too early. Registered ahead
   // of the listener below so a failure there does not skip the pass, and not
@@ -78,9 +88,7 @@ export function registerSaasHookListeners(): void {
     ]);
     const results = await Promise.allSettled([
       resumePendingPlanMigrations(),
-      // The backfill publishes the billing state of every workspace it
-      // covers, so it runs before the full recompute rather than beside it.
-      backfillDefaultSubscriptions().then(recomputeAllTenantBillingStates),
+      recomputeAllTenantBillingStates(),
       reconcileWorkspaceLifecycleDeliveries(),
     ]);
     throwDatabaseInitializationFailures(results);

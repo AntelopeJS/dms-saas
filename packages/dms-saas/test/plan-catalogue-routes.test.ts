@@ -43,6 +43,10 @@ const permissions = vi.hoisted(() => ({
 }));
 
 vi.mock("@antelopejs/interface-dms/permissions", () => permissions);
+// The default plan follows catalogue writes; its own test covers that.
+vi.mock("../src/workspaces/default-plan", () => ({
+  withDefaultPlanChange: (write: () => Promise<unknown>) => write(),
+}));
 vi.mock("../src/plans/stripe-sync", () => stripe);
 vi.mock("../src/workers", () => worker);
 

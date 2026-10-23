@@ -15,7 +15,7 @@ const hookDoubles = vi.hoisted(() => ({
   ensureLegalDocumentsSingleton: vi.fn<() => Promise<void>>(),
   resumePendingPlanMigrations: vi.fn<() => Promise<void>>(),
   recomputeAllTenantBillingStates: vi.fn<() => Promise<void>>(),
-  backfillDefaultSubscriptions: vi.fn<() => Promise<number>>(),
+  ensureDefaultSubscription: vi.fn<(tenantId: string) => Promise<boolean>>(),
   reconcileWorkspaceLifecycleDeliveries: vi.fn<() => Promise<void>>(),
   startPlanReconciliation: vi.fn<() => void>(),
 }));
@@ -27,6 +27,7 @@ vi.mock("@antelopejs/interface-database-decorators", () => ({
 vi.mock("@antelopejs/interface-dms/hooks", () => ({
   Hook: {
     TENANT_DELETED: "tenant-deleted",
+    TENANT_BEING_PROVISIONED: "tenant-being-provisioned",
     DATABASE_INITIALIZED: hookDoubles.databaseInitialized,
   },
   RegisterHook: hookDoubles.registerHook,
@@ -57,7 +58,7 @@ vi.mock("../src/workers", () => ({
   resumePendingPlanMigrations: hookDoubles.resumePendingPlanMigrations,
 }));
 vi.mock("../src/workspaces/default-plan", () => ({
-  backfillDefaultSubscriptions: hookDoubles.backfillDefaultSubscriptions,
+  ensureDefaultSubscription: hookDoubles.ensureDefaultSubscription,
 }));
 vi.mock("../src/hooks/tenant-export", () => ({
   exportSaasTenantData: vi.fn(),
@@ -101,31 +102,37 @@ beforeEach(() => {
   hookDoubles.ensureLegalDocumentsSingleton.mockResolvedValue(undefined);
   hookDoubles.resumePendingPlanMigrations.mockResolvedValue(undefined);
   hookDoubles.recomputeAllTenantBillingStates.mockResolvedValue(undefined);
-  hookDoubles.backfillDefaultSubscriptions.mockResolvedValue(0);
+  hookDoubles.ensureDefaultSubscription.mockResolvedValue(true);
   hookDoubles.reconcileWorkspaceLifecycleDeliveries.mockResolvedValue(
     undefined,
   );
   registerSaasHookListeners();
 });
 
-describe("database initialized hook", () => {
-  it("backfills the default plan before recomputing billing states", async () => {
-    const backfill = createDeferred();
-    hookDoubles.backfillDefaultSubscriptions.mockReturnValue(
-      backfill.promise.then(() => 1),
+describe("tenant provisioning hook", () => {
+  async function provision(tenantId: string): Promise<void> {
+    const listeners = hookDoubles.registerHook.mock.calls
+      .filter(([hook]) => hook === "tenant-being-provisioned")
+      .map(
+        ([, listener]) => listener as (payload: unknown) => Promise<unknown>,
+      );
+    for (const listener of listeners) await listener({ tenantId });
+  }
+
+  it("gives the DMS default tenant the default plan at its creation", async () => {
+    await provision("default");
+    expect(hookDoubles.ensureDefaultSubscription).toHaveBeenCalledWith(
+      "default",
     );
-    const completion = getDatabaseInitializedListener()();
-
-    await vi.waitFor(() => {
-      expect(hookDoubles.backfillDefaultSubscriptions).toHaveBeenCalledOnce();
-    });
-    expect(hookDoubles.recomputeAllTenantBillingStates).not.toHaveBeenCalled();
-
-    backfill.resolve();
-    await completion;
-    expect(hookDoubles.recomputeAllTenantBillingStates).toHaveBeenCalledOnce();
   });
 
+  it("leaves a workspace the signup flow provisions to that flow", async () => {
+    await provision("acme");
+    expect(hookDoubles.ensureDefaultSubscription).not.toHaveBeenCalled();
+  });
+});
+
+describe("database initialized hook", () => {
   it("stays pending until migration recovery and billing recomputation finish", async () => {
     const migrations = createDeferred();
     const billing = createDeferred();

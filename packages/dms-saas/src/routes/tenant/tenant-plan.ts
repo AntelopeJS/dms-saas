@@ -218,8 +218,7 @@ export class SaasTenantPlanController extends Controller(
 
   /**
    * "No plan" is not a state a workspace can be shown in: one that slipped
-   * through every creation path gets the default plan on first read rather
-   * than waiting for the next backfill.
+   * through every creation path gets the default plan on first read.
    */
   private async loadSubscription(
     tenantId: string,
