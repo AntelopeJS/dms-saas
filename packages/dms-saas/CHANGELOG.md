@@ -1,5 +1,53 @@
 # Changelog
 
+## v0.8.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.4...v0.8.0)
+
+### 🚀 Enhancements
+
+- **config:** Default allowedRedirectHosts to the dashboard's host ([#129](https://github.com/AntelopeJS/dms-saas/pull/129))
+- **invoice-line-items:** ⚠️  Always finalize with the lines available; expose the billing period ([#130](https://github.com/AntelopeJS/dms-saas/pull/130))
+- **frontend:** The frontend registration as a pure function of the config, declared as dmsFrontend ([#132](https://github.com/AntelopeJS/dms-saas/pull/132))
+- **saas:** ⚠️  Plan names, descriptions and badges as localized fields ([#133](https://github.com/AntelopeJS/dms-saas/pull/133))
+- **platform:** Adopt the DMS page toolbar on the dashboard and plan migration detail ([#112](https://github.com/AntelopeJS/dms-saas/pull/112))
+- **platform:** Declare the plan and segment create forms with kind: "create" ([#128](https://github.com/AntelopeJS/dms-saas/pull/128))
+
+### 🩹 Fixes
+
+- **seats:** Read the member change kinds of MEMBER_BEING_CHANGED ([#131](https://github.com/AntelopeJS/dms-saas/pull/131))
+- **auth:** Shape a role preview as an ordinary member's permissions ([#113](https://github.com/AntelopeJS/dms-saas/pull/113))
+- **workspaces:** Drop the plan quick filter dms#370 refuses ([#127](https://github.com/AntelopeJS/dms-saas/pull/127), [#370](https://github.com/AntelopeJS/dms-saas/issues/370))
+- **billing:** Show billing banners on every page, module area included ([#122](https://github.com/AntelopeJS/dms-saas/pull/122))
+- **billing:** Churn on first compute, invoice period hydration, lifecycle docs ([#108](https://github.com/AntelopeJS/dms-saas/pull/108))
+- **segments:** Normalise workspace MRR like the dashboard ([#114](https://github.com/AntelopeJS/dms-saas/pull/114))
+- **saas:** Surface Stripe failures and align plan counters ([#111](https://github.com/AntelopeJS/dms-saas/pull/111))
+- **saas:** Plan catalogue counters, Stripe sync warning and translated plan badges ([#123](https://github.com/AntelopeJS/dms-saas/pull/123))
+- **saas:** Workspace Billing page layout, DMS address input and hydrating invoice periods ([#124](https://github.com/AntelopeJS/dms-saas/pull/124))
+- **saas:** Offer every plan for complimentary access without a customer type ([#115](https://github.com/AntelopeJS/dms-saas/pull/115))
+
+### 📦 Build
+
+- Run on dms 0.10, interface-dms 0.8 and interface-data-api 0.3 ([#134](https://github.com/AntelopeJS/dms-saas/pull/134))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.6.0 ([aecf70a](https://github.com/AntelopeJS/dms-saas/commit/aecf70a))
+
+### ✅ Tests
+
+- **invites:** Import ResolveInviteAvailability from its internal module ([#125](https://github.com/AntelopeJS/dms-saas/pull/125))
+
+#### ⚠️ Breaking Changes
+
+- **invoice-line-items:** ⚠️  Always finalize with the lines available; expose the billing period ([#130](https://github.com/AntelopeJS/dms-saas/pull/130))
+- **saas:** ⚠️  Plan names, descriptions and badges as localized fields ([#133](https://github.com/AntelopeJS/dms-saas/pull/133))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+- Maxime Westhoven <maxime@altab.be>
+
 ## v0.7.4
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.3...v0.7.4)
