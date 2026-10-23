@@ -72,6 +72,29 @@ export function readSubscriptionPeriod(
   };
 }
 
+/** A subscription's current billing period, as `TenantSubscription` stores it. */
+export interface SubscriptionPeriodDates {
+  currentPeriodStart: Date | null;
+  currentPeriodEnd: Date | null;
+}
+
+/** No billing period: a workspace without a Stripe subscription. */
+export const NO_SUBSCRIPTION_PERIOD: SubscriptionPeriodDates = {
+  currentPeriodStart: null,
+  currentPeriodEnd: null,
+};
+
+/** The subscription's current billing period, ready to store. */
+export function readSubscriptionPeriodDates(
+  subscription: Stripe.Subscription,
+): SubscriptionPeriodDates {
+  const { start, end } = readSubscriptionPeriod(subscription);
+  return {
+    currentPeriodStart: stripeSecondsToDate(start),
+    currentPeriodEnd: stripeSecondsToDate(end),
+  };
+}
+
 /** When the subscription's current billing period ends. */
 export function readSubscriptionPeriodEnd(
   subscription: Stripe.Subscription,

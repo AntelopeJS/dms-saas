@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toPlainData } from "@antelopejs/interface-database-decorators";
 import {
   DEFAULT_STRIPE_TAX_CODE as DEFAULT_TAX_CODE,
   type Plan,
-  type PlanModel,
+  PLAN_LOCALIZED_FIELDS,
+  PlanModel,
   type PlanProviderRefs,
 } from "../src/db";
+import { localizePlan } from "../src/plans";
+import { planRow } from "./helpers/plan-row";
 
 interface FakeProduct {
   id: string;
@@ -144,7 +148,7 @@ const planStore = {
   update: async (id: string, patch: Partial<Plan>) => {
     fake.planUpdates.push(patch);
     const plan = fake.plans.get(id) as Plan;
-    fake.plans.set(id, { ...plan, ...patch } as Plan);
+    fake.plans.set(id, planRow({ ...toPlainData(plan), ...patch }));
     return 1;
   },
 };
@@ -176,6 +180,7 @@ vi.mock("@antelopejs/interface-core/logging", () => ({
 import {
   ensurePlanStripeRefs,
   loadBillablePlan,
+  planStripeSyncState,
   reconcilePlansWithStripe,
   startPlanReconciliation,
   syncPlanStripeRefs,
@@ -183,7 +188,7 @@ import {
 import { loadAndValidateTargetPlan } from "../src/routes/tenant/tenant-plan-ops";
 
 function seededPlan(overrides: Partial<Plan> = {}): Plan {
-  return {
+  return planRow({
     _id: "cloud-plan-hobby",
     name: "Hobby",
     slug: "hobby",
@@ -208,7 +213,7 @@ function seededPlan(overrides: Partial<Plan> = {}): Plan {
     createdAt: new Date("2026-09-01T00:00:00Z"),
     updatedAt: new Date("2026-09-01T00:00:00Z"),
     ...overrides,
-  } as Plan;
+  });
 }
 
 function store(plan: Plan): Plan {
@@ -229,7 +234,7 @@ async function editAndSync(
   patch: Partial<Plan>,
 ): Promise<Plan> {
   const plan = fake.plans.get(planId) as Plan;
-  store({ ...plan, ...patch } as Plan);
+  store(planRow({ ...toPlainData(plan), ...patch }));
   return syncStored(planId);
 }
 
@@ -278,14 +283,23 @@ describe("syncing a plan written outside dms-saas", () => {
     });
   });
 
-  it("gives Stripe no description for an i18n key it could not show", async () => {
+  it("gives Stripe the fallback locale's texts, whatever locale the plan is read in", async () => {
     const plan = store(
-      seededPlan({ description: "$cloud.plans.hobby.description" }),
+      PlanModel.fromPlainData({
+        ...toPlainData(seededPlan()),
+        name: { en: "Hobby", fr: "Loisir" },
+        description: { en: "For side projects", fr: "Pour les projets perso" },
+      }).localize("*", PLAN_LOCALIZED_FIELDS),
     );
+    localizePlan(plan, "fr");
 
     await syncPlanStripeRefs(plan);
 
-    expect(refsOf(plan._id).stripeSyncedTerms?.product.description).toBe("");
+    expect(refsOf(plan._id).stripeSyncedTerms?.product).toMatchObject({
+      name: "Hobby",
+      description: "For side projects",
+    });
+    expect(plan.name).toBe("Loisir");
   });
 
   it("writes only the refs, never the fields the writer owns", async () => {
@@ -485,6 +499,17 @@ describe("plans that stay off Stripe", () => {
 
     expect(fake.writes).toEqual([]);
     expect(fake.logs.some((log) => log.startsWith("warn:"))).toBe(true);
+  });
+
+  it("reports a paid plan unsellable while Stripe is not configured, a free one off Stripe", async () => {
+    fake.isConfigured = false;
+
+    await expect(planStripeSyncState(seededPlan())).resolves.toBe(
+      "not_configured",
+    );
+    await expect(
+      planStripeSyncState(seededPlan({ _id: "cloud-plan-free", price: 0 })),
+    ).resolves.toBe("off_stripe");
   });
 
   it("skips a plan without a supported interval", async () => {

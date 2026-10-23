@@ -21,6 +21,7 @@ import {
 } from "../frontend-vue/app/composables/useDaysLeft";
 import { isInvoiceSettled } from "../frontend-vue/app/composables/usePayInvoice";
 import {
+  canContinueToCheckout,
   diffPlanFeatures,
   featureRank,
   readPlanChangeIncompatibilities,
@@ -325,6 +326,34 @@ describe("billing formatting", () => {
   it("tells a settled payment from one Stripe is still processing", () => {
     expect(isInvoiceSettled({ status: "paid" })).toBe(true);
     expect(isInvoiceSettled({ status: "open" })).toBe(false);
+  });
+});
+
+describe("checkout dialog readiness", () => {
+  const READY = {
+    isLoading: false,
+    hasLoadFailed: false,
+    previewFailure: null,
+  };
+
+  it("offers the payment page once the identity loaded and the change priced", () => {
+    expect(canContinueToCheckout(READY)).toBe(true);
+  });
+
+  it("offers no payment for a change the preview refused", () => {
+    expect(
+      canContinueToCheckout({
+        ...READY,
+        previewFailure: "Plan not synced with Stripe",
+      }),
+    ).toBe(false);
+  });
+
+  it("waits for the billing identity", () => {
+    expect(canContinueToCheckout({ ...READY, isLoading: true })).toBe(false);
+    expect(canContinueToCheckout({ ...READY, hasLoadFailed: true })).toBe(
+      false,
+    );
   });
 });
 

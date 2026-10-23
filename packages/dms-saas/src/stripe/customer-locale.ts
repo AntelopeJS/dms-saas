@@ -1,6 +1,9 @@
 import { Logging } from "@antelopejs/interface-core/logging";
 import { getStripeClient } from "./client";
+import type { User } from "@antelopejs/interface-dms/auth/db";
+import type { TenantSubscription } from "../db";
 import { baseLanguage } from "../utils/language";
+import { isWorkspaceOwner } from "../workspaces/workspace-owner";
 
 const LOG_PREFIX = "[dms-saas:customer-locale]";
 
@@ -59,4 +62,22 @@ export async function syncCustomerPreferredLocale(
   } catch (error) {
     Logging.Warn(`${LOG_PREFIX} ${customerId} keeps its locale`, error);
   }
+}
+
+/**
+ * Billing is where an owner comes back after changing language: the Stripe
+ * customer follows it from then on, renewals included. A member's language
+ * is not the one the workspace's invoices are written in.
+ */
+export async function followOwnerLanguage(
+  tenantId: string,
+  subscription: TenantSubscription | undefined,
+  user: User,
+): Promise<void> {
+  const customerId = subscription?.stripeCustomerId;
+  if (!customerId) return;
+  if (!(await isWorkspaceOwner(user._id, tenantId).catch(() => false))) {
+    return;
+  }
+  await syncCustomerPreferredLocale(customerId, user.language);
 }

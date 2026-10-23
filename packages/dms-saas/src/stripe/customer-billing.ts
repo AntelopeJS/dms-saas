@@ -1,6 +1,10 @@
 import type Stripe from "stripe";
 import type { TenantBillingAddress, VatVerificationStatus } from "../db";
-import { getStripeClient, getStripeReadClient } from "./client";
+import {
+  getStripeClient,
+  getStripeReadClient,
+  isStripeConfigured,
+} from "./client";
 
 /** Stripe reports `unavailable` for countries it cannot check; treated as
  * unverified so the badge never claims a verification that never ran. */
@@ -167,6 +171,8 @@ export interface TaxIdSnapshot {
 export async function fetchPrimaryTaxId(
   customerId: string,
 ): Promise<TaxIdSnapshot> {
+  // Unreachable as an outage is: the stored verification stays.
+  if (!isStripeConfigured()) return { reachable: false, taxId: null };
   const stripe = getStripeReadClient();
   const taxIds = await stripe.customers
     .listTaxIds(customerId)

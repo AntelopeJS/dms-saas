@@ -8,7 +8,7 @@ import {
   serializeConfirmDialog,
 } from "@antelopejs/interface-dms/base/table-view";
 import { FeatureModel, type Plan, PlanModel } from "../../db";
-import { localizeFeature } from "../../plans";
+import { localizeFeature, localizePlan } from "../../plans";
 import { plansUsingFeature } from "../../plans/feature-usage";
 import {
   emptyPlanUsage,
@@ -226,7 +226,8 @@ export class SaasPlanDialogsController extends Controller(
     @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
   ): Promise<ConfirmDialogSerialized> {
     const [plan, usage] = await this.load(id);
-    return stopSellingDialog(plan, usage, requestLocale(language));
+    const locale = requestLocale(language);
+    return stopSellingDialog(localizePlan(plan, locale), usage, locale);
   }
 
   @Get("/:id/delete")

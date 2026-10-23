@@ -33,6 +33,10 @@ import {
   previewManualUpgrade,
   type UpgradePreview,
 } from "../../operator-actions/upgrade-preview";
+import {
+  assertStripeConfigured,
+  withStripeAvailability,
+} from "../../stripe/availability";
 import { ProvisioningAttemptModel } from "../../workspaces/db/provisioning-attempt.model";
 import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
 
@@ -222,9 +226,13 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     @Parameter("tenantId", "param") tenantId: string,
     @Parameter("planId", "query") planId: unknown,
   ): Promise<UpgradePreview> {
-    return previewManualUpgrade(
-      tenantId,
-      requireString(planId, "saas.errors.operator.target_plan_required"),
+    const targetPlanId = requireString(
+      planId,
+      "saas.errors.operator.target_plan_required",
+    );
+    assertStripeConfigured();
+    return withStripeAvailability(() =>
+      previewManualUpgrade(tenantId, targetPlanId),
     );
   }
 
@@ -235,6 +243,8 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     @JSONBody() body: ManualUpgradeBody,
   ) {
     await this.assertTenantExists(tenantId);
+    // Refused before the journal records an attempt that cannot succeed.
+    assertStripeConfigured();
     return manuallyUpgradeWorkspaceCommand({
       tenantId,
       operationId: operationIdOf(body),
@@ -254,6 +264,7 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     @JSONBody() body: BalanceCreditBody,
   ) {
     const credit = creditInputOf(body);
+    assertStripeConfigured();
     const view = await loadWorkspaceOperatorView(tenantId);
     assertBalanceCreditWithinCeiling(view, credit.amountCents);
     return grantBalanceCreditCommand({

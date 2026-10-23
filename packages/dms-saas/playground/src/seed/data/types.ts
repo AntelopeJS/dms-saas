@@ -49,8 +49,8 @@ export interface SeedFeature {
 
 export interface SeedPlan {
   id: string;
-  name: string;
-  description: string;
+  name: LocalizedText;
+  description: LocalizedText;
   audience: PlanAudience;
   /** In major units of `currency`, as the plan editor stores it. */
   price: number;
@@ -63,7 +63,7 @@ export interface SeedPlan {
   isPublic: boolean;
   isActive: boolean;
   order: number;
-  borderLabel: string | null;
+  borderLabel: LocalizedText | null;
   inheritsFromPlanId: string | null;
   /** Fake Stripe ids suffix; null for a plan that never reached Stripe. */
   stripeKey: string | null;

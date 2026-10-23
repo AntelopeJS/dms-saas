@@ -40,7 +40,7 @@ const stripe = vi.hoisted(() => ({
   prices: { retrieve: vi.fn() },
 }));
 vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
-vi.mock("../src/config", () => ({ isAllowedRedirectUrl: () => true }));
+vi.mock("../src/config", () => ({ isAllowedRedirectUrl: async () => true }));
 vi.mock("../src/billing-state", () => ({
   recomputeTenantBillingState: async () => undefined,
 }));

@@ -69,8 +69,9 @@ export interface DmsSaasConfig {
   /**
    * Hosts allowed as `return_url` for the Stripe billing portal and other
    * outbound redirects. Values are matched against URL.host; only http(s)
-   * URLs are considered. In a development runtime, loopback hosts are
-   * accepted automatically and need no entry here.
+   * URLs are considered. Defaults to the host of the DMS `clientBaseUrl`;
+   * setting it replaces that default. In a development runtime, loopback
+   * hosts are accepted automatically and need no entry here.
    */
   allowedRedirectHosts?: string[];
   /**

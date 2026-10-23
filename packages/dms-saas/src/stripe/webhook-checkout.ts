@@ -15,7 +15,7 @@ import { TenantSubscriptionModel, TrialConsumptionModel } from "../db";
 import { hashEmail, stripeSecondsToDate as optionalStripeDate } from "../utils";
 import { activatePaidUsage } from "../workspaces/complimentary";
 import { getStripeClient } from "./client";
-import { readSubscriptionPeriodEnd } from "./payload-shapes";
+import { readSubscriptionPeriodDates } from "./payload-shapes";
 import { DELETION_REQUEST_CLEARED } from "../workspaces/deletion-request";
 import { ACTIVE_STATUS, asCustomerId, TRIALING_STATUS } from "./webhook-shared";
 import { releaseCheckoutTrialReservation } from "./workspace-checkout";
@@ -116,7 +116,7 @@ async function mirrorCheckoutSubscription(
     // Seed the renewal date immediately: waiting for the first
     // customer.subscription.updated would leave the plan card without its
     // "next renewal" line exactly when the customer just paid.
-    currentPeriodEnd: readSubscriptionPeriodEnd(subscription),
+    ...readSubscriptionPeriodDates(subscription),
     updatedAt: new Date(),
   };
   if (context.targetPlanId) patch.planId = context.targetPlanId;

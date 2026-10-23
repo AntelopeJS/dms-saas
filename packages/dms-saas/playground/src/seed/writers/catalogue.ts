@@ -3,6 +3,8 @@ import {
   DEFAULT_STRIPE_TAX_CODE,
   type Feature,
   FeatureModel,
+  PLAN_FALLBACK_LOCALE,
+  type Plan,
   type PlanProviderRefs,
   PlanModel,
 } from "@antelopejs/interface-dms-saas/db";
@@ -47,8 +49,8 @@ export function toFeatureRow(feature: SeedFeature): SeedRow {
   };
 }
 
-function localizeAll(feature: Feature): Feature {
-  return feature.localize(ALL_LOCALES);
+function localizeAll<Row extends Feature | Plan>(row: Row): Row {
+  return row.localize(ALL_LOCALES) as Row;
 }
 
 /**
@@ -63,8 +65,8 @@ function fakeStripeRefs(plan: SeedPlan): PlanProviderRefs {
     stripePriceId: `price_1${plan.stripeKey}`,
     stripeSyncedTerms: {
       product: {
-        name: plan.name,
-        description: plan.description,
+        name: plan.name[PLAN_FALLBACK_LOCALE],
+        description: plan.description[PLAN_FALLBACK_LOCALE],
         taxCode: DEFAULT_STRIPE_TAX_CODE,
       },
       price: {
@@ -78,8 +80,8 @@ function fakeStripeRefs(plan: SeedPlan): PlanProviderRefs {
 }
 
 function toPlanRow(plan: SeedPlan, permissions: string[]): SeedRow {
-  const { id, stripeKey: _stripeKey, features, ...fields } = plan;
-  return {
+  const { id, stripeKey: _stripeKey, features, borderLabel, ...fields } = plan;
+  const row: SeedRow = {
     ...fields,
     _id: id,
     slug: id,
@@ -94,6 +96,9 @@ function toPlanRow(plan: SeedPlan, permissions: string[]): SeedRow {
     isDeleted: false,
     createdAt: dayFrom(PLAN_CATALOGUE_CREATED_ON),
   };
+  // No badge is no text: a localized field cannot be read back from a null.
+  if (borderLabel) row.borderLabel = borderLabel;
+  return row;
 }
 
 export async function writeCatalogue(
@@ -110,6 +115,8 @@ export async function writeCatalogue(
   await insertMissing(
     PlanModel,
     plans.map((plan) => toPlanRow(plan, permissions)),
+    undefined,
+    localizeAll,
   );
 }
 
