@@ -33,7 +33,6 @@ const MAX_HIGHLIGHTS = 4
 const { priceLabel } = usePublicPlanFormat()
 const { formatFeatureValue } = usePlanFeatureFormat()
 const { processI18n } = useTranslation()
-const planDescription = usePlanDescription()
 
 const highlights = computed(() => {
 	const summary = props.summary
@@ -89,7 +88,7 @@ const highlights = computed(() => {
 					v-if="isDetailed && summary.plan.description"
 					class="text-muted text-xs"
 				>
-					{{ planDescription(summary.plan.description) }}
+					{{ summary.plan.description }}
 				</p>
 				<ul
 					v-if="highlights.length"

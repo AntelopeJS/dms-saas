@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildWorkspaceDirectoryFields,
   type DirectoryInputs,
+  shouldLookUpPaidInvoice,
 } from "../src/billing-state/directory";
 import type { Plan, TenantBillingState, TenantSubscription } from "../src/db";
 
@@ -50,6 +51,7 @@ function inputs(overrides: Partial<DirectoryInputs> = {}): DirectoryInputs {
     owner: { status: "joined", name: "Margaux Dubois", email: "m@n.eu" },
     policy: { autoSuspendDelayDays: 14, retentionDays: 30 },
     existing: undefined,
+    hasPaidInvoice: false,
     reportingCurrency: "EUR",
     now: NOW,
     ...overrides,
@@ -241,5 +243,92 @@ describe("workspace directory row", () => {
       currency: null,
       mrrMinor: 0,
     });
+  });
+});
+
+describe("workspace directory churn", () => {
+  const cancelled = (overrides: Partial<DirectoryInputs> = {}) =>
+    buildWorkspaceDirectoryFields(
+      inputs({
+        billingState: "cancelled",
+        subscription: subscription({ status: "cancelled" }),
+        ...overrides,
+      }),
+    );
+
+  // A workspace first published already cancelled (an import, a seed) has no
+  // earlier publication to read its loss from.
+  it("takes the loss of a cancellation first seen cancelled from the price last paid", () => {
+    expect(cancelled({ hasPaidInvoice: true })).toMatchObject({
+      mrrMinor: 0,
+      previousMrrMinor: 112_700,
+    });
+  });
+
+  it("counts no loss for a workspace that never paid, like a cancelled trial", () => {
+    expect(cancelled({ hasPaidInvoice: false }).previousMrrMinor).toBe(0);
+  });
+
+  it("counts no loss for a gift or a free plan", () => {
+    expect(
+      cancelled({
+        hasPaidInvoice: true,
+        subscription: subscription({
+          status: "cancelled",
+          isComplimentary: true,
+        }),
+      }).previousMrrMinor,
+    ).toBe(0);
+    expect(
+      cancelled({
+        hasPaidInvoice: true,
+        plan: { ...BUSINESS, price: 0 } as Plan,
+      }).previousMrrMinor,
+    ).toBe(0);
+  });
+
+  // Past due, suspended, cancelled: the suspension billed nothing, so the
+  // cancellation that followed it lost nothing either.
+  it("passes the loss a suspension held on to the cancellation that follows", () => {
+    const row = cancelled({
+      existing: {
+        billingState: "suspended",
+        stateSince: new Date("2026-09-01T00:00:00Z"),
+        mrrMinor: 0,
+        previousMrrMinor: 112_700,
+      } as TenantBillingState,
+    });
+
+    expect(row.previousMrrMinor).toBe(112_700);
+  });
+
+  it("keeps a cancelled trial's loss at nothing", () => {
+    const row = cancelled({
+      hasPaidInvoice: true,
+      existing: {
+        billingState: "trialing",
+        stateSince: new Date("2026-09-01T00:00:00Z"),
+        mrrMinor: 0,
+        previousMrrMinor: 0,
+      } as TenantBillingState,
+    });
+
+    expect(row.previousMrrMinor).toBe(0);
+  });
+
+  it("reads invoices only for a workspace first published suspended or cancelled", () => {
+    const known = {
+      billingState: "cancelled",
+      mrrMinor: 0,
+      previousMrrMinor: 4_900,
+    } as TenantBillingState;
+    const unknown = { ...known, previousMrrMinor: 0 } as TenantBillingState;
+
+    expect(shouldLookUpPaidInvoice("cancelled", undefined)).toBe(true);
+    expect(shouldLookUpPaidInvoice("suspended", undefined)).toBe(true);
+    expect(shouldLookUpPaidInvoice("cancelled", unknown)).toBe(false);
+    expect(shouldLookUpPaidInvoice("cancelled", known)).toBe(false);
+    expect(shouldLookUpPaidInvoice("active", undefined)).toBe(false);
+    expect(shouldLookUpPaidInvoice("trialing", undefined)).toBe(false);
   });
 });

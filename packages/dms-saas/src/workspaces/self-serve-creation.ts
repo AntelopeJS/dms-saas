@@ -20,15 +20,26 @@ import {
   isFreePerCardPolicyActive,
   resolveFreeWorkspacesPerCard,
 } from "./free-workspaces-per-card";
-import {
-  assertBillingCountry,
-  type CardDetails,
-  type WorkspaceBillingProfile,
+import type {
+  CardDetails,
+  WorkspaceAddressInput,
+  WorkspaceBillingProfile,
 } from "./provisioning";
 import { isPlanOfferedTo } from "../plans/plan-audience";
+import { localizePlan } from "@antelopejs/interface-dms-saas/plans";
 
 const HTTP_BAD_REQUEST = 400;
 const NO_TRIAL_DAYS = 0;
+
+function assertBillingCountry(
+  address: WorkspaceAddressInput | undefined,
+): void {
+  assert(
+    address?.country,
+    HTTP_BAD_REQUEST,
+    "saas.errors.billing.country_required",
+  );
+}
 const CANCELLED_STATUS = "cancelled";
 const NO_CARD: CardDetails = { fingerprint: null, billingAddress: undefined };
 
@@ -86,10 +97,12 @@ export function cardRequirementOf(
 }
 
 function toPlanOption(
-  plan: Plan,
+  catalogued: Plan,
   freeWorkspacesPerCard: number,
   hasUsedTrial: boolean,
+  locale: string,
 ): WorkspaceCreatePlanOption {
+  const plan = localizePlan(catalogued, locale);
   return {
     _id: plan._id,
     name: plan.name,
@@ -153,9 +166,14 @@ async function resolveFreePerCardRule(
  * The plans a user may create a workspace on, each with the card it asks for
  * and the trial they would get, and the per-card rule of free workspaces.
  * The submit route applies the very same rules.
+ *
+ * @param user Who creates the workspace
+ * @param locale Reader's locale the plan texts are read in
+ * @param preferredTenantId Workspace whose billing profile is reused first
  */
 export async function buildWorkspaceCreateOptions(
   user: User,
+  locale: string,
   preferredTenantId?: string,
 ): Promise<WorkspaceCreateOptions> {
   const [plans, profile, limit, hasUsedTrial] = await Promise.all([
@@ -171,7 +189,7 @@ export async function buildWorkspaceCreateOptions(
     plans: plans
       .filter((plan) => isPlanOfferedTo(plan, profile.customerType))
       .sort((a, b) => a.order - b.order)
-      .map((plan) => toPlanOption(plan, limit, hasUsedTrial)),
+      .map((plan) => toPlanOption(plan, limit, hasUsedTrial, locale)),
     freePerCard: await resolveFreePerCardRule(user._id, limit),
   };
 }

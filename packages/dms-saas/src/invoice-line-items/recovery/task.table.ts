@@ -15,15 +15,17 @@ export const invoiceLineInjectionsTableName = "saas_invoice_line_injections";
  * - `suspended`: Stripe was read back with the draft at `auto_advance=false`.
  * - `finalizing`: every managed line was read back on the draft, and the
  *   fingerprint of what we finalize is recorded before asking Stripe to.
- * - `finalized`: Stripe was read back finalized with exactly that fingerprint.
- * - `needs_operator`: automation stops; the reason says why.
+ * - `finalized`: Stripe was read back finalized; `usageGaps` names whatever
+ *   it was finalized without.
+ *
+ * There is no state an operator has to resolve: an invoice is always
+ * finalized with the lines available, and a gap is reported, not held.
  */
 export const INVOICE_LINE_INJECTION_STATES = [
   "registered",
   "suspended",
   "finalizing",
   "finalized",
-  "needs_operator",
 ] as const;
 export type InvoiceLineInjectionState =
   (typeof INVOICE_LINE_INJECTION_STATES)[number];
@@ -75,12 +77,16 @@ export class InvoiceLineInjection extends Table {
   @Field("string")
   declare state: InvoiceLineInjectionState;
 
-  @Field("string")
-  declare reason: string | null;
+  /**
+   * Why the invoice is finalized without some of its lines, each reason a
+   * stable code, `:`, and its detail. Empty while nothing is missing.
+   */
+  @Field("any")
+  declare usageGaps: string[];
 
   /**
    * When Stripe was read back with the draft at `auto_advance=false`. Only this
-   * proves the suspension; `needs_operator` can be reached with it unset.
+   * proves the suspension; an invoice finalized before it is left unset.
    */
   @Field("date")
   declare suspendedAt: Date | null;
