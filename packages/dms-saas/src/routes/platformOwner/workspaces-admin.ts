@@ -52,7 +52,7 @@ import {
   type OwnerLookup,
   validateWorkspaceInput,
 } from "../../workspaces/operator-creation";
-import { isPlanOfferedTo } from "../../plans/plan-audience";
+import { isPlanOpenToWorkspace } from "../../plans/plan-audience";
 import {
   CONTENT_LANGUAGE_HEADER,
   requestLocale,
@@ -187,17 +187,21 @@ async function assertPlanIsAvailableForTenant(
   plan: Plan | undefined,
   tenantId: string,
 ): Promise<Plan> {
+  assert(plan && !plan.isDeleted, HTTP_BAD_REQUEST, "saas.errors.plan.invalid");
+  const [billingInfo, subscription] = await Promise.all([
+    GetModel(TenantBillingInfoModel, tenantId).findOne(),
+    GetModel(TenantSubscriptionModel, tenantId).findOne(),
+  ]);
+  // The plan the workspace is on stays grantable even once it is no longer
+  // sold or targets another audience: the dialog offers it by default.
+  const isCurrentPlan = subscription?.planId === plan._id;
   assert(
-    plan && !plan.isDeleted && plan.isActive,
+    isCurrentPlan || plan.isActive,
     HTTP_BAD_REQUEST,
     "saas.errors.plan.invalid",
   );
-  const billingInfo = await GetModel(
-    TenantBillingInfoModel,
-    tenantId,
-  ).findOne();
   assert(
-    isPlanOfferedTo(plan, billingInfo?.customerType),
+    isCurrentPlan || isPlanOpenToWorkspace(plan, billingInfo?.customerType),
     HTTP_BAD_REQUEST,
     "saas.errors.plan.not_available_for_customer_type",
   );

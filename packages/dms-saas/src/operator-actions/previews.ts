@@ -14,7 +14,7 @@ import {
 } from "../workspaces/operator-view";
 import { OperatorActionModel } from "./db/operator-action.model";
 import type { OperatorAction } from "./db/operator-action.table";
-import { isPlanOfferedTo } from "../plans/plan-audience";
+import { isPlanOpenToWorkspace } from "../plans/plan-audience";
 import { localizePlan } from "@antelopejs/interface-dms-saas/plans";
 
 const HTTP_BAD_REQUEST = 400;
@@ -188,6 +188,28 @@ function toComplimentaryOption(
 }
 
 /**
+ * The plans complimentary access may put a workspace on: those open to its
+ * customer type, and always the plan it is on, so the dialog names it even
+ * when that plan is no longer sold or targets another audience.
+ */
+function complimentaryPlans(
+  activePlans: readonly Plan[],
+  currentPlan: Plan | null,
+  customerType: string | null | undefined,
+): Plan[] {
+  const currentPlanId = currentPlan?._id;
+  const offered = activePlans.filter(
+    (plan) =>
+      plan._id === currentPlanId || isPlanOpenToWorkspace(plan, customerType),
+  );
+  const shouldAddCurrent =
+    !!currentPlan &&
+    !currentPlan.isDeleted &&
+    !offered.some((plan) => plan._id === currentPlanId);
+  return shouldAddCurrent ? [currentPlan, ...offered] : offered;
+}
+
+/**
  * The Stripe subscription it ends and the MRR it stops, with the plans on offer.
  *
  * @param tenantId Workspace the dialog is for
@@ -214,8 +236,8 @@ export async function loadComplimentaryImpact(
     nextInvoice: nextInvoiceOf(preview),
     seats: view.seats.occupied,
     owner: ownerOf(view),
-    plans: plans
-      .filter((plan) => isPlanOfferedTo(plan, customerType))
-      .map((plan) => toComplimentaryOption(plan, view.seats.occupied, locale)),
+    plans: complimentaryPlans(plans, view.plan, customerType).map((plan) =>
+      toComplimentaryOption(plan, view.seats.occupied, locale),
+    ),
   };
 }
