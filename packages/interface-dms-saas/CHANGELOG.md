@@ -1,5 +1,50 @@
 # Changelog
 
+## v0.6.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.6.0...v0.6.1)
+
+### 🚀 Enhancements
+
+- **platform:** Adopt the DMS page toolbar on the dashboard and plan migration detail ([#112](https://github.com/AntelopeJS/dms-saas/pull/112))
+- **platform:** Declare the plan and segment create forms with kind: "create" ([#128](https://github.com/AntelopeJS/dms-saas/pull/128))
+- **settings:** Offer the module default on the billing rules ([#136](https://github.com/AntelopeJS/dms-saas/pull/136))
+- Provision workspaces through DMS ProvisionTenant ([#137](https://github.com/AntelopeJS/dms-saas/pull/137))
+
+### 🩹 Fixes
+
+- **auth:** Shape a role preview as an ordinary member's permissions ([#113](https://github.com/AntelopeJS/dms-saas/pull/113))
+- **workspaces:** Drop the plan quick filter dms#370 refuses ([#127](https://github.com/AntelopeJS/dms-saas/pull/127), [#370](https://github.com/AntelopeJS/dms-saas/issues/370))
+- **billing:** Show billing banners on every page, module area included ([#122](https://github.com/AntelopeJS/dms-saas/pull/122))
+- **billing:** Churn on first compute, invoice period hydration, lifecycle docs ([#108](https://github.com/AntelopeJS/dms-saas/pull/108))
+- **segments:** Normalise workspace MRR like the dashboard ([#114](https://github.com/AntelopeJS/dms-saas/pull/114))
+- **saas:** Surface Stripe failures and align plan counters ([#111](https://github.com/AntelopeJS/dms-saas/pull/111))
+- **saas:** Plan catalogue counters, Stripe sync warning and translated plan badges ([#123](https://github.com/AntelopeJS/dms-saas/pull/123))
+- **saas:** Workspace Billing page layout, DMS address input and hydrating invoice periods ([#124](https://github.com/AntelopeJS/dms-saas/pull/124))
+- **saas:** Offer every plan for complimentary access without a customer type ([#115](https://github.com/AntelopeJS/dms-saas/pull/115))
+
+### 💅 Refactors
+
+- Attach the default plan on catalogue changes, not on a backfill ([#138](https://github.com/AntelopeJS/dms-saas/pull/138))
+
+### 📖 Documentation
+
+- **changelog:** Upgrade notes of dms-saas 0.8.0 ([#135](https://github.com/AntelopeJS/dms-saas/pull/135))
+
+### 📦 Build
+
+- Run on dms 0.10, interface-dms 0.8 and interface-data-api 0.3 ([#134](https://github.com/AntelopeJS/dms-saas/pull/134))
+- Run on @antelopejs/dms 0.11 and @antelopejs/dms-frontend 0.9 ([#139](https://github.com/AntelopeJS/dms-saas/pull/139))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.8.0 ([179ac40](https://github.com/AntelopeJS/dms-saas/commit/179ac40))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+- Maxime Westhoven ([@mwesto](http://github.com/mwesto))
+
 ## v0.6.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.5.1...v0.6.0)
