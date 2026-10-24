@@ -134,19 +134,7 @@ async function attachToTenant(tenantId: string, plan: Plan): Promise<boolean> {
   }
 }
 
-/**
- * Covers every workspace created before the default plan existed — the
- * platform's own default tenant included. Idempotent: run at startup and on
- * the billing-state cron, so a catalogue published after boot is picked up.
- *
- * @returns Number of workspaces that received the default plan
- */
-export async function backfillDefaultSubscriptions(): Promise<number> {
-  const plan = await resolveDefaultPlan();
-  if (!plan) {
-    logMissingDefaultPlan();
-    return 0;
-  }
+async function attachToUncoveredWorkspaces(plan: Plan): Promise<number> {
   const tenants = await GetModel(TenantModel).table.pluck("_id").run();
   let attachedCount = 0;
   for (const tenant of tenants) {
@@ -160,4 +148,26 @@ export async function backfillDefaultSubscriptions(): Promise<number> {
     );
   }
   return attachedCount;
+}
+
+/**
+ * Runs a write to the plan catalogue. When it changes the default plan — the
+ * first free plan is published, or another plan becomes the default — the new
+ * default is attached, once, to every workspace that has no subscription. A
+ * workspace is otherwise covered at its creation, so nothing replays this on
+ * a start or a cron.
+ *
+ * @param write The catalogue write
+ * @returns What the write returned
+ */
+export async function withDefaultPlanChange<T>(
+  write: () => Promise<T>,
+): Promise<T> {
+  const previous = await resolveDefaultPlan();
+  const result = await write();
+  const current = await resolveDefaultPlan();
+  if (current && current._id !== previous?._id) {
+    await attachToUncoveredWorkspaces(current);
+  }
+  return result;
 }

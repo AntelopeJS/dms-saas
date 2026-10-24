@@ -11,6 +11,10 @@ const stripe = vi.hoisted(() => ({
   syncPlanStripeRefs: vi.fn(async (plan: unknown) => plan),
 }));
 
+// The default plan follows catalogue writes; its own test covers that.
+vi.mock("../src/workspaces/default-plan", () => ({
+  withDefaultPlanChange: (write: () => Promise<unknown>) => write(),
+}));
 vi.mock("../src/plans/stripe-sync", () => ({
   syncPlanStripeRefs: stripe.syncPlanStripeRefs,
   planStripeSyncState: async () => "synced",

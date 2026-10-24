@@ -63,6 +63,7 @@ import {
   requestLocale,
 } from "../../utils/content-language";
 import { isPlanAccess } from "../../plans/plan-access-type";
+import { withDefaultPlanChange } from "../../workspaces/default-plan";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -424,11 +425,17 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     }
   }
 
+  // Each catalogue write may change the default plan, which plan-less
+  // workspaces then receive (withDefaultPlanChange).
   @Post("/")
   async create(
     @AuthOwnerOnly() _user: User,
     @JSONBody() body: PlanWriteBody,
   ): Promise<PlanWriteResult> {
+    return withDefaultPlanChange(() => this.createPlan(body));
+  }
+
+  private async createPlan(body: PlanWriteBody): Promise<PlanWriteResult> {
     const sanitized = pickPlanWrite(readableWrite(body));
     assertPlanInterval(sanitized.interval);
     await this.assertValidAccess(sanitized);
@@ -478,6 +485,13 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     @Parameter("id") id: string,
     @JSONBody() body: PlanWriteBody,
   ): Promise<PlanWriteResult> {
+    return withDefaultPlanChange(() => this.updatePlan(id, body));
+  }
+
+  private async updatePlan(
+    id: string,
+    body: PlanWriteBody,
+  ): Promise<PlanWriteResult> {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
     const sanitized = pickPlanWrite(readableWrite(body));
@@ -509,6 +523,10 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
 
   @Delete("/:id")
   async remove(@AuthOwnerOnly() _user: User, @Parameter("id") id: string) {
+    return withDefaultPlanChange(() => this.removePlan(id));
+  }
+
+  private async removePlan(id: string): Promise<PlanWriteResult> {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
     const [workspaceCount, scheduled] = await Promise.all([

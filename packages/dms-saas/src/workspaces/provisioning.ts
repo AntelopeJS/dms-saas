@@ -448,9 +448,9 @@ function initialStatus(
 }
 
 /**
- * Both rows are keyed by the tenant id, like every other writer of them. The
- * default-plan backfill may cover the workspace between its creation and this
- * insert; the paid subscription then replaces that free row rather than
+ * Both rows are keyed by the tenant id, like every other writer of them. A
+ * change of the default plan, or a first read of the billing page, may cover
+ * the workspace between its creation and this insert; the paid subscription then replaces that free row rather than
  * sitting beside it or failing a creation the customer already paid for.
  */
 async function insertTenantRecords(input: TenantRecordsInput): Promise<void> {

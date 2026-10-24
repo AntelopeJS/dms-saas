@@ -71,10 +71,10 @@ vi.mock("../src/config", () => ({
 }));
 
 const {
-  backfillDefaultSubscriptions,
   ensureDefaultSubscription,
   resolveDefaultPlan,
   selectDefaultPlan,
+  withDefaultPlanChange,
 } = await import("../src/workspaces/default-plan");
 
 function plan(overrides: Partial<Plan>): Plan {
@@ -181,38 +181,42 @@ describe("default subscription assignment", () => {
   });
 });
 
-describe("default subscription backfill", () => {
-  it("covers every plan-less workspace, the default tenant included", async () => {
+describe("catalogue writes that change the default plan", () => {
+  it("attach the new default, once, to every plan-less workspace", async () => {
     store.tenants = ["default", "ws1", "ws2"];
+    store.plans = [PAID];
     store.subscriptions.set("ws2", [
       { _id: "ws2", planId: "pro", status: "active" } as TenantSubscription,
     ]);
 
-    await expect(backfillDefaultSubscriptions()).resolves.toBe(2);
+    // The first free plan is published.
+    await withDefaultPlanChange(async () => {
+      store.plans = [PAID, FREE];
+    });
 
     expect(store.subscriptions.get("default")?.[0]?.planId).toBe("free");
     expect(store.subscriptions.get("ws1")?.[0]?.planId).toBe("free");
     expect(store.subscriptions.get("ws2")?.[0]?.planId).toBe("pro");
   });
 
-  it("is idempotent", async () => {
-    store.tenants = ["default", "ws1"];
+  it("attach nothing when the write leaves the default plan as it was", async () => {
+    store.tenants = ["ws1"];
 
-    await backfillDefaultSubscriptions();
-    await expect(backfillDefaultSubscriptions()).resolves.toBe(0);
+    const result = await withDefaultPlanChange(async () => "written");
 
-    expect(store.subscriptions.get("default")).toHaveLength(1);
-    expect(store.subscriptions.get("ws1")).toHaveLength(1);
+    expect(result).toBe("written");
+    expect(store.subscriptions.has("ws1")).toBe(false);
   });
 
-  it("does nothing but log, once, while the catalogue has no free plan", async () => {
-    store.tenants = ["default"];
-    store.plans = [PAID];
+  it("attach the plan that became the default, never the previous one", async () => {
+    store.tenants = ["ws1"];
+    // Reordered ahead of "free", the default until now.
+    const intro = plan({ _id: "intro", slug: "intro", order: -1 });
 
-    await expect(backfillDefaultSubscriptions()).resolves.toBe(0);
-    await backfillDefaultSubscriptions();
+    await withDefaultPlanChange(async () => {
+      store.plans = [...store.plans, intro];
+    });
 
-    expect(store.subscriptions.size).toBe(0);
-    expect(store.warnings).toHaveLength(1);
+    expect(store.subscriptions.get("ws1")?.[0]?.planId).toBe("intro");
   });
 });
