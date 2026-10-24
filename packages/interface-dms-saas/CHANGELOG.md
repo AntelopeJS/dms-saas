@@ -2,7 +2,13 @@
 
 ## v0.6.1
 
-[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.6.0...v0.6.1)
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.6.0...interface-v0.6.1)
+
+### Upgrade notes
+
+- Runs on `@antelopejs/interface-dms` 0.9 (`>=0.9.0`) and `@antelopejs/interface-data-api` 0.4 (`>=0.4.0`). The peer floors follow theirs: `@antelopejs/interface-database >=0.1.11` and `@antelopejs/interface-database-decorators >=0.1.10` ([#139](https://github.com/AntelopeJS/dms-saas/pull/139)).
+- ⚠️ **Breaking type change:** `TenantBeingProvisionedPayload.userId` is now optional (`userId?: string`). DMS 0.11 also fires `TENANT_BEING_PROVISIONED` for its `default` tenant, created at startup without an account. A listener that read `userId` as a `string` must handle its absence, typically by skipping the `default` tenant ([#137](https://github.com/AntelopeJS/dms-saas/pull/137)).
+- Upgrade together with `@antelopejs/dms-saas`, which provisions workspaces through DMS `ProvisionTenant` and needs `@antelopejs/dms` 0.11.
 
 ### 🚀 Enhancements
 
