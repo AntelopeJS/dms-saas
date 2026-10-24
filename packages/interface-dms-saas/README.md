@@ -54,8 +54,8 @@ The implementation is `@antelopejs/dms-saas >=0.6.0`. The interface declares the
 
 | Package | Range |
 | --- | --- |
-| `@antelopejs/interface-data-api` | `>=0.3.0 <1.0.0` |
-| `@antelopejs/interface-dms` | `>=0.8.0 <1.0.0` |
+| `@antelopejs/interface-data-api` | `>=0.4.0 <1.0.0` |
+| `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
 
 Peer dependencies:
 
@@ -64,8 +64,8 @@ Peer dependencies:
 | Package | Range |
 | --- | --- |
 | `@antelopejs/interface-core` | `>=0.2.4 <1.0.0` |
-| `@antelopejs/interface-database` | `>=0.1.10 <1.0.0` |
-| `@antelopejs/interface-database-decorators` | `>=0.1.9 <1.0.0` |
+| `@antelopejs/interface-database` | `>=0.1.11 <1.0.0` |
+| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0` |
 
 Subpaths resolve through the `exports` map only: compile consumers with `moduleResolution` set to `bundler`, `node16` or `nodenext`. Upgrade this package together with `@antelopejs/dms-saas`; the [upgrade notes](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading) cover the tenant billing page anchors and the rows written by earlier builds.
 
