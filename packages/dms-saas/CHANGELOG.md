@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.8.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.8.0...v0.8.1)
+
+### 🚀 Enhancements
+
+- **settings:** Offer the module default on the billing rules ([#136](https://github.com/AntelopeJS/dms-saas/pull/136))
+- Provision workspaces through DMS ProvisionTenant ([#137](https://github.com/AntelopeJS/dms-saas/pull/137))
+
+### 💅 Refactors
+
+- Attach the default plan on catalogue changes, not on a backfill ([#138](https://github.com/AntelopeJS/dms-saas/pull/138))
+
+### 📖 Documentation
+
+- **changelog:** Upgrade notes of dms-saas 0.8.0 ([#135](https://github.com/AntelopeJS/dms-saas/pull/135))
+
+### 📦 Build
+
+- Run on @antelopejs/dms 0.11 and @antelopejs/dms-frontend 0.9 ([#139](https://github.com/AntelopeJS/dms-saas/pull/139))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.6.1 ([1e5c8b7](https://github.com/AntelopeJS/dms-saas/commit/1e5c8b7))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli <rizzitelli.antony@pm.me>
+
 ## v0.8.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.7.4...v0.8.0)
