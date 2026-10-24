@@ -4,6 +4,13 @@
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.8.0...v0.8.1)
 
+### Upgrade notes
+
+- **Minimum versions:** requires `@antelopejs/dms` 0.11 (`>=0.11.0`), `@antelopejs/interface-dms` 0.9 (`>=0.9.0`), `@antelopejs/interface-data-api` 0.4 (`>=0.4.0`) and the renderer `@antelopejs/dms-frontend` 0.9 (`>=0.9.0 <0.10.0`, declared in the frontend layer's `engines`). Upgrade the backend, interfaces and renderer together; on DMS 0.10 or earlier, stay on dms-saas 0.8.0 ([#139](https://github.com/AntelopeJS/dms-saas/pull/139)).
+- Implements `@antelopejs/interface-dms-saas` 0.6.1, whose peer floors are `@antelopejs/interface-database >=0.1.11` and `@antelopejs/interface-database-decorators >=0.1.10`.
+- ⚠️ **Breaking:** workspaces are provisioned through DMS `ProvisionTenant`, which registers the workspace's tenant-schema instance before the `TENANT_BEING_PROVISIONED` listeners run. DMS 0.11 also fires that hook for its `default` tenant, without an account, so `TenantBeingProvisionedPayload.userId` is now optional: a listener that read it as a `string` must handle its absence, typically by skipping the `default` tenant ([#137](https://github.com/AntelopeJS/dms-saas/pull/137)).
+- ⚠️ **Behaviour change:** the default plan is no longer back-filled at startup or by the 15-minute cron. It is attached once to every workspace without a subscription when a platform-owner catalogue write (`POST`, `PUT`, `DELETE /plans`) changes the default plan, and to the `default` tenant when it is provisioned. Changing `defaultPlanSlug` and restarting no longer re-attaches anything; workspaces without a subscription are still covered when their billing page is first read. A catalogue written straight to the database (seed, import) does not go through the event ([#138](https://github.com/AntelopeJS/dms-saas/pull/138)).
+
 ### 🚀 Enhancements
 
 - **settings:** Offer the module default on the billing rules ([#136](https://github.com/AntelopeJS/dms-saas/pull/136))
