@@ -3,7 +3,11 @@
  */
 export interface TenantBeingProvisionedPayload {
   tenantId: string;
-  userId: string;
+  /**
+   * Account the workspace is provisioned for. Absent for the DMS `default`
+   * tenant, which is created at startup before anyone signs up.
+   */
+  userId?: string;
   /** Consumer-owned capture forwarded verbatim and normalized to an object. */
   extras?: Record<string, unknown>;
 }

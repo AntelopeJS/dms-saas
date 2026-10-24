@@ -105,6 +105,16 @@ const admission = vi.hoisted(() => ({ close: vi.fn() }));
 vi.mock("../src/workspaces/default-member-role", () => ({
   createDefaultMemberRole: async () => "member-role",
 }));
+// No tenant schema is registered here: DMS's own test covers the instance
+// `ProvisionTenant` creates, so only its hook run is kept.
+vi.mock("@antelopejs/interface-dms/tenant-provisioning", async () => {
+  const { ExecuteHooks, Hook } =
+    await import("@antelopejs/interface-dms/hooks");
+  return {
+    ProvisionTenant: (payload: TenantBeingProvisionedPayload) =>
+      ExecuteHooks(Hook.TENANT_BEING_PROVISIONED, payload),
+  };
+});
 vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
   closeTenantLifecycleAdmission: (...args: unknown[]) =>
     admission.close(...args),

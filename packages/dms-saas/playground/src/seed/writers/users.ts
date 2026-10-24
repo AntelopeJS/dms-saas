@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { GetModel } from "@antelopejs/interface-database-decorators";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
-import { PLATFORM_ADMIN_EMAIL, SEED_PASSWORD } from "../data/people";
+import { SEED_PASSWORD } from "../data/people";
 import type { SeedUser } from "../data/types";
 import { dayFrom, insertMissing, optionalDayFrom, type SeedRow } from "./rows";
 
@@ -37,11 +36,6 @@ function toUserRow(user: SeedUser): SeedRow {
     createdAt,
     updatedAt: createdAt,
   };
-}
-
-/** Whether the data set is complete: the platform admin is written last. */
-export async function isPlaygroundSeeded(): Promise<boolean> {
-  return !!(await GetModel(UserModel).getByEmail(PLATFORM_ADMIN_EMAIL));
 }
 
 export async function writeUsers(users: SeedUser[]): Promise<void> {

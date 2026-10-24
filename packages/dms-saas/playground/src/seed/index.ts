@@ -1,4 +1,5 @@
 import { Logging } from "@antelopejs/interface-core/logging";
+import { DEFAULT_TENANT_ID } from "@antelopejs/interface-dms/constants";
 import { Hook, RegisterHook } from "@antelopejs/interface-dms/hooks";
 import { CREDIT_NOTES, INVOICES } from "./data/billing";
 import { FEATURES, PLANS } from "./data/catalogue";
@@ -30,7 +31,7 @@ import {
   writePlatformNotes,
   writeSegments,
 } from "./writers/platform";
-import { isPlaygroundSeeded, writeUsers } from "./writers/users";
+import { writeUsers } from "./writers/users";
 import { publishBillingStates, writeWorkspaces } from "./writers/workspaces";
 
 const LOG_PREFIX = "[playground:seed]";
@@ -50,30 +51,33 @@ async function writeDataSet(): Promise<void> {
   await publishBillingStates([DEFAULT_WORKSPACE, ...WORKSPACES]);
 }
 
-async function seedPlayground(): Promise<void> {
-  if (await isPlaygroundSeeded()) {
-    await grantNewPermissionsToSeededPlans();
-    return;
-  }
-  await writeDataSet();
-  Logging.Info(
-    `${LOG_PREFIX} data set written; sign in as ${PLATFORM_ADMIN_EMAIL} / ${SEED_PASSWORD}`,
-  );
-}
-
 /**
- * Seeds the playground database once, on the first start against it.
+ * Seeds the playground database once, when DMS provisions its default
+ * tenant on a fresh database: that runs after every `DATABASE_INITIALIZED`
+ * handler has finished, so dms-saas has its legal documents and billing
+ * state in place before the data set lands. A failure is logged and never
+ * stops the DMS from serving.
  *
- * Registered from `start()`, after every module's `construct()`: the handler
- * then runs after those of the DMS (default tenant) and dms-saas (legal
- * documents, plan migration resume, billing state recompute), so none of
- * them acts on half-written data. A failure is logged and never stops the
- * DMS from serving.
+ * Plans seeded by an earlier start still receive the permissions a module
+ * added since, on `DATABASE_INITIALIZED`: the catalogue is the platform's,
+ * not the default tenant's.
  */
 export function registerPlaygroundSeed(): void {
+  RegisterHook(Hook.TENANT_BEING_PROVISIONED, async ({ tenantId }) => {
+    if (tenantId !== DEFAULT_TENANT_ID) return undefined;
+    try {
+      await writeDataSet();
+      Logging.Info(
+        `${LOG_PREFIX} data set written; sign in as ${PLATFORM_ADMIN_EMAIL} / ${SEED_PASSWORD}`,
+      );
+    } catch (error) {
+      Logging.Error(`${LOG_PREFIX} failed`, error);
+    }
+    return undefined;
+  });
   RegisterHook(Hook.DATABASE_INITIALIZED, async () => {
     try {
-      await seedPlayground();
+      await grantNewPermissionsToSeededPlans();
     } catch (error) {
       Logging.Error(`${LOG_PREFIX} failed`, error);
     }
