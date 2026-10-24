@@ -204,3 +204,40 @@ describe("billing rules & legal page", () => {
     expect(harness.reconcile).not.toHaveBeenCalled();
   });
 });
+
+describe("billing rules page module defaults", () => {
+  interface SerializedField {
+    id: string;
+    defaultValue?: unknown;
+    offersDefault?: boolean;
+  }
+
+  it("offers, on each rule, the value a fresh platform's route answers", async () => {
+    const { SaasSettingsController } =
+      await import("../src/pages/platform/settings");
+    const { options } = await SaasSettingsController.form.serialize();
+    const fields = (options as { fields: SerializedField[] }).fields;
+    const offered = Object.fromEntries(
+      fields
+        .filter((field) => field.offersDefault)
+        .map((field) => [field.id, field.defaultValue]),
+    );
+    const fresh = await controller.get(ADMIN);
+
+    expect(Object.keys(offered).sort()).toEqual([
+      "autoProrataOnCancelEnabled",
+      "autoSuspendDelayDays",
+      "autoSuspendEnabled",
+      "maxFreeWorkspacesPerCard",
+      "moneyBackGuaranteeEnabled",
+      "moneyBackGuaranteeMode",
+      "moneyBackGuaranteeWindowDays",
+      "stripeTaxCode",
+    ]);
+    for (const [id, value] of Object.entries(offered)) {
+      expect(fresh[id], id).toEqual(value);
+    }
+    // Lowering the retention deletes data: no one-click way back.
+    expect(offered).not.toHaveProperty("dataRetentionDaysAfterCancellation");
+  });
+});
