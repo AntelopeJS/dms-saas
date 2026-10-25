@@ -11,7 +11,7 @@ A pnpm workspace with two published packages. The root holds the tool configs, t
 | `packages/dms-saas/playground`   | An AntelopeJS project that runs the module against MongoDB. Not a workspace package: it has its own lockfile and a hoisted linker, so install it with `--ignore-workspace` |
 | `packages/interface-dms-saas`    | `@antelopejs/interface-dms-saas`, the extension points other modules import                                                |
 
-The module's typecheck and oxlint's type-aware rules resolve the interface through its built `dist`, so the root `typecheck` script is the build of both packages, and `lint` runs after it. Run `pnpm build` after `pnpm install`: without a `dist`, the pre-commit lint hook reports false type errors and the root `pnpm test` fails at `check:exports`.
+The module's typecheck and oxlint's type-aware rules resolve the interface through its built `dist`, so the root `typecheck` script is the build of both packages, and `lint` runs after it. Run `pnpm build` after `pnpm install`: without a `dist`, the pre-commit lint hook reports false type errors and `check:exports` fails.
 
 ## Versioning
 
@@ -21,6 +21,7 @@ The module's typecheck and oxlint's type-aware rules resolve the interface throu
 
 ## What `pnpm run checks` does not run
 
+- The Vitest suite: `pnpm --filter @antelopejs/dms-saas test:unit`. It starts an in-memory MongoDB, and CI runs it in the `unit` job, in parallel with `checks`. The root `test` script only runs the interface's `check:exports`.
 - `pnpm --filter @antelopejs/dms-saas test:frontend`. It builds the client, SSR and e-mail bundles with the DMS frontend source and typechecks them. CI runs it in the `frontend` job.
 - Prettier on `frontend-vue`. `pnpm format` applies it; nothing checks it.
 - The documentation check: Markdown links and the code examples in the READMEs and `docs` folders, typechecked through `packages/interface-dms-saas/docs/tsconfig.json`. Only the `checks` CI job runs it, with the file list in `.github/workflows/ci.yml`.
@@ -28,7 +29,7 @@ The module's typecheck and oxlint's type-aware rules resolve the interface throu
 - The playground's typecheck (oxlint still lints it). `pnpm --filter @antelopejs/dms-saas dev` transpiles it with `--noCheck`. Run `.agents/playground`, then `pnpm --dir packages/dms-saas/playground build`.
 - Unused files and exports. `pnpm knip` checks dependencies only. `pnpm --filter <package> knip:all` also reports dead files and exports, and expects findings: confirm each one before you remove it.
 
-The Vitest suite starts an in-memory MongoDB. The first run downloads mongod 8.0.8 (about 200 MB) into `~/.cache/mongodb-binaries`.
+The Vitest suite's first run downloads mongod 8.0.8 (about 200 MB) into `~/.cache/mongodb-binaries`.
 
 ## Orb
 

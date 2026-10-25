@@ -16,14 +16,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Two independent jobs instead of one sequence: the wall-clock is the slowest
-# of them, not their sum.
+# Three independent jobs instead of one sequence: the wall-clock is the
+# slowest of them, not their sum.
 jobs:
   # `pnpm run checks` builds both packages once (its `typecheck` step); lint
-  # and `check:exports` then read that build, while Vitest aliases both
-  # packages to their sources.
-  # The docs tsconfig maps the interface onto its sources, so the docs check,
-  # which runs before the build, needs no `dist`.
+  # and `check:exports` (its `test` step) then read that build. The docs
+  # tsconfig maps the interface onto its sources, so the docs check, which
+  # runs before the build, needs no `dist`.
   checks:
     uses: AntelopeJS/.github/.github/workflows/ci-node.yml@v1
     with:
@@ -34,6 +33,27 @@ jobs:
         packages/interface-dms-saas/README.md
         packages/interface-dms-saas/docs
       docs-typescript-project: packages/interface-dms-saas/docs/tsconfig.json
+
+  # The Vitest suite is not part of `checks`: in its own job it runs alongside
+  # the build and lint instead of after them, and keeps the mongod cache that
+  # the reusable workflow has no input for.
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # The Mongo-backed tests pin mongod 8.0.8, a 208 MB download every run
+      # without this. mongodb-memory-server stores it in this home directory
+      # by default.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-8.0.8-${{ runner.os }}
+
+      # vitest aliases both packages to their sources: no build needed.
+      - run: pnpm --filter @antelopejs/dms-saas test:unit
 
   frontend:
     runs-on: ubuntu-latest
@@ -49,7 +69,7 @@ jobs:
   # and fails unless every job above succeeded.
   ubuntu:
     if: always()
-    needs: [checks, frontend]
+    needs: [checks, unit, frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

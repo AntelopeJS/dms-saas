@@ -22,6 +22,7 @@ runs:
     # `{.}` adds the root, which owns the shared lint, format and tsconfig
     # tooling. The playground is the only project that still needs the
     # private registry, and none of the filters reaches it.
-    # verify-source compiles the layer, so the frontend package is installed.
+    # Both jobs need it: the unit tests that import the layer's composables
+    # (they resolve `vue` from there), and verify-source.
     - shell: bash
       run: pnpm install --filter "@antelopejs/dms-saas..." --filter "{.}" --filter "@antelopejs/dms-saas-frontend-vue" --frozen-lockfile
