@@ -19,8 +19,9 @@ concurrency:
 # Two independent jobs instead of one sequence: the wall-clock is the slowest
 # of them, not their sum.
 jobs:
-  # `pnpm run checks` builds both packages once (its `typecheck` step), then
-  # lints, runs knip, `check:exports` and the Vitest suite against that build.
+  # `pnpm run checks` builds both packages once (its `typecheck` step); lint
+  # and `check:exports` then read that build, while Vitest aliases both
+  # packages to their sources.
   # The docs tsconfig maps the interface onto its sources, so the docs check,
   # which runs before the build, needs no `dist`.
   checks:

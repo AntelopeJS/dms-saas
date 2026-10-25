@@ -107,9 +107,7 @@ cd packages/dms-saas
 pnpm build
 pnpm dev            # playground backend on http://localhost:5010
 pnpm frontend:dev   # dashboard on http://localhost:3001, in a second terminal
-pnpm lint
-pnpm typecheck
-pnpm test
+pnpm --dir ../.. run checks  # typecheck, lint, format, knip, tests, size, ratchet
 pnpm test:frontend  # builds the client, SSR and e-mail bundles in a temporary workspace and typechecks them
 ```
 
