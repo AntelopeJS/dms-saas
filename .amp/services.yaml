@@ -1,6 +1,6 @@
 services:
   dms-saas-backend:
-    command: pnpm --dir packages/dms-saas/playground exec ajs project run -w
+    command: .agents/playground && pnpm --dir packages/dms-saas/playground exec ajs project run -w
     port: 5010
     health: /api/onboarding/informations
 
