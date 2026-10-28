@@ -9,6 +9,7 @@ on:
   # secret scanner ran there.
   pull_request:
 
+  workflow_dispatch: null
 permissions:
   contents: read
 
@@ -23,7 +24,7 @@ jobs:
   # and `check:exports` (its `test` step) then read that build. The docs
   # tsconfig maps the interface onto its sources, so the docs check, which
   # runs before the build, needs no `dist`.
-  checks:
+  ci:
     uses: AntelopeJS/.github/.github/workflows/ci-node.yml@v1
     with:
       docs-files: |
@@ -33,6 +34,9 @@ jobs:
         packages/interface-dms-saas/README.md
         packages/interface-dms-saas/docs
       docs-typescript-project: packages/interface-dms-saas/docs/tsconfig.json
+    permissions:
+      contents: write
+      actions: write
 
   # The Vitest suite is not part of `checks`: in its own job it runs alongside
   # the build and lint instead of after them, and keeps the mongod cache that
@@ -69,7 +73,7 @@ jobs:
   # and fails unless every job above succeeded.
   ubuntu:
     if: always()
-    needs: [checks, unit, frontend]
+    needs: [ci, unit, frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
