@@ -5,7 +5,7 @@ import {
   useStripePaymentElement,
 } from "../frontend-vue/app/composables/useStripePaymentElement";
 
-const stripe = vi.hoisted(() => {
+const stripe = (() => {
   const paymentElement = () => ({ mount: vi.fn(), destroy: vi.fn() });
   const elements = {
     create: vi.fn((_type: string, _options: object) => paymentElement()),
@@ -15,14 +15,18 @@ const stripe = vi.hoisted(() => {
     elements,
     elementsFor: vi.fn((_options: { clientSecret: string }) => elements),
   };
-});
+})();
 
-vi.mock("../frontend-vue/node_modules/@stripe/stripe-js", () => ({
-  loadStripe: async () => ({
-    elements: stripe.elementsFor,
-    confirmSetup: stripe.confirmSetup,
-  }),
+/**
+ * Stands in for the Stripe.js script in a browser page: once loaded, it
+ * defines `window.Stripe`, which `loadStripe` calls with the publishable key.
+ */
+const stripeJs = vi.fn((_publishableKey: string) => ({
+  elements: stripe.elementsFor,
+  confirmSetup: stripe.confirmSetup,
 }));
+vi.stubGlobal("document", {});
+vi.stubGlobal("window", { Stripe: stripeJs });
 
 const PAYER_EMAIL = "owner@example.com";
 const PAYMENT_METHOD_ID = "pm_card_visa";
@@ -100,6 +104,7 @@ describe("useStripePaymentElement", () => {
   it("passes only options the Payment Element supports", async () => {
     await mountedHandle(() => PAYER_EMAIL);
 
+    expect(stripeJs).toHaveBeenLastCalledWith("pk_test_key");
     const [, elementOptions] = stripe.elements.create.mock.lastCall ?? [];
     expect(Object.keys(elementOptions ?? {}).sort()).toEqual([
       "fields",

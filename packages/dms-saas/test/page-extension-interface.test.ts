@@ -1,26 +1,5 @@
 import type { Component } from "@antelopejs/interface-dms/component";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const pageExtension = vi.hoisted(() => ({
-  register: vi.fn(),
-  unregister: vi.fn(),
-}));
-
-const pageRegistration = vi.hoisted(() => ({
-  Category: vi.fn(),
-  RegisterModule: vi.fn(),
-  modulesCategory: { location: "/modules" },
-  settingsCategory: { location: "/settings" },
-}));
-
-vi.mock("@antelopejs/interface-dms/page", () => ({
-  Category: pageRegistration.Category,
-  RegisterModule: pageRegistration.RegisterModule,
-  internal: { RegisterPageExtension: pageExtension },
-  modulesCategory: pageRegistration.modulesCategory,
-  settingsCategory: pageRegistration.settingsCategory,
-}));
-
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   platformSaasModule,
   platformWorkspaceDetailPage,
@@ -28,6 +7,10 @@ import {
   RegisterTenantBillingPageExtension,
   tenantBillingPage,
 } from "@antelopejs/interface-dms-saas/pages";
+import { implementPageRegistry, registered } from "./helpers/pages";
+
+const registry = implementPageRegistry();
+const pageExtension = registry.pageExtensions;
 
 const COMPONENT = {} as Component;
 
@@ -86,7 +69,7 @@ describe("tenant billing page extension interface", () => {
 
 describe("platform workspace page extension interface", () => {
   it("publishes the module and stable page identifiers", () => {
-    expect(pageRegistration.RegisterModule).not.toHaveBeenCalled();
+    expect(registered(registry.modules)).toEqual([]);
     expect(platformSaasModule).toEqual({
       id: "saas",
       fullId: "modules.saas",

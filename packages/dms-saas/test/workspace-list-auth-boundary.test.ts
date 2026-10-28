@@ -1,30 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useMyWorkspaces } from "../frontend-vue/app/composables/useMyWorkspaces";
-
-// The composables' Vue, without reactivity: a computed reads its getter on
-// each access, so plain `{ value }` holders stand in for refs.
-vi.mock("../frontend-vue/node_modules/vue/index.mjs", () => ({
-  computed: (get: () => unknown) => ({
-    get value() {
-      return get();
-    },
-  }),
-  ref: <T>(value: T) => ({ value }),
-}));
-
-interface Holder<T> {
-  value: T;
-}
-
-const holder = <T>(value: T): Holder<T> => ({ value });
-
-/** A source as `useApiData` reads it: a getter, a holder or a plain value. */
-function read<T>(source: unknown): T {
-  if (typeof source === "function") return (source as () => T)();
-  if (source && typeof source === "object" && "value" in source)
-    return (source as Holder<T>).value;
-  return source as T;
-}
+import {
+  type MaybeRefOrGetter,
+  type Ref,
+  ref,
+  toValue,
+} from "./helpers/frontend-vue";
 
 interface WorkspaceFixture {
   _id: string;
@@ -42,23 +23,23 @@ const WORKSPACE_FIXTURE: WorkspaceFixture = {
 
 /** What `useApiData` was asked to read, and the refs it hands back. */
 interface ApiDataCall {
-  url: unknown;
-  data: Holder<unknown>;
-  status: Holder<string>;
-  error: Holder<unknown>;
+  url: MaybeRefOrGetter<string | null>;
+  data: Ref<WorkspaceFixture[] | null>;
+  status: Ref<string>;
+  error: Ref<Error | null>;
   refresh: ReturnType<typeof vi.fn>;
 }
 
 function setupWorkspaceList(isLoggedIn: boolean) {
-  const loggedIn = holder(isLoggedIn);
+  const loggedIn = ref(isLoggedIn);
   const calls: ApiDataCall[] = [];
   vi.stubGlobal("useDmsUserSession", () => ({ loggedIn }));
-  vi.stubGlobal("useApiData", (url: unknown) => {
+  vi.stubGlobal("useApiData", (url: ApiDataCall["url"]) => {
     const call: ApiDataCall = {
       url,
-      data: holder(null),
-      status: holder(read(url) ? "pending" : "idle"),
-      error: holder(null),
+      data: ref(null),
+      status: ref(toValue(url) ? "pending" : "idle"),
+      error: ref(null),
       refresh: vi.fn(async () => undefined),
     };
     calls.push(call);
@@ -74,7 +55,7 @@ describe("workspace list authentication boundary", () => {
     const { list, calls } = setupWorkspaceList(false);
 
     expect(calls).toHaveLength(1);
-    expect(read(calls[0]!.url)).toBeNull();
+    expect(toValue(calls[0]!.url)).toBeNull();
     expect(list.workspaces.value).toEqual([]);
     expect(list.isLoaded.value).toBe(true);
   });
@@ -83,7 +64,7 @@ describe("workspace list authentication boundary", () => {
     const { list, calls, loggedIn } = setupWorkspaceList(true);
     const call = calls[0]!;
 
-    expect(read(call.url)).toBe("/api/saas/workspaces/mine");
+    expect(toValue(call.url)).toBe("/api/saas/workspaces/mine");
     expect(list.isLoaded.value).toBe(false);
 
     call.data.value = [WORKSPACE_FIXTURE];
@@ -93,7 +74,7 @@ describe("workspace list authentication boundary", () => {
 
     // Signing out leaves nothing to read.
     loggedIn.value = false;
-    expect(read(call.url)).toBeNull();
+    expect(toValue(call.url)).toBeNull();
   });
 
   it("keeps the entries on screen when a later read fails", () => {

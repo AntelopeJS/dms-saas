@@ -1,43 +1,11 @@
 import { ImplementInterface } from "@antelopejs/interface-core";
-import { beforeAll, describe, expect, it, vi } from "vitest";
-
-const pageRegistration = vi.hoisted(() => {
-  const modulesCategory = { location: "/modules" };
-  const settingsCategory = { location: "/settings" };
-  const workspaceSettingsCategory = { fullId: "settings.workspace" };
-  return {
-    modulesCategory,
-    settingsCategory,
-    workspaceSettingsCategory,
-    Category: vi.fn((id, options) => ({
-      ...options,
-      id,
-      fullId: `settings.${id}`,
-      fullSlug: `/settings/${id}`,
-    })),
-    RegisterModule: vi.fn((definition) => ({
-      id: definition.id,
-      fullId: `modules.${definition.id}`,
-      fullSlug: `/modules/${definition.id}`,
-      category: modulesCategory,
-    })),
-  };
-});
-
-vi.mock("@antelopejs/interface-dms/page", () => ({
-  Category: pageRegistration.Category,
-  RegisterModule: pageRegistration.RegisterModule,
-  internal: {
-    RegisterPageExtension: { register: vi.fn(), unregister: vi.fn() },
-  },
-  modulesCategory: pageRegistration.modulesCategory,
-  settingsCategory: pageRegistration.settingsCategory,
-  workspaceSettingsCategory: pageRegistration.workspaceSettingsCategory,
-}));
-
-import * as pagesImplementation from "../src/implementations/dms-saas/pages";
 import * as pagesInterface from "@antelopejs/interface-dms-saas/pages";
+import { beforeAll, describe, expect, it } from "vitest";
+import * as pagesImplementation from "../src/implementations/dms-saas/pages";
 import { saasModule } from "../src/pages/module";
+import { implementPageRegistry, registered } from "./helpers/pages";
+
+const registry = implementPageRegistry();
 
 beforeAll(() => {
   ImplementInterface(pagesInterface, pagesImplementation);
@@ -45,17 +13,20 @@ beforeAll(() => {
 
 describe("page runtime interface", () => {
   it("registers each canonical root exactly once from shared definitions", () => {
-    expect(pageRegistration.RegisterModule).toHaveBeenCalledOnce();
-    expect(pageRegistration.RegisterModule).toHaveBeenCalledWith({
-      id: "saas",
-      title: "$saas.module.title",
-      description: "$saas.module.description",
-      icon: "i-ph-buildings",
-      landingPage: "dashboard",
-    });
+    expect(registered(registry.modules)).toEqual([
+      {
+        id: "saas",
+        title: "$saas.module.title",
+        description: "$saas.module.description",
+        icon: "i-ph-buildings",
+        landingPage: "dashboard",
+      },
+    ]);
     // The workspace settings category is the DMS's own: registering a
     // second `settings.workspace` would collide with it.
-    expect(pageRegistration.Category).not.toHaveBeenCalled();
+    expect(
+      registered(registry.categories).map((category) => category.fullId),
+    ).toEqual(["pages", "settings.workspace", "modules.saas"]);
   });
 
   it("returns the canonical registered objects", async () => {

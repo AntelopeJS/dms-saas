@@ -2,20 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useBillingStatus } from "../frontend-vue/app/composables/useBillingStatus";
 import { useMountedData } from "../frontend-vue/app/composables/useMountedData";
 import { useNextInvoice } from "../frontend-vue/app/composables/useNextInvoice";
-
-const lifecycle = vi.hoisted(() => ({ mounted: [] as Array<() => void> }));
-
-// The composables' Vue, without reactivity: a computed reads its getter on
-// each access, and mounting runs the hooks a setup registered.
-vi.mock("../frontend-vue/node_modules/vue/index.mjs", () => ({
-  computed: (get: () => unknown) => ({
-    get value() {
-      return get();
-    },
-  }),
-  shallowRef: <T>(value: T) => ({ value }),
-  onMounted: (hook: () => void) => lifecycle.mounted.push(hook),
-}));
+import { mountComposable, ref } from "./helpers/frontend-vue";
 
 interface ApiDataCall {
   url: unknown;
@@ -31,13 +18,8 @@ function stubApiData(): ApiDataCall[] {
   return calls;
 }
 
-function mount(): void {
-  lifecycle.mounted.splice(0).forEach((hook) => hook());
-}
-
 afterEach(() => {
   vi.unstubAllGlobals();
-  lifecycle.mounted.length = 0;
 });
 
 describe("Stripe-backed reads of the layout strips", () => {
@@ -63,13 +45,17 @@ describe("Stripe-backed reads of the layout strips", () => {
   });
 
   it("shows nothing before the strip is mounted, as the server rendered it", () => {
-    const data = { value: { status: "past_due" } as { status: string } | null };
-    const shown = useMountedData(data);
+    const data = ref<{ status: string } | null>({ status: "past_due" });
 
-    expect(shown.value).toBeNull();
-    mount();
-    expect(shown.value).toEqual({ status: "past_due" });
+    const strip = mountComposable(
+      () => useMountedData(data),
+      (shown) => shown.value,
+    );
+
+    expect(strip.renders[0]).toBeNull();
+    expect(strip.state.value).toEqual({ status: "past_due" });
     data.value = null;
-    expect(shown.value).toBeNull();
+    expect(strip.state.value).toBeNull();
+    strip.unmount();
   });
 });
