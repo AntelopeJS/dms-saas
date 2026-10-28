@@ -5,7 +5,10 @@ import {
   type RouteHandler,
 } from "@antelopejs/interface-api";
 
-/** The `handler` route a controller registered for a method and full location. */
+/**
+ * The `handler` route a controller registered for a method (in any case: the
+ * method decorators register `get`, `post`...) and a full location.
+ */
 export function registeredRoute(
   method: string,
   location: string,
@@ -13,7 +16,7 @@ export function registeredRoute(
   const registered = getRegisteredRouteHandlers().find(
     ({ handler }) =>
       handler.mode === "handler" &&
-      handler.method === method &&
+      handler.method.toLowerCase() === method.toLowerCase() &&
       handler.location === location,
   );
   if (!registered) throw new Error(`No route answers ${method} ${location}`);
