@@ -23,6 +23,17 @@ const DMS_DIST = join(
 const SUITE_JWT_SECRET = "dms-saas-suite-only";
 
 /**
+ * The DMS runtime's own implementation of an `@antelopejs/interface-dms`
+ * declaration, to implement it with one function replaced by a test's
+ * observer: `ImplementInterface(declaration, { ...dmsImplementation(path), fn })`.
+ *
+ * @param implementation Path under the DMS `dist`, e.g. `implementations/dms/permissions.js`
+ */
+export function dmsImplementation(implementation: string): object {
+  return require(join(DMS_DIST, implementation));
+}
+
+/**
  * Implements an `@antelopejs/interface-dms` declaration with the DMS runtime's
  * own implementation, as the DMS module's `construct` does.
  *
@@ -33,7 +44,7 @@ export function implementWithDms<T extends Record<string, unknown>>(
   declaration: T,
   implementation: string,
 ): void {
-  ImplementInterface(declaration, require(join(DMS_DIST, implementation)));
+  ImplementInterface(declaration, dmsImplementation(implementation));
 }
 
 /** Applies a DMS configuration the way the DMS module's `construct` does. */

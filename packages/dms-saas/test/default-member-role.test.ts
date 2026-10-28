@@ -1,67 +1,45 @@
-import type { Role } from "@antelopejs/interface-dms/db";
-import type { PermissionTree } from "@antelopejs/interface-dms/permissions";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { RoleModel } from "@antelopejs/interface-dms/db";
+import * as permissions from "@antelopejs/interface-dms/permissions";
+import { beforeAll, describe, expect, it } from "vitest";
+import { createDefaultMemberRole } from "../src/workspaces/default-member-role";
+import { implementWithDms } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const harness = vi.hoisted(() => ({
-  inserted: [] as { tenantId: string; role: Partial<Role> }[],
-}));
+useMongoDatabase("default-member-role");
 
-function node(id: string, children: Record<string, PermissionTree> = {}) {
-  return { data: { id, title: id }, children };
-}
-
-vi.mock("@antelopejs/interface-dms/permissions", () => ({
-  GetPermissions: async (): Promise<Record<string, PermissionTree>> => ({
-    general: node("general", {
-      identity: node("general.identity"),
-      dangerZone: node("general.dangerZone"),
-    }),
-    billing: { children: { plan: node("billing.plan") } },
-  }),
-}));
-
-vi.mock(
-  "@antelopejs/interface-database-decorators",
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >()),
-    GetModel: (_model: unknown, tenantId: string) => ({
-      insert: async (rows: Partial<Role>[]) => {
-        harness.inserted.push(...rows.map((role) => ({ tenantId, role })));
-        return rows.map((role) => role._id);
-      },
-    }),
-  }),
-);
-
-const { createDefaultMemberRole } =
-  await import("../src/workspaces/default-member-role");
-
-beforeEach(() => {
-  harness.inserted = [];
+beforeAll(() => {
+  implementWithDms(permissions, "implementations/dms/permissions.js");
+  for (const id of [
+    "general",
+    "general.identity",
+    "general.dangerZone",
+    "billing.plan",
+  ]) {
+    permissions.RegisterPermission(id, { id, title: id });
+  }
 });
 
 describe("default Member role of a new workspace", () => {
   it("grants every permission the DMS registers, in the workspace's own roles", async () => {
-    const roleId = await createDefaultMemberRole("acme", "en");
+    const tenantId = randomUUID();
 
-    expect(roleId).toBe("acme:member");
-    expect(harness.inserted).toEqual([
-      {
-        tenantId: "acme",
-        role: expect.objectContaining({
-          _id: "acme:member",
-          name: "Member",
-          description: "Everything the workspace plan includes",
-          permissions: [
-            "general",
-            "general.identity",
-            "general.dangerZone",
-            "billing.plan",
-          ],
-        }),
-      },
+    const roleId = await createDefaultMemberRole(tenantId, "en");
+
+    expect(roleId).toBe(`${tenantId}:member`);
+    await expect(GetModel(RoleModel, tenantId).getAll()).resolves.toEqual([
+      expect.objectContaining({
+        _id: `${tenantId}:member`,
+        name: "Member",
+        description: "Everything the workspace plan includes",
+        permissions: [
+          "general",
+          "general.identity",
+          "general.dangerZone",
+          "billing.plan",
+        ],
+      }),
     ]);
   });
 
@@ -71,8 +49,11 @@ describe("default Member role of a new workspace", () => {
     ["de", "Member"],
     [undefined, "Member"],
   ])("names the role in the owner's language %s", async (language, name) => {
-    await createDefaultMemberRole("acme", language);
+    const tenantId = randomUUID();
 
-    expect(harness.inserted[0]?.role.name).toBe(name);
+    await createDefaultMemberRole(tenantId, language);
+
+    const [role] = await GetModel(RoleModel, tenantId).getAll();
+    expect(role?.name).toBe(name);
   });
 });
