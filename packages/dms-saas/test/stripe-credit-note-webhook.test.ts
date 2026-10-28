@@ -1,62 +1,60 @@
-import Stripe from "stripe";
-import { describe, expect, it, vi } from "vitest";
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { describe, expect, it } from "vitest";
+import { StripeWebhookEventModel } from "../src/db";
+import { StripeWebhookController } from "../src/routes/public/webhooks/stripe";
+import { useMongoDatabase } from "./helpers/mongo";
+import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 
-const WEBHOOK_SECRET = "whsec_local_credit_note_fixture";
-const stripe = new Stripe("sk_test_local_fixture");
-const dispatch = vi.hoisted(() => vi.fn<() => Promise<void>>());
+useMongoDatabase("stripe-credit-note-webhook");
+const stripe = useSuiteStripe();
 
 interface SignedFixture {
+  id: string;
   body: Buffer;
   signature: string;
 }
 
-vi.mock("../src/stripe", () => ({
-  dispatchStripeWebhookEvent: (...args: unknown[]) => dispatch(...args),
-  getStripeClient: () => stripe,
-  getStripeWebhookSecret: () => WEBHOOK_SECRET,
-}));
-
-import { StripeWebhookController } from "../src/routes/public/webhooks/stripe";
-
 function signedFixture(type: string): SignedFixture {
+  const id = `evt_${randomUUID()}`;
   const body = Buffer.from(
     JSON.stringify({
-      id: `evt_${type}`,
+      id,
       object: "event",
       type,
       data: { object: { id: "cn_123", object: "credit_note" } },
     }),
   );
-  const signature = stripe.webhooks.generateTestHeaderString({
+  const signature = stripe.write.webhooks.generateTestHeaderString({
     payload: body.toString(),
-    secret: WEBHOOK_SECRET,
+    secret: SUITE_STRIPE_KEYS.webhookSecret,
   });
-  return { body, signature };
+  return { id, body, signature };
 }
 
 describe("signed Stripe credit note webhooks", () => {
   it.each(["credit_note.created", "credit_note.voided"])(
     "verifies and dispatches %s",
     async (type) => {
-      dispatch.mockReset();
       const fixture = signedFixture(type);
 
       await expect(
         new StripeWebhookController().receive(fixture.body, fixture.signature),
       ).resolves.toEqual({ received: true });
-      expect(dispatch).toHaveBeenCalledWith(
-        expect.objectContaining({ id: `evt_${type}`, type }),
-      );
+      await expect(
+        GetModel(StripeWebhookEventModel).get(fixture.id),
+      ).resolves.toMatchObject({ type, result: "success" });
     },
   );
 
   it("rejects a credit note fixture with an invalid signature", async () => {
-    dispatch.mockReset();
     const fixture = signedFixture("credit_note.created");
 
     await expect(
       new StripeWebhookController().receive(fixture.body, "invalid"),
     ).rejects.toMatchObject({ status: 400 });
-    expect(dispatch).not.toHaveBeenCalled();
+    await expect(
+      GetModel(StripeWebhookEventModel).get(fixture.id),
+    ).resolves.toBeUndefined();
   });
 });

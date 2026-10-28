@@ -1,18 +1,25 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const stripe = vi.hoisted(() => ({ customers: { update: vi.fn() } }));
-
-vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
-
-const {
+import {
   rememberCustomerLocale,
   syncCustomerPreferredLocale,
   toStripePreferredLocales,
-} = await import("../src/stripe/customer-locale");
+} from "../src/stripe/customer-locale";
+import { createTenantCheckoutCustomer } from "../src/stripe/workspace-checkout";
+import { useSuiteStripe } from "./helpers/stripe";
+
+const stripe = useSuiteStripe();
+
+function stubCustomerUpdate() {
+  return vi
+    .spyOn(stripe.write.customers, "update")
+    .mockResolvedValue(fromPartial({}));
+}
+
+let update: ReturnType<typeof stubCustomerUpdate>;
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  stripe.customers.update.mockResolvedValue({});
+  update = stubCustomerUpdate();
 });
 
 describe("Stripe customer locale", () => {
@@ -31,7 +38,7 @@ describe("Stripe customer locale", () => {
     await syncCustomerPreferredLocale("cus_change", "fr");
     await syncCustomerPreferredLocale("cus_change", "en");
 
-    expect(stripe.customers.update.mock.calls).toEqual([
+    expect(update.mock.calls).toEqual([
       ["cus_change", { preferred_locales: ["fr"] }],
       ["cus_change", { preferred_locales: ["en"] }],
     ]);
@@ -42,34 +49,33 @@ describe("Stripe customer locale", () => {
 
     await syncCustomerPreferredLocale("cus_new", "fr");
 
-    expect(stripe.customers.update).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
   it("does nothing without a customer or a language", async () => {
     await syncCustomerPreferredLocale(null, "fr");
     await syncCustomerPreferredLocale("cus_none", undefined);
 
-    expect(stripe.customers.update).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
   it("never fails the request when Stripe refuses the update", async () => {
-    stripe.customers.update.mockRejectedValueOnce(new Error("rate limited"));
+    update.mockRejectedValueOnce(new Error("rate limited"));
 
     await expect(
       syncCustomerPreferredLocale("cus_refused", "fr"),
     ).resolves.toBeUndefined();
     await syncCustomerPreferredLocale("cus_refused", "fr");
 
-    expect(stripe.customers.update).toHaveBeenCalledTimes(2);
+    expect(update).toHaveBeenCalledTimes(2);
   });
 });
 
 describe("Checkout customer", () => {
   it("is created in the owner's language", async () => {
-    const create = vi.fn(async () => ({ id: "cus_checkout" }));
-    Object.assign(stripe.customers, { create });
-    const { createTenantCheckoutCustomer } =
-      await import("../src/stripe/workspace-checkout");
+    const create = vi
+      .spyOn(stripe.write.customers, "create")
+      .mockResolvedValue(fromPartial({ id: "cus_checkout" }));
 
     await createTenantCheckoutCustomer({
       tenantId: "acme",
@@ -82,6 +88,6 @@ describe("Checkout customer", () => {
       expect.objectContaining({ preferred_locales: ["fr"] }),
       undefined,
     );
-    expect(stripe.customers.update).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 });
