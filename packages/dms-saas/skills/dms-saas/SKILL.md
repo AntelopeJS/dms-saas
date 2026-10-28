@@ -48,7 +48,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 | --- | --- |
 | Own registration screen | `publicScreens.register: false` + `useSaasRegistration()` composable |
 | Store sign-up answers | `extras` on the payload + `Hook.TENANT_BEING_PROVISIONED` listener (throwing cancels the sign-up; return `undefined`) |
-| Bill metered usage | `RegisterInvoiceLineItemsProvider({ id, resolve })` in `construct`, unregister in `stop`; stable `key`s |
+| Bill metered usage | `RegisterInvoiceLineItemsProvider({ id, resolve })` in `construct`, `UnregisterInvoiceLineItemsProvider(id)` in `stop`, both from `@antelopejs/interface-dms-saas/invoice-line-items` (the root only exposes them as the `invoiceLineItems` namespace); stable `key`s |
 | Show tax-exact next invoice | `GetUpcomingInvoicePreview({ tenantId, userId })` → `available` / `absent` / `unavailable` |
 | Page in workspace settings | `category: workspaceSettingsCategory` (from `/pages`) |
 | Block on the billing page | `RegisterTenantBillingPageExtension({ name, components })` anchored on `tenantBillingPage.components.*` |
