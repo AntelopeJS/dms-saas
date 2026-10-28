@@ -19,6 +19,10 @@ The module's typecheck and oxlint's type-aware rules resolve the interface throu
 - `antelopejs-check-interface-ranges` (part of `pnpm lint`) checks every other `@antelopejs/interface-*` range.
 - `packages/dms-saas/frontend-vue/package.json` pins the `@antelopejs/dms-frontend` minor it builds against in `engines`. Move it together with the `@antelopejs/dms-frontend` range in `packages/dms-saas/package.json` and `packages/dms-saas/playground/package.json`, and the compatibility table in `README.md`.
 
+## Invariant checks
+
+`pnpm lint` ends with `node packages/dms-saas/scripts/checks/index.mts`, the rules over many files: the locale catalogs (each key declared in one file, every locale with the reference keys and placeholders, no empty message, the keys screens read, both forms of a seat count), locale keys nothing reads, components drawing several roots without `inheritAttrs: false`, and which frontend reads may hold a server render. It prints only what failed. Add a rule there, not a test that reads sources.
+
 ## What `pnpm run checks` does not run
 
 - The Vitest suite: `pnpm --filter @antelopejs/dms-saas test:unit`. It starts an in-memory MongoDB, and CI runs it in the `unit` job, in parallel with the `ci` job. The root `test` script only runs the interface's `check:exports`.

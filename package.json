@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm --filter @antelopejs/dms-saas build",
-    "lint": "oxlint && antelopejs-check-interface-ranges && pnpm --dir packages/dms-saas/frontend-vue lint",
+    "lint": "oxlint && antelopejs-check-interface-ranges && pnpm --dir packages/dms-saas/frontend-vue lint && node packages/dms-saas/scripts/checks/index.mts",
     "typecheck": "pnpm run build",
     "test": "pnpm --filter @antelopejs/interface-dms-saas check:exports",
     "prepare": "if git rev-parse --is-inside-work-tree >/dev/null 2>&1 && command -v lefthook >/dev/null 2>&1; then lefthook install; fi",

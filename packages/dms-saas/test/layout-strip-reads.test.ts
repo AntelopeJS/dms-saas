@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useBillingStatus } from "../frontend-vue/app/composables/useBillingStatus";
 import { useMountedData } from "../frontend-vue/app/composables/useMountedData";
@@ -17,15 +16,6 @@ vi.mock("../frontend-vue/node_modules/vue/index.mjs", () => ({
   shallowRef: <T>(value: T) => ({ value }),
   onMounted: (hook: () => void) => lifecycle.mounted.push(hook),
 }));
-
-const STRIP_SOURCES = ["PastDueBanner.vue", "TrialEndingBanner.vue"].map(
-  (file) =>
-    readFileSync(
-      new URL(`../frontend-vue/app/components/${file}`, import.meta.url),
-      "utf8",
-    ),
-);
-const STRIPE_BACKED_READ = /use(BillingStatus|NextInvoice)\(([^)]*)\)/g;
 
 interface ApiDataCall {
   url: unknown;
@@ -81,17 +71,5 @@ describe("Stripe-backed reads of the layout strips", () => {
     expect(shown.value).toEqual({ status: "past_due" });
     data.value = null;
     expect(shown.value).toBeNull();
-  });
-
-  it("never holds the server render of a page on a strip's Stripe read", () => {
-    const reads = STRIP_SOURCES.flatMap((source) => [
-      ...source.matchAll(STRIPE_BACKED_READ),
-    ]);
-
-    expect(reads.length).toBeGreaterThan(0);
-    for (const [, , options] of reads)
-      expect(options).toBe("{ server: false }");
-    for (const source of STRIP_SOURCES)
-      expect(source).toMatch(/<DmsSaasCustomerPortalButton[^>]*is-deferred/);
   });
 });

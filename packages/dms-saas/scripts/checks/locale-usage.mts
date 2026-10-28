@@ -1,15 +1,14 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import { flattenLocale, readLocale } from "./helpers/locales";
+import { flattenLocale, readLocale } from "./locale-files.mts";
+import { REFERENCE_LOCALE } from "./locale-catalog.mts";
 
-const REFERENCE_LOCALE = "en-GB";
 const SOURCE_ROOTS = [
-  "../src",
-  "../frontend-vue/app",
-  "../frontend-vue/dms.frontend.ts",
-  "../../interface-dms-saas/src",
-  "../playground/src",
+  "../../src",
+  "../../frontend-vue/app",
+  "../../frontend-vue/dms.frontend.ts",
+  "../../../interface-dms-saas/src",
+  "../../playground/src",
 ];
 const SOURCE_EXTENSION = /\.(ts|vue|mjs)$/;
 /** `const NAME = "$saas.x"` or `` const NAME = `${OTHER}.x` ``: a key prefix. */
@@ -48,7 +47,7 @@ function escapeRegExp(value: string): string {
 
 function resolveConstants(source: string): Map<string, string> {
   const constants = new Map<string, string>();
-  const resolve = (text: string) =>
+  const resolve = (text: string): string =>
     text.replace(
       INTERPOLATION,
       (whole, name: string) => constants.get(name) ?? whole,
@@ -84,13 +83,24 @@ interface KeyReferences {
   /**
    * Every run of key characters in the sources (key constants written out),
    * with each of its dotted heads: one lookup per key in place of one regex
-   * scan of every source per key, which timed out under a loaded runner.
+   * scan of every source per key.
    */
   names: Set<string>;
   /** Keys built at runtime, as patterns over the key. */
   patterns: RegExp[];
   /** Prefixes handed whole to code that appends the rest (`statusItems`). */
   roots: string[];
+}
+
+function addNames(source: string, names: Set<string>): void {
+  for (const [run] of source.matchAll(KEY_RUN)) {
+    names.add(run);
+    let end = run.indexOf(SEGMENT_SEPARATOR);
+    while (end !== -1) {
+      names.add(run.slice(0, end));
+      end = run.indexOf(SEGMENT_SEPARATOR, end + 1);
+    }
+  }
 }
 
 function collectReferences(prefixes: Set<string>): KeyReferences {
@@ -125,17 +135,6 @@ function collectReferences(prefixes: Set<string>): KeyReferences {
   return references;
 }
 
-function addNames(source: string, names: Set<string>): void {
-  for (const [run] of source.matchAll(KEY_RUN)) {
-    names.add(run);
-    let end = run.indexOf(SEGMENT_SEPARATOR);
-    while (end !== -1) {
-      names.add(run.slice(0, end));
-      end = run.indexOf(SEGMENT_SEPARATOR, end + 1);
-    }
-  }
-}
-
 function keyPrefixes(keys: string[]): Set<string> {
   const prefixes = new Set<string>();
   for (const key of keys) {
@@ -154,14 +153,16 @@ function isReferenced(key: string, references: KeyReferences): boolean {
   );
 }
 
-describe("saas locale keys", () => {
-  // Written out, through a key constant (`${TEXTS}.title`), or built from a
-  // static head (`saas.status.${family}.${status}`): a key nothing names is
-  // dead text both locales carry for nothing.
-  it("are each read somewhere in the module", () => {
-    const keys = [...flattenLocale(readLocale(REFERENCE_LOCALE)).keys()];
-    const references = collectReferences(keyPrefixes(keys));
-
-    expect(keys.filter((key) => !isReferenced(key, references))).toEqual([]);
-  });
-});
+/**
+ * Locale keys nothing in the module reads: not written out, not reached
+ * through a key constant (`${TEXTS}.title`), not built from a static head
+ * (`saas.status.${family}.${status}`). Both locales carry such a key for
+ * nothing.
+ */
+export function unusedLocaleKeyFailures(): string[] {
+  const keys = [...flattenLocale(readLocale(REFERENCE_LOCALE)).keys()];
+  const references = collectReferences(keyPrefixes(keys));
+  return keys
+    .filter((key) => !isReferenced(key, references))
+    .map((key) => `${REFERENCE_LOCALE}: ${key} is read nowhere in the module`);
+}
