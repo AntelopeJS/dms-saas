@@ -1,76 +1,57 @@
+import { randomUUID } from "node:crypto";
 import type { RequestContext } from "@antelopejs/interface-api";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import { describe, expect, it, vi } from "vitest";
-import type {
-  TenantBillingInfo,
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  PlanModel,
   TenantBillingInfoModel,
-  TenantSubscription,
   TenantSubscriptionModel,
 } from "../src/db";
+import { SaasTenantBillingController } from "../src/routes/tenant/tenant-billing";
+import { findMissingBillingIdentityFields } from "../src/workspaces/billing-identity";
+import {
+  addTenantMember,
+  createUser,
+  tenantRequest,
+  useDmsAuth,
+} from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const plans = vi.hoisted(() => new Map<string, { audience: string }>());
-const TENANT_ID = vi.hoisted(() => "tenant-a");
+useMongoDatabase("tenant-billing-info");
+useDmsAuth();
 
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: () => ({ get: async (id: string) => plans.get(id) }),
+interface Workspace {
+  tenantId: string;
+  owner: User;
+  request: RequestContext;
+  billing: TenantBillingInfoModel;
+  subscriptions: TenantSubscriptionModel;
+}
+
+let workspace: Workspace;
+
+beforeEach(async () => {
+  const tenantId = randomUUID();
+  const owner = await createUser({ name: "Workspace Owner" });
+  await addTenantMember(tenantId, owner, true);
+  workspace = {
+    tenantId,
+    owner,
+    request: await tenantRequest(owner, tenantId),
+    billing: GetModel(TenantBillingInfoModel, tenantId),
+    subscriptions: GetModel(TenantSubscriptionModel, tenantId),
   };
 });
 
-vi.mock("@antelopejs/interface-dms/request-tenant", () => ({
-  getRequestTenantId: () => TENANT_ID,
-}));
-
-const { SaasTenantBillingController } =
-  await import("../src/routes/tenant/tenant-billing");
-const { findMissingBillingIdentityFields } =
-  await import("../src/workspaces/billing-identity");
-
-interface BillingInfoWrite {
-  customerType: "individual" | "business" | null;
-  companyName: string | null;
-  vatNumber: string | null;
-  vatVerificationStatus: "pending" | "verified" | "unverified" | null;
-  billingEmail: string | null;
-  address: TenantBillingInfo["address"];
-  updatedAt: Date;
-}
-
-interface BillingInfoStore {
-  current?: TenantBillingInfo;
-}
-
-const OWNER = { name: "Workspace Owner" } as User;
-const CONTEXT = {} as RequestContext;
-
-function billingModel(store: BillingInfoStore): TenantBillingInfoModel {
-  return {
-    findOne: vi.fn(async () => store.current),
-    get: vi.fn(async (id: string) =>
-      store.current?._id === id ? store.current : undefined,
-    ),
-    insert: vi.fn(async (row: BillingInfoWrite & { _id: string }) => {
-      if (store.current?._id === row._id) throw new Error("duplicate key");
-      store.current = { ...row } as TenantBillingInfo;
-      return [row._id];
-    }),
-    update: vi.fn(async (_id: string, patch: BillingInfoWrite) => {
-      store.current = { ...store.current, ...patch } as TenantBillingInfo;
-    }),
-  } as unknown as TenantBillingInfoModel;
-}
-
-function subscriptionModel(
-  subscription?: Partial<TenantSubscription>,
-): TenantSubscriptionModel {
-  return {
-    findOne: vi.fn(async () => subscription),
-  } as unknown as TenantSubscriptionModel;
+function updateBillingInfo(body: object) {
+  return new SaasTenantBillingController().updateBillingInfo(
+    workspace.request,
+    workspace.owner,
+    body,
+    workspace.billing,
+    workspace.subscriptions,
+  );
 }
 
 const COMPLETE_ADDRESS = {
@@ -88,10 +69,12 @@ const INDIVIDUAL_IDENTITY = {
 
 describe("tenant billing information", () => {
   it("returns an empty editable profile when no billing row exists", async () => {
-    const controller = new SaasTenantBillingController();
-
     await expect(
-      controller.getBillingInfo(OWNER, billingModel({}), subscriptionModel()),
+      new SaasTenantBillingController().getBillingInfo(
+        workspace.owner,
+        workspace.billing,
+        workspace.subscriptions,
+      ),
     ).resolves.toEqual({
       customerType: null,
       companyName: null,
@@ -112,33 +95,13 @@ describe("tenant billing information", () => {
   });
 
   it("rejects an empty save instead of defaulting the customer type", async () => {
-    const controller = new SaasTenantBillingController();
-    const store: BillingInfoStore = {};
-
-    await expect(
-      controller.updateBillingInfo(
-        CONTEXT,
-        OWNER,
-        {},
-        billingModel(store),
-        subscriptionModel(),
-      ),
-    ).rejects.toMatchObject({ status: 400 });
-    expect(store.current).toBeUndefined();
+    await expect(updateBillingInfo({})).rejects.toMatchObject({ status: 400 });
+    await expect(workspace.billing.findOne()).resolves.toBeUndefined();
   });
 
   it("creates the billing row from a complete individual identity", async () => {
-    const controller = new SaasTenantBillingController();
-    const store: BillingInfoStore = {};
-
     await expect(
-      controller.updateBillingInfo(
-        CONTEXT,
-        OWNER,
-        { ...INDIVIDUAL_IDENTITY, companyName: "Ignored SRL" },
-        billingModel(store),
-        subscriptionModel(),
-      ),
+      updateBillingInfo({ ...INDIVIDUAL_IDENTITY, companyName: "Ignored SRL" }),
     ).resolves.toMatchObject({
       customerType: "individual",
       companyName: null,
@@ -146,91 +109,62 @@ describe("tenant billing information", () => {
       address: COMPLETE_ADDRESS,
       missingFields: [],
     });
-    expect(store.current).toMatchObject({
+    await expect(workspace.billing.findOne()).resolves.toMatchObject({
       customerType: "individual",
       billingEmail: "billing@example.com",
     });
   });
 
   it("keys the first billing row by the tenant", async () => {
-    const controller = new SaasTenantBillingController();
-    const store: BillingInfoStore = {};
+    await updateBillingInfo(INDIVIDUAL_IDENTITY);
 
-    await controller.updateBillingInfo(
-      CONTEXT,
-      OWNER,
-      INDIVIDUAL_IDENTITY,
-      billingModel(store),
-      subscriptionModel(),
-    );
-
-    expect(store.current?._id).toBe(TENANT_ID);
+    expect((await workspace.billing.findOne())?._id).toBe(workspace.tenantId);
   });
 
   it("turns a racing first save into an update of the same row", async () => {
-    const controller = new SaasTenantBillingController();
-    const store: BillingInfoStore = {
-      current: {
-        _id: TENANT_ID,
-        customerType: "business",
-        companyName: "Concurrent SRL",
-      } as TenantBillingInfo,
-    };
-    const model = billingModel(store);
-    // The racing request committed after this one read no row.
-    vi.mocked(model.findOne).mockResolvedValueOnce(undefined);
+    await workspace.billing.insert({
+      _id: workspace.tenantId,
+      customerType: "business",
+      companyName: "Concurrent SRL",
+      updatedAt: new Date(),
+    });
+    const update = vi.spyOn(workspace.billing, "update");
+    vi.spyOn(workspace.billing, "findOne").mockResolvedValueOnce(undefined);
 
-    await controller.updateBillingInfo(
-      CONTEXT,
-      OWNER,
-      INDIVIDUAL_IDENTITY,
-      model,
-      subscriptionModel(),
-    );
+    await updateBillingInfo(INDIVIDUAL_IDENTITY);
 
-    expect(model.update).toHaveBeenCalledWith(
-      TENANT_ID,
+    expect(update).toHaveBeenCalledWith(
+      workspace.tenantId,
       expect.objectContaining({ customerType: "individual" }),
     );
-    expect(store.current).toMatchObject({
-      _id: TENANT_ID,
+    await expect(
+      workspace.billing.get(workspace.tenantId),
+    ).resolves.toMatchObject({
+      _id: workspace.tenantId,
       customerType: "individual",
       billingEmail: "billing@example.com",
     });
   });
 
   it("requires a company name for a business", async () => {
-    const controller = new SaasTenantBillingController();
-
     await expect(
-      controller.updateBillingInfo(
-        CONTEXT,
-        OWNER,
-        { ...INDIVIDUAL_IDENTITY, customerType: "business", companyName: " " },
-        billingModel({}),
-        subscriptionModel(),
-      ),
+      updateBillingInfo({
+        ...INDIVIDUAL_IDENTITY,
+        customerType: "business",
+        companyName: " ",
+      }),
     ).rejects.toMatchObject({ status: 400 });
   });
 
   it("stores a business identity with its VAT number", async () => {
-    const controller = new SaasTenantBillingController();
-    const store: BillingInfoStore = {};
+    await updateBillingInfo({
+      ...INDIVIDUAL_IDENTITY,
+      customerType: "business",
+      companyName: " Acme SRL ",
+      vatNumber: "BE0771234567",
+    });
 
-    await controller.updateBillingInfo(
-      CONTEXT,
-      OWNER,
-      {
-        ...INDIVIDUAL_IDENTITY,
-        customerType: "business",
-        companyName: " Acme SRL ",
-        vatNumber: "BE0771234567",
-      },
-      billingModel(store),
-      subscriptionModel(),
-    );
-
-    expect(store.current).toMatchObject({
+    await expect(workspace.billing.findOne()).resolves.toMatchObject({
       customerType: "business",
       companyName: "Acme SRL",
       vatNumber: "BE0771234567",
@@ -238,18 +172,17 @@ describe("tenant billing information", () => {
   });
 
   it("refuses a customer type the plan in force is not open to", async () => {
-    plans.set("plan_business", { audience: "business" });
-    const controller = new SaasTenantBillingController();
+    const planId = randomUUID();
+    await GetModel(PlanModel).insert({ _id: planId, audience: "business" });
+    await workspace.subscriptions.insert({
+      _id: workspace.tenantId,
+      planId,
+      status: "active",
+    });
 
-    await expect(
-      controller.updateBillingInfo(
-        CONTEXT,
-        OWNER,
-        INDIVIDUAL_IDENTITY,
-        billingModel({}),
-        subscriptionModel({ planId: "plan_business" }),
-      ),
-    ).rejects.toMatchObject({ status: 400 });
+    await expect(updateBillingInfo(INDIVIDUAL_IDENTITY)).rejects.toMatchObject({
+      status: 400,
+    });
   });
 });
 
