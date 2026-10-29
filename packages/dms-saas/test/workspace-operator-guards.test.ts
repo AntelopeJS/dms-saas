@@ -1,52 +1,26 @@
+import { randomUUID } from "node:crypto";
 import { HTTPResult } from "@antelopejs/interface-api";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import { TenantModel } from "@antelopejs/interface-dms/db";
+import { fromPartial } from "@total-typescript/shoehorn";
 import Stripe from "stripe";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Plan, TenantSubscription } from "../src/db";
-
-const subscriptionModel = vi.hoisted(() => ({ findOne: vi.fn() }));
-const commands = vi.hoisted(() => ({
-  suspendWorkspaceCommand: vi.fn(async () => ({ status: "succeeded" })),
-  grantBalanceCreditCommand: vi.fn(async () => ({ status: "succeeded" })),
-  manuallyUpgradeWorkspaceCommand: vi.fn(async () => ({
-    status: "succeeded",
-  })),
-}));
-const operatorView = vi.hoisted(() => ({ load: vi.fn() }));
-const stripe = vi.hoisted(() => ({ isConfigured: true }));
-const upgradePreview = vi.hoisted(() => ({ preview: vi.fn() }));
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const original =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...original,
-    Model: () => (): void => undefined,
-    GetModel: () => subscriptionModel,
-  };
-});
-
-vi.mock("../src/operator-actions", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/operator-actions")>()),
-  ...commands,
-  operatorActorOf: (user: User) => ({ id: user._id, email: user.email }),
-}));
-
-vi.mock("../src/workspaces/operator-view", () => ({
-  loadWorkspaceOperatorView: operatorView.load,
-}));
-
-vi.mock("../src/stripe/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/stripe/client")>()),
-  isStripeConfigured: () => stripe.isConfigured,
-}));
-
-vi.mock("../src/operator-actions/upgrade-preview", () => ({
-  previewManualUpgrade: upgradePreview.preview,
-}));
-
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import {
+  type Plan,
+  TenantBillingInfoModel,
+  type TenantSubscription,
+  TenantSubscriptionModel,
+} from "../src/db";
+import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
 import {
   assertBalanceCreditWithinCeiling,
   balanceCreditCeilingMinor,
@@ -57,11 +31,26 @@ import {
   canStartFirstPaidSubscription,
 } from "../src/workspaces/first-payment";
 import type { WorkspaceOperatorView } from "../src/workspaces/operator-view";
+import { createUser } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { implementNotifications } from "./helpers/notifications";
+import {
+  PLACEHOLDER_SECRET_KEY,
+  reinitSuiteStripe,
+} from "./helpers/suite-stripe-keys";
+import { insertPlan } from "./helpers/plans";
+import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
+import { seatMembers } from "./helpers/workspaces";
 
-const OPERATOR = { _id: "op", email: "op@ops.test" } as User;
-const TENANT_ID = "tenant-1";
+useMongoDatabase("workspace-operator-guards");
+const stripe = useSuiteStripe();
+implementNotifications();
+
+let OPERATOR: User;
+let TENANT_ID = "";
 const WORKSPACE_NAME = "Northwind Traders";
-const OPERATION_ID = "operation-12345678";
+let OPERATION_ID = "";
+const BILLED_PLAN_ID = "plan_business";
 
 const SEAT_PLAN = {
   _id: "plan_business",
@@ -97,16 +86,58 @@ async function rejection(promise: Promise<unknown>): Promise<unknown> {
 
 function operatorController(): SaasWorkspaceOperatorActionsController {
   const controller = new SaasWorkspaceOperatorActionsController();
-  controller.tenantModel = {
-    get: async (id: string) =>
-      id === TENANT_ID ? { _id: id, name: WORKSPACE_NAME } : undefined,
-  } as unknown as SaasWorkspaceOperatorActionsController["tenantModel"];
+  controller.tenantModel = GetModel(TenantModel);
   return controller;
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  stripe.isConfigured = true;
+/** Stores a workspace paying a seat plan through Stripe, 23 seats taken. */
+async function seedBilledWorkspace(): Promise<void> {
+  await GetModel(TenantSubscriptionModel, TENANT_ID).insert({
+    _id: TENANT_ID,
+    planId: BILLED_PLAN_ID,
+    status: "active",
+    isComplimentary: false,
+    paidUsagePeriods: [],
+    stripeCustomerId: "cus_1",
+    stripeSubscriptionId: "sub_1",
+    currentPeriodEnd: new Date("2026-10-31T00:00:00Z"),
+  });
+  await GetModel(TenantBillingInfoModel, TENANT_ID).insert({
+    _id: TENANT_ID,
+    customerType: "business",
+    updatedAt: new Date(),
+  });
+  await seatMembers(TENANT_ID, 23);
+}
+
+beforeAll(async () => {
+  OPERATOR = await createUser({ owner: true, email: "op@ops.test" });
+  await insertPlan({
+    _id: BILLED_PLAN_ID,
+    price: 49,
+    billingMode: "seat",
+    maxMembers: 25,
+    paymentProviderRefs: { stripePriceId: "price_business" },
+  });
+  await insertPlan({
+    _id: "plan_pro",
+    price: 99,
+    billingMode: "seat",
+    maxMembers: 50,
+    paymentProviderRefs: { stripePriceId: "price_pro" },
+  });
+});
+
+beforeEach(async () => {
+  TENANT_ID = randomUUID();
+  OPERATION_ID = `operation-${randomUUID()}`;
+  const now = new Date();
+  await GetModel(TenantModel).insert({
+    _id: TENANT_ID,
+    name: WORKSPACE_NAME,
+    createdAt: now,
+    updatedAt: now,
+  });
 });
 
 describe("Stripe credit ceiling", () => {
@@ -144,7 +175,8 @@ describe("Stripe credit ceiling", () => {
   });
 
   it("is enforced by the credit route before Stripe is called", async () => {
-    operatorView.load.mockResolvedValue(view());
+    await seedBilledWorkspace();
+    const credit = vi.spyOn(stripe.write.customers, "createBalanceTransaction");
 
     const error = await rejection(
       operatorController().grantCredit(OPERATOR, TENANT_ID, {
@@ -155,13 +187,29 @@ describe("Stripe credit ceiling", () => {
     );
 
     expect(error).toBeInstanceOf(HTTPResult);
-    expect(error).toMatchObject({ status: 400 });
-    expect(commands.grantBalanceCreditCommand).not.toHaveBeenCalled();
+    expect(error).toMatchObject({
+      status: 400,
+      body: "saas.errors.operator.credit_over_ceiling",
+    });
+    expect(credit).not.toHaveBeenCalled();
+    await expect(
+      GetModel(OperatorActionModel).get(OPERATION_ID),
+    ).resolves.toBeUndefined();
   });
 });
 
 describe("typed confirmation of a suspension", () => {
+  /** Stripe pausing the workspace's subscription collection, as a suspension asks. */
+  function stubSuspensionStripe() {
+    return vi
+      .spyOn(stripe.write.subscriptions, "update")
+      .mockResolvedValue(fromPartial({}));
+  }
+
+  beforeEach(seedBilledWorkspace);
+
   it("refuses a suspension whose typed name does not match the workspace", async () => {
+    const pause = stubSuspensionStripe();
     const error = await rejection(
       operatorController().suspend(OPERATOR, TENANT_ID, {
         operationId: OPERATION_ID,
@@ -173,20 +221,39 @@ describe("typed confirmation of a suspension", () => {
       status: 400,
       body: "saas.errors.workspace.confirmation_mismatch",
     });
-    expect(commands.suspendWorkspaceCommand).not.toHaveBeenCalled();
+    await expect(
+      GetModel(OperatorActionModel).get(OPERATION_ID),
+    ).resolves.toBeUndefined();
+    await expect(
+      GetModel(TenantSubscriptionModel, TENANT_ID).findOne(),
+    ).resolves.toMatchObject({ status: "active" });
+    expect(pause).not.toHaveBeenCalled();
   });
 
   it("suspends once the workspace name is typed", async () => {
+    const pause = stubSuspensionStripe();
+
     await operatorController().suspend(OPERATOR, TENANT_ID, {
       operationId: OPERATION_ID,
       confirmName: ` ${WORKSPACE_NAME} `,
     });
 
-    expect(commands.suspendWorkspaceCommand).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tenantId: TENANT_ID,
-        operationId: OPERATION_ID,
-      }),
+    await expect(
+      GetModel(OperatorActionModel).get(OPERATION_ID),
+    ).resolves.toMatchObject({
+      tenantId: TENANT_ID,
+      action: "workspace.suspend",
+      status: "succeeded",
+      actorId: OPERATOR._id,
+      actorEmail: OPERATOR.email,
+    });
+    await expect(
+      GetModel(TenantSubscriptionModel, TENANT_ID).findOne(),
+    ).resolves.toMatchObject({ status: "suspended" });
+    expect(pause).toHaveBeenCalledWith(
+      "sub_1",
+      { pause_collection: { behavior: "void" } },
+      { idempotencyKey: `operator-suspend:${OPERATION_ID}` },
     );
   });
 });
@@ -233,21 +300,27 @@ describe("operator actions without a usable Stripe", () => {
     body: "saas.errors.stripe.not_configured",
   };
 
-  beforeEach(() => {
-    stripe.isConfigured = false;
-    operatorView.load.mockResolvedValue(view());
+  beforeEach(async () => {
+    reinitSuiteStripe(stripe, PLACEHOLDER_SECRET_KEY);
+    await seedBilledWorkspace();
+  });
+
+  afterEach(() => {
+    reinitSuiteStripe(stripe, SUITE_STRIPE_KEYS.secretKey);
   });
 
   it("refuses to price an upgrade before Stripe is called", async () => {
+    const retrieve = vi.spyOn(stripe.write.subscriptions, "retrieve");
+
     await expect(
       operatorController().getUpgradePreview(OPERATOR, TENANT_ID, "plan_pro"),
     ).rejects.toMatchObject(NOT_CONFIGURED);
-    expect(upgradePreview.preview).not.toHaveBeenCalled();
+    expect(retrieve).not.toHaveBeenCalled();
   });
 
   it("answers a handled 503 when Stripe refuses the key on an upgrade preview", async () => {
-    stripe.isConfigured = true;
-    upgradePreview.preview.mockRejectedValueOnce(
+    reinitSuiteStripe(stripe, SUITE_STRIPE_KEYS.secretKey);
+    vi.spyOn(stripe.write.subscriptions, "retrieve").mockRejectedValueOnce(
       new Stripe.errors.StripeAuthenticationError({
         message: "Invalid API Key provided: sk_test_*******lder",
         type: "authentication_error",
@@ -269,7 +342,9 @@ describe("operator actions without a usable Stripe", () => {
         planId: "plan_pro",
       }),
     ).rejects.toMatchObject(NOT_CONFIGURED);
-    expect(commands.manuallyUpgradeWorkspaceCommand).not.toHaveBeenCalled();
+    await expect(
+      GetModel(OperatorActionModel).get(OPERATION_ID),
+    ).resolves.toBeUndefined();
   });
 
   it("refuses a balance credit before the journal records an attempt", async () => {
@@ -280,6 +355,8 @@ describe("operator actions without a usable Stripe", () => {
         reason: "Goodwill",
       }),
     ).rejects.toMatchObject(NOT_CONFIGURED);
-    expect(commands.grantBalanceCreditCommand).not.toHaveBeenCalled();
+    await expect(
+      GetModel(OperatorActionModel).get(OPERATION_ID),
+    ).resolves.toBeUndefined();
   });
 });

@@ -1,160 +1,120 @@
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { planRow } from "./helpers/plan-row";
-import type { Plan, TenantSubscription } from "../src/db";
+import {
+  TenantMemberModel,
+  TenantModel,
+  UserInviteModel,
+} from "@antelopejs/interface-dms/db";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  BILLING_SETTINGS_SINGLETON_ID,
+  BillingSettingsModel,
+  InvoiceModel,
+  type Plan,
+  type TenantSubscription,
+  TenantSubscriptionModel,
+  TrialConsumptionModel,
+} from "../src/db";
+import { defaultBillingRules } from "../src/operator-billing/billing-settings-store";
+import { hashEmail } from "../src/utils/email-hash";
+import {
+  assertCardMayBackFreeWorkspace,
+  listFreeWorkspacesBackedByCard,
+} from "../src/workspaces/free-workspaces-per-card";
+import { listMyWorkspaces } from "../src/workspaces/my-workspaces";
+import {
+  buildWorkspaceCreateOptions,
+  cardRequirementOf,
+} from "../src/workspaces/self-serve-creation";
+import { buildWorkspaceOverview } from "../src/workspaces/workspace-overview";
+import { createUser } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import {
+  PLACEHOLDER_SECRET_KEY,
+  reinitSuiteStripe,
+} from "./helpers/suite-stripe-keys";
+import { insertPlan } from "./helpers/plans";
+import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 
-interface MemberFake {
-  _id: string;
-  userId: string;
+useMongoDatabase("workspace-owner-surfaces");
+const stripe = useSuiteStripe();
+
+const NOW = new Date("2026-10-01T00:00:00.000Z");
+const DAY_MS = 86_400_000;
+
+let FREE: Plan;
+let PRO: Plan;
+let camille: User;
+let ines: User;
+
+/** A member of a workspace, and whether it owns it. */
+interface Seat {
+  user: User;
   isTenantOwner: boolean;
 }
 
-interface MembershipFake {
-  tenantId: string;
-  member: MemberFake;
-}
-
-interface InvoiceFake {
-  _id: string;
-  number: string;
-}
-
-const store = vi.hoisted(() => ({
-  plans: new Map<string, Plan>(),
-  tenants: new Map<string, { _id: string; name: string; createdAt: Date }>(),
-  subscriptions: new Map<string, TenantSubscription>(),
-  members: new Map<string, MemberFake[]>(),
-  users: new Map<string, { _id: string; name: string; email: string }>(),
-  invoices: new Map<string, InvoiceFake[]>(),
-  openInvoices: new Map<string, InvoiceFake>(),
-  memberships: [] as MembershipFake[],
-  byFingerprint: [] as TenantSubscription[],
-  maxFreeWorkspacesPerCard: undefined as number | undefined,
-  usedTrial: false,
-}));
-
-const MODEL_FAKES: Record<string, (tenantId?: string) => unknown> = {
-  PlanModel: () => ({
-    get: async (id: string) => store.plans.get(id),
-    findPubliclyVisible: async () => [...store.plans.values()],
-  }),
-  TenantModel: () => ({
-    get: async (id: string) => store.tenants.get(id),
-    getMany: async (ids: string[]) =>
-      ids.flatMap((id) => {
-        const tenant = store.tenants.get(id);
-        return tenant ? [tenant] : [];
-      }),
-  }),
-  TenantSubscriptionModel: (tenantId) => ({
-    findOne: async () => store.subscriptions.get(tenantId ?? ""),
-    findByCardFingerprint: async () => store.byFingerprint,
-  }),
-  TenantMemberModel: (tenantId) => ({
-    listAll: async () => store.members.get(tenantId ?? "") ?? [],
-    listByUserWithTenantIds: async (userId: string) =>
-      store.memberships.filter(
-        (membership) => membership.member.userId === userId,
-      ),
-  }),
-  UserModel: () => ({ get: async (id: string) => store.users.get(id) }),
-  InvoiceModel: (tenantId) => ({
-    getAllInvoices: async () => store.invoices.get(tenantId ?? "") ?? [],
-    findLatestOpen: async () => store.openInvoices.get(tenantId ?? ""),
-  }),
-  BillingSettingsModel: () => ({
-    get: async () =>
-      store.maxFreeWorkspacesPerCard === undefined
-        ? undefined
-        : { maxFreeWorkspacesPerCard: store.maxFreeWorkspacesPerCard },
-  }),
-  TenantBillingInfoModel: () => ({ findOne: async () => undefined }),
-  TrialConsumptionModel: () => ({
-    existsForIdentity: async () => store.usedTrial,
-  }),
-};
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: (model: { name: string }, tenantId?: string) =>
-      MODEL_FAKES[model.name](tenantId),
-  };
+beforeAll(async () => {
+  FREE = await insertPlan({
+    _id: "free",
+    name: "Free",
+    price: 0,
+    order: 0,
+    isPublic: true,
+  });
+  PRO = await insertPlan({
+    _id: "pro",
+    name: "Pro",
+    price: 2900,
+    order: 2,
+    trialDays: 14,
+    maxMembers: 5,
+    isPublic: true,
+  });
+  await insertPlan({
+    _id: "business",
+    name: "Business",
+    price: 4900,
+    order: 3,
+    audience: "business",
+    isPublic: true,
+  });
 });
 
-vi.mock("../src/plans", () => ({
-  getSeatUsage: async (tenantId: string) => ({
-    members: (store.members.get(tenantId) ?? []).length,
-    pendingInvites: 2,
-    occupied: (store.members.get(tenantId) ?? []).length + 2,
-    platformSupport: [],
-  }),
-}));
-
-vi.mock("../src/workspaces/deletion", () => ({
-  resolveDataRetentionDays: async () => 30,
-}));
-
-const stripeSetup = vi.hoisted(() => ({ isConfigured: true }));
-
-vi.mock("../src/stripe/client", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  isStripeConfigured: () => stripeSetup.isConfigured,
-}));
-
-const { assertCardMayBackFreeWorkspace, listFreeWorkspacesBackedByCard } =
-  await import("../src/workspaces/free-workspaces-per-card");
-const { buildWorkspaceCreateOptions, cardRequirementOf } =
-  await import("../src/workspaces/self-serve-creation");
-const { listMyWorkspaces } = await import("../src/workspaces/my-workspaces");
-const { buildWorkspaceOverview } =
-  await import("../src/workspaces/workspace-overview");
-
-const FREE = plan({ _id: "free", name: "Free", price: 0, order: 0 });
-const PRO = plan({
-  _id: "pro",
-  name: "Pro",
-  price: 2900,
-  order: 2,
-  trialDays: 14,
-  maxMembers: 5,
-});
-const BUSINESS = plan({
-  _id: "business",
-  name: "Business",
-  price: 4900,
-  order: 3,
-  audience: "business",
-});
-const NOW = new Date("2026-10-01T00:00:00.000Z");
-const DAY_MS = 86_400_000;
-const user = { _id: "camille", email: "camille@acme.test" } as User;
-
-function plan(overrides: Partial<Plan>): Plan {
-  return planRow({
-    audience: "any",
-    trialDays: 0,
-    maxMembers: -1,
-    interval: "month",
-    billingMode: "flat",
-    currency: "eur",
-    description: "",
-    isComplimentary: false,
-    ...overrides,
-  } as Partial<Plan>);
+/** Stores a workspace with its members and, when given, its subscription; returns its id. */
+async function addWorkspace(
+  name: string,
+  seats: Seat[],
+  sub?: Partial<TenantSubscription>,
+): Promise<string> {
+  const tenantId = randomUUID();
+  await GetModel(TenantModel).insert({
+    _id: tenantId,
+    name,
+    createdAt: NOW,
+    updatedAt: NOW,
+  });
+  await GetModel(TenantMemberModel, tenantId).insert(
+    seats.map(({ user, isTenantOwner }) => ({
+      _id: randomUUID(),
+      userId: user._id,
+      roleIds: [],
+      isTenantOwner,
+      joinedAt: NOW,
+      invitedBy: null,
+    })),
+  );
+  if (sub) await subscribe(tenantId, sub);
+  return tenantId;
 }
 
-function subscription(
+/** Stores the subscription of a workspace, active on the free plan unless said otherwise. */
+async function subscribe(
   tenantId: string,
   overrides: Partial<TenantSubscription>,
-): TenantSubscription {
-  return {
+): Promise<void> {
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
     _id: tenantId,
-    _instance: tenantId,
     status: "active",
     planId: FREE._id,
     isComplimentary: false,
@@ -162,68 +122,62 @@ function subscription(
     cardFingerprint: null,
     currentPeriodEnd: null,
     ...overrides,
-  } as unknown as TenantSubscription;
+  });
 }
 
-function addWorkspace(
-  tenantId: string,
-  name: string,
-  members: MemberFake[],
-  sub?: Partial<TenantSubscription>,
-): void {
-  store.tenants.set(tenantId, { _id: tenantId, name, createdAt: NOW });
-  store.members.set(tenantId, members);
-  members.forEach((member) => store.memberships.push({ tenantId, member }));
-  if (sub) store.subscriptions.set(tenantId, subscription(tenantId, sub));
+/** Turns the per-card rule of the billing rules on, up to `limit` free workspaces. */
+async function setMaxFreeWorkspacesPerCard(limit: number): Promise<void> {
+  await GetModel(BillingSettingsModel).insert({
+    _id: BILLING_SETTINGS_SINGLETON_ID,
+    ...defaultBillingRules(),
+    maxFreeWorkspacesPerCard: limit,
+  });
 }
 
-function owner(userId: string): MemberFake {
-  return { _id: `m-${userId}`, userId, isTenantOwner: true };
+function owner(user: User): Seat {
+  return { user, isTenantOwner: true };
 }
 
-function member(userId: string): MemberFake {
-  return { _id: `m-${userId}`, userId, isTenantOwner: false };
+function member(user: User): Seat {
+  return { user, isTenantOwner: false };
 }
 
-beforeEach(() => {
-  store.plans = new Map([FREE, PRO, BUSINESS].map((p) => [p._id, p]));
-  store.tenants.clear();
-  store.subscriptions.clear();
-  store.members.clear();
-  store.invoices.clear();
-  store.openInvoices.clear();
-  store.memberships = [];
-  store.byFingerprint = [];
-  store.maxFreeWorkspacesPerCard = undefined;
-  store.usedTrial = false;
-  store.users = new Map([
-    ["camille", { _id: "camille", name: "Camille Laurent", email: "c@a.test" }],
-    ["ines", { _id: "ines", name: "Inès Roy", email: "i@s.test" }],
-  ]);
+beforeEach(async () => {
+  await GetModel(BillingSettingsModel).table.delete().run();
+  camille = await createUser({ name: "Camille Laurent" });
+  ines = await createUser({ name: "Inès Roy" });
 });
 
 describe("free workspaces per card", () => {
   it("counts the live free workspaces a card backs, not paid or complimentary ones", async () => {
-    store.byFingerprint = [
-      subscription("acme", { planId: FREE._id }),
-      subscription("globex", { planId: FREE._id, isComplimentary: true }),
-      subscription("initech", { planId: PRO._id }),
-    ];
+    const cardFingerprint = randomUUID();
+    const acme = randomUUID();
+    await subscribe(acme, { planId: FREE._id, cardFingerprint });
+    await subscribe(randomUUID(), {
+      planId: FREE._id,
+      isComplimentary: true,
+      cardFingerprint,
+    });
+    await subscribe(randomUUID(), { planId: PRO._id, cardFingerprint });
 
-    await expect(listFreeWorkspacesBackedByCard("fp")).resolves.toEqual([
-      "acme",
-    ]);
+    await expect(
+      listFreeWorkspacesBackedByCard(cardFingerprint),
+    ).resolves.toEqual([acme]);
   });
 
   it("refuses the card once it backs as many free workspaces as allowed", async () => {
-    store.byFingerprint = [subscription("acme", { planId: FREE._id })];
+    const cardFingerprint = randomUUID();
+    await subscribe(randomUUID(), { planId: FREE._id, cardFingerprint });
 
-    await expect(assertCardMayBackFreeWorkspace("fp", 1)).rejects.toMatchObject(
-      { status: 409, body: "saas.errors.workspace.free_card_limit_reached" },
-    );
-    await expect(assertCardMayBackFreeWorkspace("fp", 2)).resolves.toBe(
-      undefined,
-    );
+    await expect(
+      assertCardMayBackFreeWorkspace(cardFingerprint, 1),
+    ).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.workspace.free_card_limit_reached",
+    });
+    await expect(
+      assertCardMayBackFreeWorkspace(cardFingerprint, 2),
+    ).resolves.toBe(undefined);
   });
 
   it("asks a card of a free plan only while the rule is on", () => {
@@ -233,21 +187,21 @@ describe("free workspaces per card", () => {
   });
 
   it("asks no card of a free plan while Stripe is not configured", () => {
-    stripeSetup.isConfigured = false;
+    reinitSuiteStripe(stripe, PLACEHOLDER_SECRET_KEY);
     try {
       expect(cardRequirementOf(FREE, 1)).toBe("none");
       expect(cardRequirementOf(PRO, 1)).toBe("payment");
     } finally {
-      stripeSetup.isConfigured = true;
+      reinitSuiteStripe(stripe, SUITE_STRIPE_KEYS.secretKey);
     }
   });
 });
 
 describe("workspace creation options", () => {
   it("offers the plans of the caller's audience, in catalogue order, with their card rule", async () => {
-    store.maxFreeWorkspacesPerCard = 1;
+    await setMaxFreeWorkspacesPerCard(1);
 
-    const options = await buildWorkspaceCreateOptions(user, "en");
+    const options = await buildWorkspaceCreateOptions(camille, "en");
 
     expect(options.plans.map((option) => option._id)).toEqual(["free", "pro"]);
     expect(options.plans.map((option) => option.cardRequirement)).toEqual([
@@ -258,37 +212,43 @@ describe("workspace creation options", () => {
   });
 
   it("offers no trial to an e-mail that already used one", async () => {
-    store.usedTrial = true;
+    await GetModel(TrialConsumptionModel).insert({
+      _id: randomUUID(),
+      userId: camille._id,
+      emailHash: hashEmail(camille.email),
+      paymentFingerprint: null,
+      planId: PRO._id,
+    });
 
-    const options = await buildWorkspaceCreateOptions(user, "en");
+    const options = await buildWorkspaceCreateOptions(camille, "en");
 
     expect(options.plans.find((o) => o._id === PRO._id)?.trialDays).toBe(0);
   });
 
   it("names the caller's own free workspaces that already rest on a card", async () => {
-    store.maxFreeWorkspacesPerCard = 1;
-    addWorkspace("acme", "acme", [owner("camille")], { cardFingerprint: "fp" });
-    addWorkspace("nocard", "No card", [owner("camille")], {});
-    addWorkspace("theirs", "Theirs", [member("camille")], {
+    await setMaxFreeWorkspacesPerCard(1);
+    await addWorkspace("acme", [owner(camille)], { cardFingerprint: "fp" });
+    await addWorkspace("nocard", [owner(camille)], {});
+    await addWorkspace("theirs", [member(camille)], {
       cardFingerprint: "fp2",
     });
 
-    const options = await buildWorkspaceCreateOptions(user, "en");
+    const options = await buildWorkspaceCreateOptions(camille, "en");
 
     expect(options.freePerCard).toEqual({ limit: 1, usedBy: ["acme"] });
   });
 
   it("leaves the rule off by default", async () => {
-    const options = await buildWorkspaceCreateOptions(user, "en");
+    const options = await buildWorkspaceCreateOptions(camille, "en");
 
     expect(options.freePerCard).toBeNull();
     expect(options.plans[0]?.cardRequirement).toBe("none");
   });
 
   it("drops the rule when the billing rules turn it off", async () => {
-    store.maxFreeWorkspacesPerCard = 0;
+    await setMaxFreeWorkspacesPerCard(0);
 
-    const options = await buildWorkspaceCreateOptions(user, "en");
+    const options = await buildWorkspaceCreateOptions(camille, "en");
 
     expect(options.freePerCard).toBeNull();
     expect(options.plans[0]?.cardRequirement).toBe("none");
@@ -297,17 +257,19 @@ describe("workspace creation options", () => {
 
 describe("my workspaces", () => {
   it("lists the live workspaces, current first, with plan, state and owner", async () => {
-    addWorkspace("zeta", "Zeta", [owner("ines"), member("camille")], {
+    const zeta = await addWorkspace("Zeta", [owner(ines), member(camille)], {
       planId: PRO._id,
       status: "past_due",
       stripeSubscriptionId: "sub_1",
     });
-    addWorkspace("acme", "acme", [owner("camille")], { planId: FREE._id });
-    addWorkspace("gone", "Gone", [owner("camille")], { status: "cancelled" });
+    const acme = await addWorkspace("acme", [owner(camille)], {
+      planId: FREE._id,
+    });
+    await addWorkspace("Gone", [owner(camille)], { status: "cancelled" });
 
-    const rows = await listMyWorkspaces("camille", "zeta");
+    const rows = await listMyWorkspaces(camille._id, zeta);
 
-    expect(rows.map((row) => row._id)).toEqual(["zeta", "acme"]);
+    expect(rows.map((row) => row._id)).toEqual([zeta, acme]);
     expect(rows[0]).toMatchObject({
       planName: "Pro",
       status: "past_due",
@@ -320,32 +282,53 @@ describe("my workspaces", () => {
   });
 
   it("keeps the cancelled workspace the caller is in", async () => {
-    addWorkspace("acme", "acme", [owner("camille")], { planId: FREE._id });
-    addWorkspace("gone", "Gone", [owner("camille")], { status: "cancelled" });
+    const acme = await addWorkspace("acme", [owner(camille)], {
+      planId: FREE._id,
+    });
+    const gone = await addWorkspace("Gone", [owner(camille)], {
+      status: "cancelled",
+    });
 
-    const rows = await listMyWorkspaces("camille", "gone");
+    const rows = await listMyWorkspaces(camille._id, gone);
 
-    expect(rows.map((row) => row._id)).toEqual(["gone", "acme"]);
+    expect(rows.map((row) => row._id)).toEqual([gone, acme]);
     expect(rows[0]).toMatchObject({ status: "cancelled", isCurrent: true });
   });
 });
 
 describe("workspace overview", () => {
   it("states the seats, the plan, the owners and what deleting does", async () => {
-    addWorkspace("acme", "acme", [owner("camille"), member("ines")], {
+    const acme = await addWorkspace("acme", [owner(camille), member(ines)], {
       planId: PRO._id,
       status: "past_due",
       stripeSubscriptionId: "sub_1",
       currentPeriodEnd: NOW,
     });
-    addWorkspace("north", "Northwind", [owner("camille")], {});
-    store.invoices.set("acme", [
-      { _id: "i1", number: "INV-1" },
-      { _id: "i2", number: "INV-2" },
-    ]);
-    store.openInvoices.set("acme", { _id: "i2", number: "INV-2" });
+    const north = await addWorkspace("Northwind", [owner(camille)], {});
+    const invoices = GetModel(InvoiceModel, acme);
+    const invoice = (number: string, status: string) => ({
+      _id: randomUUID(),
+      documentType: "invoice" as const,
+      stripeInvoiceId: randomUUID(),
+      number,
+      status,
+      issuedAt: NOW,
+    });
+    await invoices.insert([invoice("INV-1", "paid"), invoice("INV-2", "open")]);
+    await GetModel(UserInviteModel, acme).insert(
+      ["lea", "paul"].map((name) => ({
+        _id: randomUUID(),
+        createdAt: NOW,
+        email: `${name}@acme.test`,
+        roles_ids: [],
+        language: "en",
+        token: randomUUID(),
+        asTenantOwner: false,
+        expiresAt: new Date(Date.now() + DAY_MS),
+      })),
+    );
 
-    const overview = await buildWorkspaceOverview("acme", "camille", NOW);
+    const overview = await buildWorkspaceOverview(acme, camille._id, NOW);
 
     expect(overview.seats).toEqual({
       members: 2,
@@ -356,22 +339,24 @@ describe("workspace overview", () => {
     expect(overview.plan).toMatchObject({ name: "Pro", status: "past_due" });
     expect(overview.owners).toEqual([
       {
-        userId: "camille",
+        userId: camille._id,
         name: "Camille Laurent",
-        email: "c@a.test",
+        email: camille.email,
         isCaller: true,
       },
     ]);
     expect(overview.invoicesCount).toBe(2);
     expect(overview.unpaidInvoiceNumber).toBe("INV-2");
     expect(overview.destroyedAt).toEqual(new Date(NOW.getTime() + 30 * DAY_MS));
-    expect(overview.nextWorkspace).toEqual({ _id: "north", name: "Northwind" });
+    expect(overview.nextWorkspace).toEqual({ _id: north, name: "Northwind" });
   });
 
   it("reads unlimited seats as no ceiling", async () => {
-    addWorkspace("acme", "acme", [owner("camille")], { planId: FREE._id });
+    const acme = await addWorkspace("acme", [owner(camille)], {
+      planId: FREE._id,
+    });
 
-    const overview = await buildWorkspaceOverview("acme", "camille", NOW);
+    const overview = await buildWorkspaceOverview(acme, camille._id, NOW);
 
     expect(overview.seats.maxMembers).toBeNull();
     expect(overview.nextWorkspace).toBeNull();
@@ -379,7 +364,7 @@ describe("workspace overview", () => {
 
   it("refuses an unknown workspace", async () => {
     await expect(
-      buildWorkspaceOverview("missing", "camille", NOW),
+      buildWorkspaceOverview("missing", camille._id, NOW),
     ).rejects.toMatchObject({ status: 404 });
   });
 });
