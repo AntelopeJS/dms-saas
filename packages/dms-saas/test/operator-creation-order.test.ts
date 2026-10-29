@@ -99,7 +99,7 @@ describe("operator workspace creation", () => {
       },
       operator,
     );
-    await vi.waitFor(() => expect(sendEmail).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(observed).toHaveLength(3));
     releaseEmail();
 
     expect(observed).toEqual([
