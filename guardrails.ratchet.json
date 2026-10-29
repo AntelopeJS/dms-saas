@@ -4,11 +4,8 @@
     "anti-slop/no-runtime-typeof": 2,
     "anti-slop/no-unknown-parameters": 101,
     "anti-slop/no-unknown-returns": 6,
-    "anti-slop/no-unsafe-dictionary-type": 39,
+    "anti-slop/no-unsafe-dictionary-type": 38,
     "anti-slop/require-safety-comment-for-type-assertion": 67
   },
-  "oversizeFiles": {
-    "packages/dms-saas/frontend-vue/app/components/RetirePlanModal.vue": 23570,
-    "packages/dms-saas/frontend-vue/app/composables/useSaasRegistration.ts": 21109
-  }
+  "oversizeFiles": {}
 }
