@@ -21,8 +21,8 @@ import {
   missingRegistrationFields,
   type RegistrationFieldState,
   registrationFieldOf,
-  registrationLandingPath,
 } from "../frontend-vue/app/composables/useSaasRegistration";
+import { registrationLandingPath } from "../frontend-vue/app/composables/useSaasRegistrationPlan";
 import type { TenantPlanFeature } from "../frontend-vue/app/composables/useTenantPlan";
 
 function plan(overrides: Partial<PublicPlan>): PublicPlan {
