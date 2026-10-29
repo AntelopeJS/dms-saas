@@ -24,8 +24,18 @@ function manifest(directory: string, name: string): void {
   write(`${directory}/package.json`, JSON.stringify({ name }));
 }
 
-/** A frontend entry with `source` as its only import, built for real. */
-async function buildEntry(source: string, extra: Plugin[] = []): Promise<void> {
+/**
+ * A frontend entry with `source` as its only import, built for real.
+ *
+ * @param source The import the entry makes
+ * @param extra Plugins registered after the boundary
+ * @param external The build's `external` option, if any
+ */
+async function buildEntry(
+  source: string,
+  extra: Plugin[] = [],
+  external?: (id: string) => boolean,
+): Promise<void> {
   write(
     "frontend/entry.ts",
     `import "${source}";\nexport const frontend = 1;\n`,
@@ -38,6 +48,7 @@ async function buildEntry(source: string, extra: Plugin[] = []): Promise<void> {
     build: {
       write: false,
       lib: { entry: join(root, "frontend/entry.ts"), formats: ["es"] },
+      rollupOptions: external ? { external } : undefined,
     },
   });
 }
@@ -48,6 +59,7 @@ beforeEach(() => {
   write("backend/src/routes/status.ts", "export const status = 1;\n");
   write("backend/dist/index.js", "export const built = 1;\n");
   write("backend/srcfoo/index.ts", "export const sibling = 1;\n");
+  write("backend/dist/src/index.js", "export const builtSource = 1;\n");
   manifest("backend/frontend-vue", "@antelopejs/dms-saas-frontend-vue");
   write("backend/frontend-vue/src/screen.ts", "export const screen = 1;\n");
   manifest("other", "another-package");
@@ -119,6 +131,56 @@ describe("the backend boundary of a real build", () => {
   it("lets the src of a package nested in the backend's directory through", async () => {
     await expect(
       buildEntry("../backend/frontend-vue/src/screen.ts"),
+    ).resolves.toBeUndefined();
+  });
+
+  it("fails when a resolver answers a backend source file with a hash", async () => {
+    const hashed: Plugin = {
+      name: "test:hashed",
+      enforce: "pre",
+      resolveId: (source) =>
+        source === "@hashed/status"
+          ? `${join(root, "backend/src/routes/status.ts")}#fragment`
+          : null,
+      load: (id) =>
+        id.endsWith("#fragment") ? "export const status = 1;" : null,
+    };
+    await expect(buildEntry("@hashed/status", [hashed])).rejects.toThrow(
+      /Backend boundary/,
+    );
+  });
+
+  it("fails when the import itself carries a hash", async () => {
+    await expect(
+      buildEntry("../backend/src/routes/status.ts#fragment"),
+    ).rejects.toThrow(/Backend boundary/);
+  });
+
+  it("fails when a resolver marks a backend source file external", async () => {
+    const external: Plugin = {
+      name: "test:external",
+      enforce: "pre",
+      resolveId: (source) =>
+        source === "@external/status"
+          ? { id: join(root, "backend/src/routes/status.ts"), external: true }
+          : null,
+    };
+    await expect(buildEntry("@external/status", [external])).rejects.toThrow(
+      /Backend boundary/,
+    );
+  });
+
+  it("fails when the build's external option matches the resolved backend file", async () => {
+    await expect(
+      buildEntry("../backend/src/routes/status.ts", [], (id) =>
+        id.startsWith(join(root, "backend/src/")),
+      ),
+    ).rejects.toThrow(/Backend boundary/);
+  });
+
+  it("lets a src directory inside the backend's built output through", async () => {
+    await expect(
+      buildEntry("../backend/dist/src/index.js"),
     ).resolves.toBeUndefined();
   });
 
