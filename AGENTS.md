@@ -21,7 +21,7 @@ The module's typecheck and oxlint's type-aware rules resolve the interface throu
 
 ## What `pnpm run checks` does not run
 
-- The Vitest suite: `pnpm --filter @antelopejs/dms-saas test:unit`. It starts an in-memory MongoDB, and CI runs it in the `unit` job, in parallel with `checks`. The root `test` script only runs the interface's `check:exports`.
+- The Vitest suite: `pnpm --filter @antelopejs/dms-saas test:unit`. It starts an in-memory MongoDB, and CI runs it in the `unit` job, in parallel with the `ci` job. The root `test` script only runs the interface's `check:exports`.
 - `pnpm --filter @antelopejs/dms-saas test:frontend`. It builds the client, SSR and e-mail bundles with the DMS frontend source and typechecks them. CI runs it in the `frontend` job.
 - Prettier on `frontend-vue`. `pnpm format` applies it; nothing checks it.
 - The documentation check: Markdown links and the code examples in the READMEs and `docs` folders, typechecked through `packages/interface-dms-saas/docs/tsconfig.json`. Only the `checks` CI job runs it, with the file list in `.github/workflows/ci.yml`.
