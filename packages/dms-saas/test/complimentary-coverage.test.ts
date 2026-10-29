@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
-import type { TenantSubscription } from "../src/db";
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { describe, expect, it } from "vitest";
+import { type TenantSubscription, TenantSubscriptionModel } from "../src/db";
 import {
   activatePaidUsage,
   canRecoverComplimentarySubscription,
@@ -9,18 +11,9 @@ import {
 } from "../src/workspaces/complimentary";
 import { clipInvoiceUsageWindow } from "../src/invoice-line-items/billing-window";
 import { GetTenantBillingPeriod } from "../src/implementations/dms-saas/billing";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const stored = vi.hoisted(() => ({
-  subscription: undefined as unknown,
-}));
-
-vi.mock(
-  "@antelopejs/interface-database-decorators",
-  async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    GetModel: () => ({ findOne: async () => stored.subscription }),
-  }),
-);
+useMongoDatabase("complimentary-coverage");
 
 const CREATED = new Date("2026-01-01T00:00:00Z");
 const EXPIRED = new Date("2026-02-05T12:34:00Z");
@@ -213,32 +206,47 @@ describe("GetTenantBillingPeriod", () => {
       ...overrides,
     });
 
+  /** A workspace holding `subscription`, or none when it is undefined. */
+  async function workspaceWith(
+    subscription: TenantSubscription | undefined,
+  ): Promise<string> {
+    const tenantId = randomUUID();
+    if (subscription)
+      await GetModel(TenantSubscriptionModel, tenantId).insert({
+        ...subscription,
+        _id: tenantId,
+      });
+    return tenantId;
+  }
+
   it("starts the current period when its paid usage started", async () => {
-    stored.subscription = paid();
-    expect(await GetTenantBillingPeriod("tenant")).toEqual({
+    const tenantId = await workspaceWith(paid());
+    expect(await GetTenantBillingPeriod(tenantId)).toEqual({
       start: ACTIVATED,
       end: PERIOD_END,
     });
   });
 
   it("ends the current period at a confirmed downgrade", async () => {
-    stored.subscription = paid({
-      paidUsagePeriods: [
-        { stripeSubscriptionId: "paid", start: CREATED, end: null },
-      ],
-      guardedPlanChange: {
-        operationId: "downgrade",
-        policyName: "inventory",
-        targetPlanId: "free",
-        stripeSubscriptionId: "paid",
-        requestedAt: ACTIVATED,
-        effectiveAt: REGIFTED,
-        barrierId: "barrier",
-        phase: "scheduled",
-        incompatibilities: [],
-      },
-    });
-    expect(await GetTenantBillingPeriod("tenant")).toEqual({
+    const tenantId = await workspaceWith(
+      paid({
+        paidUsagePeriods: [
+          { stripeSubscriptionId: "paid", start: CREATED, end: null },
+        ],
+        guardedPlanChange: {
+          operationId: "downgrade",
+          policyName: "inventory",
+          targetPlanId: "free",
+          stripeSubscriptionId: "paid",
+          requestedAt: ACTIVATED,
+          effectiveAt: REGIFTED,
+          barrierId: "barrier",
+          phase: "scheduled",
+          incompatibilities: [],
+        },
+      }),
+    );
+    expect(await GetTenantBillingPeriod(tenantId)).toEqual({
       start: PERIOD_START,
       end: REGIFTED,
     });
@@ -250,7 +258,7 @@ describe("GetTenantBillingPeriod", () => {
     ["not yet recorded", () => paid({ currentPeriodStart: null })],
     ["missing", () => undefined],
   ])("is null for a %s subscription", async (_label, subscription) => {
-    stored.subscription = subscription();
-    expect(await GetTenantBillingPeriod("tenant")).toBeNull();
+    const tenantId = await workspaceWith(subscription());
+    expect(await GetTenantBillingPeriod(tenantId)).toBeNull();
   });
 });

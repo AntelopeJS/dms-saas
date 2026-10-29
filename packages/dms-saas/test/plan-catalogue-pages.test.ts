@@ -1,5 +1,7 @@
 import { HTTPResult } from "@antelopejs/interface-api";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { beforeEach, describe, expect, it } from "vitest";
+import { type Plan, PlanModel } from "../src/db";
 import { SaasFeaturesController } from "../src/pages/platform/features";
 import { SaasPlansController } from "../src/pages/platform/plans";
 import { SaasPlanMigrationsController } from "../src/pages/platform/plans/migrations";
@@ -7,13 +9,18 @@ import {
   assertFeaturesUnused,
   assertValueTypeKept,
 } from "../src/plans/feature-guards";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const catalogue = vi.hoisted(() => ({ plans: [] as unknown[] }));
+useMongoDatabase("plan-catalogue-pages");
 
-vi.mock("@antelopejs/interface-database-decorators", async (original) => ({
-  ...(await original<object>()),
-  GetModel: () => ({ findNotDeleted: async () => catalogue.plans }),
-}));
+/** Replaces the plan catalogue with `plans`, none of them deleted. */
+async function publishCatalogue(plans: Partial<Plan>[]): Promise<void> {
+  await GetModel(PlanModel).table.delete().run();
+  if (plans.length === 0) return;
+  await GetModel(PlanModel).insert(
+    plans.map((plan) => ({ isDeleted: false, ...plan })),
+  );
+}
 
 interface SerializedTab {
   id: string;
@@ -47,8 +54,8 @@ async function planCard(): Promise<SerializedCardComponent> {
   );
 }
 
-beforeEach(() => {
-  catalogue.plans = [];
+beforeEach(async () => {
+  await publishCatalogue([]);
 });
 
 describe("the plans page", () => {
@@ -178,7 +185,7 @@ describe("feature guards", () => {
   const storage = { featureId: "storage", value: 100 };
 
   it("locks the value type while a plan stores a value", async () => {
-    catalogue.plans = [{ _id: "pro", features: [storage] }];
+    await publishCatalogue([{ _id: "pro", features: [storage] }]);
     const error = await assertValueTypeKept(
       "storage",
       { valueType: "boolean" },
@@ -192,7 +199,7 @@ describe("feature guards", () => {
   });
 
   it("lets the value type change while no plan stores a value", async () => {
-    catalogue.plans = [{ _id: "pro", features: [] }];
+    await publishCatalogue([{ _id: "pro", features: [] }]);
     await expect(
       assertValueTypeKept(
         "storage",
@@ -203,7 +210,7 @@ describe("feature guards", () => {
   });
 
   it("refuses to delete a feature a plan stores", async () => {
-    catalogue.plans = [{ _id: "pro", features: [storage] }];
+    await publishCatalogue([{ _id: "pro", features: [storage] }]);
     await expect(assertFeaturesUnused(["storage"])).rejects.toBeInstanceOf(
       HTTPResult,
     );

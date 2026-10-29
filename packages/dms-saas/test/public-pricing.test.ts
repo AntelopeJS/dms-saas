@@ -1,10 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { beforeEach, describe, expect, it } from "vitest";
 import { planRow } from "./helpers/plan-row";
-import type { BillingSettings, Feature, Plan } from "../src/db";
+import {
+  BILLING_SETTINGS_SINGLETON_ID,
+  type BillingSettings,
+  BillingSettingsModel,
+  type Feature,
+  FeatureModel,
+  type Plan,
+  PlanModel,
+} from "../src/db";
+import { SaasPricingController } from "../src/routes/public/pricing";
 import {
   findPlanByReference,
   toPublicBillingRules,
 } from "../src/routes/public/public-plan-catalog";
+import { SaasRegisterApiController } from "../src/routes/public/register";
+import { useMongoDatabase } from "./helpers/mongo";
+
+useMongoDatabase("public-pricing");
 
 const FEATURE_MEMBERS = {
   _id: "members",
@@ -60,61 +74,44 @@ const PRO = plan({
   features: [{ featureId: "members", value: 10 }],
 });
 
-const state = vi.hoisted(() => ({
-  publicPlans: [] as Plan[],
-  defaultPlan: null as Plan | null,
-  settings: undefined as BillingSettings | undefined,
-}));
+/** Publishes the catalogue: `plans` on sale, `offSale` active but not public. */
+async function publishCatalogue(
+  plans: Plan[],
+  offSale: Plan[] = [],
+): Promise<void> {
+  await GetModel(PlanModel).table.delete().run();
+  await GetModel(PlanModel).insert([
+    ...plans,
+    ...offSale.map((entry) => ({ ...entry, isPublic: false })),
+  ]);
+}
 
-const features = [
-  { ...FEATURE_MEMBERS, localize: () => FEATURE_MEMBERS },
-] as unknown as Feature[];
-
-vi.mock(
-  "@antelopejs/interface-database-decorators",
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >()),
-    GetModel: (model: { name: string }) =>
-      ({
-        BillingSettingsModel: { get: async () => state.settings },
-        PlanModel: { resolveInheritance: async (entry: Plan) => entry },
-        FeatureModel: { getAll: async () => features },
-      })[model.name],
-  }),
-);
-
-vi.mock("../src/workspaces", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/workspaces")>()),
-  resolveDefaultPlan: async () => state.defaultPlan,
-  resolveRegistrationPlan: async () => state.defaultPlan,
-}));
-
-const { SaasPricingController } = await import("../src/routes/public/pricing");
-const { SaasRegisterApiController } =
-  await import("../src/routes/public/register");
+async function publishBillingSettings(
+  settings: Partial<BillingSettings>,
+): Promise<void> {
+  await GetModel(BillingSettingsModel).insert({
+    _id: BILLING_SETTINGS_SINGLETON_ID,
+    ...settings,
+  });
+}
 
 function pricingController() {
   const controller = new SaasPricingController();
-  Object.assign(controller, {
-    planModel: { findPubliclyVisible: async () => state.publicPlans },
-  });
+  controller.planModel = GetModel(PlanModel);
   return controller;
 }
 
 function registerController() {
   const controller = new SaasRegisterApiController();
-  Object.assign(controller, {
-    planModel: { findPubliclyVisible: async () => state.publicPlans },
-  });
+  controller.planModel = GetModel(PlanModel);
   return controller;
 }
 
-beforeEach(() => {
-  state.publicPlans = [PRO, FREE];
-  state.defaultPlan = FREE;
-  state.settings = undefined;
+beforeEach(async () => {
+  await publishCatalogue([PRO, FREE]);
+  await GetModel(BillingSettingsModel).table.delete().run();
+  await GetModel(FeatureModel).table.delete().run();
+  await GetModel(FeatureModel).insert(FEATURE_MEMBERS);
 });
 
 describe("toPublicBillingRules", () => {
@@ -180,7 +177,7 @@ describe("GET /api/saas/pricing", () => {
   });
 
   it("names no default plan when it is not on sale", async () => {
-    state.publicPlans = [PRO];
+    await publishCatalogue([PRO], [FREE]);
 
     expect((await pricingController().getPricing("en")).defaultPlanId).toBe(
       null,
@@ -188,11 +185,11 @@ describe("GET /api/saas/pricing", () => {
   });
 
   it("carries the public billing rules", async () => {
-    state.settings = {
+    await publishBillingSettings({
       moneyBackGuaranteeEnabled: true,
       moneyBackGuaranteeWindowDays: 14,
       moneyBackGuaranteeMode: "full",
-    } as BillingSettings;
+    });
 
     expect(
       (await pricingController().getPricing("en")).rules.moneyBackGuarantee,
@@ -228,7 +225,7 @@ describe("GET /api/saas/register/plan", () => {
     await expect(
       controller.describeRegistrationPlan("free", "en"),
     ).resolves.toMatchObject({ requestedPlan: null });
-    state.publicPlans = [FREE];
+    await publishCatalogue([FREE], [PRO]);
     await expect(
       controller.describeRegistrationPlan("pro", "en"),
     ).resolves.toMatchObject({ requestedPlan: null });
