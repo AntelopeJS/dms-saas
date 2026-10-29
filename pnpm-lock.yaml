@@ -70,8 +70,8 @@ importers:
         specifier: '>=0.11.0 <1.0.0'
         version: 0.11.0(@antelopejs/core@1.17.1)
       '@antelopejs/dms-frontend':
-        specifier: '>=0.9.0 <0.10.0'
-        version: 0.9.0(@antelopejs/core@1.17.1)
+        specifier: '>=0.9.1 <0.10.0'
+        version: 0.9.1(@antelopejs/core@1.17.1)
       '@antelopejs/mongodb':
         specifier: 1.5.0
         version: 1.5.0(socks@2.8.10)
@@ -99,6 +99,9 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      vite:
+        specifier: ^8.3.4
+        version: 8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1)
       vitest:
         specifier: ^4.1.10
         version: 4.1.12(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1))
@@ -189,8 +192,8 @@ packages:
     engines: {node: '>=20.19'}
     hasBin: true
 
-  '@antelopejs/dms-frontend@0.9.0':
-    resolution: {integrity: sha512-G9Ax7H7EmMM9s1KncED7Gen+4viOPiX45HqM/QGISR6kPVgWAT/aICA+71M1AmjhLwlNkzpMR2OToLIPW+s88w==}
+  '@antelopejs/dms-frontend@0.9.1':
+    resolution: {integrity: sha512-X0l/4uSCrRdO+7Y05918KJbaNatG6pI1iLzQ6xy/dkn7wNMY3aepFmkAT9ztu0YzFxYiKp2JCaBBX5C0xZDZHQ==}
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
@@ -5132,7 +5135,7 @@ snapshots:
       semver: 7.8.5
       typescript: 5.9.3
 
-  '@antelopejs/dms-frontend@0.9.0(@antelopejs/core@1.17.1)':
+  '@antelopejs/dms-frontend@0.9.1(@antelopejs/core@1.17.1)':
     dependencies:
       '@antelopejs/core': 1.17.1
       '@intlify/message-compiler': 11.4.16
