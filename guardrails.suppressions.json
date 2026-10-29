@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "anti-slop/no-chained-type-assertions": 1,
+    "anti-slop/no-object-parameters": 3,
+    "import/no-cycle": 2,
+    "typescript/no-misused-spread": 1,
+    "vue/no-v-html": 1
+  },
+  "tsExpectError": 0,
+  "tsIgnore": 0,
+  "safety": 0
+}

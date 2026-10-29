@@ -17,10 +17,12 @@
     "format": "oxfmt . && pnpm --dir packages/dms-saas/frontend-vue format",
     "format:check": "oxfmt --check .",
     "knip": "pnpm --filter @antelopejs/interface-dms-saas knip && pnpm --filter @antelopejs/dms-saas knip",
-    "lint:fix": "oxlint --fix --max-warnings=1000000 && pnpm --dir packages/dms-saas/frontend-vue lint:fix"
+    "lint:fix": "oxlint --fix --max-warnings=1000000 && pnpm --dir packages/dms-saas/frontend-vue lint:fix",
+    "suppressions": "antelopejs-suppressions",
+    "suppressions:update": "antelopejs-suppressions --update"
   },
   "devDependencies": {
-    "@antelopejs/tooling-configs": "^0.2.0",
+    "@antelopejs/tooling-configs": "^0.2.11",
     "knip": "^6.34.0",
     "lefthook": "^2.2.2",
     "oxfmt": "^0.66.0",

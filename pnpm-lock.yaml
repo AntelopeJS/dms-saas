@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@antelopejs/tooling-configs':
-        specifier: ^0.2.0
-        version: 0.2.0(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))
+        specifier: ^0.2.11
+        version: 0.2.11(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))
       knip:
         specifier: ^6.34.0
         version: 6.41.0
@@ -281,8 +281,8 @@ packages:
   '@antelopejs/mongodb@1.5.0':
     resolution: {integrity: sha512-wNIFChNdxv4YYVgn0OaqzvCo8tkpGw3GXqZW+Qnjn7dmGLyGrMVX+mO19M16EZd3ClNuD1/qDQItriS63LJ4ow==}
 
-  '@antelopejs/tooling-configs@0.2.0':
-    resolution: {integrity: sha512-D3yCA9ZuvuDfzz8lS5VKyP8sgDkSdM0k1Awp3Q8qwq3u1/dc8UF4ep3SHW5fZpTQpLwNRcEDv1DSrRx+b7w9aA==}
+  '@antelopejs/tooling-configs@0.2.11':
+    resolution: {integrity: sha512-11reej4rSQuPEQqQgef60SyQZ8XGWlUSshD4RXLXPBpyFGVQmOqagKmj1zTg8QAktzwxxokhk/8JrIyChIv3LA==}
     engines: {node: '>=22.18.0'}
     hasBin: true
     peerDependencies:
@@ -2624,6 +2624,11 @@ packages:
   dotenv@17.4.2:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
+
+  dts-bundle-generator@9.5.1:
+    resolution: {integrity: sha512-DxpJOb2FNnEyOzMkG11sxO2dmxPjthoVWxfKqWYJ/bI/rT1rvTMktF5EKjAYrRZu6Z6t3NhOUZ0sZ5ZXevOfbA==}
+    engines: {node: '>=14.0.0'}
+    hasBin: true
 
   duplexify@3.7.1:
     resolution: {integrity: sha512-07z8uv2wMyS51kKhD1KsdXJg5WQ6t93RneqRxUHnskXVtlYYkLqM0gqStQZ3pj073g687jPCHrqNfCzawLYh5g==}
@@ -5276,9 +5281,11 @@ snapshots:
       - snappy
       - socks
 
-  '@antelopejs/tooling-configs@0.2.0(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))':
+  '@antelopejs/tooling-configs@0.2.11(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))':
     dependencies:
       '@oxlint/plugins': 1.81.0
+      dts-bundle-generator: 9.5.1
+      typescript: 5.9.3
       yaml: 2.9.1
     optionalDependencies:
       knip: 6.41.0
@@ -7494,6 +7501,11 @@ snapshots:
   dotenv@16.6.1: {}
 
   dotenv@17.4.2: {}
+
+  dts-bundle-generator@9.5.1:
+    dependencies:
+      typescript: 6.0.3
+      yargs: 17.7.3
 
   duplexify@3.7.1:
     dependencies:
