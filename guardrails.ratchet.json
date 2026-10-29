@@ -1,29 +1,17 @@
 {
   "rules": {
-    "antelopejs/no-comments": 711,
-    "antelopejs/no-constant-value-assertion": 3,
-    "antelopejs/no-fs-read-in-tests": 7,
-    "antelopejs/require-assertion": 6,
-    "anti-slop/no-known-value-widening": 51,
-    "anti-slop/no-module-mocking": 300,
-    "anti-slop/no-runtime-typeof": 113,
+    "antelopejs/no-comments": 635,
+    "anti-slop/no-known-value-widening": 36,
+    "anti-slop/no-runtime-typeof": 109,
     "anti-slop/no-shape-in-symbol-names": 18,
-    "anti-slop/no-unknown-parameters": 207,
-    "anti-slop/no-unknown-returns": 70,
-    "anti-slop/no-unsafe-dictionary-type": 83,
-    "anti-slop/require-safety-comment-for-type-assertion": 682
+    "anti-slop/no-unknown-parameters": 174,
+    "anti-slop/no-unknown-returns": 30,
+    "anti-slop/no-unsafe-dictionary-type": 62,
+    "anti-slop/require-safety-comment-for-type-assertion": 335
   },
   "oversizeFiles": {
     "packages/dms-saas/frontend-vue/app/components/RetirePlanModal.vue": 23570,
     "packages/dms-saas/frontend-vue/app/composables/useSaasRegistration.ts": 21109,
-    "packages/dms-saas/src/workspaces/provisioning.ts": 20079,
-    "packages/dms-saas/test/billing-owner-actions.test.ts": 23082,
-    "packages/dms-saas/test/checkout-admission-recovery.test.ts": 20917,
-    "packages/dms-saas/test/cron-model-concurrency.test.ts": 20314,
-    "packages/dms-saas/test/invitation-seat-limit.test.ts": 20262,
-    "packages/dms-saas/test/invoice-line-recovery.test.ts": 33804,
-    "packages/dms-saas/test/tenant-provisioning-hook.test.ts": 43642,
-    "packages/dms-saas/test/upcoming-invoice-preview.test.ts": 24353,
-    "packages/dms-saas/test/workspace-owner-invitations.test.ts": 23049
+    "packages/dms-saas/src/workspaces/provisioning.ts": 20079
   }
 }
