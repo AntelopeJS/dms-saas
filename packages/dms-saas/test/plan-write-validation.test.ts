@@ -1,60 +1,55 @@
 import { HTTPResult } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { describe, expect, it, vi } from "vitest";
 import { formatPlanIntervalLabel } from "../frontend-vue/app/composables/usePlanIntervalLabel";
-import { toPlainData } from "@antelopejs/interface-database-decorators";
-import type { Plan, PlanModel } from "../src/db";
+import { type Plan, PlanModel } from "../src/db";
 import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
+import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const stripe = vi.hoisted(() => ({
-  syncPlanStripeRefs: vi.fn(async (plan: unknown) => plan),
-}));
-
-// The default plan follows catalogue writes; its own test covers that.
-vi.mock("../src/workspaces/default-plan", () => ({
-  withDefaultPlanChange: (write: () => Promise<unknown>) => write(),
-}));
-vi.mock("../src/plans/stripe-sync", () => ({
-  syncPlanStripeRefs: stripe.syncPlanStripeRefs,
-  planStripeSyncState: async () => "synced",
-}));
-
-interface PlanStore {
-  current?: Plan;
-}
+useMongoDatabase("plan-write-validation");
+const stripe = useSuiteStripe();
 
 type AsyncOperation = () => Promise<unknown>;
+type PlanWriteBody = Parameters<SaasPlansApiController["create"]>[1];
 
-const OWNER = {} as User;
+/**
+ * A plan write as the editor's request carries it: parsed JSON, so it may
+ * hold what the write type rules out.
+ */
+function requestBody(fields: object): PlanWriteBody {
+  const body: PlanWriteBody = JSON.parse(JSON.stringify(fields));
+  return body;
+}
+
+const OWNER = fromPartial<User>({});
 const PLAN_ID = "plan-free";
 const INVALID_INTERVAL_ERROR = "saas.errors.plan.invalid_interval";
 
-function planModel(store: PlanStore): PlanModel {
-  return {
-    insert: vi.fn(async (rows: Plan[]) => {
-      store.current = planRow({
-        _id: PLAN_ID,
-        paymentProviderRefs: {},
-        ...toPlainData(rows[0]),
-      });
-      return [PLAN_ID];
-    }),
-    get: vi.fn(async () => store.current),
-    findNotDeleted: vi.fn(async () => (store.current ? [store.current] : [])),
-    update: vi.fn(async (_id: string, update: Plan) => {
-      store.current = planRow({
-        ...toPlainData(store.current as Plan),
-        ...toPlainData(update),
-      });
-    }),
-  } as unknown as PlanModel;
+/** A plans controller writing to the catalogue, holding `current` if given. */
+async function controller(current?: Plan): Promise<SaasPlansApiController> {
+  await GetModel(PlanModel).table.delete().run();
+  if (current) await GetModel(PlanModel).insert(current);
+  const instance = new SaasPlansApiController();
+  instance.planModel = GetModel(PlanModel);
+  return instance;
 }
 
-function controller(store: PlanStore): SaasPlansApiController {
-  const instance = new SaasPlansApiController();
-  instance.planModel = planModel(store);
-  return instance;
+/** Answers the product and price writes a plan sync makes; returns the price creation. */
+function stubStripeCatalogue() {
+  vi.spyOn(stripe.write.products, "create").mockResolvedValue(
+    fromPartial({ id: "prod_hobby" }),
+  );
+  vi.spyOn(stripe.write.products, "update").mockResolvedValue(
+    fromPartial({ id: "prod_hobby" }),
+  );
+  vi.spyOn(stripe.write.prices, "update").mockResolvedValue(fromPartial({}));
+  return vi
+    .spyOn(stripe.write.prices, "create")
+    .mockResolvedValue(fromPartial({ id: "price_hobby" }));
 }
 
 async function expectInvalidInterval(operation: AsyncOperation): Promise<void> {
@@ -66,41 +61,48 @@ async function expectInvalidInterval(operation: AsyncOperation): Promise<void> {
   });
 }
 
-beforeEach(() => {
-  stripe.syncPlanStripeRefs.mockClear();
-});
-
 describe("plan interval writes", () => {
   it("rejects a plan created without an interval", async () => {
-    await expectInvalidInterval(() =>
-      controller({}).create(OWNER, { name: { en: "Free" } }),
+    await expectInvalidInterval(async () =>
+      (await controller()).create(OWNER, { name: { en: "Free" } }),
     );
   });
 
   it("rejects an interval outside the supported values", async () => {
-    await expectInvalidInterval(() =>
-      controller({}).create(OWNER, {
-        name: { en: "Weekly" },
-        interval: "week",
-      } as never),
+    await expectInvalidInterval(async () =>
+      (await controller()).create(
+        OWNER,
+        requestBody({
+          name: { en: "Weekly" },
+          interval: "week",
+        }),
+      ),
     );
   });
 
   it("rejects an unsupported interval on update", async () => {
     const plan = planRow({ _id: PLAN_ID, name: "Monthly", interval: "month" });
 
+    const plans = await controller(plan);
+
     await expectInvalidInterval(() =>
-      controller({ current: plan }).update(OWNER, PLAN_ID, {
-        interval: "week",
-      } as never),
+      plans.update(
+        OWNER,
+        PLAN_ID,
+        requestBody({
+          interval: "week",
+        }),
+      ),
     );
   });
 
   it("requires a valid interval before Stripe-backed fields change", async () => {
     const plan = planRow({ _id: PLAN_ID, name: "Custom" });
 
+    const plans = await controller(plan);
+
     await expectInvalidInterval(() =>
-      controller({ current: plan }).update(OWNER, PLAN_ID, {
+      plans.update(OWNER, PLAN_ID, {
         price: 20,
       }),
     );
@@ -108,31 +110,43 @@ describe("plan interval writes", () => {
 
   it("accepts a write that leaves the Stripe-backed fields alone", async () => {
     const plan = planRow({ _id: PLAN_ID, name: "Custom" });
-    const store = { current: plan };
+    const plans = await controller(plan);
 
     await expect(
-      controller(store).update(OWNER, PLAN_ID, {
+      plans.update(OWNER, PLAN_ID, {
         isActive: false,
       }),
     ).resolves.toEqual({ _id: PLAN_ID });
-    expect(store.current.isActive).toBe(false);
+    await expect(GetModel(PlanModel).get(PLAN_ID)).resolves.toMatchObject({
+      isActive: false,
+    });
   });
 });
 
 describe("plan writes and Stripe", () => {
   it("syncs a created plan once it is stored", async () => {
-    const store: PlanStore = {};
+    const createPrice = stubStripeCatalogue();
 
-    await controller(store).create(OWNER, {
-      name: { en: "Hobby" },
-      price: 5,
-      interval: "month",
-    } as never);
+    const plans = await controller();
 
-    expect(stripe.syncPlanStripeRefs).toHaveBeenCalledOnce();
-    expect(stripe.syncPlanStripeRefs.mock.calls[0]?.[0]).toMatchObject({
-      _id: PLAN_ID,
+    const { _id: planId } = await plans.create(
+      OWNER,
+      requestBody({
+        name: { en: "Hobby" },
+        price: 5,
+        currency: "eur",
+        interval: "month",
+      }),
+    );
+
+    expect(createPrice).toHaveBeenCalledOnce();
+    expect(createPrice.mock.calls[0]?.[0]).toMatchObject({
+      unit_amount: 500,
+      metadata: { planId },
+    });
+    await expect(GetModel(PlanModel).get(planId)).resolves.toMatchObject({
       price: 5,
+      paymentProviderRefs: { stripePriceId: "price_hobby" },
     });
   });
 
@@ -141,16 +155,16 @@ describe("plan writes and Stripe", () => {
       _id: PLAN_ID,
       name: { en: "Hobby" },
       price: 5,
+      currency: "eur",
       interval: "month",
     });
-    const store = { current: plan };
+    const plans = await controller(plan);
+    const createPrice = stubStripeCatalogue();
 
-    await controller(store).update(OWNER, PLAN_ID, { price: 6 });
+    await plans.update(OWNER, PLAN_ID, { price: 6 });
 
-    expect(stripe.syncPlanStripeRefs).toHaveBeenCalledOnce();
-    expect(stripe.syncPlanStripeRefs.mock.calls[0]?.[0]).toMatchObject({
-      price: 6,
-    });
+    expect(createPrice).toHaveBeenCalledOnce();
+    expect(createPrice.mock.calls[0]?.[0]).toMatchObject({ unit_amount: 600 });
   });
 });
 
