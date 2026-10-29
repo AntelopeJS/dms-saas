@@ -173,7 +173,7 @@ describe("confirming an authenticated upgrade", () => {
 
 describe("customer.subscription.pending_update_applied", () => {
   const applied = (subscription: Stripe.Subscription) =>
-    fromPartial<Stripe.Event>({
+    fromPartial<Stripe.CustomerSubscriptionPendingUpdateAppliedEvent>({
       type: "customer.subscription.pending_update_applied",
       data: { object: subscription },
     });

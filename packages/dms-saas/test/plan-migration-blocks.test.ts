@@ -1,5 +1,7 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import { planMigrationsDataAPI } from "../src/data-api/platformOwner/plan-migrations";
+import type { PlanMigration } from "../src/db";
 import { attentionState } from "../src/plans/migration-blocks";
 import { missingKeys, writeText } from "./helpers/composed-text";
 
@@ -25,23 +27,22 @@ describe("migration attention card", () => {
   });
 });
 
-function readGetter(name: string, table: Record<string, unknown>): unknown {
-  const getter = Object.getOwnPropertyDescriptor(
-    planMigrationsDataAPI.prototype,
-    name,
-  )?.get;
-  return getter?.call({ table });
+/** A row of the migrations table, as its getters read it. */
+function migrationRow(table: Partial<PlanMigration>): planMigrationsDataAPI {
+  return Object.assign(new planMigrationsDataAPI(), {
+    table: fromPartial<PlanMigration>(table),
+  });
 }
 
 describe("migration list dates", () => {
   it("dates a migration to the minute, with its year when not this year's", () => {
     const thisYear = new Date().getUTCFullYear();
-    const started = readGetter("startedOn", {
+    const started = migrationRow({
       createdAt: new Date(`${thisYear}-03-04T14:30:00Z`),
-    });
-    const finished = readGetter("finishedOn", {
+    }).startedOn;
+    const finished = migrationRow({
       completedAt: new Date("2020-03-04T14:41:00Z"),
-    });
+    }).finishedOn;
 
     expect(started).toMatchObject({
       params: { value: { type: "datetime", format: "day" } },
@@ -49,6 +50,6 @@ describe("migration list dates", () => {
     expect(finished).toMatchObject({
       params: { value: { type: "datetime", format: "medium" } },
     });
-    expect(readGetter("finishedOn", { completedAt: null })).toBeNull();
+    expect(migrationRow({ completedAt: null }).finishedOn).toBeNull();
   });
 });

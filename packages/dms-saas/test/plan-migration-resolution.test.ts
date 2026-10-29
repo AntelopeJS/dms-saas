@@ -24,6 +24,7 @@ import {
 } from "../src/workers";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
+import { httpRefusal } from "./helpers/refusal";
 
 useMongoDatabase("plan-migration-resolution");
 const stripe = useSuiteStripe();
@@ -127,12 +128,6 @@ async function load(id: string): Promise<PlanMigration> {
 
 async function subscriptionOf(tenantId: string) {
   return GetModel(TenantSubscriptionModel, tenantId).findOne();
-}
-
-async function refusal(operation: () => Promise<unknown>): Promise<HTTPResult> {
-  const error = await operation().catch((caught: unknown) => caught);
-  expect(error).toBeInstanceOf(HTTPResult);
-  return error as HTTPResult;
 }
 
 describe("settled migration status", () => {
@@ -253,7 +248,7 @@ describe("plan migration resolution on the production Mongo provider", () => {
     failNextMove(tenantId, new Error("Stripe timed out"));
     await processPlanMigrationJob(job._id);
 
-    const error = await refusal(() =>
+    const error = await httpRefusal(
       reconcileMigration({
         migrationId: job._id,
         operatorId: OPERATOR,

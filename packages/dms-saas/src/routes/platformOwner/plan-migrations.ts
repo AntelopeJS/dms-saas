@@ -45,6 +45,7 @@ import {
 } from "../../plans/migration-workspaces";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 import {
@@ -62,6 +63,8 @@ import {
 } from "./plan-migration-context";
 import { PLAN_MIGRATIONS_PAGE_PATH } from "../../pages/platform/paths";
 import type { ItemsPayload, RowsPayload } from "./block-payloads";
+import { isString } from "../../utils/primitive-guards";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
@@ -147,13 +150,10 @@ export class SaasPlanMigrationsController extends Controller(MIGRATIONS_API) {
   async workspaces(
     @AuthOwnerOnly() _user: User,
     @Parameter("id") id: string,
-    @Parameter("filter_group", "query") group: unknown,
+    @Parameter("filter_group", "query") group: QueryParameterValue,
   ): Promise<RowsPayload<MigrationWorkspaceRow>> {
     const rows = await loadWorkspaceRows(await this.context(id));
-    const results = filterWorkspaceRows(
-      rows,
-      typeof group === "string" ? group : null,
-    );
+    const results = filterWorkspaceRows(rows, isString(group) ? group : null);
     return { results, total: results.length };
   }
 
@@ -161,7 +161,7 @@ export class SaasPlanMigrationsController extends Controller(MIGRATIONS_API) {
   async changes(
     @AuthOwnerOnly() _user: User,
     @Parameter("id") id: string,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<ItemsPayload<KeyValueListItem>> {
     const [context, names] = await Promise.all([
       this.context(id),

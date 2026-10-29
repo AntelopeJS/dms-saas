@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { beforeEach, describe, expect, it } from "vitest";
 import { planRow } from "./helpers/plan-row";
@@ -20,7 +21,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 
 useMongoDatabase("public-pricing");
 
-const FEATURE_MEMBERS = {
+const FEATURE_MEMBERS = fromPartial<Feature>({
   _id: "members",
   displayName: "Members",
   tooltip: null,
@@ -28,33 +29,35 @@ const FEATURE_MEMBERS = {
   valueType: "number",
   isDetailRow: false,
   order: 1,
-} as unknown as Feature;
+});
 
 function plan(overrides: Partial<Plan>): Plan {
-  return planRow({
-    _id: "plan",
-    slug: "plan",
-    name: "Plan",
-    description: "",
-    audience: "any",
-    price: 0,
-    currency: "eur",
-    interval: "month",
-    billingMode: "flat",
-    trialDays: 0,
-    maxMembers: 3,
-    borderColor: null,
-    borderLabel: null,
-    order: 0,
-    inheritsFromPlanId: null,
-    features: [],
-    permissions: ["secret.permission"],
-    paymentProviderRefs: { stripePriceId: "price_secret" },
-    isActive: true,
-    isPublic: true,
-    isDeleted: false,
-    ...overrides,
-  } as Partial<Plan>);
+  return planRow(
+    fromPartial<Partial<Plan>>({
+      _id: "plan",
+      slug: "plan",
+      name: "Plan",
+      description: "",
+      audience: "any",
+      price: 0,
+      currency: "eur",
+      interval: "month",
+      billingMode: "flat",
+      trialDays: 0,
+      maxMembers: 3,
+      borderColor: null,
+      borderLabel: null,
+      order: 0,
+      inheritsFromPlanId: null,
+      features: [],
+      permissions: ["secret.permission"],
+      paymentProviderRefs: { stripePriceId: "price_secret" },
+      isActive: true,
+      isPublic: true,
+      isDeleted: false,
+      ...overrides,
+    }),
+  );
 }
 
 const FREE = plan({
@@ -116,13 +119,13 @@ beforeEach(async () => {
 
 describe("toPublicBillingRules", () => {
   it("states the guarantee only when it is enabled", () => {
-    const settings = {
+    const settings = fromPartial<BillingSettings>({
       moneyBackGuaranteeEnabled: true,
       moneyBackGuaranteeWindowDays: 14,
       moneyBackGuaranteeMode: "prorated",
       dataRetentionDaysAfterCancellation: 60,
       maxFreeWorkspacesPerCard: 2,
-    } as BillingSettings;
+    });
 
     expect(toPublicBillingRules(settings)).toEqual({
       moneyBackGuarantee: { windowDays: 14, mode: "prorated" },
@@ -130,10 +133,12 @@ describe("toPublicBillingRules", () => {
       maxFreeWorkspacesPerCard: 2,
     });
     expect(
-      toPublicBillingRules({
-        ...settings,
-        moneyBackGuaranteeEnabled: false,
-      } as BillingSettings).moneyBackGuarantee,
+      toPublicBillingRules(
+        fromPartial<BillingSettings>({
+          ...settings,
+          moneyBackGuaranteeEnabled: false,
+        }),
+      ).moneyBackGuarantee,
     ).toBeNull();
   });
 });

@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -163,12 +164,16 @@ describe("deployment admission", () => {
     await expect(controller.createSetupIntent()).rejects.toMatchObject(
       CLOSED_ERROR,
     );
-    await expect(controller.register({} as never)).rejects.toMatchObject(
-      CLOSED_ERROR,
-    );
-    await expect(controller.finalize({} as never)).rejects.toMatchObject(
-      CLOSED_ERROR,
-    );
+    await expect(
+      controller.register(
+        fromPartial<Parameters<SaasRegisterApiController["register"]>[0]>({}),
+      ),
+    ).rejects.toMatchObject(CLOSED_ERROR);
+    await expect(
+      controller.finalize(
+        fromPartial<Parameters<SaasRegisterApiController["finalize"]>[0]>({}),
+      ),
+    ).rejects.toMatchObject(CLOSED_ERROR);
     await expect(
       controller.describePendingRegistration({
         tenant_assignment_token: "invalid",
@@ -232,7 +237,11 @@ describe("actual DMS invitation account creation while admission is closed", () 
       isActive: true,
       isDeleted: false,
     });
-    const admin = { _id: randomUUID(), owner: true, language: "en" } as User;
+    const admin = fromPartial<User>({
+      _id: randomUUID(),
+      owner: true,
+      language: "en",
+    });
     const controller = new SaasWorkspacesAdminController();
     controller.planModel = plans;
     controller.tenantModel = GetModel(TenantModel);
@@ -312,7 +321,15 @@ describe("actual DMS invitation account creation while admission is closed", () 
       (await users.get(colleagueResult.user._id!))!,
     ]) {
       await expect(
-        workspaces.createMine(user, {} as never, {} as never),
+        workspaces.createMine(
+          user,
+          fromPartial<Parameters<SaasWorkspacesController["createMine"]>[1]>(
+            {},
+          ),
+          fromPartial<Parameters<SaasWorkspacesController["createMine"]>[2]>(
+            {},
+          ),
+        ),
       ).rejects.toMatchObject(CLOSED_ERROR);
       await expect(workspaces.setupIntent(user)).rejects.toMatchObject(
         CLOSED_ERROR,
@@ -330,19 +347,19 @@ describe("actual DMS invitation account creation while admission is closed", () 
       paidUsagePeriods: [],
       stripeSubscriptionId: null,
     });
-    const ctx = {
+    const ctx = fromPartial<Parameters<typeof resolveRequestTenantId>[0]>({
       rawRequest: {
         headers: { authorization: `Bearer ${ownerResult.access_token}` },
       },
-    };
-    expect(await resolveRequestTenantId(ctx as never)).toBe(created.tenantId);
+    });
+    expect(await resolveRequestTenantId(ctx)).toBe(created.tenantId);
     await expect(
       planController.changePlan(
         owner!,
         { planId },
-        ctx as never,
+        ctx,
         subscriptions,
-        {} as never,
+        fromPartial<Parameters<SaasTenantPlanController["changePlan"]>[4]>({}),
       ),
     ).rejects.toMatchObject({
       status: 409,

@@ -1,5 +1,7 @@
+import { fromPartial } from "@total-typescript/shoehorn";
+import type { DeepPartial } from "@antelopejs/interface-database-decorators";
 import { describe, expect, it } from "vitest";
-import type { LegalDocumentsModel } from "../src/db";
+import type { LegalDocuments, LegalDocumentsModel } from "../src/db";
 import {
   bumpLegalDocumentVersions,
   readLegalDocuments,
@@ -11,7 +13,7 @@ const MARCH = new Date("2026-03-12T10:00:00Z");
 const NOW = new Date("2026-10-07T12:00:00Z");
 const NEVER = { version: 0, publishedAt: null };
 
-type Row = Record<string, unknown>;
+type Row = DeepPartial<LegalDocuments>;
 
 function memoryModel(initial?: Row) {
   let row = initial;
@@ -25,7 +27,7 @@ function memoryModel(initial?: Row) {
     },
   };
   return {
-    model: model as unknown as LegalDocumentsModel,
+    model: fromPartial<LegalDocumentsModel>(model),
     current: () => row,
   };
 }

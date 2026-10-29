@@ -51,17 +51,14 @@ interface DeletedNoteResult {
   _id: string;
 }
 
-const VALID_TARGET_TYPES = new Set<PlatformNoteTargetType>(
-  PLATFORM_NOTE_TARGET_TYPES,
-);
-
 function assertTargetType(value: string): PlatformNoteTargetType {
+  const targetType = PLATFORM_NOTE_TARGET_TYPES.find((type) => type === value);
   assert(
-    VALID_TARGET_TYPES.has(value as PlatformNoteTargetType),
+    targetType !== undefined,
     HTTP_BAD_REQUEST,
     "saas.errors.platform_notes.invalid_target",
   );
-  return value as PlatformNoteTargetType;
+  return targetType;
 }
 
 async function ensureTargetExists(
@@ -70,10 +67,13 @@ async function ensureTargetExists(
   userModel: UserModel,
   tenantModel: TenantModel,
 ): Promise<void> {
-  const lookups: Record<PlatformNoteTargetType, () => PromiseLike<unknown>> = {
+  const lookups = {
     user: () => userModel.get(targetId),
     workspace: () => tenantModel.get(targetId),
-  };
+  } satisfies Record<
+    PlatformNoteTargetType,
+    () => PromiseLike<object | undefined>
+  >;
   const target = await lookups[targetType]();
   assert(target, HTTP_NOT_FOUND, "saas.errors.platform_notes.target_not_found");
 }

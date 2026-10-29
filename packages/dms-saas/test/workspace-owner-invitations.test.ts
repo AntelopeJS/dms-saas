@@ -24,6 +24,7 @@ import {
   useBackOffice,
 } from "./helpers/operator-workspaces";
 import { useMongoDatabase } from "./helpers/mongo";
+import { httpRefusal } from "./helpers/refusal";
 
 useMongoDatabase("owner-invitations");
 const { sendInviteEmail, core } = useBackOffice();
@@ -372,9 +373,9 @@ describe("resend invitation from the back office", () => {
     const { tenantId, owner } = await createInvitedWorkspace();
     sendInviteEmail.mockRejectedValue(new Error("smtp down"));
 
-    const failure = await invitationsController()
-      .resend(operator, tenantId, owner.inviteId)
-      .catch((error: unknown) => error);
+    const failure = await httpRefusal(
+      invitationsController().resend(operator, tenantId, owner.inviteId),
+    );
 
     expect(failure).toBeInstanceOf(HTTPResult);
     expect(failure).toMatchObject({

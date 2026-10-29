@@ -16,6 +16,7 @@ import { localizePlan } from "@antelopejs/interface-dms-saas/plans";
 import { getStripeClient } from "./client";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
 import { toMinorUnits } from "../utils/money";
+import { isString } from "../utils/primitive-guards";
 
 /** Minor units per major unit of a plan price, as its Stripe price is created. */
 const SEAT_USAGE_TYPE = "licensed" as const;
@@ -75,8 +76,8 @@ function planStripeTerms(plan: Plan, taxCode: string): PlanStripeSyncedTerms {
   };
 }
 
-function isSameTerms(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+function isSameTerms<Terms>(held: Terms | undefined, wanted: Terms): boolean {
+  return JSON.stringify(held) === JSON.stringify(wanted);
 }
 
 /**
@@ -98,7 +99,13 @@ export function isPlanStripeSyncCurrent(plan: Plan, taxCode: string): boolean {
  * creation time keeps two environments sharing one Stripe account apart when
  * their plans share an id.
  */
-function idempotencyKey(plan: Plan, operation: string, params: unknown) {
+function idempotencyKey(
+  plan: Plan,
+  operation: string,
+  params:
+    | Stripe.ProductCreateParams
+    | [Stripe.PriceCreateParams, string | null | undefined],
+) {
   const digest = createHash("sha256")
     .update(JSON.stringify([plan._id, plan.createdAt, params]))
     .digest("hex");
@@ -108,12 +115,12 @@ function idempotencyKey(plan: Plan, operation: string, params: unknown) {
 function toHeldProductTerms(
   product: Stripe.Product | Stripe.DeletedProduct | string,
 ): PlanStripeProductTerms | undefined {
-  if (typeof product === "string" || product.deleted) return undefined;
+  if (isString(product) || product.deleted) return undefined;
   const taxCode = product.tax_code;
   return {
     name: product.name,
     description: product.description ?? "",
-    taxCode: typeof taxCode === "string" ? taxCode : (taxCode?.id ?? ""),
+    taxCode: isString(taxCode) ? taxCode : (taxCode?.id ?? ""),
   };
 }
 
@@ -238,13 +245,14 @@ async function syncLink(
   const refs = plan.paymentProviderRefs ?? {};
   const held = await heldTerms(refs);
   const productId = await syncProduct(plan, terms.product, held.product);
-  const isPriceCurrent =
-    !!refs.stripePriceId &&
+  const currentPriceId =
+    refs.stripePriceId &&
     productId === refs.stripeProductId &&
-    isSameTerms(held.price, terms.price);
-  const priceId = isPriceCurrent
-    ? (refs.stripePriceId as string)
-    : await replacePrice(plan, productId, terms.price);
+    isSameTerms(held.price, terms.price)
+      ? refs.stripePriceId
+      : null;
+  const priceId =
+    currentPriceId ?? (await replacePrice(plan, productId, terms.price));
   return { productId, priceId };
 }
 

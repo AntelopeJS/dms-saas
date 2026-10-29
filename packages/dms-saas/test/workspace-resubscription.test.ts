@@ -190,7 +190,9 @@ function choosePlan(planId: string, workspace: Workspace) {
   );
 }
 
-async function completionEvent(workspace: Workspace): Promise<Stripe.Event> {
+async function completionEvent(
+  workspace: Workspace,
+): Promise<Stripe.CheckoutSessionCompletedEvent> {
   const current = await workspace.model.findOne();
   return fromPartial<Stripe.CheckoutSessionCompletedEvent>({
     id: randomUUID(),
@@ -227,21 +229,21 @@ async function readRefundEligibility(workspace: Workspace) {
 
 describe("resubscription eligibility", () => {
   it("is open to a cancelled workspace until its deletion is admitted", () => {
-    const cancelled = { status: "cancelled" } as TenantSubscription;
+    const cancelled = fromPartial<TenantSubscription>({ status: "cancelled" });
     expect(canResubscribe(cancelled)).toBe(true);
     expect(
       canResubscribe({ ...cancelled, deletionStartedAt: new Date() }),
     ).toBe(false);
-    expect(canResubscribe({ status: "suspended" } as TenantSubscription)).toBe(
-      false,
-    );
+    expect(
+      canResubscribe(fromPartial<TenantSubscription>({ status: "suspended" })),
+    ).toBe(false);
   });
 
   it("treats the subscription Stripe ended as no subscription", () => {
-    const ended = {
+    const ended = fromPartial<TenantSubscription>({
       status: "cancelled",
       stripeSubscriptionId: ENDED_SUBSCRIPTION,
-    } as TenantSubscription;
+    });
     expect(liveStripeSubscriptionId(ended)).toBeNull();
     expect(resolvePlanChangeKind(ended, paidPlan, paidPlan)).toBe("checkout");
     expect(resolvePlanChangeKind(ended, paidPlan, freePlan)).toBe("free");

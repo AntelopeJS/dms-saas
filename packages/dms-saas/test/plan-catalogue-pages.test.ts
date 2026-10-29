@@ -10,6 +10,7 @@ import {
   assertValueTypeKept,
 } from "../src/plans/feature-guards";
 import { useMongoDatabase } from "./helpers/mongo";
+import { httpRefusal } from "./helpers/refusal";
 
 useMongoDatabase("plan-catalogue-pages");
 
@@ -22,38 +23,6 @@ async function publishCatalogue(plans: Partial<Plan>[]): Promise<void> {
   );
 }
 
-interface SerializedTab {
-  id: string;
-  filter?: { accessorKey: string; value?: string; mode: string };
-  navBadge?: boolean;
-}
-
-interface SerializedAction {
-  id?: string;
-  label: string;
-  rule?: unknown;
-  confirm?: unknown;
-  target: { type: string; component?: { componentName?: string } };
-}
-
-interface SerializedCardComponent {
-  componentName?: string;
-  options?: { selectable?: boolean };
-}
-
-interface CardsDisplayOptions {
-  card?: { component?: SerializedCardComponent; skeletonHeight?: string };
-}
-
-/** The card component the plans' cards display draws, as serialized. */
-async function planCard(): Promise<SerializedCardComponent> {
-  const { options } = await SaasPlansController.table.serialize();
-  const cards = options?.displays?.find((display) => display.id === "cards");
-  return (
-    (cards?.options as CardsDisplayOptions | undefined)?.card?.component ?? {}
-  );
-}
-
 beforeEach(async () => {
   await publishCatalogue([]);
 });
@@ -61,7 +30,7 @@ beforeEach(async () => {
 describe("the plans page", () => {
   it("opens on the stock cards, beside the grid", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const card = await planCard();
+    const cards = options?.displays?.find((display) => display.id === "cards");
 
     expect(options?.displays?.map((display) => display.id)).toEqual([
       "table",
@@ -69,8 +38,14 @@ describe("the plans page", () => {
     ]);
     expect(options?.displays?.[1]?.component).toBeUndefined();
     expect(options?.defaultDisplay).toBe("cards");
-    expect(card.componentName).toBe("DmsSaasPlanCard");
-    expect(card.options?.selectable).toBe(options?.rowActions?.hasSelection);
+    expect(cards?.options).toMatchObject({
+      card: {
+        component: {
+          componentName: "DmsSaasPlanCard",
+          options: { selectable: options?.rowActions?.hasSelection },
+        },
+      },
+    });
   });
 
   it("sizes the loading cards like a page of plan cards", async () => {
@@ -78,14 +53,12 @@ describe("the plans page", () => {
     const cards = options?.displays?.find((display) => display.id === "cards");
 
     expect(options?.pageSize).toBe(8);
-    expect(
-      (cards?.options as CardsDisplayOptions | undefined)?.card?.skeletonHeight,
-    ).toBe("580px");
+    expect(cards?.options).toMatchObject({ card: { skeletonHeight: "580px" } });
   });
 
   it("names each menu entry, so the cards find the one a control stands for", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const actions = (options?.rowActions?.custom ?? []) as SerializedAction[];
+    const actions = options?.rowActions?.custom ?? [];
 
     expect(actions.map((action) => action.id)).toEqual([
       "duplicate",
@@ -97,9 +70,8 @@ describe("the plans page", () => {
       "delete",
     ]);
     expect(
-      actions.find((action) => action.id === "retire")?.target.component
-        ?.componentName,
-    ).toBe("DmsSaasRetirePlanModal");
+      actions.find((action) => action.id === "retire")?.target,
+    ).toMatchObject({ component: { componentName: "DmsSaasRetirePlanModal" } });
   });
 
   it("narrows nothing by default, so the plans move by hand", async () => {
@@ -110,7 +82,7 @@ describe("the plans page", () => {
 
   it("asks before stopping a sale or deleting, and deletes only unused plans", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const custom = options?.rowActions?.custom as SerializedAction[];
+    const custom = options?.rowActions?.custom ?? [];
     const byLabel = (suffix: string) =>
       custom.find((action) => action.label.endsWith(suffix));
 
@@ -125,7 +97,7 @@ describe("the plans page", () => {
 
   it("splits the plans on sale from the legacy ones and reorders by hand", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const tabs = options?.tabs as SerializedTab[];
+    const tabs = options?.tabs ?? [];
 
     expect(tabs.map((tab) => tab.id)).toEqual(["on_sale", "legacy", "all"]);
     expect(tabs[1]?.filter).toEqual({
@@ -150,7 +122,7 @@ describe("stock Duplicate", () => {
 describe("the plan migrations page", () => {
   it("is listed in the catalogue with a tab per stage, badging the ones needing attention", async () => {
     const { options } = await SaasPlanMigrationsController.table.serialize();
-    const tabs = options?.tabs as SerializedTab[];
+    const tabs = options?.tabs ?? [];
 
     expect(tabs.map((tab) => tab.id)).toEqual([
       "all",
@@ -180,16 +152,18 @@ describe("feature guards", () => {
 
   it("locks the value type while a plan stores a value", async () => {
     await publishCatalogue([{ _id: "pro", features: [storage] }]);
-    const error = await assertValueTypeKept(
-      "storage",
-      { valueType: "boolean" },
-      { valueType: "number" },
-    ).catch((caught: unknown) => caught);
+    const error = await httpRefusal(
+      assertValueTypeKept(
+        "storage",
+        { valueType: "boolean" },
+        { valueType: "number" },
+      ),
+    );
 
     expect(error).toBeInstanceOf(HTTPResult);
-    expect(
-      JSON.parse(String((error as HTTPResult).getBody())) as unknown,
-    ).toMatchObject({ field: "valueType" });
+    expect(JSON.parse(String(error.getBody()))).toMatchObject({
+      field: "valueType",
+    });
   });
 
   it("lets the value type change while no plan stores a value", async () => {

@@ -4,6 +4,7 @@ import { type Invoice, InvoiceModel, type TenantSubscription } from "../db";
 import { getStripeReadClient, isStripeConfigured } from "../stripe/client";
 import { MS_PER_DAY, stripeSecondsToDate } from "../utils/time";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
+import { isString } from "../utils/primitive-guards";
 
 export interface PaymentMethodSummary {
   brand: string;
@@ -62,7 +63,7 @@ export async function fetchDefaultPaymentMethod(
     .catch(() => null);
   if (!customer || customer.deleted) return null;
   const defaultMethod = customer.invoice_settings?.default_payment_method;
-  if (!defaultMethod || typeof defaultMethod === "string") return null;
+  if (!defaultMethod || isString(defaultMethod)) return null;
   return toCardSummary(defaultMethod);
 }
 

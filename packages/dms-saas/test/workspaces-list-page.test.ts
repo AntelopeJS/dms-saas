@@ -1,26 +1,10 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
+import type { ComponentFilterContext } from "@antelopejs/interface-dms/component";
 import { describe, expect, it } from "vitest";
 import { workspacesDataAPI } from "../src/data-api/platformOwner/workspaces";
 import { SaasWorkspacesListController } from "../src/pages/platform/workspaces";
 import { WORKSPACE_STATUS_ORDER } from "../src/utils/status-vocabulary";
-
-interface SerializedTable {
-  options?: {
-    tabs?: { id: string; filter?: { accessorKey: string; value?: string } }[];
-    views?: {
-      items: { id: string; filters?: { accessorKey: string }[] }[];
-      layout?: string;
-    };
-    footer?: {
-      summary?: {
-        field?: string;
-        op: string;
-        format?: { currency?: string };
-      }[];
-    };
-    defaultSort?: { field: string; desc?: boolean };
-  };
-}
 
 const DIRECTORY_COLUMNS = [
   "billingState",
@@ -35,8 +19,7 @@ const DIRECTORY_COLUMNS = [
 ];
 
 describe("workspace list", () => {
-  const table =
-    SaasWorkspacesListController.table.serializeSync() as SerializedTable;
+  const table = SaasWorkspacesListController.table.serializeSync();
 
   it("offers a tab per status, filtering on the stored billing state", () => {
     expect(table.options?.tabs?.map((tab) => tab.id)).toEqual([
@@ -78,12 +61,12 @@ describe("workspace list", () => {
 
   it("totals the listed MRR in the reporting currency", async () => {
     const filter = SaasWorkspacesListController.table.onFilterCallback;
-    const filtered = (await filter?.(
+    const filtered = await filter?.(
       new Set(),
       table.options,
       "table",
-      {} as never,
-    )) as SerializedTable["options"];
+      fromPartial<ComponentFilterContext>({}),
+    );
 
     expect(filtered?.footer?.summary).toEqual([
       expect.objectContaining({

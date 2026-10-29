@@ -79,11 +79,11 @@ interface FeatureRowInstance {
   table: Feature;
 }
 
-function featureRowOf(self: unknown): Feature {
-  return (self as FeatureRowInstance).table;
+function featureRowOf(self: FeatureRowInstance): Feature {
+  return self.table;
 }
 
-function featureIdOf(self: unknown): string {
+function featureIdOf(self: FeatureRowInstance): string {
   return featureRowOf(self)._id;
 }
 

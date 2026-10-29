@@ -14,6 +14,7 @@
 
 import type Stripe from "stripe";
 import { stripeSecondsToDate } from "../utils/time";
+import { isString } from "../utils/primitive-guards";
 
 /** Pre-basil `Subscription` fields, since moved onto each subscription item. */
 interface LegacySubscriptionFields {
@@ -52,7 +53,7 @@ interface StripeReference {
 export function readStripeId(
   value: string | StripeReference | null | undefined,
 ): string | null {
-  if (typeof value === "string") return value;
+  if (isString(value)) return value;
   return value?.id ?? null;
 }
 
@@ -66,13 +67,13 @@ function sumAmounts(amounts: TaxAmount[] | null | undefined): number {
  * the subscription.
  */
 export function readSubscriptionPeriod(
-  subscription: Stripe.Subscription,
+  subscription: Stripe.Subscription & LegacySubscriptionFields,
 ): StripeSubscriptionPeriod {
   const item = subscription.items?.data?.[0];
-  const legacy = subscription as Stripe.Subscription & LegacySubscriptionFields;
   return {
-    start: item?.current_period_start ?? legacy.current_period_start ?? null,
-    end: item?.current_period_end ?? legacy.current_period_end ?? null,
+    start:
+      item?.current_period_start ?? subscription.current_period_start ?? null,
+    end: item?.current_period_end ?? subscription.current_period_end ?? null,
   };
 }
 
@@ -117,19 +118,19 @@ export function requireInvoiceId(invoice: Stripe.Invoice): string {
 
 /** The subscription an invoice bills, or null for a one-off invoice. */
 export function readInvoiceSubscriptionId(
-  invoice: Stripe.Invoice,
+  invoice: Stripe.Invoice & LegacyInvoiceFields,
 ): string | null {
   const fromParent = invoice.parent?.subscription_details?.subscription;
   if (fromParent) return readStripeId(fromParent);
-  return readStripeId(
-    (invoice as Stripe.Invoice & LegacyInvoiceFields).subscription,
-  );
+  return readStripeId(invoice.subscription);
 }
 
 /** Total tax an invoice carries, in minor units. */
-export function readInvoiceTax(invoice: Stripe.Invoice): number {
+export function readInvoiceTax(
+  invoice: Stripe.Invoice & LegacyInvoiceFields,
+): number {
   if (invoice.total_taxes) return sumAmounts(invoice.total_taxes);
-  return (invoice as Stripe.Invoice & LegacyInvoiceFields).tax ?? 0;
+  return invoice.tax ?? 0;
 }
 
 /**
@@ -137,19 +138,17 @@ export function readInvoiceTax(invoice: Stripe.Invoice): number {
  * refund per credit note, so the first entry is the one to mirror.
  */
 export function readCreditNoteRefundId(
-  creditNote: Stripe.CreditNote,
+  creditNote: Stripe.CreditNote & LegacyCreditNoteFields,
 ): string | null {
   const refund = creditNote.refunds?.[0]?.refund;
   if (refund) return readStripeId(refund);
-  return readStripeId(
-    (creditNote as Stripe.CreditNote & LegacyCreditNoteFields).refund,
-  );
+  return readStripeId(creditNote.refund);
 }
 
 /** Tax carried by a credit note's lines, in minor units. */
-export function readCreditNoteLineTax(creditNote: Stripe.CreditNote): number {
+export function readCreditNoteLineTax(
+  creditNote: Stripe.CreditNote & LegacyCreditNoteFields,
+): number {
   if (creditNote.total_taxes) return sumAmounts(creditNote.total_taxes);
-  return sumAmounts(
-    (creditNote as Stripe.CreditNote & LegacyCreditNoteFields).tax_amounts,
-  );
+  return sumAmounts(creditNote.tax_amounts);
 }

@@ -153,8 +153,12 @@ interface RejectionRule {
   isViolated: (item: InvoiceLineItem) => boolean;
 }
 
+function isText(value: unknown): value is string {
+  return typeof value === "string";
+}
+
 function isFilledString(value: unknown): boolean {
-  return typeof value === "string" && value.trim().length > 0;
+  return isText(value) && value.trim().length > 0;
 }
 
 const REJECTION_RULES: readonly RejectionRule[] = [
@@ -179,7 +183,7 @@ export function buildInvoiceLineKey(providerId: string, key: string): string {
 }
 
 function toLineKeyFragment(key: unknown): string {
-  return typeof key === "string" ? key.trim() : String(key);
+  return isText(key) ? key.trim() : String(key);
 }
 
 function findRejectionReason(

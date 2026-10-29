@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { ExportJobSummary } from "@antelopejs/interface-dms/base";
+import { ExportStatus } from "@antelopejs/interface-dms/base/types";
 import * as exportJobs from "@antelopejs/interface-dms/base/export-jobs";
 import * as tenantExportArchive from "@antelopejs/interface-dms/base/tenant-export-archive";
 import type { RequestContext } from "@antelopejs/interface-api";
@@ -62,14 +63,17 @@ function seatsController() {
 
 const HOUR_MS = 3_600_000;
 
-function exportJob(status: string, createdAt: Date): ExportJobSummary {
+function exportJob(
+  status: ExportJobSummary["status"],
+  createdAt: Date,
+): ExportJobSummary {
   return {
     jobId: `job-${status}`,
     scope: "saas-tenant-data-export",
     status,
     progress: 10,
     createdAt,
-  } as ExportJobSummary;
+  };
 }
 
 beforeEach(() => {
@@ -136,7 +140,9 @@ describe("workspace rename and deletion", () => {
 describe("data export start", () => {
   it("refuses a second export while one is being built", async () => {
     const { owner, request } = await createOwnedWorkspace();
-    listExportJobs.mockResolvedValue([exportJob("pending", new Date())]);
+    listExportJobs.mockResolvedValue([
+      exportJob(ExportStatus.pending, new Date()),
+    ]);
 
     await expect(
       new SaasDataExportController().start(owner, request),
@@ -150,8 +156,8 @@ describe("data export start", () => {
   it("starts once the previous exports are done or orphaned", async () => {
     const { tenantId, owner, request } = await createOwnedWorkspace();
     listExportJobs.mockResolvedValue([
-      exportJob("completed", new Date()),
-      exportJob("pending", new Date(Date.now() - 2 * HOUR_MS)),
+      exportJob(ExportStatus.completed, new Date()),
+      exportJob(ExportStatus.pending, new Date(Date.now() - 2 * HOUR_MS)),
     ]);
     startTenantExportJob.mockResolvedValue(
       fromPartial({ jobId: "job-new", extension: "zip", filename: "export" }),

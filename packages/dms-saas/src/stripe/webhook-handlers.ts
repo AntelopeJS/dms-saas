@@ -92,7 +92,9 @@ const TRIAL_BLOCKED_STRIPE_STATUSES = new Set<string>([
   "incomplete_expired",
 ]);
 
-export async function handleInvoiceCreated(event: Stripe.Event): Promise<void> {
+export async function handleInvoiceCreated(
+  event: Stripe.InvoiceCreatedEvent,
+): Promise<void> {
   const mirrored = await mirrorInvoiceFromEvent(event);
   if (!mirrored) return;
   await admitCycleInvoice({
@@ -105,7 +107,7 @@ export async function handleInvoiceCreated(event: Stripe.Event): Promise<void> {
 }
 
 export async function handleInvoiceFinalized(
-  event: Stripe.Event,
+  event: Stripe.InvoiceFinalizedEvent,
 ): Promise<void> {
   await mirrorInvoiceFromEvent(event);
 }
@@ -116,8 +118,10 @@ export async function handleInvoiceFinalized(
  * reactivate, as each lift would also restamp pastDueSince on the next
  * failure, pushing the suspension deadline out forever.
  */
-export async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
-  const invoice = event.data.object as Stripe.Invoice;
+export async function handleInvoicePaid(
+  event: Stripe.InvoicePaidEvent,
+): Promise<void> {
+  const invoice = event.data.object;
   const customerId = asCustomerId(invoice.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -134,8 +138,10 @@ export async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
   }
 }
 
-export async function handleInvoiceVoided(event: Stripe.Event): Promise<void> {
-  const invoice = event.data.object as Stripe.Invoice;
+export async function handleInvoiceVoided(
+  event: Stripe.InvoiceVoidedEvent,
+): Promise<void> {
+  const invoice = event.data.object;
   const customerId = asCustomerId(invoice.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -152,9 +158,9 @@ export async function handleInvoiceVoided(event: Stripe.Event): Promise<void> {
  * lift the suspension either.
  */
 export async function handleInvoicePaymentFailed(
-  event: Stripe.Event,
+  event: Stripe.InvoicePaymentFailedEvent,
 ): Promise<void> {
-  const invoice = event.data.object as Stripe.Invoice;
+  const invoice = event.data.object;
   const customerId = asCustomerId(invoice.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -284,9 +290,9 @@ async function isSubscriptionAlreadyLeft(
  * in place.
  */
 export async function handleSubscriptionDeleted(
-  event: Stripe.Event,
+  event: Stripe.CustomerSubscriptionDeletedEvent,
 ): Promise<void> {
-  const subscription = event.data.object as Stripe.Subscription;
+  const subscription = event.data.object;
   const customerId = asCustomerId(subscription.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -308,8 +314,10 @@ export async function handleSubscriptionDeleted(
   });
 }
 
-export async function handleTrialWillEnd(event: Stripe.Event): Promise<void> {
-  const subscription = event.data.object as Stripe.Subscription;
+export async function handleTrialWillEnd(
+  event: Stripe.CustomerSubscriptionTrialWillEndEvent,
+): Promise<void> {
+  const subscription = event.data.object;
   const customerId = asCustomerId(subscription.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -370,9 +378,9 @@ async function handleTrialTransition(
  * one of them, so neither can hang off the trial-only branch.
  */
 export async function handleSubscriptionUpdated(
-  event: Stripe.Event,
+  event: Stripe.CustomerSubscriptionUpdatedEvent,
 ): Promise<void> {
-  const subscription = event.data.object as Stripe.Subscription;
+  const subscription = event.data.object;
   const customerId = asCustomerId(subscription.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -380,9 +388,7 @@ export async function handleSubscriptionUpdated(
   await persistSubscriptionPeriod(tenant._id, subscription);
   await applyPendingPlanChangeIfEntered(tenant._id, subscription);
   await reconcilePendingWithStripe(tenant._id, subscription);
-  const previousAttributes = event.data.previous_attributes as
-    | Partial<Stripe.Subscription>
-    | undefined;
+  const previousAttributes = event.data.previous_attributes;
   if (previousAttributes?.status !== "trialing") return;
   await handleTrialTransition(tenant._id, subscription);
 }
@@ -402,9 +408,9 @@ function stripeAddressToTenant(
 }
 
 export async function handleCustomerUpdated(
-  event: Stripe.Event,
+  event: Stripe.CustomerUpdatedEvent,
 ): Promise<void> {
-  const customer = event.data.object as Stripe.Customer;
+  const customer = event.data.object;
   const tenant = await findTenantByCustomerId(customer.id);
   if (!tenant) return;
   await withBillingIdentityLock(tenant._id, () =>
@@ -494,9 +500,9 @@ async function upsertRefund(
 }
 
 export async function handleChargeRefundUpdated(
-  event: Stripe.Event,
+  event: Stripe.ChargeRefundUpdatedEvent,
 ): Promise<void> {
-  const refund = event.data.object as Stripe.Refund;
+  const refund = event.data.object;
   const chargeId = asCustomerId(refund.charge);
   if (!chargeId) return;
   const stripe = getStripeClient();

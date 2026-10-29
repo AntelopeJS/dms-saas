@@ -27,7 +27,7 @@ function emptyDocuments(now: Date): LegalDocuments {
     privacyPolicy: "",
     versions: readLegalDocumentVersions(null),
     updatedAt: now,
-  } as LegalDocuments;
+  };
 }
 
 /**

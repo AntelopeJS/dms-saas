@@ -158,7 +158,7 @@ describe("tenant-being-provisioned hook", () => {
   });
 
   it("runs while the workspace is already there to be written against", async () => {
-    const workspaceAtHookTime: { tenant?: string; user?: string } = {};
+    const workspaceAtHookTime: Partial<Record<"tenant" | "user", string>> = {};
     listen(async (payload) => {
       const [tenant, user] = await Promise.all([
         GetModel(TenantModel).get(payload.tenantId),

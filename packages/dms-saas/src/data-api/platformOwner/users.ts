@@ -47,8 +47,8 @@ export interface UserWorkspaceCounts {
   member: number;
 }
 
-function userIdOf(self: unknown): string {
-  return (self as UserRowInstance).table._id;
+function userIdOf(self: UserRowInstance): string {
+  return self.table._id;
 }
 
 /** The three workspace getters read the same row, so they share one lookup. */
@@ -65,6 +65,11 @@ async function loadWorkspaceCounts(
   return { owned, member: memberships.length - owned };
 }
 
+const WORKSPACE_SPLIT_KINDS = [
+  "owned",
+  "member",
+] as const satisfies readonly (keyof UserWorkspaceCounts)[];
+
 const WORKSPACE_SPLIT_KEYS: Record<keyof UserWorkspaceCounts, string> = {
   owned: "saas.users.workspaces_owned",
   member: "saas.users.workspaces_member",
@@ -72,22 +77,21 @@ const WORKSPACE_SPLIT_KEYS: Record<keyof UserWorkspaceCounts, string> = {
 
 function workspaceSplit(counts: UserWorkspaceCounts): ComposedText | null {
   return dotList(
-    (Object.keys(WORKSPACE_SPLIT_KEYS) as (keyof UserWorkspaceCounts)[])
-      .filter((kind) => counts[kind] > 0)
-      .map((kind) =>
-        composed(WORKSPACE_SPLIT_KEYS[kind], {
-          count: countParam(counts[kind]),
-        }),
-      ),
+    WORKSPACE_SPLIT_KINDS.filter((kind) => counts[kind] > 0).map((kind) =>
+      composed(WORKSPACE_SPLIT_KEYS[kind], {
+        count: countParam(counts[kind]),
+      }),
+    ),
   );
 }
 
-function rowWorkspaceCounts(self: unknown): Promise<UserWorkspaceCounts> {
-  const row = self as object;
-  let lookup = countsByRow.get(row);
+function rowWorkspaceCounts(
+  self: UserRowInstance,
+): Promise<UserWorkspaceCounts> {
+  let lookup = countsByRow.get(self);
   if (!lookup) {
     lookup = loadWorkspaceCounts(userIdOf(self));
-    countsByRow.set(row, lookup);
+    countsByRow.set(self, lookup);
   }
   return lookup;
 }

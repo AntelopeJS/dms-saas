@@ -5,17 +5,15 @@ import {
   CREDIT_REASONS,
 } from "../../operator-billing/credit-note-request";
 import { AUTO_PRORATA_METADATA_KEY } from "../../stripe/webhook-handlers";
-
-/** A credit note row read across workspaces: the workspace rides along. */
-type CrossInstanceCreditNote = CreditNote & { _instance: string };
+import { isString } from "../../utils/primitive-guards";
 
 interface CreditNoteRowInstance {
-  table: CrossInstanceCreditNote;
+  table: CreditNote;
 }
 
 /** The row a data controller getter is computed for. */
-export function creditNoteRow(self: unknown): CrossInstanceCreditNote {
-  return (self as CreditNoteRowInstance).table;
+export function creditNoteRow(self: CreditNoteRowInstance): CreditNote {
+  return self.table;
 }
 
 /**
@@ -38,11 +36,11 @@ const STRIPE_REASONS: Record<string, string> = {
 };
 
 function metadataText(
-  metadata: Record<string, unknown> | null | undefined,
+  metadata: CreditNote["metadata"] | null | undefined,
   key: string,
 ): string | null {
   const value = metadata?.[key];
-  return typeof value === "string" && value.length > 0 ? value : null;
+  return isString(value) && value.length > 0 ? value : null;
 }
 
 /**

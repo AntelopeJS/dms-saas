@@ -125,17 +125,22 @@ function voidedCreditNote(): Stripe.CreditNote {
   return creditNoteFixture({ status: "void", voided_at: VOIDED_SECONDS });
 }
 
-type CreditNoteEvent =
-  | Stripe.CreditNoteCreatedEvent
-  | Stripe.CreditNoteVoidedEvent;
-
-function event(
-  type: CreditNoteEvent["type"],
+function createdEvent(
   creditNote: Stripe.CreditNote,
-): CreditNoteEvent {
-  return fromPartial<CreditNoteEvent>({
-    id: `evt_${type}`,
-    type,
+): Stripe.CreditNoteCreatedEvent {
+  return fromPartial<Stripe.CreditNoteCreatedEvent>({
+    id: "evt_credit_note.created",
+    type: "credit_note.created",
+    data: { object: creditNote },
+  });
+}
+
+function voidedEvent(
+  creditNote: Stripe.CreditNote,
+): Stripe.CreditNoteVoidedEvent {
+  return fromPartial<Stripe.CreditNoteVoidedEvent>({
+    id: "evt_credit_note.voided",
+    type: "credit_note.voided",
     data: { object: creditNote },
   });
 }
@@ -216,9 +221,7 @@ beforeEach(async () => {
 
 describe("Stripe credit note mirror", () => {
   it("adds a linked negative billing row with Stripe PDF and details", async () => {
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
 
     expect(await mirroredCreditNote()).toMatchObject({
       invoiceId: workspace.invoiceRowId,
@@ -253,9 +256,7 @@ describe("Stripe credit note mirror", () => {
       refunds: [],
       type: "future_settlement",
     });
-    await handleCreditNoteCreated(
-      event("credit_note.created", currentCreditNote),
-    );
+    await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
     expect((await mirroredCreditNote())?.type).toBe("mixed");
     expect((await mirroredCreditNoteInvoice())?.creditNoteType).toBe("mixed");
@@ -276,16 +277,14 @@ describe("Stripe credit note mirror", () => {
         refunds: fromPartial(refunds),
         customer_balance_transaction: fromPartial(balance),
       });
-      await handleCreditNoteCreated(
-        event("credit_note.created", currentCreditNote),
-      );
+      await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
       expect((await mirroredCreditNote())?.type).toBe(type);
     },
   );
 
   it("upserts rather than duplicating a replayed credit note", async () => {
-    const replay = event("credit_note.created", creditNoteFixture());
+    const replay = createdEvent(creditNoteFixture());
     await handleCreditNoteCreated(replay);
     await handleCreditNoteCreated(replay);
 
@@ -301,13 +300,9 @@ describe("Stripe credit note mirror", () => {
   });
 
   it("updates both mirrors when Stripe voids the credit note", async () => {
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
     currentCreditNote = voidedCreditNote();
-    await handleCreditNoteVoided(
-      event("credit_note.voided", currentCreditNote),
-    );
+    await handleCreditNoteVoided(voidedEvent(currentCreditNote));
 
     const creditNote = await mirroredCreditNote();
     expect(creditNote?.status).toBe("void");
@@ -324,9 +319,7 @@ describe("Stripe credit note mirror", () => {
       workspace.invoiceRowId,
     );
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
 
     expect(retrieveInvoice).toHaveBeenCalledWith(workspace.stripeInvoiceId);
     const invoices = await GetModel(InvoiceModel, workspace.tenantId).getAll();
@@ -345,9 +338,7 @@ describe("Stripe credit note mirror", () => {
       { number: null },
     );
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
 
     expect(retrieveInvoice).toHaveBeenCalledWith(workspace.stripeInvoiceId);
     expect((await mirroredCreditNote())?.invoiceId).toBe(
@@ -361,9 +352,7 @@ describe("Stripe credit note mirror", () => {
   it("uses Stripe's current state when a created event arrives after voiding", async () => {
     currentCreditNote = voidedCreditNote();
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
 
     expect((await mirroredCreditNote())?.status).toBe("void");
     expect((await mirroredCreditNoteInvoice())?.status).toBe("void");
@@ -371,9 +360,7 @@ describe("Stripe credit note mirror", () => {
   });
 
   it("keeps void terminal when created and voided handlers overlap", async () => {
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
     sendToUser.mockReset();
     let releaseStaleHandler: () => void = () => undefined;
     const staleHandlerHeld = new Promise<void>((resolve) => {
@@ -398,13 +385,9 @@ describe("Stripe credit note mirror", () => {
       )
       .mockResolvedValueOnce(fromPartial(voidedCreditNote()));
 
-    const created = handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
+    const created = handleCreditNoteCreated(createdEvent(creditNoteFixture()));
     await vi.waitFor(() => expect(staleHandlerReached).toHaveBeenCalled());
-    await handleCreditNoteVoided(
-      event("credit_note.voided", voidedCreditNote()),
-    );
+    await handleCreditNoteVoided(voidedEvent(voidedCreditNote()));
     releaseStaleHandler();
     await created;
 
@@ -416,9 +399,7 @@ describe("Stripe credit note mirror", () => {
   it("links an expanded Stripe invoice reference", async () => {
     currentCreditNote = creditNoteFixture({ invoice: stripeInvoiceFixture() });
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", currentCreditNote),
-    );
+    await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
     expect((await mirroredCreditNote())?.invoiceId).toBe(
       workspace.invoiceRowId,
@@ -431,9 +412,7 @@ describe("Stripe credit note mirror", () => {
   it("uses Stripe effective date, tax amounts, and credit-note type", async () => {
     currentCreditNote = creditNoteFixture({ subtotal: 3_400 });
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", currentCreditNote),
-    );
+    await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
     expect(await mirroredCreditNoteInvoice()).toMatchObject({
       subtotal: -3_400,
@@ -478,9 +457,7 @@ describe("Stripe credit note mirror", () => {
         }),
       );
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", currentCreditNote),
-    );
+    await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
     expect(listLineItems).toHaveBeenCalledWith(workspace.creditNoteId, {
       limit: 100,

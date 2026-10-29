@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import type { TenantSubscription } from "../src/db";
 import { isComplimentaryPlanLocked } from "../src/workspaces/complimentary";
@@ -10,15 +11,14 @@ const ENDED_AT = new Date("2026-09-30T00:00:00.000Z");
 function subscription(
   overrides: Partial<TenantSubscription> = {},
 ): TenantSubscription {
-  return {
+  return fromPartial<TenantSubscription>({
     _id: "sub-1",
-    tenantId: "tenant-1",
     planId: "pro",
     status: "active",
     isComplimentary: true,
     freeUntil: null,
     ...overrides,
-  } as TenantSubscription;
+  });
 }
 
 /** Mirrors the plan payload the billing page reads, as the server builds it. */

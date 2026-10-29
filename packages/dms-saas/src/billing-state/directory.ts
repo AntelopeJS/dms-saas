@@ -23,6 +23,7 @@ import { type SeatUsage, getSeatUsage } from "../plans/seat-capacity";
 import { MS_PER_DAY } from "../utils/time";
 import {
   findPendingOwnerInvite,
+  type InvitationStatus,
   invitationStatusOf,
 } from "../workspaces/invitations";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
@@ -98,7 +99,10 @@ const LOSS_STATES: ReadonlySet<BillingState> = new Set([
 ]);
 const LOSS_HOLDING_STATES: ReadonlySet<BillingState> = new Set(["suspended"]);
 
-const OWNER_STATUS_BY_INVITATION: Record<string, WorkspaceOwnerStatus> = {
+const OWNER_STATUS_BY_INVITATION: Record<
+  InvitationStatus,
+  WorkspaceOwnerStatus
+> = {
   pending: "invited",
   expired: "expired",
 };

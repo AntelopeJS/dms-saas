@@ -23,7 +23,7 @@ const PERIOD_END = new Date("2026-10-31T00:00:00.000Z");
 const seconds = (date: Date) => Math.floor(date.getTime() / 1000);
 
 function plan(overrides: Partial<Plan>): Plan {
-  return {
+  return fromPartial<Plan>({
     _id: "plan",
     name: "Plan",
     price: 49,
@@ -34,7 +34,7 @@ function plan(overrides: Partial<Plan>): Plan {
     maxMembers: 10,
     paymentProviderRefs: { stripePriceId: "price_plan" },
     ...overrides,
-  } as Plan;
+  });
 }
 
 const BUSINESS = plan({ _id: "business", price: 49 });
@@ -56,25 +56,25 @@ const FREE = plan({
   paymentProviderRefs: {},
 });
 
-const PAID_SUBSCRIPTION = {
+const PAID_SUBSCRIPTION = fromPartial<TenantSubscription>({
   _id: "tenant-a",
   planId: "business",
   status: "active",
   stripeCustomerId: "cus_a",
   stripeSubscriptionId: "sub_a",
   currentPeriodEnd: PERIOD_END,
-} as TenantSubscription;
+});
 
-const FREE_SUBSCRIPTION = {
+const FREE_SUBSCRIPTION = fromPartial<TenantSubscription>({
   _id: "tenant-a",
   planId: "free",
   status: "active",
   stripeCustomerId: null,
   stripeSubscriptionId: null,
-} as TenantSubscription;
+});
 
 function previewInvoice(totalMinorUnits: number): Stripe.Invoice {
-  return {
+  return fromPartial<Stripe.Invoice>({
     currency: "eur",
     lines: {
       data: [
@@ -105,11 +105,11 @@ function previewInvoice(totalMinorUnits: number): Stripe.Invoice {
     automatic_tax: { enabled: true, status: "complete" },
     period_start: seconds(NOW),
     period_end: seconds(NOW),
-  } as unknown as Stripe.Invoice;
+  });
 }
 
 function stripeSubscription(status = "active"): Stripe.Subscription {
-  return {
+  return fromPartial<Stripe.Subscription>({
     id: "sub_a",
     customer: "cus_a",
     status,
@@ -123,7 +123,7 @@ function stripeSubscription(status = "active"): Stripe.Subscription {
         },
       ],
     },
-  } as unknown as Stripe.Subscription;
+  });
 }
 
 let tenantId: string;

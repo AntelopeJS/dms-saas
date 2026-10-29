@@ -1,6 +1,13 @@
-import type { Feature, Plan, PlanFeatureValue, PlanLocalizedText } from "../db";
+import type {
+  Feature,
+  FeatureValueType,
+  Plan,
+  PlanFeatureValue,
+  PlanLocalizedText,
+} from "../db";
 import { withPermissionAncestors } from "./plan-permission-tree";
 import { PLAN_LOCALIZED_FIELDS, PLAN_UNLIMITED, PlanModel } from "../db";
+import { isBoolean, isNumber, isString } from "../utils/primitive-guards";
 
 /**
  * What a number feature holds: `0` turns it off, `-1` makes it
@@ -29,7 +36,7 @@ export interface PlanInheritanceInput {
 function trimmed(
   value: string | PlanLocalizedText,
 ): string | PlanLocalizedText {
-  if (typeof value === "string") return value.trim();
+  if (isString(value)) return value.trim();
   return Object.fromEntries(
     Object.entries(value).map(([locale, text]) => [locale, text.trim()]),
   );
@@ -129,7 +136,7 @@ export function pickPlanWrite(body: PlanWriteBody): PlanWrite {
   const expanded = expandInheritance(body);
   const out: PlanWrite = {};
   for (const field of PLAN_WRITE_FIELDS) {
-    const isText = (PLAN_LOCALIZED_FIELDS as readonly string[]).includes(field);
+    const isText = PLAN_LOCALIZED_FIELDS.some((text) => text === field);
     if (isText ? expanded[field] != null : expanded[field] !== undefined) {
       Object.assign(out, { [field]: expanded[field] });
     }
@@ -158,10 +165,7 @@ export function planTexts(plan: Plan): PlanTexts {
 
 /** The plan row a write stores, its texts locked one value per locale. */
 export function toPlanRow(write: PlanWrite): Plan {
-  return PlanModel.fromPlainData(write as Partial<Plan>).localize(
-    "*",
-    PLAN_LOCALIZED_FIELDS,
-  );
+  return PlanModel.fromPlainData(write).localize("*", PLAN_LOCALIZED_FIELDS);
 }
 
 /** A URL-safe slug from a plan name: `Growth 2024` → `growth-2024`. */
@@ -177,7 +181,7 @@ export function slugify(value: string): string {
 
 function isNumberFeatureValue(value: unknown): boolean {
   return (
-    typeof value === "number" &&
+    isNumber(value) &&
     Number.isInteger(value) &&
     (value >= MIN_LIMIT ||
       value === FEATURE_OFF_VALUE ||
@@ -185,10 +189,12 @@ function isNumberFeatureValue(value: unknown): boolean {
   );
 }
 
-const FEATURE_VALUE_CHECKS: Record<string, (value: unknown) => boolean> = {
-  boolean: (value) => typeof value === "boolean",
+const FEATURE_VALUE_CHECKS: Partial<
+  Record<FeatureValueType, (value: unknown) => boolean>
+> = {
+  boolean: (value) => isBoolean(value),
   number: isNumberFeatureValue,
-  string: (value) => typeof value === "string",
+  string: (value) => isString(value),
 };
 
 /**
@@ -209,7 +215,9 @@ export function invalidFeatureValues(
   );
   return values
     .filter((entry) => {
-      const check = FEATURE_VALUE_CHECKS[types.get(entry.featureId) ?? ""];
+      const valueType = types.get(entry.featureId);
+      const check =
+        valueType === undefined ? undefined : FEATURE_VALUE_CHECKS[valueType];
       return !check?.(entry.value);
     })
     .map((entry) => entry.featureId);
@@ -218,7 +226,7 @@ export function invalidFeatureValues(
 /** Whether a member cap is unlimited (`-1`) or a whole number of seats from 1. */
 export function isValidMemberCap(value: unknown): boolean {
   return (
-    typeof value === "number" &&
+    isNumber(value) &&
     Number.isInteger(value) &&
     (value >= MIN_LIMIT || value === PLAN_UNLIMITED)
   );

@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import path from "node:path";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import type * as coreInternalModule from "@antelopejs/interface-core/internal";
@@ -51,7 +52,11 @@ async function receiptId(
   name: string,
 ): Promise<string | undefined> {
   const consumer = modules.implementation.getWorkspaceLifecycleConsumer(name);
-  return (await consumer?.consume(undefined as never))?.receiptId;
+  return (
+    await consumer?.consume(
+      fromPartial<Parameters<typeof consumer.consume>[0]>({}),
+    )
+  )?.receiptId;
 }
 
 describe("RegisterTenantLifecycleConsumer", () => {

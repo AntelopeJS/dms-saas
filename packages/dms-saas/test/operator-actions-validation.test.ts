@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { HTTPResult } from "@antelopejs/interface-api";
 import { describe, expect, it } from "vitest";
 import type { Plan } from "../src/db";
@@ -18,7 +19,7 @@ const CURRENT_PLAN_ID = "current-plan";
 const TARGET_PLAN_ID = "target-plan";
 
 function plan(id: string, price: number): Plan {
-  return {
+  return fromPartial<Plan>({
     _id: id,
     name: id,
     audience: "any",
@@ -29,7 +30,7 @@ function plan(id: string, price: number): Plan {
     paymentProviderRefs: { stripePriceId: `price_${id}` },
     isActive: true,
     isDeleted: false,
-  } as Plan;
+  });
 }
 
 function expectError(operation: Operation, code: string): void {
@@ -110,7 +111,7 @@ describe("manual upgrade eligibility", () => {
   ];
 
   it.each(ineligibleCases)("rejects $name plans", ({ patch }) => {
-    const target = { ...plan(TARGET_PLAN_ID, 20), ...patch } as Plan;
+    const target = fromPartial<Plan>({ ...plan(TARGET_PLAN_ID, 20), ...patch });
     expect(
       isEligibleManualUpgradeTarget(target, current, "individual", 5),
     ).toBe(false);
@@ -123,10 +124,10 @@ describe("manual upgrade eligibility", () => {
   });
 
   it("normalizes annual pricing when enforcing upgrade-only behavior", () => {
-    const annual = {
+    const annual = fromPartial<Plan>({
       ...plan(TARGET_PLAN_ID, 100),
       interval: "year",
-    } as Plan;
+    });
     expect(
       isEligibleManualUpgradeTarget(annual, current, "individual", 5),
     ).toBe(false);

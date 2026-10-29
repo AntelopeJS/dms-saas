@@ -132,8 +132,8 @@ export function reportSkippedLineItems(
 export function buildLineItemMetadata(
   providerId: string,
   prepared: PreparedInvoiceLineItem,
-): Record<string, string> {
-  const metadata: Record<string, string> = {
+): Stripe.Metadata {
+  const metadata: Stripe.Metadata = {
     ...prepared.item.metadata,
   };
   if (prepared.item.quantity !== undefined) {

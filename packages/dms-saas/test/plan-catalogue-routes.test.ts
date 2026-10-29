@@ -147,11 +147,6 @@ async function withUnconfiguredStripeResult<T>(
   return result;
 }
 
-/** The field a refusal names, which the form shows the message under. */
-function refusedField(error: HTTPResult): unknown {
-  return (JSON.parse(String(error.getBody())) as { field?: unknown }).field;
-}
-
 /** The HTTP refusal `operation` answers with; throws when it is not refused. */
 async function refusal(operation: () => Promise<object>): Promise<HTTPResult> {
   const [outcome] = await Promise.allSettled([operation()]);
@@ -188,7 +183,9 @@ describe("plan writes from the editor", () => {
       }),
     );
     expect(error.getStatus()).toBe(FIELD_REFUSAL);
-    expect(refusedField(error)).toBe("inheritance");
+    expect(JSON.parse(String(error.getBody()))).toMatchObject({
+      field: "inheritance",
+    });
     expect((await storedPlan())?.features).toEqual(before?.features);
   });
 
@@ -199,7 +196,9 @@ describe("plan writes from the editor", () => {
         maxMembers: 0,
       }),
     );
-    expect(refusedField(error)).toBe("maxMembers");
+    expect(JSON.parse(String(error.getBody()))).toMatchObject({
+      field: "maxMembers",
+    });
   });
 
   it("explains a price change after saving a plan already on Stripe", async () => {
@@ -323,10 +322,12 @@ describe("creating a plan", () => {
     const error = await refusal(() =>
       plansController().create(OWNER, {
         ...NEW_PLAN,
-        inheritance: { parentPlanId: null } as unknown as PlanInheritanceInput,
+        inheritance: fromPartial<PlanInheritanceInput>({ parentPlanId: null }),
       }),
     );
-    expect(refusedField(error)).toBe("inheritance");
+    expect(JSON.parse(String(error.getBody()))).toMatchObject({
+      field: "inheritance",
+    });
     await expect(GetModel(PlanModel).getAll()).resolves.toEqual([]);
   });
 
@@ -435,7 +436,9 @@ describe("retiring a plan", () => {
         confirmText: "growth",
       }),
     );
-    expect(refusedField(error)).toBe("confirmText");
+    expect(JSON.parse(String(error.getBody()))).toMatchObject({
+      field: "confirmText",
+    });
     await expect(GetModel(PlanMigrationModel).getAll()).resolves.toEqual([]);
     expect((await storedPlan())?.isActive).toBe(true);
   });

@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { describe, expect, it } from "vitest";
@@ -22,7 +23,7 @@ const REGIFTED = new Date("2026-02-18T09:21:00Z");
 const REACTIVATED = new Date("2026-03-03T10:11:00Z");
 
 function gift(overrides: Partial<TenantSubscription> = {}): TenantSubscription {
-  return {
+  return fromPartial<TenantSubscription>({
     createdAt: CREATED,
     status: "active",
     stripeCustomerId: "existing-customer",
@@ -31,7 +32,7 @@ function gift(overrides: Partial<TenantSubscription> = {}): TenantSubscription {
     freeUntil: EXPIRED,
     paidUsagePeriods: [],
     ...overrides,
-  } as TenantSubscription;
+  });
 }
 
 const FEBRUARY = {

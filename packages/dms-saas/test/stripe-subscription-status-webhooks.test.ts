@@ -94,8 +94,8 @@ beforeEach(async () => {
 });
 
 describe("customer.subscription.deleted", () => {
-  function deletion(): Stripe.Event {
-    return fromPartial<Stripe.Event>({
+  function deletion(): Stripe.CustomerSubscriptionDeletedEvent {
+    return fromPartial<Stripe.CustomerSubscriptionDeletedEvent>({
       type: "customer.subscription.deleted",
       data: {
         object: {
@@ -135,8 +135,8 @@ describe("automatic prorated refund on cancellation", () => {
   const SUBSCRIPTION_START = 1_800_000_000;
   const PERIOD_END = SUBSCRIPTION_START + 30 * 86_400;
 
-  function deletionOfSubscriptionStartedAt(): Stripe.Event {
-    return fromPartial<Stripe.Event>({
+  function deletionOfSubscriptionStartedAt(): Stripe.CustomerSubscriptionDeletedEvent {
+    return fromPartial<Stripe.CustomerSubscriptionDeletedEvent>({
       type: "customer.subscription.deleted",
       data: {
         object: {
@@ -202,8 +202,10 @@ describe("automatic prorated refund on cancellation", () => {
 });
 
 describe("invoice.payment_failed", () => {
-  function failure(billingReason = "subscription_cycle"): Stripe.Event {
-    return fromPartial<Stripe.Event>({
+  function failure(
+    billingReason = "subscription_cycle",
+  ): Stripe.InvoicePaymentFailedEvent {
+    return fromPartial<Stripe.InvoicePaymentFailedEvent>({
       type: "invoice.payment_failed",
       data: {
         object: {

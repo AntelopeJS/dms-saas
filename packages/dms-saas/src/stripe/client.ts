@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import type { DmsSaasStripeConfig } from "../types";
+import { isString } from "../utils/primitive-guards";
 
 /**
  * The Stripe API version every request is made with. It must be the version
@@ -35,7 +36,7 @@ let stripeTestMode = false;
 
 function isUsableSecretKey(key: string): boolean {
   return (
-    typeof key === "string" &&
+    isString(key) &&
     key.startsWith(SECRET_KEY_PREFIX) &&
     !key.includes(PLACEHOLDER_MARKER)
   );

@@ -72,8 +72,8 @@ function listDateTime(date: Date): ComposedText {
   return valueText(dateTimeParam(at, listDateFormat(at, new Date())));
 }
 
-function migrationOf(self: unknown): PlanMigration {
-  return (self as MigrationRowInstance).table;
+function migrationOf(self: MigrationRowInstance): PlanMigration {
+  return self.table;
 }
 
 /**

@@ -145,7 +145,7 @@ const OUTCOME_ITEMS = MIGRATION_WORKSPACE_STATUSES.map((value) => ({
   label: `${TEXTS}.workspace_status.${value}`,
 }));
 
-const WORKSPACE_COLUMNS: Record<string, TableViewSourceColumn> = {
+const WORKSPACE_COLUMNS = {
   name: {
     name: `${DETAIL}.column.workspace`,
     type: new DefaultDataTypes.StringType(),
@@ -195,7 +195,7 @@ const WORKSPACE_COLUMNS: Record<string, TableViewSourceColumn> = {
     isVisible: false,
     order: 6,
   },
-};
+} satisfies Record<string, TableViewSourceColumn>;
 
 function resolveAction(resolution: "moved" | "not_moved", icon: string) {
   return {

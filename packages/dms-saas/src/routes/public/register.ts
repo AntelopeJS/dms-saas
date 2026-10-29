@@ -39,6 +39,7 @@ import {
 } from "../../stripe";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 import type {
@@ -68,6 +69,9 @@ import {
 } from "./public-plan-catalog";
 import type { TenantPlanFeature } from "../../plans";
 import { isPlanOfferedTo } from "../../plans/plan-audience";
+import { isString } from "../../utils/primitive-guards";
+import type { QueryParameterValue } from "../../utils/query-parameter";
+import type { TenantBeingProvisionedPayload } from "@antelopejs/interface-dms-saas/provisioning";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
@@ -95,7 +99,7 @@ interface RegistrationPayload {
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else.
    */
-  extras?: Record<string, unknown>;
+  extras?: TenantBeingProvisionedPayload["extras"];
 }
 
 interface RegisterBody extends RegistrationPayload {
@@ -173,7 +177,7 @@ function generateAuthKey(): string {
  */
 function assertRegistrationPassword(password: unknown): void {
   assert(
-    typeof password === "string" && isPasswordCompliant(password),
+    isString(password) && isPasswordCompliant(password),
     HTTP_BAD_REQUEST,
     "saas.errors.registration.password_policy",
   );
@@ -310,7 +314,7 @@ export class SaasRegisterApiController extends Controller(
   declare forwardedFor: string;
 
   @Parameter(CONTENT_LANGUAGE_HEADER, "header")
-  declare contentLanguage: unknown;
+  declare contentLanguage: RequestHeaderValue;
 
   private async ensureEmailAvailable(email: string): Promise<void> {
     const existing = await this.userModel.getByEmail(email);
@@ -387,8 +391,8 @@ export class SaasRegisterApiController extends Controller(
    */
   @Get("/plan")
   async describeRegistrationPlan(
-    @Parameter("plan", "query") reference: unknown,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter("plan", "query") reference: QueryParameterValue,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<RegistrationPlanSummary> {
     assertAdmissionOpen();
     const [plan, publicPlans, rules] = await Promise.all([

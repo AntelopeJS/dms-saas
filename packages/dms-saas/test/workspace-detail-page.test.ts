@@ -1,32 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { SaasWorkspaceDetailController } from "../src/pages/platform/workspaces/detail";
-
-interface SerializedBlock {
-  componentName?: string;
-  options?: Record<string, unknown>;
-  children: { id: string; component: SerializedBlock }[];
-}
-
-interface ColumnOptions {
-  id: string;
-  isVisible?: boolean;
-}
-
-function findChild(
-  block: SerializedBlock,
-  id: string,
-): SerializedBlock | undefined {
-  for (const child of block.children) {
-    if (child.id === id) return child.component;
-    const nested = findChild(child.component, id);
-    if (nested) return nested;
-  }
-  return undefined;
-}
+import { findChild, isOptionRecord } from "./helpers/serialized";
 
 describe("workspace detail page", () => {
-  const body =
-    SaasWorkspaceDetailController.body.serializeSync() as SerializedBlock;
+  const body = SaasWorkspaceDetailController.body.serializeSync();
 
   it("underlines its tabs rather than drawing them as segments", () => {
     expect(findChild(body, "main")?.options).toMatchObject({
@@ -39,23 +16,22 @@ describe("workspace detail page", () => {
       groupByDay: false,
       fetchUrl: expect.stringContaining("flat=true"),
     });
-    expect(findChild(body, "activity")?.options?.fetchUrl).not.toContain(
-      "flat=true",
-    );
+    const activity = findChild(body, "activity")?.options;
+    assert(isOptionRecord(activity));
+    expect(activity.fetchUrl).not.toContain("flat=true");
   });
 
   it.each(["table", "invoiceTable", "creditNoteTable"])(
     "hides the workspace column of %s rather than offering a view for it",
     (id) => {
-      const options = findChild(body, id)?.options as {
-        columns: ColumnOptions[];
-        views?: unknown;
-      };
+      const options = findChild(body, id)?.options;
+      assert(isOptionRecord(options));
+      assert(Array.isArray(options.columns));
       const workspace = options.columns.find(
-        (column) => column.id === "workspaceName",
+        (column) => isOptionRecord(column) && column.id === "workspaceName",
       );
 
-      expect(workspace?.isVisible).toBe(false);
+      expect(workspace).toMatchObject({ isVisible: false });
       expect(options.views).toBeUndefined();
     },
   );

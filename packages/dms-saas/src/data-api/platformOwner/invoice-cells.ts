@@ -1,5 +1,5 @@
 import type { CellSubline, ComposedText } from "@antelopejs/interface-dms/base";
-import type { Invoice } from "../../db";
+import type { BillingDocumentStatus, Invoice } from "../../db";
 import { composed, dateParam } from "../../i18n/composed-text";
 
 /** The invoice fields its status line is written from. */
@@ -37,7 +37,7 @@ type StatusDetail = (
   replacedBy: string | null,
 ) => CellSubline | null;
 
-const STATUS_DETAILS: Record<string, StatusDetail> = {
+const STATUS_DETAILS: Partial<Record<BillingDocumentStatus, StatusDetail>> = {
   draft: (row) =>
     row.autoFinalizesAt
       ? {

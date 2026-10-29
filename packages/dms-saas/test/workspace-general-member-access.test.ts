@@ -5,6 +5,7 @@ import {
   type FormFieldSerialized,
   FormEvents,
   type FormPropsSerialized,
+  isFieldGroupSerialized,
 } from "@antelopejs/interface-dms/base";
 import type {
   ComponentBuilder,
@@ -61,7 +62,9 @@ describe("General page for a workspace member", () => {
 
     expect(served.saveMode).toBe("none");
     expect(
-      (served.fields as FormFieldSerialized[]).map((field) => field.readonly),
+      served.fields.map((field) =>
+        isFieldGroupSerialized(field) ? undefined : field.readonly,
+      ),
     ).toEqual([
       {
         badge: { label: "$saas.workspace.general.owner_only", tone: "neutral" },
@@ -76,10 +79,11 @@ describe("General page for a workspace member", () => {
     const form = await identityForm();
     const { options } = await form.serialize();
     const name = options.fields.find(
-      (field) => field.id === "name",
-    ) as FormFieldSerialized;
+      (field): field is FormFieldSerialized =>
+        !isFieldGroupSerialized(field) && field.id === "name",
+    );
 
-    expect(name.component?.options).toMatchObject({
+    expect(name?.component?.options).toMatchObject({
       maxLength: WORKSPACE_NAME_MAX_LENGTH,
       showCount: true,
     });

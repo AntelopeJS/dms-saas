@@ -10,6 +10,7 @@ import {
   type SegmentNode,
 } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
+import { isObjectOrNull, isString } from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 const ERRORS = "saas.errors.segments";
@@ -113,7 +114,7 @@ function validateConditionNode(
     `${ERRORS}.conditions_too_deep`,
   );
   assert(
-    !!node && typeof node === "object",
+    !!node && isObjectOrNull(node),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
@@ -145,9 +146,9 @@ export function parseSegmentConditions(raw: unknown): SegmentConditionGroup {
   if (raw === undefined || raw === null || raw === "") {
     return { logical: "and", conditions: [] };
   }
-  const parsed = typeof raw === "string" ? parseJson(raw) : raw;
+  const parsed = isString(raw) ? parseJson(raw) : raw;
   assert(
-    !!parsed && typeof parsed === "object" && isSegmentGroup(parsed as never),
+    !!parsed && isObjectOrNull(parsed) && isSegmentGroup(parsed as never),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
@@ -157,7 +158,7 @@ export function parseSegmentConditions(raw: unknown): SegmentConditionGroup {
 }
 
 function parseText(value: unknown, maxLength: number): string {
-  const text = typeof value === "string" ? value.trim() : "";
+  const text = isString(value) ? value.trim() : "";
   assert(text.length <= maxLength, HTTP_BAD_REQUEST, `${ERRORS}.too_long`);
   return text;
 }
@@ -180,14 +181,6 @@ export function parseSegmentInput(body: SegmentInputBody): SegmentInput {
   };
 }
 
-const PATCH_PARSERS: {
-  [Key in keyof SegmentInput]: (value: unknown) => SegmentInput[Key];
-} = {
-  name: parseName,
-  description: (value) => parseText(value, DESCRIPTION_MAX_LENGTH),
-  conditions: parseSegmentConditions,
-};
-
 /**
  * The fields an edit changes: only the ones the body carries, each checked
  * as on creation.
@@ -195,10 +188,13 @@ const PATCH_PARSERS: {
 export function parseSegmentPatch(
   body: SegmentInputBody,
 ): Partial<SegmentInput> {
-  const patch: Partial<Record<keyof SegmentInput, unknown>> = {};
-  for (const key of Object.keys(PATCH_PARSERS) as (keyof SegmentInput)[]) {
-    if (body[key] === undefined) continue;
-    patch[key] = PATCH_PARSERS[key](body[key]);
+  const patch: Partial<SegmentInput> = {};
+  if (body.name !== undefined) patch.name = parseName(body.name);
+  if (body.description !== undefined) {
+    patch.description = parseText(body.description, DESCRIPTION_MAX_LENGTH);
   }
-  return patch as Partial<SegmentInput>;
+  if (body.conditions !== undefined) {
+    patch.conditions = parseSegmentConditions(body.conditions);
+  }
+  return patch;
 }

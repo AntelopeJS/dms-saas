@@ -48,6 +48,7 @@ import {
   reserveTrialIdentities,
 } from "./provisioning-state";
 import { isPlanOfferedTo } from "../plans/plan-audience";
+import type Stripe from "stripe";
 export { rollbackWorkspaceProvisioning } from "./provisioning-rollback";
 
 const HTTP_BAD_REQUEST = 400;
@@ -263,7 +264,7 @@ async function createStripeCustomer(
 ): Promise<string> {
   const { stripeCustomerProfile: profile, handles } = input;
   const stripe = getStripeClient();
-  const metadata: Record<string, string> = {
+  const metadata: Stripe.Metadata = {
     customerType: profile.customerType,
   };
   if (profile.vatNumber) metadata.vatNumber = profile.vatNumber;

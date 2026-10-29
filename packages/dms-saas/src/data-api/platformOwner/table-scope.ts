@@ -1,4 +1,8 @@
-import { DefaultRoutes } from "@antelopejs/interface-data-api";
+import {
+  type DataControllerCallback,
+  type DataControllerCallbackWithOptions,
+  DefaultRoutes,
+} from "@antelopejs/interface-data-api";
 import type { Parameters } from "@antelopejs/interface-data-api/components";
 import type { FilterValue } from "@antelopejs/interface-data-api/metadata";
 
@@ -18,9 +22,9 @@ export interface TableScope extends Parameters.ListParameters {
  * @param scope Filters to apply
  */
 export function withTableScope(scope: TableScope) {
-  return <O>(route: O) =>
-    DefaultRoutes.WithOptions(
-      route as Parameters<typeof DefaultRoutes.WithOptions>[0],
-      scope,
-    );
+  return (
+    route:
+      | DataControllerCallback<Parameters.ListParameters>
+      | DataControllerCallbackWithOptions<Parameters.ListParameters>,
+  ) => DefaultRoutes.WithOptions(route, scope);
 }

@@ -33,7 +33,7 @@ import {
   TenantBillingState,
   TenantSubscriptionModel,
 } from "../../db";
-import { statusPillDisplay, statusType } from "../../utils";
+import { getRowInstance, statusPillDisplay, statusType } from "../../utils";
 import { HiddenStringFilter } from "./hidden-filter";
 
 const NO_PLAN = "—";
@@ -43,11 +43,11 @@ const ROLE_COLUMN_SIZE = 150;
 const REGULAR_COLUMN_SIZE = 110;
 
 interface MembershipRowInstance {
-  table: { _instance: string };
+  table: TenantMember;
 }
 
-function tenantIdOf(self: unknown): string {
-  return (self as MembershipRowInstance).table._instance;
+function tenantIdOf(self: MembershipRowInstance): string {
+  return getRowInstance(self.table);
 }
 
 /** The workspaces a user belongs to, with their place in each. */

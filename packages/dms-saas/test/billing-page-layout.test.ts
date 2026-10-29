@@ -1,7 +1,4 @@
-import type {
-  Component,
-  ComponentInfoSerialized,
-} from "@antelopejs/interface-dms/component";
+import type { ComponentInfoSerialized } from "@antelopejs/interface-dms/component";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { GetMetadata } from "@antelopejs/interface-core";
 import { SettingsLayout } from "@antelopejs/interface-dms/base/layouts";
@@ -28,10 +25,7 @@ const PAGE_FIELDS = [
 ] as const;
 
 async function ownLayout(): Promise<Layout> {
-  const fields = SaasTenantBillingController as unknown as Record<
-    (typeof PAGE_FIELDS)[number],
-    Component
-  >;
+  const fields = SaasTenantBillingController;
   const entries = await Promise.all(
     PAGE_FIELDS.map(async (key) => [key, await fields[key].serialize()]),
   );

@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { DEFAULT_TENANT_ID } from "@antelopejs/interface-dms/constants";
@@ -22,7 +23,7 @@ useMongoDatabase("default-plan");
 const logs = captureLogs();
 
 function plan(overrides: Partial<Plan>): Plan {
-  return {
+  return fromPartial<Plan>({
     _id: "plan",
     slug: "plan",
     name: "Plan",
@@ -32,7 +33,7 @@ function plan(overrides: Partial<Plan>): Plan {
     isActive: true,
     isDeleted: false,
     ...overrides,
-  } as Plan;
+  });
 }
 
 const FREE = plan({ _id: "free", slug: "free", order: 1 });

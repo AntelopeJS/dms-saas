@@ -30,6 +30,7 @@ import {
   type SegmentInputBody,
   USER_SEGMENT_FIELDS,
 } from "../../utils";
+import { isString } from "../../utils/primitive-guards";
 
 interface PlanOption {
   _id: string;
@@ -82,9 +83,7 @@ export class SaasSegmentsApiController extends Controller(
     @JSONBody() body: SegmentPreviewBody,
   ): Promise<TimedSegmentPreview> {
     const segmentId =
-      typeof body?.segmentId === "string" && body.segmentId
-        ? body.segmentId
-        : undefined;
+      isString(body?.segmentId) && body.segmentId ? body.segmentId : undefined;
     return previewSegment(parseSegmentConditions(body?.conditions), segmentId);
   }
 

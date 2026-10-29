@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import type { Invoice } from "../src/db";
 import {
@@ -12,7 +13,7 @@ const linkOf = (tenantId: string): string => `/workspaces/${tenantId}`;
 
 const SOURCES: ActivitySources = {
   documents: [
-    {
+    fromPartial<Invoice & { _instance: string }>({
       _id: "in_1",
       _instance: "t1",
       number: "INV-0941",
@@ -22,8 +23,8 @@ const SOURCES: ActivitySources = {
       amount: 112_700,
       issuedAt: new Date("2026-10-01T09:00:00Z"),
       paidAt: new Date("2026-10-02T09:00:00Z"),
-    } as unknown as Invoice,
-    {
+    }),
+    fromPartial<Invoice & { _instance: string }>({
       _id: "in_2",
       _instance: "t1",
       number: "INV-0942",
@@ -32,10 +33,10 @@ const SOURCES: ActivitySources = {
       total: 100,
       amount: 100,
       issuedAt: new Date("2026-10-03T09:00:00Z"),
-    } as unknown as Invoice,
+    }),
   ],
   actions: [
-    {
+    fromPartial<OperatorAction>({
       _id: "op_1",
       tenantId: "t1",
       actorEmail: "camille@ops.test",
@@ -44,8 +45,8 @@ const SOURCES: ActivitySources = {
       details: { amountCents: 4_900, currency: "EUR" },
       createdAt: new Date("2026-10-04T09:00:00Z"),
       effectiveAt: new Date("2026-10-04T09:00:00Z"),
-    } as unknown as OperatorAction,
-    {
+    }),
+    fromPartial<OperatorAction>({
       _id: "op_2",
       tenantId: "t1",
       actorEmail: "camille@ops.test",
@@ -54,7 +55,7 @@ const SOURCES: ActivitySources = {
       details: {},
       createdAt: new Date("2026-10-05T09:00:00Z"),
       effectiveAt: null,
-    } as unknown as OperatorAction,
+    }),
   ],
   workspaces: [
     {
@@ -187,7 +188,7 @@ describe("activity feed", () => {
 
 describe("the owner invitation e-mail in the activity feed", () => {
   function sendAction(emailDelivery: string): OperatorAction {
-    return {
+    return fromPartial<OperatorAction>({
       _id: `op_send_${emailDelivery}`,
       tenantId: "t1",
       actorEmail: "camille@ops.test",
@@ -196,7 +197,7 @@ describe("the owner invitation e-mail in the activity feed", () => {
       details: { email: "owner@northwind.test", emailDelivery },
       createdAt: new Date("2026-10-06T09:00:00Z"),
       effectiveAt: new Date("2026-10-06T09:00:00Z"),
-    } as unknown as OperatorAction;
+    });
   }
 
   it.each([

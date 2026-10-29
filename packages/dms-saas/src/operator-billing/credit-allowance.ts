@@ -1,4 +1,5 @@
-import type { CreditNote, InvoiceStatus } from "../db";
+import type Stripe from "stripe";
+import type { BillingDocumentStatus, CreditNote } from "../db";
 
 /**
  * How a credit note reaches the customer. A paid invoice is credited to the
@@ -20,12 +21,19 @@ export type CreditBlockReason =
   | "uncollectible"
   | "fully_credited";
 
-const MODES_BY_STATUS: Partial<Record<InvoiceStatus, readonly CreditMode[]>> = {
+/** An invoice status as the module stores it or Stripe reports it. */
+type CreditableStatus = Stripe.Invoice.Status | BillingDocumentStatus;
+
+const MODES_BY_STATUS: Partial<
+  Record<CreditableStatus, readonly CreditMode[]>
+> = {
   paid: ["credit_to_balance", "refund"],
   open: ["reduce_amount_due"],
 };
 
-const BLOCK_REASON_BY_STATUS: Record<string, CreditBlockReason> = {
+const BLOCK_REASON_BY_STATUS: Partial<
+  Record<CreditableStatus, CreditBlockReason>
+> = {
   draft: "draft",
   void: "void",
   uncollectible: "uncollectible",
@@ -34,13 +42,11 @@ const BLOCK_REASON_BY_STATUS: Record<string, CreditBlockReason> = {
 const ISSUED_CREDIT_NOTE_STATUS = "issued";
 
 /** The statuses whose invoices can be credited: paid and open. */
-export const CREDITABLE_INVOICE_STATUSES = Object.keys(
-  MODES_BY_STATUS,
-) as InvoiceStatus[];
+export const CREDITABLE_INVOICE_STATUSES = Object.keys(MODES_BY_STATUS);
 
 /** What crediting an invoice depends on: its status and its total. */
 export interface CreditableInvoice {
-  status: string;
+  status: CreditableStatus;
   total: number;
 }
 
@@ -76,7 +82,7 @@ export function creditAllowance(
   credited: number,
 ): CreditAllowance {
   const creditable = Math.max(0, invoice.total - credited);
-  const statusModes = MODES_BY_STATUS[invoice.status as InvoiceStatus] ?? [];
+  const statusModes = MODES_BY_STATUS[invoice.status] ?? [];
   const blockReason = resolveBlockReason(invoice.status, creditable);
   return {
     credited,
@@ -87,10 +93,10 @@ export function creditAllowance(
 }
 
 function resolveBlockReason(
-  status: string,
+  status: CreditableStatus,
   creditable: number,
 ): CreditBlockReason | null {
-  if (!MODES_BY_STATUS[status as InvoiceStatus]) {
+  if (!MODES_BY_STATUS[status]) {
     return BLOCK_REASON_BY_STATUS[status] ?? "void";
   }
   return creditable > 0 ? null : "fully_credited";

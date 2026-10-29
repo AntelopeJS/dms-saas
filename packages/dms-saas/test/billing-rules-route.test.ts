@@ -17,40 +17,47 @@ import { planRow } from "./helpers/plan-row";
 import { insertPlan } from "./helpers/localized-plans";
 import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 import { useSuiteStripe } from "./helpers/stripe";
+import { httpRefusal } from "./helpers/refusal";
+import {
+  type FormFieldSerialized,
+  isFieldGroupSerialized,
+} from "@antelopejs/interface-dms/base";
 
 useMongoDatabase("billing-rules-route");
 const stripe = useSuiteStripe();
 
-const ADMIN = {} as User;
+const ADMIN = fromPartial<User>({});
 const TAX_CODE = "txcd_10000000";
 /** How long a reconciliation that must not start is given to show itself. */
 const NO_RECONCILIATION_WAIT_MS = 100;
 
 function syncedPlan(taxCode: string, id = "pro"): Plan {
-  return planRow({
-    _id: id,
-    name: "Pro",
-    description: "",
-    price: 29,
-    currency: "eur",
-    interval: "month",
-    billingMode: "flat",
-    isActive: true,
-    isDeleted: false,
-    paymentProviderRefs: {
-      stripeProductId: `prod_${id}`,
-      stripePriceId: `price_${id}`,
-      stripeSyncedTerms: {
-        product: { name: "Pro", description: "", taxCode },
-        price: {
-          unitAmount: 2_900,
-          currency: "eur",
-          interval: "month",
-          billingMode: "flat",
+  return planRow(
+    fromPartial<Partial<Plan>>({
+      _id: id,
+      name: "Pro",
+      description: "",
+      price: 29,
+      currency: "eur",
+      interval: "month",
+      billingMode: "flat",
+      isActive: true,
+      isDeleted: false,
+      paymentProviderRefs: {
+        stripeProductId: `prod_${id}`,
+        stripePriceId: `price_${id}`,
+        stripeSyncedTerms: {
+          product: { name: "Pro", description: "", taxCode },
+          price: {
+            unitAmount: 2_900,
+            currency: "eur",
+            interval: "month",
+            billingMode: "flat",
+          },
         },
       },
-    },
-  } as Partial<Plan>);
+    }),
+  );
 }
 
 let controller: SaasBillingSettingsController;
@@ -96,15 +103,6 @@ beforeEach(async () => {
   controller.legalDocumentsModel = GetModel(LegalDocumentsModel);
   controller.planModel = GetModel(PlanModel);
 });
-
-async function rejection(promise: Promise<unknown>): Promise<unknown> {
-  try {
-    await promise;
-  } catch (error) {
-    return error;
-  }
-  throw new Error("expected a rejection");
-}
 
 describe("billing rules & legal page", () => {
   it("loads the settings, the texts and the panels beside them", async () => {
@@ -165,7 +163,7 @@ describe("billing rules & legal page", () => {
     { moneyBackGuaranteeMode: "half" },
     { stripeTaxCode: "vat" },
   ])("refuses %o", async (body) => {
-    const error = await rejection(controller.update(ADMIN, body));
+    const error = await httpRefusal(controller.update(ADMIN, body));
 
     expect(error).toMatchObject({ status: 400 });
     expect(await settingsRow()).toBeUndefined();
@@ -215,7 +213,7 @@ describe("billing rules & legal page", () => {
         .spyOn(unconfigured.write.products, "update")
         .mockResolvedValue(fromPartial({}));
 
-      expect(await rejection(controller.resyncPlans(ADMIN))).toMatchObject({
+      expect(await httpRefusal(controller.resyncPlans(ADMIN))).toMatchObject({
         status: 409,
       });
       expect(update).not.toHaveBeenCalled();
@@ -224,20 +222,16 @@ describe("billing rules & legal page", () => {
 });
 
 describe("billing rules page module defaults", () => {
-  interface SerializedField {
-    id: string;
-    defaultValue?: unknown;
-    offersDefault?: boolean;
-  }
-
   it("offers, on each rule, the value a fresh platform's route answers", async () => {
     const { SaasSettingsController } =
       await import("../src/pages/platform/settings");
     const { options } = await SaasSettingsController.form.serialize();
-    const fields = (options as { fields: SerializedField[] }).fields;
     const offered = Object.fromEntries(
-      fields
-        .filter((field) => field.offersDefault)
+      (options?.fields ?? [])
+        .filter(
+          (field): field is FormFieldSerialized =>
+            !isFieldGroupSerialized(field) && !!field.offersDefault,
+        )
         .map((field) => [field.id, field.defaultValue]),
     );
     const fresh = await controller.get(ADMIN);

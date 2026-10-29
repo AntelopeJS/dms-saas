@@ -252,7 +252,7 @@ describe("complete segment generations on Mongo", () => {
     triggerEvent(row, "insert");
     const [id] = await model.table.insert(row).run();
     const segment = (await model.get(id))!;
-    expect(typeof segment.revision).toBe("string");
+    expect(segment.revision).toBeTypeOf("string");
     await GetModel(UserSegmentModel).replaceForSegment(segment, ["a"], CUTOFF);
     expect((await model.get(id))?.estimatedCount).toBe(1);
   });

@@ -41,6 +41,7 @@ import {
 import { insertPlan } from "./helpers/plans";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 import { seatMembers } from "./helpers/workspaces";
+import { httpRefusal } from "./helpers/refusal";
 
 useMongoDatabase("workspace-operator-guards");
 const stripe = useSuiteStripe();
@@ -52,21 +53,21 @@ const WORKSPACE_NAME = "Northwind Traders";
 let OPERATION_ID = "";
 const BILLED_PLAN_ID = "plan_business";
 
-const SEAT_PLAN = {
+const SEAT_PLAN = fromPartial<Plan>({
   _id: "plan_business",
   price: 49,
   currency: "eur",
   interval: "month",
   billingMode: "seat",
   maxMembers: 25,
-} as Plan;
+});
 
 function view(
   overrides: Partial<WorkspaceOperatorView> = {},
 ): WorkspaceOperatorView {
-  return {
+  return fromPartial<WorkspaceOperatorView>({
     plan: SEAT_PLAN,
-    subscription: { isComplimentary: false } as TenantSubscription,
+    subscription: fromPartial<TenantSubscription>({ isComplimentary: false }),
     seats: {
       members: 22,
       pendingInvites: 1,
@@ -74,14 +75,7 @@ function view(
       platformSupport: [],
     },
     ...overrides,
-  } as WorkspaceOperatorView;
-}
-
-async function rejection(promise: Promise<unknown>): Promise<unknown> {
-  return promise.then(
-    () => null,
-    (error: unknown) => error,
-  );
+  });
 }
 
 function operatorController(): SaasWorkspaceOperatorActionsController {
@@ -149,7 +143,11 @@ describe("Stripe credit ceiling", () => {
     expect(balanceCreditCeilingMinor(view({ plan: null }))).toBe(0);
     expect(
       balanceCreditCeilingMinor(
-        view({ subscription: { isComplimentary: true } as TenantSubscription }),
+        view({
+          subscription: fromPartial<TenantSubscription>({
+            isComplimentary: true,
+          }),
+        }),
       ),
     ).toBe(0);
   });
@@ -178,7 +176,7 @@ describe("Stripe credit ceiling", () => {
     await seedBilledWorkspace();
     const credit = vi.spyOn(stripe.write.customers, "createBalanceTransaction");
 
-    const error = await rejection(
+    const error = await httpRefusal(
       operatorController().grantCredit(OPERATOR, TENANT_ID, {
         operationId: OPERATION_ID,
         amountCents: 10_000_000,
@@ -210,7 +208,7 @@ describe("typed confirmation of a suspension", () => {
 
   it("refuses a suspension whose typed name does not match the workspace", async () => {
     const pause = stubSuspensionStripe();
-    const error = await rejection(
+    const error = await httpRefusal(
       operatorController().suspend(OPERATOR, TENANT_ID, {
         operationId: OPERATION_ID,
         confirmName: "Northwind",
@@ -259,12 +257,12 @@ describe("typed confirmation of a suspension", () => {
 });
 
 describe("first payment of a workspace its owner pays", () => {
-  const pending = {
+  const pending = fromPartial<TenantSubscription>({
     status: "pending_payment",
     stripeSubscriptionId: null,
     isComplimentary: false,
     deletionStartedAt: null,
-  } as TenantSubscription;
+  });
 
   it("lets the owner of a workspace waiting for its first payment reach checkout", () => {
     expect(awaitsFirstPayment(pending)).toBe(true);

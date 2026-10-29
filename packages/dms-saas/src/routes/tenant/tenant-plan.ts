@@ -52,6 +52,7 @@ import {
 } from "../../workspaces/complimentary";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
@@ -101,6 +102,8 @@ import {
 } from "./tenant-plan-checkout-recovery";
 import { resubscribeOnFreePlan } from "./tenant-plan-resubscription";
 import { ANY_PLAN_AUDIENCE, isPlanOfferedTo } from "../../plans/plan-audience";
+import { isNumber, isString } from "../../utils/primitive-guards";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const PRORATION_DATE_MAX_AGE_SECONDS = 3600;
 const MS_PER_SECOND = 1000;
@@ -110,15 +113,15 @@ const MS_PER_SECOND = 1000;
  * recent: an old one would bill a difference that no longer matches.
  */
 export function acceptedProrationDate(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
+  if (!isNumber(value) || !Number.isInteger(value)) return undefined;
   const ageSeconds = Date.now() / MS_PER_SECOND - value;
   const isRecent =
     ageSeconds >= 0 && ageSeconds <= PRORATION_DATE_MAX_AGE_SECONDS;
   return isRecent ? value : undefined;
 }
 
-function asQueryString(value: unknown): string | null {
-  return typeof value === "string" && value ? value : null;
+function asQueryString(value: QueryParameterValue): string | null {
+  return isString(value) && value ? value : null;
 }
 
 /** Who the comparison is read for: the trial a plan offers depends on it. */
@@ -246,7 +249,7 @@ export class SaasTenantPlanController extends Controller(
     tenantSubscriptionModel: TenantSubscriptionModel,
     @TenantScopedModel(TenantBillingInfoModel)
     tenantBillingInfoModel: TenantBillingInfoModel,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<CurrentPlanResult> {
     const tenantId = getRequestTenantId(ctx);
     const tenant = await this.tenantModel.get(tenantId);
@@ -335,7 +338,8 @@ export class SaasTenantPlanController extends Controller(
   @Delete("/checkout")
   async cancelCheckout(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
-    @Parameter(CHECKOUT_OPERATION_PARAM, "query") operationId: unknown,
+    @Parameter(CHECKOUT_OPERATION_PARAM, "query")
+    operationId: QueryParameterValue,
     @Context() ctx: RequestContext,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
@@ -345,7 +349,7 @@ export class SaasTenantPlanController extends Controller(
       cancelPendingCheckout(
         await tenantSubscriptionModel.findOne(),
         tenantSubscriptionModel,
-        typeof operationId === "string" && operationId ? operationId : null,
+        isString(operationId) && operationId ? operationId : null,
       ),
     );
   }
@@ -359,8 +363,8 @@ export class SaasTenantPlanController extends Controller(
   @Get("/preview")
   async previewChange(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
-    @Parameter("planId", "query") planId: unknown,
-    @Parameter("country", "query") country: unknown,
+    @Parameter("planId", "query") planId: QueryParameterValue,
+    @Parameter("country", "query") country: QueryParameterValue,
     @Context() ctx: RequestContext,
     @TenantScopedModel(TenantBillingInfoModel)
     tenantBillingInfoModel: TenantBillingInfoModel,

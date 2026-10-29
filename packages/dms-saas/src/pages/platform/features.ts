@@ -2,7 +2,7 @@ import { PageController, RegisterPage } from "@antelopejs/interface-dms/page";
 import { TableView } from "@antelopejs/interface-dms/base";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { featuresDataAPI } from "../../data-api";
-import { FEATURE_VALUE_TYPES } from "../../db";
+import { FEATURE_VALUE_TYPES, type FeatureValueType } from "../../db";
 import {
   assertFeaturesUnused,
   assertValueTypeKept,
@@ -16,7 +16,7 @@ const PLAN_DIALOGS_ENDPOINT = "/api/saas/plan-dialogs";
 const FEATURES_ORDER = 10;
 const PAGE_SIZE = 50;
 
-const VALUE_TYPE_ICONS: Record<string, string> = {
+const VALUE_TYPE_ICONS: Record<FeatureValueType, string> = {
   boolean: "i-ph-toggle-right",
   number: "i-ph-hash",
   string: "i-ph-text-aa",

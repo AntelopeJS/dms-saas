@@ -55,8 +55,11 @@ import {
 import { isPlanOpenToWorkspace } from "../../plans/plan-audience";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
+import { isString } from "../../utils/primitive-guards";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -255,10 +258,10 @@ export class SaasWorkspacesAdminController extends Controller(
   @Get("/owner-lookup")
   async lookUpOwnerEmail(
     @AuthOwnerOnly() _user: User,
-    @Parameter("email", "query") email: unknown,
+    @Parameter("email", "query") email: QueryParameterValue,
   ): Promise<OwnerLookup> {
     assert(
-      typeof email === "string" && email.trim(),
+      isString(email) && email.trim(),
       HTTP_BAD_REQUEST,
       "saas.errors.workspace_create.owner_email",
     );
@@ -284,7 +287,7 @@ export class SaasWorkspacesAdminController extends Controller(
   async getComplimentaryImpact(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<ComplimentaryImpact> {
     return loadComplimentaryImpact(tenantId, requestLocale(language));
   }
@@ -300,7 +303,7 @@ export class SaasWorkspacesAdminController extends Controller(
     @JSONBody() body: GrantFreeAccessBody,
   ) {
     await this.assertTenantExists(tenantId);
-    const planId = typeof body.planId === "string" ? body.planId : "";
+    const planId = isString(body.planId) ? body.planId : "";
     const plan = await assertPlanIsAvailableForTenant(
       planId ? await this.planModel.get(planId) : undefined,
       tenantId,

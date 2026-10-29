@@ -57,13 +57,13 @@ const INVITE_UNAVAILABLE = {
   reason: "$saas.plans.seat_limit.invite_unavailable",
 };
 const STRIPE_SUBSCRIPTION_ID = "sub_seat_billed";
-const operator = {
+const operator = fromPartial<User>({
   _id: randomUUID(),
   email: "operator@example.test",
   name: "Olivia Operator",
   owner: true,
   language: "en",
-} as User;
+});
 
 beforeAll(() => {
   ImplementInterface(planChangesInterface, planChangesImplementation);

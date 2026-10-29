@@ -14,6 +14,7 @@ import type {
   OperatorCommandResult,
   WorkspaceOperatorAction,
 } from "./types";
+import { isBoolean, isNumber, isString } from "../utils/primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
@@ -62,15 +63,17 @@ interface CanonicalRecord {
 function canonicalize(value: unknown): CanonicalValue {
   if (
     value === null ||
-    ["boolean", "number", "string"].includes(typeof value)
+    isBoolean(value) ||
+    isNumber(value) ||
+    isString(value)
   ) {
-    return value as null | boolean | number | string;
+    return value;
   }
   if (Array.isArray(value)) return value.map(canonicalize);
   const entries = Object.entries(value as Record<string, unknown>)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, entry]) => [key, canonicalize(entry)] as const);
-  return Object.fromEntries(entries) as CanonicalRecord;
+  return Object.fromEntries(entries);
 }
 
 export function operatorActionFingerprint(
@@ -144,7 +147,7 @@ export async function ensureOperatorActionIntent(
 function errorCodeOf(error: unknown): string {
   if (!(error instanceof HTTPResult)) return GENERIC_FAILURE_CODE;
   const body = error.getBody();
-  return typeof body === "string" && body.startsWith("saas.errors.")
+  return isString(body) && body.startsWith("saas.errors.")
     ? body
     : GENERIC_FAILURE_CODE;
 }

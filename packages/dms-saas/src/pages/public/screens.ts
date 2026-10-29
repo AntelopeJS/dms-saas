@@ -1,11 +1,14 @@
 import type { DmsSaasConfig, PublicScreenId } from "../../types";
 
-type PublicScreenLoader = () => Promise<unknown>;
+const PUBLIC_SCREEN_IDS = [
+  "register",
+  "pricing",
+] as const satisfies readonly PublicScreenId[];
 
-const PUBLIC_SCREEN_LOADERS: Record<PublicScreenId, PublicScreenLoader> = {
+const PUBLIC_SCREEN_LOADERS = {
   register: () => import("./register"),
   pricing: () => import("./pricing"),
-};
+} satisfies Record<PublicScreenId, () => Promise<object>>;
 
 /**
  * Public screens the running configuration wants dms-saas to serve.
@@ -20,8 +23,7 @@ const PUBLIC_SCREEN_LOADERS: Record<PublicScreenId, PublicScreenLoader> = {
 export function resolvePublicScreensToRegister(
   config: DmsSaasConfig,
 ): PublicScreenId[] {
-  const ids = Object.keys(PUBLIC_SCREEN_LOADERS) as PublicScreenId[];
-  return ids.filter((id) => config.publicScreens?.[id] !== false);
+  return PUBLIC_SCREEN_IDS.filter((id) => config.publicScreens?.[id] !== false);
 }
 
 /**

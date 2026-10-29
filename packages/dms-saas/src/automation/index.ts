@@ -69,7 +69,9 @@ interface AutomationEventPayloads {
 
 export type AutomationEventName = keyof AutomationEventPayloads;
 
-type AutomationEventListener = (payload: unknown) => void | Promise<void>;
+type AutomationEventListener = (
+  payload: AutomationEventPayloads[AutomationEventName],
+) => void | Promise<void>;
 
 const eventListeners = new Map<
   AutomationEventName,

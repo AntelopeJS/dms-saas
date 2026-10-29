@@ -74,12 +74,12 @@ interface DocumentRowInstance {
   table: DocumentRow;
 }
 
-function documentRowOf(self: unknown): DocumentRow {
-  return (self as DocumentRowInstance).table;
+function documentRowOf(self: DocumentRowInstance): DocumentRow {
+  return self.table;
 }
 
-function paymentStatusRowOf(self: unknown): PaymentStatusRow {
-  return (self as PaymentStatusRowInstance).table;
+function paymentStatusRowOf(self: PaymentStatusRowInstance): PaymentStatusRow {
+  return self.table;
 }
 
 /**

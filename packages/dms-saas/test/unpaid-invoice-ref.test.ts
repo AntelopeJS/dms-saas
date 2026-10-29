@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import { toUnpaidInvoiceRef } from "../src/billing-state/recovery";
 import type { Invoice } from "../src/db";
@@ -5,14 +6,14 @@ import type { Invoice } from "../src/db";
 const HOSTED_URL = "https://invoice.stripe.com/i/test";
 
 function invoice(overrides: Partial<Invoice> = {}): Invoice {
-  return {
+  return fromPartial<Invoice>({
     number: "INV-001",
     amount: 19602,
     total: 19602,
     currency: "eur",
     hostedInvoiceUrl: HOSTED_URL,
     ...overrides,
-  } as Invoice;
+  });
 }
 
 describe("toUnpaidInvoiceRef", () => {
@@ -27,10 +28,9 @@ describe("toUnpaidInvoiceRef", () => {
 
   it("falls back to the stored amount when the total was never mirrored", () => {
     expect(toUnpaidInvoiceRef(invoice({ total: 0 })).amount).toBe(19602);
-    expect(
-      toUnpaidInvoiceRef(invoice({ total: undefined as unknown as number }))
-        .amount,
-    ).toBe(19602);
+    expect(toUnpaidInvoiceRef(invoice({ total: undefined })).amount).toBe(
+      19602,
+    );
   });
 
   it("prefers the mirrored total over the initial amount", () => {

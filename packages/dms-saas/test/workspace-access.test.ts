@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
@@ -40,7 +41,7 @@ const RULES = { autoSuspendDelayDays: 14, dataRetentionDays: 30 };
 function subscription(
   overrides: Partial<TenantSubscription>,
 ): TenantSubscription {
-  return {
+  return fromPartial<TenantSubscription>({
     _id: "sub",
     planId: "plan-business",
     status: "suspended",
@@ -53,17 +54,17 @@ function subscription(
     createdAt: new Date(NOW.getTime() - 100 * DAY),
     updatedAt: new Date(NOW.getTime() - 5 * DAY),
     ...overrides,
-  } as TenantSubscription;
+  });
 }
 
-const INVOICE = {
+const INVOICE = fromPartial<Invoice>({
   number: "INV-2026-0911",
   amount: 49000,
   total: 49000,
   currency: "eur",
   hostedInvoiceUrl: "https://invoice.stripe.com/i/1",
   issuedAt: new Date(NOW.getTime() - 30 * DAY),
-} as Invoice;
+});
 
 let OWNER: User;
 let MEMBER: User;
@@ -145,10 +146,12 @@ describe("resolveAccessBlockReason", () => {
 describe("toAccessTimelineRules", () => {
   it("drops the suspension date when automatic suspension is off", () => {
     expect(
-      toAccessTimelineRules({
-        autoSuspendEnabled: false,
-        dataRetentionDaysAfterCancellation: 60,
-      } as BillingSettings),
+      toAccessTimelineRules(
+        fromPartial<BillingSettings>({
+          autoSuspendEnabled: false,
+          dataRetentionDaysAfterCancellation: 60,
+        }),
+      ),
     ).toEqual({ autoSuspendDelayDays: null, dataRetentionDays: 60 });
   });
 });
@@ -222,17 +225,16 @@ describe("resolveDataDeletionAt", () => {
 
 describe("selectOtherWorkspaces", () => {
   it("leaves out the blocked workspace and the cancelled ones", () => {
+    const workspace = (
+      _id: string,
+      status: Parameters<typeof selectOtherWorkspaces>[0][number]["status"],
+    ) => ({ _id, status, name: _id, planName: null, isTenantOwner: false });
     const rows = [
-      { _id: CURRENT_TENANT, status: "suspended" },
-      { _id: "a", status: "active" },
-      { _id: "b", status: "cancelled" },
-      { _id: "c", status: null },
-    ].map((row) => ({
-      ...row,
-      name: row._id,
-      planName: null,
-      isTenantOwner: false,
-    })) as Parameters<typeof selectOtherWorkspaces>[0];
+      workspace(CURRENT_TENANT, "suspended"),
+      workspace("a", "active"),
+      workspace("b", "cancelled"),
+      workspace("c", null),
+    ];
 
     expect(
       selectOtherWorkspaces(rows, CURRENT_TENANT).map((row) => row._id),

@@ -1,6 +1,7 @@
 import { GetMetadata } from "@antelopejs/interface-core";
 import { TableViewMeta } from "@antelopejs/interface-dms/base";
-import { describe, expect, it } from "vitest";
+import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
+import { assert, describe, expect, it } from "vitest";
 import { featuresDataAPI } from "../src/data-api/platformOwner/features";
 
 describe("features table", () => {
@@ -12,9 +13,8 @@ describe("features table", () => {
         tones: { boolean: "success", number: "primary", string: "warning" },
       },
     });
-    const type = columns.valueType?.type as unknown as {
-      options: { items: { value: string; icon?: string }[] };
-    };
+    const type = columns.valueType?.type;
+    assert(type instanceof DefaultDataTypes.SelectType);
     expect(type.options.items.every((item) => item.icon)).toBe(true);
   });
 

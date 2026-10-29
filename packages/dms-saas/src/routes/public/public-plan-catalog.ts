@@ -15,6 +15,8 @@ import {
   type TenantPlanFeature,
 } from "../../plans";
 import { loadBillingSettings } from "../../operator-billing/billing-settings-store";
+import { isString } from "../../utils/primitive-guards";
+import type { TenantPlanView } from "@antelopejs/interface-dms-saas/plans";
 
 /**
  * A plan as a visitor reads it on the pricing and sign-up screens: what it
@@ -41,7 +43,7 @@ export interface PublicPlan {
   /** The plan this one extends, for "Everything in Free, plus". */
   inheritsFromPlanId: string | null;
   /** Resolved through inheritance, keyed by feature id. */
-  featureValues: Record<string, unknown>;
+  featureValues: TenantPlanView["featureValues"];
 }
 
 /** Plans and the feature rows their values are read against. */
@@ -76,7 +78,7 @@ export interface PublicBillingRules {
  */
 function toPublicPlan(
   catalogued: Plan,
-  featureValues: Record<string, unknown>,
+  featureValues: TenantPlanView["featureValues"],
   locale: string,
 ): PublicPlan {
   const plan = localizePlan(catalogued, locale);
@@ -130,7 +132,7 @@ export function findPlanByReference(
   plans: Plan[],
   reference: unknown,
 ): Plan | undefined {
-  if (typeof reference !== "string" || reference.length === 0) return;
+  if (!isString(reference) || reference.length === 0) return;
   return (
     plans.find((plan) => plan.slug === reference) ??
     plans.find((plan) => plan._id === reference)

@@ -9,11 +9,14 @@ import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
 import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
 import { useSuiteStripe } from "./helpers/stripe";
+import { httpRefusal } from "./helpers/refusal";
 
 useMongoDatabase("plan-write-validation");
 const stripe = useSuiteStripe();
 
-type AsyncOperation = () => Promise<unknown>;
+type PlanWrite = () => ReturnType<
+  SaasPlansApiController["create"] | SaasPlansApiController["update"]
+>;
 
 const OWNER = fromPartial<User>({});
 const PLAN_ID = "plan-free";
@@ -42,8 +45,8 @@ function stubStripeCatalogue() {
     .mockResolvedValue(fromPartial({ id: "price_hobby" }));
 }
 
-async function expectInvalidInterval(operation: AsyncOperation): Promise<void> {
-  const error = await operation().catch((caught: unknown) => caught);
+async function expectInvalidInterval(operation: PlanWrite): Promise<void> {
+  const error = await httpRefusal(operation());
   expect(error).toBeInstanceOf(HTTPResult);
   expect(error).toMatchObject({
     status: 400,
@@ -112,12 +115,15 @@ describe("plan writes and Stripe", () => {
 
     const plans = await controller();
 
-    const { _id: planId } = await plans.create(OWNER, {
-      name: { en: "Hobby" },
-      price: 5,
-      currency: "eur",
-      interval: "month",
-    } as never);
+    const { _id: planId } = await plans.create(
+      OWNER,
+      fromPartial<Parameters<SaasPlansApiController["create"]>[1]>({
+        name: { en: "Hobby" },
+        price: 5,
+        currency: "eur",
+        interval: "month",
+      }),
+    );
 
     expect(createPrice).toHaveBeenCalledOnce();
     expect(createPrice.mock.calls[0]?.[0]).toMatchObject({

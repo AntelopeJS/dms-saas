@@ -17,6 +17,7 @@ import { insertPlan } from "./helpers/localized-plans";
 import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
 import { useSuiteStripe } from "./helpers/stripe";
+import { httpRefusal } from "./helpers/refusal";
 
 useMongoDatabase("plan-migration-detail-routes");
 const stripe = useSuiteStripe();
@@ -77,7 +78,7 @@ const STARTED = new Date("2026-09-22T14:30:00Z");
 const FINISHED = new Date("2026-09-22T14:40:00Z");
 
 function migration(overrides: Partial<PlanMigration> = {}): PlanMigration {
-  return {
+  return fromPartial<PlanMigration>({
     _id: "mig",
     fromPlanId: "starter",
     toPlanId: "team",
@@ -124,7 +125,7 @@ function migration(overrides: Partial<PlanMigration> = {}): PlanMigration {
       changed: [{ key: "members.max", oldValue: 3, newValue: -1 }],
     },
     ...overrides,
-  } as unknown as PlanMigration;
+  });
 }
 
 /**
@@ -145,13 +146,6 @@ async function controller(
   return instance;
 }
 
-interface ButtonAction {
-  label: string;
-  to?: string;
-  target?: { type: string; url: string };
-  confirm?: { from: string };
-}
-
 beforeEach(() => {
   billedPriceId = "price_team";
   vi.spyOn(stripe.write.subscriptions, "retrieve").mockImplementation(
@@ -163,7 +157,7 @@ beforeEach(() => {
 describe("the migration header", () => {
   it("offers no retry nor close while a workspace is uncertain, and names it", async () => {
     const header = await (await controller(migration())).header(OWNER, "mig");
-    const actions = header.actions as ButtonAction[];
+    const actions = header.actions ?? [];
 
     expect(header.tone).toBe("error");
     expect(header.title).toEqual({
@@ -175,22 +169,23 @@ describe("the migration header", () => {
       "$saas.catalog.migrations.detail.back",
       "$saas.catalog.migrations.detail.export",
     ]);
-    expect(actions[1]?.target).toMatchObject({
-      type: "exportJob",
-      url: `${API}/workspaces-export/start`,
+    expect(actions[1]).toMatchObject({
+      target: { type: "exportJob", url: `${API}/workspaces-export/start` },
     });
   });
 
   it("offers the retry and the close, each asking through its dialog route, once nothing is uncertain", async () => {
-    const settled = migration({
-      tenantOutcomes: migration().tenantOutcomes.filter(
-        (row) => row.status !== "reconciliation_required",
-      ),
-      snapshot: { tenantIds: ["hooli", "pied"], target: {} },
-      status: "failed",
-    } as Partial<PlanMigration>);
+    const settled = migration(
+      fromPartial<Partial<PlanMigration>>({
+        tenantOutcomes: migration().tenantOutcomes.filter(
+          (row) => row.status !== "reconciliation_required",
+        ),
+        snapshot: { tenantIds: ["hooli", "pied"], target: {} },
+        status: "failed",
+      }),
+    );
     const header = await (await controller(settled)).header(OWNER, "mig");
-    const actions = header.actions as ButtonAction[];
+    const actions = header.actions ?? [];
 
     expect(actions.slice(2)).toMatchObject([
       {
@@ -205,18 +200,22 @@ describe("the migration header", () => {
   });
 
   it("only retries a partially failed migration, which stays closed", async () => {
-    const partial = migration({
-      status: "partially_failed",
-      tenantOutcomes: migration().tenantOutcomes.filter(
-        (row) => row.status !== "reconciliation_required",
-      ),
-      snapshot: { tenantIds: ["hooli", "pied"], target: {} },
-    } as Partial<PlanMigration>);
-    const actions = (await (await controller(partial)).header(OWNER, "mig"))
-      .actions as ButtonAction[];
+    const partial = migration(
+      fromPartial<Partial<PlanMigration>>({
+        status: "partially_failed",
+        tenantOutcomes: migration().tenantOutcomes.filter(
+          (row) => row.status !== "reconciliation_required",
+        ),
+        snapshot: { tenantIds: ["hooli", "pied"], target: {} },
+      }),
+    );
+    const actions =
+      (await (await controller(partial)).header(OWNER, "mig")).actions ?? [];
 
-    expect(actions.map((action) => action.target?.url).slice(2)).toEqual([
-      `${API}/retry`,
+    expect(actions.slice(2)).toEqual([
+      expect.objectContaining({
+        target: expect.objectContaining({ url: `${API}/retry` }),
+      }),
     ]);
   });
 
@@ -286,11 +285,13 @@ describe("the migration blocks", () => {
   });
 
   it("journals the start, the end and the close, newest first", async () => {
-    const reconciled = migration({
-      reconciledAt: new Date("2026-09-23T09:00:00Z"),
-      reconciledBy: "hugo",
-      reconciliationNote: "Customer asked to stay",
-    } as Partial<PlanMigration>);
+    const reconciled = migration(
+      fromPartial<Partial<PlanMigration>>({
+        reconciledAt: new Date("2026-09-23T09:00:00Z"),
+        reconciledBy: "hugo",
+        reconciliationNote: "Customer asked to stay",
+      }),
+    );
     const { items } = await (
       await controller(reconciled)
     ).journal(OWNER, "mig");
@@ -325,11 +326,14 @@ describe("the migration dialogs", () => {
   });
 
   it("refuses to word the resolution of a workspace that is not uncertain", async () => {
-    const error = await (
-      await controller(migration())
-    )
-      .resolveConfirmation(OWNER, "mig", "pied", "moved")
-      .catch((caught: unknown) => caught);
+    const error = await httpRefusal(
+      (await controller(migration())).resolveConfirmation(
+        OWNER,
+        "mig",
+        "pied",
+        "moved",
+      ),
+    );
     expect(error).toBeInstanceOf(HTTPResult);
   });
 
@@ -390,11 +394,7 @@ describe("the migration detail page", () => {
       realtimeTopic: "saas:plan-migrations",
     });
     expect(totals.componentName).toBe("dms-stat-group-block");
-    const custom = (
-      table.options as {
-        rowActions?: { custom?: { label: string; confirm?: unknown }[] };
-      }
-    ).rowActions?.custom;
+    const custom = table.options?.rowActions?.custom;
     expect(custom?.map((action) => action.confirm)).toEqual([
       undefined,
       {

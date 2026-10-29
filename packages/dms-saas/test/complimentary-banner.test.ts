@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import type { TenantSubscription } from "../src/db";
 import {
@@ -13,15 +14,14 @@ const ENDS_AT = new Date("2026-10-04T00:00:00.000Z");
 function subscription(
   overrides: Partial<TenantSubscription> = {},
 ): TenantSubscription {
-  return {
+  return fromPartial<TenantSubscription>({
     _id: "sub-1",
-    tenantId: "tenant-1",
     planId: "pro",
     status: "active",
     isComplimentary: true,
     freeUntil: null,
     ...overrides,
-  } as TenantSubscription;
+  });
 }
 
 function inputs(

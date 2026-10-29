@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { stripeSecondsToDate } from "../utils/time";
 import { getStripeClient } from "./client";
 import { readSubscriptionPeriodEnd } from "./payload-shapes";
+import { isString } from "../utils/primitive-guards";
 
 const RELEASE_END_BEHAVIOR = "release" as const;
 
@@ -14,7 +15,7 @@ export interface ScheduleDowngradeInput {
 function toPriceId(
   price: string | Stripe.Price | Stripe.DeletedPrice,
 ): string | undefined {
-  return typeof price === "string" ? price : price.id;
+  return isString(price) ? price : price.id;
 }
 
 function toPhaseItemParam(
@@ -133,7 +134,7 @@ export async function setSubscriptionCancelAtPeriodEnd(
 function toScheduleId(
   schedule: string | Stripe.SubscriptionSchedule | null,
 ): string | null {
-  if (typeof schedule === "string") return schedule;
+  if (isString(schedule)) return schedule;
   return schedule?.id ?? null;
 }
 

@@ -26,14 +26,17 @@ export interface BillingIdentity {
   address: CustomerBillingAddress;
 }
 
-export type BillingIdentityField =
-  | "customerType"
-  | "companyName"
-  | "country"
-  | "line1"
-  | "postalCode"
-  | "city"
-  | "billingEmail";
+const BILLING_IDENTITY_FIELDS = [
+  "customerType",
+  "companyName",
+  "country",
+  "line1",
+  "postalCode",
+  "city",
+  "billingEmail",
+] as const;
+
+export type BillingIdentityField = (typeof BILLING_IDENTITY_FIELDS)[number];
 
 type FieldCheck = (identity: BillingIdentityInput) => boolean;
 
@@ -70,7 +73,7 @@ const FIELD_CHECKS: Record<BillingIdentityField, FieldCheck> = {
 export function findMissingBillingIdentityFields(
   identity: BillingIdentityInput,
 ): BillingIdentityField[] {
-  return (Object.keys(FIELD_CHECKS) as BillingIdentityField[]).filter(
+  return BILLING_IDENTITY_FIELDS.filter(
     (field) => !FIELD_CHECKS[field](identity),
   );
 }

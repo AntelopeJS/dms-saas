@@ -18,6 +18,7 @@ import {
 import { parseFutureDate } from "../utils/parse-future-date";
 import { sendOwnerInvitationEmailInBackground } from "./owner-invitation-email";
 import { createDefaultMemberRole } from "./default-member-role";
+import { isString } from "../utils/primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 
@@ -93,9 +94,7 @@ const SUBSCRIPTION_TERMS: Record<
 };
 
 function asNonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : null;
+  return isString(value) && value.trim().length > 0 ? value.trim() : null;
 }
 
 function asAccessModel(value: unknown): WorkspaceAccessModel | null {
