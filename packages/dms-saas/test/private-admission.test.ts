@@ -2,11 +2,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   TenantModel,
   TenantMemberModel,
@@ -21,43 +17,20 @@ import {
   SessionModel,
   type User,
 } from "@antelopejs/interface-dms/auth/db";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import * as permissions from "@antelopejs/interface-dms/permissions";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setRuntimeConfig, assertAdmissionOpen } from "../src/config";
 import { TenantSubscriptionModel, PlanModel } from "../src/db";
 import { SaasRegisterApiController } from "../src/routes/public/register";
 import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
+import { implementWithDms } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 
-const stripe = vi.hoisted(() => ({ called: vi.fn() }));
-// The DMS permission registry is not wired here: the role is created against
-// it in production, and its own test covers what it holds.
-vi.mock("../src/workspaces/default-member-role", () => ({
-  createDefaultMemberRole: async () => "member-role",
-}));
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => {
-    stripe.called();
-    throw new Error("No Stripe call permitted in complimentary admission");
-  },
-}));
-vi.mock("../src/billing-state", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/billing-state")>()),
-  recomputeTenantBillingState: async () => undefined,
-}));
-vi.mock("../src/data-api", async () => ({
-  ...(await import("../src/data-api/platformOwner/plans")),
-  ...(await import("../src/data-api/platformOwner/workspaces")),
-}));
+useMongoDatabase("private-admission");
+const stripe = useSuiteStripe();
 
 const require = createRequire(import.meta.url);
 const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
@@ -86,15 +59,10 @@ const AUTH_CONFIG = {
     providers: { google: { clientId: "test", clientSecret: "test" } },
   },
 };
-const STRIPE_CONFIG = {
-  secretKey: "unused",
-  webhookSecret: "unused",
-  publishableKey: "unused",
-};
+const STRIPE_CONFIG = SUITE_STRIPE_KEYS;
 const CLOSED_ERROR = { status: 403, body: "saas.errors.registration_closed" };
-let mongodb: MongoMemoryReplSet;
 
-beforeAll(async () => {
+beforeAll(() => {
   // DMS answers isSaasMode() from the registrations it holds, so wire its
   // implementation in and declare SaaS mode the way construct() does.
   ImplementInterface(
@@ -111,21 +79,10 @@ beforeAll(async () => {
     ...implementation,
     sendAdminInviteEmail: async () => undefined,
   });
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongodb.getUri(), database: "private-admission" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-}, 60_000);
-
-afterAll(async () => {
-  await destroy();
-  await mongodb?.stop();
+  implementWithDms(permissions, "implementations/dms/permissions.js");
 });
+
 beforeEach(() => {
-  vi.clearAllMocks();
   setRuntimeConfig({ stripe: STRIPE_CONFIG, admissionMode: "invitation-only" });
 });
 
@@ -219,7 +176,7 @@ describe("deployment admission", () => {
         tenant_assignment_token: "invalid",
       }),
     ).rejects.toMatchObject(CLOSED_ERROR);
-    expect(stripe.called).not.toHaveBeenCalled();
+    expect(stripe.requests).toEqual([]);
   });
 
   it.each(["required", "optional", "none"] as const)(
@@ -241,7 +198,7 @@ describe("deployment admission", () => {
           name: "Visitor",
         }),
       ).rejects.toMatchObject(CLOSED_ERROR);
-      expect(stripe.called).not.toHaveBeenCalled();
+      expect(stripe.requests).toEqual([]);
     },
   );
 
@@ -397,7 +354,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
       body: "saas.errors.plan.complimentary_locked",
     });
     await assertOAuthInvitation(created.tenantId);
-    expect(stripe.called).not.toHaveBeenCalled();
+    expect(stripe.requests).toEqual([]);
   });
 });
 
@@ -441,7 +398,7 @@ describe("invitation sign-up never asks for a plan or a card", () => {
       expect(
         await GetModel(TenantSubscriptionModel, tenantId).findOne(),
       ).toBeUndefined();
-      expect(stripe.called).not.toHaveBeenCalled();
+      expect(stripe.requests).toEqual([]);
     },
   );
 });

@@ -1,23 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
-import { ImplementInterface } from "@antelopejs/interface-core";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { PlanChangePolicy } from "@antelopejs/interface-dms-saas/plan-changes";
 import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+  RegisterTenantLifecycleConsumer,
+  type TenantLifecycleConsumer,
+} from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
+import { workspaceSuspendedSubject } from "../src/notifications/subjects";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import {
   observeTenantLifecycle,
@@ -48,62 +39,39 @@ import {
   isGuardedPlanChangeBlocked,
   completeGuardedAbort,
 } from "../src/plan-changes/guarded-state";
+import { addTenantMember, createUser, implementWithDms } from "./helpers/dms";
+import { implementNotificationCore } from "./helpers/notification-core";
+import { useLifecycleConsumer } from "./helpers/lifecycle-consumer";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
+import { insertTenant } from "./helpers/workspaces";
 
-const effects = vi.hoisted(() => ({
-  retrieve: vi.fn(),
-  update: vi.fn(),
-  validate: vi.fn(),
-  lifecycle: vi.fn(),
-  notify: vi.fn(),
-}));
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => ({
-    subscriptions: { retrieve: effects.retrieve, update: effects.update },
-  }),
-}));
-vi.mock("../src/billing-state", () => ({
-  recomputeTenantBillingState: async () => undefined,
-}));
-vi.mock("../src/operator-actions/lifecycle-outbox", () => ({
-  dispatchWorkspaceLifecycle: effects.lifecycle,
-}));
-vi.mock("../src/notifications", () => ({
-  notifyTenantOwners: effects.notify,
-  workspaceSuspendedSubject: {},
-}));
+useMongoDatabase("guarded-free-downgrade");
+const stripe = useSuiteStripe();
+const core = implementNotificationCore();
+const lifecycle = useLifecycleConsumer("guarded.suite", [
+  "suspended",
+  "reactivation_requested",
+]);
+implementWithDms(tenantAccess, "implementations/dms/tenant-access.js");
+registerSubscriptionAccessGate();
+
+const validate = vi.fn<PlanChangePolicy["validatePlanChange"]>();
 
 beforeEach(() => {
-  vi.resetAllMocks();
-  effects.validate.mockResolvedValue([]);
+  validate.mockReset();
+  validate.mockResolvedValue([]);
   internal.RegisterPlanChangePolicy.register("cloud", {
     name: "cloud",
-    validatePlanChange: effects.validate,
+    validatePlanChange: validate,
   });
-});
-let mongo: MongoMemoryReplSet;
-beforeAll(async () => {
-  mongo = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongo.getUri(), database: "guarded-free-downgrade" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-  const require = createRequire(import.meta.url);
-  const dmsRoot = dirname(require.resolve("@antelopejs/dms/package.json"));
-  ImplementInterface(
-    tenantAccess,
-    require(join(dmsRoot, "dist/implementations/dms/tenant-access.js")),
-  );
-  registerSubscriptionAccessGate();
-}, 60_000);
-afterAll(async () => {
-  await destroy();
-  await mongo?.stop();
 });
 
 async function fixture(prepare = true) {
   const tenantId = randomUUID();
+  await insertTenant(tenantId);
+  const owner = await createUser();
+  await addTenantMember(tenantId, owner, true);
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const deadline = new Date(Math.floor(Date.now() / 1000) * 1000 + 60_000);
   await model.insert({
@@ -131,15 +99,21 @@ async function fixture(prepare = true) {
       incompatibilities: [],
     });
   let cancelled = false;
-  effects.retrieve.mockImplementation(async () => ({
-    status: "active",
-    cancel_at_period_end: cancelled,
-    items: { data: [{ current_period_end: deadline.getTime() / 1000 }] },
-  }));
-  effects.update.mockImplementation(async (_id, params) => {
-    cancelled = params.cancel_at_period_end;
-    return {};
-  });
+  const retrieve = vi
+    .spyOn(stripe.write.subscriptions, "retrieve")
+    .mockImplementation(async () =>
+      fromPartial({
+        status: "active",
+        cancel_at_period_end: cancelled,
+        items: { data: [{ current_period_end: deadline.getTime() / 1000 }] },
+      }),
+    );
+  const update = vi
+    .spyOn(stripe.write.subscriptions, "update")
+    .mockImplementation(async (_id, params) => {
+      cancelled = params?.cancel_at_period_end === true;
+      return fromPartial({});
+    });
   const [targetId] = await GetModel(PlanModel).insert({
     name: "Free",
     price: 0,
@@ -147,7 +121,16 @@ async function fixture(prepare = true) {
   });
   const targetPlan = await GetModel(PlanModel).get(targetId);
   if (!targetPlan) throw new Error("Missing plan");
-  return { model, read, deadline, tenantId, targetPlan };
+  return {
+    model,
+    read,
+    deadline,
+    tenantId,
+    ownerId: owner._id,
+    targetPlan,
+    retrieve,
+    update,
+  };
 }
 
 describe("durable downgrade admission", () => {
@@ -238,9 +221,9 @@ describe("durable downgrade admission", () => {
 
 describe("paid-to-Free orchestration with real inventory admission", () => {
   it("cannot emit Stripe after cancellation revokes a stalled validator", async () => {
-    const { tenantId, targetPlan, read } = await fixture(false);
+    const { tenantId, targetPlan, read, update } = await fixture(false);
     let finishValidation!: () => void;
-    effects.validate.mockImplementation(
+    validate.mockImplementation(
       () =>
         new Promise<[]>((resolve) => {
           finishValidation = () => resolve([]);
@@ -255,13 +238,13 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
     });
     finishValidation();
     await rejected;
-    expect(effects.update).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
     expect((await read()).guardedPlanChange).toBeNull();
     expect((await observeTenantLifecycle(tenantId)).barrierId).toBeNull();
   });
 
   it("drains a pre-admitted writer before validation and rejects before Stripe mutation", async () => {
-    const { tenantId, targetPlan, read } = await fixture(false);
+    const { tenantId, targetPlan, read, update } = await fixture(false);
     let finishWriter!: () => void;
     let writerEntered!: () => void;
     const entered = new Promise<void>((resolve) => {
@@ -276,7 +259,7 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
       inventoryCompatible = false;
     });
     await entered;
-    effects.validate.mockImplementation(async () =>
+    validate.mockImplementation(async () =>
       inventoryCompatible
         ? []
         : [{ code: "volume", message: "Too large for Free" }],
@@ -286,21 +269,21 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
     await vi.waitFor(async () =>
       expect((await observeTenantLifecycle(tenantId)).barrierId).not.toBeNull(),
     );
-    expect(effects.validate).not.toHaveBeenCalled();
+    expect(validate).not.toHaveBeenCalled();
     await expect(
       runTenantLifecycleOperation(tenantId, async () => undefined),
     ).rejects.toThrow();
     finishWriter();
     await writer;
     await rejected;
-    expect(effects.update).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
     expect((await read()).pendingPlanId).toBeNull();
     expect((await observeTenantLifecycle(tenantId)).barrierId).toBeNull();
   });
 
   it("does not hold inventory closed while Stripe is in flight or invert an ambiguous effect", async () => {
-    const { tenantId, targetPlan, read } = await fixture(false);
-    effects.update.mockImplementation(async () => {
+    const { tenantId, targetPlan, read, update } = await fixture(false);
+    update.mockImplementation(async () => {
       expect((await observeTenantLifecycle(tenantId)).barrierId).toBeNull();
       await runTenantLifecycleOperation(tenantId, async () => {
         expect(
@@ -315,12 +298,20 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
     await expect(cancelGuardedFreeChange(tenantId)).rejects.toThrow(
       "scheduled",
     );
-    expect(effects.update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(
+      "stripe-sub",
+      { cancel_at_period_end: true },
+      {
+        idempotencyKey: expect.stringContaining("free-downgrade:schedule:"),
+      },
+    );
     expect((await read()).guardedPlanChange?.phase).toBe("provider_pending");
   });
 
   it("retains paid pricing until the deadline and activates Free without a provider write", async () => {
-    const { tenantId, targetPlan, model, read } = await fixture(false);
+    const { tenantId, targetPlan, model, read, retrieve, update } =
+      await fixture(false);
     await scheduleGuardedFreeChange(tenantId, targetPlan);
     expect((await read()).planId).toBe("paid");
     const scheduled = await read();
@@ -331,9 +322,9 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
       },
     });
     expect((await isTenantSubscriptionBlocked(tenantId)).blocked).toBe(true);
-    effects.retrieve.mockResolvedValue({ status: "canceled" });
-    effects.update.mockClear();
-    effects.lifecycle.mockImplementation(async (message) => {
+    retrieve.mockResolvedValue(fromPartial({ status: "canceled" }));
+    update.mockClear();
+    lifecycle.mockImplementation(async (message) => {
       expect(message.transition).toBe("reactivation_requested");
       expect(await GetPlanChangeActivation(tenantId)).toEqual({
         planChangeOperationId: message.planChangeOperationId,
@@ -367,6 +358,7 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
       } finally {
         tenantAccess.internal.RegisterTenantAccessGate.unregister(laterGate);
       }
+      return { receiptId: message.operationId };
     });
     await reconcileGuardedFreeChange(tenantId);
     expect(await read()).toMatchObject({
@@ -375,14 +367,15 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
       guardedPlanChange: null,
       status: "active",
     });
-    expect(effects.lifecycle).toHaveBeenCalledTimes(1);
+    expect(lifecycle).toHaveBeenCalledTimes(1);
     expect(await GetPlanChangeActivation(tenantId)).toBeNull();
-    expect(effects.update).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
     expect((await isTenantSubscriptionBlocked(tenantId)).blocked).toBe(false);
   });
 
   it("preserves a payment suspension between the activation receipt and final CAS", async () => {
-    const { tenantId, targetPlan, model, read } = await fixture(false);
+    const { tenantId, targetPlan, model, read, retrieve } =
+      await fixture(false);
     await scheduleGuardedFreeChange(tenantId, targetPlan);
     const scheduled = await read();
     await model.update(scheduled._id, {
@@ -391,8 +384,8 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
         effectiveAt: new Date(0),
       },
     });
-    effects.retrieve.mockResolvedValue({ status: "canceled" });
-    effects.lifecycle.mockImplementation(async () => {
+    retrieve.mockResolvedValue(fromPartial({ status: "canceled" }));
+    lifecycle.mockImplementation(async (message) => {
       expect(await GetPlanChangeActivation(tenantId)).not.toBeNull();
       await updateSubscriptionStatus(tenantId, "suspended");
       expect(await GetPlanChangeActivation(tenantId)).toBeNull();
@@ -401,6 +394,7 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
           (denial) => denial.gateId,
         ),
       ).toEqual(["dms-saas.subscription-status", "dms-saas.plan-change"]);
+      return { receiptId: message.operationId };
     });
     await expect(reconcileGuardedFreeChange(tenantId)).rejects.toThrow(
       "requires reconciliation",
@@ -409,8 +403,21 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
       status: "suspended",
       guardedPlanChange: { phase: "activating" },
     });
-    await reconcileGuardedFreeChange(tenantId);
-    expect(effects.lifecycle).toHaveBeenCalledTimes(1);
+    const late = vi.fn<TenantLifecycleConsumer["consume"]>(async (message) => ({
+      receiptId: message.operationId,
+    }));
+    const registration = RegisterTenantLifecycleConsumer({
+      name: "guarded.late",
+      transitions: ["reactivation_requested"],
+      consume: late,
+    });
+    try {
+      await reconcileGuardedFreeChange(tenantId);
+    } finally {
+      registration.unregister();
+    }
+    expect(late).not.toHaveBeenCalled();
+    expect(lifecycle).toHaveBeenCalledTimes(1);
     expect(await read()).toMatchObject({
       status: "suspended",
       guardedPlanChange: null,
@@ -420,7 +427,8 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
   });
 
   it("keeps an incompatible landing outside retention deletion and payment reactivation, then permits remediation", async () => {
-    const { tenantId, targetPlan, model, read } = await fixture(false);
+    const { tenantId, ownerId, targetPlan, model, read, retrieve } =
+      await fixture(false);
     await scheduleGuardedFreeChange(tenantId, targetPlan);
     const scheduled = await read();
     await model.update(scheduled._id, {
@@ -429,8 +437,8 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
         effectiveAt: new Date(0),
       },
     });
-    effects.retrieve.mockResolvedValue({ status: "canceled" });
-    effects.validate.mockResolvedValue([
+    retrieve.mockResolvedValue(fromPartial({ status: "canceled" }));
+    validate.mockResolvedValue([
       { code: "volume", message: "Too large for Free" },
     ]);
     await reconcileGuardedFreeChange(tenantId);
@@ -449,16 +457,22 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
         new Date(Date.now() + 60_000),
       ),
     ).toBeUndefined();
-    expect(effects.notify).toHaveBeenCalled();
+    expect(core.sendToUsers).toHaveBeenCalledWith(
+      [ownerId],
+      expect.objectContaining({ subject: workspaceSuspendedSubject }),
+      undefined,
+      `free-downgrade:blocked:${scheduled.guardedPlanChange?.operationId}`,
+      expect.anything(),
+    );
     expect((await observeTenantLifecycle(tenantId)).barrierId).toBeNull();
-    effects.validate.mockResolvedValue([]);
+    validate.mockResolvedValue([]);
     await reconcileGuardedFreeChange(tenantId);
     expect(await read()).toMatchObject({
       planId: targetPlan._id,
       status: "active",
       guardedPlanChange: null,
     });
-    expect(effects.lifecycle).toHaveBeenLastCalledWith(
+    expect(lifecycle).toHaveBeenLastCalledWith(
       expect.objectContaining({ transition: "reactivation_requested" }),
     );
   });
