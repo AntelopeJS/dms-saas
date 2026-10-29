@@ -98,8 +98,10 @@ function holdLinePagesUntil(writers: number): () => boolean {
   return () => started === writers;
 }
 
-function refundEvent(status: Stripe.Refund["status"]): Stripe.Event {
-  return fromPartial<Stripe.Event>({
+function refundEvent(
+  status: Stripe.Refund["status"],
+): Stripe.ChargeRefundUpdatedEvent {
+  return fromPartial<Stripe.ChargeRefundUpdatedEvent>({
     id: `evt_refund_${status}`,
     type: "charge.refund.updated",
     data: {

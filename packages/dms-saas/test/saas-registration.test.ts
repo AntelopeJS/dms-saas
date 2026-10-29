@@ -1,4 +1,4 @@
-import { readLocale } from "./helpers/locales";
+import { localeMessage, readLocale } from "./helpers/locales";
 import { describe, expect, it } from "vitest";
 import {
   firstMissingRegistrationRequirement,
@@ -9,22 +9,11 @@ import {
   snapshotRegistrationExtras,
 } from "../frontend-vue/app/composables/useSaasRegistration";
 
-type LocaleTree = Record<string, unknown>;
-
 const MET_REQUIREMENTS: RegistrationRequirements = {
   isPaymentRequired: true,
   isPaymentReady: true,
   hasAcceptedLegal: true,
 };
-
-function lookup(tree: LocaleTree, key: string): unknown {
-  return key
-    .split(".")
-    .reduce<unknown>(
-      (node, segment) => (node as LocaleTree | undefined)?.[segment],
-      tree,
-    );
-}
 
 describe("firstMissingRegistrationRequirement", () => {
   it("clears a form that meets every requirement", () => {
@@ -139,7 +128,7 @@ describe("registration copy", () => {
   it.each(["saas-en-GB.json", "saas-fr-FR.json"])(
     "names the default workspace after its owner in %s",
     (file) => {
-      const pattern = lookup(
+      const pattern = localeMessage(
         readLocale(file),
         "saas.public.register.default_workspace_name",
       );
@@ -152,7 +141,10 @@ describe("registration copy", () => {
     "states the password policy in %s",
     (file) => {
       expect(
-        lookup(readLocale(file), "saas.errors.registration.password_policy"),
+        localeMessage(
+          readLocale(file),
+          "saas.errors.registration.password_policy",
+        ),
       ).toEqual(expect.any(String));
     },
   );

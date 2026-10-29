@@ -46,6 +46,7 @@ import { migrationTotals } from "../../plans/migration-detail";
 import { MS_PER_DAY } from "../../utils/time";
 import { loadActivitySources } from "../../metrics/activity-sources";
 import type { ItemsPayload } from "./block-payloads";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const OPEN_STATUS = "open";
 /**
@@ -199,7 +200,7 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   @Get("/activity")
   async activity(
     @AuthOwnerOnly() _user: User,
-    @Parameter("kind", "query") kind: unknown,
+    @Parameter("kind", "query") kind: QueryParameterValue,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
     const sources = await loadActivitySources(null, ACTIVITY_LIMIT);
     return {

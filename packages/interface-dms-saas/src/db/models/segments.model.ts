@@ -56,16 +56,14 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
     patchOrOptions?: DeepPartial<Segment> | ValidateOptions,
     options?: ValidateOptions,
   ): Promise<number> {
-    const id = typeof idOrPatch === "string" ? idOrPatch : idOrPatch._id;
+    const id = isIdArgument(idOrPatch) ? idOrPatch : idOrPatch._id;
     if (!id) throw new Error("Segment identity is required");
     return this.updateRevision(
       id,
-      typeof idOrPatch === "string"
+      isIdArgument(idOrPatch)
         ? (patchOrOptions as DeepPartial<Segment>)
         : idOrPatch,
-      typeof idOrPatch === "string"
-        ? options
-        : (patchOrOptions as ValidateOptions),
+      isIdArgument(idOrPatch) ? options : (patchOrOptions as ValidateOptions),
     );
   }
 
@@ -138,9 +136,13 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
 
   async getMany(ids: readonly string[]): Promise<Segment[]> {
     if (ids.length === 0) return [];
-    const rows = await this.table.getAll(ids as string[]).run();
+    const rows = await this.table.getAll([...ids]).run();
     return rows
       .map((row) => SegmentModel.fromDatabase(row))
       .filter((s): s is Segment => s !== undefined);
   }
+}
+
+function isIdArgument(value: string | DeepPartial<Segment>): value is string {
+  return typeof value === "string";
 }

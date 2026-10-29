@@ -1,9 +1,6 @@
 import { GetMetadata } from "@antelopejs/interface-core";
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
-import type {
-  Component,
-  ComponentInfo,
-} from "@antelopejs/interface-dms/component";
+import type { Component } from "@antelopejs/interface-dms/component";
 import { TableViewMeta, TableViewRoutes } from "@antelopejs/interface-dms/base";
 import { describe, expect, it } from "vitest";
 import { saasUsersDataAPI } from "../src/data-api/platformOwner/users";
@@ -18,17 +15,22 @@ import { SaasUserDetailController } from "../src/pages/platform/users/detail";
 const CUSTOM_COMPONENT = /^DmsSaas/;
 const PERMISSION_KEY = /^\$saas\.permissions\.users\.[a-z_]+$/;
 
+/** A component's info, which the pages' builders hold at once rather than as a promise. */
+function syncInfo(component: Component) {
+  const info = component.componentInfo;
+  if (info instanceof Promise) throw new Error("Expected a built component");
+  return info;
+}
+
 function* components(root: Component): Generator<Component> {
   yield root;
-  const info = root.componentInfo as ComponentInfo;
-  for (const child of info.children ?? []) yield* components(child.component);
+  for (const child of syncInfo(root).children ?? [])
+    yield* components(child.component);
 }
 
 function customComponents(root: Component): Component[] {
   return [...components(root)].filter((component) =>
-    CUSTOM_COMPONENT.test(
-      (component.componentInfo as ComponentInfo).componentName,
-    ),
+    CUSTOM_COMPONENT.test(syncInfo(component).componentName),
   );
 }
 
@@ -91,7 +93,7 @@ describe("pages of the area", () => {
   ])(
     "describe every custom component of the %s for the roles editor",
     (_, root) => {
-      const custom = customComponents(root as Component);
+      const custom = customComponents(root);
 
       expect(custom.length).toBeGreaterThan(0);
       for (const component of custom) {

@@ -12,6 +12,8 @@ import {
   valueText,
 } from "../i18n/composed-text";
 import { CREDIT_NOTE_METADATA } from "./credit-note-request";
+import { isNumber } from "../utils/primitive-guards";
+import type { CreditNote } from "../db";
 
 /** An amount in one currency, in minor units. */
 export interface MoneyFigure {
@@ -68,7 +70,7 @@ export interface CreditNoteRow extends MoneyRow {
   type: string;
   status: string;
   refundId?: string | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: CreditNote["metadata"] | null;
 }
 
 /** The rows the invoice figures are computed from. */
@@ -108,8 +110,7 @@ function moneyFigures(figures: readonly MoneyFigure[]): ComposedTextParam {
 }
 
 function detailOf(figure: BillingFigure): ComposedText {
-  if (typeof figure.value === "number" || figure.value.length < 2)
-    return figure.detail;
+  if (isNumber(figure.value) || figure.value.length < 2) return figure.detail;
   return composed(`${STATS}.other_currencies`, {
     amounts: moneyFigures(figure.value.slice(1)),
     detail: figure.detail,
@@ -122,10 +123,9 @@ function toStatItem(figure: BillingFigure): StatGroupItem {
     icon: figure.icon,
     tone: figure.tone,
     eyebrow: `$${STATS}.${figure.eyebrow}`,
-    value:
-      typeof figure.value === "number"
-        ? figure.value
-        : valueText(moneyFigures(figure.value.slice(0, 1))),
+    value: isNumber(figure.value)
+      ? figure.value
+      : valueText(moneyFigures(figure.value.slice(0, 1))),
     detail: detailOf(figure),
   };
 }

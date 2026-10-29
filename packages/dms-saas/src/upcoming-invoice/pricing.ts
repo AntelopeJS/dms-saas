@@ -17,6 +17,7 @@ import {
   unavailable,
 } from "./outcomes";
 import { quoteRunningCycleUsage } from "./usage";
+import { isString } from "../utils/primitive-guards";
 
 const LOG_PREFIX = "[dms-saas:upcoming-invoice]";
 const COMPLETE_TAX_STATUS = "complete";
@@ -30,9 +31,11 @@ const STRIPE_ERROR_OUTCOMES = new Map<string, PreviewOutcome>([
   ["taxes_calculation_failed", unavailable("tax_calculation_failed")],
 ]);
 
-const AUTOMATIC_TAX_STATUS_REASONS: Record<
-  string,
-  UpcomingInvoicePreviewUnavailableReason
+const AUTOMATIC_TAX_STATUS_REASONS: Partial<
+  Record<
+    Stripe.Invoice.AutomaticTax.Status,
+    UpcomingInvoicePreviewUnavailableReason
+  >
 > = {
   requires_location_inputs: "tax_location_required",
   failed: "tax_calculation_failed",
@@ -44,10 +47,14 @@ interface CodedError {
   code?: unknown;
 }
 
+function isCodedError(error: unknown): error is CodedError {
+  return typeof error === "object" && error !== null;
+}
+
 function stripeErrorCode(error: unknown): string | null {
-  if (typeof error !== "object" || error === null) return null;
-  const { code } = error as CodedError;
-  return typeof code === "string" ? code : null;
+  if (!isCodedError(error)) return null;
+  const { code } = error;
+  return isString(code) ? code : null;
 }
 
 function classifyStripeError(error: unknown): PreviewOutcome {

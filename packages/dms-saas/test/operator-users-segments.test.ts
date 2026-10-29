@@ -31,6 +31,7 @@ import {
 } from "vitest";
 import {
   InvoiceModel,
+  type InvoiceStatus,
   type SegmentConditionGroup,
   SegmentModel,
   TenantBillingStateModel,
@@ -201,7 +202,7 @@ describe("segments saved from the editor", () => {
     });
     expect(stored?.countHistory).toHaveLength(1);
     expect(stored?.countHistory?.[0]?.count).toBe(1);
-    expect(typeof stored?.lastEvaluationMs).toBe("number");
+    expect(stored?.lastEvaluationMs).toBeTypeOf("number");
   });
 
   it("saves only the fields an edit sends, then re-evaluates", async () => {
@@ -347,7 +348,11 @@ describe("the user page", () => {
     const owner = await insertUser();
     const tenantId = await insertWorkspace({ name: "Initech", owner });
     const invoices = GetModel(InvoiceModel, tenantId);
-    const invoice = (status: string, total: number, currency: string) => ({
+    const invoice = (
+      status: InvoiceStatus,
+      total: number,
+      currency: string,
+    ) => ({
       documentType: "invoice" as const,
       stripeInvoiceId: randomUUID(),
       status,
@@ -361,7 +366,7 @@ describe("the user page", () => {
       invoice("paid", 100, "EUR"),
       invoice("open", 9999, "eur"),
       invoice("paid", 2000, "usd"),
-    ] as never);
+    ]);
 
     expect(await sumPaidInvoices([tenantId])).toEqual([
       { currency: "EUR", amount: 5000 },

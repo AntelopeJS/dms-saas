@@ -22,6 +22,7 @@ import {
   readStripeId,
   requireInvoiceId,
 } from "./payload-shapes";
+import { isString } from "../utils/primitive-guards";
 
 export const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 export const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
@@ -81,7 +82,7 @@ export function formatAmount(amountInCents: number, currency: string): string {
 }
 
 export function asCustomerId(field: unknown): string | null {
-  if (typeof field === "string") return field;
+  if (isString(field)) return field;
   return null;
 }
 
@@ -222,9 +223,9 @@ export interface MirroredCreditNote {
 }
 
 export async function mirrorInvoiceFromEvent(
-  event: Stripe.Event,
+  event: Stripe.InvoiceCreatedEvent | Stripe.InvoiceFinalizedEvent,
 ): Promise<MirroredInvoice | null> {
-  const invoice = event.data.object as Stripe.Invoice;
+  const invoice = event.data.object;
   const customerId = asCustomerId(invoice.customer);
   if (!customerId) return null;
   const tenant = await findTenantByCustomerId(customerId);

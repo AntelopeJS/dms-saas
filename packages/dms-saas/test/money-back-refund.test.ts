@@ -26,7 +26,7 @@ function paid(
   credited = 0,
 ): Stripe.Invoice {
   const created = NOW_SECONDS - daysAgo * DAY_SECONDS;
-  return {
+  return fromPartial<Stripe.Invoice>({
     id,
     created,
     amount_paid: amountPaid,
@@ -39,33 +39,33 @@ function paid(
         },
       ],
     },
-  } as unknown as Stripe.Invoice;
+  });
 }
 
-const subscription = {
+const subscription = fromPartial<TenantSubscription>({
   _id: "acme",
   stripeCustomerId: "cus_acme",
   stripeSubscriptionId: "sub_acme",
   refundRequestedAt: null,
-} as unknown as TenantSubscription;
+});
 
-const subscriptionModel = {
+const subscriptionModel = fromPartial<TenantSubscriptionModel>({
   findOne: async () => subscription,
   claimSelfRefund: vi.fn(async () => true),
   releaseSelfRefund: vi.fn(async () => undefined),
-} as unknown as TenantSubscriptionModel;
+});
 
 function settings(mode: string) {
-  return {
+  return fromPartial<BillingSettingsModel>({
     get: async () => ({
       moneyBackGuaranteeEnabled: true,
       moneyBackGuaranteeWindowDays: WINDOW_DAYS,
       moneyBackGuaranteeMode: mode,
     }),
-  } as unknown as BillingSettingsModel;
+  });
 }
 
-const owner = { _id: "owner" } as User;
+const owner = fromPartial<User>({ _id: "owner" });
 const controller = new SaasBillingSelfRefundController();
 
 /**

@@ -37,6 +37,7 @@ import {
 } from "./journal";
 import type { OperatorActionDetails, OperatorCommandResult } from "./types";
 import { isPlanOfferedTo } from "../plans/plan-audience";
+import { isString } from "../utils/primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
@@ -357,7 +358,7 @@ async function creditAccountForAction(
   action: OperatorAction,
 ): Promise<CreditAccount> {
   const { stripeCustomerId, currency } = action.details;
-  if (typeof stripeCustomerId === "string" && typeof currency === "string")
+  if (isString(stripeCustomerId) && isString(currency))
     return { customerId: stripeCustomerId, currency };
   const account = await loadCreditAccount(tenantId);
   await checkpointOperatorActionDetails(action, {

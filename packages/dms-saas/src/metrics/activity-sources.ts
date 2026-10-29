@@ -1,9 +1,8 @@
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantModel } from "@antelopejs/interface-dms/db";
-import { type Invoice, InvoiceModel } from "../db";
+import { InvoiceModel } from "../db";
 import { OperatorActionModel } from "../operator-actions/db/operator-action.model";
-import type { OperatorAction } from "../operator-actions/db/operator-action.table";
 import { getRowInstance } from "../utils/row-instance";
 import type { ActivitySources, ActivityWorkspace } from "./activity";
 
@@ -30,12 +29,12 @@ async function platformSources(limit: number): Promise<ActivitySources> {
     GetModel(InvoiceModel, CROSS_INSTANCE)
       .table.orderBy("issuedAt", "desc")
       .slice(0, depth)
-      .run() as Promise<Invoice[]>,
+      .run(),
     GetModel(OperatorActionModel)
       .table.orderBy("createdAt", "desc")
       .filter((row) => row.key("status").eq(SUCCEEDED_STATUS))
       .slice(0, depth)
-      .run() as Promise<OperatorAction[]>,
+      .run(),
     GetModel(TenantModel)
       .table.orderBy("createdAt", "desc")
       .slice(0, depth)
@@ -52,9 +51,7 @@ async function platformSources(limit: number): Promise<ActivitySources> {
 async function workspaceSources(tenantId: string): Promise<ActivitySources> {
   const [documents, actions, tenant] = await Promise.all([
     GetModel(InvoiceModel, tenantId).getAllInvoices(),
-    GetModel(OperatorActionModel)
-      .table.getAll(tenantId, "tenantId")
-      .run() as Promise<OperatorAction[]>,
+    GetModel(OperatorActionModel).table.getAll(tenantId, "tenantId").run(),
     GetModel(TenantModel).get(tenantId),
   ]);
   const workspaces: ActivityWorkspace[] = tenant

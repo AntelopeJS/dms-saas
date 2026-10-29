@@ -9,16 +9,13 @@ import {
 } from "../../db";
 import { sumIssuedCredits } from "../../operator-billing/credit-allowance";
 
-/** An invoice row read across workspaces: the workspace rides along. */
-export type CrossInstanceInvoice = Invoice & { _instance: string };
-
 interface InvoiceRowInstance {
-  table: CrossInstanceInvoice;
+  table: Invoice;
 }
 
 /** The row a data controller getter is computed for. */
-export function invoiceRow(self: unknown): CrossInstanceInvoice {
-  return (self as InvoiceRowInstance).table;
+export function invoiceRow(self: InvoiceRowInstance): Invoice {
+  return self.table;
 }
 
 /**

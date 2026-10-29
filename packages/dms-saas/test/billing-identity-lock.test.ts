@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { TenantBillingInfo } from "../src/db";
 import { withBillingIdentityLock } from "../src/workspaces/billing-identity-lock";
 
 interface Deferred {
@@ -16,7 +17,7 @@ function deferred(): Deferred {
 
 describe("billing identity lock", () => {
   it("lets the Stripe echo read the row only once the save has written it", async () => {
-    const row = { companyName: null as string | null };
+    const row: Pick<TenantBillingInfo, "companyName"> = { companyName: null };
     const stripeUpdated = deferred();
     const save = withBillingIdentityLock("tenant-a", async () => {
       await stripeUpdated.promise;

@@ -41,6 +41,7 @@ import {
 import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
 import { fromMinorUnits } from "../../utils/money";
 import type { ItemsPayload } from "./block-payloads";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 /** The header of a workspace's detail page. */
 interface WorkspaceOverview {
@@ -181,9 +182,9 @@ export class SaasWorkspaceDetailController extends Controller(
   async activity(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
-    @Parameter("kind", "query") kind: unknown,
-    @Parameter("limit", "query") limit: unknown,
-    @Parameter("flat", "query") flat: unknown,
+    @Parameter("kind", "query") kind: QueryParameterValue,
+    @Parameter("limit", "query") limit: QueryParameterValue,
+    @Parameter("flat", "query") flat: QueryParameterValue,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
     const cut = limit === "short" ? OVERVIEW_ACTIVITY_LIMIT : ACTIVITY_LIMIT;
     const sources = await loadActivitySources(tenantId, cut);

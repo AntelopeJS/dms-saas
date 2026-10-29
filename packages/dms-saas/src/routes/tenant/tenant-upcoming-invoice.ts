@@ -287,11 +287,13 @@ export function withPlanSwitch(
 /** The most recent invoice the customer paid. */
 export function latestPaidInvoice(invoices: Invoice[]): Invoice | null {
   return invoices
-    .filter((invoice) => invoice.status === PAID_STATUS && invoice.paidAt)
-    .reduce<Invoice | null>(
+    .filter(
+      (invoice): invoice is Invoice & { paidAt: Date } =>
+        invoice.status === PAID_STATUS && !!invoice.paidAt,
+    )
+    .reduce<(Invoice & { paidAt: Date }) | null>(
       (latest, invoice) =>
-        !latest ||
-        new Date(invoice.paidAt as Date) > new Date(latest.paidAt as Date)
+        !latest || new Date(invoice.paidAt) > new Date(latest.paidAt)
           ? invoice
           : latest,
       null,

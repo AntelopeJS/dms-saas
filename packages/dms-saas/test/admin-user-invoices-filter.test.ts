@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import type { RequestContext } from "@antelopejs/interface-api";
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import { Parameters, Query } from "@antelopejs/interface-data-api/components";
@@ -9,7 +10,7 @@ import {
 } from "@antelopejs/interface-database";
 import { RegisterSchema } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { adminUserInvoicesDataAPI } from "../src/data-api/platformOwner/admin-user-invoices";
 
 const controller = new adminUserInvoicesDataAPI();
@@ -19,9 +20,9 @@ const schema = Schema.get(TenantMemberModel.schemaName)!;
 const database = schema.instance(CROSS_INSTANCE);
 
 function request(query: string): RequestContext {
-  return {
+  return fromPartial<RequestContext>({
     url: new URL(`https://example.test/invoices?${query}`),
-  } as RequestContext;
+  });
 }
 
 describe("admin user invoice filters", () => {
@@ -54,12 +55,12 @@ describe("admin user invoice filters", () => {
       "eq",
       row,
     );
-    expect(predicate).toBeInstanceOf(ValueProxy);
-    const stages = (predicate as ValueProxy<boolean>).build();
+    assert(predicate instanceof ValueProxy);
+    const stages = predicate.build();
     expect(stages[0]).toMatchObject({ stage: "constant", args: [true] });
     expect(stages[1].stage).toBe("eq");
-    const membership = stages[1].args[0] as Datum<unknown>;
-    expect(membership).toBeInstanceOf(Datum);
+    const membership: unknown = stages[1].args[0];
+    assert(membership instanceof Datum);
     expect(membership.build()).toMatchObject([
       { stage: "schema", options: { id: TenantMemberModel.schemaName } },
       { stage: "instance", options: { id: CROSS_INSTANCE } },
@@ -69,8 +70,8 @@ describe("admin user invoice filters", () => {
       { stage: "map", args: [{ args: [expect.any(Array), true] }] },
       { stage: "nth", args: [0] },
     ]);
-    const condition = membership.build()[4].args[0]
-      .args[1] as ValueProxy<boolean>;
+    const condition: unknown = membership.build()[4].args[0].args[1];
+    assert(condition instanceof ValueProxy);
     const conditionStages = condition.build();
     expect(conditionStages.slice(1, 3)).toMatchObject([
       { stage: "obj_index", args: expect.arrayContaining(["isTenantOwner"]) },
@@ -78,9 +79,9 @@ describe("admin user invoice filters", () => {
     ]);
     const ownership = conditionStages.at(-1)!;
     expect(ownership.stage).toBe("and");
-    const comparison = (ownership.args[0] as ValueProxy<boolean>)
-      .build()
-      .at(-1);
+    const ownershipCheck: unknown = ownership.args[0];
+    assert(ownershipCheck instanceof ValueProxy);
+    const comparison = ownershipCheck.build().at(-1);
     expect(comparison?.stage).toBe("eq");
     expect(comparison?.args[0].build()).toEqual(row.key("_instance").build());
   });

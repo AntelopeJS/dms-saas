@@ -77,8 +77,8 @@ export interface CreditNoteIssuer {
 function buildMetadata(
   body: IssueCreditNoteBody,
   issuer: CreditNoteIssuer,
-): Record<string, string> {
-  const metadata: Record<string, string> = {
+): Stripe.Metadata {
+  const metadata: Stripe.Metadata = {
     [CREDIT_NOTE_METADATA.issuedBy]: issuer._id,
     [CREDIT_NOTE_METADATA.issuedByName]: issuer.name || issuer.email || "",
     [CREDIT_NOTE_METADATA.reason]: body.reason,

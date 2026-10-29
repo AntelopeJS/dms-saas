@@ -16,6 +16,7 @@ import { readSubscriptionPeriodDates } from "./payload-shapes";
 import { DELETION_REQUEST_CLEARED } from "../workspaces/deletion-request";
 import { ACTIVE_STATUS, asCustomerId, TRIALING_STATUS } from "./webhook-shared";
 import { releaseCheckoutTrialReservation } from "./workspace-checkout";
+import { isString } from "../utils/primitive-guards";
 
 /**
  * A failure propagates on purpose: the whole handler is idempotent, so
@@ -26,10 +27,9 @@ async function promoteSubscriptionPaymentMethod(
   subscription: Stripe.Subscription,
 ): Promise<void> {
   const customerId = asCustomerId(subscription.customer);
-  const paymentMethodId =
-    typeof subscription.default_payment_method === "string"
-      ? subscription.default_payment_method
-      : (subscription.default_payment_method?.id ?? null);
+  const paymentMethodId = isString(subscription.default_payment_method)
+    ? subscription.default_payment_method
+    : (subscription.default_payment_method?.id ?? null);
   if (!customerId || !paymentMethodId) return;
   const stripe = getStripeClient();
   await stripe.customers.update(customerId, {
@@ -78,22 +78,21 @@ async function admitCheckoutCompletion(
   return true;
 }
 
-function resolveCheckoutContext(event: Stripe.Event): CheckoutContext | null {
-  const session = event.data.object as Stripe.Checkout.Session;
+function resolveCheckoutContext(
+  event: Stripe.CheckoutSessionCompletedEvent,
+): CheckoutContext | null {
+  const session = event.data.object;
   if (session.mode !== "subscription") return null;
-  const tenantId =
-    typeof session.metadata?.tenantId === "string"
-      ? session.metadata.tenantId
-      : null;
-  const subscriptionId =
-    typeof session.subscription === "string"
-      ? session.subscription
-      : (session.subscription?.id ?? null);
+  const tenantId = isString(session.metadata?.tenantId)
+    ? session.metadata.tenantId
+    : null;
+  const subscriptionId = isString(session.subscription)
+    ? session.subscription
+    : (session.subscription?.id ?? null);
   if (!tenantId || !subscriptionId) return null;
-  const targetPlanId =
-    typeof session.metadata?.planId === "string"
-      ? session.metadata.planId
-      : null;
+  const targetPlanId = isString(session.metadata?.planId)
+    ? session.metadata.planId
+    : null;
   return { session, tenantId, subscriptionId, targetPlanId };
 }
 
@@ -202,7 +201,7 @@ async function retrieveActivatedCheckout(
 
 /** Admit one completion executor; uncertain callbacks retain subscription intent. */
 export async function handleCheckoutSessionCompleted(
-  event: Stripe.Event,
+  event: Stripe.CheckoutSessionCompletedEvent,
 ): Promise<void> {
   const context = resolveCheckoutContext(event);
   if (!context) return;
@@ -213,9 +212,9 @@ export async function handleCheckoutSessionCompleted(
 
 /** Only an expired, recorded session can relinquish its checkout admission. */
 export async function handleCheckoutSessionExpired(
-  event: Stripe.Event,
+  event: Stripe.CheckoutSessionExpiredEvent,
 ): Promise<void> {
-  const session = event.data.object as Stripe.Checkout.Session;
+  const session = event.data.object;
   const tenantId = session.metadata?.tenantId;
   if (!tenantId || session.status !== "expired") return;
   const model = GetModel(TenantSubscriptionModel, tenantId);

@@ -3,6 +3,7 @@ import { MS_PER_DAY } from "../utils/time";
 import type { DirectoryRow } from "./directory-summary";
 import { type ReportingTotal, sumInReportingCurrency } from "./normalised-mrr";
 import { fromMinorUnits } from "../utils/money";
+import { isString } from "../utils/primitive-guards";
 
 /** A date range a `PeriodSelector` sends (`from`, `to`). */
 export interface PeriodRange {
@@ -78,16 +79,16 @@ const COMPARISON_SERIES: Record<string, string> = {
 const CUSTOM_COMPARISON_SERIES =
   "$saas.dashboard.paid_invoices.collected_compared";
 
-function parseDate(value: unknown): Date | null {
-  if (typeof value !== "string" || !value) return null;
+function parseDate(value?: string | null): Date | null {
+  if (!isString(value) || !value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /** The range a request names, the last 30 days when it names none. */
 function parsePeriod(
-  from: unknown,
-  to: unknown,
+  from: string | null,
+  to: string | null,
   now = new Date(),
 ): PeriodRange {
   const end = parseDate(to) ?? now;
@@ -102,9 +103,9 @@ function parsePeriod(
  * selector sends with it: `none` turns the comparison off whatever the range.
  */
 export function parseComparison(
-  from: unknown,
-  to: unknown,
-  comparison?: unknown,
+  from?: string | null,
+  to?: string | null,
+  comparison?: string | null,
 ): PeriodRange | null {
   if (comparison === NO_COMPARISON) return null;
   const start = parseDate(from);
@@ -201,8 +202,8 @@ function alignedSeriesOf(
   }));
 }
 
-function comparisonSeriesName(comparison: unknown): string {
-  return typeof comparison === "string"
+function comparisonSeriesName(comparison?: string | null): string {
+  return isString(comparison)
     ? (COMPARISON_SERIES[comparison] ?? CUSTOM_COMPARISON_SERIES)
     : CUSTOM_COMPARISON_SERIES;
 }
@@ -255,7 +256,7 @@ export function paidInvoicesChart(
   range: PeriodRange,
   comparison: PeriodRange | null,
   reportingCurrency: string,
-  comparisonMode?: unknown,
+  comparisonMode?: string | null,
 ): ChartCardPayload {
   const length = bucketLength(range);
   const keys = bucketKeys(range, length);

@@ -8,6 +8,7 @@ import {
   toStripePreferredLocales,
 } from "./customer-locale";
 import { getStripeClient } from "./client";
+import { isNumber } from "../utils/primitive-guards";
 
 const MISSING_RESOURCE_CODE = "resource_missing";
 const HTTP_CLIENT_ERROR_MIN = 400;
@@ -128,7 +129,7 @@ export function isDefinitiveStripeRejection(error: unknown): boolean {
   if (!(error instanceof Stripe.errors.StripeError)) return false;
   const status = error.statusCode;
   return (
-    typeof status === "number" &&
+    isNumber(status) &&
     status >= HTTP_CLIENT_ERROR_MIN &&
     status < HTTP_SERVER_ERROR_MIN
   );
@@ -271,7 +272,7 @@ export async function createWorkspaceCheckoutSession(
   const stripe = getStripeClient();
   const customerId = await resolveCheckoutCustomerId(input);
 
-  const sessionMetadata: Record<string, string> = { tenantId: input.tenantId };
+  const sessionMetadata: Stripe.Metadata = { tenantId: input.tenantId };
   if (input.planId) sessionMetadata.planId = input.planId;
   if (input.operationId) sessionMetadata.operationId = input.operationId;
   if (input.reservedTrialIdentityId)

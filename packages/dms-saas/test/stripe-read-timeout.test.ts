@@ -1,12 +1,8 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import https from "node:https";
-import {
-  type AddressInfo,
-  createServer,
-  type Server,
-  type Socket,
-} from "node:net";
+import { createServer, type Server, type Socket } from "node:net";
 import Stripe from "stripe";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, assert, beforeAll, describe, expect, it, vi } from "vitest";
 import type { TenantSubscription } from "../src/db";
 
 /**
@@ -44,6 +40,7 @@ import {
   initStripeClient,
 } from "../src/stripe";
 import { priceUpcomingInvoice } from "../src/upcoming-invoice/pricing";
+import { isString } from "../src/utils/primitive-guards";
 
 const READ_TIMEOUT_MS = 100;
 /** Far below the SDK's 80 s default, with room for a slow CI machine. */
@@ -62,7 +59,9 @@ beforeAll(async () => {
     stalled.sockets.add(socket);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  stalled.port = (server.address() as AddressInfo).port;
+  const address = server.address();
+  assert(address !== null && !isString(address));
+  stalled.port = address.port;
 });
 
 afterAll(async () => {
@@ -144,7 +143,7 @@ describe("page reads on a stalled Stripe", () => {
       priceUpcomingInvoice(
         "tenant-a",
         {
-          subscription: { _id: "tenant-a" } as TenantSubscription,
+          subscription: fromPartial<TenantSubscription>({ _id: "tenant-a" }),
           customerId: "cus_a",
           subscriptionId: "sub_a",
         },

@@ -1,3 +1,4 @@
+import { fromPartial, type PartialDeep } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
 import { describe, expect, it } from "vitest";
 import {
@@ -20,28 +21,29 @@ const PERIOD_START = 1_780_000_000;
 const PERIOD_END = 1_782_592_000;
 const MS_PER_SECOND = 1000;
 
-interface ClientInternals {
-  getApiField(key: string): unknown;
+/** A subscription as a webhook renders it, pre-basil fields included. */
+type SubscriptionPayload = Parameters<typeof readSubscriptionPeriod>[0];
+/** An invoice as a webhook renders it, pre-basil fields included. */
+type InvoicePayload = Parameters<typeof readInvoiceSubscriptionId>[0];
+/** A credit note as a webhook renders it, pre-basil fields included. */
+type CreditNotePayload = Parameters<typeof readCreditNoteRefundId>[0];
+
+function subscription(fields: object): SubscriptionPayload {
+  return fields as SubscriptionPayload;
 }
 
-function subscription(fields: object): Stripe.Subscription {
-  return fields as Stripe.Subscription;
+function invoice(fields: object): InvoicePayload {
+  return fields as InvoicePayload;
 }
 
-function invoice(fields: object): Stripe.Invoice {
-  return fields as Stripe.Invoice;
-}
-
-function creditNote(fields: object): Stripe.CreditNote {
-  return fields as Stripe.CreditNote;
+function creditNote(fields: PartialDeep<CreditNotePayload>): CreditNotePayload {
+  return fromPartial<CreditNotePayload>(fields);
 }
 
 describe("Stripe API version", () => {
   it("pins every request to the module's API version", () => {
     initStripeClient({ secretKey: "sk_test_version", webhookSecret: "whsec" });
-    expect(
-      (getStripeClient() as unknown as ClientInternals).getApiField("version"),
-    ).toBe(STRIPE_API_VERSION);
+    expect(getStripeClient().getApiField("version")).toBe(STRIPE_API_VERSION);
   });
 });
 
@@ -307,7 +309,7 @@ describe("dahlia webhook payloads", () => {
         taxRates: new Map([
           [
             "txr_de",
-            {
+            fromPartial<Stripe.TaxRate>({
               id: "txr_de",
               country: "de",
               percentage: 19,
@@ -315,7 +317,7 @@ describe("dahlia webhook payloads", () => {
               tax_type: "vat",
               display_name: "VAT",
               jurisdiction: "DE",
-            } as Stripe.TaxRate,
+            }),
           ],
         ]),
       },

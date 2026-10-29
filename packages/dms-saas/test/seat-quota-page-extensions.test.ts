@@ -1,12 +1,6 @@
 import { internal } from "@antelopejs/interface-dms/page";
 import { describe, expect, it, vi } from "vitest";
 
-interface ExtensionInfo {
-  extensionName: string;
-  targetFullId: string;
-  components: { key: string; side: string; anchorPath: string[] }[];
-}
-
 describe("seat quota page extensions", () => {
   it("puts the seat quota above the table of both workspace member pages", async () => {
     const register = vi
@@ -15,7 +9,7 @@ describe("seat quota page extensions", () => {
 
     await import("../src/pages/tenant/members-seat-quota");
 
-    const infos = register.mock.calls.map(([info]) => info as ExtensionInfo);
+    const infos = register.mock.calls.map(([info]) => info);
     expect(
       infos.map(({ targetFullId, components }) => ({
         targetFullId,

@@ -1,3 +1,4 @@
+import type { SegmentConditionGroup } from "../src/db";
 import {
   SEGMENT_COUNT_HISTORY_DAYS,
   appendSegmentCountPoint,
@@ -94,7 +95,7 @@ describe("segment rules validation", () => {
   });
 
   it("refuses rules nested deeper than the builder goes", () => {
-    let group: Record<string, unknown> = { logical: "and", conditions: [] };
+    let group: SegmentConditionGroup = { logical: "and", conditions: [] };
     for (let depth = 0; depth < 9; depth++) {
       group = { logical: "and", conditions: [group] };
     }

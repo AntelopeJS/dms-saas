@@ -17,31 +17,43 @@ function matches(row: Row, stage: QueryStage): boolean {
   const expression = stage.args[0].args[1] as Expression;
   const [, field, compare] = expression.stages;
   const value = row[field.args[0]];
-  const comparisons: Record<string, boolean> = {
-    eq: value === compare.args[0],
-    ne: value !== compare.args[0],
-  };
-  return comparisons[compare.stage];
+  if (compare.stage === "eq") return value === compare.args[0];
+  return compare.stage === "ne" && value !== compare.args[0];
 }
 
-const handlers: Record<string, StageHandler> = {
-  schema: (rows) => rows,
-  instance: (rows) => rows,
-  table: (rows) => rows,
-  getAll: (rows, stage) =>
-    rows.filter((row) => row[stage.options.index] === stage.args[0]),
-  filter: (rows, stage) => rows.filter((row) => matches(row, stage)),
-  orderBy: (rows, stage) => {
-    const direction = stage.options.direction === "desc" ? -1 : 1;
-    return [...rows].sort((left, right) => {
-      const a = left[stage.options.index] as number;
-      const b = right[stage.options.index] as number;
-      return (a < b ? -1 : a > b ? 1 : 0) * direction;
-    });
-  },
-  slice: (rows, stage) =>
-    rows.slice(stage.args[0], stage.args[0] + stage.args[1]),
-};
+const handlers = new Map<string, StageHandler>([
+  ["schema", (rows) => rows],
+  ["instance", (rows) => rows],
+  ["table", (rows) => rows],
+  [
+    "getAll",
+    (rows, stage) =>
+      rows.filter((row) => row[stage.options.index] === stage.args[0]),
+  ],
+  ["filter", (rows, stage) => rows.filter((row) => matches(row, stage))],
+  [
+    "orderBy",
+    (rows, stage) => {
+      const direction = stage.options.direction === "desc" ? -1 : 1;
+      return [...rows].sort((left, right) => {
+        const a = left[stage.options.index] as number;
+        const b = right[stage.options.index] as number;
+        return (a < b ? -1 : a > b ? 1 : 0) * direction;
+      });
+    },
+  ],
+  [
+    "slice",
+    (rows, stage) => rows.slice(stage.args[0], stage.args[0] + stage.args[1]),
+  ],
+]);
+
+/** Runs one stage on the rows, as the database would. */
+function runStage(rows: Row[], stage: QueryStage): Row[] {
+  const handler = handlers.get(stage.stage);
+  if (!handler) throw new Error(`No stand-in for the ${stage.stage} stage`);
+  return handler(rows, stage);
+}
 
 function captureQueries(instances: Record<string, Row[]>) {
   const queries: QueryStage[][] = [];
@@ -51,7 +63,7 @@ function captureQueries(instances: Record<string, Row[]>) {
       queries.push(this.stages);
       const instance = this.stages.find((stage) => stage.stage === "instance");
       const rows = this.stages.reduce(
-        (rows, stage) => handlers[stage.stage](rows, stage),
+        (rows, stage) => runStage(rows, stage),
         instances[instance?.options.id] ?? [],
       );
       transferred.push(rows.length);

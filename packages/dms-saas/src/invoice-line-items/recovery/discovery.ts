@@ -22,21 +22,22 @@ interface ManagedSubscription {
 
 async function managedSubscriptions(): Promise<ManagedSubscription[]> {
   const rows = await GetModel(TenantSubscriptionModel, CROSS_INSTANCE).getAll();
-  return rows
-    .filter(
-      (row) =>
-        !!row.stripeCustomerId &&
-        !!row.stripeSubscriptionId &&
-        !isComplimentarySubscription(row) &&
-        (row.paidUsagePeriods ?? []).some(
-          (period) => period.stripeSubscriptionId === row.stripeSubscriptionId,
-        ),
+  return rows.flatMap((row) =>
+    row.stripeCustomerId &&
+    row.stripeSubscriptionId &&
+    !isComplimentarySubscription(row) &&
+    (row.paidUsagePeriods ?? []).some(
+      (period) => period.stripeSubscriptionId === row.stripeSubscriptionId,
     )
-    .map((row) => ({
-      tenantId: getRowInstance(row),
-      customerId: row.stripeCustomerId as string,
-      stripeSubscriptionId: row.stripeSubscriptionId as string,
-    }));
+      ? [
+          {
+            tenantId: getRowInstance(row),
+            customerId: row.stripeCustomerId,
+            stripeSubscriptionId: row.stripeSubscriptionId,
+          },
+        ]
+      : [],
+  );
 }
 
 /**

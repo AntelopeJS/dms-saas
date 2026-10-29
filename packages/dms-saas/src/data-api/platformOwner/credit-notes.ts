@@ -25,7 +25,12 @@ import {
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { CreditNote, CreditNoteModel, type CreditNoteType } from "../../db";
-import { MoneyCentsType, statusPillDisplay, statusType } from "../../utils";
+import {
+  getRowInstance,
+  MoneyCentsType,
+  statusPillDisplay,
+  statusType,
+} from "../../utils";
 import {
   CREDIT_NOTE_REASONS,
   creditedInvoiceNumber,
@@ -113,7 +118,7 @@ export class creditNotesDataAPI extends DataController(
   @Listable(["type"])
   @Access(AccessMode.ReadOnly)
   get typeIcon(): string | null {
-    return TYPE_ICONS[creditNoteRow(this).type as CreditNoteType] ?? null;
+    return TYPE_ICONS[creditNoteRow(this).type] ?? null;
   }
 
   @Listable(["_instance", "invoiceId"])
@@ -121,7 +126,7 @@ export class creditNotesDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   get invoiceNumber(): PromiseLike<string | null> {
     const row = creditNoteRow(this);
-    return creditedInvoiceNumber(row._instance, row.invoiceId);
+    return creditedInvoiceNumber(getRowInstance(row), row.invoiceId);
   }
 
   @Listable(["_instance"])
@@ -187,7 +192,7 @@ export class creditNotesDataAPI extends DataController(
   @Select()
   @Listable()
   @Access(AccessMode.ReadOnly)
-  declare metadata: Record<string, unknown>;
+  declare metadata: CreditNote["metadata"];
 
   @Select()
   @Listable()

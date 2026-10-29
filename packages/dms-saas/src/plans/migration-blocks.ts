@@ -30,19 +30,20 @@ import {
 } from "./migration-detail";
 import { toMinorUnits } from "../utils/money";
 import { PLAN_UNLIMITED } from "../db";
+import { isNumber, isString } from "../utils/primitive-guards";
 
 const K = "saas.catalog.migrations.detail";
 const REASON_KEY = "saas.catalog.migrations.reason";
 const STATUS_KEY = "saas.status.migration";
 const MIGRATION_ICON = "i-ph-arrows-clockwise";
 const DEFAULT_BANNER_TONE: BannerTone = "info";
-const BANNER_TONES = new Set<string>([
+const BANNER_TONES = [
   "info",
   "success",
   "warning",
   "error",
   "primary",
-]);
+] as const satisfies readonly BannerTone[];
 
 /** Where the detail's routes and the list page live. */
 export interface MigrationDetailUrls {
@@ -69,9 +70,10 @@ export function dateTimeParam(
 function bannerTone(status: string): BannerTone {
   const tones: Record<string, Tone> = STATUS_TONES.migration;
   const tone = tones[status];
-  return tone && BANNER_TONES.has(tone)
-    ? (tone as BannerTone)
-    : DEFAULT_BANNER_TONE;
+  return (
+    (tone && BANNER_TONES.find((banner) => banner === tone)) ||
+    DEFAULT_BANNER_TONE
+  );
 }
 
 function personName(context: MigrationDetailContext, userId?: string | null) {
@@ -255,7 +257,7 @@ function featureValue(value: unknown): ComposedTextParam {
   if (value === null || value === undefined || value === PLAN_UNLIMITED) {
     return composed(`${K}.change.unlimited`);
   }
-  if (typeof value === "number" || typeof value === "string") return value;
+  if (isNumber(value) || isString(value)) return value;
   return JSON.stringify(value);
 }
 

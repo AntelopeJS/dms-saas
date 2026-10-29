@@ -38,8 +38,8 @@ interface InviteRowInstance {
   table: Pick<UserInvite, "expiresAt">;
 }
 
-function inviteRowOf(self: unknown): Pick<UserInvite, "expiresAt"> {
-  return (self as InviteRowInstance).table;
+function inviteRowOf(self: InviteRowInstance): Pick<UserInvite, "expiresAt"> {
+  return self.table;
 }
 
 /**

@@ -40,6 +40,7 @@ import {
   releaseAbandonedCheckout,
   withCheckoutCancelMarker,
 } from "./tenant-plan-checkout-recovery";
+import { isString } from "../../utils/primitive-guards";
 
 const HTTP_UNPROCESSABLE = 422;
 const HTTP_SERVICE_UNAVAILABLE = 503;
@@ -81,9 +82,7 @@ interface CheckoutSessionTarget {
 const NO_TRIAL: TrialGrant = { days: 0, reservedIdentityId: null };
 
 function asNonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : null;
+  return isString(value) && value.trim().length > 0 ? value.trim() : null;
 }
 
 async function validateCheckoutRedirectInput(

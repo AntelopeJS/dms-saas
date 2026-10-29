@@ -56,11 +56,11 @@ interface SegmentRowInstance {
   table: Pick<Segment, "countHistory" | "estimatedCount">;
 }
 
-function rowOf(self: unknown): SegmentRowInstance["table"] {
-  return (self as SegmentRowInstance).table;
+function rowOf(self: SegmentRowInstance): SegmentRowInstance["table"] {
+  return self.table;
 }
 
-function historyOf(self: unknown): SegmentCountPoint[] {
+function historyOf(self: SegmentRowInstance): SegmentCountPoint[] {
   return rowOf(self).countHistory;
 }
 

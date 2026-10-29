@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import type { Component } from "@antelopejs/interface-dms/component";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
@@ -12,7 +13,7 @@ import { implementPageRegistry, registered } from "./helpers/pages";
 const registry = implementPageRegistry();
 const pageExtension = registry.pageExtensions;
 
-const COMPONENT = {} as Component;
+const COMPONENT = fromPartial<Component>({});
 
 beforeEach(() => {
   pageExtension.register.mockClear();

@@ -4,6 +4,7 @@ import {
   PLAN_LOCALIZED_FIELDS,
   PlanModel,
 } from "../../src/db";
+import { isString } from "../../src/utils/primitive-guards";
 
 /**
  * A plan as `PlanModel` reads it, from fields whose texts are written in the
@@ -15,10 +16,9 @@ export function planRow(fields: Partial<Plan>): Plan {
   for (const field of PLAN_LOCALIZED_FIELDS) {
     const text = fields[field];
     if (text == null) delete row[field];
-    else if (typeof text === "string")
-      row[field] = { [PLAN_FALLBACK_LOCALE]: text };
+    else if (isString(text)) row[field] = { [PLAN_FALLBACK_LOCALE]: text };
   }
-  return PlanModel.fromPlainData(row as Partial<Plan>)
+  return PlanModel.fromPlainData(row)
     .localize("*", PLAN_LOCALIZED_FIELDS)
     .localize(PLAN_FALLBACK_LOCALE, PLAN_LOCALIZED_FIELDS);
 }

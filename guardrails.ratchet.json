@@ -1,12 +1,11 @@
 {
   "rules": {
-    "anti-slop/no-known-value-widening": 36,
-    "anti-slop/no-runtime-typeof": 109,
-    "anti-slop/no-shape-in-symbol-names": 18,
-    "anti-slop/no-unknown-parameters": 174,
-    "anti-slop/no-unknown-returns": 30,
-    "anti-slop/no-unsafe-dictionary-type": 62,
-    "anti-slop/require-safety-comment-for-type-assertion": 333
+    "anti-slop/no-known-value-widening": 7,
+    "anti-slop/no-runtime-typeof": 2,
+    "anti-slop/no-unknown-parameters": 101,
+    "anti-slop/no-unknown-returns": 6,
+    "anti-slop/no-unsafe-dictionary-type": 39,
+    "anti-slop/require-safety-comment-for-type-assertion": 67
   },
   "oversizeFiles": {
     "packages/dms-saas/frontend-vue/app/components/RetirePlanModal.vue": 23570,

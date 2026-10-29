@@ -23,6 +23,7 @@ import {
   creditAllowance,
   sumIssuedCredits,
 } from "./credit-allowance";
+import { isString } from "../utils/primitive-guards";
 
 const HTTP_NOT_FOUND = 404;
 const INVOICE_DOCUMENT_TYPE = "invoice";
@@ -149,10 +150,13 @@ export async function resolveCreditAllowance(loaded: LoadedInvoice): Promise<{
 function paidWith(
   stripeInvoice: Stripe.Invoice,
 ): Stripe.PaymentIntent["payment_method"] {
-  const payment = stripeInvoice.payments?.data.find(
-    (entry) => typeof entry.payment.payment_intent === "object",
-  )?.payment.payment_intent as Stripe.PaymentIntent | undefined;
-  return payment?.payment_method ?? null;
+  for (const entry of stripeInvoice.payments?.data ?? []) {
+    const intent = entry.payment.payment_intent;
+    if (intent !== undefined && !isString(intent)) {
+      return intent?.payment_method ?? null;
+    }
+  }
+  return null;
 }
 
 async function paymentCard(
@@ -160,7 +164,7 @@ async function paymentCard(
 ): Promise<PaymentMethodSummary | null> {
   const method = paidWith(stripeInvoice);
   if (!method) return null;
-  if (typeof method !== "string") return toCardSummary(method);
+  if (!isString(method)) return toCardSummary(method);
   const retrieved = await getStripeClient()
     .paymentMethods.retrieve(method)
     .catch(() => null);

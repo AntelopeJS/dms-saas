@@ -1,33 +1,35 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  ApiDataHandler,
+  ApiDataRequest,
+  UseApiDataOptions,
+} from "./helpers/api-data";
 import { useSegmentCatalog } from "../frontend-vue/app/build/segments/useSegmentCatalog";
 import { useUserDetail } from "../frontend-vue/app/build/users/useUserDetail";
 import { useWorkspaceOverview } from "../frontend-vue/app/build/workspace-detail/useWorkspaceOverview";
 import { useExportHistory } from "../frontend-vue/app/composables/useExportHistory";
 import { useOnDemandRead } from "../frontend-vue/app/composables/useOnDemandRead";
-import { ref } from "./helpers/frontend-vue";
+import { ref, toValue } from "./helpers/frontend-vue";
 
 interface Holder<T> {
   value: T;
 }
 
-/** A source as `useApiData` reads it: a getter, a holder or a plain value. */
-function read<T>(source: unknown): T {
-  if (typeof source === "function") return (source as () => T)();
-  if (source && typeof source === "object" && "value" in source)
-    return (source as Holder<T>).value;
-  return source as T;
-}
+/** The second argument of `useApiData`: the handler of the key form, or the options of the URL form. */
+type ApiDataSecond = ApiDataHandler<unknown> | UseApiDataOptions<unknown>;
 
-type Handler = (context: {
-  $authFetch: (url: string, options?: unknown) => Promise<unknown>;
-  signal: AbortSignal;
-}) => Promise<unknown>;
+/** Whether `useApiData` was called in its key form, as its own implementation tells them apart. */
+function isHandler(
+  second: ApiDataSecond | undefined,
+): second is ApiDataHandler<unknown> {
+  return typeof second === "function";
+}
 
 /** A `useApiData` call: what it reads, and the refs it hands back. */
 interface ApiDataCall {
-  source: unknown;
-  handler?: Handler;
-  options?: Record<string, unknown>;
+  source: ApiDataRequest;
+  handler?: ApiDataHandler<unknown>;
+  options?: UseApiDataOptions<unknown>;
   data: Holder<unknown>;
   status: Holder<string>;
   error: Holder<unknown>;
@@ -40,13 +42,15 @@ function stubApiData(): ApiDataCall[] {
   const calls: ApiDataCall[] = [];
   vi.stubGlobal(
     "useApiData",
-    (source: unknown, second?: unknown, third?: unknown) => {
+    (
+      source: ApiDataRequest,
+      second?: ApiDataSecond,
+      third?: UseApiDataOptions<unknown>,
+    ) => {
       const call: ApiDataCall = {
         source,
-        handler: typeof second === "function" ? (second as Handler) : undefined,
-        options: (typeof second === "function" ? third : second) as
-          | Record<string, unknown>
-          | undefined,
+        handler: isHandler(second) ? second : undefined,
+        options: isHandler(second) ? third : second,
         data: ref(null),
         status: ref("idle"),
         error: ref(null),
@@ -71,12 +75,12 @@ describe("readers on useApiData", () => {
 
     const detail = useUserDetail(() => params.value);
 
-    expect(read(calls[0]!.source)).toBe("/api/saas/users/u1");
+    expect(toValue(calls[0]!.source)).toBe("/api/saas/users/u1");
     params.value = { id: "u2" };
-    expect(read(calls[0]!.source)).toBe("/api/saas/users/u2");
+    expect(toValue(calls[0]!.source)).toBe("/api/saas/users/u2");
     expect(detail.userId.value).toBe("u2");
     params.value = {};
-    expect(read(calls[0]!.source)).toBeNull();
+    expect(toValue(calls[0]!.source)).toBeNull();
   });
 
   it("shares one operator overview read, which the page's refreshes read again", () => {
@@ -85,30 +89,30 @@ describe("readers on useApiData", () => {
     vi.stubGlobal("usePageLiveRefresh", subscribe);
 
     const state = useWorkspaceOverview("t1");
-    expect(read(calls[0]!.source)).toBe("/api/saas/workspaces/t1/overview");
+    expect(toValue(calls[0]!.source)).toBe("/api/saas/workspaces/t1/overview");
     expect(state.isLoading.value).toBe(true);
     expect(calls[0]!.options).toBeUndefined();
     expect(subscribe).not.toHaveBeenCalled();
 
     useWorkspaceOverview("");
-    expect(read(calls[1]!.source)).toBeNull();
+    expect(toValue(calls[1]!.source)).toBeNull();
   });
 
   it("keeps the export card on the newest page and falls back from an emptied one", async () => {
     const calls = stubApiData();
     vi.stubGlobal("useAuthFetch", () => ({ $authFetch: vi.fn() }));
-    vi.stubGlobal("useDmsState", (_key: string, init: () => unknown) =>
+    vi.stubGlobal("useDmsState", <T>(_key: string, init: () => T) =>
       ref(init()),
     );
 
     const history = useExportHistory();
     const [newest, shown] = calls;
-    expect(read(newest!.source)).toBe("saas-export-history:1");
-    expect(read(shown!.source)).toBe("saas-export-history:1");
+    expect(toValue(newest!.source)).toBe("saas-export-history:1");
+    expect(toValue(shown!.source)).toBe("saas-export-history:1");
 
     history.goToPage(3);
-    expect(read(newest!.source)).toBe("saas-export-history:1");
-    expect(read(shown!.source)).toBe("saas-export-history:3");
+    expect(toValue(newest!.source)).toBe("saas-export-history:1");
+    expect(toValue(shown!.source)).toBe("saas-export-history:3");
 
     const pages: unknown[] = [];
     const $authFetch = vi.fn(
@@ -131,7 +135,7 @@ describe("readers on useApiData", () => {
     vi.stubGlobal("useAuthFetch", () => ({
       $authFetch: vi.fn(async () => undefined),
     }));
-    vi.stubGlobal("useDmsState", (_key: string, init: () => unknown) =>
+    vi.stubGlobal("useDmsState", <T>(_key: string, init: () => T) =>
       ref(init()),
     );
     let finishRefresh: () => void = () => undefined;
@@ -153,7 +157,7 @@ describe("readers on useApiData", () => {
     const calls = stubApiData();
     vi.stubGlobal("usePageLiveRefresh", () => undefined);
     vi.stubGlobal("useAuthFetch", () => ({ $authFetch: vi.fn() }));
-    vi.stubGlobal("useDmsState", (_key: string, init: () => unknown) =>
+    vi.stubGlobal("useDmsState", <T>(_key: string, init: () => T) =>
       ref(init()),
     );
 

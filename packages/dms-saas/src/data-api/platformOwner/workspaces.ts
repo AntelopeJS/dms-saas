@@ -25,11 +25,18 @@ import {
   TableViewRoutes,
 } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
-import { TenantBillingState, WORKSPACE_RENEWAL_KINDS } from "../../db";
+import {
+  type BillingState,
+  type PlanBillingMode,
+  type PlanInterval,
+  TenantBillingState,
+  type WorkspaceOwnerStatus,
+  type WorkspaceRenewalKind,
+  WORKSPACE_RENEWAL_KINDS,
+} from "../../db";
 import { statusPillDisplay, statusType } from "../../utils/status-vocabulary";
 import { HiddenStringFilter } from "./hidden-filter";
 import {
-  type WorkspaceCellRow,
   workspaceMrrAmount,
   workspaceMrrNote,
   workspaceOwnerLabel,
@@ -63,8 +70,8 @@ const DIRECTORY_JOIN = {
   remoteIndex: "_id",
 } as const;
 
-function directoryField(remoteField: string): PropertyDecorator {
-  return Joined({ ...DIRECTORY_JOIN, remoteField }) as PropertyDecorator;
+function directoryField(remoteField: string): ReturnType<typeof Joined> {
+  return Joined({ ...DIRECTORY_JOIN, remoteField });
 }
 
 const RENEWAL_KIND_TYPE = new DefaultDataTypes.SelectType({
@@ -73,11 +80,6 @@ const RENEWAL_KIND_TYPE = new DefaultDataTypes.SelectType({
     value: kind,
   })),
 });
-
-/** A directory getter's row: the joined fields are read off the instance. */
-function directoryRow(self: unknown): WorkspaceCellRow {
-  return self as WorkspaceCellRow;
-}
 
 /**
  * Every customer workspace with its directory row: status, plan, MRR, owner
@@ -134,7 +136,7 @@ export class workspacesDataAPI extends DataController(
   })
   @directoryField("billingState")
   @Access(AccessMode.ReadOnly)
-  declare billingState: string;
+  declare billingState: BillingState;
 
   /** The plan's id, filtered on by the Plans page's "View workspaces" link. */
   @Listable(["_id"])
@@ -226,7 +228,7 @@ export class workspacesDataAPI extends DataController(
   })
   @directoryField("ownerStatus")
   @Access(AccessMode.ReadOnly)
-  declare ownerStatus: string;
+  declare ownerStatus: WorkspaceOwnerStatus;
 
   @Listable(["_id"])
   @Column({
@@ -265,7 +267,7 @@ export class workspacesDataAPI extends DataController(
   })
   @directoryField("renewalKind")
   @Access(AccessMode.ReadOnly)
-  declare renewalKind: string | null;
+  declare renewalKind: WorkspaceRenewalKind | null;
 
   @Listable(["_id"])
   @Column({
@@ -302,12 +304,12 @@ export class workspacesDataAPI extends DataController(
   @Listable(["_id"])
   @directoryField("planInterval")
   @Access(AccessMode.ReadOnly)
-  declare planInterval: string | null;
+  declare planInterval: PlanInterval | null;
 
   @Listable(["_id"])
   @directoryField("planBillingMode")
   @Access(AccessMode.ReadOnly)
-  declare planBillingMode: string | null;
+  declare planBillingMode: PlanBillingMode | null;
 
   @Listable(["_id"])
   @directoryField("seats")
@@ -321,43 +323,43 @@ export class workspacesDataAPI extends DataController(
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get planDetail(): ComposedText | null {
-    return workspacePlanDetail(directoryRow(this));
+    return workspacePlanDetail(this);
   }
 
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get mrrAmount(): ComposedText | null {
-    return workspaceMrrAmount(directoryRow(this));
+    return workspaceMrrAmount(this);
   }
 
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get mrrNote(): CellSubline | null {
-    return workspaceMrrNote(directoryRow(this));
+    return workspaceMrrNote(this);
   }
 
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get ownerLabel(): string | null {
-    return workspaceOwnerLabel(directoryRow(this));
+    return workspaceOwnerLabel(this);
   }
 
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get ownerState(): CellSubline {
-    return workspaceOwnerState(directoryRow(this));
+    return workspaceOwnerState(this);
   }
 
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get renewalSummary(): ComposedText | null {
-    return workspaceRenewalSummary(directoryRow(this));
+    return workspaceRenewalSummary(this);
   }
 
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get renewalDate(): CellSubline | null {
-    return workspaceRenewalDate(directoryRow(this));
+    return workspaceRenewalDate(this);
   }
 
   @Select()

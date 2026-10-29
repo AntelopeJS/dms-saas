@@ -2,19 +2,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useBillingStatus } from "../frontend-vue/app/composables/useBillingStatus";
 import { useMountedData } from "../frontend-vue/app/composables/useMountedData";
 import { useNextInvoice } from "../frontend-vue/app/composables/useNextInvoice";
+import type { ApiDataRequest, UseApiDataOptions } from "./helpers/api-data";
 import { mountComposable, ref } from "./helpers/frontend-vue";
 
 interface ApiDataCall {
-  url: unknown;
-  options: unknown;
+  url: ApiDataRequest;
+  options: UseApiDataOptions<unknown> | undefined;
 }
 
 function stubApiData(): ApiDataCall[] {
   const calls: ApiDataCall[] = [];
-  vi.stubGlobal("useApiData", (url: unknown, options: unknown) => {
-    calls.push({ url, options });
-    return { data: { value: null } };
-  });
+  vi.stubGlobal(
+    "useApiData",
+    (url: ApiDataRequest, options?: UseApiDataOptions<unknown>) => {
+      calls.push({ url, options });
+      return { data: { value: null } };
+    },
+  );
   return calls;
 }
 

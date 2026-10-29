@@ -28,6 +28,7 @@ import {
 import { assertAdmissionOpen } from "../../config";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 import type {
@@ -190,7 +191,7 @@ export class SaasWorkspacesController extends Controller(
   async createOptions(
     @AuthRawUser() user: User,
     @Context() ctx: RequestContext,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language?: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language?: RequestHeaderValue,
   ): Promise<WorkspaceCreateOptions> {
     assertAdmissionOpen(user.owner);
     return buildWorkspaceCreateOptions(

@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import type { Plan } from "../src/db";
 import { isDowngrade } from "../src/plans";
@@ -56,7 +57,7 @@ describe("plan downgrade detection", () => {
 
 describe("server plan downgrade", () => {
   const plan = (fields: Partial<Plan>): Plan =>
-    ({ interval: "month", billingMode: "flat", ...fields }) as Plan;
+    fromPartial<Plan>({ interval: "month", billingMode: "flat", ...fields });
 
   it("compares what the workspace pays for the seats it uses", () => {
     const business = plan({ price: 49, billingMode: "seat" });

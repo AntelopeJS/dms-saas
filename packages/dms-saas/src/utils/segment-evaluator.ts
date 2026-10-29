@@ -5,6 +5,12 @@ import type {
   SegmentWorkspaceRef,
 } from "../db";
 import { findAnySegmentField, type SegmentValueKind } from "./segment-fields";
+import {
+  isBoolean,
+  isNumber,
+  isObjectOrNull,
+  isString,
+} from "./primitive-guards";
 
 export type SegmentNode =
   | SegmentCondition
@@ -33,7 +39,7 @@ function getFieldValue(target: Record<string, unknown>, path: string): unknown {
     .split(".")
     .reduce<unknown>(
       (acc, key) =>
-        acc && typeof acc === "object"
+        acc && isObjectOrNull(acc)
           ? (acc as Record<string, unknown>)[key]
           : undefined,
       target,
@@ -42,19 +48,19 @@ function getFieldValue(target: Record<string, unknown>, path: string): unknown {
 
 const KIND_COERCERS: Record<SegmentValueKind, (value: unknown) => unknown> = {
   number: (value) => {
-    if (typeof value === "number") return value;
+    if (isNumber(value)) return value;
     const parsed = Number(value);
     return Number.isNaN(parsed) ? undefined : parsed;
   },
   boolean: (value) => {
-    if (typeof value === "boolean") return value;
+    if (isBoolean(value)) return value;
     if (value === "true") return true;
     if (value === "false") return false;
     return undefined;
   },
   date: (value) =>
     value instanceof Date ? value.getTime() : new Date(String(value)).getTime(),
-  string: (value) => (typeof value === "string" ? value : String(value)),
+  string: (value) => (isString(value) ? value : String(value)),
 };
 
 function coerce(value: unknown, kind: FieldKind): unknown {
@@ -73,8 +79,8 @@ function compareValues(
 ): number | null {
   const a = coerce(actual, kind);
   const e = coerce(expected, kind);
-  if (typeof a === "number" && typeof e === "number") return a - e;
-  if (typeof a === "string" && typeof e === "string") return a.localeCompare(e);
+  if (isNumber(a) && isNumber(e)) return a - e;
+  if (isString(a) && isString(e)) return a.localeCompare(e);
   return null;
 }
 
@@ -93,7 +99,7 @@ function comparesWith(
 }
 
 function evaluateContains(actual: unknown, expected: unknown): boolean {
-  if (typeof actual === "string" && typeof expected === "string") {
+  if (isString(actual) && isString(expected)) {
     return actual.toLowerCase().includes(expected.toLowerCase());
   }
   if (Array.isArray(actual)) return actual.includes(expected);

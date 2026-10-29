@@ -371,18 +371,22 @@ describe("subscription cancellation", () => {
       items: { data: [{ current_period_end: seconds(PERIOD_END) }] },
     };
     expect(
-      readScheduledCancellation({
-        ...period,
-        cancel_at_period_end: true,
-        cancel_at: null,
-      } as unknown as Stripe.Subscription),
+      readScheduledCancellation(
+        fromPartial<Stripe.Subscription>({
+          ...period,
+          cancel_at_period_end: true,
+          cancel_at: null,
+        }),
+      ),
     ).toEqual(PERIOD_END);
     expect(
-      readScheduledCancellation({
-        ...period,
-        cancel_at_period_end: false,
-        cancel_at: null,
-      } as unknown as Stripe.Subscription),
+      readScheduledCancellation(
+        fromPartial<Stripe.Subscription>({
+          ...period,
+          cancel_at_period_end: false,
+          cancel_at: null,
+        }),
+      ),
     ).toBeNull();
   });
 });

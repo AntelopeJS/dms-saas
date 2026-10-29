@@ -1,6 +1,4 @@
-import { createRequire } from "node:module";
-import path from "node:path";
-import { readLocale } from "./helpers/locales";
+import { type LocaleTree, localeMessage, readLocale } from "./helpers/locales";
 import { describe, expect, it, vi } from "vitest";
 import {
   formatPlanFeatureValue,
@@ -8,28 +6,18 @@ import {
   type PlanFeatureFormatContext,
   registerPlanFeatureUnit,
 } from "../frontend-vue/app/composables/usePlanFeatureFormat";
-
-type LocaleTree = { [key: string]: string | LocaleTree };
+import { resolveI18nKey } from "../node_modules/@antelopejs/dms/frontend-vue/layers/dms-core/app/composables/translation/useTranslation";
 
 const PLURAL_SEPARATOR = " | ";
 const UNLIMITED = "unlimited";
-
-function resolveMessage(tree: LocaleTree, key: string): string | null {
-  let node: string | LocaleTree | undefined = tree;
-  for (const segment of key.split(".")) {
-    if (typeof node !== "object") return null;
-    node = node[segment];
-  }
-  return typeof node === "string" ? node : null;
-}
 
 /** Mirrors vue-i18n's two-choice plural rule and named interpolation. */
 function translator(
   tree: LocaleTree,
 ): PlanFeatureFormatContext["translateUnit"] {
   return (key, params, count) => {
-    const message = resolveMessage(tree, key);
-    if (message === null) throw new Error(`missing locale key ${key}`);
+    const message = localeMessage(tree, key);
+    if (message === undefined) throw new Error(`missing locale key ${key}`);
     const choices = message.split(PLURAL_SEPARATOR);
     const choice =
       choices.length > 1 && count !== 1 ? choices[1]! : choices[0]!;
@@ -40,30 +28,10 @@ function translator(
   };
 }
 
-const require = createRequire(import.meta.url);
-const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
-type Translate = (key: string) => string;
-
-interface DmsTranslationHelpers {
-  resolveI18nKey: (translate: Translate, key: string) => string;
-  resolveOptionalI18nKey: (
-    translate: Translate,
-    key: string | undefined,
-  ) => string | undefined;
-}
-
-/** The real DMS helpers the plan pages get auto-imported, not a re-implementation. */
-const dmsTranslation = (await import(
-  path.join(
-    dmsRoot,
-    "frontend-vue/layers/dms-core/app/composables/translation/useTranslation.ts",
-  )
-)) as DmsTranslationHelpers;
-
 /** Messages a consumer module ships for its text feature values. */
-const VALUE_MESSAGES: Record<string, string> = {
-  "cloud.plan_features.values.upgrade": "Upgrade required",
-};
+const VALUE_MESSAGES = new Map([
+  ["cloud.plan_features.values.upgrade", "Upgrade required"],
+]);
 
 const EN = readLocale("saas-en-GB.json");
 const FR = readLocale("saas-fr-FR.json");
@@ -78,7 +46,7 @@ function context(
     unlimitedLabel: UNLIMITED,
     translateUnit: translator(locale === "en-GB" ? EN : FR),
     translateText: (text) =>
-      dmsTranslation.resolveI18nKey((key) => VALUE_MESSAGES[key] ?? key, text),
+      resolveI18nKey((key) => VALUE_MESSAGES.get(key) ?? key, text),
   };
 }
 

@@ -60,6 +60,7 @@ import {
 import { stripeDashboardUrl } from "../../stripe/client";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 import { isPlanAccess } from "../../plans/plan-access-type";
@@ -295,7 +296,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   @Get("/")
   async list(
     @AuthOwnerOnly() _user: User,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<PlanWithWorkspaceCount[]> {
     const locale = requestLocale(language);
     const plans = await this.planModel.findNotDeleted();
@@ -322,7 +323,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   @Get("/catalog")
   async editCatalog(
     @AuthOwnerOnly() _user: User,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<PlanEditCatalog> {
     const locale = requestLocale(language);
     const [plans, features, permissions] = await Promise.all([

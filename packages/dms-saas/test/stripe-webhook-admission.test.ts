@@ -109,12 +109,12 @@ it.each([true, false])(
       .spyOn(model.table, "atomicMutation")
       .mockImplementationOnce((key, request) => {
         const query = atomicMutation(key, request);
-        return {
+        return fromPartial<typeof query>({
           run: async () => {
             if (isApplied) await query.run();
             return "unknown";
           },
-        } as typeof query;
+        });
       });
     const input = event();
     const retrieve = stubCreditNoteRead();

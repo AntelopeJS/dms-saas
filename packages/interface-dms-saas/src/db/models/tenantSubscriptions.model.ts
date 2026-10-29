@@ -71,15 +71,13 @@ export class TenantSubscriptionModel extends BasicDataModel(
     patchOrOptions?: DeepPartial<TenantSubscription> | ValidateOptions,
     options?: ValidateOptions,
   ): Promise<number> {
-    const id = typeof idOrPatch === "string" ? idOrPatch : idOrPatch._id;
-    const patch =
-      typeof idOrPatch === "string"
-        ? (patchOrOptions as DeepPartial<TenantSubscription>)
-        : idOrPatch;
-    const validation =
-      typeof idOrPatch === "string"
-        ? options
-        : (patchOrOptions as ValidateOptions | undefined);
+    const id = isIdArgument(idOrPatch) ? idOrPatch : idOrPatch._id;
+    const patch = isIdArgument(idOrPatch)
+      ? (patchOrOptions as DeepPartial<TenantSubscription>)
+      : idOrPatch;
+    const validation = isIdArgument(idOrPatch)
+      ? options
+      : (patchOrOptions as ValidateOptions | undefined);
     if (!id) throw new Error("Subscription identity is required");
     if (
       validation?.validate &&
@@ -441,4 +439,10 @@ export class TenantSubscriptionModel extends BasicDataModel(
   async deleteAll(): Promise<void> {
     await this.table.delete().run();
   }
+}
+
+function isIdArgument(
+  value: string | DeepPartial<TenantSubscription>,
+): value is string {
+  return typeof value === "string";
 }

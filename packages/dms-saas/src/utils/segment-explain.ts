@@ -10,6 +10,7 @@ import {
   type SegmentNode,
   segmentWorkspacePool,
 } from "./segment-evaluator";
+import { isString } from "./primitive-guards";
 
 /** A workspace condition, with the workspaces of the user that meet it. */
 export interface ExplainedWorkspaceRef extends Omit<
@@ -49,7 +50,7 @@ function explainWorkspaceRef(
       ? explainSegmentGroup(node.conditions, first)
       : { ...node.conditions, conditions: [] },
     workspaceNames: meeting.map((workspace) =>
-      typeof workspace.name === "string" ? workspace.name : "",
+      isString(workspace.name) ? workspace.name : "",
     ),
   };
 }

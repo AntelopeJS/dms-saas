@@ -127,14 +127,14 @@ function invalidRequest(
     param,
     type: "invalid_request_error",
     statusCode: 400,
-  } as Stripe.errors.StripeRawError);
+  });
 }
 
 function connectionLost(): Stripe.errors.StripeConnectionError {
   return new Stripe.errors.StripeConnectionError({
     message: "An error occurred with our connection to Stripe.",
     type: "api_error",
-  } as Stripe.errors.StripeRawError);
+  });
 }
 
 async function checkoutRequest(): Promise<PlanChangeRequest> {
@@ -392,8 +392,10 @@ function cancel(checkout: RecordedCheckout, operationId: string | null) {
   );
 }
 
-function expiredEvent(session: Stripe.Checkout.Session): Stripe.Event {
-  return { data: { object: session } } as Stripe.Event;
+function expiredEvent(session: Stripe.Checkout.Session) {
+  return fromPartial<Stripe.CheckoutSessionExpiredEvent>({
+    data: { object: session },
+  });
 }
 
 describe("abandoned checkout recovery", () => {

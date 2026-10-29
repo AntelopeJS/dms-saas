@@ -64,9 +64,9 @@ async function findPlanByPrice(priceId: string | null): Promise<Plan | null> {
 
 /** Stripe applied a paid upgrade the confirm call may never have reported. */
 export async function handleSubscriptionPendingUpdateApplied(
-  event: Stripe.Event,
+  event: Stripe.CustomerSubscriptionPendingUpdateAppliedEvent,
 ): Promise<void> {
-  const stripeSubscription = event.data.object as Stripe.Subscription;
+  const stripeSubscription = event.data.object;
   const customerId = asCustomerId(stripeSubscription.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);

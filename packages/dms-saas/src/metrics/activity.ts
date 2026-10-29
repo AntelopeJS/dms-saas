@@ -3,7 +3,7 @@ import type {
   BlockText,
   Tone,
 } from "@antelopejs/interface-dms/base";
-import type { Invoice } from "../db";
+import type { BillingDocumentStatus, Invoice } from "../db";
 import {
   dateParam,
   listDateFormat,
@@ -14,6 +14,8 @@ import type { OperatorAction } from "../operator-actions/db/operator-action.tabl
 import type { WorkspaceOperatorAction } from "../operator-actions/types";
 import { getRowInstance } from "../utils/row-instance";
 import { MS_PER_DAY } from "../utils/time";
+import { isNumber, isString } from "../utils/primitive-guards";
+import type { QueryParameterValue } from "../utils/query-parameter";
 
 /** The activity feeds offered: everything, money movements, or lifecycle. */
 export const ACTIVITY_KINDS = ["all", "billing", "lifecycle"] as const;
@@ -79,7 +81,7 @@ const KEY_PREFIX = "$saas.activity";
 const PLATFORM_TITLES = "platform";
 const WORKSPACE_TITLES = "workspace";
 
-const DOCUMENT_LOOKS: Record<string, DocumentLook> = {
+const DOCUMENT_LOOKS: Partial<Record<BillingDocumentStatus, DocumentLook>> = {
   paid: { icon: "i-ph-check-circle", tone: "success", title: "invoice_paid" },
   open: { icon: "i-ph-hourglass", tone: "warning", title: "invoice_open" },
   uncollectible: {
@@ -155,9 +157,13 @@ const ACTION_LOOKS: Partial<
   },
 };
 
+function isLookOf(look: ActionLook | ActionLookOf): look is ActionLookOf {
+  return typeof look === "function";
+}
+
 function lookOf(action: OperatorAction): ActionLook | undefined {
   const look = ACTION_LOOKS[action.action];
-  return typeof look === "function" ? look(action) : look;
+  return look !== undefined && isLookOf(look) ? look(action) : look;
 }
 
 function key(name: string): string {
@@ -207,14 +213,14 @@ function documentEntry(
 
 function detailString(action: OperatorAction, field: string): string {
   const value = action.details?.[field];
-  return typeof value === "string" ? value : "—";
+  return isString(value) ? value : "—";
 }
 
 function actionMeta(action: OperatorAction): BlockText[] {
   const amount = action.details?.amountCents;
   const currency = action.details?.currency;
   const money =
-    typeof amount === "number" && typeof currency === "string"
+    isNumber(amount) && isString(currency)
       ? [valueText(moneyParam(amount, currency))]
       : [];
   return [...money, key("by_operator")];
@@ -301,11 +307,11 @@ export function buildActivityFeed(
 }
 
 /** Whether a query asks for a feed drawn without day separators. */
-export function isFlatFeed(value: unknown): boolean {
+export function isFlatFeed(value: QueryParameterValue): boolean {
   return value === "true";
 }
 
 /** The feed kind a query names, `all` when it names none it knows. */
-export function parseActivityKind(value: unknown): ActivityKind {
+export function parseActivityKind(value: QueryParameterValue): ActivityKind {
   return ACTIVITY_KINDS.find((kind) => kind === value) ?? "all";
 }

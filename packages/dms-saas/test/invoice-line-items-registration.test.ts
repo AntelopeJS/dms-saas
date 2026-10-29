@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import type * as declarationModule from "@antelopejs/interface-dms-saas/invoice-line-items";
 import { describe, expect, it, vi } from "vitest";
@@ -51,7 +52,9 @@ function registeredIds(modules: LineItemsModules): string[] {
 function resolvedMarkers(modules: LineItemsModules): string[] {
   return modules.implementation
     .getInvoiceLineItemsProviders()
-    .flatMap((provider) => provider.resolve(undefined as never))
+    .flatMap((provider) =>
+      provider.resolve(fromPartial<Parameters<typeof provider.resolve>[0]>({})),
+    )
     .map((line) => line.key);
 }
 

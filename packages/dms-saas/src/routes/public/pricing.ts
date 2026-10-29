@@ -3,6 +3,7 @@ import { Model } from "@antelopejs/interface-database-decorators";
 import { PlanModel } from "../../db";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 import { resolveDefaultPlan } from "../../workspaces";
@@ -31,7 +32,7 @@ export class SaasPricingController extends Controller("/api/saas/pricing") {
 
   @Get("/")
   async getPricing(
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<PublicPricing> {
     const [plans, rules, defaultPlan] = await Promise.all([
       this.planModel.findPubliclyVisible(),

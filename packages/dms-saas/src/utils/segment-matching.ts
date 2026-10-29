@@ -85,10 +85,7 @@ function diffInDays(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / MS_PER_DAY);
 }
 
-function projectInvoices(invoices: Invoice[]): {
-  totalRevenue: number;
-  lastInvoiceAt: Date | null;
-} {
+function projectInvoices(invoices: Invoice[]) {
   let totalRevenue = 0;
   let lastInvoiceAt: Date | null = null;
   for (const invoice of invoices) {

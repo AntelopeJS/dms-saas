@@ -213,7 +213,9 @@ export interface SelfServeCardUse {
   card: CardDetails;
 }
 
-function assertCardSent(value: string | null | undefined): void {
+function assertCardSent(
+  value: string | null | undefined,
+): asserts value is string {
   assert(
     value,
     HTTP_BAD_REQUEST,
@@ -234,7 +236,7 @@ const CARD_USES: Record<
     assertCardSent(paymentMethodId);
     assertCardSent(card.fingerprint);
     await assertCardMayBackFreeWorkspace(
-      card.fingerprint as string,
+      card.fingerprint,
       freeWorkspacesPerCard,
     );
     return { paymentMethodId: undefined, card };

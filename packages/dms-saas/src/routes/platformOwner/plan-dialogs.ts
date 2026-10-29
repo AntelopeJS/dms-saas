@@ -18,6 +18,7 @@ import {
 import { formatMoney } from "../../plans/money";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 
@@ -201,7 +202,7 @@ export class SaasPlanDialogsController extends Controller(
   async removeFeature(
     @AuthOwnerOnly() _user: User,
     @Parameter("id") id: string,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<ConfirmDialogSerialized> {
     const feature = await this.featureModel.get(id);
     assert(feature, HTTP_NOT_FOUND, "saas.errors.feature.not_found");
@@ -223,7 +224,7 @@ export class SaasPlanDialogsController extends Controller(
   async stopSelling(
     @AuthOwnerOnly() _user: User,
     @Parameter("id") id: string,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<ConfirmDialogSerialized> {
     const [plan, usage] = await this.load(id);
     const locale = requestLocale(language);

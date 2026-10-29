@@ -52,7 +52,7 @@ function defaultBillingSettings(now: Date): BillingSettings {
     ...defaultBillingRules(),
     plansSyncedAt: null,
     updatedAt: now,
-  } as BillingSettings;
+  };
 }
 
 /**
