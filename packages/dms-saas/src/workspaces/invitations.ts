@@ -25,7 +25,7 @@ import {
 
 const HTTP_NOT_FOUND = 404;
 const SIGNUP_PATH = "/auth/signup";
-// The DMS's own reason when a workspace admin cancels an invitation.
+/** The DMS's own reason when a workspace admin cancels an invitation. */
 const REVOKED_REASON = "cancelled";
 
 export type InvitationEmailDelivery = "sent" | "failed";

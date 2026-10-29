@@ -102,8 +102,10 @@ interface WorkspaceAccess {
   unpaidInvoice: UnpaidInvoiceRef | null;
 }
 
-// The billing routes bypass the tenant access gate on purpose: they are the
-// recovery path a blocked workspace uses to regularize its subscription.
+/**
+ * The billing routes bypass the tenant access gate on purpose: they are the
+ * recovery path a blocked workspace uses to regularize its subscription.
+ */
 export class SaasBillingPortalController extends Controller(
   "/api/saas/billing",
 ) {

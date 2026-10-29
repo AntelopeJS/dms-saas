@@ -41,6 +41,7 @@ export class SaasUsersListController extends PageController(
   },
   DefaultLayout({ fullWidth: true }),
 ) {
+  /** Rows cannot be duplicated: an account is created by its owner signing up, never copied. */
   static table = TableView(saasUsersDataAPI, {
     caption: "$saas.users.caption",
     labelKey: "name",
@@ -62,7 +63,6 @@ export class SaasUsersListController extends PageController(
       add: false,
       copyLink: true,
       delete: false,
-      // An account is created by its owner signing up, never copied.
       duplicate: false,
       edit: false,
       details: {

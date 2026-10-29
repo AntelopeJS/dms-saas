@@ -1,6 +1,3 @@
-// The checkout-session half of the Stripe webhook surface, split out of
-// webhook-handlers.ts to keep every file under the size the linter allows.
-
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import type Stripe from "stripe";
@@ -20,6 +17,11 @@ import { DELETION_REQUEST_CLEARED } from "../workspaces/deletion-request";
 import { ACTIVE_STATUS, asCustomerId, TRIALING_STATUS } from "./webhook-shared";
 import { releaseCheckoutTrialReservation } from "./workspace-checkout";
 
+/**
+ * A failure propagates on purpose: the whole handler is idempotent, so
+ * Stripe's redelivery retries the promotion. Swallowing it would leave the
+ * card invisible for good on a transient error.
+ */
 async function promoteSubscriptionPaymentMethod(
   subscription: Stripe.Subscription,
 ): Promise<void> {
@@ -30,9 +32,6 @@ async function promoteSubscriptionPaymentMethod(
       : (subscription.default_payment_method?.id ?? null);
   if (!customerId || !paymentMethodId) return;
   const stripe = getStripeClient();
-  // A failure propagates on purpose: the whole handler is idempotent, so
-  // Stripe's redelivery retries the promotion — swallowing it would leave the
-  // card invisible for good on a transient error.
   await stripe.customers.update(customerId, {
     invoice_settings: { default_payment_method: paymentMethodId },
   });
@@ -98,6 +97,11 @@ function resolveCheckoutContext(event: Stripe.Event): CheckoutContext | null {
   return { session, tenantId, subscriptionId, targetPlanId };
 }
 
+/**
+ * Seeds the renewal date immediately: waiting for the first
+ * `customer.subscription.updated` would leave the plan card without its "next
+ * renewal" line exactly when the customer just paid.
+ */
 async function mirrorCheckoutSubscription(
   context: CheckoutContext,
   subscription: Stripe.Subscription,
@@ -113,9 +117,6 @@ async function mirrorCheckoutSubscription(
     status,
     stripeSubscriptionId: context.subscriptionId,
     ...DELETION_REQUEST_CLEARED,
-    // Seed the renewal date immediately: waiting for the first
-    // customer.subscription.updated would leave the plan card without its
-    // "next renewal" line exactly when the customer just paid.
     ...readSubscriptionPeriodDates(subscription),
     updatedAt: new Date(),
   };
@@ -171,6 +172,10 @@ async function completeCheckout(context: CheckoutContext): Promise<void> {
   });
 }
 
+/**
+ * When the subscription has not activated, no provider mutation occurred: the
+ * checkout intent is restored for a later activation callback.
+ */
 async function retrieveActivatedCheckout(
   context: CheckoutContext,
   existing: TenantSubscription,
@@ -184,7 +189,6 @@ async function retrieveActivatedCheckout(
     subscription.status === TRIALING_STATUS
   )
     return subscription;
-  // No provider mutation occurred: restore the checkout intent for a later activation callback.
   await GetModel(
     TenantSubscriptionModel,
     context.tenantId,
@@ -232,6 +236,10 @@ export async function handleCheckoutSessionExpired(
   await releaseCheckoutTrialReservation(session, tenantId);
 }
 
+/**
+ * Webhooks can be redelivered, and the register flow may already have recorded
+ * this identity, so it only inserts when nothing exists yet.
+ */
 async function recordCheckoutTrialConsumption(
   session: Stripe.Checkout.Session,
   createdBy: string | null,
@@ -241,8 +249,6 @@ async function recordCheckoutTrialConsumption(
   if (!email || !createdBy || !planId) return false;
   const emailHash = hashEmail(email);
   const trialConsumptionModel = GetModel(TrialConsumptionModel);
-  // Webhooks can be redelivered, and the register flow may already have
-  // recorded this identity, so only insert when nothing exists yet.
   if (await trialConsumptionModel.existsForIdentity(emailHash, null)) {
     return true;
   }

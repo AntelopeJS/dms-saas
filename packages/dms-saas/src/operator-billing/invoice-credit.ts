@@ -26,8 +26,10 @@ import {
 
 const HTTP_NOT_FOUND = 404;
 const INVOICE_DOCUMENT_TYPE = "invoice";
-// Stripe expands four levels at most: the payment intent is the deepest it
-// reaches here, and its payment method is read on its own.
+/**
+ * Stripe expands four levels at most: the payment intent is the deepest it
+ * reaches here, and its payment method is read on its own.
+ */
 const PAYMENT_INTENT_EXPANSION = "payments.data.payment.payment_intent";
 
 /** A credit note already issued against the invoice, as the dialog lists it. */

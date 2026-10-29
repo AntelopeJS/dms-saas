@@ -134,7 +134,19 @@ async function notifySeatOverageIfAny(
   });
 }
 
-/** Admit the landing once; failed cleanup retains intent rather than replaying blindly. */
+/**
+ * Admit the landing once; failed cleanup retains intent rather than replaying
+ * blindly. The free-plan landing drops the Stripe subscription in the same
+ * patch, so seats are not synced against the one that just went away.
+ *
+ * Everything after the commit is best-effort: the marker is gone, so failing
+ * the webhook would not replay the commit. Worse, on the free-plan landing the
+ * redelivery would find no pending change and take the cancellation branch,
+ * cancelling a downgrade that just succeeded. The billing-state cron
+ * re-derives the recompute within its own schedule anyway. A notification
+ * likewise never blocks billing sync, and failing the webhook would not resend
+ * it: the redelivery exits early once the pending plan is cleared.
+ */
 async function commitPendingPlan(
   tenantId: string,
   subscription: TenantSubscription,
@@ -153,8 +165,6 @@ async function commitPendingPlan(
   await syncStripeSeatQuantity({
     tenantId,
     plan: pendingPlan,
-    // The free-plan landing drops the Stripe subscription in the same patch;
-    // seats must not be synced against the one that just went away.
     stripeSubscriptionId:
       "stripeSubscriptionId" in patch
         ? (patch.stripeSubscriptionId ?? null)
@@ -166,20 +176,12 @@ async function commitPendingPlan(
     ...toPendingPatch(null, null),
     ...patch,
   });
-  // Best-effort past this point: the marker is gone, so failing the webhook
-  // would not replay the commit — worse, on the free-plan landing the
-  // redelivery would find no pending change and take the cancellation branch,
-  // cancelling a downgrade that just succeeded. The billing-state cron
-  // re-derives this within its own schedule anyway.
   await recomputeTenantBillingState(tenantId).catch((error) => {
     Logging.Error(
       `[dms-saas:plan-changes] billing-state recompute failed after committing plan ${pendingPlan._id} for tenant ${tenantId}`,
       error,
     );
   });
-  // A notification must never block billing sync, and failing the webhook
-  // would not resend it anyway — the redelivery exits early once the pending
-  // plan is cleared.
   await notifySeatOverageIfAny(tenantId, pendingPlan).catch(() => undefined);
 }
 
@@ -209,6 +211,10 @@ function holdsPendingState(stripeSubscription: Stripe.Subscription): boolean {
  * permissions with the plan on every resolution, so enforcement never relies
  * on it — and a destructive rewrite of tenant roles has no place in an
  * automatic detection path that also covers upgrades.
+ *
+ * Same rule as dropping a parked change: events carry no ordering guarantee,
+ * so an update emitted before a phase change must not roll the mirror back to
+ * the previously billed price. Only the subscription's live state decides.
  */
 async function adoptBilledPlan(
   tenantId: string,
@@ -225,10 +231,6 @@ async function adoptBilledPlan(
   if (currentPriceId === activePriceId) {
     return;
   }
-  // Same rule as dropping a parked change: rewriting the plan is destructive
-  // and events carry no ordering guarantee, so an update emitted before a
-  // phase change must not roll the mirror back to the previously billed
-  // price. Only the subscription's live state decides.
   const fresh = await getStripeClient().subscriptions.retrieve(
     stripeSubscription.id,
   );
@@ -253,6 +255,13 @@ async function adoptBilledPlan(
  * converges to what Stripe actually holds. A parked change Stripe no longer
  * knows is dropped, and the local plan follows the billed price — so billing
  * and entitlements realign by the next event at the latest.
+ *
+ * A provider observation cannot acknowledge or reverse an uncertain emitter,
+ * so a subscription with a guarded plan change is left alone. Stripe does not
+ * guarantee delivery order: an update emitted before the downgrade was parked
+ * can arrive after it. Dropping the parked change is destructive, so it only
+ * happens against the subscription's live state, never against the payload
+ * alone.
  */
 export async function reconcilePendingWithStripe(
   tenantId: string,
@@ -261,13 +270,8 @@ export async function reconcilePendingWithStripe(
   const model = GetModel(TenantSubscriptionModel, tenantId);
   const local = await model.findOne();
   if (!local) return;
-  // A provider observation cannot acknowledge or reverse an uncertain emitter.
   if (local.guardedPlanChange) return;
   if (local.pendingPlanId && !holdsPendingState(stripeSubscription)) {
-    // Stripe does not guarantee delivery order: an update emitted before the
-    // downgrade was parked can arrive after it. Dropping the parked change is
-    // destructive, so it only happens against the subscription's live state,
-    // never against the payload alone.
     const fresh = await getStripeClient().subscriptions.retrieve(
       stripeSubscription.id,
     );
@@ -300,6 +304,14 @@ export async function applyPendingPlanChangeIfEntered(
 /**
  * A subscription cancelled at cycle end while a free plan was parked is a
  * completed downgrade, not a cancellation: the workspace stays active.
+ *
+ * Only a genuinely free target may land without a Stripe subscription; a priced
+ * plan that lost its Stripe ref falls through to the regular cancellation path
+ * rather than being granted for free. A dunning episode survives the landing:
+ * when the final cycle's invoice went unpaid before Stripe cancelled at period
+ * end, granting `active` would let the workspace walk away from that invoice.
+ * The plan still lands; the status (and its pastDueSince clock) clears on
+ * invoice.paid.
  */
 export async function applyPendingFreePlanOnCancellation(
   tenantId: string,
@@ -310,15 +322,8 @@ export async function applyPendingFreePlanOnCancellation(
     return reconcileGuardedFreeChange(tenantId);
   const pendingPlan = await loadPendingPlan(subscription);
   if (!subscription || !pendingPlan) return false;
-  // Only a genuinely free target may land without a Stripe subscription; a
-  // priced plan that lost its Stripe ref must fall through to the regular
-  // cancellation path rather than being granted for free.
   if (pendingPlan.paymentProviderRefs?.stripePriceId) return false;
   if (pendingPlan.price > 0) return false;
-  // A dunning episode survives the landing: when the final cycle's invoice
-  // went unpaid before Stripe cancelled at period end, granting `active`
-  // here would let the workspace walk away from that invoice. The plan still
-  // lands; the status (and its pastDueSince clock) clears on invoice.paid.
   const preservedStatus = DUNNING_STATUSES.has(subscription.status)
     ? subscription.status
     : ACTIVE_STATUS;

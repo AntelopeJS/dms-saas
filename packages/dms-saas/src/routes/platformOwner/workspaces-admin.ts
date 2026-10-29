@@ -123,6 +123,14 @@ function joinConfirmationDialog(
   };
 }
 
+/**
+ * Puts the workspace on the plan with complimentary access. A paid Stripe
+ * subscription is cancelled first. The write clears the subscription and
+ * checkout refs and the self-refund claim (`refundRequestedAt`), which re-arms
+ * self-refund eligibility. `stripeCustomerId` is preserved on update so the
+ * existing Stripe customer (and its saved payment methods) is reused when
+ * billing resumes instead of orphaning it with a brand-new one.
+ */
 async function upsertFreeSubscription(
   tenantId: string,
   planId: string,
@@ -146,11 +154,6 @@ async function upsertFreeSubscription(
       { idempotencyKey: `admin-grant-free:${operationId}` },
     );
   }
-  // Clears the subscription/checkout refs and the self-refund claim
-  // (refundRequestedAt), which re-arms self-refund eligibility.
-  // stripeCustomerId is preserved on update so the existing Stripe customer
-  // (and its saved payment methods) is reused when billing resumes instead of
-  // orphaning it with a brand-new one.
   const payload = {
     planId,
     status: ACTIVE_STATUS,
@@ -183,6 +186,10 @@ async function upsertFreeSubscription(
   await recomputeTenantBillingState(tenantId);
 }
 
+/**
+ * The plan the workspace is on stays grantable even once it is no longer sold
+ * or targets another audience: the dialog offers it by default.
+ */
 async function assertPlanIsAvailableForTenant(
   plan: Plan | undefined,
   tenantId: string,
@@ -192,8 +199,6 @@ async function assertPlanIsAvailableForTenant(
     GetModel(TenantBillingInfoModel, tenantId).findOne(),
     GetModel(TenantSubscriptionModel, tenantId).findOne(),
   ]);
-  // The plan the workspace is on stays grantable even once it is no longer
-  // sold or targets another audience: the dialog offers it by default.
   const isCurrentPlan = subscription?.planId === plan._id;
   assert(
     isCurrentPlan || plan.isActive,
@@ -284,6 +289,10 @@ export class SaasWorkspacesAdminController extends Controller(
     return loadComplimentaryImpact(tenantId, requestLocale(language));
   }
 
+  /**
+   * Grants complimentary access: ending a paid subscription first cancels it
+   * on Stripe.
+   */
   @Post("/:tenantId/grant-free-access")
   async grantFreeAccess(
     @AuthOwnerOnly() user: User,
@@ -301,7 +310,6 @@ export class SaasWorkspacesAdminController extends Controller(
       body.freeUntil,
       "saas.errors.workspace_create.free_until_past",
     );
-    // Ending a paid subscription first cancels it on Stripe.
     await withStripeAvailability(() =>
       runTenantLifecycleOperation(tenantId, () =>
         upsertFreeSubscription(tenantId, plan._id, freeUntil, user._id),

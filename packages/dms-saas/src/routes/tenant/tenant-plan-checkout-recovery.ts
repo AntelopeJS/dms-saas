@@ -1,13 +1,3 @@
-// Getting a workspace out of a checkout its owner walked away from, split out
-// of tenant-plan-checkout.ts to keep both files under the size the linter
-// allows.
-//
-// A checkout admission is only ever released once Stripe provably holds no
-// session a customer could still pay: the recorded session expired — on its
-// own, or because this module expired it — or no session was ever recorded.
-// A completed session is never released: its payment is on its way to the
-// completion webhook.
-
 import { HTTPResult } from "@antelopejs/interface-api";
 import { Logging } from "@antelopejs/interface-core/logging";
 import Stripe from "stripe";
@@ -89,6 +79,10 @@ function pendingCheckoutTransition(
   return transition?.kind === CHECKOUT_KIND ? transition : null;
 }
 
+/**
+ * The Stripe session recorded for this admission, or null. A session id left
+ * over from an earlier, completed checkout is not this admission's session.
+ */
 async function retrieveRecordedSession(
   subscription: TenantSubscription,
   transition: SubscriptionTransition,
@@ -97,8 +91,6 @@ async function retrieveRecordedSession(
   const session = await getStripeClient().checkout.sessions.retrieve(
     subscription.stripeCheckoutSessionId,
   );
-  // A session id left over from an earlier, completed checkout is not this
-  // admission's session.
   return session.metadata?.operationId === transition.operationId
     ? session
     : null;
@@ -160,6 +152,12 @@ async function findAbandonment(
 /**
  * Clears a checkout admission that can no longer complete, so the owner's
  * next attempt reconciles it instead of failing on it.
+ *
+ * An admission is only ever released once Stripe provably holds no session a
+ * customer could still pay: the recorded session expired, on its own or
+ * because this module expired it, or no session was ever recorded. A completed
+ * session is never released: its payment is on its way to the completion
+ * webhook.
  */
 export async function releaseAbandonedCheckout(
   subscription: TenantSubscription,

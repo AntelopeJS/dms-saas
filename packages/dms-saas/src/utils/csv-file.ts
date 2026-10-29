@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-// A cell starting with one of these is read as a formula by spreadsheets.
+/** A cell starting with one of these is read as a formula by spreadsheets. */
 const FORMULA_PREFIXES = new Set(["=", "+", "-", "@"]);
 /** Byte order mark, so spreadsheets read the file as UTF-8. */
 export const CSV_BOM = "﻿";

@@ -209,7 +209,7 @@ function permissionDiff(
   };
 }
 
-// The executor sets the workspace count once it froze the snapshot.
+/** The executor sets the workspace count once it froze the snapshot. */
 function buildMigrationJobPayload(
   input: MigrationJobInput,
 ): Partial<PlanMigration> {
@@ -352,7 +352,10 @@ export class SaasPlanDeletionController extends Controller(
     return owners.reduce((total, list) => total + list.length, 0);
   }
 
-  /** Step 2: what changes for the workspaces, and who is told. */
+  /**
+   * Step 2: what changes for the workspaces, and who is told. The price change
+   * is read from the customer's side: paying more is a loss.
+   */
   @Get("/:fromPlanId/prepare/:targetPlanId")
   async prepare(
     @AuthOwnerOnly() _user: User,
@@ -379,7 +382,6 @@ export class SaasPlanDeletionController extends Controller(
         toAccess.features,
       ),
       members: memberCapDiff(fromPlan, toPlan, usage),
-      // Read from the customer's side: paying more is a loss.
       price: {
         kind: changeKind(
           normalisedMonthlyAmount(toPlan, 1),

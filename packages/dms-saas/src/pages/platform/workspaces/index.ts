@@ -21,19 +21,21 @@ import {
 const W = "$saas.workspaces";
 const ROW = `${W}.row_actions`;
 const ROW_API = "/api/saas/workspaces/{{row._id}}";
-// Money and access dialogs open on the workspace's own page, where its
-// figures stand next to them: the row action names the dialog to open.
+/**
+ * Money and access dialogs open on the workspace's own page, where its
+ * figures stand next to them: the row action names the dialog to open.
+ */
 const ROW_DETAIL = `${WORKSPACES_PAGE_PATH}/{{row._id}}?action=`;
 const HEADLINE_FIGURES = 4;
 const PAGE_SIZE = 25;
-// MRR is stored in minor units: 500.00 in the reporting currency.
+/** MRR is stored in minor units: 500.00 in the reporting currency. */
 const MRR_OVER_500_MINOR = "50000";
 
+/** Past due is the queue operators work through: the menu shows its size. */
 const STATUS_TABS: TableViewTab[] = WORKSPACE_STATUS_ORDER.map((state) => ({
   id: state,
   label: `$saas.status.workspace.${state}`,
   filter: { accessorKey: "billingState", value: state, mode: "is" },
-  // Past due is the queue operators work through: the menu shows its size.
   navBadge: state === "past_due",
 }));
 
@@ -119,6 +121,11 @@ export class SaasWorkspacesListController extends PageController(
     fetchUrl: "/api/saas/workspaces/directory-headline",
   }).meta(permissionMeta("list_headline", "i-ph-squares-four"));
 
+  /**
+   * Largest accounts first, as an operator scans the directory. The quick
+   * filters leave out `planName`: a free-text column has no values to pick, and
+   * dms#370 refuses it at registration (the toolbar already left it out).
+   */
   static table = withReportingCurrencyTotals(
     TableView(workspacesDataAPI, {
       caption: `${W}.caption`,
@@ -127,10 +134,7 @@ export class SaasWorkspacesListController extends PageController(
       pageSize: PAGE_SIZE,
       tabs: STATUS_TABS,
       views: { items: VIEWS, layout: "strip" },
-      // Not planName: a free-text column has no values to pick, and dms#370
-      // refuses it at registration (the toolbar already left it out).
       quickFilters: [{ field: "ownerStatus", icon: "i-ph-user-circle" }],
-      // Largest accounts first, as an operator scans the directory.
       defaultSort: { field: "mrrMinor", desc: true },
       queryParamFilters: { plan: { field: "planId" } },
       footer: {

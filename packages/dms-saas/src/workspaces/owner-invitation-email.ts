@@ -23,12 +23,14 @@ export interface OwnerInvitationEmail {
   operator: User;
 }
 
+/**
+ * The owner has no account yet, so the operator's language is the best guess at
+ * theirs, as on the invitation itself.
+ */
 function deliver(
   invitation: OwnerInvitationEmail,
 ): Promise<InvitationEmailDelivery> {
   const { operator } = invitation;
-  // The owner has no account yet, so the operator's language is the best
-  // guess at theirs, as on the invitation itself.
   return deliverInvitationEmail(
     {
       email: invitation.email,

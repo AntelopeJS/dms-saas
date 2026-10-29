@@ -111,8 +111,10 @@ function asText(value: ComposedTextParam): ComposedText {
   return isComposedText(value) ? value : valueText(value);
 }
 
-// Block tones a status uses, as the text tones a table cell line takes: the
-// neutral status reads muted, as the other secondary lines of the cell.
+/**
+ * Block tones a status uses, as the text tones a table cell line takes: the
+ * neutral status reads muted, as the other secondary lines of the cell.
+ */
 const CELL_TONES: Record<Tone, CellTone> = {
   neutral: "muted",
   primary: "primary",

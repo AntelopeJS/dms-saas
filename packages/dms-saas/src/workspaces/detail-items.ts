@@ -242,7 +242,10 @@ export function billingInfoItems(
   );
 }
 
-/** The coming milestone of the subscription, first on its timeline. */
+/**
+ * The coming milestone of the subscription, first on its timeline. A coming
+ * invoice date reads as the day, not as a time relative to now.
+ */
 export function upcomingTimelineItems(
   view: WorkspaceOperatorView,
   preview: UpcomingInvoicePreview | null,
@@ -259,7 +262,6 @@ export function upcomingTimelineItems(
         },
         meta: [priceTimesSeats(view)],
         date: preview.billingDate,
-        // A coming date reads as the day, not as a time relative to now.
         time: valueText(dateParam(preview.billingDate, "day")),
       },
     ];

@@ -195,9 +195,11 @@ export class planMigrationsDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare totalWorkspaces: number;
 
-  // The bar draws the failed share inside the done one: done counts every
-  // workspace the run reached, moved or not, and the red end the ones that
-  // did not move (uncertain and unreached ones included).
+  /**
+   * The bar draws the failed share inside the done one: done counts every
+   * workspace the run reached, moved or not, and the red end the ones that did
+   * not move (uncertain and unreached ones included).
+   */
   @Listable(TOTALS_FIELDS)
   @Access(AccessMode.ReadOnly)
   get reachedCount(): number {
@@ -255,7 +257,7 @@ export class planMigrationsDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare completedAt: Date | null;
 
-  // A migration runs for minutes: the lists date it to the minute.
+  /** A migration runs for minutes: the lists date it to the minute. */
   @Listable(["createdAt"])
   @Access(AccessMode.ReadOnly)
   get startedOn(): ComposedText {

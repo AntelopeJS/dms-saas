@@ -1,8 +1,3 @@
-// The credit-note half of the Stripe webhook surface, split out of
-// webhook-handlers.ts to keep every file under the size the linter allows.
-// Shared lookups stay in webhook-handlers.ts and are imported from there: the
-// dependency runs one way, so no cycle is introduced.
-
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import type {

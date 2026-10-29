@@ -445,14 +445,16 @@ export class plansDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare isActive: boolean;
 
+  /**
+   * A move by hand takes the value between its neighbours', or one step before
+   * the first: fractional, possibly negative.
+   */
   @Select()
   @Listable()
   @Sortable()
   @Exported()
   @Column({
     name: `${TEXTS}.field.order`,
-    // A move by hand takes the value between its neighbours', or one step
-    // before the first: fractional, possibly negative.
     type: new DefaultDataTypes.NumberType(),
     isVisible: false,
   })

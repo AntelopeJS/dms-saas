@@ -1,7 +1,3 @@
-// What a plan change costs, priced by Stripe before the owner confirms it:
-// the review step of the plan change dialog reads this, and the confirm button
-// names the amount it returns.
-
 import { Logging } from "@antelopejs/interface-core/logging";
 import type { AvailableUpcomingInvoicePreview } from "@antelopejs/interface-dms-saas/billing";
 import type Stripe from "stripe";
@@ -331,6 +327,9 @@ const PREVIEWS_BY_KIND: Record<
 /**
  * Price a plan change the way it would be billed, without changing anything.
  * The caller has already checked the target is sellable to this workspace.
+ * Stripe prices it before the owner confirms: the review step of the plan
+ * change dialog reads this, and the confirm button names the amount it
+ * returns.
  */
 export async function previewPlanChange(
   input: PlanChangePreviewInput,

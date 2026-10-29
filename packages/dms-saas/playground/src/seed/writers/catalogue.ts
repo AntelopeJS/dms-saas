@@ -34,8 +34,10 @@ export async function readGrantablePermissions(): Promise<string[]> {
   return [...new Set(collectPermissionIds(await GetPermissions()))];
 }
 
-// A feature without a tooltip or a unit holds one empty text per language, as
-// the DMS form writes it: a localized field cannot be read back from a null.
+/**
+ * A feature without a tooltip or a unit holds one empty text per language, as
+ * the DMS form writes it: a localized field cannot be read back from a null.
+ */
 const NO_TEXT: LocalizedText = { en: "", fr: "" };
 
 /** The feature as stored, every localized field holding a text per language. */
@@ -89,14 +91,12 @@ function toPlanRow(plan: SeedPlan, permissions: string[]): SeedRow {
       featureId,
       value,
     })),
-    // Inherited plans hold only what they add.
     permissions: plan.inheritsFromPlanId ? [] : permissions,
     paymentProviderRefs: fakeStripeRefs(plan),
     borderColor: null,
     isDeleted: false,
     createdAt: dayFrom(PLAN_CATALOGUE_CREATED_ON),
   };
-  // No badge is no text: a localized field cannot be read back from a null.
   if (borderLabel) row.borderLabel = borderLabel;
   return row;
 }

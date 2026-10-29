@@ -35,13 +35,15 @@ export function readLegalDocumentVersions(
   ) as LegalDocumentVersions;
 }
 
+/**
+ * The version after saving `text`. An emptied document is withdrawn: its number
+ * stays taken, so the text published next is a new version, never a reused one.
+ */
 function nextVersion(
   current: LegalDocumentVersion,
   text: string,
   now: Date,
 ): LegalDocumentVersion {
-  // An emptied document is withdrawn: its number stays taken, so the text
-  // published next is a new version, never a reused one.
   if (!text) return { version: current.version, publishedAt: null };
   return { version: current.version + 1, publishedAt: now };
 }

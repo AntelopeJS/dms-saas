@@ -61,8 +61,6 @@ function validateWorkspaceRefNode(
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  // The nested tree is evaluated against workspace projections, so it is
-  // validated against the workspace catalog (and cannot nest another ref).
   validateConditionNode(node.conditions, depth + 1, "workspace");
 }
 

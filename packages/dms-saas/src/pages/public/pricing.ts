@@ -7,8 +7,10 @@ import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
 import { publicNavBar } from "./nav-bar";
 
-// Read by anonymous visitors before they have an account, like the sign-up
-// screen it leads to: the console layout would bounce them to the login.
+/**
+ * Read by anonymous visitors before they have an account, like the sign-up
+ * screen it leads to: the console layout would bounce them to the login.
+ */
 @RegisterPage()
 export class SaasPricingPage extends PageController(
   "pricing",

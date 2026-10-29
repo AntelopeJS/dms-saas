@@ -187,6 +187,7 @@ export class SaasTenantPlanController extends Controller(
   @Model(FeatureModel)
   declare featureModel: FeatureModel;
 
+  /** Offered plans are shown payable only once Stripe holds their price. */
   private async buildCatalog(
     current: Plan | null,
     locale: string,
@@ -197,7 +198,6 @@ export class SaasTenantPlanController extends Controller(
       current && !publicPlans.some((plan) => plan._id === current._id)
         ? [...publicPlans, current]
         : publicPlans;
-    // Offered plans are shown payable only once Stripe holds their price.
     const offered = await Promise.all(
       withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
@@ -415,6 +415,13 @@ export class SaasTenantPlanController extends Controller(
     });
   }
 
+  /**
+   * Changes the plan of the workspace. A cancelled workspace is blocked too;
+   * choosing a plan is how its owner brings it back, on any plan, the one it
+   * was cancelled on included. Guarded scheduling must validate before any
+   * provider mutation, including the cosmetic customer locale update; billing
+   * page reads still sync the locale.
+   */
   @Put("/")
   async changePlan(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
@@ -431,8 +438,6 @@ export class SaasTenantPlanController extends Controller(
     const subscription = await tenantSubscriptionModel.findOne();
     this.assertPlanChangeAllowed(subscription, user);
     const isRecovery = canStartFirstPaidSubscription(subscription);
-    // A cancelled workspace is blocked too; choosing a plan is how its owner
-    // brings it back, on any plan, the one it was cancelled on included.
     const choosesAnew = isRecovery || canResubscribe(subscription);
     if (!choosesAnew) await AssertTenantAccess(user._id, tenantId);
     const billingInfo = await tenantBillingInfoModel.findOne();
@@ -458,8 +463,6 @@ export class SaasTenantPlanController extends Controller(
     if (!isRecovery && startsPaidCheckout(newPlan, subscription)) {
       assertBillingIdentityComplete(billingInfo);
     }
-    // Guarded scheduling must validate before any provider mutation, including
-    // this cosmetic customer update. Billing page reads still sync the locale.
     if (!hasPlanChangePolicy() || !subscription?.stripeSubscriptionId) {
       await syncCustomerPreferredLocale(
         subscription?.stripeCustomerId,
@@ -527,6 +530,15 @@ export class SaasTenantPlanController extends Controller(
     return this.changeExistingSubscription(request, subscription);
   }
 
+  /**
+   * Leaving a live Stripe subscription for a cheaper, or free, plan always
+   * waits for the cycle the customer already paid for to run out. A deferred
+   * change is refused while the subscription is past due: the access gate only
+   * blocks suspended workspaces, but past_due is still a dunning episode over
+   * an unpaid invoice, and parking a downgrade, a free target especially,
+   * would let the workspace land past it when Stripe cancels at cycle end. Same
+   * rule as the suspended state: settle first, downgrade after.
+   */
   private async changeExistingSubscription(
     request: PlanChangeRequest,
     subscription: TenantSubscription,
@@ -536,8 +548,6 @@ export class SaasTenantPlanController extends Controller(
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
 
-    // Leaving a live Stripe subscription for a cheaper — or free — plan always
-    // waits for the cycle the customer already paid for to run out.
     const isDeferred =
       !!subscription.stripeSubscriptionId &&
       (!isPaidPlan(newPlan) ||
@@ -547,11 +557,6 @@ export class SaasTenantPlanController extends Controller(
           await countSeatsToCompare(tenantId, [currentPlan, newPlan]),
         ));
     if (isDeferred) {
-      // The access gate only blocks suspended workspaces; past_due is still a
-      // dunning episode over an unpaid invoice, and parking a downgrade — a
-      // free target especially — would let the workspace land past it when
-      // Stripe cancels at cycle end. Same rule as the suspended state: settle
-      // first, downgrade after.
       assert(
         subscription.status !== PAST_DUE_STATUS,
         HTTP_CONFLICT,

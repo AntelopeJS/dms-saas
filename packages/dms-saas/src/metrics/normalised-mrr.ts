@@ -6,8 +6,10 @@ const MONTHS_PER_INTERVAL: Record<PlanInterval, number> = {
   year: 12,
 };
 
-// Past due is still billed (the invoice is at risk, not written off); a
-// trial, a suspension, a pending first payment or a cancellation bill nothing.
+/**
+ * Past due is still billed (the invoice is at risk, not written off); a
+ * trial, a suspension, a pending first payment or a cancellation bill nothing.
+ */
 const BILLED_STATES: ReadonlySet<BillingState> = new Set([
   "active",
   "past_due",

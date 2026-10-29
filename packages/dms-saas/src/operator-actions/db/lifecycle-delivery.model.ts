@@ -10,9 +10,11 @@ import {
 
 const REPLAYABLE_STATUSES = ["pending", "failed", "running"];
 const CLAIMABLE_STATUSES = new Set(["pending", "failed"]);
-// Longer than any consumer call is expected to take, so a live attempt is
-// never retaken, and short enough that the reconcile cron recovers a crashed
-// attempt within a couple of runs.
+/**
+ * Longer than any consumer call is expected to take, so a live attempt is
+ * never retaken, and short enough that the reconcile cron recovers a crashed
+ * attempt within a couple of runs.
+ */
 const CLAIM_LEASE_MS = 10 * 60 * 1000;
 
 /** True when no live attempt holds the delivery: unclaimed, or its lease expired. */

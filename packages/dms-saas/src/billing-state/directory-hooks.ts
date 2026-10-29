@@ -8,8 +8,10 @@ import type { DirectoryDepartures } from "./directory";
 import { recomputeTenantBillingState } from "./index";
 
 const LOG_PREFIX = "[dms-saas:workspace-directory]";
-// A replaced or resent invitation hands its seat to its successor, already
-// stored by the time the old one is deleted.
+/**
+ * A replaced or resent invitation hands its seat to its successor, already
+ * stored by the time the old one is deleted.
+ */
 const SEAT_HANDED_OVER: ReadonlySet<InviteDeletedReason> = new Set([
   "replaced",
   "resent",

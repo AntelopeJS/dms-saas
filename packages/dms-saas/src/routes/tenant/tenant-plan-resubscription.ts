@@ -1,9 +1,3 @@
-// A cancelled workspace coming back on a free plan. The subscription row is
-// kept, with its Stripe customer, its card and its refund record, and moves
-// off the subscription Stripe ended onto a local free one, as registration
-// opens it. A paid plan goes through Checkout instead (tenant-plan-checkout.ts),
-// which reuses the same customer.
-
 import { assert } from "@antelopejs/interface-api-util";
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import { recomputeTenantBillingState } from "../../billing-state";
@@ -106,7 +100,11 @@ async function writeFreeResumption(
 
 /**
  * Brings a cancelled workspace back on a free plan, at once and with its
- * data. The caller has checked the plan is sellable and fits the seats.
+ * data. The caller has checked the plan is sellable and fits the seats. The
+ * subscription row is kept, with its Stripe customer, its card and its refund
+ * record, and moves off the subscription Stripe ended onto a local free one, as
+ * registration opens it. A paid plan goes through Checkout instead
+ * (`tenant-plan-checkout.ts`), which reuses the same customer.
  *
  * @param request The owner's plan change, on a free plan
  */

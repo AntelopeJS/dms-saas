@@ -25,8 +25,10 @@ const NEXT_INVOICE_ENDPOINT = "/api/saas/tenant/upcoming-invoice";
 const COMPLIMENTARY_BANNER_ENDPOINT = "/api/saas/tenant/complimentary-banner";
 const NEXT_INVOICE_SKELETON_ROWS = 6;
 const OVERVIEW_GAP = "1rem";
-// Two cards side by side need about this much each; below it the grid stacks
-// them in one column.
+/**
+ * Two cards side by side need about this much each; below it the grid stacks
+ * them in one column.
+ */
 const OVERVIEW_MIN_COLUMN_WIDTH = "360px";
 
 /** Name, description and icon of a block as the roles editor lists it. */
@@ -79,7 +81,13 @@ const refundButton = CustomComponent("DmsSaasRefundButton").meta(
   permissionMeta("money_back", "i-ph-arrow-counter-clockwise"),
 );
 
-/** Every invoice and credit note of the workspace, newest first. */
+/**
+ * Every invoice and credit note of the workspace, newest first. The page
+ * bypasses the tenant access gate; without the mirrored
+ * `bypassTenantAccessGate` the table's own data routes still 403 and the
+ * invoices of a suspended workspace render empty on the one page meant to
+ * settle them.
+ */
 const invoiceTable = TableView(tenantInvoicesDataAPI, {
   caption: `${KEY_PREFIX}.invoices.caption`,
   layout: "compact",
@@ -96,9 +104,6 @@ const invoiceTable = TableView(tenantInvoicesDataAPI, {
       description: `${KEY_PREFIX}.invoices.error_description`,
     },
   },
-  // The page bypasses the tenant access gate; without this mirror the
-  // table's own data routes still 403 and the invoices of a suspended
-  // workspace render empty on the one page meant to settle them.
   bypassTenantAccessGate: true,
   rowActions: {
     add: false,
@@ -176,6 +181,14 @@ function column(key: string, block: ComponentBuilder): ComponentBuilder {
  * spend protection after `billingForm`); `tenantBillingPageAnchorPaths` maps
  * those names to the positions below, which therefore must not move without
  * it.
+ *
+ * The page sits after the DMS Members (1) and Roles (3) pages, before Data
+ * export (100). It is the recovery surface of a blocked workspace: reachable
+ * under the tenant access gate, unlike every other tenant page. Permission
+ * checks are untouched: a member still sees only what their role allows. It
+ * has no layout of its own: like every workspace settings page it inherits the
+ * settings layout (side menu, settings content width), which the overview grid
+ * fits by stacking its cards in one column when the column is narrow.
  */
 @RegisterPage()
 export class SaasTenantBillingController extends PageController(
@@ -185,16 +198,9 @@ export class SaasTenantBillingController extends PageController(
     description: `${KEY_PREFIX}.page.description`,
     category: workspaceSettingsCategory,
     icon: "i-ph-credit-card",
-    // After the DMS Members (1) and Roles (3) pages, before Data export (100).
     order: 50,
-    // The recovery surface of a blocked workspace: reachable under the tenant
-    // access gate, unlike every other tenant page. Permission checks are
-    // untouched — a member still sees only what their role allows.
     bypassTenantAccessGate: true,
   },
-  // No layout of its own: like every workspace settings page it inherits the
-  // settings layout (side menu, settings content width), which the overview
-  // grid fits by stacking its cards in one column when the column is narrow.
 ) {
   static freeAccessBanner = Banner({
     fetchUrl: COMPLIMENTARY_BANNER_ENDPOINT,
@@ -228,8 +234,10 @@ export class SaasTenantBillingController extends PageController(
     permissionMeta("billing_information", "i-ph-identification-card"),
   );
 
-  // A compact table draws no caption: the section titles it, as the
-  // design heads every block of the page.
+  /**
+   * A compact table draws no caption: the section titles it, as the design
+   * heads every block of the page.
+   */
   static invoices = Section({
     title: `${KEY_PREFIX}.invoices.caption`,
     card: false,

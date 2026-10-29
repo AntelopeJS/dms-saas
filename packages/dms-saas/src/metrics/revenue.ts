@@ -60,7 +60,7 @@ export interface ChurnFigures {
 }
 
 const DEFAULT_PERIOD_DAYS = 30;
-// Up to a quarter, one bar per day reads; beyond it, one per month.
+/** Up to a quarter, one bar per day reads; beyond it, one per month. */
 const DAILY_BUCKETS_MAX_DAYS = 92;
 const PERCENT = 100;
 const DAY_KEY_LENGTH = 10;
@@ -74,7 +74,7 @@ const COMPARISON_SERIES: Record<string, string> = {
   "previous-period": "$saas.dashboard.paid_invoices.collected_previous_period",
   "previous-year": "$saas.dashboard.paid_invoices.collected_previous_year",
 };
-// A custom comparison window has no name of its own.
+/** A custom comparison window has no name of its own. */
 const CUSTOM_COMPARISON_SERIES =
   "$saas.dashboard.paid_invoices.collected_compared";
 

@@ -23,13 +23,17 @@ const PLANS_ENDPOINT = "/api/saas/plans";
 const PLAN_DIALOGS_ENDPOINT = "/api/saas/plan-dialogs";
 const RETIRE_MODAL_SIZE = "3xl";
 const CATALOGUE_STAT_COUNT = 4;
-// The cards draw a selection checkbox exactly when the grid does.
+/** The cards draw a selection checkbox exactly when the grid does. */
 const HAS_SELECTION = false;
-// A catalogue sells a handful of plans: two rows of four cards at 1440 px,
-// so the placeholder grid draws as many rows as the loaded one.
+/**
+ * A catalogue sells a handful of plans: two rows of four cards at 1440 px,
+ * so the placeholder grid draws as many rows as the loaded one.
+ */
 const PAGE_SIZE = 8;
-// A plan card at 1440 px measures 542 to 614 px with its feature list: the
-// placeholder takes the middle so the footer barely moves when cards land.
+/**
+ * A plan card at 1440 px measures 542 to 614 px with its feature list: the
+ * placeholder takes the middle so the footer barely moves when cards land.
+ */
 const PLAN_CARD_SKELETON_HEIGHT = "580px";
 
 const retirePlanModal = CustomComponent("DmsSaasRetirePlanModal").meta({
@@ -173,6 +177,13 @@ export class SaasPlansController extends PageController(
     icon: "i-ph-squares-four",
   });
 
+  /**
+   * The built-in duplicate action is off: "Duplicate as new plan" opens the
+   * editor prefilled instead. The custom row actions read listed values
+   * (`boundWorkspaceCount` is a number on the row), which the controller types
+   * as the getters computing them. The filtered empty state reads for a tab as
+   * for a search, since a tab narrows the rows the same way.
+   */
   static table = TableView(plansDataAPI, {
     labelKey: "name",
     searchPlaceholder: `${TEXTS}.search`,
@@ -199,12 +210,9 @@ export class SaasPlansController extends PageController(
       edit: { isEnabled: true, label: `${TEXTS}.action.edit` },
       details: false,
       delete: false,
-      // "Duplicate as new plan" opens the editor prefilled instead.
       duplicate: false,
       copyLink: false,
       hasSelection: HAS_SELECTION,
-      // The rules read listed values (`boundWorkspaceCount` is a number on the
-      // row), which the controller types as the getters computing them.
       // oxlint-disable-next-line anti-slop/no-chained-type-assertions
       custom: PLAN_ACTIONS as unknown as PlanRowActions,
     },
@@ -228,7 +236,6 @@ export class SaasPlansController extends PageController(
           },
         ],
       },
-      // A tab narrows the rows as a search does: the words fit both.
       filtered: {
         title: `${TEXTS}.empty.filtered_title`,
         description: `${TEXTS}.empty.filtered_description`,

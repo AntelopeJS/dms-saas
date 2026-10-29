@@ -20,10 +20,12 @@ export type WorkspaceCellRow = Partial<WorkspaceDirectoryFields> & {
 const K = "saas.workspaces";
 const YEARLY = "year";
 const SEAT_BILLING = "seat";
-// Without a currency, or before a first payment / after a cancellation, the
-// workspace bills nothing worth an amount.
+/**
+ * Without a currency, or before a first payment / after a cancellation, the
+ * workspace bills nothing worth an amount.
+ */
 const STATES_WITHOUT_MRR = new Set(["pending_payment", "cancelled"]);
-// What MRR means beside the amount when the workspace is not billed as usual.
+/** What MRR means beside the amount when the workspace is not billed as usual. */
 const MRR_NOTES: Record<string, CellSubline> = {
   past_due: { text: `$${K}.mrr_cell.at_risk`, tone: "error" },
   suspended: { text: `$${K}.mrr_cell.billing_paused`, tone: "muted" },

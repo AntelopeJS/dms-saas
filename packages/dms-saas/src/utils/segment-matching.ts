@@ -115,7 +115,6 @@ function workspaceMrr(inputs: ProjectionInputs): MinorAmount {
       currency: directory.currency ?? "",
     };
   }
-  // Pending invitations are not loaded here: seats are the members alone.
   return normalisedMrr({
     billingState: deriveBillingState(subscription),
     isComplimentary: subscription?.isComplimentary === true,
@@ -258,9 +257,12 @@ export type UserWorkspaceProjection = WorkspaceProjection & {
   isOwner: boolean;
 };
 
-// A type alias rather than an interface: TypeScript gives aliases an implicit
-// index signature, which is what lets a projection be read as a dictionary by
-// the segment evaluator without an assertion.
+/**
+ * A user as the segment evaluator reads it. A type alias rather than an
+ * interface: TypeScript gives aliases an implicit index signature, which is
+ * what lets a projection be read as a dictionary by the segment evaluator
+ * without an assertion.
+ */
 export type UserProjection = {
   _id: string;
   email: string;
@@ -345,8 +347,6 @@ export async function loadUserProjectionsFrom(
   const sessionModel = GetModel(SessionModel);
   const memberModel = GetModel(TenantMemberModel, CROSS_INSTANCE);
 
-  // Server-side group-max: only one (userId, lastActiveAt) pair per user is
-  // transferred instead of every session row.
   const [users, sessionActivity, memberRows] = await Promise.all([
     userModel.getAll(),
     sessionModel.table
@@ -413,7 +413,6 @@ export async function recomputeSegments(
   const now = new Date();
   const loadStartedAt = performance.now();
   const userProjections = await loadAllUserProjections(planModel, now);
-  // Every segment of the run shares the projections' load time.
   const loadMs = performance.now() - loadStartedAt;
 
   for (let i = 0; i < segments.length; i += SEGMENT_RECOMPUTE_CONCURRENCY) {
