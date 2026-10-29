@@ -213,7 +213,7 @@ export class SaasPlansController extends PageController(
       duplicate: false,
       copyLink: false,
       hasSelection: HAS_SELECTION,
-      // oxlint-disable-next-line anti-slop/no-chained-type-assertions
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- the row action rules read listed values (`boundWorkspaceCount` is a number on the row), which the controller types as the getters computing them
       custom: PLAN_ACTIONS as unknown as PlanRowActions,
     },
     formContainer: {
