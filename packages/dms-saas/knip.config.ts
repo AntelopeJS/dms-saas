@@ -7,4 +7,5 @@ export default antelopeKnipConfig({
   project: ["test/**/*.ts"],
   // The Stripe CLI drives the webhook script and is not an npm package.
   ignoreBinaries: ["stripe"],
+  ignoreDependencies: ["vue"],
 });
