@@ -28,5 +28,5 @@ export function useMongoDatabase(name: string): void {
   }, CONNECT_TIMEOUT_MS);
   afterAll(async () => {
     await destroy();
-  });
+  }, CONNECT_TIMEOUT_MS);
 }
