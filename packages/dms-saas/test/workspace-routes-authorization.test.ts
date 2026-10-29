@@ -1,43 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
-
-const ownerAuthorization = vi.hoisted(() => ({ routes: [] as string[] }));
-
-vi.mock("@antelopejs/interface-dms/auth", () => ({
-  AuthOwnerOnly:
-    () =>
-    (target: object, propertyKey: string | symbol | undefined): void => {
-      if (!propertyKey) return;
-      ownerAuthorization.routes.push(
-        `${target.constructor.name}.${String(propertyKey)}`,
-      );
-    },
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const original =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return { ...original, Model: () => (): void => undefined };
-});
-
+import { describe, expect, it } from "vitest";
 import { SaasDashboardController } from "../src/routes/platformOwner/dashboard";
 import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
 import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
+import { useDmsAuth } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { ownerOnlyRoutes } from "./helpers/owner-only";
 
-function routesOf(controller: { name: string }): string[] {
-  return [
-    ...new Set(
-      ownerAuthorization.routes
-        .filter((route) => route.startsWith(`${controller.name}.`))
-        .map((route) => route.slice(controller.name.length + 1)),
-    ),
-  ].sort();
-}
+useMongoDatabase("workspace-routes-authorization");
+useDmsAuth();
 
 describe("back-office routes of the dashboard and the workspaces", () => {
-  it("serve the dashboard to platform admins only", () => {
-    expect(routesOf(SaasDashboardController)).toEqual([
+  it("serve the dashboard to platform admins only", async () => {
+    await expect(ownerOnlyRoutes(SaasDashboardController)).resolves.toEqual([
       "activity",
       "attention",
       "churn",
@@ -48,8 +22,10 @@ describe("back-office routes of the dashboard and the workspaces", () => {
     ]);
   });
 
-  it("serve a workspace's detail to platform admins only", () => {
-    expect(routesOf(SaasWorkspaceDetailController)).toEqual([
+  it("serve a workspace's detail to platform admins only", async () => {
+    await expect(
+      ownerOnlyRoutes(SaasWorkspaceDetailController),
+    ).resolves.toEqual([
       "activity",
       "availableCredit",
       "billingInfo",
@@ -61,8 +37,10 @@ describe("back-office routes of the dashboard and the workspaces", () => {
     ]);
   });
 
-  it("let only platform admins create workspaces and change their access", () => {
-    expect(routesOf(SaasWorkspacesAdminController)).toEqual([
+  it("let only platform admins create workspaces and change their access", async () => {
+    await expect(
+      ownerOnlyRoutes(SaasWorkspacesAdminController),
+    ).resolves.toEqual([
       "createWorkspace",
       "getComplimentaryImpact",
       "grantFreeAccess",
