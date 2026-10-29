@@ -14,16 +14,6 @@ useMongoDatabase("plan-write-validation");
 const stripe = useSuiteStripe();
 
 type AsyncOperation = () => Promise<unknown>;
-type PlanWriteBody = Parameters<SaasPlansApiController["create"]>[1];
-
-/**
- * A plan write as the editor's request carries it: parsed JSON, so it may
- * hold what the write type rules out.
- */
-function requestBody(fields: object): PlanWriteBody {
-  const body: PlanWriteBody = JSON.parse(JSON.stringify(fields));
-  return body;
-}
 
 const OWNER = fromPartial<User>({});
 const PLAN_ID = "plan-free";
@@ -70,13 +60,10 @@ describe("plan interval writes", () => {
 
   it("rejects an interval outside the supported values", async () => {
     await expectInvalidInterval(async () =>
-      (await controller()).create(
-        OWNER,
-        requestBody({
-          name: { en: "Weekly" },
-          interval: "week",
-        }),
-      ),
+      (await controller()).create(OWNER, {
+        name: { en: "Weekly" },
+        interval: "week",
+      } as never),
     );
   });
 
@@ -86,13 +73,9 @@ describe("plan interval writes", () => {
     const plans = await controller(plan);
 
     await expectInvalidInterval(() =>
-      plans.update(
-        OWNER,
-        PLAN_ID,
-        requestBody({
-          interval: "week",
-        }),
-      ),
+      plans.update(OWNER, PLAN_ID, {
+        interval: "week",
+      } as never),
     );
   });
 
@@ -129,15 +112,12 @@ describe("plan writes and Stripe", () => {
 
     const plans = await controller();
 
-    const { _id: planId } = await plans.create(
-      OWNER,
-      requestBody({
-        name: { en: "Hobby" },
-        price: 5,
-        currency: "eur",
-        interval: "month",
-      }),
-    );
+    const { _id: planId } = await plans.create(OWNER, {
+      name: { en: "Hobby" },
+      price: 5,
+      currency: "eur",
+      interval: "month",
+    } as never);
 
     expect(createPrice).toHaveBeenCalledOnce();
     expect(createPrice.mock.calls[0]?.[0]).toMatchObject({

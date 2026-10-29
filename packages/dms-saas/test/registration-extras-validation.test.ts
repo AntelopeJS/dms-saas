@@ -14,10 +14,7 @@ useSuiteStripe();
 useRegistrationWorld();
 
 describe("extras validation on the public endpoint", () => {
-  async function expectRejection(
-    extras: NonNullable<Parameters<typeof buildRegisterBody>[0]>["extras"],
-    message: string,
-  ) {
+  async function expectRejection(extras: unknown, message: string) {
     const registering = buildController().register(
       buildRegisterBody({ extras }),
     );
@@ -33,7 +30,7 @@ describe("extras validation on the public endpoint", () => {
 
   it("refuses a payload that is not a plain object", async () => {
     await expectRejection(
-      JSON.parse('["referral","podcast"]'),
+      ["referral", "podcast"],
       "saas.errors.registration.extras_invalid",
     );
   });

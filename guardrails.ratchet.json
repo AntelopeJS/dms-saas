@@ -7,7 +7,7 @@
     "anti-slop/no-unknown-parameters": 174,
     "anti-slop/no-unknown-returns": 30,
     "anti-slop/no-unsafe-dictionary-type": 62,
-    "anti-slop/require-safety-comment-for-type-assertion": 335
+    "anti-slop/require-safety-comment-for-type-assertion": 333
   },
   "oversizeFiles": {
     "packages/dms-saas/frontend-vue/app/components/RetirePlanModal.vue": 23570,

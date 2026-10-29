@@ -154,13 +154,10 @@ function refusedField(error: HTTPResult): unknown {
 
 /** The HTTP refusal `operation` answers with; throws when it is not refused. */
 async function refusal(operation: () => Promise<object>): Promise<HTTPResult> {
-  const error = await operation().then(
-    () => undefined,
-    (caught: Error) => caught,
-  );
-  if (!(error instanceof HTTPResult))
+  const [outcome] = await Promise.allSettled([operation()]);
+  if (outcome?.status !== "rejected" || !(outcome.reason instanceof HTTPResult))
     throw new Error("The operation was not refused with an HTTP answer");
-  return error;
+  return outcome.reason;
 }
 
 beforeAll(async () => {

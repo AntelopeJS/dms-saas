@@ -221,12 +221,10 @@ describe("the migration header", () => {
   });
 
   it("refuses a migration that does not exist", async () => {
-    const error = await (
-      await controller(migration())
-    )
-      .header(OWNER, "missing")
-      .catch((caught: unknown) => caught);
-    expect(error).toBeInstanceOf(HTTPResult);
+    const migrations = await controller(migration());
+    await expect(migrations.header(OWNER, "missing")).rejects.toBeInstanceOf(
+      HTTPResult,
+    );
   });
 });
 

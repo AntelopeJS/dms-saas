@@ -84,15 +84,11 @@ describe("database initialized hook", () => {
     const failure = new Error("migration recovery failed");
 
     let isSettled = false;
-    const completion = ExecuteHooks(Hook.DATABASE_INITIALIZED).then(
-      () => {
-        isSettled = true;
-      },
-      (reason: Error) => {
-        isSettled = true;
-        return reason;
-      },
-    );
+    const completion = ExecuteHooks(Hook.DATABASE_INITIALIZED);
+    const settle = () => {
+      isSettled = true;
+    };
+    void completion.then(settle, settle);
 
     await vi.waitFor(() => {
       expect(gate.reads(planMigrationsTableName)).toBe(1);
@@ -103,7 +99,7 @@ describe("database initialized hook", () => {
     expect(isSettled).toBe(false);
 
     billing.release();
-    expect(await completion).toBe(failure);
+    await expect(completion).rejects.toBe(failure);
   });
 
   it("aggregates failures after both operations settle", async () => {
@@ -112,12 +108,10 @@ describe("database initialized hook", () => {
     gate.hold(planMigrationsTableName).fail(migrationFailure);
     gate.hold(tenantsTableName).fail(billingFailure);
 
-    const failure = await ExecuteHooks(Hook.DATABASE_INITIALIZED).catch(
-      (reason: Error) => reason,
-    );
+    const initialization = ExecuteHooks(Hook.DATABASE_INITIALIZED);
 
-    expect(failure).toBeInstanceOf(AggregateError);
-    expect(failure).toMatchObject({
+    await expect(initialization).rejects.toBeInstanceOf(AggregateError);
+    await expect(initialization).rejects.toMatchObject({
       errors: [migrationFailure, billingFailure],
     });
   });

@@ -225,13 +225,14 @@ const gatedQueries: typeof queries = {
   },
 };
 
-/** What the public registration endpoint takes. */
-type RegisterBody = Parameters<SaasRegisterApiController["register"]>[0];
+/** What a test changes in a registration body; extras arrive unparsed. */
+interface RegisterBodyInput {
+  extras?: unknown;
+  requestedPlanId?: string;
+}
 
 /** The body of a password registration that meets every policy. */
-export function buildRegisterBody(
-  input: Pick<RegisterBody, "extras" | "requestedPlanId"> = {},
-) {
+export function buildRegisterBody(input: RegisterBodyInput = {}) {
   return {
     email: `owner-${nextId("mail")}@example.com`,
     password: "CorrectHorse9!",

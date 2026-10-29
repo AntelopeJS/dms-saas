@@ -47,7 +47,7 @@ async function rowIds(model: InvoiceModel | RefundModel): Promise<string[]> {
 }
 
 function stripeInvoice(status: Stripe.Invoice.Status): Stripe.Invoice {
-  return {
+  return fromPartial<Stripe.Invoice>({
     id: workspace.invoiceId,
     customer: workspace.customerId,
     number: "INV-0001",
@@ -63,7 +63,7 @@ function stripeInvoice(status: Stripe.Invoice.Status): Stripe.Invoice {
     period_start: 1_790_000_000,
     period_end: 1_792_592_000,
     lines: { has_more: false, data: [] },
-  } as unknown as Stripe.Invoice;
+  });
 }
 
 /** The invoice with more lines than its event carries: they are listed from Stripe. */
@@ -99,7 +99,7 @@ function holdLinePagesUntil(writers: number): () => boolean {
 }
 
 function refundEvent(status: Stripe.Refund["status"]): Stripe.Event {
-  return {
+  return fromPartial<Stripe.Event>({
     id: `evt_refund_${status}`,
     type: "charge.refund.updated",
     data: {
@@ -112,14 +112,14 @@ function refundEvent(status: Stripe.Refund["status"]): Stripe.Event {
         failure_reason: null,
       },
     },
-  } as unknown as Stripe.Event;
+  });
 }
 
 describe("Stripe invoice collection state", () => {
   it("mirrors what Stripe is doing to collect the invoice", async () => {
     const retryAt = 1_790_300_000;
     await upsertInvoice(
-      {
+      fromPartial<Stripe.Invoice>({
         ...stripeInvoice("open"),
         amount_paid: 1_000,
         attempt_count: 2,
@@ -127,7 +127,7 @@ describe("Stripe invoice collection state", () => {
         due_date: null,
         automatically_finalizes_at: null,
         latest_revision: { id: "in_2" },
-      } as unknown as Stripe.Invoice,
+      }),
       workspace.tenantId,
     );
 

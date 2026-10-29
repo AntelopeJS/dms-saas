@@ -342,15 +342,11 @@ describe("registration card policy", () => {
   });
 
   it("rejects an unknown policy at configuration time", () => {
-    const config: DmsSaasConfig = JSON.parse(
-      JSON.stringify({
+    expect(() =>
+      setRuntimeConfig({
         stripe: SUITE_STRIPE_KEYS,
         registration: { paymentMethod: "sometimes" },
-      }),
-    );
-
-    expect(() => setRuntimeConfig(config)).toThrow(
-      "Invalid dms-saas registration.paymentMethod",
-    );
+      } as never),
+    ).toThrow("Invalid dms-saas registration.paymentMethod");
   });
 });
