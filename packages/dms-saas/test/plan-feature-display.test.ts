@@ -52,7 +52,7 @@ interface DmsTranslationHelpers {
   ) => string | undefined;
 }
 
-// The real DMS helpers the plan pages get auto-imported, not a re-implementation.
+/** The real DMS helpers the plan pages get auto-imported, not a re-implementation. */
 const dmsTranslation = (await import(
   path.join(
     dmsRoot,
@@ -111,7 +111,6 @@ describe("plan feature value formatting", () => {
       "Upgrade required",
     ],
     [{ valueType: "string", unit: "support" }, "24/7", "24/7 support"],
-    // Q36: one meaning everywhere, 0 is off, -1 unlimited, n ≥ 1 a limit.
     [numeric(null), 0, "—"],
     [numeric("projects"), 0, "—"],
     [numeric("project | projects"), 1, "1 project"],
@@ -275,7 +274,6 @@ describe("registered plan feature units", () => {
   });
 
   it("lets a registered unit override a built-in one", async () => {
-    // A fresh module instance keeps the override out of the other tests.
     vi.resetModules();
     const fresh =
       await import("../frontend-vue/app/composables/usePlanFeatureFormat");

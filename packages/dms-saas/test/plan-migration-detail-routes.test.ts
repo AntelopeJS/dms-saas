@@ -354,7 +354,6 @@ describe("the migration dialogs", () => {
     const { items, resolution } = await (
       await controller(migration())
     ).stripeReading(OWNER, "mig", "bluth");
-    // Stripe already bills the new plan: the drawer offers to mark it moved.
     expect(resolution).toBe("moved");
     expect(items.map((item) => [item.id, item.value])).toEqual([
       ["subscription", "sub_bluth"],

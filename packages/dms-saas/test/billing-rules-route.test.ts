@@ -255,7 +255,6 @@ describe("billing rules page module defaults", () => {
     for (const [id, value] of Object.entries(offered)) {
       expect(fresh[id], id).toEqual(value);
     }
-    // Lowering the retention deletes data: no one-click way back.
     expect(offered).not.toHaveProperty("dataRetentionDaysAfterCancellation");
   });
 });

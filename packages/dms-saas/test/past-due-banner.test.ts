@@ -172,8 +172,6 @@ describe("past-due layout banner registration", () => {
     });
   });
 
-  // The DMS shows banners outside the module area by default: billing state
-  // must also follow the owner into the module back office.
   it("shows billing banners on every page, module area included", () => {
     const banners = [
       PAST_DUE_OWNER_BANNER,

@@ -11,7 +11,7 @@ import { captureLogs } from "./helpers/logging";
 
 const logs = captureLogs();
 
-// The demo's keys: well-formed, but standing for no Stripe account.
+/** The demo's keys: well-formed, but standing for no Stripe account. */
 const PLACEHOLDER_KEYS = {
   secretKey: "sk_test_placeholder",
   webhookSecret: "whsec_placeholder",

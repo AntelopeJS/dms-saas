@@ -10,9 +10,11 @@ interface LineItemsModules {
   implementation: typeof implementationModule;
 }
 
-// Every test needs its own proxy and its own registry: both are module state,
-// and attaching is one-way, so a shared graph would let one test's attach
-// decide whether the next one exercises the buffered or the attached path.
+/**
+ * Loads a fresh proxy and registry for one test: both are module state, and
+ * attaching is one-way, so a shared graph would let one test's attach decide
+ * whether the next one exercises the buffered or the attached path.
+ */
 async function loadModules(): Promise<LineItemsModules> {
   vi.resetModules();
   return {
@@ -87,9 +89,6 @@ describe("RegisterInvoiceLineItemsProvider", () => {
   });
 });
 
-// The proxy keys its buffer by id and records it before the implementation
-// ever runs, so a collision cannot be refused without stranding the winner.
-// Both paths must therefore land on the same last-writer-wins outcome.
 describe("RegisterInvoiceLineItemsProvider on a taken id", () => {
   it("replaces the previous provider once attached", async () => {
     const modules = await loadAttachedModules();

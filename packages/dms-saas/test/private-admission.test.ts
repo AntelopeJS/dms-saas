@@ -63,8 +63,6 @@ const STRIPE_CONFIG = SUITE_STRIPE_KEYS;
 const CLOSED_ERROR = { status: 403, body: "saas.errors.registration_closed" };
 
 beforeAll(() => {
-  // DMS answers isSaasMode() from the registrations it holds, so wire its
-  // implementation in and declare SaaS mode the way construct() does.
   ImplementInterface(
     saasMode,
     require(path.join(dmsRoot, "dist/implementations/dms/saas-mode.js")),
@@ -337,9 +335,6 @@ describe("actual DMS invitation account creation while admission is closed", () 
         headers: { authorization: `Bearer ${ownerResult.access_token}` },
       },
     };
-    // At runtime the route's auth decorator verifies the token and binds its
-    // tenant to the request before the handler runs; dms 0.10 no longer reads
-    // the tenant of an unverified token.
     expect(await resolveRequestTenantId(ctx as never)).toBe(created.tenantId);
     await expect(
       planController.changePlan(

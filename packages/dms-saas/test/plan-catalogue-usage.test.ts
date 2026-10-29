@@ -130,8 +130,6 @@ describe("catalogue usage", () => {
   });
 
   it("counts free the workspaces the dashboard counts free: by billing state", () => {
-    // Complimentary access and a cancelled workspace bring no MRR, yet are
-    // not free: the dashboard files them under their own state.
     expect(summariseCatalogue([pro, business, free], usage)).toMatchObject({
       workspaces: 6,
       paying: 2,

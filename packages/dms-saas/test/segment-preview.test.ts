@@ -68,8 +68,10 @@ const USERS: UserProjection[] = [
   user("dan", { isValidated: false }),
 ];
 
-// Verified owners of a paying workspace that is past due or has fewer than
-// 3 members.
+/**
+ * Verified owners of a paying workspace that is past due or has fewer than
+ * 3 members.
+ */
 const AT_RISK: SegmentConditionGroup = {
   logical: "and",
   conditions: [

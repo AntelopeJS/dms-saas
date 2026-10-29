@@ -127,8 +127,6 @@ describe("retiring a plan scheduled changes switch to", () => {
       expect.objectContaining({ tenantId, status: "succeeded" }),
     ]);
     expect(scheduled.retrieve).toHaveBeenCalledWith("sub_scheduled");
-    // The target has no Stripe price: the change lands as a cancellation at
-    // the period end, as any deferred change to such a plan does.
     expect(scheduled.update).toHaveBeenCalledWith("sub_scheduled", {
       cancel_at_period_end: true,
     });

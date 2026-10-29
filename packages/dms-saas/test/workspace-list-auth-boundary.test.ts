@@ -72,7 +72,6 @@ describe("workspace list authentication boundary", () => {
     expect(list.workspaces.value).toEqual([WORKSPACE_FIXTURE]);
     expect(list.isLoaded.value).toBe(true);
 
-    // Signing out leaves nothing to read.
     loggedIn.value = false;
     expect(toValue(call.url)).toBeNull();
   });
@@ -96,7 +95,6 @@ describe("workspace list authentication boundary", () => {
     call.error.value = new Error("Bad gateway");
     expect(list.hasFailed.value).toBe(true);
 
-    // A retry keeps the failure in `error` until it answers (as Nuxt does).
     call.status.value = "pending";
     expect(list.hasFailed.value).toBe(false);
     expect(list.isLoaded.value).toBe(false);
