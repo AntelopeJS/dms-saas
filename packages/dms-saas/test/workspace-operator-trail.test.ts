@@ -13,6 +13,7 @@ import { setRuntimeConfig } from "../src/config";
 import { PlanModel } from "../src/db";
 import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
 import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
+import { planRow } from "./helpers/plan-row";
 
 let mongodb: MongoMemoryReplSet;
 
@@ -44,16 +45,18 @@ function adminController(): SaasWorkspacesAdminController {
 
 async function insertPlan(name: string): Promise<string> {
   const planId = randomUUID();
-  await GetModel(PlanModel).insert({
-    _id: planId,
-    name,
-    price: 0,
-    currency: "eur",
-    interval: "month",
-    billingMode: "flat",
-    isActive: true,
-    isDeleted: false,
-  });
+  await GetModel(PlanModel).insert(
+    planRow({
+      _id: planId,
+      name,
+      price: 0,
+      currency: "eur",
+      interval: "month",
+      billingMode: "flat",
+      isActive: true,
+      isDeleted: false,
+    }),
+  );
   return planId;
 }
 
@@ -138,7 +141,7 @@ describe("operator actions in the workspace's activity", () => {
 
     expect(await latestActivity(operator, tenantId)).toMatchObject({
       title: "$saas.activity.workspace.complimentary_access_granted",
-      params: expect.objectContaining({ operator: operator.email, to: "Team" }),
+      params: { operator: operator.email, to: "Team" },
     });
   });
 
@@ -150,7 +153,7 @@ describe("operator actions in the workspace's activity", () => {
 
     expect(await latestActivity(supporter, tenantId)).toMatchObject({
       title: "$saas.activity.workspace.support_joined",
-      params: expect.objectContaining({ operator: supporter.email }),
+      params: { operator: supporter.email },
     });
   });
 });

@@ -124,6 +124,18 @@ const invitationSendLook: ActionLookOf = (action) =>
 const ACTION_LOOKS: Partial<
   Record<WorkspaceOperatorAction, ActionLook | ActionLookOf>
 > = {
+  "workspace.complimentary_grant": {
+    kind: "billing",
+    icon: "i-ph-gift",
+    tone: "success",
+    title: "complimentary_access_granted",
+  },
+  "workspace.support_join": {
+    kind: "lifecycle",
+    icon: "i-ph-user-plus",
+    tone: "neutral",
+    title: "support_joined",
+  },
   "workspace.suspend": {
     kind: "lifecycle",
     icon: "i-ph-prohibit",

@@ -10,7 +10,7 @@ export interface WorkspaceOverview {
 	ownerName: string | null
 	ownerEmail: string | null
 	ownerStatus: string
-	joinedAt: string | null
+	membership: { role: 'owner' | 'member' | 'support'; joinedAt: string } | null
 	stripeCustomerId: string | null
 	stripeCustomerUrl: string | null
 	hasStripeSubscription: boolean

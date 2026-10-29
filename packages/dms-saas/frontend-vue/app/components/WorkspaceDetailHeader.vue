@@ -93,9 +93,11 @@ const menu = computed<DropdownMenuItem[][]>(() => {
 	const current = overview.value
 	const support: DropdownMenuItem[] = [
 		{
-			label: current?.joinedAt ? t(`${D}.joined`) : t(`${D}.join`),
+			label: current?.membership
+				? t(`${D}.${current.membership.role}`)
+				: t(`${D}.join`),
 			icon: 'i-ph-user-plus',
-			disabled: !!current?.joinedAt,
+			disabled: !!current?.membership,
 			onSelect: () => void actions.join(),
 		},
 		{
@@ -226,22 +228,26 @@ onMounted(() => {
 					<span>
 						{{ $t(`${D}.created`, { date: day(overview.createdAt) }) }}
 					</span>
-					<span v-if="overview.joinedAt" class="text-success">
-						{{ $t(`${D}.joined_as_support`, { date: day(overview.joinedAt) }) }}
+					<span v-if="overview.membership" class="text-success">
+						{{
+							$t(`${D}.membership_${overview.membership.role}`, {
+								date: day(overview.membership.joinedAt),
+							})
+						}}
 					</span>
 				</div>
 			</div>
 			<div class="flex shrink-0 items-center gap-2">
 				<UBadge
-					v-if="overview.joinedAt"
+					v-if="overview.membership"
 					color="success"
 					variant="subtle"
 					icon="i-ph-check"
 				>
-					{{ $t(`${D}.joined`) }}
+					{{ $t(`${D}.${overview.membership.role}`) }}
 				</UBadge>
 				<UButton
-					v-if="overview.joinedAt"
+					v-if="overview.membership"
 					color="neutral"
 					variant="outline"
 					icon="i-ph-arrow-square-out"

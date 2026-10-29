@@ -55,8 +55,7 @@ interface WorkspaceOverview {
   ownerName: string | null;
   ownerEmail: string | null;
   ownerStatus: string;
-  /** When the signed-in operator joined as platform support, if they did. */
-  joinedAt: Date | null;
+  membership: { role: "owner" | "member" | "support"; joinedAt: Date } | null;
   stripeCustomerId: string | null;
   stripeCustomerUrl: string | null;
   hasStripeSubscription: boolean;
@@ -117,7 +116,18 @@ export class SaasWorkspaceDetailController extends Controller(
       ownerName: view.directory.ownerName,
       ownerEmail: view.directory.ownerEmail,
       ownerStatus: view.directory.ownerStatus,
-      joinedAt: membership?.joinedAt ?? null,
+      membership: membership
+        ? {
+            role: membership.isTenantOwner
+              ? "owner"
+              : view.seats.platformSupport.some(
+                    (member) => member.userId === user._id,
+                  )
+                ? "support"
+                : "member",
+            joinedAt: membership.joinedAt,
+          }
+        : null,
       stripeCustomerId: customerId,
       stripeCustomerUrl: customerId
         ? stripeObjectUrl("customers", customerId)
