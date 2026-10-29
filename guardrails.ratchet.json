@@ -1,6 +1,5 @@
 {
   "rules": {
-    "antelopejs/no-comments": 635,
     "anti-slop/no-known-value-widening": 36,
     "anti-slop/no-runtime-typeof": 109,
     "anti-slop/no-shape-in-symbol-names": 18,
@@ -11,7 +10,6 @@
   },
   "oversizeFiles": {
     "packages/dms-saas/frontend-vue/app/components/RetirePlanModal.vue": 23570,
-    "packages/dms-saas/frontend-vue/app/composables/useSaasRegistration.ts": 21109,
-    "packages/dms-saas/src/workspaces/provisioning.ts": 20079
+    "packages/dms-saas/frontend-vue/app/composables/useSaasRegistration.ts": 21109
   }
 }
