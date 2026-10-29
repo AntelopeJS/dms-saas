@@ -1,47 +1,38 @@
-import type { PermissionsResolverInfo } from "@antelopejs/interface-dms/permissions-resolver";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { TenantMemberModel } from "@antelopejs/interface-dms/db";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import type { Plan } from "@antelopejs/interface-dms-saas/db/tables/plans.table";
+import { registerPlanPermissionsResolver } from "../src/auth/plan-permissions-resolver";
+import {
+  PlanModel,
+  type TenantSubscription,
+  TenantSubscriptionModel,
+} from "../src/db";
+import { useMongoDatabase } from "./helpers/mongo";
+import {
+  implementPermissionsResolvers,
+  registeredResolver,
+} from "./helpers/permissions-resolvers";
 
-interface SubscriptionFixture {
-  planId?: string;
-}
+useMongoDatabase("plan-permissions-resolver");
+const registered = implementPermissionsResolvers();
 
 interface MemberFixture {
   isTenantOwner: boolean;
   roleIds: string[];
 }
 
-const harness = vi.hoisted(() => ({
-  register: vi.fn<(info: PermissionsResolverInfo) => void>(),
-  getModel: vi.fn(),
-  subscription: { planId: "child" } as SubscriptionFixture | undefined,
-  members: new Map<string, MemberFixture>(),
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return { ...actual, GetModel: harness.getModel };
-});
-vi.mock("@antelopejs/interface-dms/permissions-resolver", () => ({
-  RegisterPermissionsResolver: harness.register,
-}));
-vi.mock("../src/db", async () => ({
-  PlanModel: (
-    await import("@antelopejs/interface-dms-saas/db/models/plans.model")
-  ).PlanModel,
-  TenantSubscriptionModel: class TenantSubscriptionModel {},
-}));
-
-import { TenantMemberModel } from "@antelopejs/interface-dms/db";
-import { registerPlanPermissionsResolver } from "../src/auth/plan-permissions-resolver";
-import { PlanModel, TenantSubscriptionModel } from "../src/db";
-
-const plans = new Map<string, Plan>();
-const planModel: PlanModel = Object.create(PlanModel.prototype);
-planModel.get = vi.fn(async (id: string) => plans.get(id));
+/** The workspaces of the current test, each in a tenant of its own. */
+const tenants = { a: "", b: "", c: "" };
 
 function plan(id: string, permissions: string[], parent: string | null): Plan {
   return Object.assign(Object.create(null), {
@@ -52,40 +43,76 @@ function plan(id: string, permissions: string[], parent: string | null): Plan {
   });
 }
 
-function resolve(current: string[], tenantId = "tenant-a") {
-  const registration = harness.register.mock.calls[0][0];
-  return registration.resolver("user", tenantId, new Set(current), {});
+/** Stores `entry` in the catalogue, in place of a plan with its id. */
+async function publishPlan(entry: Plan): Promise<void> {
+  await GetModel(PlanModel).delete(entry._id);
+  await GetModel(PlanModel).insert(entry);
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  plans.clear();
-  plans.set("parent", plan("parent", ["read"], null));
-  plans.set("child", plan("child", ["write"], "parent"));
-  harness.subscription = { planId: "child" };
-  harness.members.clear();
-  harness.members.set("tenant-a:user", { isTenantOwner: true, roleIds: [] });
-  harness.getModel.mockImplementation((model, tenantId) => {
-    if (model === PlanModel) return planModel;
-    if (model === TenantSubscriptionModel) {
-      return { findOne: async () => harness.subscription };
-    }
-    if (model === TenantMemberModel) {
-      return {
-        getByUser: async (userId: string) =>
-          harness.members.get(`${tenantId}:${userId}`),
-      };
-    }
-    throw new Error("Unexpected model");
+/** Makes `userId` a member of the workspace, in place of any membership it had. */
+async function setMember(
+  tenantId: string,
+  userId: string,
+  member: MemberFixture,
+): Promise<void> {
+  const members = GetModel(TenantMemberModel, tenantId);
+  const existing = await members.getByUser(userId);
+  if (existing) await members.delete(existing._id);
+  await members.insert({
+    _id: randomUUID(),
+    userId,
+    joinedAt: new Date(),
+    invitedBy: null,
+    ...member,
   });
+}
+
+/** Gives the workspace `subscription`, or no subscription when undefined. */
+async function subscribe(
+  tenantId: string,
+  subscription: Partial<TenantSubscription> | undefined,
+): Promise<void> {
+  const model = GetModel(TenantSubscriptionModel, tenantId);
+  await model.delete(tenantId);
+  if (subscription) await model.insert({ ...subscription, _id: tenantId });
+}
+
+/** Watches the workspace's membership reads. */
+function membershipReads(tenantId: string) {
+  return vi.spyOn(GetModel(TenantMemberModel, tenantId), "getByUser");
+}
+
+function planIntersection() {
+  return registeredResolver(registered, "dms-saas.plan-intersection");
+}
+
+function resolve(current: string[], tenantId = tenants.a) {
+  return planIntersection().resolver("user", tenantId, new Set(current), {});
+}
+
+beforeAll(() => {
   registerPlanPermissionsResolver();
+});
+
+beforeEach(async () => {
+  tenants.a = randomUUID();
+  tenants.b = randomUUID();
+  tenants.c = randomUUID();
+  await publishPlan(plan("parent", ["read"], null));
+  await publishPlan(plan("child", ["write"], "parent"));
+  await subscribe(tenants.a, { planId: "child" });
+  await setMember(tenants.a, "user", { isTenantOwner: true, roleIds: [] });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("plan permissions policy", () => {
   it.each([{ grants: [] }, { grants: ["read", "excluded"] }])(
     "grants the inherited plan to an owner with incoming grants $grants",
     async ({ grants }) => {
-      harness.members.set("tenant-a:user", {
+      await setMember(tenants.a, "user", {
         isTenantOwner: true,
         roleIds: grants.length ? ["owner-role"] : [],
       });
@@ -94,7 +121,7 @@ describe("plan permissions policy", () => {
   );
 
   it("intersects non-owner grants without granting missing plan permissions", async () => {
-    harness.members.set("tenant-a:user", {
+    await setMember(tenants.a, "user", {
       isTenantOwner: false,
       roleIds: ["editor"],
     });
@@ -103,41 +130,38 @@ describe("plan permissions policy", () => {
   });
 
   it("does not reuse ownership from another tenant or grant absent members", async () => {
-    harness.members.set("tenant-b:user", { isTenantOwner: false, roleIds: [] });
-    expect(await resolve([], "tenant-b")).toEqual(new Set());
-    expect(await resolve([], "tenant-c")).toEqual(new Set());
+    await subscribe(tenants.b, { planId: "child" });
+    await subscribe(tenants.c, { planId: "child" });
+    await setMember(tenants.b, "user", { isTenantOwner: false, roleIds: [] });
+    const tenantBReads = membershipReads(tenants.b);
+    expect(await resolve([], tenants.b)).toEqual(new Set());
+    expect(await resolve([], tenants.c)).toEqual(new Set());
     expect(await resolve([])).toEqual(new Set(["read", "write"]));
-    expect(harness.getModel).toHaveBeenCalledWith(
-      TenantMemberModel,
-      "tenant-b",
-    );
+    expect(tenantBReads).toHaveBeenCalledWith("user");
   });
 
   it.each([true, false])(
     "preserves the platform wildcard (tenant owner: %s)",
     async (isTenantOwner) => {
-      harness.members.set("tenant-a:user", { isTenantOwner, roleIds: [] });
+      await setMember(tenants.a, "user", { isTenantOwner, roleIds: [] });
+      const reads = membershipReads(tenants.a);
       expect(await resolve(["*", "read", "excluded"])).toEqual(
         new Set(["*", "read"]),
       );
-      expect(harness.getModel).not.toHaveBeenCalledWith(
-        TenantMemberModel,
-        "tenant-a",
-      );
+      expect(reads).not.toHaveBeenCalled();
     },
   );
 
   it("never grants a tenant wildcard, even if a plan contains one", async () => {
-    plans.set("child", plan("child", ["*", "write"], null));
+    await publishPlan(plan("child", ["*", "write"], null));
     expect(await resolve([])).toEqual(new Set(["write"]));
   });
 
   it("removes every explicit grant for an empty plan without mutating input", async () => {
-    plans.set("child", plan("child", [], null));
+    await publishPlan(plan("child", [], null));
     const current = new Set(["excluded"]);
-    const registration = harness.register.mock.calls[0][0];
     expect(
-      await registration.resolver("user", "tenant-a", current, {}),
+      await planIntersection().resolver("user", tenants.a, current, {}),
     ).toEqual(new Set());
     expect(current).toEqual(new Set(["excluded"]));
   });
@@ -145,26 +169,22 @@ describe("plan permissions policy", () => {
   it.each([undefined, {}, { planId: "missing" }])(
     "preserves incoming permissions without a resolvable plan: %j",
     async (subscription) => {
-      harness.subscription = subscription;
+      await subscribe(tenants.a, subscription);
+      const reads = membershipReads(tenants.a);
       const current = new Set(["existing"]);
-      const registration = harness.register.mock.calls[0][0];
-      expect(await registration.resolver("user", "tenant-a", current, {})).toBe(
-        current,
-      );
+      expect(
+        await planIntersection().resolver("user", tenants.a, current, {}),
+      ).toBe(current);
       expect(await resolve([])).toEqual(new Set());
-      expect(harness.getModel).not.toHaveBeenCalledWith(
-        TenantMemberModel,
-        "tenant-a",
-      );
+      expect(reads).not.toHaveBeenCalled();
     },
   );
 
   describe("in a role preview", () => {
     function preview(rolePermissions: string[]) {
-      const registration = harness.register.mock.calls[0][0];
-      return registration.resolver(
+      return planIntersection().resolver(
         "preview-user",
-        "tenant-a",
+        tenants.a,
         new Set(rolePermissions),
         {
           preview: { rolePermissions: new Set(rolePermissions) },
@@ -173,7 +193,7 @@ describe("plan permissions policy", () => {
     }
 
     it("returns the role unchanged without a plan", async () => {
-      harness.subscription = undefined;
+      await subscribe(tenants.a, undefined);
       expect(await preview(["read", "excluded"])).toEqual(
         new Set(["read", "excluded"]),
       );
@@ -190,15 +210,13 @@ describe("plan permissions policy", () => {
     });
 
     it("never takes the owner grant, even for an owner's id", async () => {
-      harness.members.set("tenant-a:preview-user", {
+      await setMember(tenants.a, "preview-user", {
         isTenantOwner: true,
         roleIds: [],
       });
+      const reads = membershipReads(tenants.a);
       expect(await preview([])).toEqual(new Set());
-      expect(harness.getModel).not.toHaveBeenCalledWith(
-        TenantMemberModel,
-        "tenant-a",
-      );
+      expect(reads).not.toHaveBeenCalled();
     });
 
     it("keeps the wildcard of a wildcard role", async () => {
@@ -206,11 +224,10 @@ describe("plan permissions policy", () => {
     });
 
     it("drops a wildcard the role does not hold", async () => {
-      const registration = harness.register.mock.calls[0][0];
       expect(
-        await registration.resolver(
+        await planIntersection().resolver(
           "preview-user",
-          "tenant-a",
+          tenants.a,
           new Set(["*", "read"]),
           {
             preview: { rolePermissions: new Set(["read"]) },
@@ -220,18 +237,24 @@ describe("plan permissions policy", () => {
     });
 
     it("leaves real calls with an empty context unchanged", async () => {
-      const registration = harness.register.mock.calls[0][0];
       expect(
-        await registration.resolver("user", "tenant-a", new Set(["read"]), {}),
+        await planIntersection().resolver(
+          "user",
+          tenants.a,
+          new Set(["read"]),
+          {},
+        ),
       ).toEqual(new Set(["read", "write"]));
     });
   });
 
   it("retains the pipeline registration contract before downstream projections", () => {
-    expect(harness.register).toHaveBeenCalledWith({
-      id: "dms-saas.plan-intersection",
-      order: 100,
-      resolver: expect.any(Function),
-    });
+    expect(registered).toEqual([
+      {
+        id: "dms-saas.plan-intersection",
+        order: 100,
+        resolver: expect.any(Function),
+      },
+    ]);
   });
 });
