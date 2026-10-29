@@ -28,6 +28,21 @@ export interface SuiteStripe {
 }
 
 /**
+ * Points `stripe` at the clients the module holds now, and records every
+ * request they send in `stripe.requests`. Call it after the module's clients
+ * were built again (`initStripeClient`).
+ */
+export function recordRequests(stripe: SuiteStripe): void {
+  stripe.write = getStripeClient();
+  stripe.read = getStripeReadClient();
+  const record = (event: Stripe.RequestEvent): void => {
+    stripe.requests.push(`${event.method} ${event.path}`);
+  };
+  stripe.write.on("request", record);
+  stripe.read.on("request", record);
+}
+
+/**
  * Initialises the module's real Stripe clients with {@link SUITE_STRIPE_KEYS}.
  * A test stubs each Stripe call it expects with `vi.spyOn` on a resource of
  * `write` or `read`; a call left unstubbed sends a request, and the suite
@@ -41,11 +56,7 @@ export function useSuiteStripe(): SuiteStripe {
     read: getStripeReadClient(),
     requests: [],
   };
-  const record = (event: Stripe.RequestEvent): void => {
-    stripe.requests.push(`${event.method} ${event.path}`);
-  };
-  stripe.write.on("request", record);
-  stripe.read.on("request", record);
+  recordRequests(stripe);
   afterEach(() => {
     vi.restoreAllMocks();
     const sent = stripe.requests.splice(0);

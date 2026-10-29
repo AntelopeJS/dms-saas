@@ -1,51 +1,30 @@
+import { setTimeout as sleep } from "node:timers/promises";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import { fromPartial } from "@total-typescript/shoehorn";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
+import {
+  BILLING_SETTINGS_SINGLETON_ID,
   BillingSettingsModel,
+  LEGAL_DOCUMENTS_SINGLETON_ID,
   LegalDocumentsModel,
-  Plan,
+  type Plan,
   PlanModel,
 } from "../src/db";
-import { planRow } from "./helpers/plan-row";
-
-const harness = vi.hoisted(() => ({
-  isStripeConfigured: vi.fn(() => true),
-  reconcile: vi.fn(async () => undefined),
-  startReconciliation: vi.fn(),
-}));
-
-vi.mock("../src/stripe/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/stripe/client")>()),
-  isStripeConfigured: harness.isStripeConfigured,
-}));
-
-vi.mock("../src/plans/stripe-sync", () => ({
-  reconcilePlansWithStripe: harness.reconcile,
-  startPlanReconciliation: harness.startReconciliation,
-}));
-
 import { SaasBillingSettingsController } from "../src/routes/platformOwner/billing-settings";
+import { useMongoDatabase } from "./helpers/mongo";
+import { planRow } from "./helpers/plan-row";
+import { insertPlan } from "./helpers/localized-plans";
+import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
+import { useSuiteStripe } from "./helpers/stripe";
+
+useMongoDatabase("billing-rules-route");
+const stripe = useSuiteStripe();
 
 const ADMIN = {} as User;
 const TAX_CODE = "txcd_10000000";
-
-type Row = Record<string, unknown>;
-
-function memoryModel(initial?: Row) {
-  const state = { row: initial };
-  return {
-    state,
-    model: {
-      get: async () => state.row,
-      insert: async ([row]: Row[]) => {
-        state.row = row;
-      },
-      update: async (_id: string, patch: Row) => {
-        state.row = { ...state.row, ...patch };
-      },
-    },
-  };
-}
+/** How long a reconciliation that must not start is given to show itself. */
+const NO_RECONCILIATION_WAIT_MS = 100;
 
 function syncedPlan(taxCode: string, id = "pro"): Plan {
   return planRow({
@@ -56,9 +35,11 @@ function syncedPlan(taxCode: string, id = "pro"): Plan {
     currency: "eur",
     interval: "month",
     billingMode: "flat",
+    isActive: true,
+    isDeleted: false,
     paymentProviderRefs: {
-      stripeProductId: "prod_1",
-      stripePriceId: "price_1",
+      stripeProductId: `prod_${id}`,
+      stripePriceId: `price_${id}`,
       stripeSyncedTerms: {
         product: { name: "Pro", description: "", taxCode },
         price: {
@@ -72,28 +53,48 @@ function syncedPlan(taxCode: string, id = "pro"): Plan {
   } as Partial<Plan>);
 }
 
-let settings: ReturnType<typeof memoryModel>;
-let legal: ReturnType<typeof memoryModel>;
 let controller: SaasBillingSettingsController;
+let updateProduct: ReturnType<typeof stubProductUpdate>;
 
-beforeEach(() => {
-  settings = memoryModel();
-  legal = memoryModel();
+function stubProductUpdate() {
+  return vi
+    .spyOn(stripe.write.products, "update")
+    .mockResolvedValue(fromPartial({}));
+}
+
+function settingsRow() {
+  return GetModel(BillingSettingsModel).get(BILLING_SETTINGS_SINGLETON_ID);
+}
+
+/**
+ * Starts every test from a platform without billing settings or legal texts,
+ * whose catalogue holds a plan synced under the default tax category, one
+ * synced under another, and a free plan.
+ */
+beforeEach(async () => {
+  updateProduct = stubProductUpdate();
+  await GetModel(BillingSettingsModel).delete(BILLING_SETTINGS_SINGLETON_ID);
+  await GetModel(LegalDocumentsModel).delete(LEGAL_DOCUMENTS_SINGLETON_ID);
+  for (const { _id } of await GetModel(PlanModel).getAll()) {
+    await GetModel(PlanModel).delete(_id);
+  }
+  await insertPlan(syncedPlan(TAX_CODE));
+  await insertPlan(syncedPlan("txcd_99999999", "team"));
+  await insertPlan(
+    planRow({
+      _id: "free",
+      name: "Free",
+      description: "",
+      price: 0,
+      isActive: true,
+      isDeleted: false,
+      paymentProviderRefs: {},
+    }),
+  );
   controller = new SaasBillingSettingsController();
-  controller.billingSettingsModel =
-    settings.model as unknown as BillingSettingsModel;
-  controller.legalDocumentsModel =
-    legal.model as unknown as LegalDocumentsModel;
-  controller.planModel = {
-    findActiveNotDeleted: async () => [
-      syncedPlan(TAX_CODE),
-      syncedPlan("txcd_99999999", "team"),
-      planRow({ _id: "free", price: 0, paymentProviderRefs: {} }),
-    ],
-  } as unknown as PlanModel;
-  harness.isStripeConfigured.mockReturnValue(true);
-  harness.reconcile.mockClear();
-  harness.startReconciliation.mockClear();
+  controller.billingSettingsModel = GetModel(BillingSettingsModel);
+  controller.legalDocumentsModel = GetModel(LegalDocumentsModel);
+  controller.planModel = GetModel(PlanModel);
 });
 
 async function rejection(promise: Promise<unknown>): Promise<unknown> {
@@ -143,11 +144,11 @@ describe("billing rules & legal page", () => {
       customerTimeline: { ignored: true },
     });
 
-    expect(settings.state.row).toMatchObject({
+    expect(await settingsRow()).toMatchObject({
       autoSuspendDelayDays: 21,
       moneyBackGuaranteeMode: "prorated",
     });
-    expect(settings.state.row).not.toHaveProperty("customerTimeline");
+    expect(await settingsRow()).not.toHaveProperty("customerTimeline");
     expect(payload).toMatchObject({
       privacyPolicy: "<p>Processors</p>",
       privacyPolicyRelease: { version: 1, path: "/privacy-policy" },
@@ -167,7 +168,7 @@ describe("billing rules & legal page", () => {
     const error = await rejection(controller.update(ADMIN, body));
 
     expect(error).toMatchObject({ status: 400 });
-    expect(settings.state.row).toBeUndefined();
+    expect(await settingsRow()).toBeUndefined();
   });
 
   it("turns the free-workspaces-per-card rule off with 0", async () => {
@@ -175,33 +176,50 @@ describe("billing rules & legal page", () => {
       maxFreeWorkspacesPerCard: 0,
     });
 
-    expect(settings.state.row?.maxFreeWorkspacesPerCard).toBe(0);
+    expect((await settingsRow())?.maxFreeWorkspacesPerCard).toBe(0);
     expect(payload.maxFreeWorkspacesPerCard).toBe(0);
   });
 
   it("carries a new tax category to the plans in the background", async () => {
     await controller.update(ADMIN, { stripeTaxCode: "txcd_10103000" });
-    expect(harness.startReconciliation).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(updateProduct).toHaveBeenCalledTimes(2));
+    expect(
+      updateProduct.mock.calls.map(([id, params]) => [id, params?.tax_code]),
+    ).toEqual(
+      expect.arrayContaining([
+        ["prod_pro", "txcd_10103000"],
+        ["prod_team", "txcd_10103000"],
+      ]),
+    );
 
     await controller.update(ADMIN, { stripeTaxCode: "txcd_10103000" });
-    expect(harness.startReconciliation).toHaveBeenCalledOnce();
+    await sleep(NO_RECONCILIATION_WAIT_MS);
+    expect(updateProduct).toHaveBeenCalledTimes(2);
   });
 
   it("re-syncs the plans and records when", async () => {
     const status = await controller.resyncPlans(ADMIN);
 
-    expect(harness.reconcile).toHaveBeenCalledOnce();
+    expect(updateProduct).toHaveBeenCalledOnce();
+    expect(updateProduct).toHaveBeenCalledWith(
+      "prod_team",
+      expect.objectContaining({ tax_code: TAX_CODE }),
+    );
     expect(status.syncedAt).toBeInstanceOf(Date);
-    expect(settings.state.row?.plansSyncedAt).toBe(status.syncedAt);
+    expect((await settingsRow())?.plansSyncedAt).toEqual(status.syncedAt);
   });
 
   it("refuses to re-sync without Stripe", async () => {
-    harness.isStripeConfigured.mockReturnValue(false);
+    await withUnconfiguredStripe(stripe, async (unconfigured) => {
+      const update = vi
+        .spyOn(unconfigured.write.products, "update")
+        .mockResolvedValue(fromPartial({}));
 
-    expect(await rejection(controller.resyncPlans(ADMIN))).toMatchObject({
-      status: 409,
+      expect(await rejection(controller.resyncPlans(ADMIN))).toMatchObject({
+        status: 409,
+      });
+      expect(update).not.toHaveBeenCalled();
     });
-    expect(harness.reconcile).not.toHaveBeenCalled();
   });
 });
 

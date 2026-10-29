@@ -4,19 +4,17 @@ import type { User } from "@antelopejs/interface-dms/auth/db";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import { fromPartial } from "@total-typescript/shoehorn";
 import Stripe from "stripe";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TenantSubscriptionModel } from "../src/db";
 import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
-import { getStripeClient, initStripeClient } from "../src/stripe/client";
 import { useMongoDatabase } from "./helpers/mongo";
-import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
+import { useSuiteStripe } from "./helpers/stripe";
+import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 
 useMongoDatabase("workspace-available-credit");
 const stripe = useSuiteStripe();
 
 const OPERATOR = fromPartial<User>({ _id: "op" });
-/** A key of the shape a deployment leaves in its sample configuration. */
-const PLACEHOLDER_SECRET_KEY = "sk_test_placeholder";
 
 const controller = new SaasWorkspaceDetailController();
 
@@ -39,22 +37,16 @@ beforeEach(async () => {
   });
 });
 
-afterEach(() => {
-  initStripeClient(SUITE_STRIPE_KEYS);
-});
-
 describe("a workspace's available credit without a usable Stripe", () => {
   it("shows nothing and asks Stripe nothing when Stripe is not configured", async () => {
-    initStripeClient({
-      ...SUITE_STRIPE_KEYS,
-      secretKey: PLACEHOLDER_SECRET_KEY,
-    });
-    const retrieve = vi.spyOn(getStripeClient().customers, "retrieve");
+    await withUnconfiguredStripe(stripe, async ({ write }) => {
+      const retrieve = vi.spyOn(write.customers, "retrieve");
 
-    expect(await controller.availableCredit(OPERATOR, tenantId)).toEqual({
-      items: [],
+      expect(await controller.availableCredit(OPERATOR, tenantId)).toEqual({
+        items: [],
+      });
+      expect(retrieve).not.toHaveBeenCalled();
     });
-    expect(retrieve).not.toHaveBeenCalled();
   });
 
   it("answers a handled 503 when Stripe refuses the key", async () => {

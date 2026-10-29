@@ -1,74 +1,19 @@
 import { ImplementInterface } from "@antelopejs/interface-core";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { TenantModel } from "@antelopejs/interface-dms/db";
+import { fromPartial } from "@total-typescript/shoehorn";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   TenantLifecycleConsumer,
   TenantLifecycleConsumerRegistration,
+  TenantLifecycleMessage,
   TenantLifecycleReceipt,
   TenantLifecycleTransition,
 } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
-import type { WorkspaceProvisioningState } from "../src/operator-actions/db/lifecycle-delivery.table";
-
-interface Delivery {
-  _id: string;
-  operationId: string;
-  tenantId: string;
-  consumer: string;
-  transition: TenantLifecycleTransition;
-  provisioningInvoiceId: string | null;
-  provisioningState: WorkspaceProvisioningState | null;
-  status: "pending" | "running" | "succeeded" | "failed";
-  attemptCount: number;
-  revision: string;
-  receiptId: string | null;
-  claimId: string | null;
-  claimExpiresAt: Date | null;
-  acceptedAt: Date | null;
-  effectiveAt: Date | null;
-  lastErrorCode: string | null;
-  requestedAt: Date;
-  createdAt: Date;
-  startedAt: Date | null;
-  completedAt: Date | null;
-  updatedAt: Date;
-}
-
-interface NamedModel {
-  name: string;
-}
-
-const harness = vi.hoisted(() => ({
-  models: new Map<string, unknown>(),
-  deliveries: new Map<string, unknown>(),
-  invoiceStatus: "open",
-  tenantExists: true,
-  failInsertConsumer: "",
-  failReceiptConsumer: "",
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const original =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...original,
-    GetModel: (model: NamedModel): unknown => harness.models.get(model.name),
-  };
-});
-
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: { Error: vi.fn() },
-}));
-
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => ({
-    invoices: { retrieve: async () => ({ status: harness.invoiceStatus }) },
-  }),
-}));
-
 import * as tenantLifecycleImplementation from "../src/implementations/dms-saas/tenant-lifecycle";
 import * as tenantLifecycleInterface from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import { RegisterTenantLifecycleConsumer } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
+import { LifecycleDeliveryModel } from "../src/operator-actions/db/lifecycle-delivery.model";
 import {
   beginWorkspaceCreation,
   cancelWorkspaceCreated,
@@ -77,100 +22,64 @@ import {
   prepareWorkspaceCreated,
   reconcileWorkspaceLifecycleDeliveries,
 } from "../src/operator-actions/lifecycle-outbox";
+import { captureLogs } from "./helpers/logging";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
+
+useMongoDatabase("workspace-lifecycle-outbox");
+const stripe = useSuiteStripe();
+const logs = captureLogs();
 
 ImplementInterface(tenantLifecycleInterface, tenantLifecycleImplementation);
 
 const registrations: TenantLifecycleConsumerRegistration[] = [];
+let invoiceStatus = "open";
 
-function currentDelivery(id: string): Delivery | undefined {
-  return harness.deliveries.get(id) as Delivery | undefined;
+async function deliveries() {
+  return GetModel(LifecycleDeliveryModel).getAll();
 }
 
-function updatePending(id: string, update: Partial<Delivery>): void {
-  const delivery = currentDelivery(id);
-  if (!delivery || delivery.status === "succeeded") return;
-  Object.assign(delivery, update, { attemptCount: delivery.attemptCount + 1 });
+async function setTenantExists(exists: boolean): Promise<void> {
+  const now = new Date();
+  const tenants = GetModel(TenantModel);
+  await tenants.delete("tenant-123");
+  if (exists)
+    await tenants.insert({
+      _id: "tenant-123",
+      name: "tenant-123",
+      createdAt: now,
+      updatedAt: now,
+    });
 }
 
-const CLAIM_LEASE_MS = 60_000;
-
-function isClaimable(delivery: Delivery): boolean {
-  if (delivery.status === "pending" || delivery.status === "failed")
-    return true;
-  return (
-    delivery.status === "running" &&
-    (delivery.claimExpiresAt?.getTime() ?? 0) <= Date.now()
-  );
+/** Makes the next insert of the consumer's delivery fail, as a lost connection would. */
+function failNextInsertOf(consumer: string): void {
+  const model = GetModel(LifecycleDeliveryModel);
+  const insert = model.insert.bind(model);
+  let isPending = true;
+  vi.spyOn(model, "insert").mockImplementation(async (row, options) => {
+    if (isPending && !Array.isArray(row) && row.consumer === consumer) {
+      isPending = false;
+      throw new Error("insert connection lost");
+    }
+    return insert(row, options);
+  });
 }
 
-function lifecycleDeliveryModel(): object {
-  return {
-    insert: async (delivery: Delivery) => {
-      if (harness.failInsertConsumer === delivery.consumer) {
-        harness.failInsertConsumer = "";
-        throw new Error("insert connection lost");
-      }
-      if (harness.deliveries.has(delivery._id)) throw new Error("duplicate");
-      harness.deliveries.set(delivery._id, { ...delivery });
-    },
-    get: async (id: string) => currentDelivery(id),
-    transitionProvisioning: async (
-      id: string,
-      expected: WorkspaceProvisioningState,
-      next: WorkspaceProvisioningState,
-      invoiceId?: string | null,
-    ) => {
-      const row = currentDelivery(id);
-      if (row?.provisioningState === next) return;
-      if (!row || row.provisioningState !== expected)
-        throw new Error("Workspace provisioning state changed");
-      row.provisioningState = next;
-      if (invoiceId !== undefined) row.provisioningInvoiceId = invoiceId;
-      if (next === "cancelled") Object.assign(row, { status: "succeeded" });
-    },
-    delete: async (id: string) => harness.deliveries.delete(id),
-    findReplayable: async () =>
-      [...harness.deliveries.values()].filter((value) =>
-        isClaimable(value as Delivery),
-      ),
-    claim: async (delivery: Delivery) => {
-      const row = currentDelivery(delivery._id);
-      if (!row || row.revision !== delivery.revision || !isClaimable(row))
-        return null;
-      Object.assign(row, {
-        status: "running",
-        revision: `${row.revision}+`,
-        claimId: `claim-${row.revision}`,
-        claimExpiresAt: new Date(Date.now() + CLAIM_LEASE_MS),
-      });
-      return { ...row };
-    },
-    findByOperation: async (operationId: string) =>
-      [...harness.deliveries.values()].filter(
-        (value) => (value as Delivery).operationId === operationId,
-      ),
-    markSucceeded: async (
-      delivery: Delivery,
-      receipt: TenantLifecycleReceipt,
-    ) => {
-      if (harness.failReceiptConsumer === delivery.consumer) {
-        harness.failReceiptConsumer = "";
+/** Makes the next receipt write of the consumer's delivery fail, as a lost connection would. */
+function failNextReceiptOf(consumer: string): void {
+  const model = GetModel(LifecycleDeliveryModel);
+  const markSucceeded = model.markSucceeded.bind(model);
+  let isPending = true;
+  vi.spyOn(model, "markSucceeded").mockImplementation(
+    async (delivery, receipt) => {
+      if (isPending && delivery.consumer === consumer) {
+        isPending = false;
         throw new Error("receipt connection lost");
       }
-      updatePending(delivery._id, {
-        status: "succeeded",
-        receiptId: receipt.receiptId,
-        effectiveAt: receipt.effectiveAt ?? new Date(),
-      });
+      return markSucceeded(delivery, receipt);
     },
-    markFailed: async (delivery: Delivery) => {
-      if (currentDelivery(delivery._id)?.claimId !== delivery.claimId) return;
-      updatePending(delivery._id, {
-        status: "failed",
-        lastErrorCode: "saas.errors.lifecycle.consumer_failed",
-      });
-    },
-  };
+  );
 }
 
 function registerConsumer(
@@ -187,36 +96,32 @@ function registerConsumer(
   return registration;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   for (const registration of registrations.splice(0)) registration.unregister();
-  harness.models.clear();
-  harness.deliveries.clear();
-  harness.invoiceStatus = "open";
-  harness.tenantExists = true;
-  harness.failInsertConsumer = "";
-  harness.failReceiptConsumer = "";
-  harness.models.set("LifecycleDeliveryModel", lifecycleDeliveryModel());
-  harness.models.set("TenantModel", {
-    get: async () => (harness.tenantExists ? { _id: "tenant-123" } : undefined),
-  });
+  invoiceStatus = "open";
+  vi.spyOn(stripe.write.invoices, "retrieve").mockImplementation(async () =>
+    fromPartial({ status: invoiceStatus }),
+  );
+  for (const { _id } of await deliveries()) {
+    await GetModel(LifecycleDeliveryModel).delete(_id);
+  }
+  await setTenantExists(true);
 });
 
 describe("workspace lifecycle outbox", () => {
   it("preserves guarded provenance after receipt loss and rejects reassignment", async () => {
-    const consume = vi.fn(
-      async (
-        _message: workspaceLifecycleInterface.WorkspaceLifecycleMessage,
-      ) => ({ receiptId: "receipt" }),
-    );
+    const consume = vi.fn(async (_message: TenantLifecycleMessage) => ({
+      receiptId: "receipt",
+    }));
     registerConsumer("guarded.consumer", consume, ["reactivation_requested"]);
-    const message: workspaceLifecycleInterface.WorkspaceLifecycleMessage = {
+    const message: TenantLifecycleMessage = {
       tenantId: "tenant-123",
       operationId: "delivery",
       planChangeOperationId: "downgrade-root",
       transition: "reactivation_requested",
       requestedAt: new Date(),
     };
-    harness.failReceiptConsumer = "guarded.consumer";
+    failNextReceiptOf("guarded.consumer");
     await expect(dispatchWorkspaceLifecycle(message)).rejects.toThrow();
     await reconcileWorkspaceLifecycleDeliveries();
     expect(consume).toHaveBeenCalledTimes(2);
@@ -259,8 +164,14 @@ describe("workspace lifecycle outbox", () => {
     registerConsumer("beta.created", beta, ["created"]);
     await beginWorkspaceCreation("tenant-123");
     await prepareWorkspaceCreated("tenant-123", null);
-    harness.failInsertConsumer = "beta.created";
+    failNextInsertOf("beta.created");
     await deliverWorkspaceCreated("tenant-123");
+    expect(logs.at("ERROR")).toEqual([
+      [
+        "[dms-saas:lifecycle] creation delivery for tenant-123 deferred",
+        expect.objectContaining({ message: "insert connection lost" }),
+      ],
+    ]);
     expect(alpha).not.toHaveBeenCalled();
     expect(beta).not.toHaveBeenCalled();
     await reconcileWorkspaceLifecycleDeliveries();
@@ -279,7 +190,7 @@ describe("workspace lifecycle outbox", () => {
     registerConsumer("created.consumer", consume, ["created"]);
     await beginWorkspaceCreation("tenant-123");
     await prepareWorkspaceCreated("tenant-123", null);
-    harness.failReceiptConsumer = "created.consumer";
+    failNextReceiptOf("created.consumer");
     await deliverWorkspaceCreated("tenant-123");
     await reconcileWorkspaceLifecycleDeliveries();
     expect(consume).toHaveBeenCalledTimes(2);
@@ -290,11 +201,11 @@ describe("workspace lifecycle outbox", () => {
   it("closes inventory eligibility before tenant insertion and never reopens a rollback tombstone", async () => {
     const { IsTenantProvisioningCommitted } = tenantLifecycleInterface;
     expect(await IsTenantProvisioningCommitted("legacy")).toBe(true);
-    harness.tenantExists = false;
+    await setTenantExists(false);
     await beginWorkspaceCreation("tenant-123");
     await reconcileWorkspaceLifecycleDeliveries();
     expect(await IsTenantProvisioningCommitted("tenant-123")).toBe(false);
-    harness.tenantExists = true;
+    await setTenantExists(true);
     await prepareWorkspaceCreated("tenant-123", "invoice-123");
     expect(await IsTenantProvisioningCommitted("tenant-123")).toBe(false);
     await cancelWorkspaceCreated("tenant-123");
@@ -314,7 +225,7 @@ describe("workspace lifecycle outbox", () => {
     await reconcileWorkspaceLifecycleDeliveries();
     expect(created).not.toHaveBeenCalled();
 
-    harness.invoiceStatus = "paid";
+    invoiceStatus = "paid";
     await reconcileWorkspaceLifecycleDeliveries();
     await beginWorkspaceCreation("tenant-123");
     await reconcileWorkspaceLifecycleDeliveries();
@@ -331,7 +242,7 @@ describe("workspace lifecycle outbox", () => {
         transition: "created",
       }),
     );
-    expect(harness.deliveries.size).toBe(2);
+    expect(await deliveries()).toHaveLength(2);
   });
 
   it("commits no-invoice workspaces without consulting payment and retries failed consumers", async () => {
@@ -354,7 +265,7 @@ describe("workspace lifecycle outbox", () => {
     await beginWorkspaceCreation("tenant-123");
     await prepareWorkspaceCreated("tenant-123", "invoice-123");
     await cancelWorkspaceCreated("tenant-123");
-    harness.invoiceStatus = "paid";
+    invoiceStatus = "paid";
     await reconcileWorkspaceLifecycleDeliveries();
     expect(created).not.toHaveBeenCalled();
   });
@@ -364,10 +275,10 @@ describe("workspace lifecycle outbox", () => {
     registerConsumer("created.consumer", created, ["created"]);
     await beginWorkspaceCreation("tenant-123");
     await prepareWorkspaceCreated("tenant-123", null);
-    harness.tenantExists = false;
+    await setTenantExists(false);
     await reconcileWorkspaceLifecycleDeliveries();
     expect(created).not.toHaveBeenCalled();
-    expect([...harness.deliveries.values()]).toEqual([
+    expect(await deliveries()).toEqual([
       expect.objectContaining({
         status: "succeeded",
         receiptId: "deleted:workspace-created:tenant-123",
@@ -423,11 +334,13 @@ describe("workspace lifecycle outbox", () => {
     });
     expect(secondConsumer).toHaveBeenCalledOnce();
     expect(
-      [...harness.deliveries.values()].map((value) => ({
-        consumer: (value as Delivery).consumer,
-        status: (value as Delivery).status,
-        receiptId: (value as Delivery).receiptId,
-      })),
+      (await deliveries())
+        .map((delivery) => ({
+          consumer: delivery.consumer,
+          status: delivery.status,
+          receiptId: delivery.receiptId,
+        }))
+        .toSorted((left, right) => left.consumer.localeCompare(right.consumer)),
     ).toEqual([
       {
         consumer: "alpha.consumer",
@@ -440,7 +353,7 @@ describe("workspace lifecycle outbox", () => {
     await expect(dispatchWorkspaceLifecycle(input)).resolves.toBeUndefined();
     expect(firstConsumer).toHaveBeenCalledOnce();
     expect(secondConsumer).toHaveBeenCalledTimes(2);
-    expect([...harness.deliveries.values()]).toEqual(
+    expect(await deliveries()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           consumer: "beta.consumer",
@@ -475,7 +388,7 @@ describe("workspace lifecycle outbox", () => {
     await expect(dispatchWorkspaceLifecycle(input)).rejects.toThrow(
       "Workspace lifecycle consumer is unavailable",
     );
-    expect([...harness.deliveries.values()]).toEqual([
+    expect(await deliveries()).toEqual([
       expect.objectContaining({
         consumer: "required.consumer",
         status: "failed",
@@ -502,7 +415,7 @@ describe("workspace lifecycle outbox", () => {
         requestedAt: new Date("2026-08-28T12:00:00.000Z"),
       }),
     ).rejects.toThrow("Invalid workspace lifecycle receipt effective time");
-    expect([...harness.deliveries.values()]).toEqual([
+    expect(await deliveries()).toEqual([
       expect.objectContaining({ status: "failed", attemptCount: 1 }),
     ]);
   });

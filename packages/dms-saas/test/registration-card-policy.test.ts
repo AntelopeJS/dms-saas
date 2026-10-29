@@ -12,7 +12,7 @@ import {
   setRuntimeConfig,
 } from "../src/config";
 import { type TenantSubscription, TenantSubscriptionModel } from "../src/db";
-import { getStripeClient, initStripeClient } from "../src/stripe/client";
+import { getStripeClient } from "../src/stripe/client";
 import type { DmsSaasConfig } from "../src/types";
 import { createUser, useDmsAuth } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
@@ -28,9 +28,10 @@ import {
   world,
 } from "./helpers/registration";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
+import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 
 useMongoDatabase("registration-card-policy");
-useSuiteStripe();
+const suiteStripe = useSuiteStripe();
 const stripe = useRegistrationWorld();
 useDmsAuth();
 
@@ -51,7 +52,6 @@ describe("registration card policy", () => {
 
   afterEach(() => {
     setRuntimeConfig({ stripe: SUITE_STRIPE_KEYS });
-    initStripeClient(SUITE_STRIPE_KEYS);
   });
 
   it("defaults to requiring a card, as before the option existed", async () => {
@@ -289,21 +289,19 @@ describe("registration card policy", () => {
 
   it("registers on the free plan without a card while Stripe is not configured", async () => {
     applyPolicy("required");
-    initStripeClient({
-      ...SUITE_STRIPE_KEYS,
-      secretKey: "sk_test_placeholder",
-    });
-    serveStripe(stripe);
-    const retrieve = vi.spyOn(getStripeClient().paymentMethods, "retrieve");
+    await withUnconfiguredStripe(suiteStripe, async ({ write }) => {
+      serveStripe(stripe);
+      const retrieve = vi.spyOn(write.paymentMethods, "retrieve");
 
-    const result = await buildController().register(cardlessBody());
+      const result = await buildController().register(cardlessBody());
 
-    expect(getRegistrationPaymentMethodPolicy()).toBe("none");
-    expect(retrieve).not.toHaveBeenCalled();
-    expect(stripe.customers.size).toBe(0);
-    expect(await world.subscriptionOf(result.tenantId)).toMatchObject({
-      planId: PLAN._id,
-      stripeCustomerId: null,
+      expect(getRegistrationPaymentMethodPolicy()).toBe("none");
+      expect(retrieve).not.toHaveBeenCalled();
+      expect(stripe.customers.size).toBe(0);
+      expect(await world.subscriptionOf(result.tenantId)).toMatchObject({
+        planId: PLAN._id,
+        stripeCustomerId: null,
+      });
     });
   });
 
