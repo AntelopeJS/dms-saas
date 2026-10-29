@@ -12,6 +12,7 @@ import * as guards from "@antelopejs/interface-dms/guards";
 import { resolveRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { fromPartial } from "@total-typescript/shoehorn";
+import { type Mock, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const DMS_DIST = join(
@@ -124,4 +125,26 @@ export async function tenantRequest(
   });
   await resolveRequestTenantId(request);
   return request;
+}
+
+/** A tenant access gate a test registered, and decides. */
+export type ObservedTenantAccessGate = Mock<tenantAccess.TenantAccessGateFn>;
+
+/**
+ * Implements the DMS tenant access check and registers a gate with it, the
+ * way a module registers one: every tenant authorization surface asks it.
+ * It lets every tenant in, until a test makes it deny one; reset it with
+ * `mockClear` or `mockReset` + an implementation.
+ */
+export function useTenantAccessGate(): ObservedTenantAccessGate {
+  implementWithDms(tenantAccess, "implementations/dms/tenant-access.js");
+  const gate = vi.fn<tenantAccess.TenantAccessGateFn>(() => ({
+    allowed: true,
+  }));
+  tenantAccess.RegisterTenantAccessGate({
+    id: "dms-saas-suite.gate",
+    order: 0,
+    gate,
+  });
+  return gate;
 }

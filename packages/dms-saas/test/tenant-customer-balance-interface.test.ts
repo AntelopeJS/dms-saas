@@ -1,106 +1,71 @@
+import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-
-interface ModelClass {
-  name: string;
-}
-
-interface SubscriptionFixture {
-  stripeCustomerId?: string;
-  isComplimentary?: boolean;
-}
-
-interface BalanceFixture {
-  status: "available" | "deleted";
-  balanceMinorUnits: number | null;
-  currency: string | null;
-}
-
-const harness = vi.hoisted(() => ({
-  tenantId: "tenant-current",
-  userId: "user-owner",
-  isMember: true,
-  subscription: { stripeCustomerId: "cus_current" } as SubscriptionFixture,
-  assertTenantAccess: vi.fn(),
-  retrieveBalance: vi.fn<() => Promise<BalanceFixture>>(),
-  getModel: vi.fn(),
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", () => ({
-  GetModel: (model: ModelClass, tenantId: string) => {
-    harness.getModel(model.name, tenantId);
-    if (model.name === "TenantMemberModel") {
-      return {
-        getByUser: async () =>
-          harness.isMember ? { isTenantOwner: false } : undefined,
-      };
-    }
-    return { findOne: async () => harness.subscription };
-  },
-}));
-
-vi.mock("@antelopejs/interface-dms/db", () => ({
-  TenantMemberModel: class TenantMemberModel {},
-}));
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: { Error: vi.fn() },
-}));
-vi.mock("@antelopejs/interface-dms/tenant-access", () => ({
-  AssertTenantAccess: (...args: unknown[]) =>
-    harness.assertTenantAccess(...args),
-}));
-vi.mock("../src/db", () => ({
-  TenantSubscriptionModel: class TenantSubscriptionModel {},
-}));
-vi.mock("../src/stripe/customer-balance", () => ({
-  retrieveStripeCustomerBalance: (...args: unknown[]) =>
-    harness.retrieveBalance(...args),
-}));
-vi.mock("../src/upcoming-invoice/preview", () => ({
-  getUpcomingInvoicePreview: vi.fn(),
-}));
-
-import * as billingImplementation from "../src/implementations/dms-saas/billing";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import type { User } from "@antelopejs/interface-dms/auth/db";
 import * as billingInterface from "@antelopejs/interface-dms-saas/billing";
+import { fromPartial } from "@total-typescript/shoehorn";
+import type Stripe from "stripe";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type TenantSubscription, TenantSubscriptionModel } from "../src/db";
+import * as billingImplementation from "../src/implementations/dms-saas/billing";
+import { addTenantMember, useTenantAccessGate } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const SCOPE = { tenantId: "tenant-current", userId: "user-owner" };
+useMongoDatabase("tenant-customer-balance-interface");
+const stripe = useSuiteStripe();
+const gate = useTenantAccessGate();
+
+const CUSTOMER_ID = "cus_current";
+
+/** The scope of the current test: a member of a workspace of its own. */
+let SCOPE = { tenantId: "", userId: "" };
+
+/** Stores the scope's workspace subscription. */
+async function subscribe(subscription: Partial<TenantSubscription>) {
+  await GetModel(TenantSubscriptionModel, SCOPE.tenantId).insert({
+    _id: SCOPE.tenantId,
+    ...subscription,
+  });
+}
+
+/** Answers the read of the workspace's Stripe customer with `customer`. */
+function stripeCustomer(
+  customer: Partial<Stripe.Customer> | Stripe.DeletedCustomer,
+) {
+  return vi
+    .spyOn(stripe.write.customers, "retrieve")
+    .mockResolvedValue(fromPartial(customer));
+}
 
 beforeAll(() => {
   ImplementInterface(billingInterface, billingImplementation);
 });
 
-beforeEach(() => {
-  harness.isMember = true;
-  harness.subscription = { stripeCustomerId: "cus_current" };
-  harness.assertTenantAccess.mockReset().mockResolvedValue(undefined);
-  harness.retrieveBalance.mockReset().mockResolvedValue({
-    status: "available",
-    balanceMinorUnits: 0,
-    currency: "eur",
-  });
-  harness.getModel.mockReset();
+beforeEach(async () => {
+  SCOPE = { tenantId: randomUUID(), userId: randomUUID() };
+  await addTenantMember(
+    SCOPE.tenantId,
+    fromPartial<User>({ _id: SCOPE.userId }),
+  );
+  gate.mockClear();
 });
 
 describe("tenant customer balance interface", () => {
   it("does not query Stripe for a complimentary grant retaining a customer", async () => {
-    harness.subscription = {
-      stripeCustomerId: "cus_current",
-      isComplimentary: true,
-    };
+    await subscribe({ stripeCustomerId: CUSTOMER_ID, isComplimentary: true });
+    const retrieve = stripeCustomer({ balance: 0, currency: "eur" });
     await expect(
       billingInterface.GetTenantCustomerBalance(SCOPE),
     ).resolves.toMatchObject({ status: "absent", reason: "complimentary" });
-    expect(harness.retrieveBalance).not.toHaveBeenCalled();
+    expect(retrieve).not.toHaveBeenCalled();
   });
 
   it.each([1_250, 0, -1_250])(
     "returns Stripe balance %i in minor units with an explicit currency",
     async (balanceMinorUnits) => {
-      harness.retrieveBalance.mockResolvedValue({
-        status: "available",
-        balanceMinorUnits,
-        currency: "eur",
-      });
+      await subscribe({ stripeCustomerId: CUSTOMER_ID });
+      stripeCustomer({ balance: balanceMinorUnits, currency: "eur" });
 
       await expect(
         billingInterface.GetTenantCustomerBalance(SCOPE),
@@ -113,7 +78,8 @@ describe("tenant customer balance interface", () => {
   );
 
   it("returns explicit absence when no Stripe customer is configured", async () => {
-    harness.subscription = {};
+    await subscribe({});
+    const retrieve = stripeCustomer({ balance: 0, currency: "eur" });
 
     await expect(
       billingInterface.GetTenantCustomerBalance(SCOPE),
@@ -123,15 +89,12 @@ describe("tenant customer balance interface", () => {
       balanceMinorUnits: null,
       currency: null,
     });
-    expect(harness.retrieveBalance).not.toHaveBeenCalled();
+    expect(retrieve).not.toHaveBeenCalled();
   });
 
   it("returns explicit absence for a deleted Stripe customer", async () => {
-    harness.retrieveBalance.mockResolvedValue({
-      status: "deleted",
-      balanceMinorUnits: null,
-      currency: null,
-    });
+    await subscribe({ stripeCustomerId: CUSTOMER_ID });
+    stripeCustomer({ id: CUSTOMER_ID, object: "customer", deleted: true });
 
     await expect(
       billingInterface.GetTenantCustomerBalance(SCOPE),
@@ -139,11 +102,8 @@ describe("tenant customer balance interface", () => {
   });
 
   it("does not expose a balance without its Stripe currency", async () => {
-    harness.retrieveBalance.mockResolvedValue({
-      status: "available",
-      balanceMinorUnits: -500,
-      currency: null,
-    });
+    await subscribe({ stripeCustomerId: CUSTOMER_ID });
+    stripeCustomer({ balance: -500, currency: null });
 
     await expect(
       billingInterface.GetTenantCustomerBalance(SCOPE),
@@ -156,7 +116,8 @@ describe("tenant customer balance interface", () => {
   });
 
   it("fails with a sanitized provider error", async () => {
-    harness.retrieveBalance.mockRejectedValue(new Error("provider details"));
+    await subscribe({ stripeCustomerId: CUSTOMER_ID });
+    stripeCustomer({}).mockRejectedValue(new Error("provider details"));
 
     await expect(
       billingInterface.GetTenantCustomerBalance(SCOPE),
@@ -167,40 +128,41 @@ describe("tenant customer balance interface", () => {
   });
 
   it("scopes models and access checks to the supplied authenticated scope", async () => {
-    await billingInterface.GetTenantCustomerBalance(SCOPE);
-
-    expect(harness.getModel).toHaveBeenCalledWith(
-      "TenantMemberModel",
-      "tenant-current",
-    );
-    expect(harness.getModel).toHaveBeenCalledWith(
-      "TenantSubscriptionModel",
-      "tenant-current",
-    );
-    expect(harness.assertTenantAccess).toHaveBeenCalledWith(
-      "user-owner",
-      "tenant-current",
-    );
-  });
-
-  it("rejects authenticated non-members before reading Stripe", async () => {
-    harness.isMember = false;
+    await subscribe({ stripeCustomerId: CUSTOMER_ID });
+    const retrieve = stripeCustomer({ balance: 0, currency: "eur" });
 
     await expect(
       billingInterface.GetTenantCustomerBalance(SCOPE),
+    ).resolves.toMatchObject({ status: "available" });
+
+    expect(retrieve).toHaveBeenCalledWith(CUSTOMER_ID);
+    expect(gate).toHaveBeenCalledWith(SCOPE.userId, SCOPE.tenantId);
+  });
+
+  it("rejects authenticated non-members before reading Stripe", async () => {
+    await subscribe({ stripeCustomerId: CUSTOMER_ID });
+    const retrieve = stripeCustomer({ balance: 0, currency: "eur" });
+
+    await expect(
+      billingInterface.GetTenantCustomerBalance({
+        ...SCOPE,
+        userId: randomUUID(),
+      }),
     ).rejects.toMatchObject({
       status: 403,
       body: "error.tenant_member_required",
     });
-    expect(harness.retrieveBalance).not.toHaveBeenCalled();
+    expect(retrieve).not.toHaveBeenCalled();
   });
 
   it("honors the current tenant access gate before reading Stripe", async () => {
-    harness.assertTenantAccess.mockRejectedValue({ status: 403 });
+    await subscribe({ stripeCustomerId: CUSTOMER_ID });
+    const retrieve = stripeCustomer({ balance: 0, currency: "eur" });
+    gate.mockReturnValueOnce({ allowed: false, code: "suspended" });
 
     await expect(
       billingInterface.GetTenantCustomerBalance(SCOPE),
     ).rejects.toMatchObject({ status: 403 });
-    expect(harness.retrieveBalance).not.toHaveBeenCalled();
+    expect(retrieve).not.toHaveBeenCalled();
   });
 });
