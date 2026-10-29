@@ -97,9 +97,11 @@ export function emitAutomationEvent<E extends AutomationEventName>(
   payload: AutomationEventPayloads[E],
 ): void {
   for (const listener of listenersFor(event)) {
+    // oxfmt-ignore
     try {
       void Promise.resolve(listener(payload)).catch(() => undefined);
-    } catch {}
+    } catch {
+    }
   }
 }
 
