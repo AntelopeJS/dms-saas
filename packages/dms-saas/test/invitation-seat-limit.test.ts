@@ -1,14 +1,9 @@
-import { createRequire } from "node:module";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
+import type { AuthConfig } from "@antelopejs/dms";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import * as planChangesInterface from "@antelopejs/interface-dms-saas/plan-changes";
 import * as planChangesImplementation from "../src/implementations/dms-saas/plan-changes";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   TenantMemberModel,
   TenantModel,
@@ -27,16 +22,9 @@ import { ResolveInviteAvailability } from "@antelopejs/interface-dms/invite-exte
 import { createUserInviteToken } from "@antelopejs/interface-dms/invites";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
 import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import * as permissions from "@antelopejs/interface-dms/permissions";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { setRuntimeConfig } from "../src/config";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import { getSeatUsage, registerSeatHooks } from "../src/plans";
@@ -46,24 +34,13 @@ import {
   resendInvitation,
   resolveInvitationLink,
 } from "../src/workspaces/invitations";
-
-// The DMS permission registry is not wired here: the role is created against
-// it in production, and its own test covers what it holds.
-vi.mock("../src/workspaces/default-member-role", () => ({
-  createDefaultMemberRole: async () => "member-role",
-}));
-vi.mock("../src/billing-state", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/billing-state")>()),
-  recomputeTenantBillingState: async () => undefined,
-}));
-vi.mock("../src/stripe/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/stripe/client")>()),
-  getStripeClient: () => fakeStripe,
-}));
-vi.mock("../src/data-api", async () => ({
-  ...(await import("../src/data-api/platformOwner/plans")),
-  ...(await import("../src/data-api/platformOwner/workspaces")),
-}));
+import {
+  applyDmsConfig,
+  dmsImplementation,
+  implementWithDms,
+} from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
 
 /**
  * A Free workspace holds a single seat, taken by its pending owner
@@ -71,25 +48,15 @@ vi.mock("../src/data-api", async () => ({
  * must keep fitting in that seat; only a second invitee is over the cap.
  */
 
-const require = createRequire(import.meta.url);
-const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
+useMongoDatabase("invitation-seats");
+const stripe = useSuiteStripe();
+
 const DAY_MS = 86_400_000;
 const SEAT_LIMIT_ERROR = { body: "saas.errors.plan.seat_limit_reached" };
 const INVITE_UNAVAILABLE = {
   reason: "$saas.plans.seat_limit.invite_unavailable",
 };
 const STRIPE_SUBSCRIPTION_ID = "sub_seat_billed";
-const billedQuantities: number[] = [];
-const fakeStripe = {
-  subscriptions: {
-    retrieve: async () => ({ items: { data: [{ id: "si_seats" }] } }),
-    update: async (_id: string, params: { items: { quantity: number }[] }) => {
-      billedQuantities.push(params.items[0]!.quantity);
-    },
-  },
-};
-let mongodb: MongoMemoryReplSet;
-
 const operator = {
   _id: randomUUID(),
   email: "operator@example.test",
@@ -98,47 +65,29 @@ const operator = {
   language: "en",
 } as User;
 
-beforeAll(async () => {
+beforeAll(() => {
   ImplementInterface(planChangesInterface, planChangesImplementation);
   // DMS answers isSaasMode() from the registrations it holds, so wire its
   // implementation in and declare SaaS mode the way construct() does.
-  ImplementInterface(
-    saasMode,
-    require(path.join(dmsRoot, "dist/implementations/dms/saas-mode.js")),
-  );
+  implementWithDms(saasMode, "implementations/dms/saas-mode.js");
   saasMode.RegisterSaasMode();
-  const { applyConfig } = require(path.join(dmsRoot, "dist/config.js"));
-  applyConfig({ auth: { jwtSecret: "invitation-seat-limit-test-only" } });
-  const implementation = require(
-    path.join(dmsRoot, "dist/implementations/dms-auth/index.js"),
-  );
+  applyDmsConfig({
+    auth: fromPartial<AuthConfig>({
+      jwtSecret: "invitation-seat-limit-test-only",
+    }),
+  });
   ImplementInterface(auth, {
-    ...implementation,
+    ...dmsImplementation("implementations/dms-auth/index.js"),
     sendAdminInviteEmail: async () => undefined,
   });
+  implementWithDms(permissions, "implementations/dms/permissions.js");
   ImplementInterface(clientBaseUrl, {
     GetClientBaseUrl: () => "https://console.example.test",
   });
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongodb.getUri(), database: "invitation-seats" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
   setRuntimeConfig({
     stripe: { secretKey: "unused", webhookSecret: "", publishableKey: "" },
   });
   registerSeatHooks();
-}, 60_000);
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-afterAll(async () => {
-  await destroy();
-  await mongodb?.stop();
 });
 
 async function insertSingleSeatPlan(): Promise<string> {
@@ -531,8 +480,17 @@ describe("seats billed for invitations", () => {
     await GetModel(PlanModel).update(subscription.planId!, {
       billingMode: "seat",
     });
-    billedQuantities.length = 0;
-    return workspace;
+    vi.spyOn(stripe.write.subscriptions, "retrieve").mockResolvedValue(
+      fromPartial({ items: { data: [{ id: "si_seats" }] } }),
+    );
+    const update = vi
+      .spyOn(stripe.write.subscriptions, "update")
+      .mockResolvedValue(fromPartial({}));
+    return {
+      ...workspace,
+      billedQuantities: () =>
+        update.mock.calls.map(([, params]) => params?.items?.[0]?.quantity),
+    };
   }
 
   async function resolveOwnerInvite(
@@ -548,23 +506,25 @@ describe("seats billed for invitations", () => {
   }
 
   it("keeps billing one seat while the invitation is resent", async () => {
-    const { tenantId, inviteId } = await createSeatBilledWorkspace();
+    const { tenantId, inviteId, billedQuantities } =
+      await createSeatBilledWorkspace();
 
     await resendInvitation(tenantId, inviteId);
 
-    expect(billedQuantities).toEqual([1, 1]);
+    expect(billedQuantities()).toEqual([1, 1]);
   });
 
   it("bills the seat once the invitation turns into a member", async () => {
-    const { email, tenantId } = await createSeatBilledWorkspace();
+    const { email, tenantId, billedQuantities } =
+      await createSeatBilledWorkspace();
 
     await resolveOwnerInvite(tenantId, "accepted", await insertUser(email));
 
-    expect(billedQuantities).toEqual([1]);
+    expect(billedQuantities()).toEqual([1]);
   });
 
   it("never bills a platform owner joining or leaving", async () => {
-    const { tenantId } = await createSeatBilledWorkspace();
+    const { tenantId, billedQuantities } = await createSeatBilledWorkspace();
     const platformOwner = await insertPlatformOwner();
 
     await joinAsMember(platformOwner, tenantId);
@@ -573,25 +533,26 @@ describe("seats billed for invitations", () => {
       userIds: [platformOwner._id],
     });
 
-    expect(billedQuantities).toEqual([1]);
+    expect(billedQuantities()).toEqual([1]);
   });
 
   it("bills a platform owner who owns the workspace", async () => {
-    const { email, tenantId } = await createSeatBilledWorkspace();
+    const { email, tenantId, billedQuantities } =
+      await createSeatBilledWorkspace();
     const userId = await insertUser(email, true);
 
     await resolveOwnerInvite(tenantId, "accepted", userId);
     await ExecuteHooks(Hook.MEMBER_REMOVED, { tenantId, userIds: [userId] });
 
-    expect(billedQuantities).toEqual([1, 0]);
+    expect(billedQuantities()).toEqual([1, 0]);
   });
 
   it("releases the seat of a cancelled invitation", async () => {
-    const { tenantId } = await createSeatBilledWorkspace();
+    const { tenantId, billedQuantities } = await createSeatBilledWorkspace();
 
     await resolveOwnerInvite(tenantId, "cancelled");
 
-    expect(billedQuantities).toEqual([0]);
+    expect(billedQuantities()).toEqual([0]);
   });
 });
 

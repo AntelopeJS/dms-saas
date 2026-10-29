@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import {
   BlockFunctions,
@@ -9,43 +10,29 @@ import type {
   ComponentBuilder,
   ComponentFilterContext,
 } from "@antelopejs/interface-dms/component";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeEach, describe, expect, it } from "vitest";
+import { SaasTenantGeneralController } from "../src/pages/tenant/general";
+import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import { WORKSPACE_NAME_MAX_LENGTH } from "../src/workspaces/workspace-name";
+import {
+  addTenantMember,
+  createUser,
+  tenantRequest,
+  useDmsAuth,
+} from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { guardRefusals } from "./helpers/guards";
 
-const harness = vi.hoisted(() => ({
-  owners: new Set<string>(),
-  guards: new Map<string, string>(),
-}));
+useMongoDatabase("workspace-general-member-access");
+useDmsAuth();
 
-vi.mock("../src/workspaces/workspace-owner", () => ({
-  isWorkspaceOwnerRequest: async ({ user, tenantId }: ComponentFilterContext) =>
-    !!user && harness.owners.has(`${tenantId}:${user._id}`),
-}));
+const OWNER_REQUIRED = "error.tenant_owner_required";
+const MEMBER_REQUIRED = "error.tenant_member_required";
 
-function recordGuard(name: string) {
-  return () =>
-    (target: object, propertyKey: string | symbol | undefined): void => {
-      if (!propertyKey) return;
-      harness.guards.set(String(propertyKey), name);
-    };
-}
-
-vi.mock("@antelopejs/interface-dms/guards", () => ({
-  AuthTenantMember: recordGuard("member"),
-  AuthTenantOwner: recordGuard("owner"),
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const original =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return { ...original, Model: () => (): void => undefined };
-});
-
-const { SaasTenantGeneralController } =
-  await import("../src/pages/tenant/general");
-await import("../src/routes/tenant/workspaces");
+let tenantId = "";
+let owner: User;
+let member: User;
 
 async function identityForm(): Promise<ComponentBuilder<FormPropsSerialized>> {
   const section = await SaasTenantGeneralController.identity.componentInfo;
@@ -53,20 +40,24 @@ async function identityForm(): Promise<ComponentBuilder<FormPropsSerialized>> {
   return form?.component as ComponentBuilder<FormPropsSerialized>;
 }
 
-async function servedTo(userId: string): Promise<FormPropsSerialized> {
+async function servedTo(user: User): Promise<FormPropsSerialized> {
   const form = await identityForm();
   const { options } = await form.serialize();
-  const context = { tenantId: "acme", user: { _id: userId } as User };
+  const context = fromPartial<ComponentFilterContext>({ tenantId, user });
   return form.onFilterCallback?.(new Set(), options, "general", context);
 }
 
-beforeEach(() => {
-  harness.owners = new Set(["acme:owner"]);
+beforeEach(async () => {
+  tenantId = randomUUID();
+  owner = await createUser();
+  member = await createUser();
+  await addTenantMember(tenantId, owner, true);
+  await addTenantMember(tenantId, member);
 });
 
 describe("General page for a workspace member", () => {
   it("serves the identity form read-only, with nothing to save", async () => {
-    const served = await servedTo("member");
+    const served = await servedTo(member);
 
     expect(served.saveMode).toBe("none");
     expect(
@@ -110,16 +101,29 @@ describe("General page for a workspace member", () => {
     const form = await identityForm();
     const { options } = await form.serialize();
 
-    expect(await servedTo("owner")).toEqual(options);
+    expect(await servedTo(owner)).toEqual(options);
   });
 
-  it("lets every member read the identity and the glance, and only owners change it", () => {
-    expect(Object.fromEntries(harness.guards)).toMatchObject({
-      getCurrent: "member",
-      getCurrentGlance: "member",
-      getCurrentOverview: "owner",
-      renameCurrent: "owner",
-      deleteCurrent: "owner",
+  it("lets every member read the identity and the glance, and only owners change it", async () => {
+    const stranger = await createUser();
+    const guardedFor = async (user: User) =>
+      guardRefusals(
+        SaasWorkspacesController,
+        await tenantRequest(user, tenantId),
+      );
+
+    await expect(guardedFor(owner)).resolves.toEqual({});
+    await expect(guardedFor(member)).resolves.toEqual({
+      getCurrentOverview: [OWNER_REQUIRED],
+      renameCurrent: [OWNER_REQUIRED],
+      deleteCurrent: [OWNER_REQUIRED],
+    });
+    await expect(guardedFor(stranger)).resolves.toEqual({
+      getCurrent: [MEMBER_REQUIRED],
+      getCurrentGlance: [MEMBER_REQUIRED],
+      getCurrentOverview: [OWNER_REQUIRED],
+      renameCurrent: [OWNER_REQUIRED],
+      deleteCurrent: [OWNER_REQUIRED],
     });
   });
 });

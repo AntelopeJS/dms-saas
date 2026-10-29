@@ -1,39 +1,29 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  TenantBillingInfo,
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { TenantModel } from "@antelopejs/interface-dms/db";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  PlanModel,
+  type TenantBillingInfo,
   TenantBillingInfoModel,
-  TenantSubscription,
+  type TenantSubscription,
   TenantSubscriptionModel,
 } from "../src/db";
-import type { User } from "@antelopejs/interface-dms/auth/db";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
+import { useDmsAuth } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { insertPlan } from "./helpers/plans";
+import {
+  allowCheckoutRedirects,
+  createOwnedWorkspace,
+} from "./helpers/workspaces";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const harness = vi.hoisted(() => ({
-  checkout: vi.fn(),
-  immediate: vi.fn(),
-  downgrade: vi.fn(),
-  price: 49,
-}));
-vi.mock("@antelopejs/interface-dms/tenant-access", () => ({
-  AssertTenantAccess: async () => undefined,
-}));
-vi.mock("../src/routes/tenant/tenant-plan-checkout", () => ({
-  startPaidCheckout: (...args: unknown[]) => harness.checkout(...args),
-}));
-vi.mock("../src/routes/tenant/tenant-plan-ops", async (original) => ({
-  ...(await original()),
-  loadAndValidateTargetPlan: async () => ({
-    _id: "target-plan",
-    price: harness.price,
-    billingMode: "flat",
-    paymentProviderRefs: harness.price > 0 ? { stripePriceId: "price" } : null,
-  }),
-  assertSeatLimit: async () => undefined,
-  applyOwnerUpgrade: (...args: unknown[]) => harness.immediate(...args),
-  scheduleDowngrade: (...args: unknown[]) => harness.downgrade(...args),
-}));
+useMongoDatabase("plan-change-billing-identity");
+useDmsAuth();
+const stripe = useSuiteStripe();
 
-const OWNER = { _id: "owner", owner: false } as User;
+const CHECKOUT_URL = "https://checkout.example.test";
 const FREE = {
   planId: "free-plan",
   isComplimentary: false,
@@ -41,13 +31,13 @@ const FREE = {
   freeUntil: null,
   stripeCustomerId: null,
   stripeSubscriptionId: null,
-} as TenantSubscription;
+} satisfies Partial<TenantSubscription>;
 const PAID = {
   ...FREE,
   planId: "paid-plan",
   stripeCustomerId: "customer",
   stripeSubscriptionId: "subscription",
-} as TenantSubscription;
+} satisfies Partial<TenantSubscription>;
 const COMPLETE_IDENTITY = {
   customerType: "individual",
   companyName: null,
@@ -61,52 +51,91 @@ const COMPLETE_IDENTITY = {
     state: null,
     country: "FR",
   },
-} as TenantBillingInfo;
-const INCOMPLETE_IDENTITIES: [string, TenantBillingInfo | undefined][] = [
-  ["no stored identity", undefined],
-  ["no address", { ...COMPLETE_IDENTITY, address: null } as TenantBillingInfo],
+} satisfies Partial<TenantBillingInfo>;
+const CUSTOMER_TYPE_ONLY = {
+  customerType: "individual",
+} satisfies Partial<TenantBillingInfo>;
+const INCOMPLETE_IDENTITIES: [string, Partial<TenantBillingInfo>][] = [
+  ["no stored identity", CUSTOMER_TYPE_ONLY],
+  ["no address", { ...COMPLETE_IDENTITY, address: null }],
   [
     "a business without a company name",
-    { ...COMPLETE_IDENTITY, customerType: "business" } as TenantBillingInfo,
+    { ...COMPLETE_IDENTITY, customerType: "business" },
   ],
 ];
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  harness.price = 49;
-  harness.checkout.mockResolvedValue({
-    checkoutUrl: "https://checkout.example.test",
+beforeAll(async () => {
+  allowCheckoutRedirects();
+  await insertPlan({ _id: "free-plan" });
+  await insertPlan({
+    _id: "paid-plan",
+    price: 19,
+    paymentProviderRefs: { stripePriceId: "price_current" },
   });
-  harness.immediate.mockResolvedValue({ changed: true });
-  harness.downgrade.mockResolvedValue({ scheduled: true });
+  await insertPlan({
+    _id: "target-plan",
+    price: 49,
+    paymentProviderRefs: { stripePriceId: "price_target" },
+  });
 });
 
-function change(
-  subscription: TenantSubscription,
-  billingInfo: TenantBillingInfo | undefined,
+function stubStripe() {
+  vi.spyOn(stripe.write.customers, "update").mockResolvedValue(fromPartial({}));
+  vi.spyOn(stripe.write.subscriptions, "retrieve").mockResolvedValue(
+    fromPartial({ items: { data: [{ id: "si_current" }] } }),
+  );
+  return {
+    createCustomer: vi
+      .spyOn(stripe.write.customers, "create")
+      .mockResolvedValue(fromPartial({ id: "cus_new" })),
+    createSession: vi
+      .spyOn(stripe.write.checkout.sessions, "create")
+      .mockResolvedValue(fromPartial({ id: "cs_1", url: CHECKOUT_URL })),
+    updateSubscription: vi
+      .spyOn(stripe.write.subscriptions, "update")
+      .mockResolvedValue(
+        fromPartial({
+          items: { data: [{ current_period_end: 1_790_000_000 }] },
+        }),
+      ),
+  };
+}
+
+let calls: ReturnType<typeof stubStripe>;
+
+beforeEach(() => {
+  calls = stubStripe();
+});
+
+async function change(
+  subscription: Partial<TenantSubscription>,
+  billingInfo: Partial<TenantBillingInfo>,
+  planId = "target-plan",
 ) {
+  const { tenantId, owner, request } = await createOwnedWorkspace();
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
+    _id: tenantId,
+    paidUsagePeriods: [],
+    ...subscription,
+  });
+  await GetModel(TenantBillingInfoModel, tenantId).insert({
+    _id: tenantId,
+    updatedAt: new Date(),
+    ...billingInfo,
+  });
   const controller = new SaasTenantPlanController();
-  controller.tenantModel = { get: async () => ({ _id: "tenant" }) } as never;
-  controller.planModel = {
-    get: async (_id: string) => ({
-      _id,
-      price: _id === "paid-plan" ? 19 : 0,
-      paymentProviderRefs:
-        _id === "paid-plan" ? { stripePriceId: "current" } : null,
-    }),
-  } as never;
-  const subscriptions = {
-    findOne: async () => subscription,
-  } as TenantSubscriptionModel;
-  const billing = {
-    findOne: async () => billingInfo,
-  } as TenantBillingInfoModel;
+  controller.tenantModel = GetModel(TenantModel);
+  controller.planModel = GetModel(PlanModel);
   return controller.changePlan(
-    OWNER,
-    { planId: "target-plan" },
-    {},
-    subscriptions,
-    billing,
+    owner,
+    {
+      planId,
+      successUrl: "https://example.test/success",
+      cancelUrl: "https://example.test/cancel",
+    },
+    request,
+    GetModel(TenantSubscriptionModel, tenantId),
+    GetModel(TenantBillingInfoModel, tenantId),
   );
 }
 
@@ -118,30 +147,42 @@ describe("free to paid plan change requires a complete billing identity", () => 
         status: 400,
         body: "saas.errors.billing.identity_incomplete",
       });
-      expect(harness.checkout).not.toHaveBeenCalled();
+      expect(calls.createSession).not.toHaveBeenCalled();
+      expect(calls.createCustomer).not.toHaveBeenCalled();
     },
   );
 
   it("starts checkout once the identity is complete", async () => {
     await expect(change(FREE, COMPLETE_IDENTITY)).resolves.toMatchObject({
-      checkoutUrl: "https://checkout.example.test",
+      checkoutUrl: CHECKOUT_URL,
     });
-    expect(harness.checkout).toHaveBeenCalledOnce();
+    expect(calls.createSession).toHaveBeenCalledOnce();
   });
 
   it("leaves paid to paid changes to the live subscription", async () => {
-    await expect(change(PAID, undefined)).resolves.toMatchObject({
+    await expect(change(PAID, CUSTOMER_TYPE_ONLY)).resolves.toMatchObject({
       changed: true,
     });
-    expect(harness.immediate).toHaveBeenCalledOnce();
-    expect(harness.checkout).not.toHaveBeenCalled();
+    expect(calls.updateSubscription).toHaveBeenCalledOnce();
+    expect(calls.updateSubscription).toHaveBeenCalledWith(
+      "subscription",
+      expect.objectContaining({
+        items: [{ id: "si_current", price: "price_target", quantity: 1 }],
+      }),
+      expect.anything(),
+    );
+    expect(calls.createSession).not.toHaveBeenCalled();
   });
 
   it("leaves downgrades to a free plan alone", async () => {
-    harness.price = 0;
-    await expect(change(PAID, undefined)).resolves.toMatchObject({
+    await expect(
+      change(PAID, CUSTOMER_TYPE_ONLY, "free-plan"),
+    ).resolves.toMatchObject({
       scheduled: true,
     });
-    expect(harness.downgrade).toHaveBeenCalledOnce();
+    expect(calls.updateSubscription).toHaveBeenCalledOnce();
+    expect(calls.updateSubscription).toHaveBeenCalledWith("subscription", {
+      cancel_at_period_end: true,
+    });
   });
 });

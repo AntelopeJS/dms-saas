@@ -1,105 +1,47 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Plan, TenantSubscription } from "../src/db";
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { RoleModel } from "@antelopejs/interface-dms/db";
+import * as permissions from "@antelopejs/interface-dms/permissions";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type Plan, PlanModel, TenantSubscriptionModel } from "../src/db";
+import { provisionWorkspace } from "../src/workspaces/provisioning";
+import { implementWithDms } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
 
 const SUBSCRIPTION_START_SECONDS = 1_780_000_000;
 const PERIOD_END_SECONDS = 1_782_592_000;
 
-const store = vi.hoisted(() => ({
-  plan: undefined as Plan | undefined,
-  subscriptions: [] as Partial<TenantSubscription>[],
-  memberRoles: [] as [string, string | undefined][],
-}));
+useMongoDatabase("provisioning-paid-usage");
+const stripe = useSuiteStripe();
 
-const stripe = vi.hoisted(() => ({
-  customers: { create: vi.fn(), update: vi.fn() },
-  paymentMethods: { attach: vi.fn() },
-  subscriptions: { create: vi.fn() },
-  invoices: { retrieve: vi.fn(), pay: vi.fn() },
-}));
+beforeAll(() => {
+  implementWithDms(permissions, "implementations/dms/permissions.js");
+});
 
-const insertNothing = async () => [];
-
-const MODEL_FAKES: Record<string, () => unknown> = {
-  PlanModel: () => ({ get: async () => store.plan }),
-  TenantModel: () => ({ insert: insertNothing }),
-  UserModel: () => ({}),
-  TenantBillingInfoModel: () => ({ insert: insertNothing }),
-  TenantSubscriptionModel: () => ({
-    insert: async (
-      rows: Partial<TenantSubscription> | Partial<TenantSubscription>[],
-    ) => {
-      store.subscriptions.push(...[rows].flat());
-      return [];
-    },
-  }),
+const PAID_PLAN = {
+  price: 29,
+  trialDays: 0,
+  paymentProviderRefs: { stripePriceId: "price" },
 };
 
-// The DMS permission registry is not wired here: the role is created against
-// it in production, and its own test covers what it holds.
-vi.mock("../src/workspaces/default-member-role", () => ({
-  createDefaultMemberRole: async (tenantId: string, language?: string) => {
-    store.memberRoles.push([tenantId, language]);
-    return "member-role";
-  },
-}));
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: (model: { name: string }) => MODEL_FAKES[model.name](),
-  };
-});
-vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
-  runTenantLifecycleOperation: async (
-    _tenantId: string,
-    work: () => Promise<unknown>,
-  ) => work(),
-}));
-vi.mock("@antelopejs/interface-dms/tenant-ownership", () => ({
-  applyTenantOwnership: async () => undefined,
-}));
-vi.mock("../src/billing-state", () => ({
-  recomputeTenantBillingState: async () => undefined,
-}));
-vi.mock("../src/hooks/tenant-provisioning", () => ({
-  emitTenantBeingProvisioned: async () => undefined,
-}));
-vi.mock("../src/operator-actions/lifecycle-outbox", () => ({
-  beginWorkspaceCreation: async () => undefined,
-  cancelWorkspaceCreated: async () => undefined,
-  deliverWorkspaceCreated: async () => undefined,
-  prepareWorkspaceCreated: async () => undefined,
-}));
-vi.mock("../src/stripe", async () => ({
-  ...(await vi.importActual("../src/stripe/payload-shapes")),
-  ...(await vi.importActual("../src/stripe/billing-mode")),
-  ...(await vi.importActual("../src/stripe/customer-locale")),
-  getStripeClient: () => stripe,
-  reconcileStripeTaxId: async () => undefined,
-  toStripeAddress: () => undefined,
-  toTenantBillingAddress: () => null,
-}));
-vi.mock("../src/workspaces/provisioning-state", () => ({
-  beginProvisioningAttempt: async () => undefined,
-  recordProvisioningState: async () => undefined,
-  reserveTrialIdentities: async () => false,
-}));
-vi.mock("../src/workspaces/provisioning-rollback", () => ({
-  rollbackWorkspaceProvisioning: async () => undefined,
-}));
+async function seedPlan(fields: Partial<Plan> = {}): Promise<string> {
+  const [planId] = await GetModel(PlanModel).insert({
+    _id: randomUUID(),
+    ...PAID_PLAN,
+    ...fields,
+  });
+  return planId;
+}
 
-const { provisionWorkspace } = await import("../src/workspaces/provisioning");
-
-function provision(paymentMethodId?: string) {
+async function provision(paymentMethodId?: string, planId?: string) {
   return provisionWorkspace({
     userId: "owner",
     ownerLanguage: "fr",
     payload: {
       workspaceName: "Acme",
-      planId: "plan",
+      planId: planId ?? (await seedPlan()),
       customerType: "individual",
       paymentMethodId,
     },
@@ -109,34 +51,53 @@ function provision(paymentMethodId?: string) {
       fallbackName: "Owner",
     },
     card: { fingerprint: null, billingAddress: undefined },
-    handles: { tenantId: "tenant" },
+    handles: {},
   });
 }
 
+function subscriptionsOf(tenantId: string) {
+  return GetModel(TenantSubscriptionModel, tenantId).getAll();
+}
+
+/** Stubs every Stripe call a provisioning makes, and hands back the ones tests read. */
+function stubProvisioningCalls() {
+  vi.spyOn(stripe.write.customers, "update").mockResolvedValue(fromPartial({}));
+  vi.spyOn(stripe.write.customers, "listTaxIds").mockResolvedValue(
+    fromPartial({ data: [] }),
+  );
+  vi.spyOn(stripe.write.invoices, "retrieve").mockResolvedValue(
+    fromPartial({ status: "paid" }),
+  );
+  return {
+    createCustomer: vi
+      .spyOn(stripe.write.customers, "create")
+      .mockResolvedValue(fromPartial({ id: "customer" })),
+    attach: vi
+      .spyOn(stripe.write.paymentMethods, "attach")
+      .mockResolvedValue(fromPartial({})),
+    createSubscription: vi
+      .spyOn(stripe.write.subscriptions, "create")
+      .mockResolvedValue(
+        fromPartial({
+          id: "sub_paid",
+          start_date: SUBSCRIPTION_START_SECONDS,
+          items: { data: [{ current_period_end: PERIOD_END_SECONDS }] },
+          latest_invoice: "invoice",
+        }),
+      ),
+  };
+}
+
+let calls: ReturnType<typeof stubProvisioningCalls>;
+
 beforeEach(() => {
-  vi.clearAllMocks();
-  store.subscriptions = [];
-  store.memberRoles = [];
-  store.plan = {
-    _id: "plan",
-    price: 29,
-    trialDays: 0,
-    paymentProviderRefs: { stripePriceId: "price" },
-  } as Plan;
-  stripe.customers.create.mockResolvedValue({ id: "customer" });
-  stripe.subscriptions.create.mockResolvedValue({
-    id: "sub_paid",
-    start_date: SUBSCRIPTION_START_SECONDS,
-    items: { data: [{ current_period_end: PERIOD_END_SECONDS }] },
-    latest_invoice: "invoice",
-  });
-  stripe.invoices.retrieve.mockResolvedValue({ status: "paid" });
+  calls = stubProvisioningCalls();
 });
 
 describe("initial paid usage coverage of a provisioned workspace", () => {
   it("covers a paid workspace from its Stripe subscription's start", async () => {
-    await provision("pm_card");
-    expect(store.subscriptions).toEqual([
+    const { tenantId } = await provision("pm_card");
+    await expect(subscriptionsOf(tenantId)).resolves.toEqual([
       expect.objectContaining({
         stripeSubscriptionId: "sub_paid",
         isComplimentary: false,
@@ -152,13 +113,19 @@ describe("initial paid usage coverage of a provisioned workspace", () => {
   });
 
   it("gives the workspace its Member role, named in the owner's language", async () => {
-    await provision("pm_card");
-    expect(store.memberRoles).toEqual([["tenant", "fr"]]);
+    const { tenantId } = await provision("pm_card");
+    await expect(GetModel(RoleModel, tenantId).getAll()).resolves.toEqual([
+      expect.objectContaining({
+        _id: `${tenantId}:member`,
+        name: "Membre",
+        description: "Tout ce que comprend l'offre de l'espace",
+      }),
+    ]);
   });
 
   it("creates the Stripe customer in the owner's language", async () => {
     await provision("pm_card");
-    expect(stripe.customers.create).toHaveBeenCalledWith(
+    expect(calls.createCustomer).toHaveBeenCalledWith(
       expect.objectContaining({ preferred_locales: ["fr"] }),
       expect.anything(),
     );
@@ -166,17 +133,19 @@ describe("initial paid usage coverage of a provisioned workspace", () => {
 
   it("creates the subscription in the classic billing mode", async () => {
     await provision("pm_card");
-    expect(stripe.subscriptions.create).toHaveBeenCalledWith(
+    expect(calls.createSubscription).toHaveBeenCalledWith(
       expect.objectContaining({ billing_mode: { type: "classic" } }),
       expect.anything(),
     );
   });
 
   it("leaves a card-less workspace with an empty coverage ledger", async () => {
-    store.plan = { ...store.plan, price: 0 } as Plan;
-    await provision();
-    expect(stripe.subscriptions.create).not.toHaveBeenCalled();
-    expect(store.subscriptions).toEqual([
+    const { tenantId } = await provision(
+      undefined,
+      await seedPlan({ price: 0 }),
+    );
+    expect(calls.createSubscription).not.toHaveBeenCalled();
+    await expect(subscriptionsOf(tenantId)).resolves.toEqual([
       expect.objectContaining({
         stripeSubscriptionId: null,
         paidUsagePeriods: [],
@@ -185,12 +154,14 @@ describe("initial paid usage coverage of a provisioned workspace", () => {
   });
 
   it("keeps a carded workspace on an off-Stripe free plan local", async () => {
-    store.plan = { ...store.plan, price: 0, paymentProviderRefs: {} } as Plan;
-    await provision("pm_card");
-    expect(stripe.customers.create).toHaveBeenCalled();
-    expect(stripe.paymentMethods.attach).toHaveBeenCalled();
-    expect(stripe.subscriptions.create).not.toHaveBeenCalled();
-    expect(store.subscriptions).toEqual([
+    const { tenantId } = await provision(
+      "pm_card",
+      await seedPlan({ price: 0, paymentProviderRefs: {} }),
+    );
+    expect(calls.createCustomer).toHaveBeenCalled();
+    expect(calls.attach).toHaveBeenCalled();
+    expect(calls.createSubscription).not.toHaveBeenCalled();
+    await expect(subscriptionsOf(tenantId)).resolves.toEqual([
       expect.objectContaining({
         stripeCustomerId: "customer",
         stripeSubscriptionId: null,

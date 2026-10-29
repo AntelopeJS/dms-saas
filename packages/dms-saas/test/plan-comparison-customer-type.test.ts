@@ -1,31 +1,26 @@
 import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { TenantModel } from "@antelopejs/interface-dms/db";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
-import type { User } from "@antelopejs/interface-dms/auth/db";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import {
+  FeatureModel,
   PlanModel,
-  type TenantBillingInfo,
-  type TenantBillingInfoModel,
+  TenantBillingInfoModel,
   TenantSubscriptionModel,
 } from "../src/db";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import { isPlanOfferedTo } from "../src/plans/plan-audience";
+import {
+  addTenantMember,
+  createUser,
+  tenantRequest,
+  useDmsAuth,
+} from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const harness = vi.hoisted(() => ({ tenantId: "" }));
-vi.mock("@antelopejs/interface-dms/request-tenant", () => ({
-  getRequestTenantId: () => harness.tenantId,
-}));
-vi.mock("../src/plans/stripe-sync", async (original) => ({
-  ...(await original()),
-  ensurePlanStripeRefs: async (plan: unknown) => plan,
-}));
+useMongoDatabase("plan-comparison-customer-type");
+useDmsAuth();
 
-const SETUP_TIMEOUT_MS = 60_000;
 const PUBLIC_PLAN = {
   isActive: true,
   isPublic: true,
@@ -36,15 +31,7 @@ const PUBLIC_PLAN = {
   features: [],
 };
 
-let mongodb: MongoMemoryReplSet;
 beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongodb.getUri(), database: "saas-plan-audience" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
   await GetModel(PlanModel).insert([
     { ...PUBLIC_PLAN, _id: "pro", name: "Pro", audience: "any", order: 1 },
     {
@@ -55,41 +42,35 @@ beforeAll(async () => {
       order: 2,
     },
   ]);
-}, SETUP_TIMEOUT_MS);
-afterAll(async () => {
-  try {
-    await destroy();
-  } finally {
-    await mongodb?.stop();
-  }
 });
 
-function owner(): User {
-  return { _id: "owner", owner: false, email: "owner@example.test" } as User;
-}
-
-async function offeredPlans(customerType: string | null) {
-  harness.tenantId = randomUUID();
-  const subscriptions = GetModel(TenantSubscriptionModel, harness.tenantId);
+async function offeredPlans(customerType: "individual" | "business" | null) {
+  const tenantId = randomUUID();
+  const now = new Date();
+  await GetModel(TenantModel).insert({
+    _id: tenantId,
+    name: "Workspace",
+    createdAt: now,
+    updatedAt: now,
+  });
+  const owner = await createUser({ email: `${tenantId}@example.test` });
+  await addTenantMember(tenantId, owner, true);
+  const subscriptions = GetModel(TenantSubscriptionModel, tenantId);
   await subscriptions.insert({
-    _id: harness.tenantId,
+    _id: tenantId,
     planId: "pro",
     status: "active",
     isComplimentary: false,
   });
-  const billingInfo = {
-    findOne: async () =>
-      customerType ? ({ customerType } as TenantBillingInfo) : undefined,
-  } as unknown as TenantBillingInfoModel;
+  const billingInfo = GetModel(TenantBillingInfoModel, tenantId);
+  if (customerType) await billingInfo.insert({ _id: tenantId, customerType });
   const controller = new SaasTenantPlanController();
-  controller.tenantModel = {
-    get: async (_id: string) => ({ _id }),
-  } as never;
+  controller.tenantModel = GetModel(TenantModel);
   controller.planModel = GetModel(PlanModel);
-  controller.featureModel = { getAll: async () => [] } as never;
+  controller.featureModel = GetModel(FeatureModel);
   const current = await controller.getCurrentPlan(
-    owner(),
-    {},
+    owner,
+    await tenantRequest(owner, tenantId),
     subscriptions,
     billingInfo,
     "en",

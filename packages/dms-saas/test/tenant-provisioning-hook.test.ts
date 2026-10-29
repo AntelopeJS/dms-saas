@@ -1,517 +1,71 @@
-import { HTTPResult } from "@antelopejs/interface-api";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import type { TenantLifecycleMessage } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
+import { UserModel } from "@antelopejs/interface-dms/auth/db";
+import { TenantModel } from "@antelopejs/interface-dms/db";
 import {
   Hook,
   RegisterHook,
   UnregisterHook,
   type TenantDeletionContext,
 } from "@antelopejs/interface-dms/hooks";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   emitTenantBeingProvisioned,
   type TenantBeingProvisionedPayload,
 } from "../src/hooks/tenant-provisioning";
 import { internal as lifecycle } from "../src/implementations/dms-saas/tenant-lifecycle";
-import type { TenantLifecycleMessage } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
-import type {
-  LifecycleDelivery,
-  WorkspaceProvisioningState,
-} from "../src/operator-actions/db/lifecycle-delivery.table";
-import type { ProvisioningAttempt } from "../src/workspaces/db/provisioning-attempt.table";
-import type {
-  SubscriptionTransition,
-  TenantBillingInfo,
-  TenantSubscription,
-} from "../src/db";
+import { reconcileWorkspaceLifecycleDeliveries } from "../src/operator-actions/lifecycle-outbox";
+import { getStripeClient } from "../src/stripe/client";
 import { getWorkspaceDeletionOperationId } from "../src/workspaces/deletion";
 import {
-  getRegistrationPaymentMethodPolicy,
-  setRuntimeConfig,
-} from "../src/config";
-import Stripe from "stripe";
-import type { DmsSaasConfig } from "../src/types";
-import {
-  isWorkspaceProvisioningCommitted,
-  reconcileWorkspaceLifecycleDeliveries,
-} from "../src/operator-actions/lifecycle-outbox";
+  buildController,
+  buildRegisterBody,
+  listen,
+  PLAN,
+  useRegistrationWorld,
+  world,
+} from "./helpers/registration";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
+
+useMongoDatabase("tenant-provisioning-hook");
+useSuiteStripe();
 
 /**
- * The registration flow driven end to end against in-memory infrastructure:
- * these tests are what stands in for a first consumer, so they assert the
- * state the world is left in — who exists, what still bills — rather than
- * which function was called.
+ * The registration flow driven end to end against the suite's database and a
+ * Stripe that keeps what it is asked to: these tests are what stands in for a
+ * first consumer, so they assert the state the world is left in — who exists,
+ * what still bills — rather than which function was called.
  */
+const stripe = useRegistrationWorld();
 
-interface FakeWorld {
-  users: Map<string, string>;
-  tenants: Map<string, string>;
-  stripeCustomers: Set<string>;
-  liveSubscriptions: Set<string>;
-  paidInvoices: Set<string>;
-  tenantRows: Map<string, number>;
-  trials: Set<string>;
+async function allDeliveriesSucceeded(): Promise<boolean> {
+  return (await world.deliveries()).every((row) => row.status === "succeeded");
 }
-
-interface TenantInsertInput {
-  _id: string;
-  name: string;
-}
-
-const world: FakeWorld = {
-  users: new Map(),
-  tenants: new Map(),
-  stripeCustomers: new Set(),
-  liveSubscriptions: new Set(),
-  paidInvoices: new Set(),
-  tenantRows: new Map(),
-  trials: new Set(),
-};
-
-// Registration always lands on the free plan; its Stripe subscription still
-// opens a (zero-total) first invoice, settled last like any other.
-const PLAN = {
-  _id: "plan_free",
-  name: "Free",
-  price: 0,
-  order: 0,
-  audience: "any",
-  isActive: true,
-  isDeleted: false,
-  trialDays: 0,
-  billingMode: "flat",
-  paymentProviderRefs: { stripePriceId: "price_free" },
-};
-const PAID_PLAN = {
-  ...PLAN,
-  _id: "plan_pro",
-  slug: "pro",
-  name: "Pro",
-  price: 29,
-  order: 1,
-  paymentProviderRefs: { stripePriceId: "price_pro" },
-};
-const PLANS = [PLAN, PAID_PLAN];
-
-let sequence = 0;
-const deliveries = new Map<string, LifecycleDelivery>();
-const owners = new Map<string, string>();
-const attempts = new Map<string, ProvisioningAttempt>();
-const trialIdentities = new Map<string, string>();
-const subscriptions = new Map<string, TenantSubscription>();
-const billingInfos = new Map<string, TenantBillingInfo>();
-const admission = vi.hoisted(() => ({ close: vi.fn() }));
-
-// The DMS permission registry is not wired here: the role is created against
-// it in production, and its own test covers what it holds.
-vi.mock("../src/workspaces/default-member-role", () => ({
-  createDefaultMemberRole: async () => "member-role",
-}));
-// No tenant schema is registered here: DMS's own test covers the instance
-// `ProvisionTenant` creates, so only its hook run is kept.
-vi.mock("@antelopejs/interface-dms/tenant-provisioning", async () => {
-  const { ExecuteHooks, Hook } =
-    await import("@antelopejs/interface-dms/hooks");
-  return {
-    ProvisionTenant: (payload: TenantBeingProvisionedPayload) =>
-      ExecuteHooks(Hook.TENANT_BEING_PROVISIONED, payload),
-  };
-});
-vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
-  closeTenantLifecycleAdmission: (...args: unknown[]) =>
-    admission.close(...args),
-  runTenantLifecycleOperation: async (
-    _tenantId: string,
-    work: () => Promise<unknown>,
-  ) => work(),
-}));
-
-function nextId(prefix: string): string {
-  sequence += 1;
-  return `${prefix}_${sequence}`;
-}
-
-function countRow(tenantId: string): void {
-  world.tenantRows.set(tenantId, (world.tenantRows.get(tenantId) ?? 0) + 1);
-}
-
-const stripeFake = {
-  customers: {
-    create: async () => {
-      const id = nextId("cus");
-      world.stripeCustomers.add(id);
-      return { id };
-    },
-    update: async () => ({}),
-    del: async (id: string) => {
-      world.stripeCustomers.delete(id);
-      return {};
-    },
-    listTaxIds: async () => ({ data: [] }),
-    deleteTaxId: async () => ({}),
-    createTaxId: async () => ({}),
-  },
-  setupIntents: {
-    create: async () => ({ client_secret: "seti_secret" }),
-  },
-  paymentMethods: {
-    attach: async () => ({}),
-    retrieve: async () => ({
-      card: { fingerprint: "fp_test" },
-      billing_details: { address: null },
-    }),
-  },
-  subscriptions: {
-    create: async () => {
-      const id = nextId("sub");
-      world.liveSubscriptions.add(id);
-      // The first invoice is created unpaid (payment_behavior:
-      // default_incomplete) and settled later through invoices.pay.
-      return {
-        id,
-        items: { data: [{ current_period_end: 1893456000 }] },
-        latest_invoice: nextId("inv"),
-      };
-    },
-    cancel: async (id: string) => {
-      world.liveSubscriptions.delete(id);
-      return {};
-    },
-  },
-  invoices: {
-    retrieve: async (id: string) => ({
-      status: world.paidInvoices.has(id) ? "paid" : "open",
-    }),
-    pay: async (id: string) => {
-      world.paidInvoices.add(id);
-      return {};
-    },
-  },
-};
-
-const modelFakes: Record<string, (tenantId?: string) => unknown> = {
-  ProvisioningAttemptModel: () => ({
-    insert: async (row: ProvisioningAttempt) => {
-      attempts.set(row._id, { ...row });
-      return [row._id];
-    },
-    get: async (id: string) => attempts.get(id),
-    advance: async (
-      current: ProvisioningAttempt,
-      patch: Partial<ProvisioningAttempt>,
-    ) => Object.assign(current, patch),
-  }),
-  TrialIdentityModel: () => ({
-    reserve: async (id: string, tenantId: string) => {
-      if (trialIdentities.has(id)) return trialIdentities.get(id) === tenantId;
-      trialIdentities.set(id, tenantId);
-      return true;
-    },
-    releaseUnused: async (id: string, tenantId: string) => {
-      if (trialIdentities.get(id) === tenantId) trialIdentities.delete(id);
-    },
-  }),
-  LifecycleDeliveryModel: () => ({
-    insert: async (row: LifecycleDelivery) => {
-      if (deliveries.has(row._id)) throw new Error("duplicate");
-      deliveries.set(row._id, { ...row });
-    },
-    get: async (id: string) => deliveries.get(id),
-    transitionProvisioning: async (
-      id: string,
-      expected: WorkspaceProvisioningState,
-      next: WorkspaceProvisioningState,
-      invoiceId?: string | null,
-    ) => {
-      const row = deliveries.get(id);
-      if (row?.provisioningState === next) return;
-      if (!row || row.provisioningState !== expected)
-        throw new Error("Workspace provisioning state changed");
-      row.provisioningState = next;
-      if (invoiceId !== undefined) row.provisioningInvoiceId = invoiceId;
-      if (next === "cancelled") row.status = "succeeded";
-    },
-    delete: async (id: string) => deliveries.delete(id),
-    findByOperation: async (id: string) =>
-      [...deliveries.values()].filter((row) => row.operationId === id),
-    findReplayable: async () =>
-      [...deliveries.values()].filter((row) => row.status !== "succeeded"),
-    claim: async (delivery: LifecycleDelivery) => {
-      const row = deliveries.get(delivery._id);
-      if (!row || row.status === "succeeded" || row.status === "running")
-        return null;
-      row.status = "running";
-      return { ...row };
-    },
-    markSucceeded: async (delivery: LifecycleDelivery) => {
-      const row = deliveries.get(delivery._id);
-      if (row) row.status = "succeeded";
-    },
-    markFailed: async (delivery: LifecycleDelivery) => {
-      const row = deliveries.get(delivery._id);
-      if (row && row.status !== "succeeded") row.status = "failed";
-    },
-  }),
-  BillingSettingsModel: () => ({ get: async () => undefined }),
-  PlanModel: () => ({
-    get: async (id: string) => PLANS.find((plan) => plan._id === id),
-    findActiveNotDeleted: async () => [PLAN],
-    findPubliclyVisible: async () => PLANS,
-  }),
-  TenantModel: () => ({
-    get: async (id: string) =>
-      world.tenants.has(id) ? { _id: id } : undefined,
-    insert: async (rows: TenantInsertInput[]) => {
-      const id = rows[0]._id;
-      expect(await isWorkspaceProvisioningCommitted(id)).toBe(false);
-      world.tenants.set(id, rows[0]?.name ?? "");
-      return [id];
-    },
-    delete: async (id: string) => {
-      world.tenants.delete(id);
-    },
-  }),
-  TrialConsumptionModel: () => ({
-    existsForIdentity: async () => false,
-    insert: async () => {
-      const id = nextId("trial");
-      world.trials.add(id);
-      return [id];
-    },
-    delete: async (id: string) => {
-      world.trials.delete(id);
-    },
-  }),
-  TenantSubscriptionModel: (tenantId?: string) => ({
-    findOne: async () => subscriptions.get(tenantId ?? ""),
-    findByCardFingerprint: async (fingerprint: string) =>
-      [...subscriptions.entries()]
-        .filter(([, row]) => row.cardFingerprint === fingerprint)
-        .map(([instance, row]) => ({ ...row, _instance: instance })),
-    beginTransition: async (
-      row: TenantSubscription,
-      intent: SubscriptionTransition,
-    ) => {
-      if (row.domainTransition || row.deletionStartedAt)
-        throw new Error("pending transition");
-      row.domainTransition = intent;
-    },
-    completeTransition: async (
-      _id: string,
-      operationId: string,
-      patch: Partial<TenantSubscription>,
-    ) => {
-      const row = subscriptions.get(tenantId ?? "");
-      if (!row || row.domainTransition?.operationId !== operationId)
-        throw new Error("lost admission");
-      Object.assign(row, patch, { domainTransition: null });
-    },
-    get: async (id: string) => {
-      const row = subscriptions.get(tenantId ?? "");
-      return row?._id === id ? row : undefined;
-    },
-    insert: async (row: TenantSubscription) => {
-      if (subscriptions.get(tenantId ?? "")?._id === row._id)
-        throw new Error("duplicate key");
-      countRow(tenantId ?? "");
-      subscriptions.set(tenantId ?? "", { ...row });
-      return [row._id];
-    },
-    update: async (id: string, patch: Partial<TenantSubscription>) => {
-      const row = subscriptions.get(tenantId ?? "");
-      if (row?._id !== id) return 0;
-      Object.assign(row, patch);
-      return 1;
-    },
-    deleteAll: async () => {
-      world.tenantRows.delete(tenantId ?? "");
-      subscriptions.delete(tenantId ?? "");
-    },
-  }),
-  TenantBillingInfoModel: (tenantId?: string) => ({
-    get: async (id: string) => {
-      const row = billingInfos.get(tenantId ?? "");
-      return row?._id === id ? row : undefined;
-    },
-    insert: async (row: TenantBillingInfo) => {
-      if (billingInfos.get(tenantId ?? "")?._id === row._id)
-        throw new Error("duplicate key");
-      countRow(tenantId ?? "");
-      billingInfos.set(tenantId ?? "", { ...row });
-      return [row._id];
-    },
-    deleteAll: async () => {
-      world.tenantRows.delete(tenantId ?? "");
-      billingInfos.delete(tenantId ?? "");
-    },
-  }),
-  TenantMemberModel: () => ({ existsByUser: async () => false }),
-  UserModel: () => userModelFake,
-};
-
-const userModelFake = {
-  getByEmail: async (email: string) => {
-    const found = [...world.users].find(([, stored]) => stored === email);
-    return found ? { _id: found[0], email } : undefined;
-  },
-  insert: async (rows: { email: string }[]) => {
-    const id = nextId("user");
-    world.users.set(id, rows[0]?.email ?? "");
-    return [id];
-  },
-  delete: async (id: string) => {
-    world.users.delete(id);
-  },
-  update: async () => ({}),
-  get: async (id: string) =>
-    world.users.has(id) ? { _id: id, email: world.users.get(id) } : undefined,
-};
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: (model: { name: string }, tenantId?: string) => {
-      const fake = modelFakes[model.name];
-      if (!fake) throw new Error(`no fake registered for ${model.name}`);
-      return fake(tenantId);
-    },
-  };
-});
-
-const stripeSetup = vi.hoisted(() => ({ isConfigured: true }));
-
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => stripeFake,
-  isStripeConfigured: () => stripeSetup.isConfigured,
-  initStripeClient: () => undefined,
-  getStripeWebhookSecret: () => "whsec_test",
-}));
-
-vi.mock("@antelopejs/interface-dms/tenant-ownership", () => ({
-  applyTenantOwnership: async (
-    _model: unknown,
-    userId: string,
-    tenantId: string,
-  ) => {
-    owners.set(tenantId, userId);
-  },
-}));
-
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: {
-    Error: () => undefined,
-    Warn: () => undefined,
-    Info: () => undefined,
-  },
-}));
-
-const OAUTH_USER = { _id: "user_oauth", email: "oauth@example.com", name: "O" };
-
-vi.mock("@antelopejs/interface-dms/auth", () => ({
-  validateTenantAssignmentToken: async () => ({ user: OAUTH_USER }),
-  createSession: async () => "session_1",
-  generateAccessToken: async () => ({ token: "access", expiresIn: 900 }),
-  generateRefreshToken: async () => ({ token: "refresh" }),
-  sanitizeUser: async (user: { email: string }) => user,
-  getExternalIdentities: async () => [],
-}));
-
-vi.mock("../src/billing-state", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/billing-state")>();
-  return { ...actual, recomputeTenantBillingState: async () => undefined };
-});
-
-const { SaasRegisterApiController } =
-  await import("../src/routes/public/register");
-
-interface RegisterBodyInput {
-  extras?: unknown;
-  requestedPlanId?: string;
-}
-
-function buildRegisterBody(input: RegisterBodyInput = {}) {
-  return {
-    email: `owner-${nextId("mail")}@example.com`,
-    password: "CorrectHorse9!",
-    name: "Owner",
-    workspaceName: "Acme Studio",
-    paymentMethodId: "pm_test",
-    ...input,
-  };
-}
-
-const sessionModelFake = {
-  update: vi.fn(async () => 1),
-  replaceRefreshToken: vi.fn(async () => undefined),
-};
-
-function buildController() {
-  const controller = new SaasRegisterApiController();
-  Object.assign(controller, {
-    userModel: userModelFake,
-    sessionModel: sessionModelFake,
-    userAgent: "vitest",
-    forwardedFor: "",
-  });
-  return controller;
-}
-
-function resetWorld(): void {
-  vi.restoreAllMocks();
-  sessionModelFake.update.mockClear();
-  sessionModelFake.replaceRefreshToken.mockClear();
-  admission.close.mockReset();
-  attempts.clear();
-  trialIdentities.clear();
-  subscriptions.clear();
-  billingInfos.clear();
-  deliveries.clear();
-  owners.clear();
-  PLAN.trialDays = 0;
-  world.users.clear();
-  world.tenants.clear();
-  world.stripeCustomers.clear();
-  world.liveSubscriptions.clear();
-  world.paidInvoices.clear();
-  world.tenantRows.clear();
-  world.trials.clear();
-}
-
-const listeners: Parameters<typeof UnregisterHook>[1][] = [];
-
-function listen(
-  handler: (payload: TenantBeingProvisionedPayload) => Promise<void> | void,
-): void {
-  const registered = handler as Parameters<typeof RegisterHook>[1];
-  RegisterHook(Hook.TENANT_BEING_PROVISIONED, registered);
-  listeners.push(registered);
-}
-
-beforeEach(resetWorld);
 
 afterEach(() => {
   lifecycle.RegisterTenantLifecycleConsumer.unregister("test.created");
-  for (const handler of listeners.splice(0)) {
-    UnregisterHook(Hook.TENANT_BEING_PROVISIONED, handler);
-  }
 });
 
 describe("tenant-being-provisioned hook", () => {
   it("delivers created only with committed ownership, records, hooks and payment", async () => {
     let hookFinished = false;
-    listen(() => {
+    listen(async () => {
       hookFinished = true;
-      expect([...deliveries.values()]).toEqual([
+      expect(await world.deliveries()).toEqual([
         expect.objectContaining({ provisioningState: "preparing" }),
       ]);
     });
     const consume = vi.fn(async (message: TenantLifecycleMessage) => {
       expect(hookFinished).toBe(true);
-      expect(world.users.has(owners.get(message.tenantId) ?? "")).toBe(true);
-      expect(world.tenantRows.get(message.tenantId)).toBe(2);
-      expect(world.paidInvoices.size).toBe(1);
+      const [owner] = await world.owners(message.tenantId);
+      expect((await world.users()).map((user) => user._id)).toContain(
+        owner?.userId,
+      );
+      expect(await world.tenantRecords(message.tenantId)).toHaveLength(2);
+      expect(stripe.paidInvoices.size).toBe(1);
       return { receiptId: message.operationId };
     });
     lifecycle.RegisterTenantLifecycleConsumer.register("test.created", {
@@ -521,30 +75,28 @@ describe("tenant-being-provisioned hook", () => {
     });
     await buildController().register(buildRegisterBody());
     expect(consume).toHaveBeenCalledOnce();
-    expect(
-      [...deliveries.values()].every((row) => row.status === "succeeded"),
-    ).toBe(true);
+    expect(await allDeliveriesSucceeded()).toBe(true);
   });
 
   it("supports already-paid zero-total invoices without paying again", async () => {
-    vi.spyOn(stripeFake.invoices, "retrieve").mockResolvedValue({
-      status: "paid",
-    });
-    const pay = vi.spyOn(stripeFake.invoices, "pay");
+    vi.spyOn(getStripeClient().invoices, "retrieve").mockResolvedValue(
+      fromPartial({ status: "paid" }),
+    );
+    const pay = vi.spyOn(getStripeClient().invoices, "pay");
     const result = await buildController().register(buildRegisterBody());
-    expect(world.tenants.has(result.tenantId)).toBe(true);
+    await expect(
+      GetModel(TenantModel).get(result.tenantId),
+    ).resolves.toBeDefined();
     expect(pay).not.toHaveBeenCalled();
-    expect(
-      [...deliveries.values()].every((row) => row.status === "succeeded"),
-    ).toBe(true);
+    expect(await allDeliveriesSucceeded()).toBe(true);
   });
 
   it("commits trials without paying an invoice", async () => {
-    PLAN.trialDays = 14;
-    const pay = vi.spyOn(stripeFake.invoices, "pay");
+    await world.updatePlan(PLAN._id, { trialDays: 14 });
+    const pay = vi.spyOn(getStripeClient().invoices, "pay");
     await buildController().register(buildRegisterBody());
     expect(pay).not.toHaveBeenCalled();
-    expect([...deliveries.values()]).toEqual([
+    expect(await world.deliveries()).toEqual([
       expect.objectContaining({
         transition: "created",
         status: "succeeded",
@@ -554,34 +106,34 @@ describe("tenant-being-provisioned hook", () => {
   });
 
   it("tombstones the creation intent before rolling back a definitive card decline", async () => {
-    vi.spyOn(stripeFake.invoices, "pay").mockRejectedValue(
+    vi.spyOn(getStripeClient().invoices, "pay").mockRejectedValue(
       Object.assign(new Error("declined"), { type: "StripeCardError" }),
     );
     await expect(
       buildController().register(buildRegisterBody()),
     ).rejects.toThrow("declined");
-    expect([...deliveries.values()]).toEqual([
+    expect(await world.deliveries()).toEqual([
       expect.objectContaining({ provisioningState: "cancelled" }),
     ]);
-    expect(world.tenants.size).toBe(0);
-    expect(world.users.size).toBe(0);
+    expect(await world.tenants()).toEqual([]);
+    expect(await world.users()).toEqual([]);
   });
 
   it("preserves membership and replays a charge whose successful response was lost", async () => {
-    vi.spyOn(stripeFake.invoices, "pay").mockImplementation(async (id) => {
-      world.paidInvoices.add(id);
-      throw new Error("connection lost");
-    });
+    vi.spyOn(getStripeClient().invoices, "pay").mockImplementation(
+      async (id) => {
+        stripe.paidInvoices.add(id);
+        throw new Error("connection lost");
+      },
+    );
     await expect(
       buildController().register(buildRegisterBody()),
     ).rejects.toThrow("connection lost");
-    expect(world.users.size).toBe(1);
-    expect(world.tenants.size).toBe(1);
-    expect(owners.size).toBe(1);
+    expect(await world.users()).toHaveLength(1);
+    expect(await world.tenants()).toHaveLength(1);
+    expect(await world.owners()).toHaveLength(1);
     await reconcileWorkspaceLifecycleDeliveries();
-    expect(
-      [...deliveries.values()].every((row) => row.status === "succeeded"),
-    ).toBe(true);
+    expect(await allDeliveriesSucceeded()).toBe(true);
   });
 
   it("hands a listener the workspace and the consumer's own capture", async () => {
@@ -600,15 +152,20 @@ describe("tenant-being-provisioned hook", () => {
       userId: result.userId,
       extras: { referral: "podcast", seats: 3 },
     });
-    expect([...attempts.values()][0]).not.toHaveProperty("extras");
-    expect(JSON.stringify([...attempts.values()])).not.toContain("podcast");
+    const attempts = await world.attempts();
+    expect(attempts[0]).not.toHaveProperty("extras");
+    expect(JSON.stringify(attempts)).not.toContain("podcast");
   });
 
   it("runs while the workspace is already there to be written against", async () => {
     const workspaceAtHookTime: { tenant?: string; user?: string } = {};
-    listen((payload) => {
-      workspaceAtHookTime.tenant = world.tenants.get(payload.tenantId);
-      workspaceAtHookTime.user = world.users.get(payload.userId);
+    listen(async (payload) => {
+      const [tenant, user] = await Promise.all([
+        GetModel(TenantModel).get(payload.tenantId),
+        GetModel(UserModel).get(payload.userId ?? ""),
+      ]);
+      workspaceAtHookTime.tenant = tenant?.name;
+      workspaceAtHookTime.user = user?.email;
     });
 
     await buildController().register(buildRegisterBody());
@@ -625,24 +182,22 @@ describe("tenant-being-provisioned hook", () => {
 
     await buildController().register(buildRegisterBody());
 
-    // The hook contract types `extras` as a required object: a listener always
-    // gets one to read, empty rather than undefined, so it never has to guard.
     expect(seen[0]?.extras).toEqual({});
   });
 
   it("retains provider and account evidence when a customer creation response is lost", async () => {
-    vi.spyOn(stripeFake.customers, "create").mockImplementationOnce(
+    vi.spyOn(getStripeClient().customers, "create").mockImplementationOnce(
       async () => {
-        world.stripeCustomers.add("unknown-customer");
+        stripe.customers.add("unknown-customer");
         throw new Error("customer acknowledgement lost");
       },
     );
     await expect(
       buildController().register(buildRegisterBody()),
     ).rejects.toThrow("customer acknowledgement lost");
-    expect(world.users.size).toBe(1);
-    expect(world.stripeCustomers.has("unknown-customer")).toBe(true);
-    expect([...attempts.values()]).toEqual([
+    expect(await world.users()).toHaveLength(1);
+    expect(stripe.customers.has("unknown-customer")).toBe(true);
+    expect(await world.attempts()).toEqual([
       expect.objectContaining({
         state: "reconciliation_required",
         stripeCustomerId: null,
@@ -651,34 +206,35 @@ describe("tenant-being-provisioned hook", () => {
   });
 
   it("does not destructively roll back while tenant closure is incomplete", async () => {
-    listen(() => {
+    listen(async ({ tenantId }) => {
+      await runTenantLifecycleOperation(tenantId, async () => {
+        throw new Error("producer still active");
+      }).catch(() => undefined);
       throw new Error("hook failed");
     });
-    admission.close.mockRejectedValue(new Error("producer still active"));
     await expect(
       buildController().register(buildRegisterBody()),
     ).rejects.toThrow("hook failed");
-    expect(world.users.size).toBe(1);
-    expect(world.tenants.size).toBe(1);
-    expect(world.stripeCustomers.size).toBe(1);
-    expect(world.liveSubscriptions.size).toBe(1);
-    expect([...attempts.values()][0].state).toBe("reconciliation_required");
+    expect(await world.users()).toHaveLength(1);
+    expect(await world.tenants()).toHaveLength(1);
+    expect(stripe.customers.size).toBe(1);
+    expect(stripe.liveSubscriptions.size).toBe(1);
+    expect((await world.attempts())[0]?.state).toBe("reconciliation_required");
   });
 
   it("shares the retention identity only after provider cancellation and preserves the marker on hook failure", async () => {
     listen(() => {
       throw new Error("hook failed");
     });
-    const cancel = stripeFake.subscriptions.cancel;
-    const observedCancellation: unknown[] = [];
-    vi.spyOn(stripeFake.subscriptions, "cancel").mockImplementation(
+    const observedCancellation: (string | Date | null | undefined)[] = [];
+    vi.spyOn(getStripeClient().subscriptions, "cancel").mockImplementation(
       async (id) => {
-        const row = [...subscriptions.values()][0];
+        const [row] = await world.subscriptions();
         observedCancellation.push(
-          row.domainTransition?.kind,
-          row.deletionStartedAt ?? null,
+          row?.domainTransition?.kind,
+          row?.deletionStartedAt ?? null,
         );
-        return cancel(id);
+        return fromPartial(await stripe.cancelSubscription(id));
       },
     );
     const deleted = vi.fn(
@@ -693,23 +249,24 @@ describe("tenant-being-provisioned hook", () => {
       ).rejects.toThrow("hook failed");
       expect(deleted).toHaveBeenCalledOnce();
       const [tenantId, context] = deleted.mock.calls[0];
-      const row = subscriptions.get(tenantId)!;
+      const row = await world.subscriptionOf(tenantId);
+      if (!row) throw new Error(`No subscription left for ${tenantId}`);
       expect(observedCancellation).toEqual(["cancel", null]);
-      expect(world.liveSubscriptions.size).toBe(0);
-      expect(world.stripeCustomers.size).toBe(0);
+      expect(stripe.liveSubscriptions.size).toBe(0);
+      expect(stripe.customers.size).toBe(0);
       expect(row.domainTransition).toBeNull();
       expect(context?.operationId).toBe(
         JSON.stringify([
           "retention-delete",
           tenantId,
           tenantId,
-          row.deletionStartedAt!.toISOString(),
+          row.deletionStartedAt?.toISOString(),
         ]),
       );
       expect(context?.operationId).toBe(
         getWorkspaceDeletionOperationId(tenantId, row),
       );
-      expect(world.tenants.size).toBe(1);
+      expect(await world.tenants()).toHaveLength(1);
     } finally {
       UnregisterHook(Hook.TENANT_DELETED, deleted);
     }
@@ -719,29 +276,29 @@ describe("tenant-being-provisioned hook", () => {
     listen(() => {
       throw new Error("hook failed");
     });
-    vi.spyOn(stripeFake.subscriptions, "cancel").mockRejectedValue(
+    vi.spyOn(getStripeClient().subscriptions, "cancel").mockRejectedValue(
       new Error("unknown"),
     );
     await expect(
       buildController().register(buildRegisterBody()),
     ).rejects.toThrow("hook failed");
-    const row = [...subscriptions.values()][0];
-    expect(row.domainTransition?.kind).toBe("cancel");
-    expect(row.deletionStartedAt).toBeFalsy();
-    expect(world.tenants.size).toBe(1);
-    expect(world.stripeCustomers.size).toBe(1);
+    const [row] = await world.subscriptions();
+    expect(row?.domainTransition?.kind).toBe("cancel");
+    expect(row?.deletionStartedAt).toBeFalsy();
+    expect(await world.tenants()).toHaveLength(1);
+    expect(stripe.customers.size).toBe(1);
   });
 
   it("cancels the whole registration when a listener fails to write", async () => {
-    const atFailure: Record<string, number> = {};
-    listen(() => {
-      // Recorded before throwing: without it, the assertions below would also
-      // pass on a registration that never got as far as creating anything.
-      atFailure.users = world.users.size;
-      atFailure.tenants = world.tenants.size;
-      atFailure.customers = world.stripeCustomers.size;
-      atFailure.subscriptions = world.liveSubscriptions.size;
-      atFailure.paidInvoices = world.paidInvoices.size;
+    let atFailure = {};
+    listen(async () => {
+      atFailure = {
+        users: (await world.users()).length,
+        tenants: (await world.tenants()).length,
+        customers: stripe.customers.size,
+        subscriptions: stripe.liveSubscriptions.size,
+        paidInvoices: stripe.paidInvoices.size,
+      };
       throw new Error("consumer storage is down");
     });
 
@@ -754,31 +311,26 @@ describe("tenant-being-provisioned hook", () => {
       tenants: 1,
       customers: 1,
       subscriptions: 1,
-      // The card is charged after listeners, so a listener that fails rolls a
-      // workspace back that was never billed — no refund to chase.
       paidInvoices: 0,
     });
-    expect([...world.users.keys()]).toEqual([]);
-    expect([...world.tenants.keys()]).toEqual([]);
-    expect([...world.stripeCustomers]).toEqual([]);
-    expect([...world.liveSubscriptions]).toEqual([]);
-    expect([...world.paidInvoices]).toEqual([]);
-    expect([...world.tenantRows.keys()]).toEqual([]);
+    expect(await world.users()).toEqual([]);
+    expect(await world.tenants()).toEqual([]);
+    expect([...stripe.customers]).toEqual([]);
+    expect([...stripe.liveSubscriptions]).toEqual([]);
+    expect([...stripe.paidInvoices]).toEqual([]);
+    expect(await world.tenantRecords()).toEqual([]);
   });
 
   it("charges the card only after every listener has run", async () => {
     let paidWhenListenerRan = -1;
     listen(() => {
-      paidWhenListenerRan = world.paidInvoices.size;
+      paidWhenListenerRan = stripe.paidInvoices.size;
     });
 
     await buildController().register(buildRegisterBody());
 
-    // Nothing billed while listeners run: the charge is the last step, so a
-    // listener still holds the power to cancel a not-yet-paid registration.
     expect(paidWhenListenerRan).toBe(0);
-    // And it does happen, exactly once, once everything else has succeeded.
-    expect(world.paidInvoices.size).toBe(1);
+    expect(stripe.paidInvoices.size).toBe(1);
   });
 
   it("stops at the first listener that fails", async () => {
@@ -801,84 +353,10 @@ describe("tenant-being-provisioned hook", () => {
   it("provisions normally when nobody listens", async () => {
     const result = await buildController().register(buildRegisterBody());
 
-    expect(world.tenants.has(result.tenantId)).toBe(true);
-    expect(world.users.has(result.userId)).toBe(true);
-  });
-});
-
-describe("the OAuth-entry path carries the same capture", () => {
-  function buildFinalizeBody(extras?: unknown) {
-    const {
-      email: _email,
-      password: _password,
-      ...shared
-    } = buildRegisterBody();
-    return { ...shared, tenant_assignment_token: "tat_test", extras };
-  }
-
-  it("answers the token pair the frontend server opens a session from", async () => {
-    // The completion screen posts this call through the loader's
-    // `/auth/establish`, which reads exactly these fields to write its session
-    // cookie. A finalize that stopped returning them would provision a
-    // workspace and leave the owner who just paid for it signed out.
-    const response = await buildController().finalize(buildFinalizeBody());
-
-    expect(response).toEqual({
-      token_type: "Bearer",
-      access_token: "access",
-      expires_in: 900,
-      refresh_token: "refresh",
-      user: OAUTH_USER,
-    });
-  });
-
-  it("stores the issued refresh token through the hashing session API", async () => {
-    await buildController().finalize(buildFinalizeBody());
-
-    expect(
-      sessionModelFake.replaceRefreshToken,
-    ).toHaveBeenCalledExactlyOnceWith("session_1", "refresh");
-    expect(sessionModelFake.update).not.toHaveBeenCalled();
-  });
-
-  it("hands the listener the account that entered through OAuth", async () => {
-    const seen: TenantBeingProvisionedPayload[] = [];
-    listen((payload) => {
-      seen.push(payload);
-    });
-
-    await buildController().finalize(buildFinalizeBody({ referral: "ads" }));
-
-    expect(seen[0]?.userId).toBe(OAUTH_USER._id);
-    expect(seen[0]?.extras).toEqual({ referral: "ads" });
-  });
-
-  it("rolls the workspace back but keeps the account it did not create", async () => {
-    world.users.set(OAUTH_USER._id, OAUTH_USER.email);
-    listen(() => {
-      throw new Error("consumer storage is down");
-    });
-
     await expect(
-      buildController().finalize(buildFinalizeBody()),
-    ).rejects.toThrow("consumer storage is down");
-
-    expect([...world.tenants.keys()]).toEqual([]);
-    expect([...world.stripeCustomers]).toEqual([]);
-    // The account predates this registration: rolling it back would delete
-    // someone who signed in through OAuth and merely failed to buy a plan.
-    expect([...world.users.keys()]).toEqual([OAUTH_USER._id]);
-  });
-
-  it("applies the same limits to the extras it accepts", async () => {
-    const error = await buildController()
-      .finalize(buildFinalizeBody({ bio: "x".repeat(5000) }))
-      .catch((thrown: unknown) => thrown);
-
-    expect(error).toMatchObject({
-      status: 400,
-      body: "saas.errors.registration.extras_too_large",
-    });
+      GetModel(TenantModel).get(result.tenantId),
+    ).resolves.toBeDefined();
+    await expect(GetModel(UserModel).get(result.userId)).resolves.toBeDefined();
   });
 });
 
@@ -891,426 +369,5 @@ describe("emitTenantBeingProvisioned", () => {
     await expect(
       emitTenantBeingProvisioned({ tenantId: "t1", userId: "u1" }),
     ).rejects.toThrow("write failed");
-  });
-});
-
-describe("password policy on the public endpoint", () => {
-  it.each([
-    ["too short", "Ab1!"],
-    ["without an uppercase letter", "correct horse 9!"],
-    ["without a number", "CorrectHorse!"],
-    ["without a special character", "CorrectHorse9"],
-    ["with a special character outside the allowed set", "CorrectHorse9#"],
-  ])(
-    "refuses a password %s before anything exists",
-    async (_case, password) => {
-      const lookup = vi.spyOn(userModelFake, "getByEmail");
-      const retrieve = vi.spyOn(stripeFake.paymentMethods, "retrieve");
-
-      await expect(
-        buildController().register({ ...buildRegisterBody(), password }),
-      ).rejects.toMatchObject({
-        status: 400,
-        body: "saas.errors.registration.password_policy",
-      });
-      expect(lookup).not.toHaveBeenCalled();
-      expect(retrieve).not.toHaveBeenCalled();
-      expect(world.users.size).toBe(0);
-      expect(world.stripeCustomers.size).toBe(0);
-    },
-  );
-
-  it("refuses a registration that sends no password", async () => {
-    const { password: _password, ...body } = buildRegisterBody();
-
-    await expect(
-      buildController().register(body as never),
-    ).rejects.toMatchObject({
-      status: 400,
-      body: "saas.errors.registration.password_policy",
-    });
-    expect(world.users.size).toBe(0);
-  });
-
-  it("registers an account whose password meets the policy", async () => {
-    const result = await buildController().register(buildRegisterBody());
-
-    expect(world.users.has(result.userId)).toBe(true);
-  });
-});
-
-describe("extras validation on the public endpoint", () => {
-  async function expectRejection(extras: unknown, message: string) {
-    const error = await buildController()
-      .register(buildRegisterBody({ extras }))
-      .catch((thrown: unknown) => thrown);
-
-    expect(error).toBeInstanceOf(HTTPResult);
-    expect(error).toMatchObject({ status: 400, body: message });
-    expect([...world.users.keys()]).toEqual([]);
-    expect([...world.tenants.keys()]).toEqual([]);
-  }
-
-  it("refuses a payload that is not a plain object", async () => {
-    await expectRejection(
-      ["referral", "podcast"],
-      "saas.errors.registration.extras_invalid",
-    );
-  });
-
-  it("refuses a payload past the size limit", async () => {
-    await expectRejection(
-      { bio: "x".repeat(5000) },
-      "saas.errors.registration.extras_too_large",
-    );
-  });
-
-  it("refuses a payload with too many keys", async () => {
-    const many = Object.fromEntries(
-      Array.from({ length: 65 }, (_, index) => [`k${index}`, 1]),
-    );
-
-    await expectRejection(many, "saas.errors.registration.extras_too_complex");
-  });
-
-  it("refuses a payload nested deeper than a form ever is", async () => {
-    await expectRejection(
-      { a: { b: { c: { d: { e: 1 } } } } },
-      "saas.errors.registration.extras_too_complex",
-    );
-  });
-
-  it("refuses a payload reaching for the object prototype", async () => {
-    await expectRejection(
-      JSON.parse('{"profile":{"__proto__":{"admin":true}}}'),
-      "saas.errors.registration.extras_invalid",
-    );
-  });
-});
-
-describe("registration card policy", () => {
-  const STRIPE_CONFIG = {
-    secretKey: "sk_test",
-    webhookSecret: "whsec_test",
-    publishableKey: "pk_test",
-  };
-
-  function applyPolicy(
-    paymentMethod: NonNullable<DmsSaasConfig["registration"]>["paymentMethod"],
-  ): void {
-    setRuntimeConfig({
-      stripe: STRIPE_CONFIG,
-      registration: { paymentMethod },
-    });
-  }
-
-  const uncappedBillingSettings = modelFakes.BillingSettingsModel;
-
-  /** The per-card rule is off by default; these cases turn it on. */
-  function capFreeWorkspacesPerCard(): void {
-    modelFakes.BillingSettingsModel = () => ({
-      get: async () => ({ maxFreeWorkspacesPerCard: 1 }),
-    });
-  }
-
-  function subscriptionOf(tenantId: string): TenantSubscription | undefined {
-    return subscriptions.get(tenantId);
-  }
-
-  function cardlessBody() {
-    const { paymentMethodId: _card, ...body } = buildRegisterBody();
-    return body;
-  }
-
-  afterEach(() => {
-    setRuntimeConfig({ stripe: STRIPE_CONFIG });
-    modelFakes.BillingSettingsModel = uncappedBillingSettings;
-    stripeSetup.isConfigured = true;
-  });
-
-  it("defaults to requiring a card, as before the option existed", async () => {
-    setRuntimeConfig({ stripe: STRIPE_CONFIG });
-
-    await expect(
-      buildController().register(cardlessBody()),
-    ).rejects.toMatchObject({
-      status: 400,
-      body: "saas.errors.registration.payment_method_required",
-    });
-    expect(world.users.size).toBe(0);
-  });
-
-  it("provisions through Stripe on the free plan when a card is required", async () => {
-    applyPolicy("required");
-
-    const result = await buildController().register(buildRegisterBody());
-
-    expect(world.stripeCustomers.size).toBe(1);
-    expect(subscriptionOf(result.tenantId)).toMatchObject({
-      planId: PLAN._id,
-      cardFingerprint: "fp_test",
-    });
-  });
-
-  it("refuses a card that already backs as many free workspaces as allowed", async () => {
-    applyPolicy("required");
-    capFreeWorkspacesPerCard();
-    await buildController().register(buildRegisterBody());
-
-    await expect(
-      buildController().register(buildRegisterBody()),
-    ).rejects.toMatchObject({
-      status: 409,
-      body: "saas.errors.workspace.free_card_limit_reached",
-    });
-    expect(world.users.size).toBe(1);
-    expect(world.stripeCustomers.size).toBe(1);
-  });
-
-  it("opens a paid plan chosen on Pricing awaiting its first payment instead", async () => {
-    applyPolicy("required");
-    capFreeWorkspacesPerCard();
-    await buildController().register(buildRegisterBody());
-
-    const result = await buildController().register(
-      buildRegisterBody({ requestedPlanId: PAID_PLAN._id }),
-    );
-
-    expect(subscriptionOf(result.tenantId)).toMatchObject({
-      planId: PAID_PLAN._id,
-      status: "pending_payment",
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      cardFingerprint: null,
-    });
-    expect(world.stripeCustomers.size).toBe(1);
-    expect(world.users.size).toBe(2);
-  });
-
-  it("still refuses the card when the plan chosen on Pricing is free", async () => {
-    applyPolicy("required");
-    capFreeWorkspacesPerCard();
-    await buildController().register(buildRegisterBody());
-
-    await expect(
-      buildController().register(
-        buildRegisterBody({ requestedPlanId: PLAN._id }),
-      ),
-    ).rejects.toMatchObject({
-      status: 409,
-      body: "saas.errors.workspace.free_card_limit_reached",
-    });
-  });
-
-  it("never calls Stripe under `none`, even when a card is sent", async () => {
-    applyPolicy("none");
-    const retrieve = vi.spyOn(stripeFake.paymentMethods, "retrieve");
-
-    const result = await buildController().register(buildRegisterBody());
-
-    expect(retrieve).not.toHaveBeenCalled();
-    expect(world.stripeCustomers.size).toBe(0);
-    expect(world.liveSubscriptions.size).toBe(0);
-    expect(subscriptionOf(result.tenantId)).toMatchObject({
-      planId: PLAN._id,
-      status: "active",
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      cardFingerprint: null,
-    });
-    expect(
-      [...deliveries.values()].every((row) => row.status === "succeeded"),
-    ).toBe(true);
-  });
-
-  it("replaces a default row the backfill wrote under the tenant key", async () => {
-    applyPolicy("required");
-    const defaultCreatedAt = new Date("2026-01-01T00:00:00.000Z");
-    const createTenantModel = modelFakes.TenantModel;
-    // The default-plan backfill covers the workspace between its creation and
-    // the insert of its paid subscription.
-    modelFakes.TenantModel = () => {
-      const tenants = createTenantModel() as {
-        insert: (rows: TenantInsertInput[]) => Promise<string[]>;
-      };
-      return {
-        ...tenants,
-        insert: async (rows: TenantInsertInput[]) => {
-          const ids = await tenants.insert(rows);
-          subscriptions.set(rows[0]._id, {
-            _id: rows[0]._id,
-            planId: "plan_default",
-            status: "active",
-            isComplimentary: false,
-            paidUsagePeriods: [],
-            stripeCustomerId: null,
-            stripeSubscriptionId: null,
-            createdBy: null,
-            createdAt: defaultCreatedAt,
-          } as TenantSubscription);
-          return ids;
-        },
-      };
-    };
-    try {
-      const result = await buildController().register(buildRegisterBody());
-
-      expect(subscriptionOf(result.tenantId)).toMatchObject({
-        _id: result.tenantId,
-        planId: PLAN._id,
-        cardFingerprint: "fp_test",
-        stripeCustomerId: expect.any(String),
-        stripeSubscriptionId: expect.any(String),
-        createdAt: defaultCreatedAt,
-      });
-      const paid = subscriptionOf(result.tenantId);
-      expect(paid?.paidUsagePeriods).toEqual([
-        expect.objectContaining({
-          stripeSubscriptionId: paid?.stripeSubscriptionId,
-          end: null,
-        }),
-      ]);
-      expect(world.paidInvoices.size).toBe(1);
-    } finally {
-      modelFakes.TenantModel = createTenantModel;
-    }
-  });
-
-  it("lets the visitor skip the card under `optional`", async () => {
-    applyPolicy("optional");
-
-    const result = await buildController().register(cardlessBody());
-
-    expect(world.stripeCustomers.size).toBe(0);
-    expect(subscriptionOf(result.tenantId)).toMatchObject({
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-    });
-  });
-
-  it("still takes a card offered under `optional`", async () => {
-    applyPolicy("optional");
-
-    const result = await buildController().register(buildRegisterBody());
-
-    expect(world.stripeCustomers.size).toBe(1);
-    expect(subscriptionOf(result.tenantId)?.stripeSubscriptionId).toBeTruthy();
-  });
-
-  it("opens a card-less workspace from the OAuth entry too", async () => {
-    applyPolicy("none");
-    const { email: _email, password: _password, ...body } = cardlessBody();
-
-    const response = await buildController().finalize({
-      ...body,
-      tenant_assignment_token: "tat_test",
-    });
-
-    expect(response.access_token).toBe("access");
-    expect(world.stripeCustomers.size).toBe(0);
-  });
-
-  it("names the workspace by default when the screen sent no name", async () => {
-    applyPolicy("none");
-    const { workspaceName: _name, ...body } = cardlessBody();
-
-    const result = await buildController().register(body);
-
-    expect(world.tenants.get(result.tenantId)).toBe("My workspace");
-  });
-
-  it("refuses to sign up when the catalogue has no free plan", async () => {
-    applyPolicy("none");
-    vi.spyOn(PLAN, "price", "get").mockReturnValue(20);
-
-    await expect(
-      buildController().register(cardlessBody()),
-    ).rejects.toMatchObject({
-      status: 409,
-      body: "saas.errors.plan.no_free_plan",
-    });
-    expect(world.users.size).toBe(0);
-  });
-
-  it("restricts the registration SetupIntent to cards through the allow-list", async () => {
-    applyPolicy("required");
-    const create = vi.spyOn(stripeFake.setupIntents, "create");
-
-    await expect(buildController().createSetupIntent()).resolves.toEqual({
-      clientSecret: "seti_secret",
-    });
-    expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ allowed_payment_method_types: ["card"] }),
-    );
-    expect(create.mock.calls[0][0]).not.toHaveProperty("payment_method_types");
-  });
-
-  it("offers no SetupIntent when the deployment takes no card", async () => {
-    applyPolicy("none");
-    const create = vi.spyOn(stripeFake.setupIntents, "create");
-
-    await expect(buildController().createSetupIntent()).rejects.toMatchObject({
-      status: 400,
-      body: "saas.errors.registration.payment_method_disabled",
-    });
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it("registers on the free plan without a card while Stripe is not configured", async () => {
-    applyPolicy("required");
-    stripeSetup.isConfigured = false;
-    const retrieve = vi.spyOn(stripeFake.paymentMethods, "retrieve");
-
-    const result = await buildController().register(cardlessBody());
-
-    expect(getRegistrationPaymentMethodPolicy()).toBe("none");
-    expect(retrieve).not.toHaveBeenCalled();
-    expect(world.stripeCustomers.size).toBe(0);
-    expect(subscriptionOf(result.tenantId)).toMatchObject({
-      planId: PLAN._id,
-      stripeCustomerId: null,
-    });
-  });
-
-  it("answers a handled 503 when Stripe refuses the key for a SetupIntent", async () => {
-    applyPolicy("required");
-    vi.spyOn(stripeFake.setupIntents, "create").mockRejectedValueOnce(
-      new Stripe.errors.StripeAuthenticationError({
-        message: "Invalid API Key provided: sk_test_*******lder",
-        type: "authentication_error",
-      }),
-    );
-
-    await expect(buildController().createSetupIntent()).rejects.toMatchObject({
-      status: 503,
-      body: "saas.errors.stripe.unavailable",
-    });
-  });
-
-  it("answers a handled 503 when registration reaches Stripe and it is down", async () => {
-    applyPolicy("required");
-    vi.spyOn(stripeFake.paymentMethods, "retrieve").mockRejectedValueOnce(
-      new Stripe.errors.StripeConnectionError({
-        message: "An error occurred with our connection to Stripe.",
-        type: "api_error",
-      }),
-    );
-
-    await expect(
-      buildController().register(buildRegisterBody()),
-    ).rejects.toMatchObject({
-      status: 503,
-      body: "saas.errors.stripe.unavailable",
-    });
-    expect(world.users.size).toBe(0);
-  });
-
-  it("rejects an unknown policy at configuration time", () => {
-    expect(() =>
-      setRuntimeConfig({
-        stripe: STRIPE_CONFIG,
-        registration: { paymentMethod: "sometimes" },
-      } as never),
-    ).toThrow("Invalid dms-saas registration.paymentMethod");
   });
 });

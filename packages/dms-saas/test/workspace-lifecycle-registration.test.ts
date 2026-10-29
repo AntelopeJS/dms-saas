@@ -5,10 +5,6 @@ import type * as declarationModule from "@antelopejs/interface-dms-saas/tenant-l
 import { describe, expect, it, vi } from "vitest";
 import type * as implementationModule from "../src/implementations/dms-saas/tenant-lifecycle";
 
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: { Error: vi.fn() },
-}));
-
 const CONSUMER_NAME = "cloud.consumer";
 
 interface LifecycleModules {

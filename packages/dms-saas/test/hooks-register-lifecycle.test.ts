@@ -1,243 +1,139 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-interface Deferred {
-  promise: Promise<void>;
-  resolve: () => void;
-  reject: (reason: unknown) => void;
-}
-
-type HookListener = () => Promise<unknown>;
-
-const hookDoubles = vi.hoisted(() => ({
-  databaseInitialized: "database-initialized",
-  registerHook: vi.fn(),
-  registerTenantDataExportContributor: vi.fn(),
-  ensureLegalDocumentsSingleton: vi.fn<() => Promise<void>>(),
-  resumePendingPlanMigrations: vi.fn<() => Promise<void>>(),
-  recomputeAllTenantBillingStates: vi.fn<() => Promise<void>>(),
-  ensureDefaultSubscription: vi.fn<(tenantId: string) => Promise<boolean>>(),
-  reconcileWorkspaceLifecycleDeliveries: vi.fn<() => Promise<void>>(),
-  startPlanReconciliation: vi.fn<() => void>(),
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", () => ({
-  GetModel: vi.fn(),
-}));
-
-vi.mock("@antelopejs/interface-dms/hooks", () => ({
-  Hook: {
-    TENANT_DELETED: "tenant-deleted",
-    TENANT_BEING_PROVISIONED: "tenant-being-provisioned",
-    DATABASE_INITIALIZED: hookDoubles.databaseInitialized,
-  },
-  RegisterHook: hookDoubles.registerHook,
-  RegisterTenantDataExportContributor:
-    hookDoubles.registerTenantDataExportContributor,
-}));
-
-vi.mock("../src/automation", () => ({ emitAutomationEvent: vi.fn() }));
-vi.mock("../src/billing-state", () => ({
-  recomputeAllTenantBillingStates: hookDoubles.recomputeAllTenantBillingStates,
-}));
-vi.mock("../src/db", () => ({ TenantBillingStateModel: class {} }));
-vi.mock("../src/operator-actions", () => ({
-  reconcileWorkspaceLifecycleDeliveries:
-    hookDoubles.reconcileWorkspaceLifecycleDeliveries,
-}));
-vi.mock("../src/pages/module", () => ({ SAAS_MODULE_ID: "dms-saas" }));
-vi.mock("../src/plans/stripe-sync", () => ({
-  startPlanReconciliation: hookDoubles.startPlanReconciliation,
-}));
-vi.mock("../src/operator-billing/billing-settings-store", () => ({
-  ensureBillingSettingsRow: vi.fn(async () => undefined),
-}));
-vi.mock("../src/routes", () => ({
-  ensureLegalDocumentsSingleton: hookDoubles.ensureLegalDocumentsSingleton,
-}));
-vi.mock("../src/workers", () => ({
-  resumePendingPlanMigrations: hookDoubles.resumePendingPlanMigrations,
-}));
-vi.mock("../src/workspaces/default-plan", () => ({
-  ensureDefaultSubscription: hookDoubles.ensureDefaultSubscription,
-}));
-vi.mock("../src/hooks/tenant-export", () => ({
-  exportSaasTenantData: vi.fn(),
-}));
-
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { DEFAULT_TENANT_ID } from "@antelopejs/interface-dms/constants";
+import { tenantsTableName } from "@antelopejs/interface-dms/db";
+import { ExecuteHooks, Hook } from "@antelopejs/interface-dms/hooks";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  legalDocumentsTableName,
+  PlanModel,
+  planMigrationsTableName,
+  plansTableName,
+  TenantSubscriptionModel,
+} from "../src/db";
 import { registerSaasHookListeners } from "../src/hooks/register";
+import { lifecycleDeliveriesTableName } from "../src/operator-actions/db/lifecycle-delivery.table";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useQueryGate } from "./helpers/query-gate";
+import { useSuiteStripe } from "./helpers/stripe";
+import { PLAN } from "./helpers/registration";
 
-function createDeferred(): Deferred {
-  let resolve = () => undefined;
-  let reject = (_reason: unknown) => undefined;
-  const promise = new Promise<void>((settle, fail) => {
-    resolve = settle;
-    reject = fail;
-  });
-  return { promise, resolve, reject };
-}
+useMongoDatabase("hooks-register-lifecycle");
+useSuiteStripe();
+const gate = useQueryGate();
 
-async function flushPromiseQueue(): Promise<void> {
-  await new Promise<void>((resolve) => setImmediate(resolve));
-}
-
-function getDatabaseInitializedListeners(): HookListener[] {
-  return hookDoubles.registerHook.mock.calls
-    .filter(([hook]) => hook === hookDoubles.databaseInitialized)
-    .map(([, listener]) => listener as HookListener);
-}
-
-/** Fires the hook the way DMS does: listeners in series, a failure stops it. */
-function getDatabaseInitializedListener(): HookListener {
-  const listeners = getDatabaseInitializedListeners();
-  if (listeners.length === 0)
-    throw new Error("database initialized hook not registered");
-  return async () => {
-    for (const listener of listeners) await listener();
-    return undefined;
-  };
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  hookDoubles.ensureLegalDocumentsSingleton.mockResolvedValue(undefined);
-  hookDoubles.resumePendingPlanMigrations.mockResolvedValue(undefined);
-  hookDoubles.recomputeAllTenantBillingStates.mockResolvedValue(undefined);
-  hookDoubles.ensureDefaultSubscription.mockResolvedValue(true);
-  hookDoubles.reconcileWorkspaceLifecycleDeliveries.mockResolvedValue(
-    undefined,
-  );
-  registerSaasHookListeners();
-});
+beforeAll(registerSaasHookListeners);
 
 describe("tenant provisioning hook", () => {
+  beforeEach(async () => {
+    await GetModel(PlanModel).table.delete().run();
+    await GetModel(PlanModel).insert(PLAN);
+  });
+
   async function provision(tenantId: string): Promise<void> {
-    const listeners = hookDoubles.registerHook.mock.calls
-      .filter(([hook]) => hook === "tenant-being-provisioned")
-      .map(
-        ([, listener]) => listener as (payload: unknown) => Promise<unknown>,
-      );
-    for (const listener of listeners) await listener({ tenantId });
+    await ExecuteHooks(Hook.TENANT_BEING_PROVISIONED, { tenantId, extras: {} });
   }
 
   it("gives the DMS default tenant the default plan at its creation", async () => {
-    await provision("default");
-    expect(hookDoubles.ensureDefaultSubscription).toHaveBeenCalledWith(
-      "default",
-    );
+    await provision(DEFAULT_TENANT_ID);
+
+    expect(
+      await GetModel(TenantSubscriptionModel, DEFAULT_TENANT_ID).getAll(),
+    ).toEqual([
+      expect.objectContaining({ _id: DEFAULT_TENANT_ID, planId: PLAN._id }),
+    ]);
   });
 
   it("leaves a workspace the signup flow provisions to that flow", async () => {
     await provision("acme");
-    expect(hookDoubles.ensureDefaultSubscription).not.toHaveBeenCalled();
+
+    expect(await GetModel(TenantSubscriptionModel, "acme").getAll()).toEqual(
+      [],
+    );
   });
 });
 
 describe("database initialized hook", () => {
   it("stays pending until migration recovery and billing recomputation finish", async () => {
-    const migrations = createDeferred();
-    const billing = createDeferred();
-    hookDoubles.resumePendingPlanMigrations.mockReturnValue(migrations.promise);
-    hookDoubles.recomputeAllTenantBillingStates.mockReturnValue(
-      billing.promise,
-    );
-    const listener = getDatabaseInitializedListener();
+    const migrations = gate.hold(planMigrationsTableName);
+    const billing = gate.hold(tenantsTableName);
 
     let isSettled = false;
-    const completion = listener().finally(() => {
+    const completion = ExecuteHooks(Hook.DATABASE_INITIALIZED).finally(() => {
       isSettled = true;
     });
 
     await vi.waitFor(() => {
-      expect(hookDoubles.resumePendingPlanMigrations).toHaveBeenCalledOnce();
-      expect(
-        hookDoubles.recomputeAllTenantBillingStates,
-      ).toHaveBeenCalledOnce();
-      expect(
-        hookDoubles.reconcileWorkspaceLifecycleDeliveries,
-      ).toHaveBeenCalledOnce();
+      expect(gate.reads(planMigrationsTableName)).toBe(1);
+      expect(gate.reads(tenantsTableName)).toBe(1);
+      expect(gate.reads(lifecycleDeliveriesTableName)).toBe(1);
     });
     expect(isSettled).toBe(false);
 
-    migrations.resolve();
+    migrations.release();
     await Promise.resolve();
     expect(isSettled).toBe(false);
 
-    billing.resolve();
+    billing.release();
     await completion;
     expect(isSettled).toBe(true);
   });
 
   it("waits for sibling work before reporting a single failure", async () => {
-    const migrations = createDeferred();
-    const billing = createDeferred();
+    const migrations = gate.hold(planMigrationsTableName);
+    const billing = gate.hold(tenantsTableName);
     const failure = new Error("migration recovery failed");
-    hookDoubles.resumePendingPlanMigrations.mockReturnValue(migrations.promise);
-    hookDoubles.recomputeAllTenantBillingStates.mockReturnValue(
-      billing.promise,
-    );
-    const listener = getDatabaseInitializedListener();
 
     let isSettled = false;
-    let reportedFailure: unknown;
-    const completion = listener().then(
-      () => {
-        isSettled = true;
-      },
-      (reason: unknown) => {
-        isSettled = true;
-        reportedFailure = reason;
-      },
-    );
+    const completion = ExecuteHooks(Hook.DATABASE_INITIALIZED);
+    const settle = () => {
+      isSettled = true;
+    };
+    void completion.then(settle, settle);
 
     await vi.waitFor(() => {
-      expect(hookDoubles.resumePendingPlanMigrations).toHaveBeenCalledOnce();
-      expect(
-        hookDoubles.recomputeAllTenantBillingStates,
-      ).toHaveBeenCalledOnce();
+      expect(gate.reads(planMigrationsTableName)).toBe(1);
+      expect(gate.reads(tenantsTableName)).toBe(1);
     });
-    migrations.reject(failure);
-    await flushPromiseQueue();
+    migrations.fail(failure);
+    await new Promise<void>((resolve) => setImmediate(resolve));
     expect(isSettled).toBe(false);
 
-    billing.resolve();
-    await completion;
-    expect(reportedFailure).toBe(failure);
+    billing.release();
+    await expect(completion).rejects.toBe(failure);
   });
 
   it("aggregates failures after both operations settle", async () => {
     const migrationFailure = new Error("migration recovery failed");
     const billingFailure = new Error("billing recomputation failed");
-    hookDoubles.resumePendingPlanMigrations.mockRejectedValue(migrationFailure);
-    hookDoubles.recomputeAllTenantBillingStates.mockRejectedValue(
-      billingFailure,
-    );
-    const listener = getDatabaseInitializedListener();
+    gate.hold(planMigrationsTableName).fail(migrationFailure);
+    gate.hold(tenantsTableName).fail(billingFailure);
 
-    const failure = await listener().catch((reason: unknown) => reason);
+    const initialization = ExecuteHooks(Hook.DATABASE_INITIALIZED);
 
-    expect(failure).toBeInstanceOf(AggregateError);
-    if (!(failure instanceof AggregateError)) return;
-    expect(failure.errors).toEqual([migrationFailure, billingFailure]);
+    await expect(initialization).rejects.toBeInstanceOf(AggregateError);
+    await expect(initialization).rejects.toMatchObject({
+      errors: [migrationFailure, billingFailure],
+    });
   });
 });
 
 describe("Stripe plan reconciliation at boot", () => {
   it("waits for the database initialized signal", async () => {
-    expect(hookDoubles.startPlanReconciliation).not.toHaveBeenCalled();
+    expect(gate.reads(plansTableName)).toBe(0);
 
-    await getDatabaseInitializedListener()();
+    await ExecuteHooks(Hook.DATABASE_INITIALIZED);
 
-    expect(hookDoubles.startPlanReconciliation).toHaveBeenCalledOnce();
+    expect(gate.reads(plansTableName)).toBe(1);
   });
 
   it("still starts when the rest of the database initialization fails", async () => {
-    hookDoubles.ensureLegalDocumentsSingleton.mockRejectedValue(
-      new Error("legal documents unavailable"),
-    );
+    gate
+      .hold(legalDocumentsTableName)
+      .fail(new Error("legal documents unavailable"));
 
-    await expect(getDatabaseInitializedListener()()).rejects.toThrow(
+    await expect(ExecuteHooks(Hook.DATABASE_INITIALIZED)).rejects.toThrow(
       "legal documents unavailable",
     );
-    expect(hookDoubles.startPlanReconciliation).toHaveBeenCalledOnce();
+    expect(gate.reads(plansTableName)).toBe(1);
   });
 });

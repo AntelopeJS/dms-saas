@@ -1,13 +1,4 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-
-const logging = vi.hoisted(() => ({
-  Error: vi.fn(),
-  Warn: vi.fn(),
-  Info: vi.fn(),
-}));
-
-vi.mock("@antelopejs/interface-core/logging", () => ({ Logging: logging }));
-
 import { fetchDefaultPaymentMethod } from "../src/billing-state/recovery";
 import {
   fetchPrimaryTaxId,
@@ -16,6 +7,9 @@ import {
   initStripeClient,
   isStripeConfigured,
 } from "../src/stripe";
+import { captureLogs } from "./helpers/logging";
+
+const logs = captureLogs();
 
 // The demo's keys: well-formed, but standing for no Stripe account.
 const PLACEHOLDER_KEYS = {
@@ -51,7 +45,7 @@ describe("Stripe reads without usable keys", () => {
     });
 
     for (const call of calls) expect(call).not.toHaveBeenCalled();
-    expect(logging.Warn).not.toHaveBeenCalled();
-    expect(logging.Error).not.toHaveBeenCalled();
+    expect(logs.at("WARN")).toEqual([]);
+    expect(logs.at("ERROR")).toEqual([]);
   });
 });

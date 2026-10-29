@@ -4,23 +4,11 @@ import { useUserDetail } from "../frontend-vue/app/build/users/useUserDetail";
 import { useWorkspaceOverview } from "../frontend-vue/app/build/workspace-detail/useWorkspaceOverview";
 import { useExportHistory } from "../frontend-vue/app/composables/useExportHistory";
 import { useOnDemandRead } from "../frontend-vue/app/composables/useOnDemandRead";
-
-// The composables' Vue, without reactivity: a computed reads its getter on
-// each access, so plain `{ value }` holders stand in for refs.
-vi.mock("../frontend-vue/node_modules/vue/index.mjs", () => ({
-  computed: (get: () => unknown) => ({
-    get value() {
-      return get();
-    },
-  }),
-  ref: <T>(value: T) => ({ value }),
-}));
+import { ref } from "./helpers/frontend-vue";
 
 interface Holder<T> {
   value: T;
 }
-
-const holder = <T>(value: T): Holder<T> => ({ value });
 
 /** A source as `useApiData` reads it: a getter, a holder or a plain value. */
 function read<T>(source: unknown): T {
@@ -59,10 +47,10 @@ function stubApiData(): ApiDataCall[] {
         options: (typeof second === "function" ? third : second) as
           | Record<string, unknown>
           | undefined,
-        data: holder(null),
-        status: holder("idle"),
-        error: holder(null),
-        pending: holder(false),
+        data: ref(null),
+        status: ref("idle"),
+        error: ref(null),
+        pending: ref(false),
         refresh: vi.fn(async () => undefined),
         execute: vi.fn(async () => undefined),
       };
@@ -79,7 +67,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("readers on useApiData", () => {
   it("reads the user a route names, and moves with the route", () => {
     const calls = stubApiData();
-    const params = holder<Record<string, string>>({ id: "u1" });
+    const params = ref<Record<string, string>>({ id: "u1" });
 
     const detail = useUserDetail(() => params.value);
 
@@ -112,7 +100,7 @@ describe("readers on useApiData", () => {
     const calls = stubApiData();
     vi.stubGlobal("useAuthFetch", () => ({ $authFetch: vi.fn() }));
     vi.stubGlobal("useDmsState", (_key: string, init: () => unknown) =>
-      holder(init()),
+      ref(init()),
     );
 
     const history = useExportHistory();
@@ -146,7 +134,7 @@ describe("readers on useApiData", () => {
       $authFetch: vi.fn(async () => undefined),
     }));
     vi.stubGlobal("useDmsState", (_key: string, init: () => unknown) =>
-      holder(init()),
+      ref(init()),
     );
     let finishRefresh: () => void = () => undefined;
     const refreshPageBlocks = vi.fn(
@@ -168,7 +156,7 @@ describe("readers on useApiData", () => {
     vi.stubGlobal("usePageLiveRefresh", () => undefined);
     vi.stubGlobal("useAuthFetch", () => ({ $authFetch: vi.fn() }));
     vi.stubGlobal("useDmsState", (_key: string, init: () => unknown) =>
-      holder(init()),
+      ref(init()),
     );
 
     const detail = useUserDetail(() => ({ id: "u1" }));

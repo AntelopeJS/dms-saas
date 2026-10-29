@@ -1,172 +1,39 @@
-import { createRequire } from "node:module";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { HTTPResult } from "@antelopejs/interface-api";
-import { ImplementInterface } from "@antelopejs/interface-core";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
 import {
   TenantModel,
   type UserInvite,
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
-import * as auth from "@antelopejs/interface-dms/auth";
-import * as saasMode from "@antelopejs/interface-dms/utils/saas-mode";
-import * as clientBaseUrl from "@antelopejs/interface-dms/client-base-url";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
-import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
-import { setRuntimeConfig } from "../src/config";
-import { PlanModel, TenantSubscriptionModel } from "../src/db";
-import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
-import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { describe, expect, it, vi } from "vitest";
 import { loadDirectoryOwner } from "../src/billing-state/directory";
+import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
+import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
 import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
-import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
 import { SaasWorkspaceInvitationsController } from "../src/routes/platformOwner/workspace-invitations";
+import {
+  CONSOLE_URL,
+  WORKSPACE_NAME,
+  createInvitedWorkspace,
+  createWorkspaceFor,
+  operator,
+  useBackOffice,
+} from "./helpers/operator-workspaces";
+import { useMongoDatabase } from "./helpers/mongo";
 
-// The DMS permission registry is not wired here: the role is created against
-// it in production, and its own test covers what it holds.
-vi.mock("../src/workspaces/default-member-role", () => ({
-  createDefaultMemberRole: async () => "member-role",
-}));
-const notified = vi.hoisted(() => ({
-  notifyUser: vi.fn(async () => undefined),
-}));
-vi.mock("../src/notifications", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/notifications")>()),
-  notifyUser: notified.notifyUser,
-}));
-vi.mock("../src/billing-state", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/billing-state")>()),
-  recomputeTenantBillingState: async () => undefined,
-}));
-vi.mock("../src/data-api", async () => ({
-  ...(await import("../src/data-api/platformOwner/plans")),
-  ...(await import("../src/data-api/platformOwner/workspaces")),
-}));
+useMongoDatabase("owner-invitations");
+const { sendInviteEmail, core } = useBackOffice();
 
-const require = createRequire(import.meta.url);
-const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
-const CONSOLE_URL = "https://console.example.test";
 const DAY_MS = 86_400_000;
-const sendInviteEmail =
-  vi.fn<
-    (
-      email: string,
-      token: string,
-      inviteeName?: string,
-      context?: auth.AdminInviteEmailContext,
-    ) => Promise<void>
-  >();
-let mongodb: MongoMemoryReplSet;
-
-beforeAll(async () => {
-  // DMS answers isSaasMode() from the registrations it holds, so wire its
-  // implementation in and declare SaaS mode the way construct() does.
-  ImplementInterface(
-    saasMode,
-    require(path.join(dmsRoot, "dist/implementations/dms/saas-mode.js")),
-  );
-  saasMode.RegisterSaasMode();
-  const { applyConfig } = require(path.join(dmsRoot, "dist/config.js"));
-  applyConfig({ auth: { jwtSecret: "owner-invitations-test-only" } });
-  const implementation = require(
-    path.join(dmsRoot, "dist/implementations/dms-auth/index.js"),
-  );
-  ImplementInterface(auth, {
-    ...implementation,
-    sendAdminInviteEmail: sendInviteEmail,
-  });
-  ImplementInterface(clientBaseUrl, { GetClientBaseUrl: () => CONSOLE_URL });
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongodb.getUri(), database: "owner-invitations" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-}, 60_000);
-
-afterAll(async () => {
-  await destroy();
-  await mongodb?.stop();
-});
-
-beforeEach(() => {
-  notified.notifyUser.mockClear();
-  sendInviteEmail.mockReset();
-  sendInviteEmail.mockResolvedValue(undefined);
-  setRuntimeConfig({
-    stripe: { secretKey: "unused", webhookSecret: "", publishableKey: "" },
-  });
-});
-
-const WORKSPACE_NAME = "Invited workspace";
-
-const operator = {
-  _id: randomUUID(),
-  email: "operator@example.test",
-  name: "Olivia Operator",
-  owner: true,
-  language: "en",
-} as User;
-
-function adminController(): SaasWorkspacesAdminController {
-  const controller = new SaasWorkspacesAdminController();
-  controller.planModel = GetModel(PlanModel);
-  controller.tenantModel = GetModel(TenantModel);
-  controller.userModel = GetModel(UserModel);
-  return controller;
-}
 
 function invitationsController(): SaasWorkspaceInvitationsController {
   const controller = new SaasWorkspaceInvitationsController();
   controller.tenantModel = GetModel(TenantModel);
   return controller;
-}
-
-async function insertPlan(): Promise<string> {
-  const planId = randomUUID();
-  await GetModel(PlanModel).insert({
-    _id: planId,
-    name: "Assigned",
-    price: 0,
-    currency: "eur",
-    interval: "month",
-    billingMode: "flat",
-    isActive: true,
-    isDeleted: false,
-  });
-  return planId;
-}
-
-async function createWorkspaceFor(ownerEmail: string, by: User = operator) {
-  return adminController().createWorkspace(by, {
-    name: WORKSPACE_NAME,
-    ownerEmail,
-    planId: await insertPlan(),
-    access: "complimentary",
-  });
-}
-
-async function createInvitedWorkspace() {
-  const email = `${randomUUID()}@example.test`;
-  const created = await createWorkspaceFor(email);
-  if (created.owner.kind !== "invited") throw new Error("Expected invitation");
-  return { email, tenantId: created.tenantId, owner: created.owner };
 }
 
 async function storedInvite(tenantId: string): Promise<UserInvite> {
@@ -227,7 +94,7 @@ describe("back-office workspace creation for a new owner", () => {
         }),
       ]),
     );
-    expect(notified.notifyUser).not.toHaveBeenCalled();
+    expect(core.sendToUsers).not.toHaveBeenCalled();
   });
 
   it("answers before the invitation e-mail leaves", async () => {
@@ -241,7 +108,7 @@ describe("back-office workspace creation for a new owner", () => {
 
   it("writes the invitation in the stored invitation language", async () => {
     const email = `${randomUUID()}@example.test`;
-    const frenchOperator = { ...operator, language: "fr" } as User;
+    const frenchOperator = fromPartial<User>({ ...operator, language: "fr" });
 
     const created = await createWorkspaceFor(email, frenchOperator);
 
@@ -258,7 +125,7 @@ describe("back-office workspace creation for a new owner", () => {
 
   it("leaves the inviter unnamed when the operator has no name", async () => {
     const email = `${randomUUID()}@example.test`;
-    const namelessOperator = { ...operator, name: " " } as User;
+    const namelessOperator = fromPartial<User>({ ...operator, name: " " });
 
     await createWorkspaceFor(email, namelessOperator);
 
@@ -282,15 +149,21 @@ describe("back-office workspace creation for a new owner", () => {
     const created = await createWorkspaceFor(email);
 
     expect(created.invitationEmail).toBe("sending");
-    expect(await storedInvite(created.tenantId)).toMatchObject({ email });
+    const invite = await storedInvite(created.tenantId);
+    expect(invite).toMatchObject({ email });
     await vi.waitFor(() =>
-      expect(notified.notifyUser).toHaveBeenCalledWith(
-        operator._id,
-        expect.objectContaining({ id: "saas.invitation_email_failed" }),
+      expect(core.sendToUsers).toHaveBeenCalledWith(
+        [operator._id],
         expect.objectContaining({
+          subject: expect.objectContaining({
+            id: "saas.invitation_email_failed",
+          }),
           params: { workspace: WORKSPACE_NAME, email },
           linkTo: `/modules/saas/customers/workspaces/${created.tenantId}`,
         }),
+        undefined,
+        `invitation-email-failed:${invite._id}`,
+        expect.anything(),
       ),
     );
     expect(await journalFor(created.tenantId)).toEqual([
@@ -513,205 +386,5 @@ describe("resend invitation from the back office", () => {
       action: "invitation.resend",
       details: { emailDelivery: "failed" },
     });
-  });
-});
-
-async function insertPaidPlan(): Promise<string> {
-  const planId = randomUUID();
-  await GetModel(PlanModel).insert({
-    _id: planId,
-    name: "Pro",
-    price: 29,
-    currency: "eur",
-    interval: "month",
-    billingMode: "flat",
-    audience: "any",
-    paymentProviderRefs: { stripePriceId: "price_pro" },
-    isActive: true,
-    isDeleted: false,
-  });
-  return planId;
-}
-
-async function subscriptionOf(tenantId: string) {
-  return GetModel(TenantSubscriptionModel, tenantId).findOne();
-}
-
-describe("access model of a workspace created by an operator", () => {
-  it("leaves the workspace waiting for its owner's first payment on the chosen plan", async () => {
-    const planId = await insertPaidPlan();
-
-    const created = await adminController().createWorkspace(operator, {
-      name: WORKSPACE_NAME,
-      ownerEmail: `${randomUUID()}@example.test`,
-      planId,
-      access: "owner_pays",
-    });
-
-    expect(created.access).toBe("owner_pays");
-    expect(await subscriptionOf(created.tenantId)).toMatchObject({
-      planId,
-      status: "pending_payment",
-      isComplimentary: false,
-      freeUntil: null,
-      stripeSubscriptionId: null,
-    });
-  });
-
-  it("refuses to let an owner pay for a plan Stripe does not bill", async () => {
-    const failure = await adminController()
-      .createWorkspace(operator, {
-        name: WORKSPACE_NAME,
-        ownerEmail: `${randomUUID()}@example.test`,
-        planId: await insertPlan(),
-        access: "owner_pays",
-      })
-      .catch((error: unknown) => error);
-
-    expect(failure).toMatchObject({
-      status: 400,
-      body: "saas.errors.workspace_create.owner_pays_needs_paid_plan",
-    });
-  });
-
-  it("grants complimentary access until the chosen date", async () => {
-    const freeUntil = new Date(Date.now() + 30 * DAY_MS);
-
-    const created = await adminController().createWorkspace(operator, {
-      name: WORKSPACE_NAME,
-      ownerEmail: `${randomUUID()}@example.test`,
-      planId: await insertPaidPlan(),
-      access: "complimentary",
-      freeUntil: freeUntil.toISOString(),
-    });
-
-    expect(await subscriptionOf(created.tenantId)).toMatchObject({
-      status: "active",
-      isComplimentary: true,
-      freeUntil,
-    });
-  });
-
-  it("requires the operator to choose the access model", async () => {
-    const failure = await adminController()
-      .createWorkspace(operator, {
-        name: WORKSPACE_NAME,
-        ownerEmail: `${randomUUID()}@example.test`,
-        planId: await insertPlan(),
-      })
-      .catch((error: unknown) => error);
-
-    expect(failure).toMatchObject({
-      status: 400,
-      body: "saas.errors.workspace_create.access",
-    });
-  });
-});
-
-describe("owner e-mail lookup", () => {
-  it("names an existing account and the workspaces it belongs to", async () => {
-    const email = `${randomUUID()}@example.test`;
-    await GetModel(UserModel).insert({
-      _id: randomUUID(),
-      email,
-      name: "Nina Sharp",
-      language: "en",
-    });
-
-    await expect(
-      adminController().lookUpOwnerEmail(operator, email.toUpperCase()),
-    ).resolves.toEqual({ kind: "existing", name: "Nina Sharp", workspaces: 0 });
-  });
-
-  it("announces an invitation for a new e-mail", async () => {
-    await expect(
-      adminController().lookUpOwnerEmail(
-        operator,
-        `${randomUUID()}@example.test`,
-      ),
-    ).resolves.toEqual({ kind: "new", invitationDays: 7 });
-  });
-});
-
-describe("complimentary access over a paid subscription", () => {
-  it("is refused until the operator acknowledges the cancellation", async () => {
-    const { tenantId } = await createInvitedWorkspace();
-    const subscription = await subscriptionOf(tenantId);
-    await GetModel(TenantSubscriptionModel, tenantId).update(
-      subscription!._id,
-      { stripeSubscriptionId: "sub_paid", isComplimentary: false },
-    );
-
-    const failure = await adminController()
-      .grantFreeAccess(operator, tenantId, { planId: await insertPaidPlan() })
-      .catch((error: unknown) => error);
-
-    expect(failure).toMatchObject({
-      status: 400,
-      body: "saas.errors.workspace.cancellation_not_acknowledged",
-    });
-  });
-});
-
-describe("complimentary access to a workspace without a customer type", () => {
-  async function insertBusinessPlan(): Promise<string> {
-    const planId = randomUUID();
-    await GetModel(PlanModel).insert({
-      _id: planId,
-      name: "Team",
-      price: 49,
-      currency: "eur",
-      interval: "month",
-      billingMode: "flat",
-      audience: "business",
-      isActive: true,
-      isDeleted: false,
-    });
-    return planId;
-  }
-
-  async function currentPlanIdOf(tenantId: string): Promise<string> {
-    const subscription = await subscriptionOf(tenantId);
-    if (!subscription) throw new Error("Expected a subscription");
-    return subscription.planId;
-  }
-
-  it("offers every plan, the one it is on included", async () => {
-    const { tenantId } = await createInvitedWorkspace();
-    const businessPlanId = await insertBusinessPlan();
-
-    const impact = await adminController().getComplimentaryImpact(
-      operator,
-      tenantId,
-    );
-
-    const offeredIds = impact.plans.map((plan) => plan.id);
-    expect(offeredIds).toContain(impact.currentPlanId);
-    expect(offeredIds).toContain(businessPlanId);
-  });
-
-  it("still names the plan it is on once that plan is no longer sold", async () => {
-    const { tenantId } = await createInvitedWorkspace();
-    const planId = await currentPlanIdOf(tenantId);
-    await GetModel(PlanModel).update(planId, { isActive: false });
-
-    const impact = await adminController().getComplimentaryImpact(
-      operator,
-      tenantId,
-    );
-
-    expect(impact.plans.map((plan) => plan.id)).toContain(planId);
-    await expect(
-      adminController().grantFreeAccess(operator, tenantId, { planId }),
-    ).resolves.toMatchObject({ planId });
-  });
-
-  it("grants a plan sold to a single audience", async () => {
-    const { tenantId } = await createInvitedWorkspace();
-    const planId = await insertBusinessPlan();
-
-    await expect(
-      adminController().grantFreeAccess(operator, tenantId, { planId }),
-    ).resolves.toMatchObject({ planId });
   });
 });

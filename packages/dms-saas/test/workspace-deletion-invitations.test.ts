@@ -1,88 +1,88 @@
-import { describe, expect, it, vi } from "vitest";
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { UserInviteModel } from "@antelopejs/interface-dms/db";
+import { Hook, RegisterHook } from "@antelopejs/interface-dms/hooks";
+import { describe, expect, it } from "vitest";
+import { TenantSubscriptionModel } from "../src/db";
+import { requestWorkspaceDeletion } from "../src/workspaces/deletion";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const store = vi.hoisted(() => ({
-  deletedInvites: [] as string[],
-  completed: [] as string[],
-  patches: [] as Record<string, unknown>[],
-}));
+useMongoDatabase("workspace-deletion-invitations");
 
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  const fakes: Record<string, () => unknown> = {
-    TenantSubscriptionModel: () => ({
-      findOne: async () => ({
-        _id: "acme",
-        status: "active",
-        stripeSubscriptionId: null,
-      }),
-      beginTransition: async () => undefined,
-      completeTransition: async (
-        id: string,
-        _operationId: string,
-        patch: Record<string, unknown>,
-      ) => {
-        store.completed.push(id);
-        store.patches.push(patch);
-      },
-    }),
-    UserInviteModel: () => ({
-      getAll: async () => [{ _id: "invite-1" }, { _id: "invite-2" }],
-    }),
-    BillingSettingsModel: () => ({ get: async () => undefined }),
-  };
-  return {
-    ...actual,
-    GetModel: (model: { name: string }) => fakes[model.name]?.(),
-  };
+const INVITATION_LIFETIME_MS = 86_400_000;
+
+/** The invitations the DMS resolution deleted, with its reason, by workspace. */
+const resolvedInvitations = new Map<
+  string,
+  { inviteId: string; reason: string }[]
+>();
+
+RegisterHook(Hook.INVITE_DELETED, async ({ tenantId, inviteId, reason }) => {
+  const resolved = resolvedInvitations.get(tenantId) ?? [];
+  resolved.push({ inviteId, reason });
+  resolvedInvitations.set(tenantId, resolved);
+  return undefined;
 });
 
-vi.mock("@antelopejs/interface-dms/invite-resolution", () => ({
-  decideInvite: async (input: { invite: { _id: string }; reason: string }) => ({
-    inviteId: input.invite._id,
-    reason: input.reason,
-  }),
-  completeInviteResolution: async (resolution: { inviteId: string }) => {
-    store.deletedInvites.push(resolution.inviteId);
-  },
-}));
-
-vi.mock("../src/billing-state", () => ({
-  recomputeTenantBillingState: async () => undefined,
-}));
-
-vi.mock("../src/notifications", () => ({
-  notifyTenantOwners: async () => undefined,
-  subscriptionCancelledSubject: "cancelled",
-}));
-
-vi.mock("../src/stripe", () => ({ getStripeClient: () => ({}) }));
-
-const { requestWorkspaceDeletion } = await import("../src/workspaces/deletion");
+/** An active, card-less workspace with two pending invitations. */
+async function workspaceWithInvitations(): Promise<string> {
+  const tenantId = randomUUID();
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
+    _id: tenantId,
+    status: "active",
+    stripeSubscriptionId: null,
+  });
+  const now = Date.now();
+  await GetModel(UserInviteModel, tenantId).insert(
+    ["invite-1", "invite-2"].map((_id) => ({
+      _id,
+      createdAt: new Date(now),
+      email: `${_id}@example.test`,
+      firstname: null,
+      lastname: null,
+      roles_ids: [],
+      language: "en",
+      token: randomUUID(),
+      asTenantOwner: false,
+      expiresAt: new Date(now + INVITATION_LIFETIME_MS),
+      extensions: null,
+    })),
+  );
+  return tenantId;
+}
 
 describe("workspace deletion", () => {
   it("cancels the pending invitations through the DMS, as the confirmation announces", async () => {
-    await expect(requestWorkspaceDeletion("acme", "owner")).resolves.toEqual({
+    const tenantId = await workspaceWithInvitations();
+
+    await expect(requestWorkspaceDeletion(tenantId, "owner")).resolves.toEqual({
       status: "cancelled",
       retentionDays: 30,
     });
 
-    expect(store.completed).toEqual(["acme"]);
-    expect(store.deletedInvites).toEqual(["invite-1", "invite-2"]);
+    await expect(
+      GetModel(TenantSubscriptionModel, tenantId).findOne(),
+    ).resolves.toMatchObject({ _id: tenantId, status: "cancelled" });
+    await expect(GetModel(UserInviteModel, tenantId).getAll()).resolves.toEqual(
+      [],
+    );
+    expect(resolvedInvitations.get(tenantId)).toEqual([
+      { inviteId: "invite-1", reason: "cancelled" },
+      { inviteId: "invite-2", reason: "cancelled" },
+    ]);
   });
 
   it("records which owner deleted the workspace, and when", async () => {
-    store.patches = [];
-    await requestWorkspaceDeletion("acme", "owner");
+    const tenantId = await workspaceWithInvitations();
 
-    expect(store.patches).toEqual([
-      expect.objectContaining({
-        status: "cancelled",
-        deletionRequestedBy: "owner",
-        deletionRequestedAt: expect.any(Date),
-      }),
-    ]);
+    await requestWorkspaceDeletion(tenantId, "owner");
+
+    await expect(
+      GetModel(TenantSubscriptionModel, tenantId).findOne(),
+    ).resolves.toMatchObject({
+      status: "cancelled",
+      deletionRequestedBy: "owner",
+      deletionRequestedAt: expect.any(Date),
+    });
   });
 });

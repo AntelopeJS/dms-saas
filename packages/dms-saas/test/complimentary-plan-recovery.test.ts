@@ -1,35 +1,33 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  TenantSubscription,
-  TenantSubscriptionModel,
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { RegisterTenantAccessGate } from "@antelopejs/interface-dms/tenant-access";
+import { TenantModel } from "@antelopejs/interface-dms/db";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  registerSubscriptionAccessGate,
+  WORKSPACE_ACCESS_BLOCKED_CODE,
+} from "../src/auth/subscription-access-gate";
+import {
+  PlanModel,
   TenantBillingInfoModel,
+  type TenantSubscription,
+  TenantSubscriptionModel,
 } from "../src/db";
-import type { User } from "@antelopejs/interface-dms/auth/db";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
+import { useDmsAuth } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { insertPlan } from "./helpers/plans";
+import {
+  allowCheckoutRedirects,
+  createOwnedWorkspace,
+} from "./helpers/workspaces";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const harness = vi.hoisted(() => ({
-  checkout: vi.fn(),
-  assertAccess: vi.fn(),
-  price: 49,
-}));
-vi.mock("@antelopejs/interface-dms/tenant-access", () => ({
-  AssertTenantAccess: (...args: unknown[]) => harness.assertAccess(...args),
-}));
-vi.mock("../src/routes/tenant/tenant-plan-checkout", () => ({
-  startPaidCheckout: (...args: unknown[]) => harness.checkout(...args),
-}));
-vi.mock("../src/routes/tenant/tenant-plan-ops", async (original) => ({
-  ...(await original()),
-  loadAndValidateTargetPlan: async () => ({
-    _id: "same-plan",
-    price: harness.price,
-    billingMode: "flat",
-    paymentProviderRefs: harness.price > 0 ? { stripePriceId: "price" } : null,
-  }),
-  assertSeatLimit: async () => undefined,
-}));
+useMongoDatabase("complimentary-plan-recovery");
+useDmsAuth();
+const stripe = useSuiteStripe();
 
-const OWNER = { _id: "owner", owner: false } as User;
+const CHECKOUT_URL = "https://checkout.example.test";
 const NOW = new Date();
 const GIFT = {
   planId: "same-plan",
@@ -38,48 +36,76 @@ const GIFT = {
   freeUntil: new Date(NOW.getTime() - 60_000),
   stripeCustomerId: "customer",
   stripeSubscriptionId: null,
-} as TenantSubscription;
+} satisfies Partial<TenantSubscription>;
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  harness.price = 49;
-  harness.assertAccess.mockRejectedValue(
-    new Error("Paid suspension remains blocked"),
-  );
-  harness.checkout.mockResolvedValue({
-    checkoutUrl: "https://checkout.example.test",
+beforeAll(async () => {
+  allowCheckoutRedirects();
+  registerSubscriptionAccessGate();
+  RegisterTenantAccessGate({
+    id: "suite.every-workspace-blocked",
+    order: 200,
+    gate: async () => ({ allowed: false, code: WORKSPACE_ACCESS_BLOCKED_CODE }),
   });
+  await insertPlan({
+    _id: "same-plan",
+    price: 49,
+    paymentProviderRefs: { stripePriceId: "price" },
+  });
+  await insertPlan({ _id: "free-plan" });
 });
 
-function change(subscription: TenantSubscription) {
+let createSession: ReturnType<typeof stubCheckout>;
+
+function stubCheckout() {
+  vi.spyOn(stripe.write.customers, "update").mockResolvedValue(fromPartial({}));
+  return vi
+    .spyOn(stripe.write.checkout.sessions, "create")
+    .mockResolvedValue(fromPartial({ id: "cs_1", url: CHECKOUT_URL }));
+}
+
+beforeEach(() => {
+  createSession = stubCheckout();
+});
+
+async function change(
+  subscription: Partial<TenantSubscription>,
+  planId = "same-plan",
+) {
+  const { tenantId, owner, request } = await createOwnedWorkspace();
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
+    _id: tenantId,
+    paidUsagePeriods: [],
+    ...subscription,
+  });
+  await GetModel(TenantBillingInfoModel, tenantId).insert({
+    _id: tenantId,
+    customerType: "individual",
+    updatedAt: new Date(),
+  });
   const controller = new SaasTenantPlanController();
-  controller.tenantModel = { get: async () => ({ _id: "tenant" }) } as never;
-  const subscriptions = {
-    findOne: async () => subscription,
-  } as TenantSubscriptionModel;
-  const billingInfo = {
-    findOne: async () => undefined,
-  } as TenantBillingInfoModel;
+  controller.tenantModel = GetModel(TenantModel);
+  controller.planModel = GetModel(PlanModel);
   return controller.changePlan(
-    OWNER,
-    { planId: "same-plan" },
-    {},
-    subscriptions,
-    billingInfo,
+    owner,
+    {
+      planId,
+      successUrl: "https://example.test/success",
+      cancelUrl: "https://example.test/cancel",
+    },
+    request,
+    GetModel(TenantSubscriptionModel, tenantId),
+    GetModel(TenantBillingInfoModel, tenantId),
   );
 }
 
 describe("complimentary plan recovery controller", () => {
-  it.each(["active", "past_due", "suspended"])(
+  it.each(["active", "past_due", "suspended"] as const)(
     "starts checkout for the same expired plan in %s even with access blocked",
     async (status) => {
-      await expect(
-        change({ ...GIFT, status } as TenantSubscription),
-      ).resolves.toMatchObject({
-        checkoutUrl: "https://checkout.example.test",
+      await expect(change({ ...GIFT, status })).resolves.toMatchObject({
+        checkoutUrl: CHECKOUT_URL,
       });
-      expect(harness.checkout).toHaveBeenCalledOnce();
-      expect(harness.assertAccess).not.toHaveBeenCalled();
+      expect(createSession).toHaveBeenCalledOnce();
     },
   );
 
@@ -90,22 +116,24 @@ describe("complimentary plan recovery controller", () => {
       status: 409,
       body: "saas.errors.plan.complimentary_locked",
     });
-    expect(harness.checkout).not.toHaveBeenCalled();
+    expect(createSession).not.toHaveBeenCalled();
   });
 
   it("cannot use complimentary recovery to escape a real unpaid paid subscription", async () => {
     await expect(
       change({ ...GIFT, isComplimentary: false, stripeSubscriptionId: "paid" }),
-    ).rejects.toThrow("Paid suspension remains blocked");
-    expect(harness.checkout).not.toHaveBeenCalled();
+    ).rejects.toMatchObject({
+      status: 403,
+      body: WORKSPACE_ACCESS_BLOCKED_CODE,
+    });
+    expect(createSession).not.toHaveBeenCalled();
   });
 
   it("does not permit free-plan selection as a way around suspension", async () => {
-    harness.price = 0;
-    await expect(change(GIFT)).rejects.toMatchObject({
+    await expect(change(GIFT, "free-plan")).rejects.toMatchObject({
       status: 409,
       body: "saas.errors.plan.paid_recovery_required",
     });
-    expect(harness.checkout).not.toHaveBeenCalled();
+    expect(createSession).not.toHaveBeenCalled();
   });
 });

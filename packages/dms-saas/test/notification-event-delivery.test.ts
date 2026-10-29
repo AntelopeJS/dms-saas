@@ -1,56 +1,41 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const dependencies = vi.hoisted(() => ({
-  members: vi.fn(),
-  owners: vi.fn(),
-  deliver: vi.fn(),
-  legacy: vi.fn(),
-  link: vi.fn(),
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", () => ({
-  GetModel: () => ({
-    listAll: dependencies.members,
-    listOwners: dependencies.owners,
-  }),
-}));
-
-vi.mock("@antelopejs/interface-dms/notifications", async () => {
-  class Builder {
-    icon(): this {
-      return this;
-    }
-    title(): this {
-      return this;
-    }
-    description(): this {
-      return this;
-    }
-    subject(): this {
-      return this;
-    }
-    linkTo(path: string): this {
-      dependencies.link(path);
-      return this;
-    }
-    build() {
-      return {
-        toUsersIdempotently: dependencies.deliver,
-        toUser: dependencies.legacy,
-      };
-    }
-  }
-  return {
-    ...(await vi.importActual("@antelopejs/interface-dms/notifications")),
-    Notification: () => new Builder(),
-  };
-});
-
+import { randomUUID } from "node:crypto";
+import { ImplementInterface } from "@antelopejs/interface-core";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { TenantMemberModel } from "@antelopejs/interface-dms/db";
+import * as notifications from "@antelopejs/interface-dms/notifications";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   notifyTenantMembers,
   notifyTenantOwners,
 } from "../src/notifications/recipients";
 import { freeWorkspaceExpiredSubject } from "../src/notifications/subjects";
+import { addTenantMember, createUser } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+
+useMongoDatabase("notification-events");
+
+const core = {
+  sendToUsers: vi.fn<typeof notifications.internal.SendToUsers>(),
+  sendToUser: vi.fn<typeof notifications.internal.SendToUser>(),
+};
+
+ImplementInterface(notifications, {
+  internal: {
+    SupportsIdempotency: async () => true,
+    RegisterNotificationCategory: {
+      register: () => undefined,
+      unregister: () => undefined,
+    },
+    RegisterNotificationSubject: {
+      register: () => undefined,
+      unregister: () => undefined,
+    },
+    SendToUser: core.sendToUser,
+    SendToUsers: core.sendToUsers,
+    SendToRoles: vi.fn(),
+    SendToAll: vi.fn(),
+  },
+});
 
 const payload = {
   eventId: "expiry:subscription-a:2026-09-10",
@@ -60,61 +45,74 @@ const payload = {
   linkTo: "/billing",
 };
 
+/** The recipients, link and event key of each send core received, in order. */
+function keyedSends() {
+  return core.sendToUsers.mock.calls.map(
+    ([userIds, data, , idempotencyKey]) => ({
+      userIds,
+      linkTo: data.linkTo,
+      idempotencyKey,
+    }),
+  );
+}
+
+function sendTo(userIds: string[]) {
+  return { userIds, linkTo: payload.linkTo, idempotencyKey: payload.eventId };
+}
+
+/** A workspace with two members, neither of them its owner. */
+async function createWorkspace() {
+  const tenantId = randomUUID();
+  const members = [await createUser(), await createUser()];
+  for (const member of members) await addTenantMember(tenantId, member);
+  return { tenantId, memberIds: members.map((member) => member._id) };
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
-  dependencies.members.mockResolvedValue([
-    { userId: "member-a" },
-    { userId: "member-b" },
-  ]);
-  dependencies.owners.mockResolvedValue([{ userId: "owner-c" }]);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("durable notification event forwarding", () => {
   it("forwards overlapping deliveries with the same event identity to core", async () => {
+    const { tenantId, memberIds } = await createWorkspace();
+
     await Promise.all([
-      notifyTenantMembers("tenant-a", freeWorkspaceExpiredSubject, payload),
-      notifyTenantMembers("tenant-a", freeWorkspaceExpiredSubject, payload),
+      notifyTenantMembers(tenantId, freeWorkspaceExpiredSubject, payload),
+      notifyTenantMembers(tenantId, freeWorkspaceExpiredSubject, payload),
     ]);
-    expect(dependencies.deliver).toHaveBeenCalledTimes(2);
-    expect(dependencies.deliver).toHaveBeenNthCalledWith(
-      1,
-      ["member-a", "member-b"],
-      payload.eventId,
-    );
-    expect(dependencies.deliver).toHaveBeenNthCalledWith(
-      2,
-      ["member-a", "member-b"],
-      payload.eventId,
-    );
-    expect(dependencies.legacy).not.toHaveBeenCalled();
-    expect(dependencies.link).toHaveBeenCalledWith("/billing");
+    expect(keyedSends()).toEqual([sendTo(memberIds), sendTo(memberIds)]);
+    expect(core.sendToUser).not.toHaveBeenCalled();
   });
 
   it("propagates partial delivery failure and retries the full recipient set", async () => {
+    const { tenantId, memberIds } = await createWorkspace();
     const error = new Error("second recipient unavailable");
-    dependencies.deliver.mockRejectedValueOnce(error);
+    core.sendToUsers.mockRejectedValueOnce(error);
     await expect(
-      notifyTenantMembers("tenant-a", freeWorkspaceExpiredSubject, payload),
+      notifyTenantMembers(tenantId, freeWorkspaceExpiredSubject, payload),
     ).rejects.toBe(error);
-    await notifyTenantMembers("tenant-a", freeWorkspaceExpiredSubject, payload);
-    expect(dependencies.deliver).toHaveBeenNthCalledWith(
-      2,
-      ["member-a", "member-b"],
-      payload.eventId,
-    );
+    await notifyTenantMembers(tenantId, freeWorkspaceExpiredSubject, payload);
+    expect(keyedSends()).toEqual([sendTo(memberIds), sendTo(memberIds)]);
   });
 
   it("propagates recipient resolution failure without consuming the event", async () => {
+    const { tenantId } = await createWorkspace();
+    const owner = await createUser();
+    await addTenantMember(tenantId, owner, true);
     const error = new Error("owners unavailable");
-    dependencies.owners.mockRejectedValueOnce(error);
+    vi.spyOn(
+      GetModel(TenantMemberModel, tenantId),
+      "listOwners",
+    ).mockRejectedValueOnce(error);
     await expect(
-      notifyTenantOwners("tenant-a", freeWorkspaceExpiredSubject, payload),
+      notifyTenantOwners(tenantId, freeWorkspaceExpiredSubject, payload),
     ).rejects.toBe(error);
-    expect(dependencies.deliver).not.toHaveBeenCalled();
-    await notifyTenantOwners("tenant-a", freeWorkspaceExpiredSubject, payload);
-    expect(dependencies.deliver).toHaveBeenCalledWith(
-      ["owner-c"],
-      payload.eventId,
-    );
+    expect(core.sendToUsers).not.toHaveBeenCalled();
+    await notifyTenantOwners(tenantId, freeWorkspaceExpiredSubject, payload);
+    expect(keyedSends()).toEqual([sendTo([owner._id])]);
   });
 });

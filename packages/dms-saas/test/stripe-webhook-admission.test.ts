@@ -1,55 +1,50 @@
-import { randomUUID } from "node:crypto";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import type Stripe from "stripe";
-import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { StripeWebhookEventModel } from "@antelopejs/interface-dms-saas/db/models/stripeWebhookEvents.model";
 import { dispatchStripeWebhookEvent } from "../src/stripe/webhook-dispatch";
+import {
+  type CreditedWorkspace,
+  creditedWorkspace,
+} from "./helpers/credit-notes";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const handlers = vi.hoisted(() => ({ created: vi.fn() }));
-vi.mock("../src/stripe/webhook-credit-notes", () => ({
-  handleCreditNoteCreated: handlers.created,
-  handleCreditNoteVoided: vi.fn(),
-}));
+useMongoDatabase("stripe-webhook-admission");
+const stripe = useSuiteStripe();
 
-const SETUP_TIMEOUT_MS = 60_000;
 const BEYOND_OLD_CLAIM_TIMEOUT_MS = 16 * 60 * 1000;
-let mongodb: MongoMemoryReplSet;
 
-beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongodb.getUri(), database: "webhook-admission" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-}, SETUP_TIMEOUT_MS);
+let workspace: CreditedWorkspace;
+
+/** The `credit_note.created` handler's read of the credit note from Stripe. */
+function stubCreditNoteRead() {
+  return vi
+    .spyOn(stripe.write.creditNotes, "retrieve")
+    .mockResolvedValue(fromPartial(workspace.creditNote));
+}
+
+beforeEach(async () => {
+  workspace = await creditedWorkspace();
+});
 
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
-  handlers.created.mockReset();
-});
-afterAll(async () => {
-  await destroy();
-  await mongodb?.stop();
 });
 
-function event(): Stripe.Event {
-  return { id: randomUUID(), type: "credit_note.created" } as Stripe.Event;
+function event() {
+  return workspace.event;
 }
 
 it("does not take over a paused handler beyond the old timeout", async () => {
   const started = Promise.withResolvers<void>();
   const finish = Promise.withResolvers<void>();
-  handlers.created.mockImplementationOnce(async () => {
+  const retrieve = stubCreditNoteRead();
+  retrieve.mockImplementationOnce(async () => {
     started.resolve();
     await finish.promise;
+    return fromPartial(workspace.creditNote);
   });
   const input = event();
   const first = dispatchStripeWebhookEvent(input);
@@ -60,13 +55,13 @@ it("does not take over a paused handler beyond the old timeout", async () => {
     await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow(
       "reconciliation",
     );
-    expect(handlers.created).toHaveBeenCalledOnce();
+    expect(retrieve).toHaveBeenCalledOnce();
   } finally {
     finish.resolve();
     await first;
   }
   await dispatchStripeWebhookEvent(input);
-  expect(handlers.created).toHaveBeenCalledOnce();
+  expect(retrieve).toHaveBeenCalledOnce();
 });
 
 it("rejects stale completion even after the same attempt has already completed", async () => {
@@ -94,13 +89,14 @@ it("preserves an admitted insert whose acknowledgement was lost", async () => {
     throw new Error("insert acknowledgement lost");
   });
   const input = event();
+  const retrieve = stubCreditNoteRead();
   await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow(
     "acknowledgement lost",
   );
   await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow(
     "reconciliation",
   );
-  expect(handlers.created).not.toHaveBeenCalled();
+  expect(retrieve).not.toHaveBeenCalled();
   expect((await model.get(input.id))?.result).toBe("pending");
 });
 
@@ -121,6 +117,7 @@ it.each([true, false])(
         } as typeof query;
       });
     const input = event();
+    const retrieve = stubCreditNoteRead();
     await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow("unknown");
     expect(writes).toHaveBeenCalledOnce();
     expect((await model.get(input.id))?.result).toBe(
@@ -131,14 +128,16 @@ it.each([true, false])(
       await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow(
         "reconciliation",
       );
-    expect(handlers.created).toHaveBeenCalledOnce();
+    expect(retrieve).toHaveBeenCalledOnce();
   },
 );
 
 it("keeps partial failures out of replay and retention", async () => {
   const model = GetModel(StripeWebhookEventModel);
   const input = event();
-  handlers.created.mockRejectedValueOnce(new Error("effect outcome unknown"));
+  stubCreditNoteRead().mockRejectedValueOnce(
+    new Error("effect outcome unknown"),
+  );
   await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow(
     "effect outcome unknown",
   );
@@ -149,5 +148,5 @@ it("keeps partial failures out of replay and retention", async () => {
     new Date(Date.now() + BEYOND_OLD_CLAIM_TIMEOUT_MS),
   );
   expect((await model.get(input.id))?.result).toBe("reconciliation_required");
-  expect(handlers.created).toHaveBeenCalledOnce();
+  expect(stripe.write.creditNotes.retrieve).toHaveBeenCalledOnce();
 });

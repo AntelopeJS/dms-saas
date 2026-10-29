@@ -1,4 +1,5 @@
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import { fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -6,20 +7,13 @@ import type {
   TenantSubscription,
   TenantSubscriptionModel,
 } from "../src/db";
+import {
+  chargedInvoicesInWindow,
+  SaasBillingSelfRefundController,
+} from "../src/routes/tenant/billing-self-refund";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const stripe = vi.hoisted(() => ({
-  invoices: { list: vi.fn() },
-  subscriptions: { cancel: vi.fn() },
-  creditNotes: { create: vi.fn() },
-}));
-
-vi.mock("../src/stripe", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/stripe")>()),
-  getStripeClient: () => stripe,
-}));
-
-const { SaasBillingSelfRefundController, chargedInvoicesInWindow } =
-  await import("../src/routes/tenant/billing-self-refund");
+const stripe = useSuiteStripe();
 
 const DAY_SECONDS = 86_400;
 const NOW_SECONDS = Math.floor(Date.now() / 1000);
@@ -82,9 +76,25 @@ const INVOICES = [
   paid("in_trial", 20, 0),
 ];
 
+function stubRefundCalls() {
+  return {
+    listInvoices: vi
+      .spyOn(stripe.write.invoices, "list")
+      .mockResolvedValue(fromPartial({ data: INVOICES, has_more: false })),
+    cancelSubscription: vi
+      .spyOn(stripe.write.subscriptions, "cancel")
+      .mockResolvedValue(fromPartial({})),
+    createCreditNote: vi
+      .spyOn(stripe.write.creditNotes, "create")
+      .mockResolvedValue(fromPartial({})),
+  };
+}
+
+let api: ReturnType<typeof stubRefundCalls>;
+
 beforeEach(() => {
   vi.clearAllMocks();
-  stripe.invoices.list.mockResolvedValue({ data: INVOICES, has_more: false });
+  api = stubRefundCalls();
 });
 
 describe("money-back guarantee over several payments", () => {
@@ -120,11 +130,9 @@ describe("money-back guarantee over several payments", () => {
     );
 
     expect(result).toEqual({ refunded: 2900 + 12098 });
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledBefore(
-      stripe.creditNotes.create,
-    );
+    expect(api.cancelSubscription).toHaveBeenCalledBefore(api.createCreditNote);
     expect(
-      stripe.creditNotes.create.mock.calls.map(([params, options]) => [
+      api.createCreditNote.mock.calls.map(([params, options]) => [
         params.invoice,
         params.refund_amount,
         options.idempotencyKey,
@@ -136,10 +144,12 @@ describe("money-back guarantee over several payments", () => {
   });
 
   it("never refunds more than what is left after earlier credit notes", async () => {
-    stripe.invoices.list.mockResolvedValue({
-      data: [paid("in_upgrade", 5, 12098, 12098), paid("in_first", 10, 2900)],
-      has_more: false,
-    });
+    api.listInvoices.mockResolvedValue(
+      fromPartial({
+        data: [paid("in_upgrade", 5, 12098, 12098), paid("in_first", 10, 2900)],
+        has_more: false,
+      }),
+    );
 
     const result = await controller.requestSelfRefund(
       owner,
@@ -148,7 +158,7 @@ describe("money-back guarantee over several payments", () => {
     );
 
     expect(result).toEqual({ refunded: 2900 });
-    expect(stripe.creditNotes.create).toHaveBeenCalledTimes(1);
+    expect(api.createCreditNote).toHaveBeenCalledTimes(1);
   });
 
   it("prorates each payment over the period it paid for", async () => {

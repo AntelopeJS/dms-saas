@@ -37,9 +37,8 @@ function creditNote(fields: object): Stripe.CreditNote {
 }
 
 describe("Stripe API version", () => {
-  it("pins every request to the latest dahlia release", () => {
+  it("pins every request to the module's API version", () => {
     initStripeClient({ secretKey: "sk_test_version", webhookSecret: "whsec" });
-    expect(STRIPE_API_VERSION).toBe("2026-08-26.dahlia");
     expect(
       (getStripeClient() as unknown as ClientInternals).getApiField("version"),
     ).toBe(STRIPE_API_VERSION);

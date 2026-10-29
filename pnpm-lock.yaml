@@ -75,6 +75,9 @@ importers:
       '@antelopejs/mongodb':
         specifier: 1.5.0
         version: 1.5.0(socks@2.8.10)
+      '@total-typescript/shoehorn':
+        specifier: ^0.1.2
+        version: 0.1.2
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -1858,6 +1861,9 @@ packages:
 
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
+
+  '@total-typescript/shoehorn@0.1.2':
+    resolution: {integrity: sha512-p7nNZbOZIofpDNyP0u1BctFbjxD44Qc+oO5jufgQdFdGIXJLc33QRloJpq7k5T59CTgLWfQSUxsuqLcmeurYRw==}
 
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
@@ -6702,6 +6708,8 @@ snapshots:
       yjs: 13.6.30
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
+
+  '@total-typescript/shoehorn@0.1.2': {}
 
   '@tybys/wasm-util@0.10.4':
     dependencies:

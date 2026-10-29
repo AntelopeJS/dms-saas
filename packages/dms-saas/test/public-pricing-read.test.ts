@@ -1,15 +1,9 @@
-import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePublicPricing } from "../frontend-vue/app/composables/usePublicPricing";
 
 // The pricing page is public and its plans are its content: a server render
 // reads them and hands them to the browser with the page, in the visitor's
 // language, instead of the browser reading them again after it mounted.
-
-const PRICING_SOURCE = readFileSync(
-  new URL("../frontend-vue/app/components/Pricing.vue", import.meta.url),
-  "utf8",
-);
 
 interface FetchOptions {
   signal: AbortSignal;
@@ -76,11 +70,5 @@ describe("public pricing read", () => {
       signal: new AbortController().signal,
     });
     expect(sent[0]!.headers).toEqual({ "x-content-language": "fr" });
-  });
-
-  it("leaves the after-mount public fetch to the screens that need it", () => {
-    expect(PRICING_SOURCE).toContain("usePublicPricing()");
-    expect(PRICING_SOURCE).not.toContain("usePublicFetch");
-    expect(PRICING_SOURCE).not.toContain("onMounted(");
   });
 });

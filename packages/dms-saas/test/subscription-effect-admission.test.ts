@@ -1,22 +1,9 @@
 import { randomUUID } from "node:crypto";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { User } from "@antelopejs/interface-dms/auth/db/tables/users.table";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
+import { fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  afterEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import {
   insertFreeSubscription,
@@ -29,80 +16,74 @@ import {
 } from "../src/stripe/webhook-checkout";
 import { requestWorkspaceDeletion } from "../src/workspaces/deletion";
 import { scheduleDeferredPlanChange } from "../src/plan-changes/deferred";
+import { useMongoDatabase } from "./helpers/mongo";
+import { allowCheckoutRedirects } from "./helpers/workspaces";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const stripe = vi.hoisted(() => ({
-  subscriptions: { retrieve: vi.fn(), cancel: vi.fn(), update: vi.fn() },
-  customers: { create: vi.fn(), update: vi.fn() },
-  checkout: {
-    sessions: { create: vi.fn(), expire: vi.fn(), retrieve: vi.fn() },
-  },
-  subscriptionSchedules: { create: vi.fn(), release: vi.fn() },
-  prices: { retrieve: vi.fn() },
-}));
-vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
-vi.mock("../src/config", () => ({ isAllowedRedirectUrl: async () => true }));
-vi.mock("../src/billing-state", () => ({
-  recomputeTenantBillingState: async () => undefined,
-}));
-vi.mock("../src/automation", () => ({ emitAutomationEvent: () => undefined }));
-vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
-  runTenantLifecycleOperation: async (
-    _tenantId: string,
-    work: () => Promise<unknown>,
-  ) => work(),
-}));
+useMongoDatabase("subscription-effect-admission");
+const stripe = useSuiteStripe();
 
-const SETUP_TIMEOUT_MS = 60_000;
 const createdSessions = new Map<string, object>();
 const CONTENDERS = 12;
-let mongodb: MongoMemoryReplSet;
-beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongodb.getUri(), database: "saas-effect-admission" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-}, SETUP_TIMEOUT_MS);
-afterAll(async () => {
-  try {
-    await destroy();
-  } finally {
-    await mongodb?.stop();
-  }
-});
-afterEach(() => vi.restoreAllMocks());
-beforeEach(() => {
-  vi.clearAllMocks();
-  stripe.customers.create.mockResolvedValue({ id: "customer" });
-  stripe.customers.update.mockResolvedValue({ id: "customer" });
-  stripe.prices.retrieve.mockResolvedValue({
-    id: "price",
-    recurring: { interval: "month", interval_count: 1 },
-  });
-  stripe.checkout.sessions.create.mockImplementation(
-    async (params: Stripe.Checkout.SessionCreateParams) => {
-      const session = {
-        id: randomUUID(),
-        url: "https://checkout.example.test/session",
-        metadata: params.metadata,
-      };
-      createdSessions.set(session.id, session);
-      return session;
-    },
+
+beforeAll(allowCheckoutRedirects);
+
+function stubStripe() {
+  vi.spyOn(stripe.write.prices, "retrieve").mockResolvedValue(
+    fromPartial({
+      id: "price",
+      recurring: { interval: "month", interval_count: 1 },
+    }),
   );
-  stripe.checkout.sessions.retrieve.mockImplementation(async (id: string) => ({
-    ...createdSessions.get(id),
-    status: "open",
-  }));
-  stripe.subscriptions.retrieve.mockResolvedValue({
-    id: "paid-subscription",
-    customer: "customer",
-    default_payment_method: "payment-method",
-    status: "active",
-    items: { data: [{ current_period_end: 1_900_000_000 }] },
-  });
+  return {
+    createCustomer: vi
+      .spyOn(stripe.write.customers, "create")
+      .mockResolvedValue(fromPartial({ id: "customer" })),
+    updateCustomer: vi
+      .spyOn(stripe.write.customers, "update")
+      .mockResolvedValue(fromPartial({ id: "customer" })),
+    createSession: vi
+      .spyOn(stripe.write.checkout.sessions, "create")
+      .mockImplementation(async (params) => {
+        const session = {
+          id: randomUUID(),
+          url: "https://checkout.example.test/session",
+          metadata: Object.fromEntries(
+            Object.entries(params?.metadata ?? {}).map(([key, value]) => [
+              key,
+              String(value),
+            ]),
+          ),
+        };
+        createdSessions.set(session.id, session);
+        return fromPartial(session);
+      }),
+    retrieveSession: vi
+      .spyOn(stripe.write.checkout.sessions, "retrieve")
+      .mockImplementation(async (id: string) =>
+        fromPartial({ ...createdSessions.get(id), status: "open" }),
+      ),
+    retrieveSubscription: vi
+      .spyOn(stripe.write.subscriptions, "retrieve")
+      .mockResolvedValue(
+        fromPartial({
+          id: "paid-subscription",
+          customer: "customer",
+          default_payment_method: "payment-method",
+          status: "active",
+          items: { data: [{ current_period_end: 1_900_000_000 }] },
+        }),
+      ),
+    cancelSubscription: vi.spyOn(stripe.write.subscriptions, "cancel"),
+    createSchedule: vi.spyOn(stripe.write.subscriptionSchedules, "create"),
+    releaseSchedule: vi.spyOn(stripe.write.subscriptionSchedules, "release"),
+  };
+}
+
+let api: ReturnType<typeof stubStripe>;
+
+beforeEach(() => {
+  api = stubStripe();
 });
 
 async function checkoutRequest(
@@ -164,9 +145,9 @@ describe("subscription effect admission with real Mongo mutations", () => {
     const request = await checkoutRequest();
     await startPaidCheckout(request);
     const event = await sessionEvent(request);
-    stripe.subscriptions.retrieve.mockResolvedValueOnce({
-      status: "incomplete",
-    });
+    api.retrieveSubscription.mockResolvedValueOnce(
+      fromPartial({ status: "incomplete" }),
+    );
     await expect(handleCheckoutSessionCompleted(event)).rejects.toThrow(
       "has not activated",
     );
@@ -224,8 +205,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
     expect(subscription?.stripeCheckoutSessionId).toBeNull();
     await startPaidCheckout({ ...request, subscription });
     expect(
-      stripe.checkout.sessions.create.mock.calls[1][0].subscription_data
-        .trial_period_days,
+      api.createSession.mock.calls[1][0]?.subscription_data?.trial_period_days,
     ).toBeUndefined();
   });
 
@@ -237,12 +217,11 @@ describe("subscription effect admission with real Mongo mutations", () => {
     expect(
       results.filter((result) => result.status === "fulfilled"),
     ).toHaveLength(1);
-    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    expect(api.createSession).toHaveBeenCalledTimes(1);
     expect(
-      stripe.checkout.sessions.create.mock.calls[0][0].subscription_data
-        .trial_period_days,
+      api.createSession.mock.calls[0][0]?.subscription_data?.trial_period_days,
     ).toBe(7);
-    expect(stripe.checkout.sessions.create.mock.calls[0][0]).toMatchObject({
+    expect(api.createSession.mock.calls[0][0]).toMatchObject({
       managed_payments: { enabled: false },
       subscription_data: { billing_mode: { type: "classic" } },
     });
@@ -251,8 +230,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
     const otherTenant = await checkoutRequest(request.user.email);
     await startPaidCheckout(otherTenant);
     expect(
-      stripe.checkout.sessions.create.mock.calls[1][0].subscription_data
-        .trial_period_days,
+      api.createSession.mock.calls[1][0]?.subscription_data?.trial_period_days,
     ).toBeUndefined();
     await expect(
       startPaidCheckout({ ...request, subscription: current }),
@@ -260,7 +238,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
       status: 409,
       body: "saas.errors.plan.checkout_in_progress",
     });
-    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(2);
+    expect(api.createSession).toHaveBeenCalledTimes(2);
   });
 
   it("holds checkout completion admission through the last provider effect and receipts replay", async () => {
@@ -275,10 +253,10 @@ describe("subscription effect admission with real Mongo mutations", () => {
     const ready = new Promise<void>((resolve) => {
       entered = resolve;
     });
-    stripe.customers.update.mockImplementationOnce(async () => {
+    api.updateCustomer.mockImplementationOnce(async () => {
       entered();
       await paused;
-      return {};
+      return fromPartial({});
     });
     const first = handleCheckoutSessionCompleted(event);
     await ready;
@@ -297,8 +275,8 @@ describe("subscription effect admission with real Mongo mutations", () => {
       completed?.stripeCheckoutSessionId,
     );
     await handleCheckoutSessionCompleted(event);
-    expect(stripe.customers.update).toHaveBeenCalledTimes(1);
-    expect(stripe.subscriptions.retrieve).toHaveBeenCalledTimes(1);
+    expect(api.updateCustomer).toHaveBeenCalledTimes(1);
+    expect(api.retrieveSubscription).toHaveBeenCalledTimes(1);
   });
 
   it("retains an unknown completion admission and does not guess a retry", async () => {
@@ -321,7 +299,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
     await expect(handleCheckoutSessionCompleted(event)).rejects.toThrow(
       "requires reconciliation",
     );
-    expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+    expect(api.retrieveSubscription).not.toHaveBeenCalled();
     expect(
       (await request.tenantSubscriptionModel.findOne())?.domainTransition?.kind,
     ).toBe("change_plan");
@@ -332,7 +310,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
     await request.tenantSubscriptionModel.update(request.tenantId, {
       stripeSubscriptionId: "paid",
     });
-    stripe.subscriptions.cancel.mockRejectedValueOnce(new Error("ack unknown"));
+    api.cancelSubscription.mockRejectedValueOnce(new Error("ack unknown"));
     await expect(
       requestWorkspaceDeletion(request.tenantId, "owner"),
     ).rejects.toThrow("ack unknown");
@@ -343,7 +321,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
     await expect(
       requestWorkspaceDeletion(request.tenantId, "owner"),
     ).rejects.toThrow("different pending transition");
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
+    expect(api.cancelSubscription).toHaveBeenCalledTimes(1);
   });
 
   it("does not compensate an ambiguous replacement schedule", async () => {
@@ -354,12 +332,11 @@ describe("subscription effect admission with real Mongo mutations", () => {
     });
     const subscription = await request.tenantSubscriptionModel.findOne();
     if (!subscription) throw new Error("Missing fixture");
-    stripe.subscriptions.retrieve.mockResolvedValueOnce({
-      schedule: "old-schedule",
-      cancel_at_period_end: false,
-    });
-    stripe.subscriptionSchedules.release.mockResolvedValueOnce({});
-    stripe.subscriptionSchedules.create.mockRejectedValueOnce(
+    api.retrieveSubscription.mockResolvedValueOnce(
+      fromPartial({ schedule: "old-schedule", cancel_at_period_end: false }),
+    );
+    api.releaseSchedule.mockResolvedValueOnce(fromPartial({}));
+    api.createSchedule.mockRejectedValueOnce(
       new Error("schedule acknowledgement unknown"),
     );
     await expect(
@@ -369,8 +346,8 @@ describe("subscription effect admission with real Mongo mutations", () => {
         targetPlan: request.newPlan,
       }),
     ).rejects.toThrow("acknowledgement unknown");
-    expect(stripe.subscriptionSchedules.release).toHaveBeenCalledTimes(1);
-    expect(stripe.subscriptionSchedules.create).toHaveBeenCalledTimes(1);
+    expect(api.releaseSchedule).toHaveBeenCalledTimes(1);
+    expect(api.createSchedule).toHaveBeenCalledTimes(1);
     expect(await request.tenantSubscriptionModel.findOne()).toMatchObject({
       pendingPlanId: "old-target",
       domainTransition: { targetPlanId: "target" },

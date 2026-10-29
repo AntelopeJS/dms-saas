@@ -1,34 +1,11 @@
 import { readLocale } from "./helpers/locales";
-import { describe, expect, it, vi } from "vitest";
-
-const registrations = vi.hoisted(() => ({
-  triggers: vi.fn(),
-  actions: vi.fn(),
-}));
-vi.mock("@antelopejs/interface-dms-automation", () => ({
-  RegisterTriggerType: registrations.triggers,
-  RegisterActionType: registrations.actions,
-  UnregisterTriggerType: vi.fn(),
-  UnregisterActionType: vi.fn(),
-}));
-vi.mock("../src/notifications", () => ({
-  notifyTenantOwners: vi.fn(),
-  automationNotificationSubject: {},
-}));
-vi.mock("../src/operator-actions", () => ({
-  reactivateWorkspaceCommand: vi.fn(),
-  suspendWorkspaceCommand: vi.fn(),
-}));
-
+import { describe, expect, it } from "vitest";
 import { registerAutomationNodes } from "../src/automation";
+import { implementAutomationCatalog } from "./helpers/automation";
 
 type LocaleTree = Record<string, unknown>;
 
-interface CatalogNode {
-  id: string;
-  name: string;
-  description: string;
-}
+const catalog = implementAutomationCatalog();
 
 const LOCALE_PATHS = ["saas-en-GB.json", "saas-fr-FR.json"];
 const LABEL_PREFIX = "$saas.automation.";
@@ -43,11 +20,9 @@ function translate(locale: LocaleTree, label: string): unknown {
     );
 }
 
-function registeredNodes(): CatalogNode[] {
+function registeredNodes() {
   registerAutomationNodes();
-  return [registrations.triggers, registrations.actions].flatMap((register) =>
-    register.mock.calls.map(([node]) => node as CatalogNode),
-  );
+  return [...catalog.triggers.values(), ...catalog.actions.values()];
 }
 
 const nodes = registeredNodes();

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSessionEstablishRequest,
-  SESSION_ESTABLISH_ENDPOINT,
   type WorkspaceFinalization,
-  WORKSPACE_FINALIZE_ENDPOINT,
 } from "../frontend-vue/app/composables/useWorkspaceFinalization";
+import { frontendModule } from "../src/frontend-module";
+import { SaasRegisterApiController } from "../src/routes/public/register";
+import { registeredRoute } from "./helpers/routes";
+import { SUITE_STRIPE_KEYS } from "./helpers/stripe";
 
 const FINALIZATION: WorkspaceFinalization = {
   tenantAssignmentToken: "tat_test",
@@ -14,14 +16,14 @@ const FINALIZATION: WorkspaceFinalization = {
 
 describe("buildSessionEstablishRequest", () => {
   it("addresses the frontend server, naming the API route it must call", () => {
-    // The page posts to the loader, not to the API: the session cookie can
-    // only be written by the server that owns it, from tokens it fetched
-    // itself.
-    expect(SESSION_ESTABLISH_ENDPOINT).toBe("/auth/establish");
-    expect(buildSessionEstablishRequest(FINALIZATION).endpoint).toBe(
-      WORKSPACE_FINALIZE_ENDPOINT,
+    const { endpoint } = buildSessionEstablishRequest(FINALIZATION);
+
+    expect(
+      frontendModule({ stripe: SUITE_STRIPE_KEYS }).authEstablishEndpoints,
+    ).toContain(endpoint);
+    expect(registeredRoute("POST", endpoint).callback).toBe(
+      SaasRegisterApiController.prototype.finalize,
     );
-    expect(WORKSPACE_FINALIZE_ENDPOINT).toBe("/api/saas/register/finalize");
   });
 
   it("wraps the payload the finalize endpoint validates", () => {

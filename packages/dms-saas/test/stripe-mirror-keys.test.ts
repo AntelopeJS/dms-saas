@@ -1,89 +1,55 @@
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { InvoiceModel, RefundModel, TenantSubscriptionModel } from "../src/db";
+import { handleChargeRefundUpdated } from "../src/stripe/webhook-handlers";
+import { upsertInvoice } from "../src/stripe/webhook-shared";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
 
-interface MirrorRow {
-  _id: string;
-  [field: string]: unknown;
+useMongoDatabase("stripe-mirror-keys");
+const stripe = useSuiteStripe();
+
+interface BilledWorkspace {
+  tenantId: string;
+  customerId: string;
+  invoiceId: string;
+  refundId: string;
+  invoices: InvoiceModel;
+  refunds: RefundModel;
 }
 
-interface KeyedTable {
-  rows: Map<string, MirrorRow>;
-  lookupField: string;
-}
+let workspace: BilledWorkspace;
 
-const tables = vi.hoisted(() => ({
-  InvoiceModel: {
-    rows: new Map(),
-    lookupField: "stripeInvoiceId",
-  } as KeyedTable,
-  RefundModel: {
-    rows: new Map(),
-    lookupField: "stripeRefundId",
-  } as KeyedTable,
-}));
-
-/** Lets every concurrent writer finish its lookup before any of them inserts. */
-function yieldToOtherWriters(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
-function keyedModel(table: KeyedTable) {
-  const findByLookup = async (value: string) => {
-    await yieldToOtherWriters();
-    return [...table.rows.values()].find(
-      (row) => row[table.lookupField] === value,
-    );
-  };
-  return {
-    get: async (id: string) => table.rows.get(id),
-    insert: async (row: MirrorRow) => {
-      if (table.rows.has(row._id)) throw new Error("E11000 duplicate key");
-      table.rows.set(row._id, { ...row });
-      return [row._id];
-    },
-    update: async (id: string, patch: Partial<MirrorRow>) => {
-      const row = table.rows.get(id);
-      if (row) Object.assign(row, patch);
-      return row ? 1 : 0;
-    },
-    findOneByStripeInvoice: findByLookup,
-    findOneByStripeRefund: findByLookup,
-  };
-}
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: (model: { name: string }) => {
-      if (model.name === "TenantSubscriptionModel")
-        return {
-          findOneByStripeCustomer: async () => ({ _instance: "tenant-a" }),
-        };
-      const table = tables[model.name as keyof typeof tables];
-      if (!table) throw new Error(`no fake registered for ${model.name}`);
-      return keyedModel(table);
-    },
+beforeEach(async () => {
+  const tenantId = randomUUID();
+  const customerId = `cus_${randomUUID()}`;
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
+    _id: tenantId,
+    planId: "paid",
+    status: "active",
+    stripeCustomerId: customerId,
+  });
+  workspace = {
+    tenantId,
+    customerId,
+    invoiceId: `in_${randomUUID()}`,
+    refundId: `re_${randomUUID()}`,
+    invoices: GetModel(InvoiceModel, tenantId),
+    refunds: GetModel(RefundModel, tenantId),
   };
 });
 
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => ({
-    charges: { retrieve: async () => ({ customer: "cus_1" }) },
-  }),
-}));
-
-const { upsertInvoice } = await import("../src/stripe/webhook-shared");
-const { handleChargeRefundUpdated } =
-  await import("../src/stripe/webhook-handlers");
+async function rowIds(model: InvoiceModel | RefundModel): Promise<string[]> {
+  return (await model.getAll()).map((row) => row._id);
+}
 
 function stripeInvoice(status: Stripe.Invoice.Status): Stripe.Invoice {
-  return {
-    id: "in_1",
-    customer: "cus_1",
+  return fromPartial<Stripe.Invoice>({
+    id: workspace.invoiceId,
+    customer: workspace.customerId,
     number: "INV-0001",
     amount_due: 5935,
     subtotal: 5935,
@@ -97,16 +63,48 @@ function stripeInvoice(status: Stripe.Invoice.Status): Stripe.Invoice {
     period_start: 1_790_000_000,
     period_end: 1_792_592_000,
     lines: { has_more: false, data: [] },
-  } as unknown as Stripe.Invoice;
+  });
+}
+
+/** The invoice with more lines than its event carries: they are listed from Stripe. */
+function pagedInvoice(status: Stripe.Invoice.Status): Stripe.Invoice {
+  return fromPartial({
+    ...stripeInvoice(status),
+    lines: { has_more: true, data: [] },
+  });
+}
+
+/**
+ * Holds every listing of an invoice's lines until `writers` of them started:
+ * each writer has looked its row up by then, and none has inserted yet.
+ * Returns whether that many writers got there.
+ */
+function holdLinePagesUntil(writers: number): () => boolean {
+  let started = 0;
+  let release = (): void => undefined;
+  const allStarted = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  vi.spyOn(stripe.write.invoices, "listLineItems").mockImplementation(() => {
+    started += 1;
+    if (started === writers) release();
+    return fromPartial({
+      autoPagingToArray: async () => {
+        await allStarted;
+        return [];
+      },
+    });
+  });
+  return () => started === writers;
 }
 
 function refundEvent(status: Stripe.Refund["status"]): Stripe.Event {
-  return {
+  return fromPartial<Stripe.Event>({
     id: `evt_refund_${status}`,
     type: "charge.refund.updated",
     data: {
       object: {
-        id: "re_1",
+        id: workspace.refundId,
         charge: "ch_1",
         amount: 1200,
         currency: "eur",
@@ -114,19 +112,14 @@ function refundEvent(status: Stripe.Refund["status"]): Stripe.Event {
         failure_reason: null,
       },
     },
-  } as unknown as Stripe.Event;
+  });
 }
-
-beforeEach(() => {
-  tables.InvoiceModel.rows.clear();
-  tables.RefundModel.rows.clear();
-});
 
 describe("Stripe invoice collection state", () => {
   it("mirrors what Stripe is doing to collect the invoice", async () => {
     const retryAt = 1_790_300_000;
     await upsertInvoice(
-      {
+      fromPartial<Stripe.Invoice>({
         ...stripeInvoice("open"),
         amount_paid: 1_000,
         attempt_count: 2,
@@ -134,11 +127,13 @@ describe("Stripe invoice collection state", () => {
         due_date: null,
         automatically_finalizes_at: null,
         latest_revision: { id: "in_2" },
-      } as unknown as Stripe.Invoice,
-      "tenant-a",
+      }),
+      workspace.tenantId,
     );
 
-    expect(tables.InvoiceModel.rows.get("in_1")).toMatchObject({
+    await expect(
+      workspace.invoices.get(workspace.invoiceId),
+    ).resolves.toMatchObject({
       amountPaid: 1_000,
       attemptCount: 2,
       nextPaymentAttemptAt: new Date(retryAt * 1_000),
@@ -151,40 +146,56 @@ describe("Stripe invoice collection state", () => {
 
 describe("Stripe invoice mirror keys", () => {
   it("keeps concurrent events of one invoice to a single row", async () => {
+    const bothLookedUp = holdLinePagesUntil(2);
+
     await Promise.all([
-      upsertInvoice(stripeInvoice("open"), "tenant-a"),
-      upsertInvoice(stripeInvoice("paid"), "tenant-a"),
+      upsertInvoice(pagedInvoice("open"), workspace.tenantId),
+      upsertInvoice(pagedInvoice("paid"), workspace.tenantId),
     ]);
 
-    expect([...tables.InvoiceModel.rows.keys()]).toEqual(["in_1"]);
-    expect(tables.InvoiceModel.rows.get("in_1")?.stripeInvoiceId).toBe("in_1");
+    expect(bothLookedUp()).toBe(true);
+    await expect(rowIds(workspace.invoices)).resolves.toEqual([
+      workspace.invoiceId,
+    ]);
+    await expect(
+      workspace.invoices.get(workspace.invoiceId),
+    ).resolves.toMatchObject({ stripeInvoiceId: workspace.invoiceId });
   });
 
   it("updates a legacy row found by its Stripe id instead of adding one", async () => {
-    tables.InvoiceModel.rows.set("legacy-random-id", {
-      _id: "legacy-random-id",
-      stripeInvoiceId: "in_1",
+    const legacyId = randomUUID();
+    await workspace.invoices.insert({
+      _id: legacyId,
+      stripeInvoiceId: workspace.invoiceId,
       stripeCreditNoteId: null,
       status: "open",
     });
 
-    await upsertInvoice(stripeInvoice("paid"), "tenant-a");
+    await upsertInvoice(stripeInvoice("paid"), workspace.tenantId);
 
-    expect([...tables.InvoiceModel.rows.keys()]).toEqual(["legacy-random-id"]);
-    expect(tables.InvoiceModel.rows.get("legacy-random-id")?.status).toBe(
-      "paid",
-    );
+    await expect(rowIds(workspace.invoices)).resolves.toEqual([legacyId]);
+    await expect(workspace.invoices.get(legacyId)).resolves.toMatchObject({
+      status: "paid",
+    });
   });
 });
 
 describe("Stripe refund mirror keys", () => {
   it("keeps concurrent events of one refund to a single row", async () => {
+    vi.spyOn(stripe.write.charges, "retrieve").mockResolvedValue(
+      fromPartial({ customer: workspace.customerId }),
+    );
+
     await Promise.all([
       handleChargeRefundUpdated(refundEvent("pending")),
       handleChargeRefundUpdated(refundEvent("failed")),
     ]);
 
-    expect([...tables.RefundModel.rows.keys()]).toEqual(["re_1"]);
-    expect(tables.RefundModel.rows.get("re_1")?.stripeRefundId).toBe("re_1");
+    await expect(rowIds(workspace.refunds)).resolves.toEqual([
+      workspace.refundId,
+    ]);
+    await expect(
+      workspace.refunds.get(workspace.refundId),
+    ).resolves.toMatchObject({ stripeRefundId: workspace.refundId });
   });
 });

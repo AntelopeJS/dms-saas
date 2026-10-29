@@ -1,54 +1,61 @@
-import type { PermissionsResolverInfo } from "@antelopejs/interface-dms/permissions-resolver";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const harness = vi.hoisted(() => ({
-  register: vi.fn<(info: PermissionsResolverInfo) => void>(),
-  owners: new Set<string>(),
-}));
-
-vi.mock("@antelopejs/interface-dms/permissions-resolver", () => ({
-  RegisterPermissionsResolver: harness.register,
-}));
-vi.mock("../src/pages/tenant/owner-only", () => ({
-  ownerOnlyPermissionIds: () => ["general.dangerZone", "data-export"],
-}));
-vi.mock("../src/workspaces/workspace-owner", () => ({
-  isWorkspaceOwner: async (userId: string, tenantId: string) =>
-    harness.owners.has(`${tenantId}:${userId}`),
-}));
-
+import { randomUUID } from "node:crypto";
+import type { User } from "@antelopejs/interface-dms/auth/db";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { registerOwnerOnlyPermissionsResolver } from "../src/auth/owner-only-permissions-resolver";
+import { addTenantMember } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import {
+  implementPermissionsResolvers,
+  registeredResolver,
+} from "./helpers/permissions-resolvers";
+
+useMongoDatabase("owner-only-permissions-resolver");
+const registered = implementPermissionsResolvers();
+
+/** The workspace settings pages the owner-only surfaces sit on. */
+const WORKSPACE_SETTINGS = "settings.workspace";
 
 const MEMBER_GRANTS = [
-  "general",
-  "general.identity",
-  "general.dangerZone",
-  "general.dangerZone.actions",
-  "data-export",
-  "data-export.request",
+  `${WORKSPACE_SETTINGS}.general`,
+  `${WORKSPACE_SETTINGS}.general.identity`,
+  `${WORKSPACE_SETTINGS}.general.dangerZone`,
+  `${WORKSPACE_SETTINGS}.general.dangerZone.actions`,
+  `${WORKSPACE_SETTINGS}.data-export`,
+  `${WORKSPACE_SETTINGS}.data-export.request`,
 ];
 
-function resolve(current: string[], userId = "member") {
-  const registration = harness.register.mock.calls[0][0];
-  return registration.resolver(userId, "acme", new Set(current), {});
+const MEMBER_VIEW = [
+  `${WORKSPACE_SETTINGS}.general`,
+  `${WORKSPACE_SETTINGS}.general.identity`,
+  `${WORKSPACE_SETTINGS}.general.dangerZone.actions`,
+  `${WORKSPACE_SETTINGS}.data-export.request`,
+];
+
+/** The workspace of the current test, which "owner" owns and "member" joined. */
+let tenantId = "";
+
+function ownerOnly() {
+  return registeredResolver(registered, "dms-saas.owner-only-surfaces");
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  harness.owners = new Set(["acme:owner"]);
+function resolve(current: string[], userId = "member") {
+  return ownerOnly().resolver(userId, tenantId, new Set(current), {});
+}
+
+beforeAll(() => {
   registerOwnerOnlyPermissionsResolver();
+});
+
+beforeEach(async () => {
+  tenantId = randomUUID();
+  await addTenantMember(tenantId, fromPartial<User>({ _id: "owner" }), true);
+  await addTenantMember(tenantId, fromPartial<User>({ _id: "member" }), false);
 });
 
 describe("owner-only surfaces", () => {
   it("withholds the danger zone and the data export from a member granted everything", async () => {
-    expect(await resolve(MEMBER_GRANTS)).toEqual(
-      new Set([
-        "general",
-        "general.identity",
-        "general.dangerZone.actions",
-        "data-export.request",
-      ]),
-    );
+    expect(await resolve(MEMBER_GRANTS)).toEqual(new Set(MEMBER_VIEW));
   });
 
   it("leaves an owner's permissions untouched", async () => {
@@ -58,27 +65,21 @@ describe("owner-only surfaces", () => {
   });
 
   it("leaves the platform wildcard untouched", async () => {
-    expect(await resolve(["*", "data-export"])).toEqual(
-      new Set(["*", "data-export"]),
+    expect(await resolve(["*", `${WORKSPACE_SETTINGS}.data-export`])).toEqual(
+      new Set(["*", `${WORKSPACE_SETTINGS}.data-export`]),
     );
   });
 
   describe("in a role preview", () => {
     function preview(current: string[], userId: string) {
-      const registration = harness.register.mock.calls[0][0];
-      return registration.resolver(userId, "acme", new Set(current), {
+      return ownerOnly().resolver(userId, tenantId, new Set(current), {
         preview: { rolePermissions: new Set(current) },
       });
     }
 
     it("withholds the owner-only surfaces, even for an owner's id", async () => {
       expect(await preview(MEMBER_GRANTS, "owner")).toEqual(
-        new Set([
-          "general",
-          "general.identity",
-          "general.dangerZone.actions",
-          "data-export.request",
-        ]),
+        new Set(MEMBER_VIEW),
       );
     });
 
@@ -87,11 +88,10 @@ describe("owner-only surfaces", () => {
     });
 
     it("leaves an owner's real call with an empty context untouched", async () => {
-      const registration = harness.register.mock.calls[0][0];
       expect(
-        await registration.resolver(
+        await ownerOnly().resolver(
           "owner",
-          "acme",
+          tenantId,
           new Set(MEMBER_GRANTS),
           {},
         ),
@@ -100,6 +100,6 @@ describe("owner-only surfaces", () => {
   });
 
   it("runs after the plan intersection", () => {
-    expect(harness.register.mock.calls[0][0].order).toBeGreaterThan(100);
+    expect(ownerOnly().order).toBeGreaterThan(100);
   });
 });
