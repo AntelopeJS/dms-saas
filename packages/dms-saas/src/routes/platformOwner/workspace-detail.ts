@@ -196,14 +196,16 @@ export class SaasWorkspaceDetailController extends Controller(
     };
   }
 
-  /** The counts on the detail page's tabs, by tab slot. */
+  /**
+   * The counts on the detail page's tabs, by tab slot. The invoice mirror's
+   * `getAllInvoices` leaves the credit notes out: they are counted from their
+   * own table.
+   */
   @Get("/:tenantId/tab-counts")
   async tabCounts(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
   ): Promise<Record<string, string | number>> {
-    // The invoice mirror's `getAllInvoices` leaves the credit notes out:
-    // they are counted from their own table.
     const [view, invoices, creditNotes] = await Promise.all([
       loadWorkspaceOperatorView(tenantId),
       loadDocuments(tenantId),

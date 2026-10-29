@@ -109,6 +109,9 @@ async function prepareFreeChange(
  * Use the existing end-of-period cancellation, never a future paid price.
  * Only this emitter can acknowledge provider_pending. Recovery never infers
  * that a request settled from a GET, timeout or expired idempotency key.
+ * The provider effect is admitted with the revision read under the barrier,
+ * never a fresh revision that could belong to an aborted or replaced
+ * preparation.
  */
 export async function scheduleGuardedFreeChange(
   tenantId: string,
@@ -133,8 +136,6 @@ export async function scheduleGuardedFreeChange(
       change.policyName,
     );
     if (issues.length) throw new PlanChangeIncompatibleError(issues);
-    // Use the revision read under the barrier, never a fresh revision that
-    // could belong to an aborted/replaced preparation.
     await admitGuardedProviderEffect(model, drained);
   } catch (error) {
     const latest = await readSubscription(tenantId);

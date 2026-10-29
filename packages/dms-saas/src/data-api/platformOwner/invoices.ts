@@ -66,7 +66,8 @@ const withInvoiceScope = withTableScope(INVOICE_LIST_OPTIONS);
 /**
  * Every workspace's invoices, for platform admins. Credit notes share the
  * table as negative rows for the workspace owners' history; this controller
- * never lists them.
+ * never lists them. The guards are set on the controller itself, so they hold
+ * even when no TableView page mounts it.
  */
 @RegisterDataController()
 @AuthOwnerOnly()
@@ -83,7 +84,6 @@ export class invoicesDataAPI extends DataController(
   },
   Controller("/api/saas/tables/invoices"),
 ) {
-  // Enforce the guard even when no TableView page mounts this controller.
   static {
     GetMetadata(invoicesDataAPI, TableViewMeta).setControllerGuards(
       INVOICE_GUARDS,

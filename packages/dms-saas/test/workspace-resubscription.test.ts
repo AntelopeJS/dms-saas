@@ -329,7 +329,6 @@ describe("a cancelled workspace choosing a plan again", () => {
       stripeCustomerId: KEPT_CUSTOMER,
       stripeSubscriptionId: null,
       refundRequestedAt: REFUNDED_AT,
-      // Back on its feet, it is no longer the workspace its owner deleted.
       deletionRequestedAt: null,
       deletionRequestedBy: null,
     });

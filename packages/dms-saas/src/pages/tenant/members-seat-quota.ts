@@ -1,13 +1,13 @@
-// A page extension is a class carrying only static component fields — that is the shape the decorator consumes.
-
 import { RegisterPageExtension } from "@antelopejs/interface-dms/page";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 
 /** The component key both DMS member pages declare their table under. */
 const TABLE_ANCHOR = "table";
 
-// One builder per page: a component builder holds the position of the page it
-// is injected into.
+/**
+ * One builder per page: a component builder holds the position of the page it
+ * is injected into.
+ */
 function seatQuotaBlock() {
   return CustomComponent("DmsSaasSeatQuotaBanner")
     .meta({
@@ -26,6 +26,9 @@ function seatQuotaBlock() {
  * deployment that runs the DMS without the SaaS module. The invite button
  * itself stays the DMS's: `RegisterInviteAvailability` disables it at the
  * limit, with the reason.
+ *
+ * A page extension is a class carrying only static component fields, which is
+ * the shape the decorator consumes.
  *
  * The target page is named by its id and the anchor by the component key the
  * page declares it under, so nothing is imported from the DMS runtime.

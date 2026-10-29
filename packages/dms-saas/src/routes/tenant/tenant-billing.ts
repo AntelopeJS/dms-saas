@@ -150,9 +150,11 @@ async function persistBillingInfo(
   );
 }
 
-// Both routes back blocks of the billing page, which stays reachable under the
-// tenant access gate: a suspended owner must be able to correct the invoicing
-// identity Stripe bills against before settling.
+/**
+ * Both routes back blocks of the billing page, which stays reachable under the
+ * tenant access gate: a suspended owner must be able to correct the invoicing
+ * identity Stripe bills against before settling.
+ */
 export class SaasTenantBillingController extends Controller(
   "/api/saas/tenant",
 ) {
@@ -161,6 +163,9 @@ export class SaasTenantBillingController extends Controller(
    * reads the live tax ID rather than waiting for a webhook to catch up.
    * `verified` and `unverified` are terminal — Stripe never re-evaluates an
    * existing tax ID — so a settled status costs no Stripe call per page view.
+   * The row returned after an update is spread from an AntelopeJS table class:
+   * `Table` declares one field and a static, no instance methods, and the value
+   * is serialised to JSON on the way out, so no prototype is lost.
    */
   private async refreshVatVerification(
     info: TenantBillingInfo,
@@ -177,10 +182,7 @@ export class SaasTenantBillingController extends Controller(
       : null;
     if (status === stored) return info;
     await billingModel.update(info._id, { vatVerificationStatus: status });
-    // The spread row is an AntelopeJS table class: `Table` declares one
-    // field and a static, no instance methods, and the value is
-    // serialised to JSON on the way out. No prototype to lose.
-    // oxlint-disable-next-line typescript/no-misused-spread
+    // oxlint-disable-next-line typescript/no-misused-spread -- the row is an AntelopeJS table class whose `Table` base declares one field and a static and no instance methods, serialised to JSON on the way out, so no prototype is lost
     return { ...info, vatVerificationStatus: status };
   }
 

@@ -41,8 +41,10 @@ function isUsableSecretKey(key: string): boolean {
   );
 }
 
-// Writes keep the SDK's timeout and retries: a write cut short may still land
-// on Stripe, and its idempotent retries are what make it safe to repeat.
+/**
+ * Writes keep the SDK's timeout and retries: a write cut short may still land
+ * on Stripe, and its idempotent retries are what make it safe to repeat.
+ */
 export function initStripeClient(config: DmsSaasStripeConfig): void {
   stripeClient = new Stripe(config.secretKey, {
     apiVersion: STRIPE_API_VERSION,

@@ -29,8 +29,10 @@ import {
 } from "vitest";
 import { invoicesDataAPI } from "../src/data-api/platformOwner/invoices";
 
-// The user page's billing table lists credit notes too: only the invoices
-// table is scoped to invoices.
+/**
+ * The user page's billing table lists credit notes too: only the invoices
+ * table is scoped to invoices.
+ */
 const CONTROLLERS = [invoicesDataAPI];
 const LIST_ROUTES = ["list", "select", "count"];
 const OWNER = { _id: "owner", name: "Owner" };
@@ -76,7 +78,6 @@ beforeAll(() => {
     CheckTenantAccess: async () =>
       isAllowed ? { allowed: true } : { allowed: false, code: "test.denied" },
   });
-  // The table-view routes reach the DMS through these interface functions.
   ImplementInterface(
     { internal: tableView },
     {
@@ -105,9 +106,6 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
   function get() {
     const route = meta.endpoints.get.callback;
     const ctx = request();
-    // The values the runtime resolves for each of the route's declared args,
-    // in order: the data-api Get (context, params), the view check's user,
-    // then presence acquisition's context, session, presence flag and user.
     const args = [
       ctx,
       { id: "invoice" },

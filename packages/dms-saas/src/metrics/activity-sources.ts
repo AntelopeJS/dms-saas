@@ -7,8 +7,10 @@ import type { OperatorAction } from "../operator-actions/db/operator-action.tabl
 import { getRowInstance } from "../utils/row-instance";
 import type { ActivitySources, ActivityWorkspace } from "./activity";
 
-// Each source is read newest first and cut before merging: a few times the
-// feed's length, so a feed of one kind is still full after the others drop.
+/**
+ * Each source is read newest first and cut before merging: a few times the
+ * feed's length, so a feed of one kind is still full after the others drop.
+ */
 const SOURCE_OVERFETCH = 4;
 const SUCCEEDED_STATUS = "succeeded";
 

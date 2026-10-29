@@ -14,8 +14,10 @@ import { isFreePlan } from "./free-plan";
 
 const LOG_PREFIX = "[dms-saas:default-plan]";
 const ACTIVE_STATUS = "active" as const;
-// A workspace that falls back on the default plan has no billing identity
-// yet, so a plan reserved to businesses cannot be the one it lands on.
+/**
+ * A workspace that falls back on the default plan has no billing identity yet,
+ * so a plan reserved to businesses cannot be the one it lands on.
+ */
 const DEFAULT_PLAN_AUDIENCES = new Set<PlanAudience>(["any", "individual"]);
 
 function isDefaultPlanCandidate(plan: Plan): boolean {
@@ -53,8 +55,10 @@ export function selectDefaultPlan(
   return configured ?? candidates[0] ?? null;
 }
 
-// The billing page covers a plan-less workspace on every read: without this
-// latch, an empty catalogue would log once per page view.
+/**
+ * The billing page covers a plan-less workspace on every read: without this
+ * latch, an empty catalogue would log once per page view.
+ */
 let hasWarnedMissingPlan = false;
 
 /** The catalogue's default free plan, or null when it offers none. */
@@ -124,11 +128,11 @@ export async function ensureDefaultSubscription(
   return isAttached;
 }
 
+/** One workspace mid-deletion must not keep every other one plan-less. */
 async function attachToTenant(tenantId: string, plan: Plan): Promise<boolean> {
   try {
     return await ensureDefaultSubscription(tenantId, plan);
   } catch (error) {
-    // One workspace mid-deletion must not keep every other one plan-less.
     Logging.Error(`${LOG_PREFIX} could not cover workspace ${tenantId}`, error);
     return false;
   }

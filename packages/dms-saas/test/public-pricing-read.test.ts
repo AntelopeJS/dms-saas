@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePublicPricing } from "../frontend-vue/app/composables/usePublicPricing";
 
-// The pricing page is public and its plans are its content: a server render
-// reads them and hands them to the browser with the page, in the visitor's
-// language, instead of the browser reading them again after it mounted.
-
 interface FetchOptions {
   signal: AbortSignal;
   headers?: Record<string, string>;

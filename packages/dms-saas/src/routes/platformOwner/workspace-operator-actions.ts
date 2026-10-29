@@ -236,6 +236,11 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     );
   }
 
+  /**
+   * Upgrades the workspace to the target plan by hand. Stripe configuration is
+   * asserted first: it is refused before the journal records an attempt that
+   * cannot succeed.
+   */
   @Post("/:tenantId/upgrade")
   async upgrade(
     @AuthOwnerOnly() user: User,
@@ -243,7 +248,6 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     @JSONBody() body: ManualUpgradeBody,
   ) {
     await this.assertTenantExists(tenantId);
-    // Refused before the journal records an attempt that cannot succeed.
     assertStripeConfigured();
     return manuallyUpgradeWorkspaceCommand({
       tenantId,

@@ -50,9 +50,6 @@ beforeAll(() => {
   );
 });
 
-// A filter narrowing the rows turns off moving them by hand, so the
-// catalogue leaves deleted plans out on the server, on every route that
-// lists or counts them.
 describe("the plans table scope", () => {
   it.each(SCOPED_ROUTES)("leaves deleted plans out of %s", (route) => {
     const filters = Parameters.ExtractFilters(
@@ -103,8 +100,6 @@ describe("the plans table scope", () => {
   });
 });
 
-// A move saves through the table's edit route: it may write the position
-// alone, so it never reaches the Stripe sync of `/api/saas/plans`.
 describe("moving plans by hand", () => {
   it("writes nothing but the position", () => {
     const writable = Object.entries(meta.fields)

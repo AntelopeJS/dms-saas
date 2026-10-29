@@ -40,7 +40,6 @@ describe("formatPeriodRange", () => {
   it("decides the years in the formatters' zone", () => {
     const newYearUtc = new Date("2026-12-31T23:30:00.000Z");
     const startUtc = new Date("2026-12-01T12:00:00.000Z");
-    // 00:30 on 1 January in Brussels: the period spans two years there.
     expect(
       formatPeriodRange(
         startUtc,

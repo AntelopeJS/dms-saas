@@ -40,8 +40,10 @@ import {
 } from "./workspace-cells";
 
 const COLUMN = "$saas.workspaces.column";
-// The seven visible columns fit a 1440px screen without scrolling, scrollbar
-// included.
+/**
+ * Column sizes: the seven visible columns fit a 1440px screen without
+ * scrolling, scrollbar included.
+ */
 const NAME_COLUMN_SIZE = 175;
 const STATUS_COLUMN_SIZE = 130;
 const PLAN_COLUMN_SIZE = 150;
@@ -50,9 +52,11 @@ const OWNER_COLUMN_SIZE = 185;
 const RENEWS_COLUMN_SIZE = 170;
 const CREATED_COLUMN_SIZE = 130;
 
-// Every directory field is read off the workspace's billing state row, which
-// is keyed by the tenant id: one join per column, sortable and filterable in
-// the database.
+/**
+ * Every directory field is read off the workspace's billing state row, which
+ * is keyed by the tenant id: one join per column, sortable and filterable in
+ * the database.
+ */
 const DIRECTORY_JOIN = {
   table: TenantBillingState,
   localKey: "_id",
@@ -310,8 +314,10 @@ export class workspacesDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare seats: number;
 
-  // The two-line cells' texts, written from the directory row: the browser
-  // words them in the reader's language.
+  /**
+   * The two-line cells' texts, written from the directory row: the browser
+   * words them in the reader's language.
+   */
   @Listable(["_id"])
   @Access(AccessMode.ReadOnly)
   get planDetail(): ComposedText | null {

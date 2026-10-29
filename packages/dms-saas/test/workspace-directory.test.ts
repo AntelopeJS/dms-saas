@@ -256,8 +256,6 @@ describe("workspace directory churn", () => {
       }),
     );
 
-  // A workspace first published already cancelled (an import, a seed) has no
-  // earlier publication to read its loss from.
   it("takes the loss of a cancellation first seen cancelled from the price last paid", () => {
     expect(cancelled({ hasPaidInvoice: true })).toMatchObject({
       mrrMinor: 0,
@@ -287,8 +285,6 @@ describe("workspace directory churn", () => {
     ).toBe(0);
   });
 
-  // Past due, suspended, cancelled: the suspension billed nothing, so the
-  // cancellation that followed it lost nothing either.
   it("passes the loss a suspension held on to the cancellation that follows", () => {
     const row = cancelled({
       existing: {

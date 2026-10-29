@@ -69,6 +69,10 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
     );
   }
 
+  /**
+   * Applies `patch` as a compare-and-set on the stored revision, which owns
+   * the next revision rather than the update modifier.
+   */
   private async updateRevision(
     id: string,
     patch: DeepPartial<Segment>,
@@ -84,7 +88,6 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
     const { _id, revision, ...changes } = patch;
     const instance = SegmentModel.fromPlainData(changes);
     triggerEvent(instance, "update");
-    // The compare-and-set owns the next revision, not the update modifier.
     const { revision: _rotated, ...dbPatch } =
       SegmentModel.toDatabase(instance);
     const outcome = await this.table

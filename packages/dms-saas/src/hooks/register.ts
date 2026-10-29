@@ -52,9 +52,22 @@ async function emitDeletedTenant(
   });
 }
 
+/**
+ * Registers the module's DMS hook listeners and its tenant export contributor.
+ *
+ * - The export contributor is registered with an explicit module id: it
+ *   namespaces the archive entries, and the auto-detected one depends on which
+ *   call site the runtime credits.
+ * - The DMS creates its default tenant outside the signup flow: it gets the
+ *   default plan at its creation, as a workspace registered here does. A
+ *   catalogue published later reaches it through `withDefaultPlanChange`.
+ * - The plan table is readable only once DMS has registered its schemas, which
+ *   `DATABASE_INITIALIZED` signals; module `start()` runs too early. The Stripe
+ *   plan reconciliation listener is registered ahead of the other
+ *   `DATABASE_INITIALIZED` listener so a failure there does not skip the pass,
+ *   and is not awaited so DMS startup never waits on Stripe.
+ */
 export function registerSaasHookListeners(): void {
-  // Registered with an explicit module id: it namespaces the archive entries,
-  // and the auto-detected one depends on which call site the runtime credits.
   RegisterTenantDataExportContributor(SAAS_MODULE_ID, exportSaasTenantData);
   RegisterHook(
     Hook.TENANT_DELETED,
@@ -64,19 +77,12 @@ export function registerSaasHookListeners(): void {
       return undefined;
     },
   );
-  // The DMS creates its default tenant outside the signup flow: it gets the
-  // default plan at its creation, as a workspace registered here does. A
-  // catalogue published later reaches it through withDefaultPlanChange.
   RegisterHook(Hook.TENANT_BEING_PROVISIONED, async ({ tenantId }) => {
     if (tenantId === DEFAULT_TENANT_ID) {
       await ensureDefaultSubscription(tenantId);
     }
     return undefined;
   });
-  // The plan table is readable only once DMS has registered its schemas, which
-  // is what this hook signals; module start() runs too early. Registered ahead
-  // of the listener below so a failure there does not skip the pass, and not
-  // awaited so DMS startup never waits on Stripe.
   RegisterHook(Hook.DATABASE_INITIALIZED, () => {
     startPlanReconciliation();
     return undefined;

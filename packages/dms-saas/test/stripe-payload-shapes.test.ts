@@ -191,9 +191,6 @@ describe("upcoming invoice lines", () => {
   });
 });
 
-// Payloads as a webhook endpoint on 2026-08-26.dahlia renders them: clover and
-// dahlia moved none of the fields dms-saas reads, so the basil readers apply
-// unchanged, next to the fields those releases added or reshaped.
 describe("dahlia webhook payloads", () => {
   const USAGE_THROUGH = new Date("2026-09-15T00:00:00.000Z");
 

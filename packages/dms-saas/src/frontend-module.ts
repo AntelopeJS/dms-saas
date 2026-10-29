@@ -13,6 +13,13 @@ const DEFAULT_ADMISSION_MODE = "open";
  * it with `AddFrontendModule`, and `@antelopejs/dms-frontend` calls this same
  * function (declared as `dmsFrontend` in package.json) to build and start the
  * frontend without a backend. It reads nothing but its arguments.
+ *
+ * Self-service registration ends on an authenticated user: the finalize route
+ * provisions the workspace and mints the token pair, and the frontend server
+ * seals its session cookie from it. Declaring `authEstablishEndpoints` here is
+ * what lets `/auth/establish` call it, so no deployment has to name it in
+ * DMS_AUTH_ESTABLISH_ENDPOINTS by hand. Sign-in only links to the bundled
+ * screens the deployment serves.
  */
 export function frontendModule(
   config: DmsSaasConfig,
@@ -22,11 +29,6 @@ export function frontendModule(
     sourcePath: path.join(__dirname, "../frontend-vue"),
     renderer: { name: "vue", version: "3" },
     priority: 0,
-    // Self-service registration ends on an authenticated user: the finalize
-    // route provisions the workspace and mints the token pair, and the
-    // frontend server seals its session cookie from it. Declaring it here is
-    // what lets `/auth/establish` call it, so no deployment has to name it in
-    // DMS_AUTH_ESTABLISH_ENDPOINTS by hand.
     authEstablishEndpoints: ["/api/saas/register/finalize"],
     options: {
       dmsSaas: {
@@ -35,7 +37,6 @@ export function frontendModule(
         registrationPaymentMethod:
           config.registration?.paymentMethod ??
           DEFAULT_REGISTRATION_PAYMENT_METHOD_POLICY,
-        // Sign-in only links to the bundled screens the deployment serves.
         publicScreens: resolvePublicScreensToRegister(config),
       },
     },

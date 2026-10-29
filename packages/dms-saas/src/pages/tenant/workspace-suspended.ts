@@ -6,9 +6,11 @@ import {
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
 
-// authOnly keeps this page reachable when the subscription access gate
-// blocks the workspace: it needs authentication but no permission, so a
-// blocked member can still land here and regularize (or contact the owner).
+/**
+ * `authOnly` keeps this page reachable when the subscription access gate
+ * blocks the workspace: it needs authentication but no permission, so a
+ * blocked member can still land here and regularize (or contact the owner).
+ */
 @RegisterPage()
 export class SaasWorkspaceSuspendedController extends PageController(
   "workspace-suspended",

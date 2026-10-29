@@ -28,9 +28,6 @@ describe("legal pages", () => {
       const page = registered(registry.pages).find(({ id }) => id === slug);
       const servePage = GetPageLayoutBySlug(`/${slug}`);
 
-      // The console layout's authenticated calls answer 401 to a visitor
-      // without a session, which bounces them to the login screen before
-      // they can read the terms they are asked to accept.
       expect(page?.publicAccess).toBe(true);
       await expect(
         servePage?.(

@@ -4,10 +4,6 @@ import { useOnDemandRead } from "../frontend-vue/app/composables/useOnDemandRead
 import { useSeatQuota } from "../frontend-vue/app/composables/useSeatQuota";
 import { useTenantPlan } from "../frontend-vue/app/composables/useTenantPlan";
 
-// The reads a dialog, a drawer or a lookup makes go through `useApiData`, as
-// every read of the module: nothing on a server, nothing before `read()`, a
-// fresh read on each, and the failure handed to the caller.
-
 interface Holder<T> {
   value: T;
 }

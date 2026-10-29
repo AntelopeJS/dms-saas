@@ -34,8 +34,10 @@ interface EligibilityRule {
   ) => boolean;
 }
 
-// Evaluated in order: a gift is reported as such whatever plan it carries, and
-// a free plan before the Stripe objects a free workspace never has.
+/**
+ * Evaluated in order: a gift is reported as such whatever plan it carries, and
+ * a free plan before the Stripe objects a free workspace never has.
+ */
 const ELIGIBILITY_RULES: EligibilityRule[] = [
   {
     outcome: absent("complimentary"),

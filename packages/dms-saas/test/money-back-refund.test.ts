@@ -68,8 +68,10 @@ function settings(mode: string) {
 const owner = { _id: "owner" } as User;
 const controller = new SaasBillingSelfRefundController();
 
-// A first payment 10 days ago, an upgrade paid 5 days ago within the window,
-// and a trial's zero invoice before both.
+/**
+ * A first payment 10 days ago, an upgrade paid 5 days ago within the window,
+ * and a trial's zero invoice before both.
+ */
 const INVOICES = [
   paid("in_upgrade", 5, 12098),
   paid("in_first", 10, 2900),

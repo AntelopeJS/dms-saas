@@ -64,17 +64,19 @@ async function oneBillingCycleOf(priceId: string): Promise<PhaseDuration> {
  * plan they paid for until then, and the renewal invoice is already priced at
  * the cheaper plan. The schedule releases itself afterwards, leaving a plain
  * subscription behind.
+ *
+ * The billing cycle is read before the schedule exists, so a failure leaves
+ * nothing half-built. Creating the schedule is deliberately not
+ * idempotency-keyed: scheduling, cancelling and scheduling the same downgrade
+ * again would otherwise replay the released schedule from Stripe's 24h cache
+ * and fail on the phase update. Stripe already refuses a second schedule on a
+ * subscription, so a double submit fails safely.
  */
 export async function scheduleSubscriptionDowngrade(
   input: ScheduleDowngradeInput,
 ): Promise<Date | null> {
   const stripe = getStripeClient();
-  // Read before the schedule exists, so a failure leaves nothing half-built.
   const nextPhaseDuration = await oneBillingCycleOf(input.stripePriceId);
-  // Deliberately not idempotency-keyed: scheduling, cancelling and scheduling
-  // the same downgrade again would otherwise replay the released schedule from
-  // Stripe's 24h cache and fail on the phase update. Stripe already refuses a
-  // second schedule on a subscription, so a double submit fails safely.
   const created = await stripe.subscriptionSchedules.create({
     from_subscription: input.stripeSubscriptionId,
   });

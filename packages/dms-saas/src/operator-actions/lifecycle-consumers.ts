@@ -4,9 +4,11 @@ import type { TenantLifecycleConsumer } from "@antelopejs/interface-dms-saas/ten
 const LOG_PREFIX = "[dms-saas:workspace-lifecycle]";
 const consumers = new Map<string, TenantLifecycleConsumer>();
 
-// RegisteringProxy changes ownership before calling the implementation. A
-// rejected collision would leave automatic unload cleanup attached to the
-// rejected consumer instead of the active one, so the latest owner must win.
+/**
+ * RegisteringProxy changes ownership before calling the implementation. A
+ * rejected collision would leave automatic unload cleanup attached to the
+ * rejected consumer instead of the active one, so the latest owner must win.
+ */
 function register(name: string, consumer: TenantLifecycleConsumer): void {
   if (consumers.has(name)) {
     Logging.Error(

@@ -31,7 +31,7 @@ import { HiddenStringFilter } from "./hidden-filter";
 const COLUMN = "$saas.workspace_detail.invitations.column";
 const ROLE = "$saas.workspace_detail.members.role";
 
-// An invitation about to lapse turns amber this many days ahead.
+/** An invitation about to lapse turns amber this many days ahead. */
 const EXPIRING_SOON_DAYS = 2;
 
 interface InviteRowInstance {

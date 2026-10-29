@@ -22,8 +22,6 @@ describe("page runtime interface", () => {
         landingPage: "dashboard",
       },
     ]);
-    // The workspace settings category is the DMS's own: registering a
-    // second `settings.workspace` would collide with it.
     expect(
       registered(registry.categories).map((category) => category.fullId),
     ).toEqual(["pages", "settings.workspace", "modules.saas"]);

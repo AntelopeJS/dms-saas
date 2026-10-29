@@ -20,6 +20,11 @@ import {
 const CRON_NAME = "hard-delete-cancelled";
 const CRON_SCHEDULE = "30 4 * * *";
 
+/**
+ * Deletes a cancelled tenant once its deletion is admitted. The admitted marker
+ * on the subscription survives every partial failure, so the hook effects must
+ * accept replay.
+ */
 async function deleteAdmittedTenant(
   sub: TenantSubscription,
   cutoff: Date,
@@ -33,10 +38,14 @@ async function deleteAdmittedTenant(
   await ExecuteHooks(Hook.TENANT_DELETED, tenantId, { operationId });
   await GetModel(TenantModel).delete(tenantId);
   await GetModel(TenantBillingInfoModel, tenantId).deleteAll();
-  // The admitted marker survives every partial failure; hook effects must accept replay.
   await model.finishDeletion(admitted);
 }
 
+/**
+ * Deletes every cancelled tenant past the retention cutoff. A failure is
+ * isolated to its tenant so one stuck tenant does not abort the others, and
+ * the surviving subscription marker lets the next run resume it.
+ */
 async function run(): Promise<void> {
   const tenantSubscriptionModel = GetModel(
     TenantSubscriptionModel,
@@ -54,8 +63,6 @@ async function run(): Promise<void> {
     try {
       await deleteAdmittedTenant(sub, cutoff);
     } catch (error) {
-      // Isolate failures: one stuck tenant must not abort the others, and the
-      // surviving subscription marker lets the next run resume this tenant.
       Logging.Error(
         `[dms-saas:cron:${CRON_NAME}] failed to delete tenant ${tenantId}`,
         error,

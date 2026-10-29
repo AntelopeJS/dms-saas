@@ -73,8 +73,6 @@ describe("the plans page", () => {
     expect(card.options?.selectable).toBe(options?.rowActions?.hasSelection);
   });
 
-  // The placeholder grid draws a page of cards as tall as a plan card, so the
-  // footer stands where the loaded catalogue puts it.
   it("sizes the loading cards like a page of plan cards", async () => {
     const { options } = await SaasPlansController.table.serialize();
     const cards = options?.displays?.find((display) => display.id === "cards");
@@ -104,8 +102,6 @@ describe("the plans page", () => {
     ).toBe("DmsSaasRetirePlanModal");
   });
 
-  // Moving cards by hand is off while a filter narrows the rows: deleted
-  // plans are scoped out by the data API instead of a default filter.
   it("narrows nothing by default, so the plans move by hand", async () => {
     const { options } = await SaasPlansController.table.serialize();
 
@@ -142,8 +138,6 @@ describe("the plans page", () => {
 });
 
 describe("stock Duplicate", () => {
-  // Plans have their own "Duplicate as new plan"; a migration is a record of
-  // what happened, nothing to copy.
   it("is off on the plans and plan migrations tables", async () => {
     const plans = await SaasPlansController.table.serialize();
     const migrations = await SaasPlanMigrationsController.table.serialize();

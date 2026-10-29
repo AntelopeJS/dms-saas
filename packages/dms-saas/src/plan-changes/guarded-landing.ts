@@ -22,11 +22,11 @@ import { BLOCKING_STATUSES } from "../auth/subscription-access-gate";
 
 const INVENTORY_PREPARATION_MAX_MS = 30_000;
 
+/** Repeated reconciliation reuses the same durable delivery and notice IDs. */
 async function notifyBlocked(
   tenantId: string,
   change: GuardedPlanChange,
 ): Promise<void> {
-  // Repeated reconciliation reuses the same durable delivery and notice IDs.
   await dispatchWorkspaceLifecycle({
     tenantId,
     operationId: `${change.operationId}:blocked`,
@@ -43,6 +43,11 @@ async function notifyBlocked(
   });
 }
 
+/**
+ * Persists the downgrade incident. With `preserveProviderPhase`, unknown
+ * provider effects retain their billing intent. Without it, a failed inventory
+ * validation has no provider effect and must allow compatible remediation.
+ */
 async function recordBlocked(
   tenantId: string,
   current: TenantSubscription,
@@ -59,8 +64,6 @@ async function recordBlocked(
       incompatibilities: issues,
     },
   };
-  // Unknown provider effects retain their billing intent. A failed inventory
-  // validation has no provider effect and must allow compatible remediation.
   if (!preserveProviderPhase) {
     patch.domainTransition = null;
     patch.paidUsagePeriods = closePaidUsagePeriods(
@@ -74,14 +77,16 @@ async function recordBlocked(
   await recomputeTenantBillingState(tenantId);
 }
 
+/**
+ * The downgrade owns its marker, not the subscription status: a later payment
+ * suspension must survive both a receipt and this final CAS.
+ */
 async function completeFreeActivation(
   tenantId: string,
   current: TenantSubscription,
 ): Promise<void> {
   const change = current.guardedPlanChange;
   if (!change || change.phase !== "activating") return;
-  // The downgrade owns its marker, not the subscription status. A later
-  // payment suspension must survive both a receipt and this final CAS.
   if (!BLOCKING_STATUSES.has(current.status)) {
     await dispatchWorkspaceLifecycle({
       tenantId,
@@ -158,6 +163,11 @@ async function recoverInventoryPreparation(
  * Consume guarded cancellations even when landing is blocked: falling through
  * to ordinary cancellation would eventually invoke retention deletion.
  * Stripe is read before inventory closure and never mutated by this landing.
+ * Phases that no longer need inventory closure still release it while keeping
+ * the identity, which makes a crash between the phase CAS and the barrier
+ * release recoverable. A prior suspension delivery is finished before its
+ * inverse is allowed: durable delivery identities prevent a late retry from
+ * reversing a later resume.
  */
 export async function reconcileGuardedFreeChange(
   tenantId: string,
@@ -166,8 +176,6 @@ export async function reconcileGuardedFreeChange(
   const change = current?.guardedPlanChange;
   if (!current || !change) return false;
   if (await recoverInventoryPreparation(tenantId, current, change)) return true;
-  // These phases no longer need inventory closure. Retaining the identity
-  // makes a crash between phase CAS and barrier release recoverable.
   await releasePlanInventory(tenantId, change);
   if (change.phase === "activating") {
     await completeFreeActivation(tenantId, current);
@@ -189,8 +197,6 @@ export async function reconcileGuardedFreeChange(
     await notifyBlocked(tenantId, change);
     return true;
   }
-  // Finish any prior suspension delivery before allowing its inverse; durable
-  // delivery identities prevent a late retry from reversing a later resume.
   if (change.phase === "blocked") await notifyBlocked(tenantId, change);
   try {
     const live = await getStripeClient().subscriptions.retrieve(

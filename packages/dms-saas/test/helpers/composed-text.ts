@@ -41,11 +41,14 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 
 type WrittenParams = Record<string, string | number>;
 
+/**
+ * Resolves a key in a locale and fills in its params. Picks the plural form by
+ * vue-i18n's default rule: two forms are one / other, three zero / one / other.
+ */
 function translate(code: string, key: string, params: WrittenParams): string {
   const message = flattenLocale(readLocale(code)).get(key) ?? key;
   const forms = message.split(PLURAL_SEPARATOR);
   const count = Number(params.count);
-  // vue-i18n's default rule: two forms are one / other, three zero / one / other.
   const index =
     forms.length === TWO_FORMS
       ? Number(count !== 1)

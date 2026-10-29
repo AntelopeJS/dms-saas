@@ -106,9 +106,7 @@ type AttachFieldModifier = (
   tableClass: new () => object,
   modifier: new () => Modifier,
   field: string,
-  // Mirrors the shape the database decorators declare, where the value
-  // is genuinely opaque to this side.
-  // oxlint-disable-next-line anti-slop/no-object-parameters
+  // oxlint-disable-next-line anti-slop/no-object-parameters -- mirrors the shape the database decorators declare, where the value is opaque to this side
   options: object,
 ) => void;
 

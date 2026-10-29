@@ -45,8 +45,6 @@ describe("buildSessionEstablishRequest", () => {
   });
 
   it("sends no token of its own", () => {
-    // The tenant assignment token is the only credential the page holds; an
-    // access or refresh token must never reach it, and never leave it.
     const body = JSON.stringify(buildSessionEstablishRequest(FINALIZATION));
 
     expect(body).not.toContain("access_token");

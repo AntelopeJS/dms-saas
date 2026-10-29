@@ -35,11 +35,13 @@ import {
 const DATA_EXPORT_SCOPE = "saas-tenant-data-export";
 const EXPORT_FILENAME_PREFIX = "workspace-export";
 
+/**
+ * Exports expire within a day, so a workspace never accumulates anywhere near
+ * `maxFetchLimit`. It is a ceiling on what one request may read, not a target.
+ */
 const HISTORY_PAGE_LIMITS: PageLimits = {
   defaultPageSize: 10,
   maxPageSize: 50,
-  // Exports expire within a day, so a workspace never accumulates anywhere near
-  // this many. It is a ceiling on what one request may read, not a target.
   maxFetchLimit: 500,
 };
 

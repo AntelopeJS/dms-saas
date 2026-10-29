@@ -42,14 +42,16 @@ function mergeShapes(left: ExtrasShape, right: ExtrasShape): ExtrasShape {
   };
 }
 
-/** One walk for every limit: the payload is untrusted, so it is read once. */
+/**
+ * One walk for every limit: the payload is untrusted, so it is read once. A
+ * leaf adds no level of its own: `{ a: 1 }` is one deep, not two.
+ */
 function inspect(value: unknown, depth: number): ExtrasShape {
   if (Array.isArray(value)) {
     return value
       .map((entry) => inspect(entry, depth + 1))
       .reduce(mergeShapes, { ...EMPTY_SHAPE, depth });
   }
-  // A leaf adds no level of its own: `{ a: 1 }` is one deep, not two.
   if (!isPlainObject(value)) return EMPTY_SHAPE;
   return Object.entries(value)
     .map(([key, nested]) =>

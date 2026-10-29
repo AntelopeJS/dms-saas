@@ -1,7 +1,3 @@
-// An owner's upgrade Stripe applied once its invoice was paid, recorded by the
-// confirm call after the 3D Secure challenge or by the
-// `customer.subscription.pending_update_applied` webhook, whichever lands first.
-
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import {
@@ -24,7 +20,11 @@ export function billedPriceId(
   return stripeSubscription.items.data[0]?.price?.id ?? null;
 }
 
-/** Records the plan Stripe applied once the upgrade's invoice was paid. */
+/**
+ * Records the plan Stripe applied once an owner's upgrade invoice was paid,
+ * from the confirm call after the 3D Secure challenge or from the
+ * `customer.subscription.pending_update_applied` webhook, whichever lands first.
+ */
 async function recordAppliedUpgrade(
   tenantId: string,
   subscription: TenantSubscription,

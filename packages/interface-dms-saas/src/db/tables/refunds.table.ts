@@ -8,10 +8,7 @@ import {
   UpdateTime,
 } from "@antelopejs/interface-database-decorators";
 import { TENANT_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
-// A bidirectional relation cannot be declared without both sides
-// naming each other. `@Relation({ to: () => X })` defers the
-// reference to call time, which is what makes the cycle safe.
-// oxlint-disable-next-line import/no-cycle
+// oxlint-disable-next-line import/no-cycle -- a bidirectional relation names both tables; `@Relation({ to: () => X })` defers the reference to call time, which makes the cycle safe
 import { CreditNote } from "./creditNotes.table";
 
 export const refundsTableName = "refunds";

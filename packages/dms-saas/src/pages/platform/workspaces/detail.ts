@@ -55,10 +55,10 @@ function tabLink(slot: string): string {
 
 const ROUTE_FILTER_TENANT = { id: { field: "_instance" } };
 
-// The workspace is the page: its column would repeat on every row.
+/** The workspace is the page: its column would repeat on every row. */
 const WITHOUT_WORKSPACE_COLUMN = { hidden: ["workspaceName"] };
 
-// The same actions as the Invoices page: credit only paid and open invoices.
+/** The same actions as the Invoices page: credit only paid and open invoices. */
 const invoiceRowActions = {
   ...NO_ROW_ACTIONS,
   custom: INVOICE_ROW_ACTIONS,
@@ -114,6 +114,10 @@ const invitationRowActions = {
   ],
 };
 
+/**
+ * A compact table draws no caption: the card around the latest-invoices table
+ * titles it and links to every invoice.
+ */
 const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
   .child(
     "billingInfo",
@@ -137,8 +141,6 @@ const overview = VStack({ spacing: "1.5rem", alignment: "stretch" })
   )
   .child(
     "latestInvoices",
-    // A compact table draws no caption: the card titles it and links to
-    // every invoice.
     Card({
       title: `${D}.invoices.latest`,
       padded: false,

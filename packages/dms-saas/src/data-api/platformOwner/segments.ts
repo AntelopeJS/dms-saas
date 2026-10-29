@@ -41,7 +41,7 @@ import {
 const SEGMENTS_API_BASE = "/api/saas/segments";
 const CHANGE_WINDOW_DAYS = 7;
 const ISO_DAY_LENGTH = 10;
-// The visible columns fit a 1440px screen without scrolling, scrollbar included.
+/** Column sizes: the visible columns fit a 1440px screen without scrolling, scrollbar included. */
 const RULES_COLUMN_SIZE = 330;
 const NAME_COLUMN_SIZE = 220;
 const COUNT_COLUMN_SIZE = 125;
@@ -137,9 +137,11 @@ function wrapDeleteWithCascade(
   };
 }
 
-// Segments are written by the editor's own routes (`/api/saas/segments`),
-// which validate the rules and re-evaluate on save: the table only reads,
-// exports and deletes.
+/**
+ * Segments are written by the editor's own routes (`/api/saas/segments`),
+ * which validate the rules and re-evaluate on save: the table only reads,
+ * exports and deletes.
+ */
 const segmentsRoutes = {
   get: TableViewRoutes.Get,
   list: TableViewRoutes.List,

@@ -168,10 +168,13 @@ export interface TaxIdSnapshot {
   taxId: Stripe.TaxId | null;
 }
 
+/**
+ * A Stripe that is not configured reads as unreachable, as an outage does: the
+ * stored verification stays.
+ */
 export async function fetchPrimaryTaxId(
   customerId: string,
 ): Promise<TaxIdSnapshot> {
-  // Unreachable as an outage is: the stored verification stays.
   if (!isStripeConfigured()) return { reachable: false, taxId: null };
   const stripe = getStripeReadClient();
   const taxIds = await stripe.customers

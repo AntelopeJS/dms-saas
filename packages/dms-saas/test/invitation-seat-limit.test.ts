@@ -67,8 +67,6 @@ const operator = {
 
 beforeAll(() => {
   ImplementInterface(planChangesInterface, planChangesImplementation);
-  // DMS answers isSaasMode() from the registrations it holds, so wire its
-  // implementation in and declare SaaS mode the way construct() does.
   implementWithDms(saasMode, "implementations/dms/saas-mode.js");
   saasMode.RegisterSaasMode();
   applyDmsConfig({

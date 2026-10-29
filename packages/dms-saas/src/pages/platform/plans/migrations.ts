@@ -34,13 +34,16 @@ const MIGRATIONS_ORDER = 5;
 const ATTENTION_COLUMNS = 2;
 const NEEDS_ATTENTION_STAGE = "needs_attention";
 
+/**
+ * A tab filtering the migrations on one stage. The menu entry of the
+ * needs-attention tab carries the count of migrations waiting for someone.
+ */
 function stageTab(id: string, icon: string, stage: string) {
   return {
     id,
     label: `${TEXTS}.tabs.${id}`,
     icon,
     filter: { accessorKey: "stage", value: stage, mode: "is" },
-    // The menu entry carries the count of migrations waiting for someone.
     navBadge: stage === NEEDS_ATTENTION_STAGE,
   };
 }
@@ -297,7 +300,7 @@ export class SaasPlanMigrationDetailController extends PageController(
   },
   DefaultLayout({ fullWidth: true, hideHeader: true }),
 ) {
-  // No period: the bar is the Direct / Pause toggle and the last update.
+  /** No period: the bar is the Direct / Pause toggle and the last update. */
   static toolbar = pageToolbar({ period: false }).meta(
     detailMeta("toolbar", "i-ph-broadcast"),
   );

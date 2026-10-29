@@ -42,7 +42,6 @@ function visibleTo(audience: PastDueAudience) {
 export const PAST_DUE_OWNER_BANNER: LayoutBannerComponentInfo = {
   key: "dms-saas:past-due",
   variant: LayoutBannerVariant.ERROR,
-  // An unpaid invoice concerns the whole workspace, module area included.
   scope: LayoutBannerScope.EVERYWHERE,
   component: BANNER_COMPONENT,
   props: { audience: "owner" },

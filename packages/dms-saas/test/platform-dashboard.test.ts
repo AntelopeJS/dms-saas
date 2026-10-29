@@ -366,7 +366,6 @@ describe("paid invoices chart", () => {
         document({ total: 3_000 }),
         document({ total: 2_000, paidAt: new Date("2025-10-07T09:00:00Z") }),
         document({ total: 400, paidAt: new Date("2025-09-08T13:00:00Z") }),
-        // Between the two windows: in neither.
         document({ total: 9_000, paidAt: new Date("2026-03-01T00:00:00Z") }),
       ],
       range,

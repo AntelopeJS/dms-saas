@@ -87,9 +87,11 @@ const NO_OWNER: DirectoryOwner = { status: "none", name: null, email: null };
 const PAID_INVOICE_STATUS = "paid";
 const INVOICE_DOCUMENT_TYPE = "invoice";
 
-// States a churn is read from: what the workspace paid before them is the
-// loss. A suspension bills nothing but still holds the loss of the paying
-// workspace it stopped, for the cancellation that usually follows.
+/**
+ * States a churn is read from: what the workspace paid before them is the
+ * loss. A suspension bills nothing but still holds the loss of the paying
+ * workspace it stopped, for the cancellation that usually follows.
+ */
 const LOSS_STATES: ReadonlySet<BillingState> = new Set([
   "suspended",
   "cancelled",

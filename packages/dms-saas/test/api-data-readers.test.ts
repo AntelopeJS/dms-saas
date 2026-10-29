@@ -87,8 +87,6 @@ describe("readers on useApiData", () => {
     const state = useWorkspaceOverview("t1");
     expect(read(calls[0]!.source)).toBe("/api/saas/workspaces/t1/overview");
     expect(state.isLoading.value).toBe(true);
-    // useApiData follows the page's refreshes: a refresh of its own would
-    // read it twice.
     expect(calls[0]!.options).toBeUndefined();
     expect(subscribe).not.toHaveBeenCalled();
 
@@ -173,7 +171,6 @@ describe("readers on useApiData", () => {
     expect(overview.hasError.value).toBe(true);
     expect(history.state.value.hasFailed).toBe(true);
 
-    // A retry keeps the failure in `error` until it answers (as Nuxt does).
     for (const call of calls) {
       call.status.value = "pending";
       call.pending.value = true;

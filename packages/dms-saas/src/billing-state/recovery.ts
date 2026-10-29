@@ -47,12 +47,12 @@ export function toCardSummary(
 /**
  * Read-only view of the customer's default card. Brand, last four digits and
  * expiry are the only fields that ever leave Stripe, so nothing here is PCI
- * scoped and card changes still happen in the Stripe portal.
+ * scoped and card changes still happen in the Stripe portal. With
+ * placeholder keys the call could only fail, so no card is read.
  */
 export async function fetchDefaultPaymentMethod(
   stripeCustomerId: string,
 ): Promise<PaymentMethodSummary | null> {
-  // Placeholder keys: the call could only fail. The page shows no card.
   if (!isStripeConfigured()) return null;
   const stripe = getStripeReadClient();
   const customer = await stripe.customers
@@ -86,11 +86,14 @@ async function fetchNextRetryAt(stripeInvoiceId: string): Promise<Date | null> {
   return stripeSecondsToDate(invoice?.next_payment_attempt);
 }
 
+/**
+ * The unpaid invoice as the billing screens name it. `total` is only mirrored
+ * from the invoice's next Stripe event, so older rows fall back to the amount
+ * captured when they were first stored.
+ */
 export function toUnpaidInvoiceRef(invoice: Invoice): UnpaidInvoiceRef {
   return {
     number: invoice.number,
-    // `total` is only mirrored from the invoice's next Stripe event, so older
-    // rows fall back to the amount captured when they were first stored.
     amount: invoice.total || invoice.amount,
     currency: invoice.currency,
     hostedInvoiceUrl: invoice.hostedInvoiceUrl,

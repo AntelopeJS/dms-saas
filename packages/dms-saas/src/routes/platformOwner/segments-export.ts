@@ -58,7 +58,11 @@ function ownersExportAccessForSegment(
   };
 }
 
-/** One CSV row of a matching user: who they are and what they own. */
+/**
+ * One CSV row of a matching user: who they are and what they own. The MRR
+ * column is in major units already, as the projection holds it and segment
+ * rules read it.
+ */
 export function segmentExportRow(projection: UserProjection): string[] {
   const owned = projection.workspaces.filter((workspace) => workspace.isOwner);
   const ownedMrr = owned.reduce((sum, workspace) => sum + workspace.mrr, 0);
@@ -71,7 +75,6 @@ export function segmentExportRow(projection: UserProjection): string[] {
     projection.isValidated ? "true" : "false",
     projection.workspaces.map((w) => w.name).join(WORKSPACE_SEPARATOR),
     owned.map((w) => w.name).join(WORKSPACE_SEPARATOR),
-    // The projection's MRR is in major units already, as segment rules read it.
     ownedMrr.toFixed(MONEY_FRACTION_DIGITS),
   ];
 }

@@ -72,8 +72,10 @@ interface ActionLook {
 }
 
 const KEY_PREFIX = "$saas.activity";
-// A platform feed, which links each entry to its workspace, names the
-// workspace in the title; a workspace's own feed does not repeat it.
+/**
+ * A platform feed, which links each entry to its workspace, names the
+ * workspace in the title; a workspace's own feed does not repeat it.
+ */
 const PLATFORM_TITLES = "platform";
 const WORKSPACE_TITLES = "workspace";
 
@@ -109,8 +111,10 @@ const INVITATION_SEND_LOOKS: Record<string, ActionLook> = {
   },
 };
 
-// The first e-mail of an owner invitation reads by its outcome: the operator
-// learns from the feed too whether the owner was told.
+/**
+ * The first e-mail of an owner invitation reads by its outcome: the operator
+ * learns from the feed too whether the owner was told.
+ */
 const invitationSendLook: ActionLookOf = (action) =>
   INVITATION_SEND_LOOKS[detailString(action, "emailDelivery")] ??
   INVITATION_SEND_LOOKS.sent!;

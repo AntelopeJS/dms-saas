@@ -31,7 +31,7 @@ import { getSegmentNamesCached } from "../../utils";
 
 const ACTIVE_NOW_MS = 5 * 60 * 1000;
 const IDENTITY_COLUMN_SIZE = 245;
-// The six visible columns fit a 1440px screen without scrolling.
+/** Column sizes: the six visible columns fit a 1440px screen without scrolling. */
 const ROLE_COLUMN_SIZE = 170;
 const SEGMENTS_COLUMN_SIZE = 190;
 const REGULAR_COLUMN_SIZE = 155;
@@ -51,7 +51,7 @@ function userIdOf(self: unknown): string {
   return (self as UserRowInstance).table._id;
 }
 
-// The three workspace getters read the same row, so they share one lookup.
+/** The three workspace getters read the same row, so they share one lookup. */
 const countsByRow = new WeakMap<object, Promise<UserWorkspaceCounts>>();
 
 async function loadWorkspaceCounts(
@@ -176,9 +176,11 @@ export class saasUsersDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare owner: boolean;
 
-  // The role reads as a pill on admins and a dash on everyone else: the
-  // pill is drawn from `owner`, the getter only gives the column a value that
-  // is never a pill of its own.
+  /**
+   * The role reads as a pill on admins and a dash on everyone else: the pill is
+   * drawn from `owner`, the getter only gives the column a value that is never
+   * a pill of its own.
+   */
   @Listable(["_id"])
   @Column({
     name: "$saas.users.column.platform_role",

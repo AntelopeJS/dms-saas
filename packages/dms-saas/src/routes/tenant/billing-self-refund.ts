@@ -292,16 +292,19 @@ export function toEligibilityResponse(
   };
 }
 
+/**
+ * Cancels the subscription, then refunds. Cancelling first means the
+ * irreversible action (returning money) happens last: if the cancel fails, no
+ * money has left yet, and the caller releases the refund claim so the request
+ * can be retried. Every call uses a deterministic idempotency key, so a retry
+ * never double-cancels or double-refunds.
+ */
 async function issueRefundAndCancel(
   subscriptionId: string,
   stripeSubscriptionId: string,
   refunds: InvoiceRefund[],
 ): Promise<void> {
   const stripe = getStripeClient();
-  // Cancel first so the irreversible action (returning money) happens last. If
-  // the cancel fails, no money has left yet; the caller releases the refund
-  // claim so the request can be retried. Every call uses a deterministic
-  // idempotency key, so a retry never double-cancels or double-refunds.
   await stripe.subscriptions.cancel(stripeSubscriptionId, undefined, {
     idempotencyKey: `cancel-self-refund:${subscriptionId}`,
   });
@@ -344,6 +347,13 @@ export class SaasBillingSelfRefundController extends Controller(
     );
   }
 
+  /**
+   * Refunds the customer and cancels the subscription. The refund claim is
+   * released when the issue fails, so a partial failure (e.g. cancel succeeded
+   * but a credit note call threw) can be retried; the deterministic
+   * idempotency keys make the retry safe against double-cancel and
+   * double-refund.
+   */
   @Post("/refund-self")
   async requestSelfRefund(
     @AuthTenantOwner() _user: User,
@@ -381,9 +391,6 @@ export class SaasBillingSelfRefundController extends Controller(
         refunds,
       );
     } catch (error) {
-      // Release the claim so a partial failure (e.g. cancel succeeded but a
-      // credit note call threw) can be retried. The deterministic idempotency
-      // keys make the retry safe against double-cancel/double-refund.
       await tenantSubscriptionModel
         .releaseSelfRefund(subscription._id)
         .catch(() => {});

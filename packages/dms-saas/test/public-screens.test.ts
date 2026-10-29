@@ -65,8 +65,6 @@ describe("registerPublicScreens", () => {
       configWith({ register: false, pricing: false }),
     );
 
-    // The page registers itself on import, so opting out has to keep the
-    // module from ever being evaluated — not merely skip a registration call.
     expect(registeredScreens()).toEqual([]);
 
     await registerPublicScreens(configWith());

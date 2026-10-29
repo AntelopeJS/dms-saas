@@ -1,8 +1,3 @@
-// The lookups and row-mirroring shared by every Stripe webhook handler. They
-// live apart from the handlers so each handler file stays under the size the
-// linter allows, and so the split files depend on this one rather than on each
-// other -- the dependency runs one way and introduces no cycle.
-
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
@@ -49,6 +44,14 @@ export async function findTenantByCustomerId(
   return { _id: getRowInstance(sub) };
 }
 
+/**
+ * Paying an old invoice cannot grant an unvalidated Free plan or erase its
+ * incident: while a guarded plan change is pending, cancellation and an
+ * unblocking `active` are ignored. Cancellation events for this operation have
+ * their own landing. Entering past_due arms the dunning clock unless an episode
+ * is already running; leaving it disarms structurally (see DunningClock on the
+ * table).
+ */
 export async function updateSubscriptionStatus(
   tenantId: string,
   status: TenantSubscriptionStatus,
@@ -56,8 +59,6 @@ export async function updateSubscriptionStatus(
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const subscription = await tenantSubscriptionModel.findOne();
   if (!subscription) return;
-  // Paying an old invoice cannot grant an unvalidated Free plan or erase its
-  // incident. Cancellation events for this operation have their own landing.
   if (
     subscription.guardedPlanChange &&
     (status === "cancelled" ||
@@ -68,8 +69,6 @@ export async function updateSubscriptionStatus(
     status,
     updatedAt: new Date(),
   };
-  // Entering past_due arms the dunning clock unless an episode is already
-  // running; leaving it disarms structurally (see DunningClock on the table).
   if (status === PAST_DUE_STATUS) {
     patch.pastDueSince = subscription.pastDueSince ?? new Date();
   }
@@ -184,6 +183,12 @@ function toInvoicePayload(invoice: Stripe.Invoice, lines: InvoiceLine[]) {
   };
 }
 
+/**
+ * Every invoice.* event of one invoice mirrors it, concurrently and across the
+ * Stripe round-trip for its lines: keying the row by the Stripe id is what
+ * keeps them to one row. Legacy rows keep their random key and are found by
+ * the Stripe invoice lookup.
+ */
 export async function upsertInvoice(
   invoice: Stripe.Invoice,
   tenantId: string,
@@ -196,9 +201,6 @@ export async function upsertInvoice(
     await invoiceModel.update(existing._id, payload);
     return;
   }
-  // Every invoice.* event of one invoice mirrors it, concurrently and across
-  // the Stripe round-trip above: keying the row by the Stripe id is what keeps
-  // them to one row. Legacy rows keep their random key and the lookup above.
   await insertOrUpdateById(
     invoiceModel,
     invoiceId,

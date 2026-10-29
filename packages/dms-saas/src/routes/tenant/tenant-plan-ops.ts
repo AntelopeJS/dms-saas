@@ -1,7 +1,3 @@
-// The plan-change operations behind the controller in tenant-plan.ts, split out
-// to keep both files under the size the linter allows. They are also called
-// directly by the operator actions, which is why they stay exported.
-
 import { HTTPResult } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
@@ -49,9 +45,11 @@ export const PAST_DUE_STATUS: TenantSubscriptionStatus = "past_due";
 const ACTIVE_STATUS = "active" as const;
 const SEAT_BILLING_MODE = "seat";
 const FLAT_QUANTITY = 1;
-// An immediate change the owner pays for only lands on Stripe once its invoice
-// is paid: a card that needs 3D Secure leaves it pending for the owner to
-// authenticate, where `error_if_incomplete` would refuse it as declined.
+/**
+ * An immediate change the owner pays for only lands on Stripe once its invoice
+ * is paid: a card that needs 3D Secure leaves it pending for the owner to
+ * authenticate, where `error_if_incomplete` would refuse it as declined.
+ */
 const PAID_UPGRADE_PAYMENT_BEHAVIOR = "pending_if_incomplete" as const;
 
 /** Preserve structured inventory incompatibilities at the HTTP boundary. */
@@ -183,7 +181,11 @@ export const UNCHANGED_RESULT_BASE = {
 
 /**
  * The plan exists, is on sale and is billed on a Stripe price that matches
- * it: what any path that selects a plan, or prices one, starts from.
+ * it: what any path that selects a plan, or prices one, starts from. Whatever
+ * wrote the plan, it is billed on a price that matches it. A priced plan with
+ * no Stripe price must not be selectable: `isPaidPlan` keys off the Stripe
+ * ref, so an unsynced paid plan would be parked as a free downgrade and land
+ * active without ever being billed.
  */
 export async function loadSellablePlan(
   planModel: PlanModel,
@@ -195,11 +197,7 @@ export async function loadSellablePlan(
     HTTP_BAD_REQUEST,
     "saas.errors.plan.invalid",
   );
-  // Whatever wrote the plan, it is billed on a price that matches it.
   const newPlan = await ensurePlanStripeRefs(storedPlan, planModel);
-  // A priced plan with no Stripe price must not be selectable: isPaidPlan
-  // keys off the Stripe ref, so an unsynced paid plan would be parked as a
-  // free downgrade and land active without ever being billed.
   assert(
     newPlan.price <= 0 || !!newPlan.paymentProviderRefs?.stripePriceId,
     HTTP_BAD_REQUEST,
