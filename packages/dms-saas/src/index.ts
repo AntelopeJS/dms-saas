@@ -40,6 +40,13 @@ import "./routes";
 
 let registeredCronTasks: ScheduledTask[] = [];
 
+/**
+ * Starts the module with its configuration. While the SaaS mode registration
+ * made here exists, the DMS stops treating default-tenant ownership as
+ * platform ownership; the core drops it when this module unloads.
+ *
+ * @param config Module configuration
+ */
 export async function construct(config: DmsSaasConfig): Promise<void> {
   setRuntimeConfig(config);
   planChangesImplementation.setRequiredPlanChangePolicy(

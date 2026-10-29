@@ -105,7 +105,8 @@ function projectInvoices(invoices: Invoice[]): {
 
 /**
  * The MRR the directory published, which the dashboard sums; computed from the
- * records the same way when the workspace has no directory row yet.
+ * records the same way when the workspace has no directory row yet. Pending
+ * invitations are not loaded here: the billed seats are the members alone.
  */
 function workspaceMrr(inputs: ProjectionInputs): MinorAmount {
   const { directory, subscription, plan, membersCount } = inputs;

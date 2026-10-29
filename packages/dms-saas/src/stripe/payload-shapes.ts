@@ -1,10 +1,6 @@
-import type Stripe from "stripe";
-import { stripeSecondsToDate } from "../utils/time";
-
 /**
- * Pre-basil `Subscription` fields, since moved onto each subscription item.
+ * Readers for the Stripe fields that moved in API version 2025-03-31.basil.
  *
- * This file reads the Stripe fields that moved in API version 2025-03-31.basil.
  * API calls made through the SDK always come back in the pinned version, but a
  * webhook payload is rendered in the API version of the *endpoint* that
  * receives it, which is configured in the Stripe Dashboard. Until an operator
@@ -12,7 +8,14 @@ import { stripeSecondsToDate } from "../utils/time";
  * pre-basil shape, so every field that moved is read from its basil location
  * first and from its legacy location second. The clover and dahlia releases
  * moved none of the fields read here, so their payloads take the basil path.
+ *
+ * @packageDocumentation
  */
+
+import type Stripe from "stripe";
+import { stripeSecondsToDate } from "../utils/time";
+
+/** Pre-basil `Subscription` fields, since moved onto each subscription item. */
 interface LegacySubscriptionFields {
   current_period_start?: number | null;
   current_period_end?: number | null;

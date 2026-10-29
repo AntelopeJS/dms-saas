@@ -182,7 +182,7 @@ export class SaasTenantBillingController extends Controller(
       : null;
     if (status === stored) return info;
     await billingModel.update(info._id, { vatVerificationStatus: status });
-    // oxlint-disable-next-line typescript/no-misused-spread -- the row is an AntelopeJS table class with one declared field and no instance methods, serialised to JSON on the way out, so no prototype is lost
+    // oxlint-disable-next-line typescript/no-misused-spread -- the row is an AntelopeJS table class whose `Table` base declares one field and a static and no instance methods, serialised to JSON on the way out, so no prototype is lost
     return { ...info, vatVerificationStatus: status };
   }
 
