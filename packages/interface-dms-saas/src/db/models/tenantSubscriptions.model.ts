@@ -67,17 +67,11 @@ export class TenantSubscriptionModel extends BasicDataModel(
     options?: ValidateOptions,
   ): Promise<number>;
   override async update(
-    idOrPatch: string | DeepPartial<TenantSubscription>,
-    patchOrOptions?: DeepPartial<TenantSubscription> | ValidateOptions,
-    options?: ValidateOptions,
+    ...call: TenantSubscriptionUpdateCall
   ): Promise<number> {
-    const id = isIdArgument(idOrPatch) ? idOrPatch : idOrPatch._id;
-    const patch = isIdArgument(idOrPatch)
-      ? (patchOrOptions as DeepPartial<TenantSubscription>)
-      : idOrPatch;
-    const validation = isIdArgument(idOrPatch)
-      ? options
-      : (patchOrOptions as ValidateOptions | undefined);
+    const [id, patch, validation] = isIdUpdate(call)
+      ? call
+      : [call[0]._id, ...call];
     if (!id) throw new Error("Subscription identity is required");
     if (
       validation?.validate &&
@@ -441,8 +435,18 @@ export class TenantSubscriptionModel extends BasicDataModel(
   }
 }
 
-function isIdArgument(
-  value: string | DeepPartial<TenantSubscription>,
-): value is string {
-  return typeof value === "string";
+type TenantSubscriptionIdUpdate = [
+  id: string,
+  patch: DeepPartial<TenantSubscription>,
+  options?: ValidateOptions,
+];
+
+type TenantSubscriptionUpdateCall =
+  | TenantSubscriptionIdUpdate
+  | [patch: DeepPartial<TenantSubscription>, options?: ValidateOptions];
+
+function isIdUpdate(
+  call: TenantSubscriptionUpdateCall,
+): call is TenantSubscriptionIdUpdate {
+  return typeof call[0] === "string";
 }
