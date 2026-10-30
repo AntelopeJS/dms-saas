@@ -311,10 +311,8 @@ describe("creating a plan", () => {
         currency: "eur",
       }),
     );
-    expect(result).toMatchObject({
-      _id: expect.any(String),
-      notice: { color: "warning" },
-    });
+    expect(result).toMatchObject({ notice: { color: "warning" } });
+    expect(result._id).toEqual(expect.any(String));
     expect(await storedPlan(result._id)).toBeDefined();
   });
 
@@ -356,8 +354,8 @@ describe("creating a plan", () => {
   it("keeps the texts of the other locales when one is rewritten", async () => {
     await storePlan({}, { name: { en: "Growth", fr: "Croissance" } });
     await plansController().update(OWNER, PLAN_ID, { price: 29 });
-    const texts = (await plansController().getOne(OWNER, PLAN_ID)).name;
-    expect(texts).toEqual({ en: "Growth", fr: "Croissance" });
+    const plan = await plansController().getOne(OWNER, PLAN_ID);
+    expect(plan).toHaveProperty("name", { en: "Growth", fr: "Croissance" });
   });
 
   it("offers the editor every registered permission for a new plan", async () => {
