@@ -107,7 +107,7 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
   const controller = new Controller();
   const meta = GetDataControllerMeta(controller);
 
-  function get() {
+  function expectGet() {
     const route = meta.endpoints.get.callback;
     const ctx = request();
     const args = [
@@ -120,7 +120,8 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
       OWNER,
     ];
     assert.equal(args.length, route.args.length);
-    return route.func.call(controller, ...args);
+    const outcome: unknown = route.func.call(controller, ...args);
+    return expect(outcome);
   }
 
   it.each(LIST_ROUTES)("merges mandatory and user filters on %s", (route) => {
@@ -222,7 +223,7 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
       current = { _id: "invoice", documentType };
       prepareRead();
 
-      await expect(get()).rejects.toMatchObject({
+      await expectGet().rejects.toMatchObject({
         status: 404,
         body: "saas.errors.invoice.not_found",
       });
@@ -236,7 +237,7 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
     current = { _id: "invoice", documentType: "invoice" };
     prepareRead();
 
-    await expect(get()).resolves.toEqual({ _id: "invoice" });
+    await expectGet().resolves.toEqual({ _id: "invoice" });
     expect(Query.Get).toHaveBeenCalledTimes(1);
     expect(presence).toHaveBeenCalledTimes(1);
   });
@@ -244,7 +245,7 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
   it("preserves missing-row 404s", async () => {
     current = undefined;
     prepareRead();
-    await expect(get()).rejects.toMatchObject({ status: 404 });
+    await expectGet().rejects.toMatchObject({ status: 404 });
     expect(Query.ReadProperties).not.toHaveBeenCalled();
     expect(presence).not.toHaveBeenCalled();
   });
@@ -252,7 +253,7 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
   it("checks authorization before loading a document", async () => {
     isAllowed = false;
     prepareRead();
-    await expect(get()).rejects.toMatchObject({ status: 403 });
+    await expectGet().rejects.toMatchObject({ status: 403 });
     expect(Query.Get).not.toHaveBeenCalled();
     expect(presence).not.toHaveBeenCalled();
   });

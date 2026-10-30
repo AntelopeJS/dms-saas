@@ -3,7 +3,7 @@ import {
   onPublicLocaleChange,
   usePublicFetch,
 } from "../frontend-vue/app/build/public/usePublicFetch";
-import { nextTick, ref } from "./helpers/frontend-vue";
+import { nextTick, ref } from "./helpers/vue-runtime/index.mjs";
 
 interface FetchRequestContext {
   options: { headers?: HeadersInit };

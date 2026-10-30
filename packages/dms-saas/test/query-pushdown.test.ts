@@ -3,7 +3,7 @@ import type { QueryStage } from "@antelopejs/interface-database/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvoiceModel } from "@antelopejs/interface-dms-saas/db/models/invoices.model";
 import { Invoice } from "@antelopejs/interface-dms-saas/db/tables/invoices.table";
-import { isString } from "../src/utils/primitive-guards";
+import { isNumber, isString } from "../src/utils/primitive-guards";
 import { isRecord } from "./helpers/records";
 
 type Row = Record<string, string | Date | undefined>;
@@ -33,7 +33,9 @@ function matches(row: Row, stage: QueryStage): boolean {
     throw new Error(`The ${stage.stage} stage carries no expression`);
   }
   const [, field, compare] = expression.stages;
-  const value = row[field.args[0]];
+  const name: unknown = field.args[0];
+  if (!isString(name)) throw new Error("The filter stage names no field");
+  const value = Object.hasOwn(row, name) ? row[name] : undefined;
   if (compare.stage === "eq") return value === compare.args[0];
   return compare.stage === "ne" && value !== compare.args[0];
 }
@@ -61,7 +63,14 @@ const handlers = new Map<string, StageHandler>([
   ],
   [
     "slice",
-    (rows, stage) => rows.slice(stage.args[0], stage.args[0] + stage.args[1]),
+    (rows, stage) => {
+      const start: unknown = stage.args[0];
+      const count: unknown = stage.args[1];
+      if (!isNumber(start) || !isNumber(count)) {
+        throw new Error("The slice stage carries no bounds");
+      }
+      return rows.slice(start, start + count);
+    },
   ],
 ]);
 
@@ -72,16 +81,18 @@ function runStage(rows: Row[], stage: QueryStage): Row[] {
   return handler(rows, stage);
 }
 
-function captureQueries(instances: Record<string, Row[]>) {
+function captureQueries(tenants: Record<string, Row[]>) {
+  const instances = new Map(Object.entries(tenants));
   const queries: QueryStage[][] = [];
   const transferred: number[] = [];
   vi.spyOn(Query.prototype, "run").mockImplementation(
     async function (this: Query<unknown>) {
       queries.push(this.stages);
       const instance = this.stages.find((stage) => stage.stage === "instance");
+      const id: unknown = instance?.options.id;
       const rows = this.stages.reduce(
         (rows, stage) => runStage(rows, stage),
-        instances[instance?.options.id] ?? [],
+        (isString(id) ? instances.get(id) : undefined) ?? [],
       );
       transferred.push(rows.length);
       return rows;
