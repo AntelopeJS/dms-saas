@@ -6,6 +6,7 @@ import {
   processInvoiceLineInjection,
 } from "../src/invoice-line-items/recovery";
 import { dispatchStripeWebhookEvent } from "../src/stripe/webhook-dispatch";
+import { latch } from "./helpers/latch";
 import { useMongoDatabase } from "./helpers/mongo";
 import {
   aCycleInvoice,
@@ -76,8 +77,8 @@ describe("invoice line recovery — real concurrency on MongoDB", () => {
     world.resolve = () => ({ status: "not_ready", reason: "coverage" });
     await dispatchStripeWebhookEvent(invoiceCreated(f));
     expect((await task(f.invoiceId))?.state).toBe("suspended");
-    const stalled = Promise.withResolvers<void>();
-    const entered = Promise.withResolvers<void>();
+    const stalled = latch();
+    const entered = latch();
     let resolveCalls = 0;
     world.resolve = async () => {
       resolveCalls += 1;
