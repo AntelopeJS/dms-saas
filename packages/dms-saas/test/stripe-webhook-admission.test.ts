@@ -9,6 +9,7 @@ import {
 } from "./helpers/credit-notes";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
+import { latch } from "./helpers/latch";
 
 useMongoDatabase("stripe-webhook-admission");
 const stripe = useSuiteStripe();
@@ -38,8 +39,8 @@ function event() {
 }
 
 it("does not take over a paused handler beyond the old timeout", async () => {
-  const started = Promise.withResolvers<void>();
-  const finish = Promise.withResolvers<void>();
+  const started = latch();
+  const finish = latch();
   const retrieve = stubCreditNoteRead();
   retrieve.mockImplementationOnce(async () => {
     started.resolve();

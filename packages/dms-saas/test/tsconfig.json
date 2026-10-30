@@ -4,7 +4,8 @@
     "noEmit": true,
     "incremental": false,
     "rootDir": "..",
-    "composite": false
+    "composite": false,
+    "paths": { "vue": ["../../../node_modules/.pnpm/node_modules/vue"] }
   },
   "include": ["../src/**/*.ts", "./**/*.ts"]
 }

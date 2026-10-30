@@ -29,6 +29,7 @@ import {
 import { captureLogs } from "./helpers/logging";
 import { useMongoDatabase } from "./helpers/mongo";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
+import { latch } from "./helpers/latch";
 
 useMongoDatabase("retention-deletion-replay");
 const logs = captureLogs();
@@ -83,7 +84,7 @@ describe("retention deletion replay", () => {
       status: "cancelled",
       deletionStartedAt: BEFORE,
     });
-    const drained = Promise.withResolvers<void>();
+    const drained = latch();
     const producer = runTenantLifecycleOperation(
       tenantId,
       () => drained.promise,
