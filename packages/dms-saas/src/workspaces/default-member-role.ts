@@ -17,21 +17,16 @@ interface RoleText {
  * and renamed by them at will, so it is written here rather than translated
  * on each read.
  */
-const FALLBACK_ROLE_TEXT: RoleText = {
-  name: "Member",
-  description: "Everything the workspace plan includes",
+const MEMBER_ROLE_TEXTS: Record<string, RoleText> = {
+  en: {
+    name: "Member",
+    description: "Everything the workspace plan includes",
+  },
+  fr: {
+    name: "Membre",
+    description: "Tout ce que comprend l'offre de l'espace",
+  },
 };
-
-const MEMBER_ROLE_TEXTS = new Map<string, RoleText>([
-  [FALLBACK_LANGUAGE, FALLBACK_ROLE_TEXT],
-  [
-    "fr",
-    {
-      name: "Membre",
-      description: "Tout ce que comprend l'offre de l'espace",
-    },
-  ],
-]);
 
 /** Tenant rows share one collection, so the role id carries the tenant. */
 export function defaultMemberRoleId(tenantId: string): string {
@@ -40,7 +35,7 @@ export function defaultMemberRoleId(tenantId: string): string {
 
 function memberRoleText(language: string | undefined): RoleText {
   const base = baseLanguage(language) ?? FALLBACK_LANGUAGE;
-  return MEMBER_ROLE_TEXTS.get(base) ?? FALLBACK_ROLE_TEXT;
+  return MEMBER_ROLE_TEXTS[base] ?? MEMBER_ROLE_TEXTS[FALLBACK_LANGUAGE];
 }
 
 /**
