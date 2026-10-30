@@ -50,7 +50,7 @@ describe("operator invoices tab counters", () => {
       { dataAPIEntry: entry },
     );
 
-    const counts = await entry.callback.func.call(
+    const counts: unknown = await entry.callback.func.call(
       controller,
       ctx,
       {
