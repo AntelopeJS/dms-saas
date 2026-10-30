@@ -69,14 +69,14 @@ const EU_VAT_COUNTRIES = new Set([
   "SE",
 ]);
 
-const NON_EU_VAT_TAX_ID_TYPES: Record<string, Stripe.TaxIdCreateParams.Type> = {
-  GB: "gb_vat",
-  CH: "ch_vat",
-  NO: "no_vat",
-  AU: "au_abn",
-  NZ: "nz_gst",
-  CA: "ca_gst_hst",
-};
+const NON_EU_VAT_TAX_ID_TYPES = new Map<string, Stripe.TaxIdCreateParams.Type>([
+  ["GB", "gb_vat"],
+  ["CH", "ch_vat"],
+  ["NO", "no_vat"],
+  ["AU", "au_abn"],
+  ["NZ", "nz_gst"],
+  ["CA", "ca_gst_hst"],
+]);
 
 export function resolveTaxIdType(
   country: string | null | undefined,
@@ -84,7 +84,7 @@ export function resolveTaxIdType(
   if (!country) return undefined;
   const code = country.trim().toUpperCase();
   if (EU_VAT_COUNTRIES.has(code)) return "eu_vat";
-  return NON_EU_VAT_TAX_ID_TYPES[code];
+  return NON_EU_VAT_TAX_ID_TYPES.get(code);
 }
 
 export function toStripeAddress(

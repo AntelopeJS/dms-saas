@@ -28,12 +28,12 @@ export const CREDIT_NOTE_REASONS = [
 ] as const;
 
 /** Stripe's own reasons, worded with the module's reasons where they agree. */
-const STRIPE_REASONS: Record<string, string> = {
-  duplicate: "duplicate",
-  fraudulent: "fraudulent",
-  order_change: "order_change",
-  product_unsatisfactory: "service_issue",
-};
+const STRIPE_REASONS = new Map([
+  ["duplicate", "duplicate"],
+  ["fraudulent", "fraudulent"],
+  ["order_change", "order_change"],
+  ["product_unsatisfactory", "service_issue"],
+]);
 
 function metadataText(
   metadata: CreditNote["metadata"] | null | undefined,
@@ -57,7 +57,7 @@ export function creditNoteReason(
   if (metadataText(row.metadata, AUTO_PRORATA_METADATA_KEY)) {
     return "prorated_cancellation";
   }
-  return STRIPE_REASONS[row.reason] ?? null;
+  return STRIPE_REASONS.get(row.reason) ?? null;
 }
 
 /**
