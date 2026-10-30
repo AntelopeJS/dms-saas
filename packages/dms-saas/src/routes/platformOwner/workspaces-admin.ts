@@ -35,6 +35,7 @@ import {
   type ComplimentaryImpact,
   loadComplimentaryImpact,
 } from "../../operator-actions/previews";
+import { runJournaled } from "../../operator-actions/one-shot";
 import { getStripeClient } from "../../stripe";
 import { withStripeAvailability } from "../../stripe/availability";
 import { parseFutureDate } from "../../utils";
@@ -139,9 +140,12 @@ async function upsertFreeSubscription(
   planId: string,
   freeUntil: Date | null,
   createdBy: string,
-): Promise<void> {
+): Promise<string | null> {
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const existing = await tenantSubscriptionModel.findOne();
+  const previousPlan = existing?.planId
+    ? await GetModel(PlanModel).get(existing.planId)
+    : undefined;
   const operationId = randomUUID();
   if (existing)
     await tenantSubscriptionModel.beginTransition(existing, {
@@ -187,6 +191,7 @@ async function upsertFreeSubscription(
     ]);
   }
   await recomputeTenantBillingState(tenantId);
+  return previousPlan?.name ?? null;
 }
 
 /**
@@ -313,10 +318,28 @@ export class SaasWorkspacesAdminController extends Controller(
       body.freeUntil,
       "saas.errors.workspace_create.free_until_past",
     );
-    await withStripeAvailability(() =>
-      runTenantLifecycleOperation(tenantId, () =>
-        upsertFreeSubscription(tenantId, plan._id, freeUntil, user._id),
-      ),
+    await runJournaled(
+      { tenantId, actor: { id: user._id, email: user.email }, details: {} },
+      {
+        action: "workspace.complimentary_grant",
+        run: () =>
+          withStripeAvailability(() =>
+            runTenantLifecycleOperation(tenantId, async () => {
+              const previousPlanName = await upsertFreeSubscription(
+                tenantId,
+                plan._id,
+                freeUntil,
+                user._id,
+              );
+              return {
+                previousPlanName,
+                targetPlanName: plan.name ?? null,
+                freeUntil: freeUntil?.toISOString() ?? null,
+              };
+            }),
+          ),
+        detailsOf: (details) => details,
+      },
     );
     await notifyTenantOwners(tenantId, complimentaryAccessGrantedSubject, {
       icon: COMP_ICON,
@@ -353,10 +376,19 @@ export class SaasWorkspacesAdminController extends Controller(
       user._id,
     );
     assert(!existing, HTTP_CONFLICT, "saas.errors.workspace.already_member");
-    await applyTenantOwnership(this.userModel, user._id, tenantId, {
-      roleIds: [],
-      isTenantOwner: false,
-    });
-    return { joined: true };
+    return runJournaled<JoinResult>(
+      { tenantId, actor: { id: user._id, email: user.email }, details: {} },
+      {
+        action: "workspace.support_join",
+        run: async () => {
+          await applyTenantOwnership(this.userModel, user._id, tenantId, {
+            roleIds: [],
+            isTenantOwner: false,
+          });
+          return { joined: true };
+        },
+        detailsOf: () => ({}),
+      },
+    );
   }
 }

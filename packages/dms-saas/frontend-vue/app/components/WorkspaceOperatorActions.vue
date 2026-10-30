@@ -24,7 +24,7 @@ interface OperatorRow {
 }
 
 const tenantId = props.routeParams?.id ?? ''
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { overview, isLoading, hasError, load } = useWorkspaceOverview(tenantId)
 const actions = useWorkspaceActions(tenantId)
 const dialogs = ref<InstanceType<typeof WorkspaceActionDialogs> | null>(null)
@@ -61,9 +61,22 @@ const rows = computed<OperatorRow[]>(() => {
 		{
 			id: 'join',
 			icon: 'i-ph-user-plus',
-			title: current?.joinedAt ? t(`${D}.joined`) : t(`${D}.join`),
-			description: t(`${D}.join_description`),
-			isDisabled: !!current?.joinedAt,
+			title: current?.membership
+				? t(`${D}.${current.membership.role}`)
+				: t(`${D}.join`),
+			description:
+				current?.membership && current.membership.role !== 'support'
+					? t(
+							`saas.workspace_detail.header.membership_${current.membership.role}`,
+							{
+								date:
+									formatDate(current.membership.joinedAt, locale.value, {
+										dateStyle: 'medium',
+									}) ?? '—',
+							},
+						)
+					: t(`${D}.join_description`),
+			isDisabled: !!current?.membership,
 			run: () => void actions.join(),
 		},
 	]

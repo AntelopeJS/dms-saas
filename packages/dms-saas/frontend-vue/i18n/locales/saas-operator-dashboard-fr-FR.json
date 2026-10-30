@@ -1,0 +1,66 @@
+{
+  "saas": {
+    "dashboard": {
+      "title": "Tableau de bord",
+      "description": "Revenu récurrent, santé des espaces de travail et incidents de facturation pour tous les clients.",
+      "other_currencies": "{amounts} dans d'autres devises non comptés",
+      "headline": {
+        "label": "Revenu récurrent et espaces de travail",
+        "mrr": "MRR · normalisé",
+        "arr": "ARR {arr}",
+        "paying": "Espaces payants",
+        "paying_value": "{paying} / {total}",
+        "paying_detail": "{free} gratuits · {trialing} en essai",
+        "trials": "Essais",
+        "trials_detail": "Aucun ne se termine dans les 14 jours | 1 se termine dans les 14 jours | {count} se terminent dans les 14 jours"
+      },
+      "churn": {
+        "title": "Attrition du revenu",
+        "description": "MRR perdu par des résiliations sur la période"
+      },
+      "attention": {
+        "title": "À traiter",
+        "description": "Les files qu'un opérateur devrait regarder aujourd'hui.",
+        "empty_title": "Rien à signaler",
+        "empty_description": "Aucun espace en retard de paiement, aucun accès offert ne se termine cette semaine, aucune migration ni facture n'attend.",
+        "past_due": "Aucun espace en retard de paiement | 1 espace en retard de paiement | {count} espaces en retard de paiement",
+        "complimentary_ending": "Aucun accès offert ne se termine | 1 accès offert se termine | {count} accès offerts se terminent",
+        "named_ending": "{name} le {date}",
+        "migrations": "Aucune migration à réconcilier | 1 migration à réconcilier | {count} migrations à réconcilier",
+        "migrations_detail": "{from} → {to} · {failed} espaces sur {total} en échec",
+        "open_invoices": "Aucune facture ouverte | 1 facture ouverte | {count} factures ouvertes",
+        "open_invoices_detail": "{amount} en attente de paiement"
+      },
+      "paid_invoices": {
+        "title": "Factures payées",
+        "description": "Encaissé et crédité, dans la devise de reporting",
+        "collected": "Encaissé",
+        "credited": "Crédité / remboursé",
+        "collected_previous_period": "Encaissé, période précédente",
+        "collected_previous_year": "Encaissé, année précédente",
+        "collected_compared": "Encaissé, période comparée"
+      },
+      "by_status": {
+        "title": "Espaces par statut",
+        "description": "Une couleur par statut dans tout le module",
+        "open_list": "Ouvrir la liste"
+      },
+      "plans": {
+        "title": "Offres par MRR",
+        "subtitle": "MRR normalisé apporté par chaque offre",
+        "description": "Aucun espace payant · {price} | 1 espace payant · {price} | {count} espaces payants · {price}",
+        "empty": "Aucune offre n'apporte encore de revenu récurrent.",
+        "open_catalogue": "Catalogue"
+      },
+      "activity": {
+        "title": "Activité récente",
+        "empty": "Rien ne s'est encore passé.",
+        "tabs": {
+          "all": "Tout",
+          "billing": "Facturation",
+          "lifecycle": "Cycle de vie"
+        }
+      }
+    }
+  }
+}

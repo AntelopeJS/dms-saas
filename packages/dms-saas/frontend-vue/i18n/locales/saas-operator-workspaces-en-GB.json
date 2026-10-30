@@ -1,67 +1,5 @@
 {
   "saas": {
-    "dashboard": {
-      "title": "Dashboard",
-      "description": "Recurring revenue, workspace health and billing issues across every customer.",
-      "other_currencies": "{amounts} in other currencies not counted",
-      "headline": {
-        "label": "Recurring revenue and workspaces",
-        "mrr": "MRR · normalised",
-        "arr": "ARR {arr}",
-        "paying": "Paying workspaces",
-        "paying_value": "{paying} / {total}",
-        "paying_detail": "{free} free · {trialing} in trial",
-        "trials": "Trials",
-        "trials_detail": "None end in the next 14 days | 1 ends in the next 14 days | {count} end in the next 14 days"
-      },
-      "churn": {
-        "title": "Revenue churn",
-        "description": "MRR lost to cancellations over the period"
-      },
-      "attention": {
-        "title": "Needs attention",
-        "description": "Queues an operator should look at today.",
-        "empty_title": "All clear",
-        "empty_description": "No workspace is past due, no complimentary access ends this week, no migration or invoice is waiting.",
-        "past_due": "No workspace past due | 1 workspace past due | {count} workspaces past due",
-        "complimentary_ending": "No complimentary access ending | 1 complimentary access ending | {count} complimentary accesses ending",
-        "named_ending": "{name} on {date}",
-        "migrations": "No migration to reconcile | 1 migration needs reconciliation | {count} migrations need reconciliation",
-        "migrations_detail": "{from} → {to} · {failed} of {total} workspaces failed",
-        "open_invoices": "No open invoice | 1 open invoice | {count} open invoices",
-        "open_invoices_detail": "{amount} awaiting payment"
-      },
-      "paid_invoices": {
-        "title": "Paid invoices",
-        "description": "Collected and credited, in the reporting currency",
-        "collected": "Collected",
-        "credited": "Credited / refunded",
-        "collected_previous_period": "Collected, previous period",
-        "collected_previous_year": "Collected, previous year",
-        "collected_compared": "Collected, compared period"
-      },
-      "by_status": {
-        "title": "Workspaces by status",
-        "description": "One colour per status across the module",
-        "open_list": "Open list"
-      },
-      "plans": {
-        "title": "Plans by MRR",
-        "subtitle": "Normalised MRR each plan brings",
-        "description": "No paying workspace · {price} | 1 paying workspace · {price} | {count} paying workspaces · {price}",
-        "empty": "No plan brings recurring revenue yet.",
-        "open_catalogue": "Catalogue"
-      },
-      "activity": {
-        "title": "Recent activity",
-        "empty": "Nothing happened yet.",
-        "tabs": {
-          "all": "All",
-          "billing": "Billing",
-          "lifecycle": "Lifecycle"
-        }
-      }
-    },
     "activity": {
       "by_operator": "by {operator}",
       "platform": {
@@ -72,6 +10,8 @@
         "workspace_suspended": "{workspace} suspended",
         "workspace_reactivated": "{workspace} reactivated",
         "subscription_upgraded": "{workspace} upgraded {from} → {to}",
+        "complimentary_access_granted": "Complimentary access on {to} granted to {workspace}",
+        "support_joined": "Platform support joined {workspace}",
         "balance_credited": "Stripe credit granted to {workspace}",
         "invitation_sent": "Invitation to {workspace} e-mailed to {email}",
         "invitation_email_failed": "Invitation e-mail to {email} for {workspace} not sent",
@@ -86,6 +26,8 @@
         "workspace_suspended": "Workspace suspended",
         "workspace_reactivated": "Workspace reactivated",
         "subscription_upgraded": "Upgraded {from} → {to}",
+        "complimentary_access_granted": "Complimentary access granted on {to}",
+        "support_joined": "Platform support joined the workspace",
         "balance_credited": "Stripe credit granted",
         "invitation_sent": "Invitation e-mailed to {email}",
         "invitation_email_failed": "Invitation e-mail to {email} not sent: copy the link to send it yourself",
@@ -232,14 +174,18 @@
         "no_owner": "No owner",
         "workspace_owner": "Workspace owner",
         "created": "Created {date}",
-        "joined_as_support": "You joined as platform support · {date}",
+        "membership_owner": "You own this workspace",
+        "membership_member": "You're a member since {date}",
+        "membership_support": "You joined as platform support · {date}",
         "complimentary": "Complimentary",
         "change_plan": "Change plan",
         "grant_free_access": "Grant free access",
         "immediate_upgrade": "Immediate upgrade…",
         "grant_credit": "Grant Stripe credit…",
         "join": "Join as member…",
-        "joined": "Joined",
+        "owner": "Workspace owner",
+        "member": "Member",
+        "support": "Joined",
         "open_in_stripe": "Open customer in Stripe",
         "copy_link": "Copy workspace link",
         "link_copied": "Workspace link copied.",
@@ -386,7 +332,9 @@
         "credit_description": "Deducted from the next invoices",
         "credit_unavailable": "Needs a Stripe customer",
         "join": "Join as member",
-        "joined": "Joined as platform support",
+        "owner": "Workspace owner",
+        "member": "Already a member",
+        "support": "Joined as platform support",
         "join_description": "Platform support · no seat used"
       },
       "credit": {
