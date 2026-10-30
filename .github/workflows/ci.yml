@@ -34,9 +34,9 @@ jobs:
         packages/interface-dms-saas/README.md
         packages/interface-dms-saas/docs
       docs-typescript-project: packages/interface-dms-saas/docs/tsconfig.json
+      renovate-sync: false
     permissions:
-      contents: write
-      actions: write
+      contents: read
 
   # The Vitest suite is not part of `checks`: in its own job it runs alongside
   # the build and lint instead of after them, and keeps the mongod cache that
@@ -80,3 +80,10 @@ jobs:
       - env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: for result in $RESULTS; do [ "$result" = success ] || exit 1; done
+  renovate-sync:
+    if: >-
+      github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/') && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+      actions: write
+    uses: AntelopeJS/.github/.github/workflows/ci-renovate-sync.yml@v1
