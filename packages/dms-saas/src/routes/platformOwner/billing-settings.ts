@@ -9,26 +9,28 @@ import { assert, assertValidation } from "@antelopejs/interface-api-util";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import type { ZodError } from "zod";
+import { ZodError } from "zod";
 import {
   BILLING_SETTINGS_SINGLETON_ID,
   type BillingSettings,
   BillingSettingsModel,
   DEFAULT_STRIPE_TAX_CODE,
+  type LegalDocumentKey,
   LegalDocumentsModel,
   PlanModel,
 } from "../../db";
 import {
-  type BillingRulesBody,
   billingRulesBodySchema,
   computePlanTaxSync,
   ensureBillingSettingsRow,
   loadBillingSettings,
   legalDocumentReleases,
+  type LegalDocumentReleases,
   type PlanTaxSyncStatus,
   pickBillingRules,
   pickLegalTexts,
   pickSettingsUpdate,
+  type PublishedLegalDocuments,
   readLegalDocuments,
   saveLegalDocuments,
 } from "../../operator-billing";
@@ -45,15 +47,18 @@ const HTTP_CONFLICT = 409;
  * texts, and the read-only panels shown beside them (the customer timeline,
  * the refund example, the plans' tax sync, each document's release).
  */
-export type BillingRulesPayload = Record<string, unknown>;
-
-function parseBody(body: unknown): BillingRulesBody {
-  return assertValidation(
-    body,
-    (value) => billingRulesBodySchema.parse(value),
-    (error) => (error as ZodError).issues,
-  );
-}
+export type BillingRulesPayload = Partial<BillingSettings> &
+  Pick<PublishedLegalDocuments, LegalDocumentKey> &
+  LegalDocumentReleases & {
+    customerTimeline: Pick<
+      BillingSettings,
+      | "autoSuspendEnabled"
+      | "autoSuspendDelayDays"
+      | "dataRetentionDaysAfterCancellation"
+    >;
+    refundExample: Pick<BillingSettings, "moneyBackGuaranteeMode">;
+    planTaxSync: PlanTaxSyncStatus;
+  };
 
 function taxCodeOf(settings: Pick<BillingSettings, "stripeTaxCode">): string {
   return settings.stripeTaxCode || DEFAULT_STRIPE_TAX_CODE;
@@ -127,7 +132,11 @@ export class SaasBillingSettingsController extends Controller(
     @AuthOwnerOnly() _user: User,
     @JSONBody() rawBody: unknown,
   ): Promise<BillingRulesPayload> {
-    const body = parseBody(rawBody);
+    const body = assertValidation(
+      rawBody,
+      (value) => billingRulesBodySchema.parse(value),
+      (error) => (error instanceof ZodError ? error.issues : undefined),
+    );
     const before = await this.loadSettings();
     const now = new Date();
     await this.billingSettingsModel.update(BILLING_SETTINGS_SINGLETON_ID, {

@@ -125,27 +125,14 @@ export async function createTenantCheckoutCustomer(
  * call had no effect and the caller can safely undo its own bookkeeping. A
  * 5xx or a network failure proves nothing either way.
  */
-export function isDefinitiveStripeRejection(error: unknown): boolean {
-  if (!(error instanceof Stripe.errors.StripeError)) return false;
+export function isDefinitiveStripeRejection(
+  error: Stripe.errors.StripeError,
+): boolean {
   const status = error.statusCode;
   return (
     isNumber(status) &&
     status >= HTTP_CLIENT_ERROR_MIN &&
     status < HTTP_SERVER_ERROR_MIN
-  );
-}
-
-function isManagedPaymentsParamRejection(error: unknown): boolean {
-  return (
-    error instanceof Stripe.errors.StripeInvalidRequestError &&
-    (error.param ?? "").startsWith(MANAGED_PAYMENTS_PARAM)
-  );
-}
-
-function isMissingResourceError(error: unknown): boolean {
-  return (
-    error instanceof Stripe.errors.StripeInvalidRequestError &&
-    error.code === MISSING_RESOURCE_CODE
   );
 }
 
@@ -160,8 +147,13 @@ export async function deleteStripeCustomerIfExists(
   const stripe = getStripeClient();
   const customer = await stripe.customers
     .retrieve(customerId)
-    .catch((error) => {
-      if (isMissingResourceError(error)) return null;
+    .catch((error: unknown) => {
+      if (
+        error instanceof Stripe.errors.StripeInvalidRequestError &&
+        error.code === MISSING_RESOURCE_CODE
+      ) {
+        return null;
+      }
       throw error;
     });
   if (!customer || customer.deleted) return;
@@ -199,7 +191,7 @@ export async function releaseCheckoutTrialReservation(
   if (!identityId) return;
   await GetModel(TrialIdentityModel)
     .releaseUnused(identityId, tenantId)
-    .catch((error) =>
+    .catch((error: unknown) =>
       Logging.Warn(
         `${LOG_PREFIX} failed to release the trial reserved by checkout session ${session.id}`,
         error,
@@ -241,7 +233,14 @@ async function createSessionOptingOutOfManagedPayments(
   try {
     return await sessions.create(optedOut, options);
   } catch (error) {
-    if (!isManagedPaymentsParamRejection(error)) throw error;
+    if (
+      !(
+        error instanceof Stripe.errors.StripeInvalidRequestError &&
+        (error.param ?? "").startsWith(MANAGED_PAYMENTS_PARAM)
+      )
+    ) {
+      throw error;
+    }
     Logging.Warn(
       `${LOG_PREFIX} Stripe rejected the Managed Payments opt-out; opening the session without it`,
       error,
@@ -306,7 +305,7 @@ export async function createWorkspaceCheckoutSession(
     if (input.operationId) throw new UnusableCheckoutSessionError(session.id);
     await stripe.checkout.sessions.expire(session.id).catch(() => {});
     if (!input.existingCustomerId) {
-      await deleteStripeCustomerIfExists(customerId).catch((error) =>
+      await deleteStripeCustomerIfExists(customerId).catch((error: unknown) =>
         Logging.Warn(
           `[dms-saas] failed to delete Stripe customer ${customerId} after unusable checkout session`,
           error,

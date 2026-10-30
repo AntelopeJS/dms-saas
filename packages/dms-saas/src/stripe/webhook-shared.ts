@@ -81,7 +81,10 @@ export function formatAmount(amountInCents: number, currency: string): string {
   return `${(amountInCents / CENTS_PER_UNIT).toFixed(2)} ${currency.toUpperCase()}`;
 }
 
-export function asCustomerId(field: unknown): string | null {
+/** A Stripe reference: the id, or the object when the request expanded it. */
+type ExpandableReference = string | { id: string } | null | undefined;
+
+export function asCustomerId(field: ExpandableReference): string | null {
   if (isString(field)) return field;
   return null;
 }

@@ -11,6 +11,7 @@ import {
 import type { OperatorAction } from "./db/operator-action.table";
 import type {
   OperatorActionDetails,
+  OperatorActionDetailValue,
   OperatorCommandResult,
   WorkspaceOperatorAction,
 } from "./types";
@@ -60,7 +61,7 @@ interface CanonicalRecord {
   [key: string]: CanonicalValue;
 }
 
-function canonicalize(value: unknown): CanonicalValue {
+function canonicalize(value: OperatorActionDetailValue): CanonicalValue {
   if (
     value === null ||
     isBoolean(value) ||
@@ -70,7 +71,7 @@ function canonicalize(value: unknown): CanonicalValue {
     return value;
   }
   if (Array.isArray(value)) return value.map(canonicalize);
-  const entries = Object.entries(value as Record<string, unknown>)
+  const entries = Object.entries(value)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, entry]) => [key, canonicalize(entry)] as const);
   return Object.fromEntries(entries);
@@ -144,30 +145,16 @@ export async function ensureOperatorActionIntent(
   }
 }
 
-function errorCodeOf(error: unknown): string {
-  if (!(error instanceof HTTPResult)) return GENERIC_FAILURE_CODE;
+function errorCodeOf(error: HTTPResult): string {
   const body = error.getBody();
   return isString(body) && body.startsWith("saas.errors.")
     ? body
     : GENERIC_FAILURE_CODE;
 }
 
-function throwSafeActionError(error: unknown, operationId: string): never {
-  if (
-    error instanceof HTTPResult &&
-    errorCodeOf(error) !== GENERIC_FAILURE_CODE
-  ) {
-    throw error;
-  }
-  Logging.Error(`[dms-saas:operator] operation ${operationId} failed`, error);
-  throw new HTTPResult(HTTP_BAD_GATEWAY, GENERIC_FAILURE_CODE);
-}
-
 async function isRetryableValidationFailure(
   action: OperatorAction,
-  error: unknown,
 ): Promise<boolean> {
-  if (!(error instanceof HTTPResult)) return false;
   try {
     const subscription = await GetModel(
       TenantSubscriptionModel,
@@ -179,18 +166,6 @@ async function isRetryableValidationFailure(
   }
 }
 
-async function failAction(
-  model: OperatorActionModel,
-  action: OperatorAction,
-  error: unknown,
-): Promise<never> {
-  const failure = (await isRetryableValidationFailure(action, error))
-    ? model.markFailed(action, errorCodeOf(error))
-    : model.markReconciliationRequired(action, RECONCILIATION_REQUIRED_CODE);
-  await failure.catch(() => {});
-  throwSafeActionError(error, action._id);
-}
-
 async function runEffect(
   model: OperatorActionModel,
   action: OperatorAction,
@@ -200,7 +175,23 @@ async function runEffect(
     const outcome = await effect(action);
     await model.markSucceeded(action, outcome);
   } catch (error) {
-    return failAction(model, action, error);
+    const failure =
+      error instanceof HTTPResult &&
+      (await isRetryableValidationFailure(action))
+        ? model.markFailed(action, errorCodeOf(error))
+        : model.markReconciliationRequired(
+            action,
+            RECONCILIATION_REQUIRED_CODE,
+          );
+    await failure.catch(() => {});
+    if (
+      error instanceof HTTPResult &&
+      errorCodeOf(error) !== GENERIC_FAILURE_CODE
+    ) {
+      throw error;
+    }
+    Logging.Error(`[dms-saas:operator] operation ${action._id} failed`, error);
+    throw new HTTPResult(HTTP_BAD_GATEWAY, GENERIC_FAILURE_CODE);
   }
   const completed = await model.get(action._id);
   if (!completed) throw new Error("Completed operator action is missing");

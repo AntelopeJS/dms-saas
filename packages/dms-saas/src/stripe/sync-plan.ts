@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import type {
   Plan,
   PlanProviderRefs,
@@ -47,7 +47,8 @@ export async function resolveProductTaxCode(): Promise<string> {
  * the caller may hold the plan unlocked in its reader's locale.
  */
 function fallbackTexts(plan: Plan): Pick<Plan, "name" | "description"> {
-  const copy = PlanModel.fromDatabase(PlanModel.toDatabase(plan)) as Plan;
+  const copy = PlanModel.fromDatabase(PlanModel.toDatabase(plan));
+  if (!copy) throw new Error(`Plan '${plan._id}' could not be copied`);
   const { name, description } = localizePlan(copy, PLAN_FALLBACK_LOCALE);
   return { name, description };
 }
@@ -139,10 +140,6 @@ function toHeldPriceTerms(
   };
 }
 
-function isResourceMissing(error: unknown): boolean {
-  return (error as Stripe.errors.StripeError)?.code === RESOURCE_MISSING_CODE;
-}
-
 /**
  * The terms the linked objects hold. A plan synced before the terms were
  * recorded is read back from Stripe once, so an unchanged price is kept rather
@@ -160,7 +157,12 @@ async function heldTerms(refs: PlanProviderRefs): Promise<StripeHeldTerms> {
       price: toHeldPriceTerms(price),
     };
   } catch (error) {
-    if (isResourceMissing(error)) return {};
+    if (
+      error instanceof Stripe.errors.StripeError &&
+      error.code === RESOURCE_MISSING_CODE
+    ) {
+      return {};
+    }
     throw error;
   }
 }
