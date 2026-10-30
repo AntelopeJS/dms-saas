@@ -123,7 +123,7 @@ function wrapDeleteWithCascade(
       params: DeleteParams,
       ...rest: unknown[]
     ) {
-      const result = await base.func.call(this, ctx, params, ...rest);
+      const result: unknown = await base.func.call(this, ctx, params, ...rest);
       invalidateSegmentNamesCache();
       const ids = Array.isArray(params.id) ? params.id : [params.id];
       const userSegmentModel = GetModel(UserSegmentModel);
