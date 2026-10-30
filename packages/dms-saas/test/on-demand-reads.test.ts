@@ -3,8 +3,9 @@ import { useBillingStatus } from "../frontend-vue/app/composables/useBillingStat
 import { useOnDemandRead } from "../frontend-vue/app/composables/useOnDemandRead";
 import { useSeatQuota } from "../frontend-vue/app/composables/useSeatQuota";
 import { useTenantPlan } from "../frontend-vue/app/composables/useTenantPlan";
-import type { ApiDataRequest, UseApiDataOptions } from "./helpers/api-data";
-import { toValue } from "./helpers/frontend-vue";
+import type { UseApiDataOptions } from "./helpers/api-data";
+import type { ApiDataRequest } from "./helpers/api-data-request";
+import { toValue } from "./helpers/vue-runtime/index.mjs";
 
 interface Holder<T> {
   value: T;

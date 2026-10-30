@@ -4,6 +4,7 @@ import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { Notification } from "@antelopejs/interface-dms/notifications";
 import type { NotificationSubjectInfo } from "./subjects";
+import { rejectionReasons } from "../utils/rejection-reasons";
 
 export interface SaasNotificationPayload {
   icon: string;
@@ -58,9 +59,7 @@ async function sendAll(
   const results = await Promise.allSettled(
     recipients.map((userId) => sendOne(userId, subject, payload)),
   );
-  const failures = results.flatMap((result) =>
-    result.status === "rejected" ? [result.reason] : [],
-  );
+  const failures = rejectionReasons(results);
   if (failures.length > 0) {
     Logging.Error(
       `[dms-saas:notifications] ${failures.length} delivery attempt(s) failed`,

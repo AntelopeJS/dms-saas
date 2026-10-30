@@ -73,8 +73,10 @@ describe("admin user invoice filters", () => {
     const condition: unknown = membership.build()[4].args[0].args[1];
     assert(condition instanceof ValueProxy);
     const conditionStages = condition.build();
+    const [objIndex] = conditionStages.slice(1, 3);
+    expect(objIndex?.args).toContain("isTenantOwner");
     expect(conditionStages.slice(1, 3)).toMatchObject([
-      { stage: "obj_index", args: expect.arrayContaining(["isTenantOwner"]) },
+      { stage: "obj_index" },
       { stage: "eq", args: [true] },
     ]);
     const ownership = conditionStages.at(-1)!;

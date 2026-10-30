@@ -146,7 +146,7 @@ export async function ensureOperatorActionIntent(
 }
 
 function errorCodeOf(error: HTTPResult): string {
-  const body = error.getBody();
+  const body: unknown = error.getBody();
   return isString(body) && body.startsWith("saas.errors.")
     ? body
     : GENERIC_FAILURE_CODE;

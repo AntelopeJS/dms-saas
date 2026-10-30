@@ -340,7 +340,7 @@ describe("workspace lifecycle outbox", () => {
           status: delivery.status,
           receiptId: delivery.receiptId,
         }))
-        .toSorted((left, right) => left.consumer.localeCompare(right.consumer)),
+        .sort((left, right) => left.consumer.localeCompare(right.consumer)),
     ).toEqual([
       {
         consumer: "alpha.consumer",

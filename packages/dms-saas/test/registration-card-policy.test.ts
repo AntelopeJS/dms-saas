@@ -29,6 +29,7 @@ import {
 } from "./helpers/registration";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
+import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
 useMongoDatabase("registration-card-policy");
 const suiteStripe = useSuiteStripe();
@@ -174,8 +175,8 @@ describe("registration card policy", () => {
       _id: result.tenantId,
       planId: PLAN._id,
       cardFingerprint: "fp_test",
-      stripeCustomerId: expect.any(String),
-      stripeSubscriptionId: expect.any(String),
+      stripeCustomerId: ANY_STRING,
+      stripeSubscriptionId: ANY_STRING,
       createdAt: backfills[0]?.createdAt,
     });
     expect(backfills).toEqual([

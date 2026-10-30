@@ -406,12 +406,15 @@ describe("paid invoices chart", () => {
   });
 
   it("shows no change and no comparison series without a comparison", () => {
-    const chart = paidInvoicesChart([document({})], range, null, "EUR");
+    const { series, ...figures } = paidInvoicesChart(
+      [document({})],
+      range,
+      null,
+      "EUR",
+    );
 
-    expect(chart).toEqual({
-      value: 10,
-      series: expect.any(Array),
-    });
+    expect(figures).toEqual({ value: 10 });
+    expect(series).toEqual(expect.any(Array));
   });
 });
 
@@ -484,11 +487,14 @@ describe("comparison window", () => {
     });
 
     query.set("comparison", "previous-year");
-    expect(churnKpi(rows, readPeriodQuery(query), mrr)).toEqual({
-      value: 20,
-      previousValue: expect.closeTo(100 / 9),
-      delta: expect.closeTo(80),
-    });
+    const { previousValue, delta, ...figures } = churnKpi(
+      rows,
+      readPeriodQuery(query),
+      mrr,
+    );
+    expect(figures).toEqual({ value: 20 });
+    expect(previousValue).toBeCloseTo(100 / 9);
+    expect(delta).toBeCloseTo(80);
     query.set("comparison", "none");
     expect(churnKpi(rows, readPeriodQuery(query), mrr)).toEqual({ value: 20 });
   });

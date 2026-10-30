@@ -49,7 +49,7 @@ export function isLocaleTree(value: unknown): value is LocaleTree {
 
 /** One catalog file of the layer, by name (`saas-en-GB.json`). */
 export function readLocaleFile(file: string): LocaleTree {
-  const catalog = JSON.parse(
+  const catalog: unknown = JSON.parse(
     readFileSync(new URL(file, LOCALES_DIRECTORY), "utf-8"),
   );
   if (!isLocaleTree(catalog))
@@ -59,7 +59,7 @@ export function readLocaleFile(file: string): LocaleTree {
 
 function mergeTrees(target: LocaleTree, source: LocaleTree): LocaleTree {
   for (const [key, value] of Object.entries(source)) {
-    const existing = target[key];
+    const existing = Object.hasOwn(target, key) ? target[key] : undefined;
     target[key] =
       existing !== undefined && !isMessage(existing) && !isMessage(value)
         ? mergeTrees(existing, value)

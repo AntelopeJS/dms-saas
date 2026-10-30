@@ -1,7 +1,6 @@
 import { fromPartial } from "@total-typescript/shoehorn";
-import { createRequire } from "node:module";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
+import type { AuthConfig } from "@antelopejs/dms";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
@@ -22,19 +21,24 @@ import * as permissions from "@antelopejs/interface-dms/permissions";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setRuntimeConfig, assertAdmissionOpen } from "../src/config";
 import { TenantSubscriptionModel, PlanModel } from "../src/db";
+import { signup } from "../node_modules/@antelopejs/dms/dist/routes/auth/signup";
+import { oauthCallback } from "../node_modules/@antelopejs/dms/dist/routes/auth/oauth/callback";
+import { signOAuthState } from "../node_modules/@antelopejs/dms/dist/routes/auth/oauth/state";
 import { SaasRegisterApiController } from "../src/routes/public/register";
 import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
-import { implementWithDms } from "./helpers/dms";
+import {
+  applyDmsConfig,
+  dmsImplementation,
+  implementWithDms,
+} from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 
 useMongoDatabase("private-admission");
 const stripe = useSuiteStripe();
 
-const require = createRequire(import.meta.url);
-const dmsRoot = path.dirname(require.resolve("@antelopejs/dms/package.json"));
 interface SignupResult {
   user: Partial<User>;
   access_token: string;
@@ -46,18 +50,6 @@ interface SignupBody {
   token: string;
   lang: string;
 }
-interface SignupModule {
-  signup: (
-    users: UserModel,
-    sessions: SessionModel,
-    body: SignupBody,
-    agent: string,
-    ip: string,
-  ) => Promise<SignupResult>;
-}
-const { signup } = require(
-  path.join(dmsRoot, "dist/routes/auth/signup.js"),
-) as SignupModule;
 const AUTH_CONFIG = {
   jwtSecret: "private-admission-test-only",
   mustValidateEmail: false,
@@ -71,18 +63,11 @@ const STRIPE_CONFIG = SUITE_STRIPE_KEYS;
 const CLOSED_ERROR = { status: 403, body: "saas.errors.registration_closed" };
 
 beforeAll(() => {
-  ImplementInterface(
-    saasMode,
-    require(path.join(dmsRoot, "dist/implementations/dms/saas-mode.js")),
-  );
+  implementWithDms(saasMode, "implementations/dms/saas-mode.js");
   saasMode.RegisterSaasMode();
-  const { applyConfig } = require(path.join(dmsRoot, "dist/config.js"));
-  applyConfig({ auth: AUTH_CONFIG });
-  const implementation = require(
-    path.join(dmsRoot, "dist/implementations/dms-auth/index.js"),
-  );
+  applyDmsConfig({ auth: fromPartial<AuthConfig>(AUTH_CONFIG) });
   ImplementInterface(auth, {
-    ...implementation,
+    ...dmsImplementation("implementations/dms-auth/index.js"),
     sendAdminInviteEmail: async () => undefined,
   });
   implementWithDms(permissions, "implementations/dms/permissions.js");
@@ -91,6 +76,12 @@ beforeAll(() => {
 beforeEach(() => {
   setRuntimeConfig({ stripe: STRIPE_CONFIG, admissionMode: "invitation-only" });
 });
+
+function userIdOf(response: { user?: Partial<User> }): string {
+  const id = response.user?._id;
+  if (!id) throw new Error("The sign-up answered no user");
+  return id;
+}
 
 function signupBody(email: string, token: string): SignupBody {
   return {
@@ -106,12 +97,6 @@ async function oauthLogin(
   email: string,
   invite?: string,
 ): Promise<SignupResult> {
-  const { signOAuthState } = require(
-    path.join(dmsRoot, "dist/routes/auth/oauth/state.js"),
-  );
-  const { oauthCallback } = require(
-    path.join(dmsRoot, "dist/routes/auth/oauth/callback.js"),
-  );
   const state = signOAuthState("google");
   const responses = new Map<string, unknown>([
     [
@@ -132,7 +117,7 @@ async function oauthLogin(
     }),
   );
   try {
-    return await oauthCallback({
+    const outcome = await oauthCallback({
       userModel: GetModel(UserModel),
       sessionModel: GetModel(SessionModel),
       providerId: "google",
@@ -140,6 +125,10 @@ async function oauthLogin(
       userAgent: "test",
       origin: { ip: "127.0.0.1" },
     });
+    if (!("access_token" in outcome) || !outcome.user) {
+      throw new Error("The OAuth callback opened no session");
+    }
+    return { ...outcome, user: outcome.user };
   } finally {
     vi.unstubAllGlobals();
   }
@@ -156,7 +145,7 @@ async function assertOAuthInvitation(tenantId: string): Promise<void> {
   if (invite.kind !== "invited") throw new Error("Expected OAuth invitation");
   const result = await oauthLogin(email, invite.token);
   expect(
-    await GetModel(TenantMemberModel, tenantId).getByUser(result.user._id!),
+    await GetModel(TenantMemberModel, tenantId).getByUser(userIdOf(result)),
   ).toBeDefined();
   expect(
     await GetModel(UserInviteModel, tenantId).get(invite.inviteId),
@@ -267,9 +256,9 @@ describe("actual DMS invitation account creation while admission is closed", () 
       GetModel(SessionModel),
       signupBody(email, created.owner.token),
       "test",
-      "127.0.0.1",
+      { ip: "127.0.0.1" },
     );
-    const owner = await users.get(ownerResult.user._id!);
+    const owner = await users.get(userIdOf(ownerResult));
     expect(owner).toBeDefined();
     const members = GetModel(TenantMemberModel, created.tenantId);
     expect(await members.getByUser(owner!._id)).toMatchObject({
@@ -286,7 +275,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
         GetModel(SessionModel),
         signupBody(email, created.owner.token),
         "test",
-        "127.0.0.1",
+        { ip: "127.0.0.1" },
       ),
     ).rejects.toBeDefined();
 
@@ -303,9 +292,9 @@ describe("actual DMS invitation account creation while admission is closed", () 
       GetModel(SessionModel),
       signupBody(colleagueEmail, invite.token),
       "test",
-      "127.0.0.1",
+      { ip: "127.0.0.1" },
     );
-    expect(await members.getByUser(colleagueResult.user._id!)).toMatchObject({
+    expect(await members.getByUser(userIdOf(colleagueResult))).toMatchObject({
       isTenantOwner: false,
       roleIds: ["member"],
     });
@@ -325,7 +314,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
     const workspaces = new SaasWorkspacesController();
     for (const user of [
       owner!,
-      (await users.get(colleagueResult.user._id!))!,
+      (await users.get(userIdOf(colleagueResult)))!,
     ]) {
       await expect(
         workspaces.createMine(
@@ -408,11 +397,11 @@ describe("invitation sign-up never asks for a plan or a card", () => {
         GetModel(SessionModel),
         signupBody(email, invite.token),
         "test",
-        "127.0.0.1",
+        { ip: "127.0.0.1" },
       );
 
       expect(
-        await GetModel(TenantMemberModel, tenantId).getByUser(result.user._id!),
+        await GetModel(TenantMemberModel, tenantId).getByUser(userIdOf(result)),
       ).toBeDefined();
       expect(
         await GetModel(TenantSubscriptionModel, tenantId).findOne(),

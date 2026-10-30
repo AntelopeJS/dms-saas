@@ -67,9 +67,12 @@ export function dateTimeParam(
   return { type: "datetime", value: new Date(date).toISOString(), format };
 }
 
+const MIGRATION_TONES = new Map<string, Tone>(
+  Object.entries(STATUS_TONES.migration),
+);
+
 function bannerTone(status: string): BannerTone {
-  const tones: Record<string, Tone> = STATUS_TONES.migration;
-  const tone = tones[status];
+  const tone = MIGRATION_TONES.get(status);
   return (
     (tone && BANNER_TONES.find((banner) => banner === tone)) ||
     DEFAULT_BANNER_TONE

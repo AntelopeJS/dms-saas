@@ -212,10 +212,8 @@ describe("the migration header", () => {
     const actions =
       (await (await controller(partial)).header(OWNER, "mig")).actions ?? [];
 
-    expect(actions.slice(2)).toEqual([
-      expect.objectContaining({
-        target: expect.objectContaining({ url: `${API}/retry` }),
-      }),
+    expect(actions.slice(2)).toMatchObject([
+      { target: { url: `${API}/retry` } },
     ]);
   });
 

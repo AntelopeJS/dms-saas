@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false,
+    "rootDir": "..",
+    "composite": false,
+    "paths": { "vue": ["../frontend-vue/node_modules/vue"] }
+  },
+  "include": ["../src/**/*.ts", "./**/*.ts"]
+}

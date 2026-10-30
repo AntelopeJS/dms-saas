@@ -13,6 +13,8 @@ import { resolveRequestTenantId } from "@antelopejs/interface-dms/request-tenant
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { type Mock, vi } from "vitest";
+import { applyConfig } from "../../node_modules/@antelopejs/dms/dist/config.js";
+import { isRecord } from "./records";
 
 const require = createRequire(import.meta.url);
 const DMS_DIST = join(
@@ -31,7 +33,11 @@ const SUITE_JWT_SECRET = "dms-saas-suite-only";
  * @param implementation Path under the DMS `dist`, e.g. `implementations/dms/permissions.js`
  */
 export function dmsImplementation(implementation: string): object {
-  return require(join(DMS_DIST, implementation));
+  const loaded: unknown = require(join(DMS_DIST, implementation));
+  if (!isRecord(loaded)) {
+    throw new Error(`${implementation} does not export an implementation`);
+  }
+  return loaded;
 }
 
 /**
@@ -41,8 +47,11 @@ export function dmsImplementation(implementation: string): object {
  * @param declaration The interface module, imported as a namespace
  * @param implementation Path of the implementation under the DMS `dist`, e.g. `implementations/dms/tenant-access.js`
  */
-export function implementWithDms<T extends Record<string, unknown>>(
-  declaration: T,
+export function implementWithDms(
+  declaration: Exclude<
+    Parameters<typeof ImplementInterface>[0],
+    PromiseLike<unknown>
+  >,
   implementation: string,
 ): void {
   ImplementInterface(declaration, dmsImplementation(implementation));
@@ -50,7 +59,6 @@ export function implementWithDms<T extends Record<string, unknown>>(
 
 /** Applies a DMS configuration the way the DMS module's `construct` does. */
 export function applyDmsConfig(config: Config): void {
-  const { applyConfig } = require(join(DMS_DIST, "config.js"));
   applyConfig(config);
 }
 

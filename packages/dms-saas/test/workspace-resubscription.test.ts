@@ -38,6 +38,7 @@ import {
 } from "./helpers/workspaces";
 import { callRoute } from "./helpers/routes";
 import { useSuiteStripe } from "./helpers/stripe";
+import { ANY_DATE } from "./helpers/asymmetric-matchers";
 
 useMongoDatabase("workspace-resubscription");
 useDmsAuth();
@@ -213,17 +214,20 @@ async function completionEvent(
   });
 }
 
-async function readRefundEligibility(workspace: Workspace) {
+/** The assertions on the refund eligibility the workspace's owner reads. */
+async function expectRefundEligibility(workspace: Workspace) {
   await GetModel(BillingSettingsModel).insert({
     _id: BILLING_SETTINGS_SINGLETON_ID,
     moneyBackGuaranteeEnabled: true,
     moneyBackGuaranteeWindowDays: 30,
     moneyBackGuaranteeMode: "full",
   });
-  return callRoute(
-    "GET",
-    "/api/saas/billing/refund-eligibility",
-    workspace.request,
+  return expect<unknown>(
+    await callRoute(
+      "GET",
+      "/api/saas/billing/refund-eligibility",
+      workspace.request,
+    ),
   );
 }
 
@@ -267,7 +271,7 @@ describe("a cancelled workspace choosing a plan again", () => {
     );
     expect(await workspace.model.findOne()).toMatchObject({
       status: "cancelled",
-      domainTransition: expect.objectContaining({ kind: "checkout" }),
+      domainTransition: { kind: "checkout" },
     });
   });
 
@@ -291,7 +295,7 @@ describe("a cancelled workspace choosing a plan again", () => {
     expect(reopened?.paidUsagePeriods).toEqual([
       expect.objectContaining({
         stripeSubscriptionId: ENDED_SUBSCRIPTION,
-        end: expect.any(Date),
+        end: ANY_DATE,
       }),
       expect.objectContaining({
         stripeSubscriptionId: NEW_SUBSCRIPTION,
@@ -305,9 +309,9 @@ describe("a cancelled workspace choosing a plan again", () => {
     await choosePlan(paidPlan._id, workspace);
     await handleCheckoutSessionCompleted(await completionEvent(workspace));
 
-    const eligibility = await readRefundEligibility(workspace);
+    const eligibility = await expectRefundEligibility(workspace);
 
-    expect(eligibility).toMatchObject({
+    eligibility.toMatchObject({
       eligible: false,
       reason: "already_processed",
       refundedAt: REFUNDED_AT,
