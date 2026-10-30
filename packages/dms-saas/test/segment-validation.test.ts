@@ -14,9 +14,11 @@ import {
   parseSegmentPatch,
 } from "../src/utils";
 
-/** The refusal a segment parser throws, by its error key. */
-function refusal(key: string) {
-  return expect.objectContaining({ body: `saas.errors.segments.${key}` });
+/** Expects `parse` to throw the refusal a segment parser throws, by its error key. */
+function expectRefusal(parse: () => void, key: string): void {
+  expect(parse).toThrow(
+    expect.objectContaining({ body: `saas.errors.segments.${key}` }),
+  );
 }
 
 describe("segment rules validation", () => {
@@ -35,21 +37,25 @@ describe("segment rules validation", () => {
   });
 
   it("refuses a field the level does not read", () => {
-    expect(() =>
-      parseSegmentConditions({
-        logical: "and",
-        conditions: [{ field: "mrr", operator: "gt", value: 1 }],
-      }),
-    ).toThrow(refusal("unknown_field"));
+    expectRefusal(
+      () =>
+        parseSegmentConditions({
+          logical: "and",
+          conditions: [{ field: "mrr", operator: "gt", value: 1 }],
+        }),
+      "unknown_field",
+    );
   });
 
   it("refuses an operator the field does not offer", () => {
-    expect(() =>
-      parseSegmentConditions({
-        logical: "and",
-        conditions: [{ field: "isValidated", operator: "gt", value: 1 }],
-      }),
-    ).toThrow(refusal("invalid_operator"));
+    expectRefusal(
+      () =>
+        parseSegmentConditions({
+          logical: "and",
+          conditions: [{ field: "isValidated", operator: "gt", value: 1 }],
+        }),
+      "invalid_operator",
+    );
   });
 
   it("asks a list for any of / none of, and a single value otherwise", () => {
@@ -68,12 +74,14 @@ describe("segment rules validation", () => {
       ],
     });
 
-    expect(() =>
-      parseSegmentConditions(workspaceRule("in", "past_due")),
-    ).toThrow(refusal("invalid_value"));
-    expect(() =>
-      parseSegmentConditions(workspaceRule("eq", ["past_due"])),
-    ).toThrow(refusal("invalid_value"));
+    expectRefusal(
+      () => parseSegmentConditions(workspaceRule("in", "past_due")),
+      "invalid_value",
+    );
+    expectRefusal(
+      () => parseSegmentConditions(workspaceRule("eq", ["past_due"])),
+      "invalid_value",
+    );
     expect(() =>
       parseSegmentConditions(workspaceRule("in", ["past_due"])),
     ).not.toThrow();
@@ -86,12 +94,14 @@ describe("segment rules validation", () => {
       conditions: { logical: "and", conditions },
     });
 
-    expect(() =>
-      parseSegmentConditions({
-        logical: "and",
-        conditions: [ref([ref([])])],
-      }),
-    ).toThrow(refusal("invalid_conditions"));
+    expectRefusal(
+      () =>
+        parseSegmentConditions({
+          logical: "and",
+          conditions: [ref([ref([])])],
+        }),
+      "invalid_conditions",
+    );
   });
 
   it("refuses rules nested deeper than the builder goes", () => {
@@ -100,17 +110,13 @@ describe("segment rules validation", () => {
       group = { logical: "and", conditions: [group] };
     }
 
-    expect(() => parseSegmentConditions(group)).toThrow(
-      refusal("conditions_too_deep"),
-    );
+    expectRefusal(() => parseSegmentConditions(group), "conditions_too_deep");
   });
 });
 
 describe("segment saves", () => {
   it("requires a name on creation", () => {
-    expect(() => parseSegmentInput({ name: "  " })).toThrow(
-      refusal("name_required"),
-    );
+    expectRefusal(() => parseSegmentInput({ name: "  " }), "name_required");
     expect(parseSegmentInput({ name: " Trials " })).toEqual({
       name: "Trials",
       description: "",
@@ -122,11 +128,10 @@ describe("segment saves", () => {
     expect(parseSegmentPatch({ description: "For the sequence" })).toEqual({
       description: "For the sequence",
     });
-    expect(() => parseSegmentPatch({ name: "" })).toThrow(
-      refusal("name_required"),
-    );
-    expect(() => parseSegmentPatch({ name: "x".repeat(121) })).toThrow(
-      refusal("too_long"),
+    expectRefusal(() => parseSegmentPatch({ name: "" }), "name_required");
+    expectRefusal(
+      () => parseSegmentPatch({ name: "x".repeat(121) }),
+      "too_long",
     );
   });
 });

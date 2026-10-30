@@ -25,6 +25,7 @@ import {
 import { createUser, useDmsAuth } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
+import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
 useMongoDatabase("registration-oauth");
 useSuiteStripe();
@@ -60,10 +61,10 @@ describe("the OAuth-entry path carries the same capture", () => {
     const [session] = await GetModel(SessionModel).getByUserId(oauthUser._id);
     expect(response).toEqual({
       token_type: "Bearer",
-      access_token: expect.any(String),
+      access_token: ANY_STRING,
       expires_in: (await generateAccessToken(tenant?._id ?? "", oauthUser))
         .expiresIn,
-      refresh_token: expect.any(String),
+      refresh_token: ANY_STRING,
       user: await sanitizeUser(oauthUser),
     });
     const request = bearer(response.access_token);
@@ -95,12 +96,13 @@ describe("the OAuth-entry path carries the same capture", () => {
       session?._id,
       response.refresh_token,
     );
+    const unhashedToken: unknown = expect.not.stringContaining(
+      response.refresh_token,
+    );
     expect(update.mock.calls).toEqual([
       [
         session?._id,
-        expect.objectContaining({
-          refreshTokenHash: expect.not.stringContaining(response.refresh_token),
-        }),
+        expect.objectContaining({ refreshTokenHash: unhashedToken }),
       ],
     ]);
     expect(

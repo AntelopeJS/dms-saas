@@ -17,6 +17,7 @@ import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import * as billingImplementation from "../src/implementations/dms-saas/billing";
 import { addTenantMember, useTenantAccessGate } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
+import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
 useMongoDatabase("upcoming-invoice-interface");
 const gate = useTenantAccessGate();
@@ -61,7 +62,7 @@ describe("upcoming invoice preview interface", () => {
     ).resolves.toEqual({
       status: "absent",
       reason: "free_plan",
-      computedAt: expect.any(String),
+      computedAt: ANY_STRING,
     });
     expect(gate).toHaveBeenCalledWith(SCOPE.userId, SCOPE.tenantId);
   });

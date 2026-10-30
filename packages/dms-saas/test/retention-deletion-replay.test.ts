@@ -28,6 +28,7 @@ import {
 } from "./helpers/subscription-fixture";
 import { captureLogs } from "./helpers/logging";
 import { useMongoDatabase } from "./helpers/mongo";
+import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
 useMongoDatabase("retention-deletion-replay");
 const logs = captureLogs();
@@ -116,7 +117,7 @@ describe("retention deletion replay", () => {
     expect(hookRuns).toEqual([
       {
         tenantId,
-        operationId: expect.any(String),
+        operationId: ANY_STRING,
         closed: true,
         activeProducers: 0,
       },

@@ -39,6 +39,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { insertTenant } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
+import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
 useMongoDatabase("workspace-self-serve-card");
 useDmsAuth();
@@ -276,15 +277,14 @@ describe("self-serve workspace creation card rules", () => {
     expect(calls.attach).toHaveBeenCalledWith(PAYMENT_METHOD_ID, {
       customer: "cus_created",
     });
+    const frenchAddress: unknown = expect.objectContaining({ country: "FR" });
     expect(calls.createCustomer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: expect.objectContaining({ country: "FR" }),
-      }),
+      expect.objectContaining({ address: frenchAddress }),
       expect.anything(),
     );
     expect(
       await GetModel(TenantBillingInfoModel, tenantId).findOne(),
-    ).toMatchObject({ address: expect.objectContaining({ country: "FR" }) });
+    ).toMatchObject({ address: { country: "FR" } });
     expect(await subscriptionOf(tenantId)).toMatchObject({
       planId: PAID_PLAN_ID,
       cardFingerprint: fingerprint,
@@ -312,10 +312,10 @@ describe("self-serve workspace creation card rules", () => {
       createWorkspace(FREE_PLAN_ID, PAYMENT_METHOD_ID),
     ).rejects.toMatchObject(CREATION_IN_PROGRESS);
     held.release();
-    await expect(first).resolves.toEqual({ tenantId: expect.any(String) });
+    await expect(first).resolves.toEqual({ tenantId: ANY_STRING });
     await expect(
       createWorkspace(PAID_PLAN_ID, PAYMENT_METHOD_ID),
-    ).resolves.toEqual({ tenantId: expect.any(String) });
+    ).resolves.toEqual({ tenantId: ANY_STRING });
   });
 
   it("refuses a name longer than the forms allow", async () => {
