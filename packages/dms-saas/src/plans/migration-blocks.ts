@@ -251,7 +251,11 @@ export function migrationTotalItems(
 /** Feature names by key, in the reader's language. */
 export type FeatureNames = Map<string, string>;
 
-function featureValue(value: unknown): ComposedTextParam {
+function featureValue(
+  change: PlanMigrationFeatureChange,
+  side: "oldValue" | "newValue",
+): ComposedTextParam {
+  const value = change[side];
   if (value === true) return composed(`${K}.change.included`);
   if (value === false) return composed(`${K}.change.excluded`);
   if (value === null || value === undefined || value === PLAN_UNLIMITED) {
@@ -269,8 +273,8 @@ function changedFeatureItem(
     id: `feature-${change.key}`,
     label: names.get(change.key) ?? change.key,
     value: composed(`${K}.change.from_to`, {
-      from: featureValue(change.oldValue),
-      to: featureValue(change.newValue),
+      from: featureValue(change, "oldValue"),
+      to: featureValue(change, "newValue"),
     }),
   };
 }
