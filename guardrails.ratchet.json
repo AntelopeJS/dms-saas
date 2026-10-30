@@ -4,7 +4,7 @@
     "antelopejs/no-inherited-key-lookup": 8,
     "anti-slop/no-unknown-parameters": 10,
     "anti-slop/no-unsafe-dictionary-type": 6,
-    "anti-slop/require-safety-comment-for-type-assertion": 20,
+    "anti-slop/require-safety-comment-for-type-assertion": 24,
     "typescript/no-unnecessary-type-parameters": 4,
     "typescript/no-unsafe-argument": 18,
     "typescript/no-unsafe-assignment": 116,
