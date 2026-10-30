@@ -1,4 +1,5 @@
 import {
+  LEGAL_DOCUMENT_KEYS,
   LEGAL_DOCUMENTS_SINGLETON_ID,
   type LegalDocuments,
   type LegalDocumentsModel,
@@ -77,11 +78,11 @@ export async function saveLegalDocuments(
 ): Promise<void> {
   await ensureLegalDocumentsRow(model);
   const row = await model.get(LEGAL_DOCUMENTS_SINGLETON_ID);
-  const changed = Object.fromEntries(
-    Object.entries(texts).filter(
-      ([key, text]) => text !== row?.[key as keyof LegalDocumentTexts],
-    ),
-  ) as LegalDocumentTexts;
+  const changed: LegalDocumentTexts = Object.fromEntries(
+    LEGAL_DOCUMENT_KEYS.filter(
+      (key) => Object.hasOwn(texts, key) && texts[key] !== row?.[key],
+    ).map((key) => [key, texts[key]]),
+  );
   if (Object.keys(changed).length === 0) return;
   await model.update(LEGAL_DOCUMENTS_SINGLETON_ID, {
     ...changed,

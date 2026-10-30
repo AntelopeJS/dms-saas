@@ -8,11 +8,24 @@ const GATE_ID = "dms-saas.subscription-status";
 export const PLAN_CHANGE_ACCESS_GATE_ID = "dms-saas.plan-change";
 const GATE_ORDER = 100;
 
-export const BLOCKING_STATUSES = new Set<TenantSubscriptionStatus>([
+const BLOCKING_STATUS_LIST = [
   "pending_payment",
   "suspended",
   "cancelled",
-]);
+] as const satisfies readonly TenantSubscriptionStatus[];
+
+export type BlockingStatus = (typeof BLOCKING_STATUS_LIST)[number];
+
+export const BLOCKING_STATUSES = new Set<TenantSubscriptionStatus>(
+  BLOCKING_STATUS_LIST,
+);
+
+/** Whether a subscription status blocks the workspace's access. */
+export function isBlockingStatus(
+  status: TenantSubscriptionStatus,
+): status is BlockingStatus {
+  return BLOCKING_STATUSES.has(status);
+}
 
 /**
  * 403 body returned by every tenant authorization surface when the

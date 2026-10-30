@@ -14,7 +14,7 @@ import {
 import { AuthTenantMember } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
-import { BLOCKING_STATUSES } from "../../auth";
+import { isBlockingStatus } from "../../auth";
 import { toUnpaidInvoiceRef, type UnpaidInvoiceRef } from "../../billing-state";
 import {
   type BillingSettings,
@@ -133,7 +133,7 @@ export function resolveAccessBlockReason(
   subscription: TenantSubscription | undefined,
   now = new Date(),
 ): AccessBlockReason | null {
-  if (!subscription || !BLOCKING_STATUSES.has(subscription.status)) {
+  if (!subscription || !isBlockingStatus(subscription.status)) {
     return null;
   }
   const isEndedGift =
@@ -141,7 +141,7 @@ export function resolveAccessBlockReason(
     canRecoverComplimentarySubscription(subscription, now);
   if (isEndedGift) return "complimentary_expired";
   if (isDeletedByOwner(subscription)) return "deleted";
-  return subscription.status as AccessBlockReason;
+  return subscription.status;
 }
 
 /** A workspace an owner deleted, still within its retention period. */

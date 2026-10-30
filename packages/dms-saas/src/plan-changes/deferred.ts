@@ -103,7 +103,7 @@ export async function scheduleDeferredPlanChange(
   await releasePendingOnStripe(subscription);
   const effectiveAt = await establishPendingTarget(
     tenantId,
-    subscription,
+    subscription.stripeSubscriptionId,
     pendingTargetOf(targetPlan),
   );
   await model.completeTransition(
@@ -176,7 +176,7 @@ async function commitPendingPlan(
     ...toPendingPatch(null, null),
     ...patch,
   });
-  await recomputeTenantBillingState(tenantId).catch((error) => {
+  await recomputeTenantBillingState(tenantId).catch((error: unknown) => {
     Logging.Error(
       `[dms-saas:plan-changes] billing-state recompute failed after committing plan ${pendingPlan._id} for tenant ${tenantId}`,
       error,
