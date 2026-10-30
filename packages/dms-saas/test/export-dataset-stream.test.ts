@@ -219,11 +219,7 @@ describe("writeDatasetsToArchive", () => {
 describe("exportSaasTenantData", () => {
   it("names the contract when the archive sink is missing", async () => {
     await expect(
-      exportSaasTenantData(
-        "tenant-1",
-        undefined as never,
-        new AbortController().signal,
-      ),
+      exportSaasTenantData("tenant-1", undefined, new AbortController().signal),
     ).rejects.toThrow(/export archive sink/);
   });
 });

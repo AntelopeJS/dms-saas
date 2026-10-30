@@ -1,12 +1,10 @@
 {
   "pack": "0.2.17",
   "rules": {
-    "antelopejs/no-inherited-key-lookup": 10,
-    "anti-slop/no-known-value-widening": 2,
-    "anti-slop/no-unknown-parameters": 32,
-    "anti-slop/no-unknown-returns": 5,
-    "anti-slop/no-unsafe-dictionary-type": 10,
-    "anti-slop/require-safety-comment-for-type-assertion": 47,
+    "antelopejs/no-inherited-key-lookup": 8,
+    "anti-slop/no-unknown-parameters": 10,
+    "anti-slop/no-unsafe-dictionary-type": 6,
+    "anti-slop/require-safety-comment-for-type-assertion": 20,
     "typescript/no-unnecessary-type-parameters": 4,
     "typescript/no-unsafe-argument": 18,
     "typescript/no-unsafe-assignment": 116,
