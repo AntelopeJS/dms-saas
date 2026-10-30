@@ -87,7 +87,7 @@ interface DunningClockPatch {
 class DunningClockModifier extends Modifier {
   update(object: DunningClockPatch, field: string): void {
     if (object.status === undefined) return;
-    if (object[field] !== undefined) return;
+    if (Object.hasOwn(object, field) && object[field] !== undefined) return;
     if (object.status !== PAST_DUE_STATUS) {
       object[field] = null;
     }
