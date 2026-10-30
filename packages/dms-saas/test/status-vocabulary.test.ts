@@ -35,14 +35,11 @@ describe("status vocabulary", () => {
         ([status, tone]) => ({ family, status, tone }),
       ),
     );
-    const drawn = served.map(({ family, status }) => ({
-      family,
-      status,
-      tone: statusView(family, status).tone,
-    }));
 
     expect(served.length).toBeGreaterThan(0);
-    expect(drawn).toEqual(served);
+    for (const { family, status, tone } of served) {
+      expect(statusView(family, status)).toMatchObject({ tone });
+    }
   });
 
   it.each(LOCALES)("%s names every status of every family", (code) => {
