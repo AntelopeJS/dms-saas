@@ -1,8 +1,11 @@
 import {
+  type CreditNote,
   CreditNoteModel,
+  type Invoice,
   type InvoiceLine,
   InvoiceModel,
   PLAN_FALLBACK_LOCALE as FALLBACK_LOCALE,
+  type Refund,
   RefundModel,
 } from "@antelopejs/interface-dms-saas/db";
 import { PLANS } from "../data/catalogue";
@@ -54,7 +57,7 @@ function planName(planId: string | null): string | undefined {
   return PLANS.find((plan) => plan.id === planId)?.name[FALLBACK_LOCALE];
 }
 
-function toInvoiceRow({ invoice, number }: NumberedInvoice): SeedRow {
+function toInvoiceRow({ invoice, number }: NumberedInvoice): SeedRow<Invoice> {
   const subtotal = toLines(invoice).reduce((sum, line) => sum + line.amount, 0);
   const tax = Math.round((subtotal * invoice.taxRate) / PERCENT);
   const issuedAt = dayFrom(invoice.issuedOn);
@@ -133,7 +136,7 @@ function toCreditNoteRow({
   creditNote,
   number,
   parent,
-}: CreditNoteContext): SeedRow {
+}: CreditNoteContext): SeedRow<CreditNote> {
   const issuedAt = dayFrom(creditNote.issuedOn);
   return {
     _id: creditNote.id,
@@ -162,7 +165,7 @@ function toCreditNoteDocumentRow({
   creditNote,
   number,
   parent,
-}: CreditNoteContext): SeedRow {
+}: CreditNoteContext): SeedRow<Invoice> {
   const issuedAt = dayFrom(creditNote.issuedOn);
   const line = {
     description: creditNote.memo,
@@ -197,7 +200,10 @@ function toCreditNoteDocumentRow({
   };
 }
 
-function toRefundRow({ creditNote, parent }: CreditNoteContext): SeedRow[] {
+function toRefundRow({
+  creditNote,
+  parent,
+}: CreditNoteContext): SeedRow<Refund>[] {
   if (!creditNote.refund) return [];
   const issuedAt = dayFrom(creditNote.issuedOn);
   return [

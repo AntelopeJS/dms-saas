@@ -2,9 +2,11 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   DEFAULT_STRIPE_TAX_CODE,
   type Feature,
+  type FeatureLocalizedText,
   FeatureModel,
   PLAN_FALLBACK_LOCALE,
   type Plan,
+  type PlanLocalizedText,
   type PlanProviderRefs,
   PlanModel,
 } from "@antelopejs/interface-dms-saas/db";
@@ -14,7 +16,12 @@ import {
 } from "@antelopejs/interface-dms/permissions";
 import { PLANS } from "../data/catalogue";
 import type { LocalizedText, SeedFeature, SeedPlan } from "../data/types";
-import { dayFrom, insertMissing, type SeedRow } from "./rows";
+import {
+  dayFrom,
+  insertMissing,
+  type PrepareInstance,
+  type SeedRow,
+} from "./rows";
 
 /** Every locale of a localized field is written at once. */
 const ALL_LOCALES = "*";
@@ -41,7 +48,9 @@ export async function readGrantablePermissions(): Promise<string[]> {
 const NO_TEXT: LocalizedText = { en: "", fr: "" };
 
 /** The feature as stored, every localized field holding a text per language. */
-export function toFeatureRow(feature: SeedFeature): SeedRow {
+export function toFeatureRow(
+  feature: SeedFeature,
+): SeedRow<Feature, FeatureLocalizedText> {
   const { id, ...fields } = feature;
   return {
     ...fields,
@@ -51,9 +60,11 @@ export function toFeatureRow(feature: SeedFeature): SeedRow {
   };
 }
 
-function localizeAll<Row extends Feature | Plan>(row: Row): Row {
-  return row.localize(ALL_LOCALES) as Row;
-}
+const localizeFeature: PrepareInstance<Feature> = (feature) =>
+  feature.localize(ALL_LOCALES);
+
+const localizePlan: PrepareInstance<Plan> = (plan) =>
+  plan.localize(ALL_LOCALES);
 
 /**
  * Fake Stripe ids, with the terms dms-saas records after a sync: the plan
@@ -81,9 +92,12 @@ function fakeStripeRefs(plan: SeedPlan): PlanProviderRefs {
   };
 }
 
-function toPlanRow(plan: SeedPlan, permissions: string[]): SeedRow {
+function toPlanRow(
+  plan: SeedPlan,
+  permissions: string[],
+): SeedRow<Plan, PlanLocalizedText> {
   const { id, stripeKey: _stripeKey, features, borderLabel, ...fields } = plan;
-  const row: SeedRow = {
+  const row: SeedRow<Plan, PlanLocalizedText> = {
     ...fields,
     _id: id,
     slug: id,
@@ -109,14 +123,14 @@ export async function writeCatalogue(
     FeatureModel,
     features.map(toFeatureRow),
     undefined,
-    localizeAll,
+    localizeFeature,
   );
   const permissions = await readGrantablePermissions();
   await insertMissing(
     PlanModel,
     plans.map((plan) => toPlanRow(plan, permissions)),
     undefined,
-    localizeAll,
+    localizePlan,
   );
 }
 
