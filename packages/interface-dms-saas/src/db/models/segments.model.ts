@@ -51,20 +51,12 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
     patch: DeepPartial<Segment>,
     options?: ValidateOptions,
   ): Promise<number>;
-  async update(
-    idOrPatch: string | DeepPartial<Segment>,
-    patchOrOptions?: DeepPartial<Segment> | ValidateOptions,
-    options?: ValidateOptions,
-  ): Promise<number> {
-    const id = isIdArgument(idOrPatch) ? idOrPatch : idOrPatch._id;
+  async update(...call: SegmentUpdateCall): Promise<number> {
+    const [id, patch, options] = isIdUpdate(call)
+      ? call
+      : [call[0]._id, ...call];
     if (!id) throw new Error("Segment identity is required");
-    return this.updateRevision(
-      id,
-      isIdArgument(idOrPatch)
-        ? (patchOrOptions as DeepPartial<Segment>)
-        : idOrPatch,
-      isIdArgument(idOrPatch) ? options : (patchOrOptions as ValidateOptions),
-    );
+    return this.updateRevision(id, patch, options);
   }
 
   /**
@@ -143,6 +135,16 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
   }
 }
 
-function isIdArgument(value: string | DeepPartial<Segment>): value is string {
-  return typeof value === "string";
+type SegmentIdUpdate = [
+  id: string,
+  patch: DeepPartial<Segment>,
+  options?: ValidateOptions,
+];
+
+type SegmentUpdateCall =
+  | SegmentIdUpdate
+  | [patch: DeepPartial<Segment>, options?: ValidateOptions];
+
+function isIdUpdate(call: SegmentUpdateCall): call is SegmentIdUpdate {
+  return typeof call[0] === "string";
 }
