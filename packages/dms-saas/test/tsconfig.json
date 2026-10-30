@@ -5,7 +5,7 @@
     "incremental": false,
     "rootDir": "..",
     "composite": false,
-    "paths": { "vue": ["../../../node_modules/.pnpm/node_modules/vue"] }
+    "paths": { "vue": ["../frontend-vue/node_modules/vue"] }
   },
   "include": ["../src/**/*.ts", "./**/*.ts"]
 }
