@@ -27,14 +27,19 @@ const PAGE_FIELDS = [
 async function ownLayout(): Promise<Layout> {
   const fields = SaasTenantBillingController;
   const entries = await Promise.all(
-    PAGE_FIELDS.map(async (key) => [key, await fields[key].serialize()]),
+    PAGE_FIELDS.map(async (key): Promise<[string, ComponentInfoSerialized]> => [
+      key,
+      await fields[key].serialize(),
+    ]),
   );
   return Object.fromEntries(entries);
 }
 
 function childAt(layout: Layout, path: readonly string[]) {
   const [key, ...ids] = path;
-  let node: ComponentInfoSerialized | undefined = layout[key];
+  let node: ComponentInfoSerialized | undefined = Object.hasOwn(layout, key)
+    ? layout[key]
+    : undefined;
   for (const id of ids) {
     node = node?.children?.find((child) => child.id === id)?.component;
   }
