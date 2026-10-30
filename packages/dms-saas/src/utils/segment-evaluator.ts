@@ -19,6 +19,29 @@ export type SegmentNode =
 
 type FieldKind = SegmentValueKind | "unknown";
 
+/** A value a segment projection holds. */
+export type ProjectionValue =
+  | string
+  | number
+  | boolean
+  | Date
+  | null
+  | undefined
+  | ProjectionValue[]
+  | ProjectionRecord;
+
+/** A projection of a user or of a workspace, read by field path. */
+export type ProjectionRecord = { [field: string]: ProjectionValue };
+
+function isProjectionRecord(value: ProjectionValue): value is ProjectionRecord {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    !(value instanceof Date)
+  );
+}
+
 /** Whether a node is a group of conditions joined by AND / OR. */
 export function isSegmentGroup(
   node: SegmentNode,
@@ -33,15 +56,16 @@ export function isSegmentWorkspaceRef(
   return (node as SegmentWorkspaceRef).kind === "workspaceRef";
 }
 
-function getFieldValue(target: Record<string, unknown>, path: string): unknown {
-  if (path in target) return target[path];
+function getFieldValue(
+  target: ProjectionRecord,
+  path: string,
+): ProjectionValue {
+  if (Object.hasOwn(target, path)) return target[path];
   return path
     .split(".")
-    .reduce<unknown>(
+    .reduce<ProjectionValue>(
       (acc, key) =>
-        acc && isObjectOrNull(acc)
-          ? (acc as Record<string, unknown>)[key]
-          : undefined,
+        acc && isObjectOrNull(acc) ? (acc as ProjectionRecord)[key] : undefined,
       target,
     );
 }
@@ -73,7 +97,7 @@ function getKind(fieldId: string): FieldKind {
 }
 
 function compareValues(
-  actual: unknown,
+  actual: ProjectionValue,
   expected: unknown,
   kind: FieldKind,
 ): number | null {
@@ -84,12 +108,16 @@ function compareValues(
   return null;
 }
 
-function equals(actual: unknown, expected: unknown, kind: FieldKind): boolean {
+function equals(
+  actual: ProjectionValue,
+  expected: unknown,
+  kind: FieldKind,
+): boolean {
   return coerce(actual, kind) === coerce(expected, kind);
 }
 
 function comparesWith(
-  actual: unknown,
+  actual: ProjectionValue,
   expected: unknown,
   kind: FieldKind,
   predicate: (comparison: number) => boolean,
@@ -98,16 +126,19 @@ function comparesWith(
   return comparison !== null && predicate(comparison);
 }
 
-function evaluateContains(actual: unknown, expected: unknown): boolean {
+function evaluateContains(actual: ProjectionValue, expected: unknown): boolean {
   if (isString(actual) && isString(expected)) {
     return actual.toLowerCase().includes(expected.toLowerCase());
   }
-  if (Array.isArray(actual)) return actual.includes(expected);
+  if (Array.isArray(actual)) {
+    const items: readonly unknown[] = actual;
+    return items.includes(expected);
+  }
   return false;
 }
 
 type OperatorHandler = (
-  actual: unknown,
+  actual: ProjectionValue,
   expected: unknown,
   kind: FieldKind,
 ) => boolean;
@@ -134,7 +165,7 @@ const OPERATOR_HANDLERS: Record<SegmentOperator, OperatorHandler> = {
 
 function evaluateCondition(
   condition: SegmentCondition,
-  target: Record<string, unknown>,
+  target: ProjectionRecord,
 ): boolean {
   const handler = OPERATOR_HANDLERS[condition.operator];
   if (!handler) return false;
@@ -149,10 +180,11 @@ function evaluateCondition(
  */
 export function segmentWorkspacePool(
   node: SegmentWorkspaceRef,
-  target: Record<string, unknown>,
-): Record<string, unknown>[] {
-  const all = Array.isArray(target.workspaces)
-    ? (target.workspaces as Record<string, unknown>[])
+  target: ProjectionRecord,
+): ProjectionRecord[] {
+  const { workspaces } = target;
+  const all = Array.isArray(workspaces)
+    ? workspaces.filter(isProjectionRecord)
     : [];
   return node.role === "owner" ? all.filter((w) => w.isOwner === true) : all;
 }
@@ -164,7 +196,7 @@ export function segmentWorkspacePool(
  */
 function evaluateWorkspaceRef(
   node: SegmentWorkspaceRef,
-  target: Record<string, unknown>,
+  target: ProjectionRecord,
 ): boolean {
   const workspaces = segmentWorkspacePool(node, target);
   if (workspaces.length === 0) return false;
@@ -176,7 +208,7 @@ function evaluateWorkspaceRef(
 /** Evaluate any node of a segment's tree against a projection. */
 export function evaluateSegmentNode(
   node: SegmentNode,
-  target: Record<string, unknown>,
+  target: ProjectionRecord,
 ): boolean {
   if (isSegmentWorkspaceRef(node)) return evaluateWorkspaceRef(node, target);
   if (isSegmentGroup(node)) return evaluateSegmentGroup(node, target);
@@ -185,7 +217,7 @@ export function evaluateSegmentNode(
 
 export function evaluateSegmentGroup(
   group: SegmentConditionGroup | null | undefined,
-  target: Record<string, unknown>,
+  target: ProjectionRecord,
 ): boolean {
   if (!group?.conditions?.length) return false;
   const results = group.conditions.map((node) =>

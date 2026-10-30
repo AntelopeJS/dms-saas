@@ -4,6 +4,7 @@ import {
   evaluateSegmentNode,
   isSegmentGroup,
   isSegmentWorkspaceRef,
+  type ProjectionRecord,
   type SegmentNode,
   segmentWorkspacePool,
 } from "./segment-evaluator";
@@ -58,7 +59,7 @@ export interface SegmentPreviewInputs {
   savedMemberIds: ReadonlySet<string> | null;
 }
 
-type Targets = (user: UserProjection) => Record<string, unknown>[];
+type Targets = (user: UserProjection) => ProjectionRecord[];
 
 interface PlacedNode {
   node: SegmentNode;

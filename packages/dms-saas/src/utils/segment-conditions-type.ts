@@ -58,10 +58,9 @@ const stringOrGroupSchema = z
   })
   .pipe(groupSchema);
 
-export interface SegmentConditionsTypeOptions {
+export type SegmentConditionsTypeOptions = {
   fieldsCatalogUrl?: string;
-  [key: string]: unknown;
-}
+};
 
 @RegisterDataType("segment_conditions")
 export class SegmentConditionsType extends DataType {

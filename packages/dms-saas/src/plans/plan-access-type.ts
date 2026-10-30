@@ -6,10 +6,9 @@ import {
 import { z } from "zod";
 
 /** Options of {@link PlanAccessType}: where its editor reads the permissions. */
-export interface PlanAccessTypeOptions {
+export type PlanAccessTypeOptions = {
   permissionsTreeUrl?: string;
-  [key: string]: unknown;
-}
+};
 
 const planAccessSchema = z
   .object({
@@ -24,7 +23,9 @@ const planAccessSchema = z
  *
  * @param value The `inheritance` field of a plan write
  */
-export function isPlanAccess(value: unknown): boolean {
+export function isPlanAccess(
+  value: unknown,
+): value is z.infer<typeof planAccessSchema> {
   return planAccessSchema.safeParse(value).success;
 }
 
