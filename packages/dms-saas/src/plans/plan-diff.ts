@@ -21,18 +21,23 @@ export interface FeatureChange {
 /** The feature fields a comparison reads. */
 export type ComparedFeature = Pick<Feature, "_id" | "valueType">;
 
-type Rank = (value: unknown) => number;
+type Rank = (entry: PlanFeatureValue | undefined) => number;
 
 const NO_RANK = 0;
 
-function booleanRank(value: unknown): number {
-  return value === true ? 1 : NO_RANK;
+function booleanRank(entry: PlanFeatureValue | undefined): number {
+  return entry?.value === true ? 1 : NO_RANK;
 }
 
 /** Off and missing rank lowest, unlimited highest, a limit in between. */
-function numberRank(value: unknown): number {
-  if (value === PLAN_UNLIMITED) return Number.POSITIVE_INFINITY;
-  return isNumber(value) && value > 0 ? value : NO_RANK;
+function capRank(cap: number): number {
+  if (cap === PLAN_UNLIMITED) return Number.POSITIVE_INFINITY;
+  return cap > 0 ? cap : NO_RANK;
+}
+
+function numberRank(entry: PlanFeatureValue | undefined): number {
+  const value = entry?.value;
+  return isNumber(value) ? capRank(value) : NO_RANK;
 }
 
 const RANKS: Partial<Record<FeatureValueType, Rank>> = {
@@ -52,21 +57,24 @@ export function changeKind(from: number, to: number): PlanChangeKind {
   return "same";
 }
 
-function textKind(from: unknown, to: unknown): PlanChangeKind {
-  return (from ?? "") === (to ?? "") ? "same" : "changed";
+function textKind(
+  from: PlanFeatureValue | undefined,
+  to: PlanFeatureValue | undefined,
+): PlanChangeKind {
+  return (from?.value ?? "") === (to?.value ?? "") ? "same" : "changed";
 }
 
 function compareFeature(
   feature: ComparedFeature,
-  from: unknown,
-  to: unknown,
+  from: PlanFeatureValue | undefined,
+  to: PlanFeatureValue | undefined,
 ): PlanChangeKind {
   const rank = RANKS[feature.valueType];
   return rank ? changeKind(rank(from), rank(to)) : textKind(from, to);
 }
 
-function valueMap(values: PlanFeatureValue[]): Map<string, unknown> {
-  return new Map(values.map((entry) => [entry.featureId, entry.value]));
+function valueMap(values: PlanFeatureValue[]): Map<string, PlanFeatureValue> {
+  return new Map(values.map((entry) => [entry.featureId, entry]));
 }
 
 /**
@@ -90,8 +98,8 @@ export function diffPlanFeatures(
     const after = toValues.get(feature._id);
     return {
       featureId: feature._id,
-      from: before ?? null,
-      to: after ?? null,
+      from: before?.value ?? null,
+      to: after?.value ?? null,
       kind: compareFeature(feature, before, after),
     };
   });
@@ -104,10 +112,11 @@ export function diffPlanFeatures(
  * @param to Cap of the plan joined
  */
 export function memberCapChange(from: number, to: number): PlanChangeKind {
-  return changeKind(numberRank(from), numberRank(to));
+  return changeKind(capRank(from), capRank(to));
 }
 
-function isAbsentFeature(value: unknown): boolean {
+function isAbsentFeature(change: FeatureChange, side: "from" | "to"): boolean {
+  const value = change[side];
   return value === null || value === false;
 }
 
@@ -125,14 +134,17 @@ export function migrationFeatureDiff(
     moved.filter(test).map((change) => change.featureId);
   return {
     added: keysWhere(
-      (change) => isAbsentFeature(change.from) && !isAbsentFeature(change.to),
+      (change) =>
+        isAbsentFeature(change, "from") && !isAbsentFeature(change, "to"),
     ),
     removed: keysWhere(
-      (change) => !isAbsentFeature(change.from) && isAbsentFeature(change.to),
+      (change) =>
+        !isAbsentFeature(change, "from") && isAbsentFeature(change, "to"),
     ),
     changed: moved
       .filter(
-        (change) => isAbsentFeature(change.from) === isAbsentFeature(change.to),
+        (change) =>
+          isAbsentFeature(change, "from") === isAbsentFeature(change, "to"),
       )
       .map((change) => ({
         key: change.featureId,

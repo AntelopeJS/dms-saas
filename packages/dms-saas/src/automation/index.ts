@@ -171,7 +171,9 @@ function createEventTrigger(spec: SaasEventTriggerSpec): TriggerType {
       return listener;
     },
     async deactivate(handle) {
-      listenersFor(spec.event).delete(handle as AutomationEventListener);
+      const listeners = listenersFor(spec.event);
+      const listener = [...listeners].find((candidate) => candidate === handle);
+      if (listener) listeners.delete(listener);
     },
   };
 }

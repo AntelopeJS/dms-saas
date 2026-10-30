@@ -465,27 +465,6 @@ export async function applyImmediateChange(
 }
 
 /**
- * Stripe refused the whole update because the card was declined: nothing
- * changed on its side, so the admission is released and the owner told.
- */
-async function releaseDeclinedUpgrade(
-  error: unknown,
-  admission: ImmediateChangeAdmission,
-  subscriptionId: string,
-): Promise<never> {
-  if (!(error instanceof Stripe.errors.StripeCardError)) throw error;
-  await admission.model.completeTransition(
-    subscriptionId,
-    admission.intent.operationId,
-    {},
-  );
-  throw new HTTPResult(
-    HTTP_PAYMENT_REQUIRED,
-    "saas.errors.plan.upgrade_payment_declined",
-  );
-}
-
-/**
  * The challenge of an upgrade Stripe left pending. Anything but a payment
  * waiting on authentication is a declined card: the update is dropped, so the
  * plan stays as it was and no unpaid invoice lingers.
@@ -524,8 +503,18 @@ export async function applyOwnerUpgrade(
     billing: { prorationBehavior: "always_invoice", prorationDate },
   };
   const updated = await runImmediateChange(change, admission).catch(
-    (error: unknown) =>
-      releaseDeclinedUpgrade(error, admission, subscription._id),
+    async (error: unknown) => {
+      if (!(error instanceof Stripe.errors.StripeCardError)) throw error;
+      await admission.model.completeTransition(
+        subscription._id,
+        admission.intent.operationId,
+        {},
+      );
+      throw new HTTPResult(
+        HTTP_PAYMENT_REQUIRED,
+        "saas.errors.plan.upgrade_payment_declined",
+      );
+    },
   );
   await tenantSubscriptionModel.completeTransition(
     subscription._id,

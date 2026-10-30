@@ -12,6 +12,7 @@ import {
   type TenantSubscriptionModel,
   TrialConsumptionModel,
 } from "../../db";
+import Stripe from "stripe";
 import { getStripeClient } from "../../stripe/client";
 import {
   createTenantCheckoutCustomer,
@@ -41,6 +42,7 @@ import {
   withCheckoutCancelMarker,
 } from "./tenant-plan-checkout-recovery";
 import { isString } from "../../utils/primitive-guards";
+import type { JsonValue } from "../../utils/json-value";
 
 const HTTP_UNPROCESSABLE = 422;
 const HTTP_SERVICE_UNAVAILABLE = 503;
@@ -81,7 +83,7 @@ interface CheckoutSessionTarget {
 
 const NO_TRIAL: TrialGrant = { days: 0, reservedIdentityId: null };
 
-function asNonEmptyString(value: unknown): string | null {
+function asNonEmptyString(value: JsonValue | undefined): string | null {
   return isString(value) && value.trim().length > 0 ? value.trim() : null;
 }
 
@@ -191,11 +193,6 @@ async function attachCheckoutSession(
   });
 }
 
-async function expireUnusableSession(error: unknown): Promise<void> {
-  if (!(error instanceof UnusableCheckoutSessionError)) return;
-  await getStripeClient().checkout.sessions.expire(error.sessionId);
-}
-
 /**
  * Undoes one attempt once Stripe provably holds nothing payable: the
  * admission, the trial it reserved and the customer it created all go, so the
@@ -214,7 +211,7 @@ async function rollbackCheckoutAttempt(
   if (attempt.reservedTrialIdentityId) {
     await GetModel(TrialIdentityModel)
       .releaseUnused(attempt.reservedTrialIdentityId, attempt.tenantId)
-      .catch((releaseError) =>
+      .catch((releaseError: unknown) =>
         Logging.Warn(
           `${LOG_PREFIX} failed to release the trial reserved by checkout ${attempt.operationId}`,
           releaseError,
@@ -223,42 +220,13 @@ async function rollbackCheckoutAttempt(
   }
   if (attempt.createdCustomerId) {
     await deleteStripeCustomerIfExists(attempt.createdCustomerId).catch(
-      (cleanupError) =>
+      (cleanupError: unknown) =>
         Logging.Warn(
           `${LOG_PREFIX} failed to delete unused Stripe customer ${attempt.createdCustomerId}`,
           cleanupError,
         ),
     );
   }
-}
-
-/**
- * A refusal Stripe stated is rolled back and reported as such. Anything else
- * leaves the admission in place — a session may exist — for the TTL release
- * to reclaim once no request can still record it.
- */
-async function failCheckoutAttempt(
-  error: unknown,
-  attempt: CheckoutAttempt,
-  model: TenantSubscriptionModel,
-): Promise<never> {
-  Logging.Error(
-    `${LOG_PREFIX} Stripe Checkout failed for tenant ${attempt.tenantId}`,
-    error,
-  );
-  const isUnusableSession = error instanceof UnusableCheckoutSessionError;
-  if (!isDefinitiveStripeRejection(error) && !isUnusableSession) {
-    throw new HTTPResult(
-      HTTP_SERVICE_UNAVAILABLE,
-      "saas.errors.billing.checkout_unavailable",
-    );
-  }
-  await expireUnusableSession(error);
-  await rollbackCheckoutAttempt(attempt, model);
-  throw new HTTPResult(
-    HTTP_UNPROCESSABLE,
-    "saas.errors.billing.checkout_rejected",
-  );
 }
 
 async function admitCheckout(
@@ -344,9 +312,30 @@ async function createAdmittedCheckout(
     stripePriceId,
     existingCustomerId: subscription.stripeCustomerId ?? null,
     redirect,
-  }).catch((error: unknown) =>
-    failCheckoutAttempt(error, attempt, tenantSubscriptionModel),
-  );
+  }).catch(async (error: unknown) => {
+    Logging.Error(
+      `${LOG_PREFIX} Stripe Checkout failed for tenant ${attempt.tenantId}`,
+      error,
+    );
+    const isUnusableSession = error instanceof UnusableCheckoutSessionError;
+    const isRejection =
+      error instanceof Stripe.errors.StripeError &&
+      isDefinitiveStripeRejection(error);
+    if (!isRejection && !isUnusableSession) {
+      throw new HTTPResult(
+        HTTP_SERVICE_UNAVAILABLE,
+        "saas.errors.billing.checkout_unavailable",
+      );
+    }
+    if (isUnusableSession) {
+      await getStripeClient().checkout.sessions.expire(error.sessionId);
+    }
+    await rollbackCheckoutAttempt(attempt, tenantSubscriptionModel);
+    throw new HTTPResult(
+      HTTP_UNPROCESSABLE,
+      "saas.errors.billing.checkout_rejected",
+    );
+  });
   await attachCheckoutSession(
     checkout,
     subscription,

@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { MakePropertyDecorator } from "@antelopejs/interface-core/decorators";
 import {
   attachModifier,
   CreationTime,
@@ -71,24 +70,6 @@ export interface SegmentCountPoint {
   count: number;
 }
 
-class RevisionModifier extends Modifier {
-  insert(object: Record<string, unknown>, field: string): void {
-    object[field] = randomUUID();
-  }
-
-  update(object: Record<string, unknown>, field: string): void {
-    object[field] = randomUUID();
-  }
-}
-
-type AttachFieldModifier = (
-  tableClass: new () => object,
-  modifier: new () => Modifier,
-  field: string,
-  // oxlint-disable-next-line anti-slop/no-object-parameters -- mirrors the shape the database decorators declare, where the value is opaque to this side
-  options: object,
-) => void;
-
 /**
  * Seeds the revision on every insert event and rotates it on every update
  * event. The platform data API writes through the raw table rather than
@@ -96,18 +77,23 @@ type AttachFieldModifier = (
  * compare-and-set mutations would refuse, or edit its conditions while a
  * recompute of the previous conditions can still publish.
  */
-const Revision = MakePropertyDecorator((target, propertyKey) => {
-  (attachModifier as AttachFieldModifier)(
-    target.constructor as new () => object,
-    RevisionModifier,
-    propertyKey as string,
-    {},
-  );
-});
+class RevisionModifier extends Modifier {
+  insert(object: Segment, field: string): void {
+    Reflect.set(object, field, randomUUID());
+  }
+
+  update(object: Segment, field: string): void {
+    Reflect.set(object, field, randomUUID());
+  }
+}
 
 /** Reusable audience segment evaluated against platform data. */
 @RegisterTable(segmentsTableName, CORE_SCHEMA_NAME)
 export class Segment extends Table {
+  static {
+    attachModifier(this, RevisionModifier, "revision", {});
+  }
+
   @Field("string")
   declare _id: string;
 
@@ -123,7 +109,6 @@ export class Segment extends Table {
   @Field("number")
   declare estimatedCount: number;
 
-  @Revision()
   @Field("string")
   declare revision: string;
 

@@ -67,7 +67,7 @@ export interface SeedPlan {
   inheritsFromPlanId: string | null;
   /** Fake Stripe ids suffix; null for a plan that never reached Stripe. */
   stripeKey: string | null;
-  features: Record<string, unknown>;
+  features: Record<string, boolean | number | string>;
 }
 
 export interface SeedMember {

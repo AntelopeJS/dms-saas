@@ -40,6 +40,7 @@ describe("legal pages", () => {
 
 describe("login page sign-up link", () => {
   const registered: AuthLink[] = [];
+  const setups: PluginSetup[] = [];
 
   async function runPlugin(
     admissionMode?: string,
@@ -47,15 +48,21 @@ describe("login page sign-up link", () => {
   ): Promise<void> {
     vi.resetModules();
     registered.length = 0;
-    vi.stubGlobal("defineDmsPlugin", (setup: PluginSetup) => setup);
+    setups.length = 0;
+    vi.stubGlobal("defineDmsPlugin", (setup: PluginSetup) => {
+      setups.push(setup);
+      return setup;
+    });
     vi.stubGlobal("useDmsRuntimeConfig", () => ({
       public: { dmsSaas: { admissionMode, publicScreens } },
     }));
     vi.stubGlobal("registerAuthLink", (link: AuthLink) =>
       registered.push(link),
     );
-    const plugin = await import("../frontend-vue/app/plugins/auth-links");
-    (plugin.default as unknown as PluginSetup)();
+    await import("../frontend-vue/app/plugins/auth-links");
+    const [setup] = setups;
+    if (!setup) throw new Error("The plugin never called defineDmsPlugin");
+    setup();
   }
 
   afterEach(() => {

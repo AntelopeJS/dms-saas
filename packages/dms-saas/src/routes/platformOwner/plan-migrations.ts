@@ -71,7 +71,7 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const NOTE_MAX_LENGTH = 500;
 const NOTE_REQUIRED = "$saas.errors.migration.note_required";
-const RESOLUTIONS = new Set<UncertainResolution>(["moved", "not_moved"]);
+const RESOLUTIONS: readonly UncertainResolution[] = ["moved", "not_moved"];
 const MIGRATIONS_API = "/api/saas/plan-migrations";
 const URLS = { api: MIGRATIONS_API, list: PLAN_MIGRATIONS_PAGE_PATH };
 const TEXTS = "$saas.catalog.migrations";
@@ -90,10 +90,10 @@ interface ReconcileBody {
   note?: string;
 }
 
-function assertResolution(value: unknown): UncertainResolution {
-  const resolution = value as UncertainResolution;
+function assertResolution(value: string | undefined): UncertainResolution {
+  const resolution = RESOLUTIONS.find((candidate) => candidate === value);
   assert(
-    RESOLUTIONS.has(resolution),
+    resolution,
     HTTP_BAD_REQUEST,
     "saas.errors.migration.invalid_resolution",
   );

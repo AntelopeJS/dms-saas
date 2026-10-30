@@ -51,17 +51,6 @@ function isCodedError(error: unknown): error is CodedError {
   return typeof error === "object" && error !== null;
 }
 
-function stripeErrorCode(error: unknown): string | null {
-  if (!isCodedError(error)) return null;
-  const { code } = error;
-  return isString(code) ? code : null;
-}
-
-function classifyStripeError(error: unknown): PreviewOutcome {
-  const code = stripeErrorCode(error);
-  return (code && STRIPE_ERROR_OUTCOMES.get(code)) || PROVIDER_ERROR;
-}
-
 /**
  * A preview whose automatic tax did not complete carries no tax at all: its
  * total would read as tax-free when Stripe simply could not compute the tax.
@@ -134,7 +123,9 @@ export async function priceUpcomingInvoice(
   try {
     return await priceWithStripe(tenantId, target, computedAt);
   } catch (error) {
-    const outcome = classifyStripeError(error);
+    const code =
+      isCodedError(error) && isString(error.code) ? error.code : null;
+    const outcome = (code && STRIPE_ERROR_OUTCOMES.get(code)) || PROVIDER_ERROR;
     if (outcome.status === "unavailable") {
       reportUnavailable(tenantId, outcome.reason, error);
     }

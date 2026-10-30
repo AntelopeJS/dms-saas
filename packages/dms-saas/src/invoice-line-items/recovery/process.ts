@@ -128,10 +128,6 @@ function reportUsageGap(task: InvoiceLineInjection): void {
   }
 }
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 /** A transient failure or a not-ready provider: keep the state, come back later. */
 async function retryLater(
   lease: InvoiceLineInjectionLease,
@@ -175,7 +171,7 @@ async function suspend(lease: InvoiceLineInjectionLease): Promise<StepOutcome> {
       { idempotencyKey: `${SUSPEND_KEY_PREFIX}:${invoiceId}` },
     );
   } catch (error) {
-    requestError = errorText(error);
+    requestError = error instanceof Error ? error.message : String(error);
   }
   const invoice = await retrieveInvoice(invoiceId);
   if (isSuspendedDraft(invoice))
@@ -221,7 +217,7 @@ async function resolveOne(
   } catch (error) {
     return {
       status: "not_ready",
-      reason: `provider_failed:${errorText(error)}`,
+      reason: `provider_failed:${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -307,7 +303,9 @@ async function createLinesOrGap(
   } catch (error) {
     if (error instanceof LeaseLostError || !isPastDeadline(lease.task))
       throw error;
-    return [`managed_lines_create_failed:${errorText(error)}`];
+    return [
+      `managed_lines_create_failed:${error instanceof Error ? error.message : String(error)}`,
+    ];
   }
 }
 
@@ -428,7 +426,7 @@ async function finalize(
         { idempotencyKey: `${FINALIZE_KEY_PREFIX}:${task._id}` },
       );
     } catch (error) {
-      requestError = errorText(error);
+      requestError = error instanceof Error ? error.message : String(error);
     }
     invoice = await retrieveInvoice(task._id);
   }
@@ -491,7 +489,7 @@ export async function processInvoiceLineInjection(
     Logging.Error(`${LOG_PREFIX} invoice ${invoiceId}: step failed`, error);
     await model()
       .advance(lease, {
-        lastError: errorText(error),
+        lastError: error instanceof Error ? error.message : String(error),
         attemptCount: lease.task.attemptCount + 1,
         nextAttemptAt: new Date(Date.now() + RETRY_AFTER_MS),
       })

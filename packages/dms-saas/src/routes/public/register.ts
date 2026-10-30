@@ -71,6 +71,7 @@ import type { TenantPlanFeature } from "../../plans";
 import { isPlanOfferedTo } from "../../plans/plan-audience";
 import { isString } from "../../utils/primitive-guards";
 import type { QueryParameterValue } from "../../utils/query-parameter";
+import type { JsonValue } from "../../utils/json-value";
 import type { TenantBeingProvisionedPayload } from "@antelopejs/interface-dms-saas/provisioning";
 
 const HTTP_BAD_REQUEST = 400;
@@ -175,7 +176,7 @@ function generateAuthKey(): string {
  * e-mail is looked up and before any account or Stripe object exists. The
  * OAuth completion has no password and never comes through here.
  */
-function assertRegistrationPassword(password: unknown): void {
+function assertRegistrationPassword(password: JsonValue | undefined): void {
   assert(
     isString(password) && isPasswordCompliant(password),
     HTTP_BAD_REQUEST,
@@ -203,7 +204,7 @@ async function registrationCardMayBackFreeWorkspace(
  * individual, the customer type a registration starts as.
  */
 async function resolveRequestedPaidPlan(
-  reference: unknown,
+  reference: QueryParameterValue,
 ): Promise<Plan | null> {
   const publicPlans = await GetModel(PlanModel).findPubliclyVisible();
   const plan = findPlanByReference(publicPlans, reference);
@@ -454,12 +455,14 @@ export class SaasRegisterApiController extends Controller(
     } catch (error) {
       await rollbackWorkspaceProvisioning(handles);
       if (handles.userId && !handles.mustPreserveWorkspace) {
-        await this.userModel.delete(handles.userId).catch((cleanupError) => {
-          Logging.Error(
-            `[dms-saas:register] rollback failed to delete user ${handles.userId}`,
-            cleanupError,
-          );
-        });
+        await this.userModel
+          .delete(handles.userId)
+          .catch((cleanupError: unknown) => {
+            Logging.Error(
+              `[dms-saas:register] rollback failed to delete user ${handles.userId}`,
+              cleanupError,
+            );
+          });
       }
       throw error;
     }

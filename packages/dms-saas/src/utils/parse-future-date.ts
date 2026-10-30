@@ -1,4 +1,5 @@
 import { assert } from "@antelopejs/interface-api-util";
+import type { JsonValue } from "./json-value";
 import { isString } from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
@@ -9,7 +10,10 @@ const HTTP_BAD_REQUEST = 400;
  * the past is rejected with a 400 — so a corrupt or stale date is never
  * silently coerced into unlimited access.
  */
-export function parseFutureDate(value: unknown, errorKey: string): Date | null {
+export function parseFutureDate(
+  value: JsonValue | Date | undefined,
+  errorKey: string,
+): Date | null {
   if (value === null || value === undefined || value === "") return null;
   assert(isString(value) || value instanceof Date, HTTP_BAD_REQUEST, errorKey);
   const parsed = value instanceof Date ? value : new Date(value);

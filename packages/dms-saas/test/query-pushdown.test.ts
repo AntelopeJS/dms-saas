@@ -3,8 +3,10 @@ import type { QueryStage } from "@antelopejs/interface-database/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvoiceModel } from "@antelopejs/interface-dms-saas/db/models/invoices.model";
 import { Invoice } from "@antelopejs/interface-dms-saas/db/tables/invoices.table";
+import { isString } from "../src/utils/primitive-guards";
+import { isRecord } from "./helpers/records";
 
-type Row = Record<string, unknown>;
+type Row = Record<string, string | Date | undefined>;
 type StageHandler = (rows: Row[], stage: QueryStage) => Row[];
 interface Expression {
   stages: QueryStage[];
@@ -13,8 +15,23 @@ interface Expression {
 const ROW_COUNT = 10_000;
 const schema = new Schema("query-pushdown-test", {});
 
+function isQueryStage(value: unknown): value is QueryStage {
+  return isRecord(value) && isString(value.stage) && Array.isArray(value.args);
+}
+
+function isExpression(value: unknown): value is Expression {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.stages) &&
+    value.stages.every(isQueryStage)
+  );
+}
+
 function matches(row: Row, stage: QueryStage): boolean {
-  const expression = stage.args[0].args[1] as Expression;
+  const expression: unknown = stage.args[0].args[1];
+  if (!isExpression(expression)) {
+    throw new Error(`The ${stage.stage} stage carries no expression`);
+  }
   const [, field, compare] = expression.stages;
   const value = row[field.args[0]];
   if (compare.stage === "eq") return value === compare.args[0];
@@ -36,8 +53,8 @@ const handlers = new Map<string, StageHandler>([
     (rows, stage) => {
       const direction = stage.options.direction === "desc" ? -1 : 1;
       return [...rows].sort((left, right) => {
-        const a = left[stage.options.index] as number;
-        const b = right[stage.options.index] as number;
+        const a = Number(left[stage.options.index]);
+        const b = Number(right[stage.options.index]);
         return (a < b ? -1 : a > b ? 1 : 0) * direction;
       });
     },

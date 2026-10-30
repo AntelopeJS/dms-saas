@@ -8,6 +8,7 @@ import {
   type LegalDocumentVersions,
   LegalDocumentsModel,
   PLAN_FALLBACK_LOCALE as FALLBACK_LOCALE,
+  type PlanMigration,
   type PlanMigrationFeatureDiff,
   PlanMigrationModel,
   type PlanMigrationTenantOutcome,
@@ -51,12 +52,13 @@ const FIRST_LEGAL_VERSION = 1;
 /** Each seeded document as published once, now. */
 function firstVersions(): LegalDocumentVersions {
   const publishedAt = new Date();
-  return Object.fromEntries(
-    LEGAL_DOCUMENT_KEYS.map((key) => [
-      key,
-      { version: FIRST_LEGAL_VERSION, publishedAt },
-    ]),
-  ) as LegalDocumentVersions;
+  const [termsOfUse, termsAndConditions, privacyPolicy] = LEGAL_DOCUMENT_KEYS;
+  const published = () => ({ version: FIRST_LEGAL_VERSION, publishedAt });
+  return {
+    [termsOfUse]: published(),
+    [termsAndConditions]: published(),
+    [privacyPolicy]: published(),
+  };
 }
 
 /**
@@ -170,7 +172,7 @@ function tenantOutcomes(
 function toMigrationRow(
   migration: SeedPlanMigration,
   permissions: string[],
-): SeedRow {
+): SeedRow<PlanMigration> {
   const target = findPlan(migration.toPlanId);
   const startedAt =
     migration.durationMinutes === null

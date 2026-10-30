@@ -10,6 +10,7 @@ import {
   type SegmentNode,
 } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
+import type { JsonValue } from "./json-value";
 import { isObjectOrNull, isString } from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
@@ -36,9 +37,9 @@ export interface SegmentInput {
 
 /** The body of a segment save, as it arrives. */
 export interface SegmentInputBody {
-  name?: unknown;
-  description?: unknown;
-  conditions?: unknown;
+  name?: JsonValue;
+  description?: JsonValue;
+  conditions?: JsonValue;
 }
 
 function validateWorkspaceRefNode(
@@ -157,13 +158,13 @@ export function parseSegmentConditions(raw: unknown): SegmentConditionGroup {
   return group;
 }
 
-function parseText(value: unknown, maxLength: number): string {
+function parseText(value: JsonValue | undefined, maxLength: number): string {
   const text = isString(value) ? value.trim() : "";
   assert(text.length <= maxLength, HTTP_BAD_REQUEST, `${ERRORS}.too_long`);
   return text;
 }
 
-function parseName(value: unknown): string {
+function parseName(value: JsonValue | undefined): string {
   const name = parseText(value, NAME_MAX_LENGTH);
   assert(name.length > 0, HTTP_BAD_REQUEST, `${ERRORS}.name_required`);
   return name;

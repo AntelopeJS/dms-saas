@@ -100,10 +100,12 @@ export type BillingRulesBody = z.infer<typeof billingRulesBodySchema>;
 export function pickSettingsUpdate(
   body: BillingRulesBody,
 ): Partial<BillingSettings> {
-  const { termsOfUse, termsAndConditions, privacyPolicy, ...settings } = body;
-  return Object.fromEntries(
-    Object.entries(settings).filter(([, value]) => value !== undefined),
-  ) as Partial<BillingSettings>;
+  const update: Partial<BillingSettings> = {};
+  for (const key of BILLING_RULES_SETTING_KEYS) {
+    const value = body[key];
+    if (value !== undefined) Object.assign(update, { [key]: value });
+  }
+  return update;
 }
 
 /** The legal texts part of a saved body. */
@@ -165,14 +167,22 @@ export interface LegalDocumentRelease extends LegalDocumentVersion {
   path: string;
 }
 
+/** The release panels of the legal documents, by their `<document>Release` field. */
+export type LegalDocumentReleases = {
+  [Key in LegalDocumentKey as `${Key}Release`]: LegalDocumentRelease;
+};
+
 /** The release panels of the legal documents, keyed `<document>Release`. */
 export function legalDocumentReleases(
   versions: LegalDocumentVersions,
-): Record<string, LegalDocumentRelease> {
-  return Object.fromEntries(
-    LEGAL_DOCUMENT_KEYS.map((key) => [
-      `${key}Release`,
-      { ...versions[key], path: LEGAL_DOCUMENT_PATHS[key] },
-    ]),
-  );
+): LegalDocumentReleases {
+  const release = (key: LegalDocumentKey): LegalDocumentRelease => ({
+    ...versions[key],
+    path: LEGAL_DOCUMENT_PATHS[key],
+  });
+  return {
+    termsOfUseRelease: release("termsOfUse"),
+    termsAndConditionsRelease: release("termsAndConditions"),
+    privacyPolicyRelease: release("privacyPolicy"),
+  };
 }

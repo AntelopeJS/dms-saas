@@ -7,6 +7,7 @@ import type {
 } from "../db";
 import { withPermissionAncestors } from "./plan-permission-tree";
 import { PLAN_LOCALIZED_FIELDS, PLAN_UNLIMITED, PlanModel } from "../db";
+import type { JsonValue } from "../utils/json-value";
 import { isBoolean, isNumber, isString } from "../utils/primitive-guards";
 
 /**
@@ -179,7 +180,8 @@ export function slugify(value: string): string {
     .slice(0, SLUG_MAX_LENGTH);
 }
 
-function isNumberFeatureValue(value: unknown): boolean {
+function isNumberFeatureValue(entry: PlanFeatureValue): boolean {
+  const { value } = entry;
   return (
     isNumber(value) &&
     Number.isInteger(value) &&
@@ -190,11 +192,11 @@ function isNumberFeatureValue(value: unknown): boolean {
 }
 
 const FEATURE_VALUE_CHECKS: Partial<
-  Record<FeatureValueType, (value: unknown) => boolean>
+  Record<FeatureValueType, (entry: PlanFeatureValue) => boolean>
 > = {
-  boolean: (value) => isBoolean(value),
+  boolean: (entry) => isBoolean(entry.value),
   number: isNumberFeatureValue,
-  string: (value) => isString(value),
+  string: (entry) => isString(entry.value),
 };
 
 /**
@@ -218,13 +220,13 @@ export function invalidFeatureValues(
       const valueType = types.get(entry.featureId);
       const check =
         valueType === undefined ? undefined : FEATURE_VALUE_CHECKS[valueType];
-      return !check?.(entry.value);
+      return !check?.(entry);
     })
     .map((entry) => entry.featureId);
 }
 
 /** Whether a member cap is unlimited (`-1`) or a whole number of seats from 1. */
-export function isValidMemberCap(value: unknown): boolean {
+export function isValidMemberCap(value: JsonValue | undefined): boolean {
   return (
     isNumber(value) &&
     Number.isInteger(value) &&

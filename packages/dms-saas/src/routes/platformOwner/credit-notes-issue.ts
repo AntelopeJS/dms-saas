@@ -10,7 +10,7 @@ import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import type { ZodError } from "zod";
+import { ZodError } from "zod";
 import { InvoiceModel } from "../../db";
 import {
   buildCreditNoteParams,
@@ -37,14 +37,6 @@ export interface IssuedCreditNote {
   number: string;
   amount: number;
   currency: string;
-}
-
-function parseBody(body: unknown): IssueCreditNoteBody {
-  return assertValidation(
-    body,
-    (value) => issueCreditNoteBodySchema.parse(value),
-    (error) => (error as ZodError).issues,
-  );
 }
 
 /** Checks what is left to credit with Stripe, then has Stripe issue the note. */
@@ -109,7 +101,11 @@ export class SaasCreditNotesIssueController extends Controller(
     @JSONBody() rawBody: unknown,
     @Model(InvoiceModel, CROSS_INSTANCE) invoiceModel: InvoiceModel,
   ): Promise<IssuedCreditNote> {
-    const body = parseBody(rawBody);
+    const body = assertValidation(
+      rawBody,
+      (value) => issueCreditNoteBodySchema.parse(value),
+      (error) => (error instanceof ZodError ? error.issues : undefined),
+    );
     assertStripeConfigured();
     const loaded = await loadInvoice(invoiceModel, body.invoiceId);
     return withStripeAvailability(() => issueAgainst(loaded, body, user));

@@ -102,6 +102,7 @@ import {
 } from "./tenant-plan-checkout-recovery";
 import { resubscribeOnFreePlan } from "./tenant-plan-resubscription";
 import { ANY_PLAN_AUDIENCE, isPlanOfferedTo } from "../../plans/plan-audience";
+import type { JsonValue } from "../../utils/json-value";
 import { isNumber, isString } from "../../utils/primitive-guards";
 import type { QueryParameterValue } from "../../utils/query-parameter";
 
@@ -112,7 +113,9 @@ const MS_PER_SECOND = 1000;
  * The proration date of the preview the owner reviewed, kept only while
  * recent: an old one would bill a difference that no longer matches.
  */
-export function acceptedProrationDate(value: unknown): number | undefined {
+export function acceptedProrationDate(
+  value: JsonValue | undefined,
+): number | undefined {
   if (!isNumber(value) || !Number.isInteger(value)) return undefined;
   const ageSeconds = Date.now() / MS_PER_SECOND - value;
   const isRecent =

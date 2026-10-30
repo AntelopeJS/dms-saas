@@ -11,6 +11,7 @@ import {
   computeUnusedPortionCents,
   getStripeClient,
   nowInStripeSeconds,
+  requireInvoiceId,
 } from "../../stripe";
 import { CREDIT_NOTE_METADATA } from "../../operator-billing/credit-note-request";
 import { MS_PER_DAY } from "../../utils/time";
@@ -36,28 +37,31 @@ interface RefundErrorMapping {
   message: string;
 }
 
-const REASON_TO_ERROR: Record<string, RefundErrorMapping> = {
-  [REASON_NOT_ENABLED]: {
-    code: HTTP_FORBIDDEN,
-    message: "saas.errors.refund.not_enabled",
-  },
-  [REASON_NO_SUBSCRIPTION]: {
-    code: HTTP_BAD_REQUEST,
-    message: "saas.errors.workspace.no_active_subscription",
-  },
-  [REASON_ALREADY_PROCESSED]: {
-    code: HTTP_CONFLICT,
-    message: "saas.errors.refund.already_processed",
-  },
-  [REASON_NO_INVOICE]: {
-    code: HTTP_NOT_FOUND,
-    message: "saas.errors.invoice.no_paid_found",
-  },
-  [REASON_WINDOW_EXPIRED]: {
-    code: HTTP_FORBIDDEN,
-    message: "saas.errors.refund.window_expired",
-  },
-};
+const REASON_TO_ERROR = new Map<string, RefundErrorMapping>([
+  [
+    REASON_NOT_ENABLED,
+    { code: HTTP_FORBIDDEN, message: "saas.errors.refund.not_enabled" },
+  ],
+  [
+    REASON_NO_SUBSCRIPTION,
+    {
+      code: HTTP_BAD_REQUEST,
+      message: "saas.errors.workspace.no_active_subscription",
+    },
+  ],
+  [
+    REASON_ALREADY_PROCESSED,
+    { code: HTTP_CONFLICT, message: "saas.errors.refund.already_processed" },
+  ],
+  [
+    REASON_NO_INVOICE,
+    { code: HTTP_NOT_FOUND, message: "saas.errors.invoice.no_paid_found" },
+  ],
+  [
+    REASON_WINDOW_EXPIRED,
+    { code: HTTP_FORBIDDEN, message: "saas.errors.refund.window_expired" },
+  ],
+]);
 
 export interface EligibleInvoice {
   id: string;
@@ -186,7 +190,7 @@ async function listPaidInvoices(
 function toEligibleInvoice(invoice: Stripe.Invoice): EligibleInvoice {
   const line = invoice.lines?.data?.[0];
   return {
-    id: invoice.id as string,
+    id: requireInvoiceId(invoice),
     amountPaid: invoice.amount_paid,
     refundable: Math.max(
       0,
@@ -366,7 +370,7 @@ export class SaasBillingSelfRefundController extends Controller(
     const eligibility = await resolveRefundEligibility(settings, subscription);
     const error = eligibility.eligible
       ? null
-      : REASON_TO_ERROR[eligibility.reason ?? ""];
+      : REASON_TO_ERROR.get(eligibility.reason ?? "");
     assert(
       eligibility.eligible,
       error?.code ?? HTTP_BAD_REQUEST,

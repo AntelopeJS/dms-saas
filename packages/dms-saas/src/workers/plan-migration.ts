@@ -23,6 +23,7 @@ import {
 } from "../plans/migration-outcomes";
 import { publishMigrationChange } from "../plans/migration-realtime";
 import { redirectPendingPlanChange } from "../plan-changes/pending-target";
+import Stripe from "stripe";
 import { getStripeClient } from "../stripe/client";
 import { isDefinitiveStripeRejection } from "../stripe/workspace-checkout";
 import { getRowInstance } from "../utils";
@@ -85,7 +86,7 @@ class ProviderChangeRefusedError extends Error {
   }
 }
 
-function isRefusedMove(error: unknown): boolean {
+function isRefusedMove(error: unknown): error is ProviderChangeRefusedError {
   return error instanceof ProviderChangeRefusedError;
 }
 
@@ -95,7 +96,10 @@ async function changeProviderPlanOrRefuse(
   try {
     await changeProviderPlan(work);
   } catch (error) {
-    if (isDefinitiveStripeRejection(error)) {
+    if (
+      error instanceof Stripe.errors.StripeError &&
+      isDefinitiveStripeRejection(error)
+    ) {
       throw new ProviderChangeRefusedError(error);
     }
     throw error;
@@ -409,12 +413,12 @@ const LIVE_EXECUTORS_KEY: unique symbol = Symbol.for(
   "@antelopejs/dms-saas/plan-migration-executors",
 );
 
-interface LiveExecutorsHost {
+interface LiveExecutorsHost extends Pick<typeof globalThis, "globalThis"> {
   [LIVE_EXECUTORS_KEY]?: Set<string>;
 }
 
 function liveExecutors(): Set<string> {
-  const host = globalThis as LiveExecutorsHost;
+  const host: LiveExecutorsHost = globalThis;
   host[LIVE_EXECUTORS_KEY] ??= new Set();
   return host[LIVE_EXECUTORS_KEY];
 }

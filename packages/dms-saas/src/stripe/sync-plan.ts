@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import type {
   Plan,
   PlanProviderRefs,
@@ -9,7 +9,9 @@ import type {
 } from "../db";
 import {
   DEFAULT_STRIPE_TAX_CODE,
+  PLAN_BILLING_MODES,
   PLAN_FALLBACK_LOCALE,
+  PLAN_INTERVALS,
   PlanModel,
 } from "../db";
 import { localizePlan } from "@antelopejs/interface-dms-saas/plans";
@@ -47,7 +49,8 @@ export async function resolveProductTaxCode(): Promise<string> {
  * the caller may hold the plan unlocked in its reader's locale.
  */
 function fallbackTexts(plan: Plan): Pick<Plan, "name" | "description"> {
-  const copy = PlanModel.fromDatabase(PlanModel.toDatabase(plan)) as Plan;
+  const copy = PlanModel.fromDatabase(PlanModel.toDatabase(plan));
+  if (!copy) throw new Error(`Plan '${plan._id}' could not be copied`);
   const { name, description } = localizePlan(copy, PLAN_FALLBACK_LOCALE);
   return { name, description };
 }
@@ -130,17 +133,18 @@ function toHeldPriceTerms(
   if (!price.active || !price.recurring || price.unit_amount === null) {
     return undefined;
   }
+  const { interval: stripeInterval } = price.recurring;
+  const interval = PLAN_INTERVALS.find((term) => term === stripeInterval);
+  const billingMode = PLAN_BILLING_MODES.find(
+    (mode) => mode === price.metadata.billingMode,
+  );
+  if (!interval || !billingMode) return undefined;
   return {
     unitAmount: price.unit_amount,
     currency: price.currency,
-    interval: price.recurring.interval as PlanStripePriceTerms["interval"],
-    billingMode: price.metadata
-      .billingMode as PlanStripePriceTerms["billingMode"],
+    interval,
+    billingMode,
   };
-}
-
-function isResourceMissing(error: unknown): boolean {
-  return (error as Stripe.errors.StripeError)?.code === RESOURCE_MISSING_CODE;
 }
 
 /**
@@ -160,7 +164,12 @@ async function heldTerms(refs: PlanProviderRefs): Promise<StripeHeldTerms> {
       price: toHeldPriceTerms(price),
     };
   } catch (error) {
-    if (isResourceMissing(error)) return {};
+    if (
+      error instanceof Stripe.errors.StripeError &&
+      error.code === RESOURCE_MISSING_CODE
+    ) {
+      return {};
+    }
     throw error;
   }
 }
