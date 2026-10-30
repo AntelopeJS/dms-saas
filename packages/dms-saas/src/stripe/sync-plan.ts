@@ -9,7 +9,9 @@ import type {
 } from "../db";
 import {
   DEFAULT_STRIPE_TAX_CODE,
+  PLAN_BILLING_MODES,
   PLAN_FALLBACK_LOCALE,
+  PLAN_INTERVALS,
   PlanModel,
 } from "../db";
 import { localizePlan } from "@antelopejs/interface-dms-saas/plans";
@@ -131,12 +133,17 @@ function toHeldPriceTerms(
   if (!price.active || !price.recurring || price.unit_amount === null) {
     return undefined;
   }
+  const { interval: stripeInterval } = price.recurring;
+  const interval = PLAN_INTERVALS.find((term) => term === stripeInterval);
+  const billingMode = PLAN_BILLING_MODES.find(
+    (mode) => mode === price.metadata.billingMode,
+  );
+  if (!interval || !billingMode) return undefined;
   return {
     unitAmount: price.unit_amount,
     currency: price.currency,
-    interval: price.recurring.interval as PlanStripePriceTerms["interval"],
-    billingMode: price.metadata
-      .billingMode as PlanStripePriceTerms["billingMode"],
+    interval,
+    billingMode,
   };
 }
 

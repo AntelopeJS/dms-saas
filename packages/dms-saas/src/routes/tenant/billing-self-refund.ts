@@ -11,6 +11,7 @@ import {
   computeUnusedPortionCents,
   getStripeClient,
   nowInStripeSeconds,
+  requireInvoiceId,
 } from "../../stripe";
 import { CREDIT_NOTE_METADATA } from "../../operator-billing/credit-note-request";
 import { MS_PER_DAY } from "../../utils/time";
@@ -189,7 +190,7 @@ async function listPaidInvoices(
 function toEligibleInvoice(invoice: Stripe.Invoice): EligibleInvoice {
   const line = invoice.lines?.data?.[0];
   return {
-    id: invoice.id as string,
+    id: requireInvoiceId(invoice),
     amountPaid: invoice.amount_paid,
     refundable: Math.max(
       0,

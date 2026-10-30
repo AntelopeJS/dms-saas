@@ -100,10 +100,12 @@ export type BillingRulesBody = z.infer<typeof billingRulesBodySchema>;
 export function pickSettingsUpdate(
   body: BillingRulesBody,
 ): Partial<BillingSettings> {
-  const { termsOfUse, termsAndConditions, privacyPolicy, ...settings } = body;
-  return Object.fromEntries(
-    Object.entries(settings).filter(([, value]) => value !== undefined),
-  ) as Partial<BillingSettings>;
+  const update: Partial<BillingSettings> = {};
+  for (const key of BILLING_RULES_SETTING_KEYS) {
+    const value = body[key];
+    if (value !== undefined) Object.assign(update, { [key]: value });
+  }
+  return update;
 }
 
 /** The legal texts part of a saved body. */
