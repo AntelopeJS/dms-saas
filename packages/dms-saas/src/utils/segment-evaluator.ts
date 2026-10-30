@@ -19,6 +19,9 @@ export type SegmentNode =
 
 type FieldKind = SegmentValueKind | "unknown";
 
+/** A value to compare, held like a condition holds what it expects. */
+type Operand = Pick<SegmentCondition, "value">;
+
 /** A value a segment projection holds: a scalar, a date, or its workspaces. */
 export type ProjectionValue =
   | string
@@ -66,31 +69,43 @@ function getFieldValue(
     .split(".")
     .reduce<ProjectionValue>(
       (acc, key) =>
-        acc && isObjectOrNull(acc) ? (acc as ProjectionRecord)[key] : undefined,
+        acc &&
+        isObjectOrNull(acc) &&
+        !(acc instanceof Date) &&
+        !Array.isArray(acc)
+          ? acc[key]
+          : undefined,
       target,
     );
 }
 
-const KIND_COERCERS: Record<SegmentValueKind, (value: unknown) => unknown> = {
-  number: (value) => {
-    if (isNumber(value)) return value;
+const KIND_COERCERS: Record<SegmentValueKind, (operand: Operand) => Operand> = {
+  number: ({ value }) => {
+    if (isNumber(value)) return { value };
     const parsed = Number(value);
-    return Number.isNaN(parsed) ? undefined : parsed;
+    return { value: Number.isNaN(parsed) ? undefined : parsed };
   },
-  boolean: (value) => {
-    if (isBoolean(value)) return value;
-    if (value === "true") return true;
-    if (value === "false") return false;
-    return undefined;
+  boolean: ({ value }) => {
+    if (isBoolean(value)) return { value };
+    if (value === "true") return { value: true };
+    if (value === "false") return { value: false };
+    return { value: undefined };
   },
-  date: (value) =>
-    value instanceof Date ? value.getTime() : new Date(String(value)).getTime(),
-  string: (value) => (isString(value) ? value : String(value)),
+  date: ({ value }) => ({
+    value:
+      value instanceof Date
+        ? value.getTime()
+        : new Date(String(value)).getTime(),
+  }),
+  string: ({ value }) => ({ value: isString(value) ? value : String(value) }),
 };
 
-function coerce(value: unknown, kind: FieldKind): unknown {
-  if (value === null || value === undefined || kind === "unknown") return value;
-  return KIND_COERCERS[kind](value);
+function coerce(operand: Operand, kind: FieldKind): Operand {
+  const { value } = operand;
+  if (value === null || value === undefined || kind === "unknown") {
+    return operand;
+  }
+  return KIND_COERCERS[kind](operand);
 }
 
 function getKind(fieldId: string): FieldKind {
@@ -99,11 +114,11 @@ function getKind(fieldId: string): FieldKind {
 
 function compareValues(
   actual: ProjectionValue,
-  expected: unknown,
+  expected: Operand,
   kind: FieldKind,
 ): number | null {
-  const a = coerce(actual, kind);
-  const e = coerce(expected, kind);
+  const a = coerce({ value: actual }, kind).value;
+  const e = coerce(expected, kind).value;
   if (isNumber(a) && isNumber(e)) return a - e;
   if (isString(a) && isString(e)) return a.localeCompare(e);
   return null;
@@ -111,15 +126,15 @@ function compareValues(
 
 function equals(
   actual: ProjectionValue,
-  expected: unknown,
+  expected: Operand,
   kind: FieldKind,
 ): boolean {
-  return coerce(actual, kind) === coerce(expected, kind);
+  return coerce({ value: actual }, kind).value === coerce(expected, kind).value;
 }
 
 function comparesWith(
   actual: ProjectionValue,
-  expected: unknown,
+  expected: Operand,
   kind: FieldKind,
   predicate: (comparison: number) => boolean,
 ): boolean {
@@ -127,20 +142,20 @@ function comparesWith(
   return comparison !== null && predicate(comparison);
 }
 
-function evaluateContains(actual: ProjectionValue, expected: unknown): boolean {
-  if (isString(actual) && isString(expected)) {
-    return actual.toLowerCase().includes(expected.toLowerCase());
+function evaluateContains(actual: ProjectionValue, expected: Operand): boolean {
+  if (isString(actual) && isString(expected.value)) {
+    return actual.toLowerCase().includes(expected.value.toLowerCase());
   }
   if (Array.isArray(actual)) {
     const items: readonly unknown[] = actual;
-    return items.includes(expected);
+    return items.includes(expected.value);
   }
   return false;
 }
 
 type OperatorHandler = (
   actual: ProjectionValue,
-  expected: unknown,
+  expected: Operand,
   kind: FieldKind,
 ) => boolean;
 
@@ -156,11 +171,11 @@ const OPERATOR_HANDLERS: Record<SegmentOperator, OperatorHandler> = {
   lte: (actual, expected, kind) =>
     comparesWith(actual, expected, kind, (c) => c <= 0),
   in: (actual, expected, kind) =>
-    Array.isArray(expected) &&
-    expected.some((value) => equals(actual, value, kind)),
+    Array.isArray(expected.value) &&
+    expected.value.some((value) => equals(actual, { value }, kind)),
   nin: (actual, expected, kind) =>
-    Array.isArray(expected) &&
-    !expected.some((value) => equals(actual, value, kind)),
+    Array.isArray(expected.value) &&
+    !expected.value.some((value) => equals(actual, { value }, kind)),
   contains: (actual, expected) => evaluateContains(actual, expected),
 };
 
@@ -171,7 +186,7 @@ function evaluateCondition(
   const handler = OPERATOR_HANDLERS[condition.operator];
   if (!handler) return false;
   const actual = getFieldValue(target, condition.field);
-  return handler(actual, condition.value, getKind(condition.field));
+  return handler(actual, condition, getKind(condition.field));
 }
 
 /**
