@@ -19,7 +19,7 @@ export type SegmentNode =
 
 type FieldKind = SegmentValueKind | "unknown";
 
-/** A value a segment projection holds. */
+/** A value a segment projection holds: a scalar, a date, or its workspaces. */
 export type ProjectionValue =
   | string
   | number
@@ -27,33 +27,34 @@ export type ProjectionValue =
   | Date
   | null
   | undefined
-  | ProjectionValue[]
-  | ProjectionRecord;
+  | ProjectionRecord
+  | ProjectionRecord[];
 
 /** A projection of a user or of a workspace, read by field path. */
 export type ProjectionRecord = { [field: string]: ProjectionValue };
-
-function isProjectionRecord(value: ProjectionValue): value is ProjectionRecord {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    !(value instanceof Date)
-  );
-}
 
 /** Whether a node is a group of conditions joined by AND / OR. */
 export function isSegmentGroup(
   node: SegmentNode,
 ): node is SegmentConditionGroup {
-  return (node as SegmentConditionGroup).logical !== undefined;
+  return (
+    isObjectOrNull(node) &&
+    node !== null &&
+    "logical" in node &&
+    node.logical !== undefined
+  );
 }
 
 /** Whether a node is a condition on the user's workspaces. */
 export function isSegmentWorkspaceRef(
   node: SegmentNode,
 ): node is SegmentWorkspaceRef {
-  return (node as SegmentWorkspaceRef).kind === "workspaceRef";
+  return (
+    isObjectOrNull(node) &&
+    node !== null &&
+    "kind" in node &&
+    node.kind === "workspaceRef"
+  );
 }
 
 function getFieldValue(
@@ -183,9 +184,7 @@ export function segmentWorkspacePool(
   target: ProjectionRecord,
 ): ProjectionRecord[] {
   const { workspaces } = target;
-  const all = Array.isArray(workspaces)
-    ? workspaces.filter(isProjectionRecord)
-    : [];
+  const all = Array.isArray(workspaces) ? workspaces : [];
   return node.role === "owner" ? all.filter((w) => w.isOwner === true) : all;
 }
 

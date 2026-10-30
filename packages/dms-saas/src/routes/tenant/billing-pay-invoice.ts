@@ -54,27 +54,6 @@ function assertPayableSubscription(
 }
 
 /**
- * A declined card is the owner's to fix (another card); a refusal of the
- * request itself means the invoice changed meanwhile; anything else is
- * Stripe being unreachable, worth a retry.
- */
-export function toPaymentFailure(error: unknown): HTTPResult {
-  if (error instanceof Stripe.errors.StripeCardError) {
-    return new HTTPResult(
-      HTTP_PAYMENT_REQUIRED,
-      "saas.errors.billing.payment_declined",
-    );
-  }
-  if (error instanceof Stripe.errors.StripeInvalidRequestError) {
-    return new HTTPResult(HTTP_CONFLICT, "saas.errors.invoice.not_payable");
-  }
-  return new HTTPResult(
-    HTTP_SERVICE_UNAVAILABLE,
-    "saas.errors.billing.payment_unavailable",
-  );
-}
-
-/**
  * Part of the recovery path of a blocked workspace, like the portal: paying
  * the unpaid invoice is what lifts the block.
  */
@@ -111,7 +90,19 @@ export class SaasBillingPayInvoiceController extends Controller(
         `${LOG_PREFIX} payment of ${invoice.stripeInvoiceId} failed`,
         error,
       );
-      throw toPaymentFailure(error);
+      if (error instanceof Stripe.errors.StripeCardError) {
+        throw new HTTPResult(
+          HTTP_PAYMENT_REQUIRED,
+          "saas.errors.billing.payment_declined",
+        );
+      }
+      if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+        throw new HTTPResult(HTTP_CONFLICT, "saas.errors.invoice.not_payable");
+      }
+      throw new HTTPResult(
+        HTTP_SERVICE_UNAVAILABLE,
+        "saas.errors.billing.payment_unavailable",
+      );
     }
   }
 }

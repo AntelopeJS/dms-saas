@@ -15,7 +15,6 @@ import { readScheduledCancellation } from "../src/stripe/subscription-cancellati
 import {
   isPayableInvoice,
   SaasBillingPayInvoiceController,
-  toPaymentFailure,
 } from "../src/routes/tenant/billing-pay-invoice";
 import { applyOwnerUpgrade } from "../src/routes/tenant/tenant-plan-ops";
 import { SaasTenantPlanCancellationController } from "../src/routes/tenant/tenant-plan-cancellation";
@@ -297,21 +296,23 @@ describe("pay invoice", () => {
     });
   });
 
-  it("tells a declined card from Stripe being unreachable", () => {
-    const declined = toPaymentFailure(
-      new Stripe.errors.StripeCardError({ type: "card_error" }),
-    );
-    const refused = toPaymentFailure(
-      new Stripe.errors.StripeInvalidRequestError({
-        type: "invalid_request_error",
-      }),
-    );
-    const down = toPaymentFailure(new Error("socket hang up"));
+  it("tells a declined card from Stripe being unreachable", async () => {
+    const statusOf = async (failure: Error): Promise<number> => {
+      api.payInvoice.mockRejectedValueOnce(failure);
+      const refusal = await pay().catch((error: unknown) => error);
+      expect(refusal).toBeInstanceOf(HTTPResult);
+      return refusal instanceof HTTPResult ? refusal.status : 0;
+    };
 
-    expect(declined).toBeInstanceOf(HTTPResult);
-    expect([declined.status, refused.status, down.status]).toEqual([
-      402, 409, 503,
-    ]);
+    expect([
+      await statusOf(new Stripe.errors.StripeCardError({ type: "card_error" })),
+      await statusOf(
+        new Stripe.errors.StripeInvalidRequestError({
+          type: "invalid_request_error",
+        }),
+      ),
+      await statusOf(new Error("socket hang up")),
+    ]).toEqual([402, 409, 503]);
   });
 });
 

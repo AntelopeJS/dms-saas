@@ -1,6 +1,5 @@
 import {
   type Plan,
-  type PlanLocalizedText,
   PLAN_FALLBACK_LOCALE,
   PLAN_LOCALIZED_FIELDS,
   PlanModel,
@@ -13,15 +12,15 @@ import { isString } from "../../src/utils/primitive-guards";
  * back in that locale. A text left `null` is left out, as dms-saas writes it.
  */
 export function planRow(fields: Partial<Plan>): Plan {
-  const row: { [K in keyof Plan]?: Plan[K] | PlanLocalizedText } = {
-    ...fields,
-  };
+  const kept = { ...fields };
   for (const field of PLAN_LOCALIZED_FIELDS) {
-    const text = fields[field];
-    if (text == null) delete row[field];
-    else if (isString(text)) row[field] = { [PLAN_FALLBACK_LOCALE]: text };
+    if (fields[field] == null) delete kept[field];
   }
-  return PlanModel.fromPlainData(row)
+  const texts = PLAN_LOCALIZED_FIELDS.flatMap((field) => {
+    const text = fields[field];
+    return isString(text) ? [[field, { [PLAN_FALLBACK_LOCALE]: text }]] : [];
+  });
+  return PlanModel.fromPlainData({ ...kept, ...Object.fromEntries(texts) })
     .localize("*", PLAN_LOCALIZED_FIELDS)
     .localize(PLAN_FALLBACK_LOCALE, PLAN_LOCALIZED_FIELDS);
 }
