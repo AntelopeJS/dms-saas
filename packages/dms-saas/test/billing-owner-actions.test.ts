@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { HTTPResult } from "@antelopejs/interface-api";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { fromPartial } from "@total-typescript/shoehorn";
 import Stripe from "stripe";
@@ -296,23 +295,24 @@ describe("pay invoice", () => {
     });
   });
 
-  it("tells a declined card from Stripe being unreachable", async () => {
-    const statusOf = async (failure: Error): Promise<number> => {
-      api.payInvoice.mockRejectedValueOnce(failure);
-      const refusal = await pay().catch((error: unknown) => error);
-      expect(refusal).toBeInstanceOf(HTTPResult);
-      return refusal instanceof HTTPResult ? refusal.status : 0;
-    };
+  it.each([
+    [
+      "a declined card",
+      new Stripe.errors.StripeCardError({ type: "card_error" }),
+      402,
+    ],
+    [
+      "a refused request",
+      new Stripe.errors.StripeInvalidRequestError({
+        type: "invalid_request_error",
+      }),
+      409,
+    ],
+    ["Stripe being unreachable", new Error("socket hang up"), 503],
+  ])("answers %s with %d", async (_failure, thrown, status) => {
+    api.payInvoice.mockRejectedValueOnce(thrown);
 
-    expect([
-      await statusOf(new Stripe.errors.StripeCardError({ type: "card_error" })),
-      await statusOf(
-        new Stripe.errors.StripeInvalidRequestError({
-          type: "invalid_request_error",
-        }),
-      ),
-      await statusOf(new Error("socket hang up")),
-    ]).toEqual([402, 409, 503]);
+    await expect(pay()).rejects.toMatchObject({ status });
   });
 });
 
