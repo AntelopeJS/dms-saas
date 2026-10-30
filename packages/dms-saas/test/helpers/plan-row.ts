@@ -1,5 +1,6 @@
 import {
   type Plan,
+  type PlanLocalizedText,
   PLAN_FALLBACK_LOCALE,
   PLAN_LOCALIZED_FIELDS,
   PlanModel,
@@ -12,7 +13,9 @@ import { isString } from "../../src/utils/primitive-guards";
  * back in that locale. A text left `null` is left out, as dms-saas writes it.
  */
 export function planRow(fields: Partial<Plan>): Plan {
-  const row: Record<string, unknown> = { ...fields };
+  const row: { [K in keyof Plan]?: Plan[K] | PlanLocalizedText } = {
+    ...fields,
+  };
   for (const field of PLAN_LOCALIZED_FIELDS) {
     const text = fields[field];
     if (text == null) delete row[field];

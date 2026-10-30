@@ -72,12 +72,12 @@ export interface SegmentCountPoint {
 }
 
 class RevisionModifier extends Modifier {
-  insert(object: Record<string, unknown>, field: string): void {
-    object[field] = randomUUID();
+  insert(object: Segment, field: string): void {
+    Reflect.set(object, field, randomUUID());
   }
 
-  update(object: Record<string, unknown>, field: string): void {
-    object[field] = randomUUID();
+  update(object: Segment, field: string): void {
+    Reflect.set(object, field, randomUUID());
   }
 }
 

@@ -11,10 +11,26 @@ const manifest = JSON.parse(
 );
 const NON_CODE_SUBPATHS = new Set(["./package.json"]);
 
+/**
+ * @param {unknown} value
+ * @returns {value is string}
+ */
+function isString(value) {
+  return typeof value === "string";
+}
+
+/**
+ * @param {unknown} value
+ * @returns {value is object}
+ */
+function isObject(value) {
+  return typeof value === "object" && value !== null;
+}
+
 /** Every `types`/`default` target a conditional export resolves to. */
 function exportTargets(value) {
-  if (typeof value === "string") return [value];
-  if (value === null || typeof value !== "object") return [];
+  if (isString(value)) return [value];
+  if (!isObject(value)) return [];
   return Object.values(value).flatMap(exportTargets);
 }
 

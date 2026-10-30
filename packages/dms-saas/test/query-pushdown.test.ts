@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvoiceModel } from "@antelopejs/interface-dms-saas/db/models/invoices.model";
 import { Invoice } from "@antelopejs/interface-dms-saas/db/tables/invoices.table";
 
-type Row = Record<string, unknown>;
+type Row = Record<string, string | Date | undefined>;
 type StageHandler = (rows: Row[], stage: QueryStage) => Row[];
 interface Expression {
   stages: QueryStage[];
@@ -36,8 +36,8 @@ const handlers = new Map<string, StageHandler>([
     (rows, stage) => {
       const direction = stage.options.direction === "desc" ? -1 : 1;
       return [...rows].sort((left, right) => {
-        const a = left[stage.options.index] as number;
-        const b = right[stage.options.index] as number;
+        const a = Number(left[stage.options.index]);
+        const b = Number(right[stage.options.index]);
         return (a < b ? -1 : a > b ? 1 : 0) * direction;
       });
     },
