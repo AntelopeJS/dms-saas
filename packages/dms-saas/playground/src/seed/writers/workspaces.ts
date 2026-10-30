@@ -1,14 +1,19 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import {
   type PaidUsagePeriod,
+  type TenantBillingInfo,
   TenantBillingInfoModel,
+  type TenantSubscription,
   TenantSubscriptionModel,
   type VatVerificationStatus,
 } from "@antelopejs/interface-dms-saas/db";
 import {
+  type Role,
   RoleModel,
+  type TenantMember,
   TenantMemberModel,
   TenantModel,
+  type UserInvite,
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { RecomputeTenantBillingState } from "@antelopejs/interface-dms-saas/billing";
@@ -36,7 +41,7 @@ function memberRole(
   tenantId: string,
   permissions: string[],
   createdOn: DayOffset,
-): SeedRow {
+): SeedRow<Role> {
   const createdAt = dayFrom(createdOn);
   return {
     _id: memberRoleId(tenantId),
@@ -48,7 +53,10 @@ function memberRole(
   };
 }
 
-function toMemberRow(tenantId: string, member: SeedMember): SeedRow {
+function toMemberRow(
+  tenantId: string,
+  member: SeedMember,
+): SeedRow<TenantMember> {
   return {
     _id: `${tenantId}:${member.userId}`,
     userId: member.userId,
@@ -62,7 +70,7 @@ function toMemberRow(tenantId: string, member: SeedMember): SeedRow {
 function toInvitationRow(
   tenantId: string,
   invitation: SeedInvitation,
-): SeedRow {
+): SeedRow<UserInvite> {
   return {
     _id: `${tenantId}:${invitation.email}`,
     email: invitation.email,
@@ -88,7 +96,9 @@ function paidUsagePeriods(
   return [{ stripeSubscriptionId, start: startedAt, end: null }];
 }
 
-function toSubscriptionRow(workspace: SeedWorkspace): SeedRow {
+function toSubscriptionRow(
+  workspace: SeedWorkspace,
+): SeedRow<TenantSubscription> {
   const { subscription } = workspace;
   const createdAt = dayFrom(workspace.createdOn);
   const isPaid = !!subscription.stripeSubscriptionId;
@@ -117,7 +127,7 @@ function toSubscriptionRow(workspace: SeedWorkspace): SeedRow {
 function toBillingInfoRow(
   tenantId: string,
   profile: SeedBillingProfile,
-): SeedRow {
+): SeedRow<TenantBillingInfo> {
   return {
     ...profile,
     _id: tenantId,

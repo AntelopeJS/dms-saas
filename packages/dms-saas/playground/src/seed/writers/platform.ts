@@ -8,6 +8,7 @@ import {
   type LegalDocumentVersions,
   LegalDocumentsModel,
   PLAN_FALLBACK_LOCALE as FALLBACK_LOCALE,
+  type PlanMigration,
   type PlanMigrationFeatureDiff,
   PlanMigrationModel,
   type PlanMigrationTenantOutcome,
@@ -171,7 +172,7 @@ function tenantOutcomes(
 function toMigrationRow(
   migration: SeedPlanMigration,
   permissions: string[],
-): SeedRow {
+): SeedRow<PlanMigration> {
   const target = findPlan(migration.toPlanId);
   const startedAt =
     migration.durationMinutes === null
