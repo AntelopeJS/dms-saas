@@ -78,14 +78,14 @@ describe("workspaces table tab counters", () => {
       { dataAPIEntry: entry },
     );
 
-    const counts = await entry.callback.func.call(
-      controller,
-      ctx,
-      { queries: states.map(tabQuery) },
-      OWNER,
-    );
-
-    expect(counts).toEqual(TOTALS_BY_STATE);
+    expect(
+      await entry.callback.func.call(
+        controller,
+        ctx,
+        { queries: states.map(tabQuery) },
+        OWNER,
+      ),
+    ).toEqual(TOTALS_BY_STATE);
     expect(countWithSearch).toHaveBeenCalledTimes(states.length);
   });
 });
