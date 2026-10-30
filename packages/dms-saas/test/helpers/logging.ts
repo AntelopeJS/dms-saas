@@ -11,7 +11,7 @@ export type LogLevelName = keyof typeof Logging.Level;
 export interface LogCapture {
   entries: Log[];
   /** The arguments of every entry written at `level`, on any channel. */
-  at(level: LogLevelName): Log["args"][];
+  at(level: LogLevelName): unknown[][];
 }
 
 /**
@@ -36,6 +36,6 @@ export function captureLogs(): LogCapture {
     at: (level) =>
       entries
         .filter((log) => log.levelId === Logging.Level[level])
-        .map((log) => log.args),
+        .map((log): unknown[] => log.args),
   };
 }

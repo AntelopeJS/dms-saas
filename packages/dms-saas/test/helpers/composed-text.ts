@@ -41,7 +41,7 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
   day: "numeric",
 };
 
-type WrittenParams = Record<string, string | number>;
+type WrittenParams = Map<string, string | number>;
 
 /**
  * Resolves a key in a locale and fills in its params. Picks the plural form by
@@ -50,7 +50,7 @@ type WrittenParams = Record<string, string | number>;
 function translate(code: string, key: string, params: WrittenParams): string {
   const message = flattenLocale(readLocale(code)).get(key) ?? key;
   const forms = message.split(PLURAL_SEPARATOR);
-  const count = Number(params.count);
+  const count = Number(params.get("count"));
   const index =
     forms.length === TWO_FORMS
       ? Number(count !== 1)
@@ -59,8 +59,11 @@ function translate(code: string, key: string, params: WrittenParams): string {
     forms.length > 1 && Number.isFinite(count)
       ? (forms[index] ?? message)
       : message;
-  return form.replace(PARAM_PATTERN, (match, literal, name) =>
-    literal !== undefined ? literal : String(params[name] ?? match),
+  return form.replace(
+    PARAM_PATTERN,
+    (match: string, literal: string | undefined, name: string | undefined) =>
+      literal ??
+      (name === undefined ? match : String(params.get(name) ?? match)),
   );
 }
 
@@ -98,18 +101,18 @@ function writeParam(param: ComposedTextParam, code: string): string {
 export function writeText(text: BlockText | undefined, code = "en-GB"): string {
   if (isString(text)) {
     return text.startsWith(KEY_PREFIX)
-      ? translate(code, text.slice(1), {})
+      ? translate(code, text.slice(1), new Map())
       : text;
   }
   if (text === undefined) return String(text);
   const rawParams = text.params ?? {};
-  const params: WrittenParams = Object.fromEntries(
-    Object.entries(rawParams).map(([name, param]) => [
+  const params: WrittenParams = new Map(
+    Object.entries(rawParams).map(([name, param]): [string, string] => [
       name,
       writeParam(param, code),
     ]),
   );
   const count = Object.values(rawParams).find(isCountParam);
-  if (count) params.count = count.value;
+  if (count) params.set("count", count.value);
   return translate(code, text.key.replace(/^\$/, ""), params);
 }
