@@ -19,6 +19,7 @@ import { parseFutureDate } from "../utils/parse-future-date";
 import { sendOwnerInvitationEmailInBackground } from "./owner-invitation-email";
 import { createDefaultMemberRole } from "./default-member-role";
 import { isString } from "../utils/primitive-guards";
+import type { JsonValue } from "../utils/json-value";
 
 const HTTP_BAD_REQUEST = 400;
 
@@ -32,11 +33,11 @@ export type WorkspaceAccessModel = (typeof WORKSPACE_ACCESS_MODELS)[number];
 
 /** The create-workspace form as the operator sends it. */
 export interface CreateWorkspaceBody {
-  name?: unknown;
-  planId?: unknown;
-  ownerEmail?: unknown;
-  access?: unknown;
-  freeUntil?: unknown;
+  name?: JsonValue;
+  planId?: JsonValue;
+  ownerEmail?: JsonValue;
+  access?: JsonValue;
+  freeUntil?: JsonValue;
 }
 
 /** The form, validated. */
@@ -93,11 +94,13 @@ const SUBSCRIPTION_TERMS: Record<
   }),
 };
 
-function asNonEmptyString(value: unknown): string | null {
+function asNonEmptyString(value: JsonValue | undefined): string | null {
   return isString(value) && value.trim().length > 0 ? value.trim() : null;
 }
 
-function asAccessModel(value: unknown): WorkspaceAccessModel | null {
+function asAccessModel(
+  value: JsonValue | undefined,
+): WorkspaceAccessModel | null {
   return WORKSPACE_ACCESS_MODELS.find((model) => model === value) ?? null;
 }
 

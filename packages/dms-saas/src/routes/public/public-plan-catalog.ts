@@ -16,6 +16,7 @@ import {
 } from "../../plans";
 import { loadBillingSettings } from "../../operator-billing/billing-settings-store";
 import { isString } from "../../utils/primitive-guards";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 import type { TenantPlanView } from "@antelopejs/interface-dms-saas/plans";
 
 /**
@@ -130,7 +131,7 @@ export function toPublicBillingRules(
  */
 export function findPlanByReference(
   plans: Plan[],
-  reference: unknown,
+  reference: QueryParameterValue | string[],
 ): Plan | undefined {
   if (!isString(reference) || reference.length === 0) return;
   return (

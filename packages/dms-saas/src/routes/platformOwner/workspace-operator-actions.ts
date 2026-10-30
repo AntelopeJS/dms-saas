@@ -40,27 +40,28 @@ import {
 import { ProvisioningAttemptModel } from "../../workspaces/db/provisioning-attempt.model";
 import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
 import { isNumber, isString } from "../../utils/primitive-guards";
+import type { JsonValue } from "../../utils/json-value";
 import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
 
 interface OperationBody {
-  operationId?: unknown;
+  operationId?: JsonValue;
 }
 
 interface SuspendBody extends OperationBody {
   /** The workspace name, typed by the operator to confirm. */
-  confirmName?: unknown;
+  confirmName?: JsonValue;
 }
 
 interface ManualUpgradeBody extends OperationBody {
-  planId?: unknown;
+  planId?: JsonValue;
 }
 
 interface BalanceCreditBody extends OperationBody {
-  amountCents?: unknown;
-  reason?: unknown;
+  amountCents?: JsonValue;
+  reason?: JsonValue;
 }
 
 interface ValidatedCreditInput {
@@ -74,7 +75,10 @@ interface OperatorOptionsResponse extends WorkspaceOperatorOptions {
   nextInvoice: NextInvoiceRef | null;
 }
 
-function requireString(value: unknown, errorCode: string): string {
+function requireString(
+  value: JsonValue | undefined,
+  errorCode: string,
+): string {
   const normalized = isString(value) ? value.trim() : "";
   assert(normalized, HTTP_BAD_REQUEST, errorCode);
   return normalized;

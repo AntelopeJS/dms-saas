@@ -7,6 +7,7 @@ import type {
 } from "../db";
 import { withPermissionAncestors } from "./plan-permission-tree";
 import { PLAN_LOCALIZED_FIELDS, PLAN_UNLIMITED, PlanModel } from "../db";
+import type { JsonValue } from "../utils/json-value";
 import { isBoolean, isNumber, isString } from "../utils/primitive-guards";
 
 /**
@@ -224,7 +225,7 @@ export function invalidFeatureValues(
 }
 
 /** Whether a member cap is unlimited (`-1`) or a whole number of seats from 1. */
-export function isValidMemberCap(value: unknown): boolean {
+export function isValidMemberCap(value: JsonValue | undefined): boolean {
   return (
     isNumber(value) &&
     Number.isInteger(value) &&

@@ -1,4 +1,4 @@
-import type { SegmentConditionGroup } from "../src/db";
+import type { JsonValue } from "../src/utils/json-value";
 import {
   SEGMENT_COUNT_HISTORY_DAYS,
   appendSegmentCountPoint,
@@ -53,7 +53,7 @@ describe("segment rules validation", () => {
   });
 
   it("asks a list for any of / none of, and a single value otherwise", () => {
-    const workspaceRule = (operator: string, value: unknown) => ({
+    const workspaceRule = (operator: string, value: JsonValue) => ({
       logical: "and",
       conditions: [
         {
@@ -80,7 +80,7 @@ describe("segment rules validation", () => {
   });
 
   it("refuses a workspace condition nested in another", () => {
-    const ref = (conditions: unknown[]) => ({
+    const ref = (conditions: JsonValue[]) => ({
       kind: "workspaceRef",
       quantifier: "any",
       conditions: { logical: "and", conditions },
@@ -95,7 +95,7 @@ describe("segment rules validation", () => {
   });
 
   it("refuses rules nested deeper than the builder goes", () => {
-    let group: SegmentConditionGroup = { logical: "and", conditions: [] };
+    let group: JsonValue = { logical: "and", conditions: [] };
     for (let depth = 0; depth < 9; depth++) {
       group = { logical: "and", conditions: [group] };
     }

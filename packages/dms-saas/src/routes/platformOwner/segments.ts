@@ -30,6 +30,7 @@ import {
   type SegmentInputBody,
   USER_SEGMENT_FIELDS,
 } from "../../utils";
+import type { JsonValue } from "../../utils/json-value";
 import { isString } from "../../utils/primitive-guards";
 
 interface PlanOption {
@@ -49,7 +50,7 @@ export interface SegmentFieldsCatalog {
 
 /** What the preview route receives: the rules being edited. */
 export interface SegmentPreviewBody {
-  conditions?: unknown;
+  conditions?: JsonValue;
   /** The segment being edited, to compare with its saved version. */
   segmentId?: unknown;
 }
