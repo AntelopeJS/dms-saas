@@ -3,7 +3,7 @@ import {
   HTTPResult,
   type RequestContext,
 } from "@antelopejs/interface-api";
-import { controllerRoutes } from "./routes";
+import { controllerRoutes, newController } from "./routes";
 
 const HTTP_FORBIDDEN = 403;
 
@@ -20,7 +20,7 @@ export async function guardRefusals(
 ): Promise<Record<string, unknown[]>> {
   const refusals: Record<string, unknown[]> = {};
   for (const [name, route] of controllerRoutes(controller)) {
-    const instance = new route.proto.constructor();
+    const instance = newController(route);
     const computed = await Promise.allSettled([
       ...Object.values(route.properties).map((property) =>
         computeParameter(request, property, instance),
@@ -29,7 +29,7 @@ export async function guardRefusals(
         computeParameter(request, parameter, instance),
       ),
     ]);
-    const bodies = computed.flatMap((outcome) =>
+    const bodies = computed.flatMap((outcome): unknown[] =>
       outcome.status === "rejected" &&
       outcome.reason instanceof HTTPResult &&
       outcome.reason.getStatus() === HTTP_FORBIDDEN

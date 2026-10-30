@@ -5,6 +5,7 @@ import {
   type RequestContext,
   type RouteHandler,
 } from "@antelopejs/interface-api";
+import { isRecord } from "./records";
 
 const HTTP_FORBIDDEN = 403;
 
@@ -26,6 +27,19 @@ export function registeredRoute(
   return registered.handler;
 }
 
+/** A fresh instance of the controller class a route was registered on. */
+export function newController(route: RouteHandler): object {
+  const proto: unknown = route.proto;
+  if (!isRecord(proto)) {
+    throw new Error(`${route.callback.name} has no controller prototype`);
+  }
+  const instance: unknown = Reflect.construct(proto.constructor, []);
+  if (!isRecord(instance)) {
+    throw new Error(`${route.callback.name} has no controller to instantiate`);
+  }
+  return instance;
+}
+
 /**
  * Serves one request with a registered route the way the API module does: a
  * fresh controller with its computed properties, then every parameter
@@ -37,10 +51,14 @@ export async function callRoute(
   context: RequestContext,
 ): Promise<ReturnType<RouteHandler["callback"]>> {
   const route = registeredRoute(method, location);
-  const controller = new route.proto.constructor();
+  const controller = newController(route);
   await Promise.all(
     Object.entries(route.properties).map(async ([key, property]) => {
-      controller[key] = await computeParameter(context, property, controller);
+      Reflect.set(
+        controller,
+        key,
+        await computeParameter(context, property, controller),
+      );
     }),
   );
   const parameters = await Promise.all(
@@ -76,7 +94,7 @@ export async function refusesAsOwnerOnly(
   route: RouteHandler,
   context: RequestContext,
 ): Promise<boolean> {
-  const controller = new route.proto.constructor();
+  const controller = newController(route);
   const computed = await Promise.allSettled([
     ...Object.values(route.properties).map((property) =>
       computeParameter(context, property, controller),
