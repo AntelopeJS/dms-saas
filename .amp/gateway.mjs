@@ -33,11 +33,19 @@ function upstreamHeaders(request, target, upgrade = false) {
   return headers;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {value is string}
+ */
+function isString(value) {
+  return typeof value === "string";
+}
+
 function responseHeaders(headers, target) {
   const forwarded = { ...headers };
   const location = forwarded.location;
 
-  if (typeof location === "string" && location.startsWith(target.origin)) {
+  if (isString(location) && location.startsWith(target.origin)) {
     forwarded.location = `${publicUrl.origin}${location.slice(target.origin.length)}`;
   }
 
