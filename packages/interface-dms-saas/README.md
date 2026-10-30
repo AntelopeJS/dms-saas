@@ -50,22 +50,19 @@ A module may seed plans straight into the `db` plan table: it writes `name`, `de
 
 The implementation is `@antelopejs/dms-saas >=0.6.0`. The interface declares these dependencies:
 
-<!-- docs-compat: ./package.json#dependencies -->
+<!-- antelopejs-docs-compat:start -->
 
-| Package | Range |
-| --- | --- |
-| `@antelopejs/interface-data-api` | `>=0.4.0 <1.0.0` |
-| `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
+| Package                                     | Supported         | Tested with |
+| ------------------------------------------- | ----------------- | ----------- |
+| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`  | `0.2.4`     |
+| `@antelopejs/interface-data-api`            | `>=0.4.0 <1.0.0`  | `0.4.0`     |
+| `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0` | `0.1.11`    |
+| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0` | `0.1.10`    |
+| `@antelopejs/interface-dms`                 | `>=0.9.0 <1.0.0`  | `0.9.0`     |
+
+<!-- antelopejs-docs-compat:end -->
 
 Peer dependencies:
-
-<!-- docs-compat: ./package.json#peerDependencies -->
-
-| Package | Range |
-| --- | --- |
-| `@antelopejs/interface-core` | `>=0.2.4 <1.0.0` |
-| `@antelopejs/interface-database` | `>=0.1.11 <1.0.0` |
-| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0` |
 
 Subpaths resolve through the `exports` map only: compile consumers with `moduleResolution` set to `bundler`, `node16` or `nodenext`. Upgrade this package together with `@antelopejs/dms-saas`; the [upgrade notes](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading) cover the tenant billing page anchors and the rows written by earlier builds.
 
