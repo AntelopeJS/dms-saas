@@ -39,11 +39,18 @@ interface SignupResult {
   user: Partial<User>;
   access_token: string;
 }
+interface SignupBody {
+  name: string;
+  email: string;
+  password: string;
+  token: string;
+  lang: string;
+}
 interface SignupModule {
   signup: (
     users: UserModel,
     sessions: SessionModel,
-    body: unknown,
+    body: SignupBody,
     agent: string,
     ip: string,
   ) => Promise<SignupResult>;
@@ -85,7 +92,7 @@ beforeEach(() => {
   setRuntimeConfig({ stripe: STRIPE_CONFIG, admissionMode: "invitation-only" });
 });
 
-function signupBody(email: string, token: string) {
+function signupBody(email: string, token: string): SignupBody {
   return {
     name: "Invited Person",
     email,

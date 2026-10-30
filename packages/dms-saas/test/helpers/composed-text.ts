@@ -1,14 +1,16 @@
+import type {
+  BlockText,
+  ComposedTextCountParam,
+  ComposedTextParam,
+} from "@antelopejs/interface-dms/base";
 import { flattenLocale, readLocale } from "./locales";
+import { isRecord } from "./records";
 import { isNumber, isString } from "../../src/utils/primitive-guards";
 
 /** The locales the module ships. */
 export const LOCALES = ["en-GB", "fr-FR"];
 
 const KEY_PREFIX = "$";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
 
 /**
  * Every i18n key a route payload names: the keys of its composed texts, nested
@@ -62,18 +64,23 @@ function translate(code: string, key: string, params: WrittenParams): string {
   );
 }
 
-function writeParam(param: unknown, code: string): string {
+function isCountParam(
+  param: ComposedTextParam,
+): param is ComposedTextCountParam {
+  return typeof param === "object" && "type" in param && param.type === "count";
+}
+
+function writeParam(param: ComposedTextParam, code: string): string {
   if (isString(param)) return param;
   if (isNumber(param)) {
     return new Intl.NumberFormat(code).format(param);
   }
-  if (!isRecord(param)) return String(param);
-  if (isString(param.key)) return writeText(param, code);
+  if ("key" in param) return writeText(param, code);
   if (param.type === "money") {
     return new Intl.NumberFormat(code, {
       style: "currency",
-      currency: String(param.currency),
-    }).format(Number(param.value) / MINOR_UNITS_PER_UNIT);
+      currency: param.currency,
+    }).format(param.value / MINOR_UNITS_PER_UNIT);
   }
   if (param.type === "date") {
     return new Intl.DateTimeFormat(code, DAY_FORMAT).format(
@@ -88,23 +95,21 @@ function writeParam(param: unknown, code: string): string {
  * browser composes, for asserting the wording a payload yields. Dates are
  * written as their day; plurals follow vue-i18n's default rule on `count`.
  */
-export function writeText(text: unknown, code = "en-GB"): string {
+export function writeText(text: BlockText | undefined, code = "en-GB"): string {
   if (isString(text)) {
     return text.startsWith(KEY_PREFIX)
       ? translate(code, text.slice(1), {})
       : text;
   }
-  if (!isRecord(text) || !isString(text.key)) return String(text);
-  const rawParams = isRecord(text.params) ? text.params : {};
+  if (text === undefined) return String(text);
+  const rawParams = text.params ?? {};
   const params: WrittenParams = Object.fromEntries(
     Object.entries(rawParams).map(([name, param]) => [
       name,
       writeParam(param, code),
     ]),
   );
-  const count = Object.values(rawParams).find(
-    (param) => isRecord(param) && param.type === "count",
-  );
-  if (isRecord(count)) params.count = Number(count.value);
+  const count = Object.values(rawParams).find(isCountParam);
+  if (count) params.count = count.value;
   return translate(code, text.key.replace(/^\$/, ""), params);
 }

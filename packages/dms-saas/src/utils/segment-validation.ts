@@ -1,14 +1,11 @@
 import { assert } from "@antelopejs/interface-api-util";
+import { z } from "zod";
 import type {
   SegmentCondition,
   SegmentConditionGroup,
   SegmentWorkspaceRef,
 } from "../db";
-import {
-  isSegmentGroup,
-  isSegmentWorkspaceRef,
-  type SegmentNode,
-} from "./segment-evaluator";
+import type { SegmentNode } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
 import type { JsonValue } from "./json-value";
 import { isObjectOrNull, isString } from "./primitive-guards";
@@ -42,11 +39,26 @@ export interface SegmentInputBody {
   conditions?: JsonValue;
 }
 
-function validateWorkspaceRefNode(
-  node: SegmentWorkspaceRef,
+/** A JSON object: neither `null` nor an array. */
+type JsonObject = { [key: string]: JsonValue };
+
+function isJsonObject(value: JsonValue | undefined): value is JsonObject {
+  return !!value && isObjectOrNull(value) && !Array.isArray(value);
+}
+
+function isJsonGroup(value: JsonValue | undefined): value is JsonObject {
+  return isJsonObject(value) && value.logical !== undefined;
+}
+
+function isJsonWorkspaceRef(value: JsonValue | undefined): value is JsonObject {
+  return isJsonObject(value) && value.kind === "workspaceRef";
+}
+
+function assertWorkspaceRefNode(
+  node: JsonObject,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is JsonObject & SegmentWorkspaceRef {
   assert(catalog === "user", HTTP_BAD_REQUEST, `${ERRORS}.invalid_conditions`);
   assert(
     node.quantifier === "any" || node.quantifier === "all",
@@ -59,56 +71,59 @@ function validateWorkspaceRefNode(
     `${ERRORS}.invalid_role`,
   );
   assert(
-    !!node.conditions && isSegmentGroup(node.conditions),
+    isJsonGroup(node.conditions),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  validateConditionNode(node.conditions, depth + 1, "workspace");
+  assertConditionNode(node.conditions, depth + 1, "workspace");
 }
 
-function validateGroupNode(
-  node: SegmentConditionGroup,
+function assertGroupNode(
+  node: JsonObject,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is JsonObject & SegmentConditionGroup {
   assert(
     node.logical === "and" || node.logical === "or",
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_logical`,
   );
+  const { conditions } = node;
   assert(
-    Array.isArray(node.conditions),
+    Array.isArray(conditions),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  for (const child of node.conditions) {
-    validateConditionNode(child, depth + 1, catalog);
+  for (const child of conditions) {
+    assertConditionNode(child, depth + 1, catalog);
   }
 }
 
-function validateLeafCondition(
-  condition: SegmentCondition,
+function assertLeafCondition(
+  node: JsonValue | undefined,
   catalog: SegmentFieldCatalog,
-): void {
-  const field = findSegmentField(condition.field, catalog);
+): asserts node is JsonObject & SegmentCondition {
+  assert(isJsonObject(node), HTTP_BAD_REQUEST, `${ERRORS}.unknown_field`);
+  const field = isString(node.field)
+    ? findSegmentField(node.field, catalog)
+    : undefined;
   assert(field, HTTP_BAD_REQUEST, `${ERRORS}.unknown_field`);
-  assert(
-    field.operators.includes(condition.operator),
-    HTTP_BAD_REQUEST,
-    `${ERRORS}.invalid_operator`,
+  const operator = field.operators.find(
+    (candidate) => candidate === node.operator,
   );
+  assert(operator, HTTP_BAD_REQUEST, `${ERRORS}.invalid_operator`);
   assert(
-    LIST_OPERATORS.has(condition.operator) === Array.isArray(condition.value),
+    LIST_OPERATORS.has(operator) === Array.isArray(node.value),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_value`,
   );
 }
 
-function validateConditionNode(
-  node: SegmentNode,
+function assertConditionNode(
+  node: JsonValue | undefined,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is JsonObject & SegmentNode {
   assert(
     depth <= MAX_CONDITION_DEPTH,
     HTTP_BAD_REQUEST,
@@ -119,23 +134,41 @@ function validateConditionNode(
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  if (isSegmentWorkspaceRef(node)) {
-    validateWorkspaceRefNode(node, depth, catalog);
+  if (isJsonWorkspaceRef(node)) {
+    assertWorkspaceRefNode(node, depth, catalog);
     return;
   }
-  if (isSegmentGroup(node)) {
-    validateGroupNode(node, depth, catalog);
+  if (isJsonGroup(node)) {
+    assertGroupNode(node, depth, catalog);
     return;
   }
-  validateLeafCondition(node, catalog);
+  assertLeafCondition(node, catalog);
 }
 
-function parseJson(raw: string): unknown {
+const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValueSchema),
+    z.record(jsonValueSchema),
+  ]),
+);
+
+function parseJson(raw: string): JsonValue | undefined {
   try {
-    return JSON.parse(raw);
+    return jsonValueSchema.parse(JSON.parse(raw));
   } catch {
     return undefined;
   }
+}
+
+function assertSegmentGroup(
+  parsed: JsonValue | undefined,
+): asserts parsed is JsonObject & SegmentConditionGroup {
+  assert(isJsonGroup(parsed), HTTP_BAD_REQUEST, `${ERRORS}.invalid_conditions`);
+  assertConditionNode(parsed, ROOT_DEPTH, "user");
 }
 
 /**
@@ -150,14 +183,8 @@ export function parseSegmentConditions(
     return { logical: "and", conditions: [] };
   }
   const parsed = isString(raw) ? parseJson(raw) : raw;
-  assert(
-    !!parsed && isObjectOrNull(parsed) && isSegmentGroup(parsed as never),
-    HTTP_BAD_REQUEST,
-    `${ERRORS}.invalid_conditions`,
-  );
-  const group = parsed as SegmentConditionGroup;
-  validateConditionNode(group, ROOT_DEPTH, "user");
-  return group;
+  assertSegmentGroup(parsed);
+  return parsed;
 }
 
 function parseText(value: JsonValue | undefined, maxLength: number): string {

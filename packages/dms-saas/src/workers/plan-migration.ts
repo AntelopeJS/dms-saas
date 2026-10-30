@@ -413,12 +413,12 @@ const LIVE_EXECUTORS_KEY: unique symbol = Symbol.for(
   "@antelopejs/dms-saas/plan-migration-executors",
 );
 
-interface LiveExecutorsHost {
+interface LiveExecutorsHost extends Pick<typeof globalThis, "globalThis"> {
   [LIVE_EXECUTORS_KEY]?: Set<string>;
 }
 
 function liveExecutors(): Set<string> {
-  const host = globalThis as LiveExecutorsHost;
+  const host: LiveExecutorsHost = globalThis;
   host[LIVE_EXECUTORS_KEY] ??= new Set();
   return host[LIVE_EXECUTORS_KEY];
 }

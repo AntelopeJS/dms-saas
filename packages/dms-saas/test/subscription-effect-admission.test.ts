@@ -116,45 +116,56 @@ async function checkoutRequest(
   };
 }
 
-type CheckoutSessionEventType =
-  | "checkout.session.completed"
-  | "checkout.session.expired";
-
 /**
- * The checkout session event Stripe sends for the workspace's pending
- * checkout, completed or expired. The session id is the stored one, which
- * is null before a checkout starts, where Stripe's type has a string.
+ * The workspace's pending checkout session as Stripe reports it once it is
+ * `status`, under the stored session id.
  */
-async function sessionEvent<Type extends CheckoutSessionEventType>(
+async function pendingSession(
   request: PlanChangeRequest,
-  type: Type,
-): Promise<Extract<Stripe.Event, { type: Type }>> {
+  status: "complete" | "expired",
+) {
   const current = await request.tenantSubscriptionModel.findOne();
-  const expired = type === "checkout.session.expired";
+  if (!current?.stripeCheckoutSessionId) {
+    throw new Error("The workspace has no checkout in flight");
+  }
   return {
-    id: randomUUID(),
-    type,
-    data: {
-      object: {
-        id: current?.stripeCheckoutSessionId,
-        mode: "subscription",
-        status: expired ? "expired" : "complete",
-        subscription: "paid-subscription",
-        metadata: {
-          tenantId: request.tenantId,
-          planId: "target",
-          operationId: current?.domainTransition?.operationId,
-        },
-      },
+    id: current.stripeCheckoutSessionId,
+    mode: "subscription" as const,
+    status,
+    subscription: "paid-subscription",
+    metadata: {
+      tenantId: request.tenantId,
+      planId: "target",
+      operationId: current.domainTransition?.operationId,
     },
-  } as Extract<Stripe.Event, { type: Type }>;
+  };
+}
+
+async function completedSessionEvent(
+  request: PlanChangeRequest,
+): Promise<Stripe.CheckoutSessionCompletedEvent> {
+  return fromPartial<Stripe.CheckoutSessionCompletedEvent>({
+    id: randomUUID(),
+    type: "checkout.session.completed",
+    data: { object: await pendingSession(request, "complete") },
+  });
+}
+
+async function expiredSessionEvent(
+  request: PlanChangeRequest,
+): Promise<Stripe.CheckoutSessionExpiredEvent> {
+  return fromPartial<Stripe.CheckoutSessionExpiredEvent>({
+    id: randomUUID(),
+    type: "checkout.session.expired",
+    data: { object: await pendingSession(request, "expired") },
+  });
 }
 
 describe("subscription effect admission with real Mongo mutations", () => {
   it("does not activate coverage for incomplete payment and allows a later successful retry", async () => {
     const request = await checkoutRequest();
     await startPaidCheckout(request);
-    const event = await sessionEvent(request, "checkout.session.completed");
+    const event = await completedSessionEvent(request);
     api.retrieveSubscription.mockResolvedValueOnce(
       fromPartial({ status: "incomplete" }),
     );
@@ -175,8 +186,8 @@ describe("subscription effect admission with real Mongo mutations", () => {
   it("fences an expiration observed before a competing completion admission", async () => {
     const request = await checkoutRequest();
     await startPaidCheckout(request);
-    const expired = await sessionEvent(request, "checkout.session.expired");
-    const completed = await sessionEvent(request, "checkout.session.completed");
+    const expired = await expiredSessionEvent(request);
+    const completed = await completedSessionEvent(request);
     const model = request.tenantSubscriptionModel;
     const read = model.findOne.bind(model);
     let release = () => {};
@@ -209,9 +220,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
   it("allows another checkout after recorded expiry without granting another trial", async () => {
     const request = await checkoutRequest();
     await startPaidCheckout(request);
-    await handleCheckoutSessionExpired(
-      await sessionEvent(request, "checkout.session.expired"),
-    );
+    await handleCheckoutSessionExpired(await expiredSessionEvent(request));
     const subscription = await request.tenantSubscriptionModel.findOne();
     expect(subscription?.domainTransition).toBeNull();
     expect(subscription?.stripeCheckoutSessionId).toBeNull();
@@ -256,7 +265,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
   it("holds checkout completion admission through the last provider effect and receipts replay", async () => {
     const request = await checkoutRequest();
     await startPaidCheckout(request);
-    const event = await sessionEvent(request, "checkout.session.completed");
+    const event = await completedSessionEvent(request);
     let release = () => {};
     let entered = () => {};
     const paused = new Promise<void>((resolve) => {
@@ -275,9 +284,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
     await expect(handleCheckoutSessionCompleted(event)).rejects.toThrow(
       "requires reconciliation",
     );
-    await handleCheckoutSessionExpired(
-      await sessionEvent(request, "checkout.session.expired"),
-    );
+    await handleCheckoutSessionExpired(await expiredSessionEvent(request));
     expect(
       (await request.tenantSubscriptionModel.findOne())?.domainTransition?.kind,
     ).toBe("change_plan");
@@ -296,7 +303,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
   it("retains an unknown completion admission and does not guess a retry", async () => {
     const request = await checkoutRequest();
     await startPaidCheckout(request);
-    const event = await sessionEvent(request, "checkout.session.completed");
+    const event = await completedSessionEvent(request);
     const mutate = request.tenantSubscriptionModel.mutateRevision.bind(
       request.tenantSubscriptionModel,
     );
@@ -404,9 +411,7 @@ describe("subscription effect admission with real Mongo mutations", () => {
       paidUsagePeriods: [],
     });
     expect(placeholder?.revision).toBeTypeOf("string");
-    await handleCheckoutSessionCompleted(
-      await sessionEvent(request, "checkout.session.completed"),
-    );
+    await handleCheckoutSessionCompleted(await completedSessionEvent(request));
     expect(
       (await request.tenantSubscriptionModel.findOne())?.paidUsagePeriods,
     ).toEqual([

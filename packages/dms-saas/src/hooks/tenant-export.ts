@@ -105,7 +105,7 @@ function buildDatasets(tenantId: string): ExportDataset<ExportedRow>[] {
  */
 export async function exportSaasTenantData(
   tenantId: string,
-  archive: TenantExportArchive,
+  archive: TenantExportArchive | undefined,
   signal: AbortSignal,
 ): Promise<void> {
   if (!archive) {

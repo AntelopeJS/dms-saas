@@ -5,11 +5,10 @@ import { recomputeTenantBillingState } from "../billing-state";
 import type {
   Invoice,
   InvoiceLine,
-  InvoiceStatus,
   TenantSubscription,
   TenantSubscriptionStatus,
 } from "../db";
-import { InvoiceModel, TenantSubscriptionModel } from "../db";
+import { INVOICE_STATUSES, InvoiceModel, TenantSubscriptionModel } from "../db";
 import { isGuardedPlanChangeBlocked } from "../plan-changes/guarded-state";
 import {
   getRowInstance,
@@ -167,7 +166,8 @@ function toInvoicePayload(invoice: Stripe.Invoice, lines: InvoiceLine[]) {
     tax: readInvoiceTax(invoice),
     total: invoice.total,
     currency: invoice.currency,
-    status: (invoice.status ?? "open") as InvoiceStatus,
+    status:
+      INVOICE_STATUSES.find((status) => status === invoice.status) ?? "open",
     creditNoteReason: null,
     creditNoteType: null,
     memo: null,
