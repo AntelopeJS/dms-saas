@@ -76,7 +76,7 @@
     "@antelopejs/core": "1.17.1",
     "@antelopejs/dms": ">=0.11.0 <1.0.0",
     "@antelopejs/dms-frontend": ">=0.9.1 <0.10.0",
-    "@antelopejs/mongodb": "file:../../.campaign/tgz/antelopejs-mongodb-07203a7.tgz",
+    "@antelopejs/mongodb": "file:../../.campaign/tgz/antelopejs-mongodb-db4b449.tgz",
     "@total-typescript/shoehorn": "^0.1.2",
     "@types/node": "^24.0.0",
     "knip": "^6.34.0",
