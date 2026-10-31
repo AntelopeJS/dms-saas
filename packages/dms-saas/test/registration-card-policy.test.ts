@@ -346,8 +346,9 @@ describe("registration card policy", () => {
     expect(() =>
       setRuntimeConfig({
         stripe: SUITE_STRIPE_KEYS,
+        // @ts-expect-error "sometimes" is off-contract for registration.paymentMethod; the runtime config must refuse it at configuration time
         registration: { paymentMethod: "sometimes" },
-      } as never),
+      }),
     ).toThrow("Invalid dms-saas registration.paymentMethod");
   });
 });

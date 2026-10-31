@@ -214,7 +214,8 @@ describe("deployment admission", () => {
     "rejects invalid deployment admission %s",
     (admissionMode) => {
       expect(() =>
-        setRuntimeConfig({ stripe: STRIPE_CONFIG, admissionMode } as never),
+        // @ts-expect-error each admissionMode of the table is off-contract (a misspelling, "", null, false); the runtime config must refuse it
+        setRuntimeConfig({ stripe: STRIPE_CONFIG, admissionMode }),
       ).toThrow("Invalid dms-saas admissionMode");
       expect(() => assertAdmissionOpen()).toThrow();
     },
