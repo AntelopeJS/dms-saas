@@ -11,7 +11,12 @@ import {
 } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
 import type { JsonValue } from "./json-value";
-import { isObjectOrNull, isString } from "./primitive-guards";
+import {
+  isBoolean,
+  isNumber,
+  isObjectOrNull,
+  isString,
+} from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 const ERRORS = "saas.errors.segments";
@@ -102,6 +107,20 @@ function validateLeafCondition(
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_value`,
   );
+  const operands: unknown[] = Array.isArray(condition.value)
+    ? condition.value
+    : [condition.value];
+  assert(
+    operands.every(
+      (operand) =>
+        operand === null ||
+        isString(operand) ||
+        isNumber(operand) ||
+        isBoolean(operand),
+    ),
+    HTTP_BAD_REQUEST,
+    `${ERRORS}.invalid_value`,
+  );
 }
 
 function validateConditionNode(
@@ -115,7 +134,7 @@ function validateConditionNode(
     `${ERRORS}.conditions_too_deep`,
   );
   assert(
-    !!node && isObjectOrNull(node),
+    !!node && isObjectOrNull(node) && !Object.hasOwn(node, "__proto__"),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
