@@ -5,3 +5,5 @@
 @antelopejs/mongodb	packages/dms-saas/package.json	devDependencies	1.5.0
 @antelopejs/mongodb	package.json	pnpm.overrides	
 @antelopejs/mongodb	pnpm-workspace.yaml	overrides	
+@antelopejs/mongodb>@antelopejs/interface-core	package.json	pnpm.overrides	
+@antelopejs/mongodb>@antelopejs/interface-core	pnpm-workspace.yaml	overrides	
