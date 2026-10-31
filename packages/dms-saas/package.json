@@ -51,7 +51,7 @@
     "dev": "ajs project run -w -p playground",
     "stripe:webhooks": "stripe listen --forward-to localhost:5010/api/saas/webhooks/stripe",
     "typecheck": "tsc --noEmit",
-    "verify:interface": "node scripts/verify-interface-package.cjs",
+    "verify:interface": "node scripts/verify-interface-package.mjs",
     "test": "pnpm run build && pnpm --filter @antelopejs/interface-dms-saas run check:exports && pnpm run test:unit",
     "test:unit": "vitest run",
     "release": "pnpm --filter @antelopejs/interface-dms-saas build && pnpm --dir frontend-vue install --frozen-lockfile && pnpm run verify:interface && release-it",
