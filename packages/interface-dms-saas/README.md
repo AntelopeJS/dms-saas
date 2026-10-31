@@ -54,7 +54,7 @@ The implementation is `@antelopejs/dms-saas >=0.6.0`. The interface declares the
 
 | Package                                     | Supported         | Tested with                                                               |
 | ------------------------------------------- | ----------------- | ------------------------------------------------------------------------- |
-| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`  | `0.2.6`                                                                   |
+| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`  | `0.2.4`                                                                   |
 | `@antelopejs/interface-data-api`            | `>=0.4.0 <1.0.0`  | `0.4.0`                                                                   |
 | `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0` | `file:.campaign/tgz/antelopejs-interface-database-4939b45.tgz`            |
 | `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0` | `file:.campaign/tgz/antelopejs-interface-database-decorators-d4f3b5a.tgz` |
