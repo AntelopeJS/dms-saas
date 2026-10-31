@@ -358,6 +358,27 @@ describe("paid invoices chart", () => {
     expect(comparison?.data.at(-1)).toEqual({ x: "2026-10-07", y: 5 });
   });
 
+  it.each(["constructor", "toString", "__proto__", "hasOwnProperty"])(
+    "names a custom comparison's series with the custom label when the mode is %s",
+    (mode) => {
+      const previous = {
+        from: new Date(NOW.getTime() - 59 * DAY_MS),
+        to: new Date(NOW.getTime() - 30 * DAY_MS),
+      };
+      const chart = paidInvoicesChart(
+        [document({})],
+        range,
+        previous,
+        "EUR",
+        mode,
+      );
+
+      expect(chart.comparisonSeries?.[0]?.name).toBe(
+        "$saas.dashboard.paid_invoices.collected_compared",
+      );
+    },
+  );
+
   it("compares with the same days a year before", () => {
     const lastYear = {
       from: new Date("2025-09-08T12:00:00Z"),

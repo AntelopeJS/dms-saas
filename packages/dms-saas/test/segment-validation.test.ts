@@ -36,6 +36,159 @@ describe("segment rules validation", () => {
     });
   });
 
+  it("refuses a __proto__ key in the rules, as a string or an object", () => {
+    const top = '{"logical":"and","conditions":[],"__proto__":{"x":1}}';
+    const nested =
+      '{"logical":"and","conditions":[{"field":"email","operator":"contains","value":{"__proto__":{"a":1}}}]}';
+    const wire: JsonValue = {
+      logical: "and",
+      conditions: [],
+      ["__proto__"]: { x: 1 },
+    };
+
+    expectRefusal(() => parseSegmentConditions(top), "invalid_conditions");
+    expectRefusal(() => parseSegmentConditions(wire), "invalid_conditions");
+    expectRefusal(() => parseSegmentConditions(nested), "invalid_conditions");
+  });
+
+  it("refuses a __proto__ key at any depth of a condition value", () => {
+    const rule = (value: string) =>
+      `{"logical":"and","conditions":[{"field":"email","operator":"contains","value":${value}}]}`;
+    const workspaceRule = (value: string) =>
+      `{"logical":"and","conditions":[{"kind":"workspaceRef","quantifier":"any","conditions":{"logical":"and","conditions":[{"field":"status","operator":"in","value":${value}}]}}]}`;
+
+    expectRefusal(
+      () => parseSegmentConditions(rule('{"a":{"b":{"__proto__":1}}}')),
+      "invalid_conditions",
+    );
+    expectRefusal(
+      () => parseSegmentConditions(workspaceRule('[{"__proto__":1}]')),
+      "invalid_conditions",
+    );
+    expectRefusal(
+      () =>
+        parseSegmentConditions(workspaceRule('[["x",{"a":{"__proto__":1}}]]')),
+      "invalid_conditions",
+    );
+  });
+
+  const leaf = (condition: JsonValue): JsonValue => ({
+    logical: "and",
+    conditions: [condition],
+  });
+  const workspaceLeaf = (value: JsonValue): JsonValue =>
+    leaf({
+      kind: "workspaceRef",
+      quantifier: "any",
+      conditions: leaf({ field: "status", operator: "in", value }),
+    });
+
+  it.each<[string, JsonValue]>([
+    ["a condition with no value", leaf({ field: "email", operator: "eq" })],
+    [
+      "an object value",
+      leaf({ field: "email", operator: "eq", value: { a: 1 } }),
+    ],
+    [
+      "an empty object value",
+      leaf({ field: "email", operator: "contains", value: {} }),
+    ],
+    ["a list holding a list", workspaceLeaf([["active"]])],
+    ["a list holding an object", workspaceLeaf([{}])],
+  ])("keeps accepting %s, as it did before", (_name, rules) => {
+    expect(parseSegmentConditions(rules)).toEqual(rules);
+    expect(parseSegmentConditions(JSON.stringify(rules))).toEqual(rules);
+  });
+
+  const poisoned: JsonValue = { ["__proto__"]: { x: 1 } };
+  const nodesWithAnExtraKey: [string, (extra: JsonValue) => JsonValue][] = [
+    [
+      "a condition",
+      (extra) =>
+        leaf({ field: "email", operator: "contains", value: "a", extra }),
+    ],
+    ["the root group", (extra) => ({ logical: "and", conditions: [], extra })],
+    [
+      "a nested group",
+      (extra) => leaf({ logical: "or", conditions: [], extra }),
+    ],
+    [
+      "a workspace condition",
+      (extra) =>
+        leaf({
+          kind: "workspaceRef",
+          quantifier: "any",
+          conditions: leaf({ field: "status", operator: "in", value: ["a"] }),
+          extra,
+        }),
+    ],
+    [
+      "the group inside a workspace condition",
+      (extra) =>
+        leaf({
+          kind: "workspaceRef",
+          quantifier: "any",
+          conditions: {
+            logical: "and",
+            conditions: [{ field: "status", operator: "in", value: ["a"] }],
+            extra,
+          },
+        }),
+    ],
+  ];
+
+  it.each(nodesWithAnExtraKey)(
+    "refuses a __proto__ key under an extra key of %s, as a string or an object",
+    (_name, rulesWith) => {
+      for (const extra of [poisoned, [poisoned], { deeper: [poisoned] }]) {
+        const rules = rulesWith(extra);
+
+        expectRefusal(
+          () => parseSegmentConditions(rules),
+          "invalid_conditions",
+        );
+        expectRefusal(
+          () => parseSegmentConditions(JSON.stringify(rules)),
+          "invalid_conditions",
+        );
+      }
+    },
+  );
+
+  it.each(nodesWithAnExtraKey)(
+    "keeps accepting an extra key of %s that holds no __proto__ key",
+    (_name, rulesWith) => {
+      const rules = rulesWith({ b: [1, { c: "__proto__" }] });
+
+      expect(parseSegmentConditions(rules)).toEqual(rules);
+      expect(parseSegmentConditions(JSON.stringify(rules))).toEqual(rules);
+    },
+  );
+
+  it("refuses a __proto__ key under an extra key however deep, without overflowing", () => {
+    let extra: JsonValue = poisoned;
+    for (let depth = 0; depth < 100_000; depth++) {
+      extra = { a: extra };
+    }
+
+    expectRefusal(
+      () => parseSegmentConditions({ logical: "and", conditions: [], extra }),
+      "invalid_conditions",
+    );
+  });
+
+  it("reports a tree nested past the limit as too deep, however deep", () => {
+    const deep = (levels: number) =>
+      '{"logical":"and","conditions":['.repeat(levels) + "]}".repeat(levels);
+
+    for (const levels of [9, 1100, 20000]) {
+      expectRefusal(
+        () => parseSegmentConditions(deep(levels)),
+        "conditions_too_deep",
+      );
+    }
+  });
+
   it("refuses a field the level does not read", () => {
     expectRefusal(
       () =>
