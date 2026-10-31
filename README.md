@@ -7,7 +7,7 @@
 <a href="https://discord.gg/sjK28QHrA7"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000"></a>
 <a href="https://dms.antelopejs.com/docs/modules/saas"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000"></a>
 
-Sign-up, plans, Stripe billing and a back office for a multi-tenant AntelopeJS DMS.
+Sign-up, plans, Stripe billing and a back office for a multi-tenant [AntelopeJS DMS](https://github.com/AntelopeJS/dms).
 
 </div>
 
