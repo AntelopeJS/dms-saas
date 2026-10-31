@@ -137,7 +137,7 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
       meta,
       {
         filters: Parameters.ExtractFilters,
-        limit: "int",
+        limit: Parameters.FromSearch.int,
       },
     );
 
