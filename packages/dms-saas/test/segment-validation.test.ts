@@ -48,7 +48,7 @@ describe("segment rules validation", () => {
 
     expectRefusal(() => parseSegmentConditions(top), "invalid_conditions");
     expectRefusal(() => parseSegmentConditions(wire), "invalid_conditions");
-    expectRefusal(() => parseSegmentConditions(nested), "invalid_value");
+    expectRefusal(() => parseSegmentConditions(nested), "invalid_conditions");
   });
 
   it("refuses a __proto__ key at any depth of a condition value", () => {
@@ -59,16 +59,16 @@ describe("segment rules validation", () => {
 
     expectRefusal(
       () => parseSegmentConditions(rule('{"a":{"b":{"__proto__":1}}}')),
-      "invalid_value",
+      "invalid_conditions",
     );
     expectRefusal(
       () => parseSegmentConditions(workspaceRule('[{"__proto__":1}]')),
-      "invalid_value",
+      "invalid_conditions",
     );
     expectRefusal(
       () =>
         parseSegmentConditions(workspaceRule('[["x",{"a":{"__proto__":1}}]]')),
-      "invalid_value",
+      "invalid_conditions",
     );
   });
 

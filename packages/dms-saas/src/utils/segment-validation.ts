@@ -87,12 +87,12 @@ function validateGroupNode(
 }
 
 /**
- * Whether a condition's value is, or holds at any depth, an object with an own
- * `__proto__` key. Walks with a stack, so a deeply nested value cannot
- * overflow the call stack.
+ * Whether the rules are, or hold at any depth, an object with an own
+ * `__proto__` key, under a known key or an extra one. Walks with a stack, so
+ * a deeply nested tree cannot overflow the call stack.
  */
-function valueHoldsOwnProtoKey(condition: SegmentCondition): boolean {
-  const pending: unknown[] = [condition.value];
+function holdsOwnProtoKey(rules: SegmentConditionGroup): boolean {
+  const pending: unknown[] = [rules];
   while (pending.length > 0) {
     const current = pending.pop();
     if (!current || !isObjectOrNull(current)) continue;
@@ -118,11 +118,6 @@ function validateLeafCondition(
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_value`,
   );
-  assert(
-    !valueHoldsOwnProtoKey(condition),
-    HTTP_BAD_REQUEST,
-    `${ERRORS}.invalid_value`,
-  );
 }
 
 function validateConditionNode(
@@ -136,7 +131,7 @@ function validateConditionNode(
     `${ERRORS}.conditions_too_deep`,
   );
   assert(
-    !!node && isObjectOrNull(node) && !Object.hasOwn(node, "__proto__"),
+    !!node && isObjectOrNull(node),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
@@ -177,6 +172,11 @@ export function parseSegmentConditions(
     `${ERRORS}.invalid_conditions`,
   );
   const group = parsed as SegmentConditionGroup;
+  assert(
+    !holdsOwnProtoKey(group),
+    HTTP_BAD_REQUEST,
+    `${ERRORS}.invalid_conditions`,
+  );
   validateConditionNode(group, ROOT_DEPTH, "user");
   return group;
 }
