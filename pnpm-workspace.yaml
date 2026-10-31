@@ -6,5 +6,5 @@ overrides:
   "@antelopejs/interface-database": "file:.campaign/tgz/antelopejs-interface-database-6bef278.tgz"
   "@antelopejs/mongodb": "file:.campaign/tgz/antelopejs-mongodb-db4b449.tgz"
   "@antelopejs/mongodb>@antelopejs/interface-core": "0.2.4"
-  "@antelopejs/interface-database-decorators": "file:.campaign/tgz/antelopejs-interface-database-decorators-da3b0f1.tgz"
+  "@antelopejs/interface-database-decorators": "file:.campaign/tgz/antelopejs-interface-database-decorators-fcb0a29.tgz"
   "@antelopejs/interface-data-api": "file:.campaign/tgz/antelopejs-interface-data-api-2b29c9d.tgz"
