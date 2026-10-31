@@ -143,7 +143,9 @@ function parseJson(raw: string): unknown {
  * sends, checked against the field catalogs. An empty value is an empty AND
  * group, which matches nobody.
  */
-export function parseSegmentConditions(raw: unknown): SegmentConditionGroup {
+export function parseSegmentConditions(
+  raw: JsonValue | undefined,
+): SegmentConditionGroup {
   if (raw === undefined || raw === null || raw === "") {
     return { logical: "and", conditions: [] };
   }
