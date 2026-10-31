@@ -9,10 +9,10 @@ Inputs:
 
 - the design mockup (`modules/saas/*`, `settings/billing.html`, `settings/workspace.html`,
   `settings/members.html`, `settings/data-export.html`) and its UX review (findings S01 to S20);
-- `@antelopejs/dms` 0.6.0 / `@antelopejs/interface-dms` 0.4.0 (PR AntelopeJS/dms#119 and its
+- `dms` 0.6.0 / `interface-dms` 0.4.0 (PR AntelopeJS/dms#119 and its
   follow-ups #160 to #167), the migration guide `docs/02.building/13.migration-0-3-to-0-4.md`;
-- `@antelopejs/dms-frontend` 0.4.0 and 0.5.0 (module-declared auto-imports, `componentPrefix`);
-  the module now requires `@antelopejs/dms` 0.7.7 and `@antelopejs/dms-frontend` 0.5.2 (see Q5).
+- `dms-frontend` 0.4.0 and 0.5.0 (module-declared auto-imports, `componentPrefix`);
+  the module now requires `dms` 0.7.7 and `dms-frontend` 0.5.2 (see Q5).
 
 ---
 
@@ -44,15 +44,15 @@ workspace-owner pages stay in the core settings navigation, under the DMS's work
 ## 2. Dependencies and breaking changes
 
 **Q5. Which ranges?**
-`@antelopejs/interface-dms >=0.4.0 <1.0.0` (the repository's `antelopejs-check-interface-ranges`
-requires `<1.0.0` for an interface it does not own), `@antelopejs/interface-data-api >=0.2.0`,
-`@antelopejs/dms >=0.7.7 <0.8.0`, `@antelopejs/dms-frontend >=0.5.2 <0.6.0`, `@antelopejs/core 1.13.5`,
-`@antelopejs/mongodb 1.4.2`, and the frontend layer's `engines` `>=0.5.2 <0.6.0`.
+`interface-dms` from 0.4.0, below the next major (the repository's `antelopejs-check-interface-ranges`
+requires a cap at the next major for an interface it does not own), `interface-data-api` from 0.2.0,
+`dms` from 0.7.7 in the 0.7 line, `dms-frontend` from 0.5.2 in the 0.5 line, `core` 1.13.5,
+`mongodb` 1.4.2, and the frontend layer's `engines` set to the `dms-frontend` 0.5 line from 0.5.2.
 
 **Q6. `interface-dms-saas` changes in a breaking way. Does the module require 0.4 of it now?**
 No. The repository releases the interface first and raises the module's range in a follow-up
-(as #79 then #80 did). This pull request keeps `@antelopejs/interface-dms-saas >=0.3.0 <0.4.0`
-in the module, so the workspace links the local package, and its commits are marked breaking
+(as #79 then #80 did). This pull request keeps the module on the `interface-dms-saas` 0.3 line
+(`>=0.3.0`, below 0.4.0), so the workspace links the local package, and its commits are marked breaking
 so the next interface release is 0.4.0.
 
 **Q7. What happens to the module's own `settings.workspace` category?**
