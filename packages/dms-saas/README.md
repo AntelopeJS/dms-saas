@@ -68,7 +68,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 | ------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `@antelopejs/interface-api`                 | `>=0.0.15 <1.0.0`                                                               | `0.0.15`                                                                  |
 | `@antelopejs/interface-api-util`            | `>=0.1.3 <1.0.0`                                                                | `0.1.3`                                                                   |
-| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                                | `0.2.4`                                                                   |
+| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                                | `0.2.6`                                                                   |
 | `@antelopejs/interface-data-api`            | `>=0.4.0 <1.0.0`                                                                | `0.4.0`                                                                   |
 | `@antelopejs/interface-database`            | `file:../../.campaign/tgz/antelopejs-interface-database-4939b45.tgz`            | `file:.campaign/tgz/antelopejs-interface-database-4939b45.tgz`            |
 | `@antelopejs/interface-database-decorators` | `file:../../.campaign/tgz/antelopejs-interface-database-decorators-d4f3b5a.tgz` | `file:.campaign/tgz/antelopejs-interface-database-decorators-d4f3b5a.tgz` |
