@@ -1,4 +1,7 @@
-import { BasicDataModel } from "@antelopejs/interface-database-decorators";
+import {
+  BasicDataModel,
+  type IndexKey,
+} from "@antelopejs/interface-database-decorators";
 import {
   Plan,
   PLAN_FALLBACK_LOCALE,
@@ -40,7 +43,10 @@ export class PlanModel extends BasicDataModel(Plan, plansTableName) {
     return plan && inFallbackLocale(plan);
   }
 
-  override async getBy(index: keyof Plan, ...keys: unknown[]): Promise<Plan[]> {
+  override async getBy(
+    index: Extract<keyof Plan, string>,
+    ...keys: IndexKey[]
+  ): Promise<Plan[]> {
     return (await super.getBy(index, ...keys)).map(inFallbackLocale);
   }
 
