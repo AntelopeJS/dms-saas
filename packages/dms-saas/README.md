@@ -35,6 +35,8 @@ Give the module its Stripe keys from the environment:
 
 ```ts
 // antelope.config.ts
+import { defineConfig } from "@antelopejs/interface-core/config";
+
 export default defineConfig({
   name: "my-saas",
   envOverrides: {
@@ -44,7 +46,7 @@ export default defineConfig({
   },
   modules: {
     "dms-saas": {
-      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.6.0" },
+      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.8.1" },
       config: {
         stripe: {
           secretKey: "sk_test_placeholder",
@@ -70,23 +72,17 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 | `@antelopejs/interface-api-util`            | `>=0.1.3 <1.0.0`                                                                | `0.1.3`                                                                   |
 | `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                                | `0.2.4`                                                                   |
 | `@antelopejs/interface-data-api`            | `>=0.4.0 <1.0.0`                                                                | `0.4.0`                                                                   |
-| `@antelopejs/interface-database`            | `file:../../.campaign/tgz/antelopejs-interface-database-4939b45.tgz`            | `file:.campaign/tgz/antelopejs-interface-database-4939b45.tgz`            |
-| `@antelopejs/interface-database-decorators` | `file:../../.campaign/tgz/antelopejs-interface-database-decorators-d4f3b5a.tgz` | `file:.campaign/tgz/antelopejs-interface-database-decorators-d4f3b5a.tgz` |
+| `@antelopejs/interface-database`            | `file:../../.campaign/tgz/antelopejs-interface-database-6bef278.tgz`            | `file:.campaign/tgz/antelopejs-interface-database-6bef278.tgz`            |
+| `@antelopejs/interface-database-decorators` | `file:../../.campaign/tgz/antelopejs-interface-database-decorators-9dc0781.tgz` | `file:.campaign/tgz/antelopejs-interface-database-decorators-9dc0781.tgz` |
 | `@antelopejs/interface-dms`                 | `>=0.9.0 <1.0.0`                                                                | `0.9.0`                                                                   |
 | `@antelopejs/interface-dms-automation`      | `>=0.2.1 <1.0.0`                                                                | `0.2.1`                                                                   |
 | `@antelopejs/interface-dms-saas`            | `workspace:^`                                                                   | `0.6.1`                                                                   |
 
 <!-- antelopejs-docs-compat:end -->
 
-| Package | Version |
-| --- | --- |
-| `@antelopejs/dms` | `>=0.11.0 <1.0.0` |
-| `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
-| `@antelopejs/dms-frontend` (renderer) | `>=0.9.1 <0.10.0` |
-| `@antelopejs/interface-dms-saas` | `>=0.6.0 <0.7.0` |
-| Stripe API version | `2026-08-26.dahlia` |
+The module also needs a DMS backend in a release that implements the `@antelopejs/interface-dms` range in the table above, and the `@antelopejs/dms-frontend` renderer in the range its frontend module declares in `engines["@antelopejs/dms-frontend"]` of `frontend-vue/package.json`; the `ajs dms` CLI refuses to build it with a renderer outside that range.
 
-On DMS 0.10 or earlier, use `@antelopejs/dms-saas` 0.8. Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
+The Stripe API version is `2026-08-26.dahlia`. Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
 
 ## Documentation
 

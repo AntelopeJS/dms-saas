@@ -25,7 +25,7 @@ jobs:
   # tsconfig maps the interface onto its sources, so the docs check, which
   # runs before the build, needs no `dist`.
   ci:
-    uses: AntelopeJS/.github/.github/workflows/ci-node.yml@v1
+    uses: AntelopeJS/.github/.github/workflows/ci-node.yml@v1-campaign
     with:
       docs-files: |
         README.md
