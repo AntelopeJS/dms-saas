@@ -12,6 +12,7 @@ import type {
 } from "../db";
 import {
   InvoiceModel,
+  REFUND_STATUSES,
   RefundModel,
   TenantBillingInfoModel,
   TenantSubscriptionModel,
@@ -468,6 +469,15 @@ function resolveVatFields(
 }
 
 /**
+ * The status the table lists for a Stripe refund status. Stripe also reports
+ * `requires_action`, a refund the customer still has to act on: it is pending
+ * until it succeeds or fails.
+ */
+function refundStatusOf(status: string | null): RefundStatus {
+  return REFUND_STATUSES.find((known) => known === status) ?? "pending";
+}
+
+/**
  * Every status change of a refund is its own event: keying the row by the
  * Stripe id keeps concurrent deliveries to one row. Legacy rows keep their
  * random key and the lookup by Stripe id.
@@ -483,7 +493,7 @@ async function upsertRefund(
     stripeRefundId: refund.id,
     amount: refund.amount,
     currency: refund.currency,
-    status: (refund.status ?? "pending") as RefundStatus,
+    status: refundStatusOf(refund.status),
     failureReason: refund.failure_reason ?? null,
     updatedAt: new Date(),
   };
