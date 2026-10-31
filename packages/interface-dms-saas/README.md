@@ -48,7 +48,7 @@ A module may seed plans straight into the `db` plan table: it writes `name`, `de
 
 ## Compatibility
 
-The implementation is `@antelopejs/dms-saas >=0.6.0`. The interface declares these dependencies:
+The implementation is `@antelopejs/dms-saas`; the compatibility block of its [README](../dms-saas/README.md#compatibility) lists the interface range that module release supports. The interface declares these dependencies:
 
 <!-- antelopejs-docs-compat:start -->
 
