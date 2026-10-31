@@ -26,7 +26,7 @@ export type BillingDocumentStatus = InvoiceStatus | "issued";
 export interface InvoiceMetadata {
   planId?: string;
   planName?: string;
-  [key: string]: unknown;
+  [key: string]: string | undefined;
 }
 
 export interface InvoiceLine {

@@ -86,6 +86,22 @@ function validateGroupNode(
   }
 }
 
+/**
+ * Whether the rules are, or hold at any depth, an object with an own
+ * `__proto__` key, under a known key or an extra one. Walks with a stack, so
+ * a deeply nested tree cannot overflow the call stack.
+ */
+function holdsOwnProtoKey(rules: SegmentConditionGroup): boolean {
+  const pending: unknown[] = [rules];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current || !isObjectOrNull(current)) continue;
+    if (Object.hasOwn(current, "__proto__")) return true;
+    for (const child of Object.values(current)) pending.push(child);
+  }
+  return false;
+}
+
 function validateLeafCondition(
   condition: SegmentCondition,
   catalog: SegmentFieldCatalog,
@@ -156,6 +172,11 @@ export function parseSegmentConditions(
     `${ERRORS}.invalid_conditions`,
   );
   const group = parsed as SegmentConditionGroup;
+  assert(
+    !holdsOwnProtoKey(group),
+    HTTP_BAD_REQUEST,
+    `${ERRORS}.invalid_conditions`,
+  );
   validateConditionNode(group, ROOT_DEPTH, "user");
   return group;
 }
