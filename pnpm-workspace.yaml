@@ -2,3 +2,7 @@ packages:
   - packages/dms-saas
   - packages/interface-dms-saas
   - packages/dms-saas/frontend-vue
+overrides:
+  "@antelopejs/interface-database": "file:.campaign/tgz/antelopejs-interface-database-4939b45.tgz"
+  "@antelopejs/mongodb": "file:.campaign/tgz/antelopejs-mongodb-995e66f.tgz"
+  "@antelopejs/interface-database-decorators": "file:.campaign/tgz/antelopejs-interface-database-decorators-d4f3b5a.tgz"
