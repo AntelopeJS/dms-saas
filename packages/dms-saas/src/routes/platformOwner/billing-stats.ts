@@ -9,6 +9,7 @@ import {
   computeCreditNoteStats,
   computeInvoiceStats,
   type CreditNoteRow,
+  type InvoiceStatsInput,
   type OpenInvoiceRow,
   type PaidInvoiceRow,
   startOfMonth,
@@ -43,7 +44,7 @@ export class SaasBillingStatsController extends Controller(
       .getAll(OPEN_STATUS, "status")
       .filter((row) => row.key("documentType").eq(INVOICE_DOCUMENT_TYPE))
       .pluck(...MONEY_FIELDS, "amountPaid", "nextPaymentAttemptAt")
-      .run() as Promise<OpenInvoiceRow[]>;
+      .run();
   }
 
   private paidSince(since: Date): Promise<PaidInvoiceRow[]> {
@@ -51,22 +52,24 @@ export class SaasBillingStatsController extends Controller(
       .getAll(PAID_STATUS, "status")
       .filter((row) => row.key("paidAt").ge(since))
       .pluck(...MONEY_FIELDS, "amountPaid")
-      .run() as Promise<PaidInvoiceRow[]>;
+      .run();
   }
 
-  private writtenOffSince(since: Date): Promise<OpenInvoiceRow[]> {
+  private writtenOffSince(
+    since: Date,
+  ): Promise<InvoiceStatsInput["writtenOffThisYear"]> {
     return this.invoiceModel.table
       .getAll(UNCOLLECTIBLE_STATUS, "status")
       .filter((row) => row.key("issuedAt").ge(since))
       .pluck(...MONEY_FIELDS)
-      .run() as Promise<OpenInvoiceRow[]>;
+      .run();
   }
 
   private creditNotesSince(since: Date): Promise<CreditNoteRow[]> {
     return this.creditNoteModel.table
       .filter((row) => row.key("issuedAt").ge(since))
       .pluck(...CREDIT_NOTE_FIELDS)
-      .run() as Promise<CreditNoteRow[]>;
+      .run();
   }
 
   @Get("/invoices")
