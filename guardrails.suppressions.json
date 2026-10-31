@@ -6,7 +6,7 @@
     "typescript/no-misused-spread": 1,
     "vue/no-v-html": 1
   },
-  "tsExpectError": 0,
+  "tsExpectError": 4,
   "tsIgnore": 0,
   "safety": 0,
   "config": {

@@ -65,8 +65,9 @@ describe("plan interval writes", () => {
     await expectInvalidInterval(async () =>
       (await controller()).create(OWNER, {
         name: { en: "Weekly" },
+        // @ts-expect-error "week" is off-contract for PlanInterval; create must refuse it with the invalid-interval error
         interval: "week",
-      } as never),
+      }),
     );
   });
 
@@ -77,8 +78,9 @@ describe("plan interval writes", () => {
 
     await expectInvalidInterval(() =>
       plans.update(OWNER, PLAN_ID, {
+        // @ts-expect-error "week" is off-contract for PlanInterval; update must refuse it with the invalid-interval error
         interval: "week",
-      } as never),
+      }),
     );
   });
 
