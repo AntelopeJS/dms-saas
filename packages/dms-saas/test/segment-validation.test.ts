@@ -36,6 +36,29 @@ describe("segment rules validation", () => {
     });
   });
 
+  it("refuses a __proto__ key in the rules, as a string or an object", () => {
+    const top = '{"logical":"and","conditions":[],"__proto__":{"x":1}}';
+    const nested =
+      '{"logical":"and","conditions":[{"field":"email","operator":"contains","value":{"__proto__":{"a":1}}}]}';
+    const wire: unknown = JSON.parse(top);
+
+    expectRefusal(() => parseSegmentConditions(top), "invalid_conditions");
+    expectRefusal(() => parseSegmentConditions(wire), "invalid_conditions");
+    expectRefusal(() => parseSegmentConditions(nested), "invalid_value");
+  });
+
+  it("reports a tree nested past the limit as too deep, however deep", () => {
+    const deep = (levels: number) =>
+      '{"logical":"and","conditions":['.repeat(levels) + "]}".repeat(levels);
+
+    for (const levels of [9, 1100, 20000]) {
+      expectRefusal(
+        () => parseSegmentConditions(deep(levels)),
+        "conditions_too_deep",
+      );
+    }
+  });
+
   it("refuses a field the level does not read", () => {
     expectRefusal(
       () =>
