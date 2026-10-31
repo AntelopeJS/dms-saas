@@ -71,7 +71,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 | `@antelopejs/interface-api`                 | `>=0.0.15 <1.0.0`                                                               | `0.0.15`                                                                  |
 | `@antelopejs/interface-api-util`            | `>=0.1.3 <1.0.0`                                                                | `0.1.3`                                                                   |
 | `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                                | `0.2.4`                                                                   |
-| `@antelopejs/interface-data-api`            | `>=0.4.0 <1.0.0`                                                                | `0.4.0`                                                                   |
+| `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-2b29c9d.tgz`            | `file:.campaign/tgz/antelopejs-interface-data-api-2b29c9d.tgz`            |
 | `@antelopejs/interface-database`            | `file:../../.campaign/tgz/antelopejs-interface-database-6bef278.tgz`            | `file:.campaign/tgz/antelopejs-interface-database-6bef278.tgz`            |
 | `@antelopejs/interface-database-decorators` | `file:../../.campaign/tgz/antelopejs-interface-database-decorators-9dc0781.tgz` | `file:.campaign/tgz/antelopejs-interface-database-decorators-9dc0781.tgz` |
 | `@antelopejs/interface-dms`                 | `>=0.9.0 <1.0.0`                                                                | `0.9.0`                                                                   |
