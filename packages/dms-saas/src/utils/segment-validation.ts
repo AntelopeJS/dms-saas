@@ -11,12 +11,7 @@ import {
 } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
 import type { JsonValue } from "./json-value";
-import {
-  isBoolean,
-  isNumber,
-  isObjectOrNull,
-  isString,
-} from "./primitive-guards";
+import { isObjectOrNull, isString } from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 const ERRORS = "saas.errors.segments";
@@ -91,6 +86,22 @@ function validateGroupNode(
   }
 }
 
+/**
+ * Whether a condition's value is, or holds at any depth, an object with an own
+ * `__proto__` key. Walks with a stack, so a deeply nested value cannot
+ * overflow the call stack.
+ */
+function valueHoldsOwnProtoKey(condition: SegmentCondition): boolean {
+  const pending: unknown[] = [condition.value];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current || !isObjectOrNull(current)) continue;
+    if (Object.hasOwn(current, "__proto__")) return true;
+    for (const child of Object.values(current)) pending.push(child);
+  }
+  return false;
+}
+
 function validateLeafCondition(
   condition: SegmentCondition,
   catalog: SegmentFieldCatalog,
@@ -107,17 +118,8 @@ function validateLeafCondition(
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_value`,
   );
-  const operands: unknown[] = Array.isArray(condition.value)
-    ? condition.value
-    : [condition.value];
   assert(
-    operands.every(
-      (operand) =>
-        operand === null ||
-        isString(operand) ||
-        isNumber(operand) ||
-        isBoolean(operand),
-    ),
+    !valueHoldsOwnProtoKey(condition),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_value`,
   );
