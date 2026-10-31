@@ -14,7 +14,7 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
 
 ## Setup checklist
 
-- dms-saas 0.6 requires `@antelopejs/dms` >=0.9 (interface-dms 0.7, renderer `@antelopejs/dms-frontend` 0.6);
+- The DMS backend and renderer releases the module runs on are in the README compatibility block and in `engines["@antelopejs/dms-frontend"]` of `frontend-vue/package.json`;
   0.5 is the DMS 0.8 line.
 - `ajs project modules add @antelopejs/dms-saas`; config `stripe.{secretKey,publishableKey,webhookSecret}` from env
   (`envOverrides`). Placeholder keys disable Stripe calls: plan sync skipped, registration

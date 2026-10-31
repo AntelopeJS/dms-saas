@@ -40,11 +40,64 @@ describe("segment rules validation", () => {
     const top = '{"logical":"and","conditions":[],"__proto__":{"x":1}}';
     const nested =
       '{"logical":"and","conditions":[{"field":"email","operator":"contains","value":{"__proto__":{"a":1}}}]}';
-    const wire: unknown = JSON.parse(top);
+    const wire: JsonValue = {
+      logical: "and",
+      conditions: [],
+      ["__proto__"]: { x: 1 },
+    };
 
     expectRefusal(() => parseSegmentConditions(top), "invalid_conditions");
     expectRefusal(() => parseSegmentConditions(wire), "invalid_conditions");
     expectRefusal(() => parseSegmentConditions(nested), "invalid_value");
+  });
+
+  it("refuses a __proto__ key at any depth of a condition value", () => {
+    const rule = (value: string) =>
+      `{"logical":"and","conditions":[{"field":"email","operator":"contains","value":${value}}]}`;
+    const workspaceRule = (value: string) =>
+      `{"logical":"and","conditions":[{"kind":"workspaceRef","quantifier":"any","conditions":{"logical":"and","conditions":[{"field":"status","operator":"in","value":${value}}]}}]}`;
+
+    expectRefusal(
+      () => parseSegmentConditions(rule('{"a":{"b":{"__proto__":1}}}')),
+      "invalid_value",
+    );
+    expectRefusal(
+      () => parseSegmentConditions(workspaceRule('[{"__proto__":1}]')),
+      "invalid_value",
+    );
+    expectRefusal(
+      () =>
+        parseSegmentConditions(workspaceRule('[["x",{"a":{"__proto__":1}}]]')),
+      "invalid_value",
+    );
+  });
+
+  const leaf = (condition: JsonValue): JsonValue => ({
+    logical: "and",
+    conditions: [condition],
+  });
+  const workspaceLeaf = (value: JsonValue): JsonValue =>
+    leaf({
+      kind: "workspaceRef",
+      quantifier: "any",
+      conditions: leaf({ field: "status", operator: "in", value }),
+    });
+
+  it.each<[string, JsonValue]>([
+    ["a condition with no value", leaf({ field: "email", operator: "eq" })],
+    [
+      "an object value",
+      leaf({ field: "email", operator: "eq", value: { a: 1 } }),
+    ],
+    [
+      "an empty object value",
+      leaf({ field: "email", operator: "contains", value: {} }),
+    ],
+    ["a list holding a list", workspaceLeaf([["active"]])],
+    ["a list holding an object", workspaceLeaf([{}])],
+  ])("keeps accepting %s, as it did before", (_name, rules) => {
+    expect(parseSegmentConditions(rules)).toEqual(rules);
+    expect(parseSegmentConditions(JSON.stringify(rules))).toEqual(rules);
   });
 
   it("reports a tree nested past the limit as too deep, however deep", () => {

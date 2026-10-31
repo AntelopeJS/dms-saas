@@ -33,8 +33,10 @@ ajs project modules add @antelopejs/dms-saas
 
 Give the module its Stripe keys from the environment:
 
-```ts
+```ts fragment
 // antelope.config.ts
+import { defineConfig } from "@antelopejs/interface-core/config";
+
 export default defineConfig({
   name: "my-saas",
   envOverrides: {
@@ -44,7 +46,7 @@ export default defineConfig({
   },
   modules: {
     "dms-saas": {
-      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.6.0" },
+      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.8.1" },
       config: {
         stripe: {
           secretKey: "sk_test_placeholder",
@@ -62,15 +64,9 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 
 ## Compatibility
 
-| Package | Version |
-| --- | --- |
-| `@antelopejs/dms` | `>=0.11.0 <1.0.0` |
-| `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
-| `@antelopejs/dms-frontend` (renderer) | `>=0.9.1 <0.10.0` |
-| `@antelopejs/interface-dms-saas` | `>=0.6.0 <0.7.0` |
-| Stripe API version | `2026-08-26.dahlia` |
+The module also needs a DMS backend in a release that implements the `@antelopejs/interface-dms` range in the [module README compatibility block](packages/dms-saas/README.md#compatibility), and the `@antelopejs/dms-frontend` renderer in the range its frontend module declares in `engines["@antelopejs/dms-frontend"]` of `packages/dms-saas/frontend-vue/package.json`; the `ajs dms` CLI refuses to build it with a renderer outside that range.
 
-On DMS 0.10 or earlier, use `@antelopejs/dms-saas` 0.8. Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
+The Stripe API version is `2026-08-26.dahlia`. Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
 
 ## Packages
 
