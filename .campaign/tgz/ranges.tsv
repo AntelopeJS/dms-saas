@@ -1,0 +1,7 @@
+@antelopejs/interface-database	packages/dms-saas/package.json	dependencies	>=0.1.11 <1.0.0
+@antelopejs/interface-database	packages/interface-dms-saas/package.json	devDependencies	>=0.1.11 <1.0.0
+@antelopejs/interface-database	package.json	pnpm.overrides	
+@antelopejs/interface-database	pnpm-workspace.yaml	overrides	
+@antelopejs/mongodb	packages/dms-saas/package.json	devDependencies	1.5.0
+@antelopejs/mongodb	package.json	pnpm.overrides	
+@antelopejs/mongodb	pnpm-workspace.yaml	overrides	
