@@ -7,3 +7,4 @@
 @antelopejs/mongodb	pnpm-workspace.yaml	overrides	
 @antelopejs/mongodb>@antelopejs/interface-core	package.json	pnpm.overrides	
 @antelopejs/mongodb>@antelopejs/interface-core	pnpm-workspace.yaml	overrides	
+@antelopejs/interface-database	packages/dms-saas/playground/package.json	dependencies	>=0.1.11 <1.0.0

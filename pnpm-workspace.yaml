@@ -3,6 +3,6 @@ packages:
   - packages/interface-dms-saas
   - packages/dms-saas/frontend-vue
 overrides:
-  "@antelopejs/interface-database": "file:.campaign/tgz/antelopejs-interface-database-4939b45.tgz"
-  "@antelopejs/mongodb": "file:.campaign/tgz/antelopejs-mongodb-995e66f.tgz"
+  "@antelopejs/interface-database": "file:.campaign/tgz/antelopejs-interface-database-6bef278.tgz"
+  "@antelopejs/mongodb": "file:.campaign/tgz/antelopejs-mongodb-07203a7.tgz"
   "@antelopejs/mongodb>@antelopejs/interface-core": "0.2.4"
