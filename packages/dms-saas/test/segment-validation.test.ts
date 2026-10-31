@@ -100,6 +100,83 @@ describe("segment rules validation", () => {
     expect(parseSegmentConditions(JSON.stringify(rules))).toEqual(rules);
   });
 
+  const poisoned: JsonValue = { ["__proto__"]: { x: 1 } };
+  const nodesWithAnExtraKey: [string, (extra: JsonValue) => JsonValue][] = [
+    [
+      "a condition",
+      (extra) =>
+        leaf({ field: "email", operator: "contains", value: "a", extra }),
+    ],
+    ["the root group", (extra) => ({ logical: "and", conditions: [], extra })],
+    [
+      "a nested group",
+      (extra) => leaf({ logical: "or", conditions: [], extra }),
+    ],
+    [
+      "a workspace condition",
+      (extra) =>
+        leaf({
+          kind: "workspaceRef",
+          quantifier: "any",
+          conditions: leaf({ field: "status", operator: "in", value: ["a"] }),
+          extra,
+        }),
+    ],
+    [
+      "the group inside a workspace condition",
+      (extra) =>
+        leaf({
+          kind: "workspaceRef",
+          quantifier: "any",
+          conditions: {
+            logical: "and",
+            conditions: [{ field: "status", operator: "in", value: ["a"] }],
+            extra,
+          },
+        }),
+    ],
+  ];
+
+  it.each(nodesWithAnExtraKey)(
+    "refuses a __proto__ key under an extra key of %s, as a string or an object",
+    (_name, rulesWith) => {
+      for (const extra of [poisoned, [poisoned], { deeper: [poisoned] }]) {
+        const rules = rulesWith(extra);
+
+        expectRefusal(
+          () => parseSegmentConditions(rules),
+          "invalid_conditions",
+        );
+        expectRefusal(
+          () => parseSegmentConditions(JSON.stringify(rules)),
+          "invalid_conditions",
+        );
+      }
+    },
+  );
+
+  it.each(nodesWithAnExtraKey)(
+    "keeps accepting an extra key of %s that holds no __proto__ key",
+    (_name, rulesWith) => {
+      const rules = rulesWith({ b: [1, { c: "__proto__" }] });
+
+      expect(parseSegmentConditions(rules)).toEqual(rules);
+      expect(parseSegmentConditions(JSON.stringify(rules))).toEqual(rules);
+    },
+  );
+
+  it("refuses a __proto__ key under an extra key however deep, without overflowing", () => {
+    let extra: JsonValue = poisoned;
+    for (let depth = 0; depth < 100_000; depth++) {
+      extra = { a: extra };
+    }
+
+    expectRefusal(
+      () => parseSegmentConditions({ logical: "and", conditions: [], extra }),
+      "invalid_conditions",
+    );
+  });
+
   it("reports a tree nested past the limit as too deep, however deep", () => {
     const deep = (levels: number) =>
       '{"logical":"and","conditions":['.repeat(levels) + "]}".repeat(levels);
