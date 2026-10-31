@@ -16,10 +16,12 @@ export function planRow(fields: Partial<Plan>): Plan {
   for (const field of PLAN_LOCALIZED_FIELDS) {
     if (fields[field] == null) delete kept[field];
   }
-  const texts = PLAN_LOCALIZED_FIELDS.flatMap((field) => {
-    const text = fields[field];
-    return isString(text) ? [[field, { [PLAN_FALLBACK_LOCALE]: text }]] : [];
-  });
+  const texts = PLAN_LOCALIZED_FIELDS.flatMap(
+    (field): [string, Record<string, string>][] => {
+      const text = fields[field];
+      return isString(text) ? [[field, { [PLAN_FALLBACK_LOCALE]: text }]] : [];
+    },
+  );
   return PlanModel.fromPlainData({ ...kept, ...Object.fromEntries(texts) })
     .localize("*", PLAN_LOCALIZED_FIELDS)
     .localize(PLAN_FALLBACK_LOCALE, PLAN_LOCALIZED_FIELDS);

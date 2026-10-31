@@ -73,7 +73,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 | `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                                | `0.2.4`                                                                   |
 | `@antelopejs/interface-data-api`            | `>=0.4.0 <1.0.0`                                                                | `0.4.0`                                                                   |
 | `@antelopejs/interface-database`            | `file:../../.campaign/tgz/antelopejs-interface-database-6bef278.tgz`            | `file:.campaign/tgz/antelopejs-interface-database-6bef278.tgz`            |
-| `@antelopejs/interface-database-decorators` | `file:../../.campaign/tgz/antelopejs-interface-database-decorators-9dc0781.tgz` | `file:.campaign/tgz/antelopejs-interface-database-decorators-9dc0781.tgz` |
+| `@antelopejs/interface-database-decorators` | `file:../../.campaign/tgz/antelopejs-interface-database-decorators-da3b0f1.tgz` | `file:.campaign/tgz/antelopejs-interface-database-decorators-da3b0f1.tgz` |
 | `@antelopejs/interface-dms`                 | `>=0.9.0 <1.0.0`                                                                | `0.9.0`                                                                   |
 | `@antelopejs/interface-dms-automation`      | `>=0.2.1 <1.0.0`                                                                | `0.2.1`                                                                   |
 | `@antelopejs/interface-dms-saas`            | `workspace:^`                                                                   | `0.6.1`                                                                   |
