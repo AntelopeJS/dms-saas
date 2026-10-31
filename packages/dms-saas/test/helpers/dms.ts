@@ -13,7 +13,7 @@ import { resolveRequestTenantId } from "@antelopejs/interface-dms/request-tenant
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { type Mock, vi } from "vitest";
-import { applyConfig } from "../../node_modules/@antelopejs/dms/dist/config.js";
+import { applyConfig } from "../../node_modules/@antelopejs/dms/dist/config/internal/state.js";
 import { isRecord } from "./records";
 
 const require = createRequire(import.meta.url);
