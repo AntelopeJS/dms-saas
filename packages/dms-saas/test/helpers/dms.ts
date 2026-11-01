@@ -50,7 +50,7 @@ export function implementWithDms<T extends Record<string, unknown>>(
 
 /** Applies a DMS configuration the way the DMS module's `construct` does. */
 export function applyDmsConfig(config: Config): void {
-  const { applyConfig } = require(join(DMS_DIST, "config.js"));
+  const { applyConfig } = require(join(DMS_DIST, "config"));
   applyConfig(config);
 }
 

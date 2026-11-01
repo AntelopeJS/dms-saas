@@ -69,7 +69,7 @@ beforeAll(() => {
     require(path.join(dmsRoot, "dist/implementations/dms/saas-mode.js")),
   );
   saasMode.RegisterSaasMode();
-  const { applyConfig } = require(path.join(dmsRoot, "dist/config.js"));
+  const { applyConfig } = require(path.join(dmsRoot, "dist/config"));
   applyConfig({ auth: AUTH_CONFIG });
   const implementation = require(
     path.join(dmsRoot, "dist/implementations/dms-auth/index.js"),

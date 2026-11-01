@@ -200,7 +200,6 @@
         "clear_search": "Clear search",
         "create": "Create workspace",
         "switch_failed": "Couldn't switch to {name}",
-        "still_in": "You're still in {name}.",
         "complimentary": "complimentary",
         "owner_prefix": "owner",
         "members_count": "no member | 1 member | {count} members",

@@ -25,6 +25,7 @@ const WORKSPACE_HOME = '/'
 const tenantId = props.routeParams?.id ?? ''
 const { t, locale } = useI18n()
 const toast = useToast()
+const { presentError } = useApiErrorPresenter()
 const route = useDmsRoute()
 const router = useDmsRouter()
 const { statusView } = useSaasStatus()
@@ -66,12 +67,8 @@ async function copyLink(): Promise<void> {
 async function openWorkspace(): Promise<void> {
 	try {
 		await useTenantSwitch(tenantId, WORKSPACE_HOME)
-	} catch {
-		toast.add({
-			title: t(`${D}.open_error`),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
+	} catch (error) {
+		presentError(error, { fallbackKey: `${D}.open_error` })
 	}
 }
 

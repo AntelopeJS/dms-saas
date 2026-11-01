@@ -17,7 +17,7 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 const { formatMinorUnits } = useMoneyFormat()
 const { payWithDefaultCard } = usePayInvoice()
 const billingStatus = useBillingStatus()
@@ -69,7 +69,8 @@ async function payWithCard(): Promise<void> {
 		await refreshPageBlocks()
 		emit('paid')
 	} catch (error) {
-		failure.value = resolveApiError(error, `${KEY_PREFIX}.error`)
+		failure.value =
+			resolveError(error, { fallbackKey: `${KEY_PREFIX}.error` })?.message ?? ''
 	} finally {
 		isPaying.value = false
 	}

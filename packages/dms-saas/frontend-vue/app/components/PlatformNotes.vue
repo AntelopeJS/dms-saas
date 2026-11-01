@@ -35,9 +35,8 @@ const MAX_INITIALS = 2
 
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
-const toast = useToast()
 const { confirm } = useConfirm()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError, resolveError } = useApiErrorPresenter()
 
 const targetId = computed(() => props.routeParams?.id ?? '')
 const baseUrl = computed(
@@ -63,7 +62,8 @@ const isLoading = computed(
 )
 const loadError = computed(() =>
 	page.error.value
-		? resolveApiError(page.error.value, `${N}.error.load`)
+		? (resolveError(page.error.value, { fallbackKey: `${N}.error.load` })
+				?.message ?? '')
 		: null,
 )
 const isSubmitting = ref(false)
@@ -120,11 +120,7 @@ async function submit(): Promise<void> {
 		// The note is listed before the button comes back.
 		await refreshPageBlocks()
 	} catch (error) {
-		toast.add({
-			color: 'error',
-			icon: 'i-ph-warning',
-			title: resolveApiError(error, `${N}.error.create`),
-		})
+		presentError(error, { fallbackKey: `${N}.error.create` })
 	} finally {
 		isSubmitting.value = false
 	}

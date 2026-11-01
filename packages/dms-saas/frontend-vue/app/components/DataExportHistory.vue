@@ -28,8 +28,7 @@ const ROW_TONES: Record<ExportRowState, Tone> = {
 }
 
 const { t, locale } = useI18n()
-const { resolveApiError } = useApiErrorMessage()
-const toast = useToast()
+const { presentError } = useApiErrorPresenter()
 const { state, running, load, goToPage, start, download } = useExportHistory()
 
 const downloadingJobId = ref<string | null>(null)
@@ -80,20 +79,14 @@ function detail(entry: ExportHistoryEntry): string {
 	return t('saas.workspace.data_export.scope')
 }
 
-function notifyError(error: unknown, fallbackKey: string): void {
-	toast.add({
-		title: resolveApiError(error, fallbackKey),
-		color: 'error',
-		icon: 'i-ph-warning-circle',
-	})
-}
-
 async function downloadEntry(entry: ExportHistoryEntry): Promise<void> {
 	if (downloadingJobId.value) return
 	downloadingJobId.value = entry.jobId
 	await download(entry.jobId, entry)
 		.catch((error) =>
-			notifyError(error, 'saas.workspace.data_export.error.download'),
+			presentError(error, {
+				fallbackKey: 'saas.workspace.data_export.error.download',
+			}),
 		)
 		.finally(() => {
 			downloadingJobId.value = null
@@ -102,7 +95,9 @@ async function downloadEntry(entry: ExportHistoryEntry): Promise<void> {
 
 function requestAnother(): Promise<void> {
 	return start().catch((error) =>
-		notifyError(error, 'saas.workspace.data_export.error.start'),
+		presentError(error, {
+			fallbackKey: 'saas.workspace.data_export.error.start',
+		}),
 	)
 }
 </script>
