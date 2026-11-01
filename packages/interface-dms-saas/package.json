@@ -67,7 +67,7 @@
     "prepack": "pnpm run build"
   },
   "dependencies": {
-    "@antelopejs/interface-data-api": "file:../../.campaign/tgz/antelopejs-interface-data-api-26c36e9.tgz",
+    "@antelopejs/interface-data-api": "file:../../.campaign/tgz/antelopejs-interface-data-api-d8a868f.tgz",
     "@antelopejs/interface-dms": "file:../../.campaign/tgz/antelopejs-interface-dms-0cfaaa3.tgz"
   },
   "devDependencies": {
