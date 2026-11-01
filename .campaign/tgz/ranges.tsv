@@ -5,8 +5,6 @@
 @antelopejs/mongodb	packages/dms-saas/package.json	devDependencies	1.5.0
 @antelopejs/mongodb	package.json	pnpm.overrides	
 @antelopejs/mongodb	pnpm-workspace.yaml	overrides	
-@antelopejs/mongodb>@antelopejs/interface-core	package.json	pnpm.overrides	
-@antelopejs/mongodb>@antelopejs/interface-core	pnpm-workspace.yaml	overrides	
 @antelopejs/interface-database	packages/dms-saas/playground/package.json	dependencies	>=0.1.11 <1.0.0
 @antelopejs/interface-database-decorators	packages/dms-saas/package.json	dependencies	>=0.1.10 <1.0.0
 @antelopejs/interface-database-decorators	packages/dms-saas/playground/package.json	dependencies	>=0.1.10 <1.0.0
@@ -37,8 +35,6 @@
 @antelopejs/dms	packages/dms-saas/playground/package.json	dependencies	>=0.11.0 <1.0.0
 @antelopejs/dms	package.json	pnpm.overrides	
 @antelopejs/dms	pnpm-workspace.yaml	overrides	
-@antelopejs/dms>@antelopejs/interface-core	package.json	pnpm.overrides	
-@antelopejs/dms>@antelopejs/interface-core	pnpm-workspace.yaml	overrides	
 @antelopejs/interface-api	packages/dms-saas/playground/package.json	pnpm.overrides	
 @antelopejs/interface-api-util	packages/dms-saas/playground/package.json	pnpm.overrides	
 @antelopejs/interface-database	packages/dms-saas/playground/package.json	pnpm.overrides	
@@ -54,4 +50,13 @@
 @antelopejs/dms-frontend	package.json	pnpm.overrides	
 @antelopejs/dms-frontend	pnpm-workspace.yaml	overrides	
 @antelopejs/dms-frontend	packages/dms-saas/playground/package.json	pnpm.overrides	
-@antelopejs/dms>@antelopejs/interface-core	packages/dms-saas/playground/package.json	pnpm.overrides	
+@antelopejs/interface-core	packages/dms-saas/package.json	dependencies	>=0.2.4 <1.0.0
+@antelopejs/interface-core	packages/dms-saas/playground/package.json	dependencies	>=0.2.4 <1.0.0
+@antelopejs/interface-core	package.json	pnpm.overrides	
+@antelopejs/interface-core	pnpm-workspace.yaml	overrides	
+@antelopejs/interface-core	packages/dms-saas/playground/package.json	pnpm.overrides	
+@antelopejs/core	packages/dms-saas/package.json	devDependencies	1.17.1
+@antelopejs/core	packages/dms-saas/playground/package.json	devDependencies	1.17.1
+@antelopejs/core	package.json	pnpm.overrides	
+@antelopejs/core	pnpm-workspace.yaml	overrides	
+@antelopejs/core	packages/dms-saas/playground/package.json	pnpm.overrides	

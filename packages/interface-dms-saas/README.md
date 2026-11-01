@@ -54,11 +54,11 @@ The implementation is `@antelopejs/dms-saas`; the compatibility block of its [RE
 
 | Package                                     | Supported                                                            | Tested with                                                               |
 | ------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                     | `0.2.4`                                                                   |
-| `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-d8a868f.tgz` | `file:.campaign/tgz/antelopejs-interface-data-api-d8a868f.tgz`            |
+| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                     | `file:.campaign/tgz/antelopejs-interface-core-6a8b526.tgz`                |
+| `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-7a8719d.tgz` | `file:.campaign/tgz/antelopejs-interface-data-api-7a8719d.tgz`            |
 | `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            |
-| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-decorators-e79a62b.tgz` |
-| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-0cfaaa3.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-0cfaaa3.tgz`                 |
+| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz` |
+| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-c88750b.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-c88750b.tgz`                 |
 
 <!-- antelopejs-docs-compat:end -->
 
