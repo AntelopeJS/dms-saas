@@ -5,7 +5,6 @@ import {
   type RequestContext,
   type RouteHandler,
 } from "@antelopejs/interface-api";
-import { isRecord } from "./records";
 
 const HTTP_FORBIDDEN = 403;
 
@@ -28,16 +27,8 @@ export function registeredRoute(
 }
 
 /** A fresh instance of the controller class a route was registered on. */
-export function newController(route: RouteHandler): object {
-  const proto: unknown = route.proto;
-  if (!isRecord(proto)) {
-    throw new Error(`${route.callback.name} has no controller prototype`);
-  }
-  const instance: unknown = Reflect.construct(proto.constructor, []);
-  if (!isRecord(instance)) {
-    throw new Error(`${route.callback.name} has no controller to instantiate`);
-  }
-  return instance;
+export function newController(route: RouteHandler) {
+  return new route.controller();
 }
 
 /**
@@ -75,7 +66,7 @@ export function controllerRoutes(
 ): Map<string, RouteHandler> {
   const routes = new Map<string, RouteHandler>();
   for (const { handler } of getRegisteredRouteHandlers()) {
-    if (handler.mode !== "handler" || handler.proto?.constructor !== controller)
+    if (handler.mode !== "handler" || handler.controller !== controller)
       continue;
     routes.set(handler.callback.name, handler);
   }
