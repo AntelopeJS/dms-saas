@@ -79,8 +79,10 @@ function discard(): void {
 async function save(): Promise<void> {
 	hasTriedSubmit.value = true
 	if (invalidFields.value.length > 0) {
-		presentError(new Error('Incomplete billing identity'), {
-			fallbackKey: `${KEY_PREFIX}.incomplete_toast`,
+		toast.add({
+			title: t(`${KEY_PREFIX}.incomplete_toast`),
+			color: 'warning',
+			icon: 'i-ph-warning-circle',
 		})
 		return
 	}

@@ -119,6 +119,43 @@ function expectNotice(title: string, color: string): void {
 }
 
 describe("billing refusal", () => {
+  it("warns about incomplete local billing details without sending a request", async () => {
+    vi.stubGlobal("useBillingStatus", () => ({
+      data: ref({ isTenantOwner: true }),
+    }));
+    vi.stubGlobal("useBillingInfo", () => ({
+      data: ref(null),
+      pending: ref(false),
+      error: ref(null),
+    }));
+    const wrapper = mount(
+      defineComponent({
+        render: () =>
+          h(Suspense, null, { default: () => h(TenantBillingForm) }),
+      }),
+      {
+        global: {
+          mocks: { $t: translate },
+          stubs: {
+            DmsSection: Slot,
+            DmsSaasBillingIdentityFields: IdentityFields,
+            DmsSaveBar: true,
+          },
+        },
+      },
+    );
+    await flushPromises();
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expectNotice(
+      "saas.tenant_billing.billing_info.incomplete_toast",
+      "warning",
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it.each([false, true])(
     "preserves the draft with one warning, corePresented=%s",
     async (corePresented) => {

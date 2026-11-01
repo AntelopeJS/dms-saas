@@ -158,8 +158,10 @@ async function confirm(): Promise<void> {
 	if (!plan) return
 	hasTriedSubmit.value = true
 	if (invalidFields.value.length > 0) {
-		presentError(new Error('Incomplete billing identity'), {
-			fallbackKey: 'saas.tenant_billing.billing_info.incomplete_toast',
+		toast.add({
+			title: t('saas.tenant_billing.billing_info.incomplete_toast'),
+			color: 'warning',
+			icon: 'i-ph-warning-circle',
 		})
 		return
 	}
