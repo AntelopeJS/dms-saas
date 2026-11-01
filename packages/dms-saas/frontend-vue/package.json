@@ -6,7 +6,7 @@
 	"license": "Apache-2.0",
 	"packageManager": "pnpm@10.6.5",
 	"engines": {
-		"@antelopejs/dms-frontend": ">=0.9.1 <0.10.0"
+		"@antelopejs/dms-frontend": ">=0.10.0 <0.11.0"
 	},
 	"scripts": {
 		"format": "prettier --write .",

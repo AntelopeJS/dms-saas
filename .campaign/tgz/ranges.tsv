@@ -45,9 +45,13 @@
 @antelopejs/interface-dms-automation	packages/dms-saas/package.json	optionalDependencies	>=0.2.1 <1.0.0
 @antelopejs/interface-dms-automation	package.json	pnpm.overrides	
 @antelopejs/interface-dms-automation	pnpm-workspace.yaml	overrides	
+@antelopejs/dms-frontend	packages/dms-saas/package.json	devDependencies	>=0.9.1 <0.10.0
+@antelopejs/dms-frontend	packages/dms-saas/playground/package.json	devDependencies	>=0.9.1 <0.10.0
+@antelopejs/dms-frontend	package.json	pnpm.overrides	
+@antelopejs/dms-frontend	pnpm-workspace.yaml	overrides	
+@antelopejs/dms-frontend	packages/dms-saas/playground/package.json	pnpm.overrides	
 @antelopejs/interface-core	packages/dms-saas/package.json	dependencies	>=0.2.4 <1.0.0
 @antelopejs/interface-core	packages/dms-saas/playground/package.json	dependencies	>=0.2.4 <1.0.0
-@antelopejs/interface-core	packages/interface-dms-saas/package.json	devDependencies	>=0.2.4 <1.0.0
 @antelopejs/interface-core	package.json	pnpm.overrides	
 @antelopejs/interface-core	pnpm-workspace.yaml	overrides	
 @antelopejs/interface-core	packages/dms-saas/playground/package.json	pnpm.overrides	
