@@ -55,9 +55,9 @@ The implementation is `@antelopejs/dms-saas`; the compatibility block of its [RE
 | Package                                     | Supported                                                            | Tested with                                                               |
 | ------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                     | `0.2.4`                                                                   |
-| `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-4352b2c.tgz` | `file:.campaign/tgz/antelopejs-interface-data-api-4352b2c.tgz`            |
-| `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-8261536.tgz`            |
-| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-decorators-fcb0a29.tgz` |
+| `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-e070b68.tgz` | `file:.campaign/tgz/antelopejs-interface-data-api-e070b68.tgz`            |
+| `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            |
+| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-decorators-e79a62b.tgz` |
 | `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-50e3adc.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-50e3adc.tgz`                 |
 
 <!-- antelopejs-docs-compat:end -->
