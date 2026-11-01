@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { HOME_PATH } from '../build/workspace-paths'
+import { HOME_PATH, workspaceSwitchLandingPath } from '../build/workspace-paths'
 import WorkspaceSwitcherRow from '../build/WorkspaceSwitcherRow.vue'
 
 // Drawn as two roots: attributes have no single element to land on.
@@ -16,6 +16,8 @@ const PAST_DUE_STATUS = 'past_due'
 const toast = useToast()
 const { t } = useI18n()
 const { statusView } = useSaasStatus()
+const route = useDmsRoute()
+const siteLayout = useSiteLayout()
 
 // Platform owners are not tenant members by default, so an owner can legitimately
 // have no workspace at all — the switcher must still offer them a way in.
@@ -97,7 +99,12 @@ async function selectWorkspace(workspace: MyWorkspace): Promise<void> {
 	if (workspace.isCurrent || switchingId.value) return
 	switchingId.value = workspace._id
 	try {
-		await useTenantSwitch(workspace._id)
+		await useTenantSwitch(
+			workspace._id,
+			workspaceSwitchLandingPath(
+				siteLayout.findMatchingRoute(route.path)?.metadata,
+			),
+		)
 	} catch {
 		switchingId.value = null
 		reportSwitchFailure(workspace)
