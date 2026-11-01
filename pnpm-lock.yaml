@@ -15,6 +15,7 @@ overrides:
   '@antelopejs/interface-dms': file:.campaign/tgz/antelopejs-interface-dms-50e3adc.tgz
   '@antelopejs/dms': file:.campaign/tgz/antelopejs-dms-50e3adc.tgz
   '@antelopejs/dms>@antelopejs/interface-core': 0.2.4
+  '@antelopejs/interface-dms-automation': file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz
 
 importers:
 
@@ -119,8 +120,8 @@ importers:
         version: 4.1.12(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1))
     optionalDependencies:
       '@antelopejs/interface-dms-automation':
-        specifier: '>=0.2.1 <1.0.0'
-        version: 0.2.1(@antelopejs/interface-core@0.2.4)
+        specifier: file:../../.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz
+        version: file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz(@antelopejs/interface-core@0.2.4)
 
   packages/dms-saas/frontend-vue:
     dependencies:
@@ -275,13 +276,9 @@ packages:
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/interface-dms-automation@0.2.1':
-    resolution: {integrity: sha512-2G3w/GvS2NRBN/WBGwvkHXEDajH/jlKKGgJ5ryoe2Ge/Qo0TGdux9mhZOr5as8qE3qNqCNfPNyaUtKQMv+HwLQ==}
-    peerDependencies:
-      '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
-
-  '@antelopejs/interface-dms-automation@0.4.0':
-    resolution: {integrity: sha512-L8YZmFYs7m4l/kn3Uc16evBcjhMYk1O9okUMZITjAHjfwRIQwEYU64yxgNE5tSPhHhk9VTyUmoBUV5GEdOmhQg==}
+  '@antelopejs/interface-dms-automation@file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz':
+    resolution: {integrity: sha512-QYkzTrr7ZGybut0ajNGNXUCwMQtP9WKeXeTfiwF8e6kFie/JXYL8RbcEditGg14AZgleAKESoCzvcQvtKeKweA==, tarball: file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz}
+    version: 0.6.0
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
@@ -5207,7 +5204,7 @@ snapshots:
       zod: 3.24.4
     optionalDependencies:
       '@antelopejs/core': 1.17.1
-      '@antelopejs/interface-dms-automation': 0.4.0(@antelopejs/interface-core@0.2.4)
+      '@antelopejs/interface-dms-automation': file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz(@antelopejs/interface-core@0.2.4)
       '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.2.4)
     transitivePeerDependencies:
       - bare-abort-controller
@@ -5256,12 +5253,7 @@ snapshots:
     dependencies:
       '@antelopejs/interface-core': 0.2.4
 
-  '@antelopejs/interface-dms-automation@0.2.1(@antelopejs/interface-core@0.2.4)':
-    dependencies:
-      '@antelopejs/interface-core': 0.2.4
-    optional: true
-
-  '@antelopejs/interface-dms-automation@0.4.0(@antelopejs/interface-core@0.2.4)':
+  '@antelopejs/interface-dms-automation@file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz(@antelopejs/interface-core@0.2.4)':
     dependencies:
       '@antelopejs/interface-core': 0.2.4
     optional: true
