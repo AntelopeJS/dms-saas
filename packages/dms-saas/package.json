@@ -1,6 +1,6 @@
 {
   "name": "@antelopejs/dms-saas",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "SaaS module for the AntelopeJS DMS: self-service sign-up and pricing, plans that gate features, Stripe billing, workspace settings and a back office.",
   "keywords": [
     "antelopejs",
