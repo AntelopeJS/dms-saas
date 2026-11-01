@@ -5,13 +5,16 @@ import {
   Parameter,
   Post,
 } from "@antelopejs/interface-api";
-import { assert, assertValidation } from "@antelopejs/interface-api-util";
+import {
+  assert,
+  assertValidation,
+  zodIssuesJson,
+} from "@antelopejs/interface-api-util";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { ZodError } from "zod";
-import { zodIssuesJson } from "../../utils/zod-json";
 import { InvoiceModel } from "../../db";
 import {
   buildCreditNoteParams,
