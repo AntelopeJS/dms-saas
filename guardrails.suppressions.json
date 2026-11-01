@@ -1,6 +1,6 @@
 {
   "rules": {
-    "anti-slop/no-chained-type-assertions": 1,
+    "anti-slop/no-chained-type-assertions": 0,
     "anti-slop/no-object-parameters": 1,
     "import/no-cycle": 2,
     "typescript/no-misused-spread": 1,
