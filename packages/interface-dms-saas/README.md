@@ -58,7 +58,7 @@ The implementation is `@antelopejs/dms-saas`; the compatibility block of its [RE
 | `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-7a8719d.tgz` | `file:.campaign/tgz/antelopejs-interface-data-api-7a8719d.tgz`            |
 | `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            |
 | `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz` |
-| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-0cfaaa3.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-0cfaaa3.tgz`                 |
+| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-c05ba50.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-c05ba50.tgz`                 |
 
 <!-- antelopejs-docs-compat:end -->
 
