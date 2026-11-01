@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@antelopejs/dms':
-        specifier: '>=0.13.0 <1.0.0'
-        version: 0.13.0(@antelopejs/core@1.17.1)
+        specifier: '>=0.13.1 <1.0.0'
+        version: 0.13.1(@antelopejs/core@1.17.1)
       '@antelopejs/interface-api':
         specifier: '>=0.0.15 <1.0.0'
         version: 0.0.15(@antelopejs/interface-core@0.2.4)
@@ -72,8 +72,8 @@ packages:
     peerDependencies:
       '@antelopejs/core': '>=1.16.0 <2'
 
-  '@antelopejs/dms@0.13.0':
-    resolution: {integrity: sha512-j6MdVIe1PBqH93hO7b7Zi+ZFOITQkVdxKne5bvGg/iJJnE451WzkqNGI1Jjk4PV1xJxwGr4ZV/Rkq2qOludWkw==}
+  '@antelopejs/dms@0.13.1':
+    resolution: {integrity: sha512-caSbDrh1nW3dprRMDr9796Gfm1Oh5EDcBDIfE07l2NOEAFvx03SpEeFNaYIEakwL5wXJWfFCJUpAgDeUEbZ5aQ==}
     hasBin: true
     peerDependencies:
       '@antelopejs/core': '>=1.17.0 <2'
@@ -1109,7 +1109,7 @@ snapshots:
       '@oxc-parser/binding-linux-x64-gnu': 0.95.0
       '@oxc-parser/binding-win32-x64-msvc': 0.95.0
 
-  '@antelopejs/dms@0.13.0(@antelopejs/core@1.17.1)':
+  '@antelopejs/dms@0.13.1(@antelopejs/core@1.17.1)':
     dependencies:
       2fa: 0.1.2
       '@antelopejs/interface-api': 0.0.15(@antelopejs/interface-core@0.2.6)
