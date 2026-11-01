@@ -6,6 +6,7 @@ import {
   Plan,
   PLAN_FALLBACK_LOCALE,
   PLAN_LOCALIZED_FIELDS,
+  type FeatureValue,
   type PlanFeatureValue,
   plansTableName,
 } from "../tables/plans.table";
@@ -100,7 +101,7 @@ export class PlanModel extends BasicDataModel(Plan, plansTableName) {
   async resolveInheritance(plan: Plan): Promise<ResolvedPlanInheritance> {
     const chain = await this.resolveInheritanceChain(plan);
     const permissions = new Set<string>();
-    const featureMap = new Map<string, unknown>();
+    const featureMap = new Map<string, FeatureValue>();
     for (let i = chain.length - 1; i >= 0; i--) {
       const link = chain[i];
       for (const permission of link.permissions ?? []) {

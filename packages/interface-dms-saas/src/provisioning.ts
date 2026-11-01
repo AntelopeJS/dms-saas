@@ -1,3 +1,5 @@
+import type { JsonObject } from "./json";
+
 /**
  * Workspace and consumer-owned capture supplied to provisioning listeners.
  */
@@ -9,5 +11,5 @@ export interface TenantBeingProvisionedPayload {
    */
   userId?: string;
   /** Consumer-owned capture forwarded verbatim and normalized to an object. */
-  extras?: Record<string, unknown>;
+  extras?: JsonObject;
 }

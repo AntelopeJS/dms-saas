@@ -10,11 +10,18 @@ export type PlanAccessTypeOptions = {
   permissionsTreeUrl?: string;
 };
 
+const featureValueSchema = z.union([
+  z.boolean(),
+  z.number(),
+  z.string(),
+  z.null(),
+]);
+
 const planAccessSchema = z
   .object({
     parentPlanId: z.string().nullable(),
     extraPermissions: z.array(z.string()),
-    extraFeatures: z.record(z.string(), z.unknown()),
+    extraFeatures: z.record(z.string(), featureValueSchema),
   })
   .passthrough();
 

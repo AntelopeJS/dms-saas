@@ -81,15 +81,17 @@ const PAST_DUE_STATUS: TenantSubscriptionStatus = "past_due";
 
 interface DunningClockPatch {
   status?: TenantSubscriptionStatus;
-  [field: string]: unknown;
 }
 
 class DunningClockModifier extends Modifier {
   update(object: DunningClockPatch, field: string): void {
     if (object.status === undefined) return;
-    if (Object.hasOwn(object, field) && object[field] !== undefined) return;
+    const isWritten = Object.entries(object).some(
+      ([key, value]) => key === field && value !== undefined,
+    );
+    if (isWritten) return;
     if (object.status !== PAST_DUE_STATUS) {
-      object[field] = null;
+      Object.assign(object, { [field]: null });
     }
   }
 }

@@ -19,7 +19,7 @@ import { parseFutureDate } from "../utils/parse-future-date";
 import { sendOwnerInvitationEmailInBackground } from "./owner-invitation-email";
 import { createDefaultMemberRole } from "./default-member-role";
 import { isString } from "../utils/primitive-guards";
-import type { JsonValue } from "../utils/json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 
 const HTTP_BAD_REQUEST = 400;
 

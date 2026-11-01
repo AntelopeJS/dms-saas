@@ -42,7 +42,7 @@ import {
   withCheckoutCancelMarker,
 } from "./tenant-plan-checkout-recovery";
 import { isString } from "../../utils/primitive-guards";
-import type { JsonValue } from "../../utils/json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 
 const HTTP_UNPROCESSABLE = 422;
 const HTTP_SERVICE_UNAVAILABLE = 503;
