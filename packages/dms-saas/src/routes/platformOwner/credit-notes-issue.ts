@@ -27,6 +27,7 @@ import {
   assertStripeConfigured,
   withStripeAvailability,
 } from "../../stripe/availability";
+import { zodIssuesJson } from "../../utils/zod-json";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
@@ -104,7 +105,8 @@ export class SaasCreditNotesIssueController extends Controller(
     const body = assertValidation(
       rawBody,
       (value) => issueCreditNoteBodySchema.parse(value),
-      (error) => (error instanceof ZodError ? error.issues : undefined),
+      (error) =>
+        error instanceof ZodError ? zodIssuesJson(error.issues) : undefined,
     );
     assertStripeConfigured();
     const loaded = await loadInvoice(invoiceModel, body.invoiceId);

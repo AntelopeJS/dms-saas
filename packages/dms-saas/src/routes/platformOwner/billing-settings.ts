@@ -39,6 +39,7 @@ import {
   startPlanReconciliation,
 } from "../../plans/stripe-sync";
 import { isStripeConfigured } from "../../stripe/client";
+import { zodIssuesJson } from "../../utils/zod-json";
 
 const HTTP_CONFLICT = 409;
 
@@ -135,7 +136,8 @@ export class SaasBillingSettingsController extends Controller(
     const body = assertValidation(
       rawBody,
       (value) => billingRulesBodySchema.parse(value),
-      (error) => (error instanceof ZodError ? error.issues : undefined),
+      (error) =>
+        error instanceof ZodError ? zodIssuesJson(error.issues) : undefined,
     );
     const before = await this.loadSettings();
     const now = new Date();
