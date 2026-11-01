@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@antelopejs/interface-data-api": "file:../../.campaign/tgz/antelopejs-interface-data-api-7a8719d.tgz",
-    "@antelopejs/interface-dms": "file:../../.campaign/tgz/antelopejs-interface-dms-c05ba50.tgz"
+    "@antelopejs/interface-dms": "file:../../.campaign/tgz/antelopejs-interface-dms-c88750b.tgz"
   },
   "devDependencies": {
     "@antelopejs/interface-api": "file:../../.campaign/tgz/antelopejs-interface-api-2d1cc37.tgz",
