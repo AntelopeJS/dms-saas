@@ -69,7 +69,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 | Package                                     | Supported                                                                       | Tested with                                                               |
 | ------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `@antelopejs/interface-api`                 | `file:../../.campaign/tgz/antelopejs-interface-api-f2a99b5.tgz`                 | `file:.campaign/tgz/antelopejs-interface-api-f2a99b5.tgz`                 |
-| `@antelopejs/interface-api-util`            | `file:../../.campaign/tgz/antelopejs-interface-api-util-cc740f8.tgz`            | `file:.campaign/tgz/antelopejs-interface-api-util-cc740f8.tgz`            |
+| `@antelopejs/interface-api-util`            | `file:../../.campaign/tgz/antelopejs-interface-api-util-87b092e.tgz`            | `file:.campaign/tgz/antelopejs-interface-api-util-87b092e.tgz`            |
 | `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                                | `0.2.4`                                                                   |
 | `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-26c36e9.tgz`            | `file:.campaign/tgz/antelopejs-interface-data-api-26c36e9.tgz`            |
 | `@antelopejs/interface-database`            | `file:../../.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            | `file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            |

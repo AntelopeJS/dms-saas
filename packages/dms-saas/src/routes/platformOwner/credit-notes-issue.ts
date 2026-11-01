@@ -11,6 +11,7 @@ import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { ZodError } from "zod";
+import { zodIssuesJson } from "../../utils/zod-json";
 import { InvoiceModel } from "../../db";
 import {
   buildCreditNoteParams,
@@ -104,7 +105,8 @@ export class SaasCreditNotesIssueController extends Controller(
     const body = assertValidation(
       rawBody,
       (value) => issueCreditNoteBodySchema.parse(value),
-      (error) => (error instanceof ZodError ? error.issues : undefined),
+      (error) =>
+        error instanceof ZodError ? zodIssuesJson(error.issues) : undefined,
     );
     assertStripeConfigured();
     const loaded = await loadInvoice(invoiceModel, body.invoiceId);
