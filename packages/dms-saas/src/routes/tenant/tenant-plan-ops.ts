@@ -62,7 +62,9 @@ export async function planChangeResponse<T>(
     if (error instanceof PlanChangeIncompatibleError) {
       throw new HTTPResult(HTTP_CONFLICT, {
         code: "saas.errors.plan.incompatible",
-        incompatibilities: error.incompatibilities,
+        incompatibilities: error.incompatibilities.map((item) => ({
+          ...item,
+        })),
       });
     }
     throw error;
