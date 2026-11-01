@@ -10,6 +10,7 @@ import {
   UpdateTime,
 } from "@antelopejs/interface-database-decorators";
 import { CORE_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
+import type { FeatureValue } from "./features.table";
 
 export const plansTableName = "plans";
 
@@ -27,15 +28,6 @@ export type PlanInterval = (typeof PLAN_INTERVALS)[number];
 
 export const PLAN_BILLING_MODES = ["flat", "seat"] as const;
 export type PlanBillingMode = (typeof PLAN_BILLING_MODES)[number];
-
-/**
- * What a plan states for a feature: a switch, a limit or a label. `null`
- * states nothing, as a display-only feature the plan does not grant.
- */
-export type FeatureValue = boolean | number | string | null;
-
-/** Feature values of a plan, by feature id. */
-export type FeatureValues = Record<string, FeatureValue>;
 
 export interface PlanFeatureValue {
   featureId: string;

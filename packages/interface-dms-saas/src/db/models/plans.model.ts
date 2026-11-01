@@ -6,10 +6,10 @@ import {
   Plan,
   PLAN_FALLBACK_LOCALE,
   PLAN_LOCALIZED_FIELDS,
-  type FeatureValue,
   type PlanFeatureValue,
   plansTableName,
 } from "../tables/plans.table";
+import type { FeatureValue } from "../tables/features.table";
 
 const MAX_INHERITANCE_DEPTH = 10;
 
