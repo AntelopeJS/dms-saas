@@ -14,6 +14,17 @@ import {
   SAAS_MODULE_DEFINITION,
 } from "./page-definitions";
 
+declare module "@antelopejs/interface-dms/page/types" {
+  interface MenuOptions {
+    /**
+     * This page names a record owned by the current workspace. Switching
+     * workspaces from it lands on the homepage instead of reloading its URL.
+     * Omit or set to false to keep reloading the current URL.
+     */
+    workspaceScoped?: boolean;
+  }
+}
+
 /** Stable identifiers for the tenant billing page and its extension anchors. */
 export const tenantBillingPage = {
   id: "billing",
