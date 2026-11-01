@@ -63,7 +63,7 @@ function readonlyForNonOwners(
  * switcher. A rename reads the page's blocks and data again, as any form
  * changing what its page shows.
  */
-const identityForm = Form({
+export const identityForm = Form({
   fields: [
     {
       id: "name",

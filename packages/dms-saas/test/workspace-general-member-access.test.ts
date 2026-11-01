@@ -4,16 +4,15 @@ import {
   BlockFunctions,
   type FormFieldSerialized,
   FormEvents,
-  type FormPropsSerialized,
   isFieldGroupSerialized,
 } from "@antelopejs/interface-dms/base";
-import type {
-  ComponentBuilder,
-  ComponentFilterContext,
-} from "@antelopejs/interface-dms/component";
+import type { ComponentFilterContext } from "@antelopejs/interface-dms/component";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { beforeEach, describe, expect, it } from "vitest";
-import { SaasTenantGeneralController } from "../src/pages/tenant/general";
+import {
+  identityForm as servedIdentityForm,
+  SaasTenantGeneralController,
+} from "../src/pages/tenant/general";
 import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import { WORKSPACE_NAME_MAX_LENGTH } from "../src/workspaces/workspace-name";
 import {
@@ -35,10 +34,12 @@ let tenantId = "";
 let owner: User;
 let member: User;
 
-async function identityForm(): Promise<ComponentBuilder<FormPropsSerialized>> {
+/** The identity form, once the identity section is shown to serve it. */
+async function identityForm(): Promise<typeof servedIdentityForm> {
   const section = await SaasTenantGeneralController.identity.componentInfo;
   const form = section.children?.find((child) => child.id === "form");
-  return form?.component as ComponentBuilder<FormPropsSerialized>;
+  expect(form?.component).toBe(servedIdentityForm);
+  return servedIdentityForm;
 }
 
 /** The assertions on what the identity form is served to `user`. */
