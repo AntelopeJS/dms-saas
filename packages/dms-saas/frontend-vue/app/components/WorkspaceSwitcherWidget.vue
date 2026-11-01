@@ -13,7 +13,7 @@ const props = defineProps<{
 const KEYS = 'saas.workspace.switcher'
 const SEARCH_THRESHOLD = 6
 const PAST_DUE_STATUS = 'past_due'
-const toast = useToast()
+const { presentError } = useApiErrorPresenter()
 const { t } = useI18n()
 const { statusView } = useSaasStatus()
 const route = useDmsRoute()
@@ -82,15 +82,14 @@ function initialOf(name: string): string {
 	return (name.trim()[0] ?? '?').toUpperCase()
 }
 
-function reportSwitchFailure(target: MyWorkspace | string): void {
+function reportSwitchFailure(
+	error: unknown,
+	target: MyWorkspace | string,
+): void {
 	const name = typeof target === 'string' ? target : target.name
-	toast.add({
-		title: t(`${KEYS}.switch_failed`, { name }),
-		description: current.value
-			? t(`${KEYS}.still_in`, { name: current.value.name })
-			: undefined,
-		color: 'error',
-		icon: 'i-ph-warning-circle',
+	presentError(error, {
+		fallbackKey: `${KEYS}.switch_failed`,
+		params: { name },
 	})
 }
 
@@ -105,9 +104,9 @@ async function selectWorkspace(workspace: MyWorkspace): Promise<void> {
 				siteLayout.findMatchingRoute(route.path)?.metadata,
 			),
 		)
-	} catch {
+	} catch (error) {
 		switchingId.value = null
-		reportSwitchFailure(workspace)
+		reportSwitchFailure(error, workspace)
 	}
 }
 
@@ -129,8 +128,8 @@ async function onWorkspaceCreated(
 		// Lands on the homepage rather than reloading the screen the creation
 		// was started from — that screen belongs to the previous workspace.
 		await useTenantSwitch(tenantId, HOME_PATH)
-	} catch {
-		reportSwitchFailure(name)
+	} catch (error) {
+		reportSwitchFailure(error, name)
 		await load()
 	}
 }

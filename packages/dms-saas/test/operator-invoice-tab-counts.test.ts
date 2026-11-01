@@ -53,12 +53,7 @@ describe("operator invoices tab counters", () => {
     const counts = await entry.callback.func.call(
       controller,
       ctx,
-      {
-        queries: [
-          { id: "all", query: {} },
-          { id: "void", query: { filter_status: "is:void" } },
-        ],
-      },
+      ["all?", "void?filter_status=is:void"],
       OWNER,
     );
 

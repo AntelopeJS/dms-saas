@@ -16,10 +16,9 @@ const TIME_FORMAT: Intl.DateTimeFormatOptions = {
 
 const { t, locale } = useI18n()
 const { user } = useCurrentUser()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError } = useApiErrorPresenter()
 const route = useDmsRoute()
 const router = useDmsRouter()
-const toast = useToast()
 const { state, running, load, start, download } = useExportHistory()
 
 /** The export this visit watched finish, shown until the page is left. */
@@ -34,7 +33,11 @@ const runningStatus = useApiData<ExportJobStatus>(
 		running.value
 			? `${EXPORT_STATUS_ENDPOINT}/${encodeURIComponent(running.value.jobId)}`
 			: null,
-	{ server: false, refreshInterval: POLL_INTERVAL_MS, refreshOnPageRefresh: false },
+	{
+		server: false,
+		refreshInterval: POLL_INTERVAL_MS,
+		refreshOnPageRefresh: false,
+	},
 )
 
 const email = computed(() => user.value?.email ?? '')
@@ -70,25 +73,21 @@ function errorStatus(error: unknown): number | undefined {
 	return typeof status === 'number' ? status : undefined
 }
 
-function notifyError(error: unknown, fallbackKey: string): void {
-	toast.add({
-		title: resolveApiError(error, fallbackKey),
-		color: 'error',
-		icon: 'i-ph-warning-circle',
-	})
-}
-
 async function requestExport(): Promise<void> {
 	finished.value = null
 	expiredLinkJobId.value = null
-	await start().catch((error) => notifyError(error, `${KEYS}.error.start`))
+	await start().catch((error) =>
+		presentError(error, { fallbackKey: `${KEYS}.error.start` }),
+	)
 }
 
 async function downloadFinished(): Promise<void> {
 	if (!finished.value || isDownloading.value) return
 	isDownloading.value = true
 	await download(finished.value.jobId, finished.value)
-		.catch((error) => notifyError(error, `${KEYS}.error.download`))
+		.catch((error) =>
+			presentError(error, { fallbackKey: `${KEYS}.error.download` }),
+		)
 		.finally(() => {
 			isDownloading.value = false
 		})
@@ -127,7 +126,8 @@ async function consumeDeliveredLink(): Promise<void> {
 		await clearDeliveredLink()
 	} catch (error) {
 		const isGone = GONE_STATUSES.has(errorStatus(error) ?? 0)
-		if (!isGone) return notifyError(error, `${KEYS}.error.download`)
+		if (!isGone)
+			return presentError(error, { fallbackKey: `${KEYS}.error.download` })
 		expiredLinkJobId.value = jobId
 		await clearDeliveredLink()
 	}

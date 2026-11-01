@@ -13,7 +13,7 @@ const { t } = useI18n()
 const { $authFetch } = useAuthFetch()
 const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError } = useApiErrorPresenter()
 const detail = useUserDetail(() => props.routeParams)
 const user = computed(() => detail.data.value)
 const isOpening = ref(false)
@@ -37,10 +37,7 @@ async function openConfirm(): Promise<void> {
 			onConfirm: () => runChange(kind),
 		})
 	} catch (error) {
-		toast.add({
-			color: 'error',
-			title: resolveApiError(error, `${I18N}.confirm_failed`),
-		})
+		presentError(error, { fallbackKey: `${I18N}.confirm_failed` })
 	} finally {
 		isOpening.value = false
 	}

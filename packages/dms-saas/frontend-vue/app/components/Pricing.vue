@@ -25,7 +25,7 @@ import type { PlanInterval } from '../composables/usePlanIntervalLabel'
 const SKELETON_CARDS = 3
 
 const { t } = useI18n()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 const config = useDmsRuntimeConfig()
 const saasConfig = config.public.dmsSaas as
 	| DmsSaasPublicRuntimeConfig
@@ -41,7 +41,9 @@ const isLoading = computed(
 )
 const loadError = computed(() =>
 	pricingRead.error.value
-		? resolveApiError(pricingRead.error.value, 'saas.public.pricing.load_error')
+		? (resolveError(pricingRead.error.value, {
+				fallbackKey: 'saas.public.pricing.load_error',
+			})?.message ?? '')
 		: null,
 )
 const interval = ref<PlanInterval>('month')

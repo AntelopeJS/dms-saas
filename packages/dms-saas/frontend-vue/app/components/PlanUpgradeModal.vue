@@ -20,7 +20,7 @@ const PREVIEW_DEBOUNCE_MS = 400
 
 const toast = useToast()
 const { t, locale } = useI18n()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError, resolveError } = useApiErrorPresenter()
 const identity = useBillingIdentity()
 const { changePlan, previewChange } = useTenantPlanChanges()
 const { offerFor: offerPendingCheckout } = usePendingCheckout()
@@ -113,10 +113,9 @@ async function price(): Promise<void> {
 		previewFailure.value = null
 	} catch (error) {
 		preview.value = null
-		previewFailure.value = resolveApiError(
-			error,
-			`${KEY_PREFIX}.preview_failed`,
-		)
+		previewFailure.value =
+			resolveError(error, { fallbackKey: `${KEY_PREFIX}.preview_failed` })
+				?.message ?? ''
 	} finally {
 		isPricing.value = false
 	}
@@ -149,10 +148,6 @@ watch(
 	},
 )
 
-function notifyError(title: string): void {
-	toast.add({ title, color: 'error', icon: 'i-ph-warning-circle' })
-}
-
 /**
  * The identity is saved first: the plan change checks the plan's audience
  * against the stored customer type, and Stripe Checkout bills the customer
@@ -163,7 +158,9 @@ async function confirm(): Promise<void> {
 	if (!plan) return
 	hasTriedSubmit.value = true
 	if (invalidFields.value.length > 0) {
-		notifyError(t('saas.tenant_billing.billing_info.incomplete_toast'))
+		presentError(new Error('Incomplete billing identity'), {
+			fallbackKey: 'saas.tenant_billing.billing_info.incomplete_toast',
+		})
 		return
 	}
 	isSubmitting.value = true
@@ -186,7 +183,7 @@ async function confirm(): Promise<void> {
 			open.value = false
 			return
 		}
-		notifyError(resolveApiError(error, 'saas.workspace.plan.change_error'))
+		presentError(error, { fallbackKey: 'saas.workspace.plan.change_error' })
 	} finally {
 		isSubmitting.value = false
 	}

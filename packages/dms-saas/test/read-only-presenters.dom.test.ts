@@ -5,7 +5,6 @@ import { useApiErrorPresenter } from "../node_modules/@antelopejs/dms/frontend-v
 import TenantBillingForm from "../frontend-vue/app/components/TenantBillingForm.vue";
 import DataExport from "../frontend-vue/app/components/DataExport.vue";
 import DataExportHistory from "../frontend-vue/app/components/DataExportHistory.vue";
-import { useApiErrorMessage } from "../frontend-vue/app/composables/useApiErrorMessage";
 import * as billing from "../frontend-vue/app/composables/useBillingIdentity";
 import { useExportHistory } from "../frontend-vue/app/composables/useExportHistory";
 
@@ -80,7 +79,6 @@ beforeEach(() => {
     $i18n: { t: translate, te: () => false },
   }));
   vi.stubGlobal("useI18n", () => ({ t: translate, locale: ref("en") }));
-  vi.stubGlobal("useApiErrorMessage", useApiErrorMessage);
   vi.stubGlobal("useAuthFetch", () => ({ $authFetch: fetch }));
   vi.stubGlobal("refreshPageBlocks", refresh);
   vi.stubGlobal("formatDate", () => "");
@@ -215,6 +213,13 @@ describe.each([DataExport, DataExportHistory])(
         data: {},
         title: "saas.workspace.data_export.error.start",
         color: "error",
+        corePresented: false,
+      },
+      {
+        status: 503,
+        data: { message: "error.read_only_demo", severity: "info" },
+        title: READ_ONLY_TITLE,
+        color: "info",
         corePresented: false,
       },
     ])(

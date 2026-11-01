@@ -64,7 +64,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 
 | Package | Version |
 | --- | --- |
-| `@antelopejs/dms` | `>=0.11.0 <1.0.0` |
+| `@antelopejs/dms` | `>=0.13.0 <1.0.0` |
 | `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
 | `@antelopejs/dms-frontend` (renderer) | `>=0.9.1 <0.10.0` |
 | `@antelopejs/interface-dms-saas` | `>=0.6.0 <0.7.0` |

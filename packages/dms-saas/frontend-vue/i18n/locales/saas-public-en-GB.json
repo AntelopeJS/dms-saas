@@ -250,8 +250,7 @@
 						"complimentary_expired": "Choose a plan"
 					},
 					"manage_in_stripe": "Manage in Stripe",
-					"portal_failed": "We couldn't open Stripe",
-					"portal_failed_hint": "Try again, or pay the invoice from Billing."
+					"portal_failed": "We couldn't open Stripe"
 				},
 				"member": {
 					"title": "Only the workspace owner can restore access",
@@ -265,8 +264,7 @@
 					"owner": "workspace owner",
 					"member": "member",
 					"open": "Open",
-					"switch_failed": "We couldn't open {name}",
-					"switch_failed_hint": "Try again in a moment."
+					"switch_failed": "We couldn't open {name}"
 				},
 				"signed_in_as": "Signed in as {email}",
 				"check_again": "Check again",

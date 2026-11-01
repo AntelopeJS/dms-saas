@@ -26,7 +26,7 @@ const KEY_PREFIX = 'saas.tenant_billing.plan_change.review'
 
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 const { previewChange, changePlan } = useTenantPlanChanges()
 const { offerFor: offerPendingCheckout } = usePendingCheckout()
 const { formatMinorUnits, formatMajorUnits } = useMoneyFormat()
@@ -197,7 +197,9 @@ async function loadPreview(): Promise<void> {
 		preview.value = null
 		incompatibilities.value = readPlanChangeIncompatibilities(error)
 		if (!incompatibilities.value) {
-			loadFailure.value = resolveApiError(error, `${KEY_PREFIX}.load_failed`)
+			loadFailure.value =
+				resolveError(error, { fallbackKey: `${KEY_PREFIX}.load_failed` })
+					?.message ?? ''
 		}
 	} finally {
 		isLoading.value = false
@@ -230,10 +232,9 @@ async function confirm(): Promise<void> {
 			preview.value = null
 			return
 		}
-		submitFailure.value = resolveApiError(
-			error,
-			'saas.workspace.plan.change_error',
-		)
+		submitFailure.value =
+			resolveError(error, { fallbackKey: 'saas.workspace.plan.change_error' })
+				?.message ?? ''
 	} finally {
 		isSubmitting.value = false
 	}

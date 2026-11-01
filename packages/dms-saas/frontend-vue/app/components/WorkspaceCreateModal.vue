@@ -65,7 +65,7 @@ const CARD_ERROR_KEYS = new Set([
 
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 const { formatMajorUnits } = useMoneyFormat()
 const planPriceLabel = usePlanPriceLabel()
 const planIntervalLabel = usePlanIntervalLabel(`${KEYS}.interval`)
@@ -184,7 +184,9 @@ async function setUpCard(): Promise<void> {
 		await initStripeElement()
 	} catch (error) {
 		cardSetup = null
-		cardError.value = resolveApiError(error, `${KEYS}.error.card_setup`)
+		cardError.value =
+			resolveError(error, { fallbackKey: `${KEYS}.error.card_setup` })
+				?.message ?? ''
 	}
 }
 
@@ -205,7 +207,9 @@ async function load(): Promise<void> {
 		options.value = await optionsRead.read()
 		selectedPlanId.value ??= options.value.plans[0]?._id ?? null
 	} catch (error) {
-		loadError.value = resolveApiError(error, `${KEYS}.error.load_description`)
+		loadError.value =
+			resolveError(error, { fallbackKey: `${KEYS}.error.load_description` })
+				?.message ?? ''
 	} finally {
 		isLoading.value = false
 	}
@@ -236,7 +240,8 @@ async function confirmCard(): Promise<ConfirmedPayment> {
 }
 
 function reportSubmitError(error: unknown): void {
-	const message = resolveApiError(error, `${KEYS}.error.failed`)
+	const message =
+		resolveError(error, { fallbackKey: `${KEYS}.error.failed` })?.message ?? ''
 	if (CARD_ERROR_KEYS.has(readApiErrorKey(error) ?? '')) {
 		cardError.value = message
 		return
@@ -251,7 +256,9 @@ async function renewCard(): Promise<void> {
 	try {
 		await stripeHandle.value?.renew(await createSetupIntent())
 	} catch (error) {
-		cardError.value = resolveApiError(error, `${KEYS}.error.card_setup`)
+		cardError.value =
+			resolveError(error, { fallbackKey: `${KEYS}.error.card_setup` })
+				?.message ?? ''
 	}
 }
 

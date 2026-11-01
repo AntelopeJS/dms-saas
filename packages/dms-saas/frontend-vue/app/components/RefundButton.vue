@@ -57,7 +57,6 @@ const { $authFetch } = useAuthFetch()
 const toast = useToast()
 const { t, locale } = useI18n()
 const { confirm } = useConfirm()
-const { resolveApiError } = useApiErrorMessage()
 const { formatMinorUnits } = useMoneyFormat()
 const billingStatus = useBillingStatus()
 const tenantPlan = useTenantPlan()
@@ -223,7 +222,10 @@ async function requestRefund(): Promise<void> {
 			try {
 				await submitRefund()
 			} catch (error) {
-				throw new Error(resolveApiError(error, `${KEY_PREFIX}.error`))
+				throw new ConfirmActionError(
+					{ fallbackKey: `${KEY_PREFIX}.error` },
+					{ cause: error },
+				)
 			}
 		},
 	})

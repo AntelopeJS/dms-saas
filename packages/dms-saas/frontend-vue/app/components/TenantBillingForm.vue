@@ -22,7 +22,7 @@ const DRAFT_FIELDS: (keyof BillingIdentityDraft)[] = [
 
 const toast = useToast()
 const { t, locale } = useI18n()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError } = useApiErrorPresenter()
 const identity = useBillingIdentity()
 const info = useBillingInfo()
 const { data: billingStatus } = useBillingStatus()
@@ -79,10 +79,8 @@ function discard(): void {
 async function save(): Promise<void> {
 	hasTriedSubmit.value = true
 	if (invalidFields.value.length > 0) {
-		toast.add({
-			title: t(`${KEY_PREFIX}.incomplete_toast`),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
+		presentError(new Error('Incomplete billing identity'), {
+			fallbackKey: `${KEY_PREFIX}.incomplete_toast`,
 		})
 		return
 	}
@@ -95,11 +93,7 @@ async function save(): Promise<void> {
 			icon: 'i-ph-check-circle',
 		})
 	} catch (error) {
-		toast.add({
-			title: resolveApiError(error, `${KEY_PREFIX}.save_error`),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
+		presentError(error, { fallbackKey: `${KEY_PREFIX}.save_error` })
 	} finally {
 		isSaving.value = false
 	}
