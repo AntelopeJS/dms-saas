@@ -10,7 +10,7 @@ import {
   type SegmentNode,
 } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
-import type { JsonValue } from "./json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { isObjectOrNull, isString } from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;

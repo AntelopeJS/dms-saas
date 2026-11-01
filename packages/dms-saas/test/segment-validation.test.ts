@@ -1,4 +1,4 @@
-import type { JsonValue } from "../src/utils/json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import {
   SEGMENT_COUNT_HISTORY_DAYS,
   appendSegmentCountPoint,

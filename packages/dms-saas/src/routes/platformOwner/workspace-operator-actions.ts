@@ -40,7 +40,7 @@ import {
 import { ProvisioningAttemptModel } from "../../workspaces/db/provisioning-attempt.model";
 import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
 import { isNumber, isString } from "../../utils/primitive-guards";
-import type { JsonValue } from "../../utils/json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const HTTP_BAD_REQUEST = 400;

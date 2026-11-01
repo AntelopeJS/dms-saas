@@ -1,5 +1,6 @@
 import type {
   Feature,
+  FeatureValues,
   FeatureValueType,
   Plan,
   PlanFeatureValue,
@@ -7,7 +8,7 @@ import type {
 } from "../db";
 import { withPermissionAncestors } from "./plan-permission-tree";
 import { PLAN_LOCALIZED_FIELDS, PLAN_UNLIMITED, PlanModel } from "../db";
-import type { JsonValue } from "../utils/json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { isBoolean, isNumber, isString } from "../utils/primitive-guards";
 
 /**
@@ -30,7 +31,7 @@ const EDGE_DASHES = /^-+|-+$/g;
 export interface PlanInheritanceInput {
   parentPlanId: string | null;
   extraPermissions: string[];
-  extraFeatures: Record<string, unknown>;
+  extraFeatures: FeatureValues;
 }
 
 /** A free text trimmed, in each of its locales when it is localized. */

@@ -102,7 +102,7 @@ import {
 } from "./tenant-plan-checkout-recovery";
 import { resubscribeOnFreePlan } from "./tenant-plan-resubscription";
 import { ANY_PLAN_AUDIENCE, isPlanOfferedTo } from "../../plans/plan-audience";
-import type { JsonValue } from "../../utils/json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { isNumber, isString } from "../../utils/primitive-guards";
 import type { QueryParameterValue } from "../../utils/query-parameter";
 

@@ -71,7 +71,7 @@ import type { TenantPlanFeature } from "../../plans";
 import { isPlanOfferedTo } from "../../plans/plan-audience";
 import { isString } from "../../utils/primitive-guards";
 import type { QueryParameterValue } from "../../utils/query-parameter";
-import type { JsonValue } from "../../utils/json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import type { TenantBeingProvisionedPayload } from "@antelopejs/interface-dms-saas/provisioning";
 
 const HTTP_BAD_REQUEST = 400;

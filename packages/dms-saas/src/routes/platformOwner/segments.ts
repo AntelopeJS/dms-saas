@@ -30,7 +30,7 @@ import {
   type SegmentInputBody,
   USER_SEGMENT_FIELDS,
 } from "../../utils";
-import type { JsonValue } from "../../utils/json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { isString } from "../../utils/primitive-guards";
 
 interface PlanOption {

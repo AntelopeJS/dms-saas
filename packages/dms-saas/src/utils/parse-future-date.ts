@@ -1,5 +1,5 @@
 import { assert } from "@antelopejs/interface-api-util";
-import type { JsonValue } from "./json-value";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { isString } from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
