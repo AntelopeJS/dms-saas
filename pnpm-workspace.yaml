@@ -11,6 +11,7 @@ overrides:
   "@antelopejs/interface-api": "file:.campaign/tgz/antelopejs-interface-api-f2a99b5.tgz"
   "@antelopejs/interface-api-util": "file:.campaign/tgz/antelopejs-interface-api-util-639f38b.tgz"
   "@antelopejs/interface-dms": "file:.campaign/tgz/antelopejs-interface-dms-0cfaaa3.tgz"
-  "@antelopejs/dms": "file:.campaign/tgz/antelopejs-dms-0cfaaa3.tgz"
+  "@antelopejs/dms": "file:.campaign/tgz/antelopejs-dms-80e4dc1.tgz"
   "@antelopejs/dms>@antelopejs/interface-core": "0.2.4"
   "@antelopejs/interface-dms-automation": "file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz"
+  "@antelopejs/dms-frontend": "file:.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz"
