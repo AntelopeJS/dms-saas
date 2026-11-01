@@ -5,11 +5,7 @@ import {
   Post,
   Put,
 } from "@antelopejs/interface-api";
-import {
-  assert,
-  assertValidation,
-  zodIssuesJson,
-} from "@antelopejs/interface-api-util";
+import { assert, assertValidation } from "@antelopejs/interface-api-util";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
 import type { User } from "@antelopejs/interface-dms/auth/db";
@@ -43,6 +39,7 @@ import {
   startPlanReconciliation,
 } from "../../plans/stripe-sync";
 import { isStripeConfigured } from "../../stripe/client";
+import { zodIssuesJson } from "../../utils/zod-json";
 
 const HTTP_CONFLICT = 409;
 

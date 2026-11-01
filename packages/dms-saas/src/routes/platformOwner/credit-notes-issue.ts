@@ -5,11 +5,7 @@ import {
   Parameter,
   Post,
 } from "@antelopejs/interface-api";
-import {
-  assert,
-  assertValidation,
-  zodIssuesJson,
-} from "@antelopejs/interface-api-util";
+import { assert, assertValidation } from "@antelopejs/interface-api-util";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { Model } from "@antelopejs/interface-database-decorators";
 import { AuthOwnerOnly } from "@antelopejs/interface-dms/auth";
@@ -31,6 +27,7 @@ import {
   assertStripeConfigured,
   withStripeAvailability,
 } from "../../stripe/availability";
+import { zodIssuesJson } from "../../utils/zod-json";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
