@@ -13,3 +13,4 @@ overrides:
   "@antelopejs/interface-dms": "file:.campaign/tgz/antelopejs-interface-dms-50e3adc.tgz"
   "@antelopejs/dms": "file:.campaign/tgz/antelopejs-dms-50e3adc.tgz"
   "@antelopejs/dms>@antelopejs/interface-core": "0.2.4"
+  "@antelopejs/interface-dms-automation": "file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz"
