@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import vue from "@vitejs/plugin-vue";
 import { defineConfig, type ViteUserConfig } from "vitest/config";
 
 const sourceRoot = fileURLToPath(new URL("./src", import.meta.url));
@@ -27,6 +28,7 @@ const oxc = {
  * sources, which carry a test suite the default glob would collect.
  */
 export default defineConfig({
+  plugins: [vue()],
   resolve: {
     alias: {
       "@antelopejs/dms-saas": sourceRoot,
@@ -34,8 +36,25 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["test/**/*.test.ts"],
-    globalSetup: ["test/global-setup.ts"],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          include: ["test/**/*.test.ts"],
+          exclude: ["test/**/*.dom.test.ts"],
+          globalSetup: ["test/global-setup.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "frontend",
+          include: ["test/**/*.dom.test.ts"],
+          environment: "happy-dom",
+        },
+      },
+    ],
   },
   oxc,
 });
