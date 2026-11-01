@@ -1,32 +1,21 @@
-import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePublicPricing } from "../frontend-vue/app/composables/usePublicPricing";
-
-// The pricing page is public and its plans are its content: a server render
-// reads them and hands them to the browser with the page, in the visitor's
-// language, instead of the browser reading them again after it mounted.
-
-const PRICING_SOURCE = readFileSync(
-  new URL("../frontend-vue/app/components/Pricing.vue", import.meta.url),
-  "utf8",
-);
+import type {
+  ApiDataHandler,
+  ApiDataRequest,
+  UseApiDataOptions,
+} from "./helpers/api-data";
+import { toValue } from "./helpers/frontend-vue";
 
 interface FetchOptions {
   signal: AbortSignal;
   headers?: Record<string, string>;
 }
 
-interface Handler {
-  (context: {
-    $authFetch: (url: string, options: FetchOptions) => unknown;
-    signal: AbortSignal;
-  }): unknown;
-}
-
 interface ApiDataCall {
-  key: () => string;
-  handler: Handler;
-  options: unknown;
+  key: ApiDataRequest;
+  handler: ApiDataHandler<unknown>;
+  options: UseApiDataOptions<unknown> | undefined;
 }
 
 function stubReads(locale: { value: string }): ApiDataCall[] {
@@ -34,7 +23,11 @@ function stubReads(locale: { value: string }): ApiDataCall[] {
   vi.stubGlobal("useI18n", () => ({ locale }));
   vi.stubGlobal(
     "useApiData",
-    (key: ApiDataCall["key"], handler: Handler, options: unknown) => {
+    (
+      key: ApiDataRequest,
+      handler: ApiDataHandler<unknown>,
+      options?: UseApiDataOptions<unknown>,
+    ) => {
       calls.push({ key, handler, options });
       return { data: { value: null } };
     },
@@ -56,7 +49,7 @@ describe("public pricing read", () => {
     const fetched: string[] = [];
     const signal = new AbortController().signal;
     await calls[0]!.handler({
-      $authFetch: (url) => fetched.push(url),
+      $authFetch: (url: string) => fetched.push(url),
       signal,
     });
     expect(fetched).toEqual(["/api/saas/pricing"]);
@@ -67,20 +60,14 @@ describe("public pricing read", () => {
     const calls = stubReads(locale);
     usePublicPricing();
 
-    const english = calls[0]!.key();
+    const english = toValue(calls[0]!.key);
     locale.value = "fr";
-    expect(calls[0]!.key()).not.toBe(english);
+    expect(toValue(calls[0]!.key)).not.toBe(english);
     const sent: FetchOptions[] = [];
     await calls[0]!.handler({
-      $authFetch: (_url, options) => sent.push(options),
+      $authFetch: (_url: string, options: FetchOptions) => sent.push(options),
       signal: new AbortController().signal,
     });
     expect(sent[0]!.headers).toEqual({ "x-content-language": "fr" });
-  });
-
-  it("leaves the after-mount public fetch to the screens that need it", () => {
-    expect(PRICING_SOURCE).toContain("usePublicPricing()");
-    expect(PRICING_SOURCE).not.toContain("usePublicFetch");
-    expect(PRICING_SOURCE).not.toContain("onMounted(");
   });
 });

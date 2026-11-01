@@ -160,6 +160,10 @@ const SEATLESS_CHANGE_KINDS: ReadonlySet<SeatChangePayload["kind"]> = new Set([
   "removed",
 ]);
 
+/**
+ * Accepted invitations transfer their existing reservation to membership. They
+ * still validate: `deliveryId` is not a policy bypass.
+ */
 async function enforceSeatOnMemberChange(
   change: SeatChangePayload,
 ): Promise<void> {
@@ -180,8 +184,6 @@ async function enforceSeatOnMemberChange(
     previousIsTenantOwner !== null &&
     !(await isPlatformSupportEntry(userId, previousIsTenantOwner));
   if (!nextHoldsSeat || heldSeat) return;
-  // Accepted invitations transfer their existing reservation to membership.
-  // They still validate: deliveryId is not a policy bypass.
   const user = deliveryId ? await GetModel(UserModel).get(userId) : undefined;
   const occupied = await countOccupiedSeats(tenantId, user?.email);
   for (const plan of [constraints.currentPlan, constraints.pendingPlan]) {
@@ -194,9 +196,23 @@ async function enforceSeatOnMemberChange(
   }
 }
 
-// Platform owners entering a workspace they do not own come to support it,
-// never as one of its seats: they pass the quota and leave the billed
-// quantity untouched. A workspace owner is the customer and always holds one.
+/**
+ * Platform owners entering a workspace they do not own come to support it,
+ * never as one of its seats: they pass the quota and leave the billed
+ * quantity untouched. A workspace owner is the customer and always holds one.
+ *
+ * A delivery id means an accepted invitation: the membership takes over the
+ * seat that invitation already held, so `MEMBER_BEING_ADDED` and `MEMBER_ADDED`
+ * skip it. The accepted invitation is still stored when `MEMBER_ADDED` runs;
+ * its deletion right after syncs the count once it no longer holds the seat.
+ *
+ * An invitation to an already-invited email replaces the existing one (a
+ * resend, a renewed link), so that invitee's seat is not claimed twice.
+ * `INVITE_DELETED` runs before the row is deleted: an invitation that ends
+ * there must not be billed, while a reissued one keeps its seat for its
+ * successor. `MEMBER_REMOVED` runs before the memberships are deleted, while
+ * they still tell which of them held a seat.
+ */
 export function registerSeatHooks(): void {
   RegisterInviteAvailability(resolveInviteSeatAvailability);
   RegisterHook(Hook.MEMBER_BEING_CHANGED, async (payload) => {
@@ -206,16 +222,12 @@ export function registerSeatHooks(): void {
   RegisterHook(
     Hook.MEMBER_BEING_ADDED,
     async ({ tenantId, userId, isTenantOwner, deliveryId }) => {
-      // A delivery id means an accepted invitation: the membership takes over
-      // the seat that invitation already held, and it is still counted here.
       if (deliveryId) return undefined;
       if (await isPlatformSupportEntry(userId, isTenantOwner)) return undefined;
       await enforceSeatCapacity(tenantId);
       return undefined;
     },
   );
-  // An invitation to an already-invited email replaces the existing one (a
-  // resend, a renewed link), so that invitee's seat is not claimed twice.
   RegisterHook(
     Hook.INVITE_BEING_CREATED,
     async ({ tenantId, email, asTenantOwner }) => {
@@ -227,8 +239,6 @@ export function registerSeatHooks(): void {
   RegisterHook(
     Hook.MEMBER_ADDED,
     async ({ tenantId, userId, isTenantOwner, deliveryId }) => {
-      // The accepted invitation is still stored at this point; its deletion
-      // right after syncs the count once it no longer holds the seat.
       if (deliveryId) return undefined;
       if (await isPlatformSupportEntry(userId, isTenantOwner)) return undefined;
       await syncSeatsAfterChange(
@@ -245,8 +255,6 @@ export function registerSeatHooks(): void {
     );
     return undefined;
   });
-  // The hook runs before the row is deleted: an invitation that ends here
-  // must not be billed, while a reissued one keeps its seat for its successor.
   RegisterHook(
     Hook.INVITE_DELETED,
     async ({ tenantId, inviteId, email, reason }) => {
@@ -258,8 +266,6 @@ export function registerSeatHooks(): void {
       return undefined;
     },
   );
-  // The hook runs before the memberships are deleted, while they still tell
-  // which of them held a seat.
   RegisterHook(Hook.MEMBER_REMOVED, async ({ tenantId, userIds }) => {
     await syncSeatsAfterRemoval(
       tenantId,

@@ -1,20 +1,7 @@
 import { randomUUID } from "node:crypto";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   PlanMigrationModel,
   PlanModel,
@@ -26,58 +13,40 @@ import {
   processPlanMigrationJob,
   resumePendingPlanMigrations,
 } from "../src/workers/plan-migration";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
+import { seatMembers } from "./helpers/workspaces";
 
-vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
-  runTenantLifecycleOperation: async (
-    _tenantId: string,
-    work: () => Promise<void>,
-  ) => work(),
-}));
-vi.mock("../src/plans", () => ({
-  countOccupiedSeats: async () => 3,
-  syncStripeSeatQuantity: async () => undefined,
-}));
-vi.mock("../src/plans/seat-capacity", () => ({
-  countOccupiedSeats: async () => 3,
-}));
+useMongoDatabase("plan-migration-concurrency");
+const stripe = useSuiteStripe();
 
 const SCHEDULED_AT = new Date("2026-11-01T00:00:00.000Z");
-const schedule = vi.hoisted(() => ({
-  reset: vi.fn(async () => undefined),
-  downgrade: vi.fn(async () => new Date("2026-11-01T00:00:00.000Z")),
-  cancelAtPeriodEnd: vi.fn(async () => new Date("2026-11-01T00:00:00.000Z")),
-}));
-vi.mock("../src/stripe/plan-schedule", () => ({
-  resetSubscriptionPendingState: schedule.reset,
-  scheduleSubscriptionDowngrade: schedule.downgrade,
-  setSubscriptionCancelAtPeriodEnd: schedule.cancelAtPeriodEnd,
-}));
-
-const SETUP_TIMEOUT_MS = 60_000;
 const OLD_TTL_MS = 15 * 60 * 1000;
-let mongodb: MongoMemoryReplSet;
+/** The seats each migrated workspace occupies. */
+const SEATS = 3;
 
-beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({
-    url: mongodb.getUri(),
-    database: "saas-migration-concurrency",
-  });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-}, SETUP_TIMEOUT_MS);
+/**
+ * Stripe's side of a workspace scheduled to switch plans: no schedule left
+ * attached, and an end-of-period cancellation that ends at {@link SCHEDULED_AT}.
+ */
+function stubScheduledSubscription() {
+  return {
+    retrieve: vi
+      .spyOn(stripe.write.subscriptions, "retrieve")
+      .mockResolvedValue(
+        fromPartial({ schedule: null, cancel_at_period_end: false }),
+      ),
+    update: vi.spyOn(stripe.write.subscriptions, "update").mockResolvedValue(
+      fromPartial({
+        items: {
+          data: [{ current_period_end: SCHEDULED_AT.getTime() / 1_000 }],
+        },
+      }),
+    ),
+  };
+}
 
 afterEach(() => vi.restoreAllMocks());
-afterAll(async () => {
-  try {
-    await destroy();
-  } finally {
-    await mongodb?.stop();
-  }
-});
 
 async function createJob(): Promise<PlanMigration> {
   const model = GetModel(PlanMigrationModel);
@@ -123,6 +92,7 @@ async function createSubscription(
     stripeSubscriptionId: null,
     ...fields,
   });
+  await seatMembers(tenantId, SEATS);
   return tenantId;
 }
 
@@ -139,7 +109,11 @@ async function createScheduledChange(
 }
 
 describe("retiring a plan scheduled changes switch to", () => {
-  beforeEach(() => vi.clearAllMocks());
+  let scheduled: ReturnType<typeof stubScheduledSubscription>;
+
+  beforeEach(() => {
+    scheduled = stubScheduledSubscription();
+  });
 
   it("redirects the scheduled change to the target plan", async () => {
     const job = await createJob();
@@ -152,13 +126,10 @@ describe("retiring a plan scheduled changes switch to", () => {
     expect(persisted?.tenantOutcomes).toEqual([
       expect.objectContaining({ tenantId, status: "succeeded" }),
     ]);
-    expect(schedule.reset).toHaveBeenCalledWith("sub_scheduled");
-    // The target has no Stripe price: the change lands as a cancellation at
-    // the period end, as any deferred change to such a plan does.
-    expect(schedule.cancelAtPeriodEnd).toHaveBeenCalledWith(
-      "sub_scheduled",
-      true,
-    );
+    expect(scheduled.retrieve).toHaveBeenCalledWith("sub_scheduled");
+    expect(scheduled.update).toHaveBeenCalledWith("sub_scheduled", {
+      cancel_at_period_end: true,
+    });
     const subscription = await GetModel(
       TenantSubscriptionModel,
       tenantId,
@@ -184,7 +155,7 @@ describe("retiring a plan scheduled changes switch to", () => {
       pendingPlanId: null,
       pendingPlanChangeAt: null,
     });
-    expect(schedule.cancelAtPeriodEnd).not.toHaveBeenCalled();
+    expect(scheduled.update).not.toHaveBeenCalled();
   });
 });
 
@@ -253,7 +224,7 @@ describe("migration snapshots on the production Mongo provider", () => {
         tenantId,
         status: "succeeded",
         error: null,
-        seatQuantity: 3,
+        seatQuantity: SEATS,
         attempt: 1,
       }),
     ]);
@@ -376,7 +347,7 @@ describe("migration snapshots on the production Mongo provider", () => {
         tenantId,
         status: "succeeded",
         error: null,
-        seatQuantity: 3,
+        seatQuantity: SEATS,
         attempt: 1,
       }),
     ]);

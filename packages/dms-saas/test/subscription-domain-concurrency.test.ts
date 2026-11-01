@@ -261,9 +261,7 @@ describe("operator execution without timed takeover", () => {
       await paused;
       return { details: {}, effectiveAt: new Date() };
     });
-    const first = executeOperatorAction(request, effect).catch(
-      (error: unknown) => error,
-    );
+    const first = executeOperatorAction(request, effect).catch(() => undefined);
     await vi.waitFor(async () =>
       expect(
         (await model.get(current._id))?.domainTransition?.operationId,

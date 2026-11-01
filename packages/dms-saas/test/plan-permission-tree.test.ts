@@ -14,7 +14,7 @@ function branch(
   return { data: { id, title: id, defaultGranted }, children };
 }
 
-const TREE: Record<string, PermissionTree> = {
+const TREE = {
   pages: branch("pages", {
     welcome: branch("pages.welcome", {
       form: branch("pages.welcome.form"),
@@ -46,7 +46,7 @@ const TREE: Record<string, PermissionTree> = {
   media: {
     children: { upload: branch("media.upload") },
   },
-};
+} satisfies Record<string, PermissionTree>;
 
 const ENTRY_IDS = new Set([
   "settings.user.profile",

@@ -92,8 +92,10 @@ export function reconcileDialog(
   });
 }
 
-// Settling a workspace one way while Stripe reads the other way is what the
-// dialog warns about: its colour says so before the operator reads it.
+/**
+ * Settling a workspace one way while Stripe reads the other way is what the
+ * dialog warns about: its colour says so before the operator reads it.
+ */
 const AGREEING_SIDE: Record<UncertainResolution, StripeReading["stripePlan"]> =
   {
     moved: "target",

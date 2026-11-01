@@ -1,6 +1,10 @@
 import type { RequestContext } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
+import {
+  GetDataControllerMeta,
+  type DataControllerCallback,
+  type DataControllerCallbackWithOptions,
+} from "@antelopejs/interface-data-api";
 import type { Parameters } from "@antelopejs/interface-data-api/components";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
@@ -9,21 +13,22 @@ import { workspacesDataAPI } from "../src/data-api/platformOwner/workspaces";
 
 const OWNER = { _id: "owner", name: "Owner" };
 const BATCH_ENDPOINT = "/count/batch";
-const TOTALS_BY_STATE: Record<string, number> = {
+const TOTALS_BY_STATE = {
   active: 4,
   free: 2,
   past_due: 1,
   suspended: 0,
 };
+const TOTAL_BY_STATE_NAME = new Map(Object.entries(TOTALS_BY_STATE));
 
 const countWithSearch = vi.fn(
   async (
-    _controller: unknown,
+    _controller: DataControllerCallback | DataControllerCallbackWithOptions,
     _ctx: RequestContext,
     params: Parameters.ListParameters,
   ) => {
     const [state] = params.filters?.billingState ?? [];
-    return { total: TOTALS_BY_STATE[String(state)] ?? 0 };
+    return { total: TOTAL_BY_STATE_NAME.get(String(state)) ?? 0 };
   },
 );
 
@@ -71,7 +76,7 @@ describe("workspaces table tab counters", () => {
         ),
       },
       { dataAPIEntry: entry },
-    ) as unknown as RequestContext;
+    );
 
     const counts = await entry.callback.func.call(
       controller,

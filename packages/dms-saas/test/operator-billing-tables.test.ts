@@ -12,6 +12,8 @@ import {
 } from "../src/pages/platform/invoices";
 import { SaasSettingsController } from "../src/pages/platform/settings";
 import { AUTO_PRORATA_METADATA_KEY } from "../src/stripe/webhook-handlers";
+import { isFieldGroupSerialized } from "@antelopejs/interface-dms/base";
+import { isOptionRecord } from "./helpers/serialized";
 
 describe("operator invoices table", () => {
   it("offers a credit note on paid and open invoices only", () => {
@@ -91,9 +93,7 @@ describe("operator credit notes table", () => {
 
 describe("billing rules & legal page", () => {
   it("is one form, saved at once, its sections listed beside it", () => {
-    const form = SaasSettingsController.form.serializeSync() as {
-      options: Record<string, unknown> & { sections: { id: string }[] };
-    };
+    const form = SaasSettingsController.form.serializeSync();
 
     expect(form.options).toMatchObject({
       fetchUrl: "/api/saas/settings/billing",
@@ -101,7 +101,7 @@ describe("billing rules & legal page", () => {
       saveMode: "bar",
       sectionNav: "side",
     });
-    expect(form.options.sections.map((section) => section.id)).toEqual([
+    expect(form.options?.sections?.map((section) => section.id)).toEqual([
       "unpaid",
       "free",
       "tax",
@@ -111,16 +111,14 @@ describe("billing rules & legal page", () => {
   });
 
   it("reads the day counts with their unit after the field", () => {
-    const form = SaasSettingsController.form.serializeSync() as {
-      options: {
-        fields: { id: string; component?: { options?: { suffix?: string } } }[];
-      };
-    };
+    const form = SaasSettingsController.form.serializeSync();
     const suffixes = Object.fromEntries(
-      form.options.fields.map((field) => [
-        field.id,
-        field.component?.options?.suffix,
-      ]),
+      (form.options?.fields ?? []).map((field) => {
+        const options = isFieldGroupSerialized(field)
+          ? undefined
+          : field.component.options;
+        return [field.id, isOptionRecord(options) ? options.suffix : undefined];
+      }),
     );
 
     expect(suffixes).toMatchObject({
@@ -134,13 +132,11 @@ describe("billing rules & legal page", () => {
   });
 
   it("groups its side navigation under Billing and Legal", () => {
-    const form = SaasSettingsController.form.serializeSync() as {
-      options: { sections: { id: string; navGroup?: string }[] };
-    };
+    const form = SaasSettingsController.form.serializeSync();
     const groups = "$saas.operator_billing.billing_rules.nav";
 
     expect(
-      form.options.sections.map((section) => [section.id, section.navGroup]),
+      form.options?.sections?.map((section) => [section.id, section.navGroup]),
     ).toEqual([
       ["unpaid", `${groups}.billing`],
       ["free", `${groups}.billing`],

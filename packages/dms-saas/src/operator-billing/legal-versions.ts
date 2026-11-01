@@ -1,5 +1,4 @@
 import {
-  LEGAL_DOCUMENT_KEYS,
   type LegalDocumentKey,
   type LegalDocuments,
   type LegalDocumentVersion,
@@ -30,18 +29,22 @@ export function readLegalDocumentVersions(
   row: VersionedLegalDocuments | null | undefined,
 ): LegalDocumentVersions {
   if (row) return row.versions;
-  return Object.fromEntries(
-    LEGAL_DOCUMENT_KEYS.map((key) => [key, NEVER_PUBLISHED]),
-  ) as LegalDocumentVersions;
+  return {
+    termsOfUse: NEVER_PUBLISHED,
+    termsAndConditions: NEVER_PUBLISHED,
+    privacyPolicy: NEVER_PUBLISHED,
+  };
 }
 
+/**
+ * The version after saving `text`. An emptied document is withdrawn: its number
+ * stays taken, so the text published next is a new version, never a reused one.
+ */
 function nextVersion(
   current: LegalDocumentVersion,
   text: string,
   now: Date,
 ): LegalDocumentVersion {
-  // An emptied document is withdrawn: its number stays taken, so the text
-  // published next is a new version, never a reused one.
   if (!text) return { version: current.version, publishedAt: null };
   return { version: current.version + 1, publishedAt: now };
 }
@@ -60,14 +63,14 @@ export function bumpLegalDocumentVersions(
   now: Date,
 ): LegalDocumentVersions {
   const current = readLegalDocumentVersions(row);
-  return Object.fromEntries(
-    LEGAL_DOCUMENT_KEYS.map((key) => {
-      const text = texts[key];
-      const isChanged = text !== undefined && text !== (row?.[key] ?? "");
-      return [
-        key,
-        isChanged ? nextVersion(current[key], text, now) : current[key],
-      ];
-    }),
-  ) as LegalDocumentVersions;
+  const bump = (key: LegalDocumentKey): LegalDocumentVersion => {
+    const text = texts[key];
+    const isChanged = text !== undefined && text !== (row?.[key] ?? "");
+    return isChanged ? nextVersion(current[key], text, now) : current[key];
+  };
+  return {
+    termsOfUse: bump("termsOfUse"),
+    termsAndConditions: bump("termsAndConditions"),
+    privacyPolicy: bump("privacyPolicy"),
+  };
 }

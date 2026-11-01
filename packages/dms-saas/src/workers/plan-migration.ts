@@ -400,9 +400,11 @@ async function processTenantInJob(
   }
 }
 
-// Keyed on globalThis rather than module scope: a hot reload re-evaluates this
-// module and replays the resume pass while the previous generation's executor
-// is still running in the same process.
+/**
+ * Keyed on globalThis rather than module scope: a hot reload re-evaluates this
+ * module and replays the resume pass while the previous generation's executor
+ * is still running in the same process.
+ */
 const LIVE_EXECUTORS_KEY: unique symbol = Symbol.for(
   "@antelopejs/dms-saas/plan-migration-executors",
 );
@@ -467,12 +469,15 @@ export async function retryFailedPlanMigrationWorkspaces(
   }
 }
 
-/** Execute a frozen snapshot once; interrupted jobs retain evidence and never take over. */
+/**
+ * Execute a frozen snapshot once; interrupted jobs retain evidence and never
+ * take over. The job is registered as live before `beginJob`, so no running
+ * row is ever observable in this process without its executor being visible to
+ * the resume pass.
+ */
 export async function processPlanMigrationJob(jobId: string): Promise<void> {
   const executors = liveExecutors();
   if (executors.has(jobId)) return;
-  // Registered before beginJob so no running row is ever observable in this
-  // process without its executor being visible to the resume pass.
   executors.add(jobId);
   try {
     await executePlanMigrationJob(jobId);

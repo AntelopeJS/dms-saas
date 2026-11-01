@@ -41,6 +41,7 @@ import {
 import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
 import { fromMinorUnits } from "../../utils/money";
 import type { ItemsPayload } from "./block-payloads";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 /** The header of a workspace's detail page. */
 interface WorkspaceOverview {
@@ -54,8 +55,7 @@ interface WorkspaceOverview {
   ownerName: string | null;
   ownerEmail: string | null;
   ownerStatus: string;
-  /** When the signed-in operator joined as platform support, if they did. */
-  joinedAt: Date | null;
+  membership: { role: "owner" | "member" | "support"; joinedAt: Date } | null;
   stripeCustomerId: string | null;
   stripeCustomerUrl: string | null;
   hasStripeSubscription: boolean;
@@ -116,7 +116,18 @@ export class SaasWorkspaceDetailController extends Controller(
       ownerName: view.directory.ownerName,
       ownerEmail: view.directory.ownerEmail,
       ownerStatus: view.directory.ownerStatus,
-      joinedAt: membership?.joinedAt ?? null,
+      membership: membership
+        ? {
+            role: membership.isTenantOwner
+              ? "owner"
+              : view.seats.platformSupport.some(
+                    (member) => member.userId === user._id,
+                  )
+                ? "support"
+                : "member",
+            joinedAt: membership.joinedAt,
+          }
+        : null,
       stripeCustomerId: customerId,
       stripeCustomerUrl: customerId
         ? stripeObjectUrl("customers", customerId)
@@ -181,9 +192,9 @@ export class SaasWorkspaceDetailController extends Controller(
   async activity(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
-    @Parameter("kind", "query") kind: unknown,
-    @Parameter("limit", "query") limit: unknown,
-    @Parameter("flat", "query") flat: unknown,
+    @Parameter("kind", "query") kind: QueryParameterValue,
+    @Parameter("limit", "query") limit: QueryParameterValue,
+    @Parameter("flat", "query") flat: QueryParameterValue,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
     const cut = limit === "short" ? OVERVIEW_ACTIVITY_LIMIT : ACTIVITY_LIMIT;
     const sources = await loadActivitySources(tenantId, cut);
@@ -196,14 +207,16 @@ export class SaasWorkspaceDetailController extends Controller(
     };
   }
 
-  /** The counts on the detail page's tabs, by tab slot. */
+  /**
+   * The counts on the detail page's tabs, by tab slot. The invoice mirror's
+   * `getAllInvoices` leaves the credit notes out: they are counted from their
+   * own table.
+   */
   @Get("/:tenantId/tab-counts")
   async tabCounts(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
   ): Promise<Record<string, string | number>> {
-    // The invoice mirror's `getAllInvoices` leaves the credit notes out:
-    // they are counted from their own table.
     const [view, invoices, creditNotes] = await Promise.all([
       loadWorkspaceOperatorView(tenantId),
       loadDocuments(tenantId),

@@ -4,6 +4,7 @@ import {
   RegisterDataType,
 } from "@antelopejs/interface-dms/base/data-types";
 import { z } from "zod";
+import { isString } from "./primitive-guards";
 
 const SEGMENT_OPERATOR_VALUES = [
   "eq",
@@ -45,7 +46,7 @@ const groupSchema = z.object({
 const stringOrGroupSchema = z
   .union([z.string(), groupSchema])
   .transform((value) => {
-    if (typeof value === "string") {
+    if (isString(value)) {
       if (value === "") return { logical: "and", conditions: [] };
       try {
         return JSON.parse(value);

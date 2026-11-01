@@ -1,13 +1,3 @@
-// The 3D Secure leg of an owner's upgrade. The upgrade is sent to Stripe as a
-// pending update: Stripe applies it only once its invoice is paid. A card that
-// asks for authentication leaves that invoice waiting on the owner, who passes
-// the challenge in the browser; the confirm call then records the plan Stripe
-// now bills, or drops the update when the challenge was not passed. The
-// `customer.subscription.pending_update_applied` webhook records it too, for an
-// owner who closes the page between the challenge and the confirm call. The
-// confirm call polls Stripe for up to SETTLE_POLL_ATTEMPTS x
-// SETTLE_POLL_INTERVAL_MS (3 s); past that, the webhook records the change.
-
 import { setTimeout as delay } from "node:timers/promises";
 import {
   Context,
@@ -57,7 +47,9 @@ export interface ConfirmUpgradeBody {
 
 /**
  * Stripe marks the invoice paid, and applies the update, a moment after the
- * challenge succeeds; the confirm call usually arrives inside that moment.
+ * challenge succeeds; the confirm call usually arrives inside that moment. It
+ * polls Stripe for up to `SETTLE_POLL_ATTEMPTS` x `SETTLE_POLL_INTERVAL_MS`;
+ * past that, the webhook records the change.
  */
 async function waitForAppliedUpdate(
   stripeSubscriptionId: string,
@@ -90,7 +82,12 @@ async function settlePendingUpgrade(
   );
 }
 
-/** What the owner's browser calls once the 3D Secure challenge is over. */
+/**
+ * What the owner's browser calls once the 3D Secure challenge is over. It
+ * records the plan Stripe now bills, or drops the update when the challenge
+ * was not passed. A payment that is taken but not yet applied is left to the
+ * webhook, which records it when Stripe does.
+ */
 export async function confirmOwnerUpgrade(
   tenantId: string,
   subscription: TenantSubscription | undefined,
@@ -109,7 +106,6 @@ export async function confirmOwnerUpgrade(
       subscription.stripeSubscriptionId,
     ),
   );
-  // Paid but not yet applied: the webhook records it when Stripe does.
   if (!settled) return applied;
   assert(
     billedPriceId(settled) === plan.paymentProviderRefs?.stripePriceId,
@@ -120,6 +116,14 @@ export async function confirmOwnerUpgrade(
   return applied;
 }
 
+/**
+ * The 3D Secure leg of an owner's upgrade. The upgrade is sent to Stripe as a
+ * pending update: Stripe applies it only once its invoice is paid. A card that
+ * asks for authentication leaves that invoice waiting on the owner, who passes
+ * the challenge in the browser; the confirm call then settles the upgrade. The
+ * `customer.subscription.pending_update_applied` webhook records it too, for an
+ * owner who closes the page between the challenge and the confirm call.
+ */
 export class SaasTenantPlanAuthenticationController extends Controller(
   "/api/saas/tenant/plan/authentication",
 ) {

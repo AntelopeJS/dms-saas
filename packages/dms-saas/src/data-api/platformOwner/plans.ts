@@ -95,8 +95,8 @@ interface PlanRowInstance {
   table: Plan;
 }
 
-function planOf(self: unknown): Plan {
-  return (self as PlanRowInstance).table;
+function planOf(self: PlanRowInstance): Plan {
+  return self.table;
 }
 
 /** An amount in major units, written in the plan's own currency. */
@@ -104,7 +104,7 @@ function planMoney(amount: number, currency: string): ComposedText {
   return valueText(moneyParam(toMinorUnits(amount, currency), currency));
 }
 
-async function usageOf(self: unknown) {
+async function usageOf(self: PlanRowInstance) {
   const usage = await loadCatalogueUsage();
   return usage.byPlan.get(planOf(self)._id);
 }
@@ -445,14 +445,16 @@ export class plansDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare isActive: boolean;
 
+  /**
+   * A move by hand takes the value between its neighbours', or one step before
+   * the first: fractional, possibly negative.
+   */
   @Select()
   @Listable()
   @Sortable()
   @Exported()
   @Column({
     name: `${TEXTS}.field.order`,
-    // A move by hand takes the value between its neighbours', or one step
-    // before the first: fractional, possibly negative.
     type: new DefaultDataTypes.NumberType(),
     isVisible: false,
   })

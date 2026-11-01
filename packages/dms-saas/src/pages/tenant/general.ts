@@ -57,6 +57,12 @@ function readonlyForNonOwners(
   };
 }
 
+/**
+ * The workspace name form. The name shows elsewhere on the page: in the "At a
+ * glance" cards, the danger zone's typed confirmation and the sidebar
+ * switcher. A rename reads the page's blocks and data again, as any form
+ * changing what its page shows.
+ */
 const identityForm = Form({
   fields: [
     {
@@ -84,9 +90,6 @@ const identityForm = Form({
   successMessage: `${KEYS}.renamed`,
   errorMessage: `${KEYS}.error.rename`,
 })
-  // The name shows elsewhere on the page: in the "At a glance" cards, the
-  // danger zone's typed confirmation and the sidebar switcher. A rename reads
-  // the page's blocks and data again, as any form changing what its page shows.
   .watch(FormEvents.SUBMIT_SUCCESS, BlockFunctions.REFRESH_PAGE)
   .meta({
     name: `${PERMISSIONS}.identity`,
@@ -133,9 +136,11 @@ export class SaasTenantGeneralController extends PageController("general", {
     }),
   );
 
-  // Separate component, hence a separate permission node: granting the rename
-  // form must not imply the right to delete the workspace. It is withheld from
-  // every non-owner whatever their role grants: see `OWNER_ONLY_SURFACES`.
+  /**
+   * Separate component, hence a separate permission node: granting the rename
+   * form must not imply the right to delete the workspace. It is withheld from
+   * every non-owner whatever their role grants: see `OWNER_ONLY_SURFACES`.
+   */
   static dangerZone = Section({
     title: `${KEYS}.danger_zone_title`,
     danger: true,

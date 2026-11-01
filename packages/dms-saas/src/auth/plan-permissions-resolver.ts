@@ -10,10 +10,16 @@ const RESOLVER_ID = "dms-saas.plan-intersection";
 const RESOLVER_ORDER = 100;
 const ALL_PERMISSIONS = "*";
 
-// Blocking subscription statuses are NOT handled here — that
-// is a tenant-level access denial enforced by the subscription access gate
-// (see subscription-access-gate.ts), which also covers surfaces a permission
-// set cannot express (defaultGranted permissions, membership-only guards).
+/**
+ * Caps a user's permissions to the workspace plan, and hands its owner the
+ * whole plan. A role preview shapes the set of an ordinary member holding that
+ * role: the owner grant would show the plan instead of the role.
+ *
+ * Blocking subscription statuses are not handled here: that is a tenant-level
+ * access denial enforced by the subscription access gate
+ * (`subscription-access-gate.ts`), which also covers surfaces a permission set
+ * cannot express (`defaultGranted` permissions, membership-only guards).
+ */
 async function intersectWithPlan(
   userId: string,
   tenantId: string,
@@ -30,8 +36,6 @@ async function intersectWithPlan(
 
   const resolved = await planModel.resolveInheritance(plan);
   const allowed = new Set(resolved.permissions);
-  // A role preview shapes the set of an ordinary member holding that role:
-  // the owner grant would show the plan instead of the role.
   const preview = context.preview;
   if (!preview && !current.has(ALL_PERMISSIONS)) {
     const member = await GetModel(TenantMemberModel, tenantId).getByUser(

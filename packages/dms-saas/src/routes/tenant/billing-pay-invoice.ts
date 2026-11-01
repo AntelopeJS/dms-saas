@@ -74,8 +74,10 @@ export function toPaymentFailure(error: unknown): HTTPResult {
   );
 }
 
-// Part of the recovery path of a blocked workspace, like the portal: paying
-// the unpaid invoice is what lifts the block.
+/**
+ * Part of the recovery path of a blocked workspace, like the portal: paying
+ * the unpaid invoice is what lifts the block.
+ */
 export class SaasBillingPayInvoiceController extends Controller(
   "/api/saas/billing",
 ) {

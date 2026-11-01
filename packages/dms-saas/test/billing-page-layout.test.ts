@@ -1,14 +1,9 @@
-import type {
-  Component,
-  ComponentInfoSerialized,
-} from "@antelopejs/interface-dms/component";
+import type { ComponentInfoSerialized } from "@antelopejs/interface-dms/component";
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { GetMetadata } from "@antelopejs/interface-core";
 import { SettingsLayout } from "@antelopejs/interface-dms/base/layouts";
 import type { PageExtensionInfo } from "@antelopejs/interface-dms/page";
 import { internal, PageMetadata } from "@antelopejs/interface-dms/page";
-// The DMS's own assembly, so the test places blocks exactly as a page serves
-// them rather than restating its rules.
 import { assembleLayoutComponents } from "@antelopejs/interface-dms/page/internal/extension-assembly";
 import { collectExtensionErrors } from "@antelopejs/interface-dms/page/internal/extension-validation";
 import {
@@ -30,10 +25,7 @@ const PAGE_FIELDS = [
 ] as const;
 
 async function ownLayout(): Promise<Layout> {
-  const fields = SaasTenantBillingController as unknown as Record<
-    (typeof PAGE_FIELDS)[number],
-    Component
-  >;
+  const fields = SaasTenantBillingController;
   const entries = await Promise.all(
     PAGE_FIELDS.map(async (key) => [key, await fields[key].serialize()]),
   );
@@ -98,7 +90,6 @@ describe("tenant billing page layout", () => {
 
     expect(meta.layout?.componentName).toBe(SettingsLayout().componentName);
     expect(meta.layout?.options?.fullWidth).toBeUndefined();
-    // The recovery surface of a blocked workspace keeps bypassing the gate.
     expect(meta.pageInfo?.bypassTenantAccessGate).toBe(true);
   });
 

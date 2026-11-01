@@ -39,6 +39,8 @@ import {
 } from "../../stripe/availability";
 import { ProvisioningAttemptModel } from "../../workspaces/db/provisioning-attempt.model";
 import { loadWorkspaceOperatorView } from "../../workspaces/operator-view";
+import { isNumber, isString } from "../../utils/primitive-guards";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
@@ -73,7 +75,7 @@ interface OperatorOptionsResponse extends WorkspaceOperatorOptions {
 }
 
 function requireString(value: unknown, errorCode: string): string {
-  const normalized = typeof value === "string" ? value.trim() : "";
+  const normalized = isString(value) ? value.trim() : "";
   assert(normalized, HTTP_BAD_REQUEST, errorCode);
   return normalized;
 }
@@ -87,7 +89,7 @@ function operationIdOf(body: OperationBody): string {
 
 function creditInputOf(body: BalanceCreditBody): ValidatedCreditInput {
   assert(
-    typeof body.amountCents === "number",
+    isNumber(body.amountCents),
     HTTP_BAD_REQUEST,
     "saas.errors.operator.invalid_credit_amount",
   );
@@ -193,8 +195,7 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
   ) {
     const name = await this.assertTenantExists(tenantId);
     assert(
-      typeof body.confirmName === "string" &&
-        body.confirmName.trim() === name.trim(),
+      isString(body.confirmName) && body.confirmName.trim() === name.trim(),
       HTTP_BAD_REQUEST,
       "saas.errors.workspace.confirmation_mismatch",
     );
@@ -224,7 +225,7 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
   async getUpgradePreview(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
-    @Parameter("planId", "query") planId: unknown,
+    @Parameter("planId", "query") planId: QueryParameterValue,
   ): Promise<UpgradePreview> {
     const targetPlanId = requireString(
       planId,
@@ -236,6 +237,11 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     );
   }
 
+  /**
+   * Upgrades the workspace to the target plan by hand. Stripe configuration is
+   * asserted first: it is refused before the journal records an attempt that
+   * cannot succeed.
+   */
   @Post("/:tenantId/upgrade")
   async upgrade(
     @AuthOwnerOnly() user: User,
@@ -243,7 +249,6 @@ export class SaasWorkspaceOperatorActionsController extends Controller(
     @JSONBody() body: ManualUpgradeBody,
   ) {
     await this.assertTenantExists(tenantId);
-    // Refused before the journal records an attempt that cannot succeed.
     assertStripeConfigured();
     return manuallyUpgradeWorkspaceCommand({
       tenantId,

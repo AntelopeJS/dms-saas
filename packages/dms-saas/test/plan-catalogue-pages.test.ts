@@ -1,5 +1,7 @@
 import { HTTPResult } from "@antelopejs/interface-api";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { beforeEach, describe, expect, it } from "vitest";
+import { type Plan, PlanModel } from "../src/db";
 import { SaasFeaturesController } from "../src/pages/platform/features";
 import { SaasPlansController } from "../src/pages/platform/plans";
 import { SaasPlanMigrationsController } from "../src/pages/platform/plans/migrations";
@@ -7,54 +9,28 @@ import {
   assertFeaturesUnused,
   assertValueTypeKept,
 } from "../src/plans/feature-guards";
+import { useMongoDatabase } from "./helpers/mongo";
+import { httpRefusal } from "./helpers/refusal";
 
-const catalogue = vi.hoisted(() => ({ plans: [] as unknown[] }));
+useMongoDatabase("plan-catalogue-pages");
 
-vi.mock("@antelopejs/interface-database-decorators", async (original) => ({
-  ...(await original<object>()),
-  GetModel: () => ({ findNotDeleted: async () => catalogue.plans }),
-}));
-
-interface SerializedTab {
-  id: string;
-  filter?: { accessorKey: string; value?: string; mode: string };
-  navBadge?: boolean;
-}
-
-interface SerializedAction {
-  id?: string;
-  label: string;
-  rule?: unknown;
-  confirm?: unknown;
-  target: { type: string; component?: { componentName?: string } };
-}
-
-interface SerializedCardComponent {
-  componentName?: string;
-  options?: { selectable?: boolean };
-}
-
-interface CardsDisplayOptions {
-  card?: { component?: SerializedCardComponent; skeletonHeight?: string };
-}
-
-/** The card component the plans' cards display draws, as serialized. */
-async function planCard(): Promise<SerializedCardComponent> {
-  const { options } = await SaasPlansController.table.serialize();
-  const cards = options?.displays?.find((display) => display.id === "cards");
-  return (
-    (cards?.options as CardsDisplayOptions | undefined)?.card?.component ?? {}
+/** Replaces the plan catalogue with `plans`, none of them deleted. */
+async function publishCatalogue(plans: Partial<Plan>[]): Promise<void> {
+  await GetModel(PlanModel).table.delete().run();
+  if (plans.length === 0) return;
+  await GetModel(PlanModel).insert(
+    plans.map((plan) => ({ isDeleted: false, ...plan })),
   );
 }
 
-beforeEach(() => {
-  catalogue.plans = [];
+beforeEach(async () => {
+  await publishCatalogue([]);
 });
 
 describe("the plans page", () => {
   it("opens on the stock cards, beside the grid", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const card = await planCard();
+    const cards = options?.displays?.find((display) => display.id === "cards");
 
     expect(options?.displays?.map((display) => display.id)).toEqual([
       "table",
@@ -62,25 +38,27 @@ describe("the plans page", () => {
     ]);
     expect(options?.displays?.[1]?.component).toBeUndefined();
     expect(options?.defaultDisplay).toBe("cards");
-    expect(card.componentName).toBe("DmsSaasPlanCard");
-    expect(card.options?.selectable).toBe(options?.rowActions?.hasSelection);
+    expect(cards?.options).toMatchObject({
+      card: {
+        component: {
+          componentName: "DmsSaasPlanCard",
+          options: { selectable: options?.rowActions?.hasSelection },
+        },
+      },
+    });
   });
 
-  // The placeholder grid draws a page of cards as tall as a plan card, so the
-  // footer stands where the loaded catalogue puts it.
   it("sizes the loading cards like a page of plan cards", async () => {
     const { options } = await SaasPlansController.table.serialize();
     const cards = options?.displays?.find((display) => display.id === "cards");
 
     expect(options?.pageSize).toBe(8);
-    expect(
-      (cards?.options as CardsDisplayOptions | undefined)?.card?.skeletonHeight,
-    ).toBe("580px");
+    expect(cards?.options).toMatchObject({ card: { skeletonHeight: "580px" } });
   });
 
   it("names each menu entry, so the cards find the one a control stands for", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const actions = (options?.rowActions?.custom ?? []) as SerializedAction[];
+    const actions = options?.rowActions?.custom ?? [];
 
     expect(actions.map((action) => action.id)).toEqual([
       "duplicate",
@@ -92,13 +70,10 @@ describe("the plans page", () => {
       "delete",
     ]);
     expect(
-      actions.find((action) => action.id === "retire")?.target.component
-        ?.componentName,
-    ).toBe("DmsSaasRetirePlanModal");
+      actions.find((action) => action.id === "retire")?.target,
+    ).toMatchObject({ component: { componentName: "DmsSaasRetirePlanModal" } });
   });
 
-  // Moving cards by hand is off while a filter narrows the rows: deleted
-  // plans are scoped out by the data API instead of a default filter.
   it("narrows nothing by default, so the plans move by hand", async () => {
     const { options } = await SaasPlansController.table.serialize();
 
@@ -107,7 +82,7 @@ describe("the plans page", () => {
 
   it("asks before stopping a sale or deleting, and deletes only unused plans", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const custom = options?.rowActions?.custom as SerializedAction[];
+    const custom = options?.rowActions?.custom ?? [];
     const byLabel = (suffix: string) =>
       custom.find((action) => action.label.endsWith(suffix));
 
@@ -122,7 +97,7 @@ describe("the plans page", () => {
 
   it("splits the plans on sale from the legacy ones and reorders by hand", async () => {
     const { options } = await SaasPlansController.table.serialize();
-    const tabs = options?.tabs as SerializedTab[];
+    const tabs = options?.tabs ?? [];
 
     expect(tabs.map((tab) => tab.id)).toEqual(["on_sale", "legacy", "all"]);
     expect(tabs[1]?.filter).toEqual({
@@ -135,8 +110,6 @@ describe("the plans page", () => {
 });
 
 describe("stock Duplicate", () => {
-  // Plans have their own "Duplicate as new plan"; a migration is a record of
-  // what happened, nothing to copy.
   it("is off on the plans and plan migrations tables", async () => {
     const plans = await SaasPlansController.table.serialize();
     const migrations = await SaasPlanMigrationsController.table.serialize();
@@ -149,7 +122,7 @@ describe("stock Duplicate", () => {
 describe("the plan migrations page", () => {
   it("is listed in the catalogue with a tab per stage, badging the ones needing attention", async () => {
     const { options } = await SaasPlanMigrationsController.table.serialize();
-    const tabs = options?.tabs as SerializedTab[];
+    const tabs = options?.tabs ?? [];
 
     expect(tabs.map((tab) => tab.id)).toEqual([
       "all",
@@ -178,21 +151,23 @@ describe("feature guards", () => {
   const storage = { featureId: "storage", value: 100 };
 
   it("locks the value type while a plan stores a value", async () => {
-    catalogue.plans = [{ _id: "pro", features: [storage] }];
-    const error = await assertValueTypeKept(
-      "storage",
-      { valueType: "boolean" },
-      { valueType: "number" },
-    ).catch((caught: unknown) => caught);
+    await publishCatalogue([{ _id: "pro", features: [storage] }]);
+    const error = await httpRefusal(
+      assertValueTypeKept(
+        "storage",
+        { valueType: "boolean" },
+        { valueType: "number" },
+      ),
+    );
 
     expect(error).toBeInstanceOf(HTTPResult);
-    expect(
-      JSON.parse(String((error as HTTPResult).getBody())) as unknown,
-    ).toMatchObject({ field: "valueType" });
+    expect(JSON.parse(String(error.getBody()))).toMatchObject({
+      field: "valueType",
+    });
   });
 
   it("lets the value type change while no plan stores a value", async () => {
-    catalogue.plans = [{ _id: "pro", features: [] }];
+    await publishCatalogue([{ _id: "pro", features: [] }]);
     await expect(
       assertValueTypeKept(
         "storage",
@@ -203,7 +178,7 @@ describe("feature guards", () => {
   });
 
   it("refuses to delete a feature a plan stores", async () => {
-    catalogue.plans = [{ _id: "pro", features: [storage] }];
+    await publishCatalogue([{ _id: "pro", features: [storage] }]);
     await expect(assertFeaturesUnused(["storage"])).rejects.toBeInstanceOf(
       HTTPResult,
     );

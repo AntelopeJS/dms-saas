@@ -8,6 +8,7 @@ import {
   toStripePreferredLocales,
 } from "./customer-locale";
 import { getStripeClient } from "./client";
+import { isNumber } from "../utils/primitive-guards";
 
 const MISSING_RESOURCE_CODE = "resource_missing";
 const HTTP_CLIENT_ERROR_MIN = 400;
@@ -128,7 +129,7 @@ export function isDefinitiveStripeRejection(error: unknown): boolean {
   if (!(error instanceof Stripe.errors.StripeError)) return false;
   const status = error.statusCode;
   return (
-    typeof status === "number" &&
+    isNumber(status) &&
     status >= HTTP_CLIENT_ERROR_MIN &&
     status < HTTP_SERVER_ERROR_MIN
   );
@@ -258,6 +259,12 @@ async function createSessionOptingOutOfManagedPayments(
  *
  * The tenant subscription should be persisted in `pending_payment` (or kept
  * on its current plan) until the `checkout.session.completed` webhook fires.
+ *
+ * A session without a URL is expired here so a session nobody can redirect to
+ * cannot be completed out of band, and the customer this call created is
+ * dropped: callers that brought their own keep it, since it is not ours to
+ * delete. The session id still travels with the error so a caller's rollback
+ * can retry the expiry.
  */
 export async function createWorkspaceCheckoutSession(
   input: WorkspaceCheckoutSessionInput,
@@ -265,7 +272,7 @@ export async function createWorkspaceCheckoutSession(
   const stripe = getStripeClient();
   const customerId = await resolveCheckoutCustomerId(input);
 
-  const sessionMetadata: Record<string, string> = { tenantId: input.tenantId };
+  const sessionMetadata: Stripe.Metadata = { tenantId: input.tenantId };
   if (input.planId) sessionMetadata.planId = input.planId;
   if (input.operationId) sessionMetadata.operationId = input.operationId;
   if (input.reservedTrialIdentityId)
@@ -297,10 +304,6 @@ export async function createWorkspaceCheckoutSession(
 
   if (!session.url) {
     if (input.operationId) throw new UnusableCheckoutSessionError(session.id);
-    // Expire it here so a session nobody can redirect to cannot be completed
-    // out of band, and drop the customer this call created — callers that
-    // brought their own keep it, since it is not ours to delete. The id still
-    // travels with the error so a caller's rollback can retry the expiry.
     await stripe.checkout.sessions.expire(session.id).catch(() => {});
     if (!input.existingCustomerId) {
       await deleteStripeCustomerIfExists(customerId).catch((error) =>

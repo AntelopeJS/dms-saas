@@ -1,213 +1,232 @@
+import { randomUUID } from "node:crypto";
+import { ImplementInterface } from "@antelopejs/interface-core";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import type { ExportJobSummary } from "@antelopejs/interface-dms/base";
+import { ExportStatus } from "@antelopejs/interface-dms/base/types";
+import * as exportJobs from "@antelopejs/interface-dms/base/export-jobs";
+import * as tenantExportArchive from "@antelopejs/interface-dms/base/tenant-export-archive";
 import type { RequestContext } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import type { ExportJobSummary } from "@antelopejs/interface-dms/base";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Plan } from "../src/db";
+import {
+  TenantMemberModel,
+  TenantModel,
+  UserInviteModel,
+} from "@antelopejs/interface-dms/db";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { PlanModel, TenantSubscriptionModel } from "../src/db";
+import { SaasDataExportController } from "../src/routes/tenant/data-export";
+import { SaasTenantSeatsController } from "../src/routes/tenant/tenant-seats";
+import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
+import {
+  addTenantMember,
+  createUser,
+  dmsImplementation,
+  tenantRequest,
+  useDmsAuth,
+} from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { implementNotifications } from "./helpers/notifications";
+import { insertPlan } from "./helpers/plans";
+import {
+  createOwnedWorkspace,
+  insertTenant,
+  seatMembers,
+} from "./helpers/workspaces";
 
-interface MemberFake {
-  userId: string;
-  isTenantOwner: boolean;
-}
-
-const store = vi.hoisted(() => ({
-  tenantName: "acme",
-  renamed: [] as string[],
-  deletions: [] as string[],
-  exports: [] as ExportJobSummary[],
-  started: 0,
-  plans: [] as Plan[],
-  members: [] as MemberFake[],
-  users: new Map<string, { name: string; email: string }>(),
-}));
-
-vi.mock("@antelopejs/interface-dms/request-tenant", () => ({
-  getRequestTenantId: () => "acme",
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: () => ({ get: async (id: string) => store.users.get(id) }),
-  };
+useMongoDatabase("workspace-owner-routes");
+useDmsAuth();
+implementNotifications();
+const listExportJobs = vi.fn<typeof exportJobs.listExportJobs>();
+const startTenantExportJob =
+  vi.fn<typeof tenantExportArchive.startTenantExportJob>();
+ImplementInterface(exportJobs, {
+  ...dmsImplementation("implementations/dms-base/export-jobs.js"),
+  listExportJobs,
+});
+ImplementInterface(tenantExportArchive, {
+  ...dmsImplementation("implementations/dms-base/tenant-export-archive.js"),
+  startTenantExportJob,
 });
 
-const tenantModel = {
-  get: async (id: string) => ({ _id: id, name: store.tenantName }),
-  update: async (_id: string, patch: { name: string }) => {
-    store.renamed.push(patch.name);
-    return 1;
-  },
-};
-
-const planModel = {
-  get: async (id: string) => store.plans.find((plan) => plan._id === id),
-  findPubliclyVisible: async () => store.plans,
-};
-
-vi.mock("../src/workspaces", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/workspaces")>()),
-  requestWorkspaceDeletion: async (tenantId: string) => {
-    store.deletions.push(tenantId);
-    return { status: "cancelled", retentionDays: 30 };
-  },
-}));
-
-vi.mock("@antelopejs/interface-dms/base", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@antelopejs/interface-dms/base")>()),
-  listExportJobs: async () => store.exports,
-  startTenantExportJob: async () => {
-    store.started += 1;
-    return { jobId: "job-new", extension: "zip", filename: "export" };
-  },
-}));
-
-vi.mock("../src/plans", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/plans")>()),
-  getSeatUsage: async () => ({
-    members: 4,
-    pendingInvites: 1,
-    occupied: 5,
-    platformSupport: [],
-  }),
-}));
-
-const { SaasWorkspacesController } =
-  await import("../src/routes/tenant/workspaces");
-const { SaasDataExportController } =
-  await import("../src/routes/tenant/data-export");
-const { SaasTenantSeatsController } =
-  await import("../src/routes/tenant/tenant-seats");
-
-// The framework injects the `@Model` fields; a test hands its fakes over.
 function workspacesController() {
-  return Object.assign(new SaasWorkspacesController(), { tenantModel });
+  return Object.assign(new SaasWorkspacesController(), {
+    tenantModel: GetModel(TenantModel),
+  });
 }
 
 function seatsController() {
-  return Object.assign(new SaasTenantSeatsController(), { planModel });
+  return Object.assign(new SaasTenantSeatsController(), {
+    planModel: GetModel(PlanModel),
+  });
 }
 
-const owner = { _id: "camille" } as User;
-const ctx = {} as RequestContext;
 const HOUR_MS = 3_600_000;
 
-function exportJob(status: string, createdAt: Date): ExportJobSummary {
+function exportJob(
+  status: ExportJobSummary["status"],
+  createdAt: Date,
+): ExportJobSummary {
   return {
     jobId: `job-${status}`,
     scope: "saas-tenant-data-export",
     status,
     progress: 10,
     createdAt,
-  } as ExportJobSummary;
-}
-
-function plan(_id: string, maxMembers: number, order: number): Plan {
-  return { _id, name: _id, maxMembers, order } as Plan;
+  };
 }
 
 beforeEach(() => {
-  store.tenantName = "acme";
-  store.renamed = [];
-  store.deletions = [];
-  store.exports = [];
-  store.started = 0;
-  store.plans = [];
-  store.members = [];
-  store.users = new Map();
+  listExportJobs.mockReset();
+  startTenantExportJob.mockReset();
 });
 
 describe("workspace rename and deletion", () => {
   it("renames with the trimmed name", async () => {
-    const result = await workspacesController().renameCurrent(owner, ctx, {
+    const { tenantId, owner, request } = await createOwnedWorkspace();
+
+    const result = await workspacesController().renameCurrent(owner, request, {
       name: "  Acme Retail ",
     });
 
-    expect(result).toEqual({ _id: "acme", name: "Acme Retail" });
-    expect(store.renamed).toEqual(["Acme Retail"]);
+    expect(result).toEqual({ _id: tenantId, name: "Acme Retail" });
+    await expect(GetModel(TenantModel).get(tenantId)).resolves.toMatchObject({
+      name: "Acme Retail",
+    });
   });
 
   it("refuses an empty or too long name", async () => {
+    const { tenantId, owner, request } = await createOwnedWorkspace();
     const controller = workspacesController();
 
     await expect(
-      controller.renameCurrent(owner, ctx, { name: "  " }),
+      controller.renameCurrent(owner, request, { name: "  " }),
     ).rejects.toMatchObject({ body: "saas.errors.workspace.name_required" });
     await expect(
-      controller.renameCurrent(owner, ctx, { name: "x".repeat(61) }),
+      controller.renameCurrent(owner, request, { name: "x".repeat(61) }),
     ).rejects.toMatchObject({ body: "saas.errors.workspace.name_too_long" });
-    expect(store.renamed).toEqual([]);
+    await expect(GetModel(TenantModel).get(tenantId)).resolves.toMatchObject({
+      name: tenantId,
+    });
   });
 
   it("deletes only once the typed name matches", async () => {
+    const { tenantId, owner, request } = await createOwnedWorkspace();
+    await GetModel(TenantModel).update(tenantId, { name: "acme" });
+    await GetModel(TenantSubscriptionModel, tenantId).insert({
+      _id: tenantId,
+      status: "active",
+    });
     const controller = workspacesController();
+    const subscription = () =>
+      GetModel(TenantSubscriptionModel, tenantId).findOne();
 
     await expect(
-      controller.deleteCurrent(owner, ctx, { confirmName: "Acme" }),
+      controller.deleteCurrent(owner, request, { confirmName: "Acme" }),
     ).rejects.toMatchObject({
       status: 400,
       body: "saas.errors.workspace.delete_confirmation_mismatch",
     });
-    expect(store.deletions).toEqual([]);
+    await expect(subscription()).resolves.toMatchObject({ status: "active" });
 
-    await controller.deleteCurrent(owner, ctx, { confirmName: " acme " });
-    expect(store.deletions).toEqual(["acme"]);
+    await controller.deleteCurrent(owner, request, { confirmName: " acme " });
+    await expect(subscription()).resolves.toMatchObject({
+      status: "cancelled",
+      deletionRequestedBy: owner._id,
+    });
   });
 });
 
 describe("data export start", () => {
   it("refuses a second export while one is being built", async () => {
-    store.exports = [exportJob("pending", new Date())];
+    const { owner, request } = await createOwnedWorkspace();
+    listExportJobs.mockResolvedValue([
+      exportJob(ExportStatus.pending, new Date()),
+    ]);
 
     await expect(
-      new SaasDataExportController().start(owner, ctx),
+      new SaasDataExportController().start(owner, request),
     ).rejects.toMatchObject({
       status: 409,
       body: "saas.errors.data_export.already_running",
     });
-    expect(store.started).toBe(0);
+    expect(startTenantExportJob).not.toHaveBeenCalled();
   });
 
   it("starts once the previous exports are done or orphaned", async () => {
-    store.exports = [
-      exportJob("completed", new Date()),
-      exportJob("pending", new Date(Date.now() - 2 * HOUR_MS)),
-    ];
+    const { tenantId, owner, request } = await createOwnedWorkspace();
+    listExportJobs.mockResolvedValue([
+      exportJob(ExportStatus.completed, new Date()),
+      exportJob(ExportStatus.pending, new Date(Date.now() - 2 * HOUR_MS)),
+    ]);
+    startTenantExportJob.mockResolvedValue(
+      fromPartial({ jobId: "job-new", extension: "zip", filename: "export" }),
+    );
 
     await expect(
-      new SaasDataExportController().start(owner, ctx),
+      new SaasDataExportController().start(owner, request),
     ).resolves.toMatchObject({ jobId: "job-new" });
-    expect(store.started).toBe(1);
+    expect(startTenantExportJob).toHaveBeenCalledTimes(1);
+    expect(startTenantExportJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ctx: request,
+        user: owner,
+        scope: "saas-tenant-data-export",
+        filename: `workspace-export-${tenantId}`,
+      }),
+    );
   });
 });
 
 describe("seat quota", () => {
-  function readQuota(planId: string | null) {
+  let tenantId = "";
+  let camille: User;
+  let request: RequestContext;
+
+  async function readQuota(planId: string | null) {
+    await GetModel(TenantSubscriptionModel, tenantId).update(tenantId, {
+      planId,
+    });
     return seatsController().getSeatQuota(
-      ctx,
-      owner,
-      { findOne: async () => ({ planId }) } as never,
-      { listAll: async () => store.members } as never,
+      request,
+      camille,
+      GetModel(TenantSubscriptionModel, tenantId),
+      GetModel(TenantMemberModel, tenantId),
     );
   }
 
-  beforeEach(() => {
-    store.plans = [
-      plan("starter", 1, 1),
-      plan("pro", 5, 2),
-      plan("business", 10, 3),
-      plan("enterprise", -1, 4),
+  beforeAll(async () => {
+    const plans = [
+      { _id: "starter", maxMembers: 1, order: 1 },
+      { _id: "pro", maxMembers: 5, order: 2 },
+      { _id: "business", maxMembers: 10, order: 3 },
+      { _id: "enterprise", maxMembers: -1, order: 4 },
     ];
-    store.members = [
-      { userId: "camille", isTenantOwner: true },
-      { userId: "julien", isTenantOwner: false },
-    ];
-    store.users = new Map([
-      ["camille", { name: "Camille Laurent", email: "c@acme.test" }],
-    ]);
+    for (const plan of plans) await insertPlan({ ...plan, isPublic: true });
+  });
+
+  beforeEach(async () => {
+    tenantId = randomUUID();
+    await insertTenant(tenantId);
+    camille = await createUser({ name: "Camille Laurent" });
+    await addTenantMember(tenantId, camille, true);
+    await addTenantMember(tenantId, await createUser());
+    await seatMembers(tenantId, 2);
+    await GetModel(UserInviteModel, tenantId).insert({
+      _id: randomUUID(),
+      createdAt: new Date(),
+      email: "pending@acme.test",
+      roles_ids: [],
+      language: "en",
+      token: randomUUID(),
+      asTenantOwner: false,
+      expiresAt: new Date(Date.now() + 24 * HOUR_MS),
+    });
+    await GetModel(TenantSubscriptionModel, tenantId).insert({
+      _id: tenantId,
+      status: "active",
+    });
+    request = await tenantRequest(camille, tenantId);
   });
 
   it("names the plan, the next plan with more seats and the owners to ask", async () => {
@@ -217,7 +236,7 @@ describe("seat quota", () => {
       planName: "pro",
       upgradePlanName: "business",
       isTenantOwner: true,
-      owners: [{ name: "Camille Laurent", email: "c@acme.test" }],
+      owners: [{ name: "Camille Laurent", email: camille.email }],
     });
   });
 

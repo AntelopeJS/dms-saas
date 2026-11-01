@@ -85,10 +85,7 @@ function diffInDays(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / MS_PER_DAY);
 }
 
-function projectInvoices(invoices: Invoice[]): {
-  totalRevenue: number;
-  lastInvoiceAt: Date | null;
-} {
+function projectInvoices(invoices: Invoice[]) {
   let totalRevenue = 0;
   let lastInvoiceAt: Date | null = null;
   for (const invoice of invoices) {
@@ -105,7 +102,8 @@ function projectInvoices(invoices: Invoice[]): {
 
 /**
  * The MRR the directory published, which the dashboard sums; computed from the
- * records the same way when the workspace has no directory row yet.
+ * records the same way when the workspace has no directory row yet. Pending
+ * invitations are not loaded here: the billed seats are the members alone.
  */
 function workspaceMrr(inputs: ProjectionInputs): MinorAmount {
   const { directory, subscription, plan, membersCount } = inputs;
@@ -115,7 +113,6 @@ function workspaceMrr(inputs: ProjectionInputs): MinorAmount {
       currency: directory.currency ?? "",
     };
   }
-  // Pending invitations are not loaded here: seats are the members alone.
   return normalisedMrr({
     billingState: deriveBillingState(subscription),
     isComplimentary: subscription?.isComplimentary === true,
@@ -258,9 +255,12 @@ export type UserWorkspaceProjection = WorkspaceProjection & {
   isOwner: boolean;
 };
 
-// A type alias rather than an interface: TypeScript gives aliases an implicit
-// index signature, which is what lets a projection be read as a dictionary by
-// the segment evaluator without an assertion.
+/**
+ * A user as the segment evaluator reads it. A type alias rather than an
+ * interface: TypeScript gives aliases an implicit index signature, which is
+ * what lets a projection be read as a dictionary by the segment evaluator
+ * without an assertion.
+ */
 export type UserProjection = {
   _id: string;
   email: string;
@@ -345,8 +345,6 @@ export async function loadUserProjectionsFrom(
   const sessionModel = GetModel(SessionModel);
   const memberModel = GetModel(TenantMemberModel, CROSS_INSTANCE);
 
-  // Server-side group-max: only one (userId, lastActiveAt) pair per user is
-  // transferred instead of every session row.
   const [users, sessionActivity, memberRows] = await Promise.all([
     userModel.getAll(),
     sessionModel.table
@@ -413,7 +411,6 @@ export async function recomputeSegments(
   const now = new Date();
   const loadStartedAt = performance.now();
   const userProjections = await loadAllUserProjections(planModel, now);
-  // Every segment of the run shares the projections' load time.
   const loadMs = performance.now() - loadStartedAt;
 
   for (let i = 0; i < segments.length; i += SEGMENT_RECOMPUTE_CONCURRENCY) {

@@ -37,6 +37,7 @@ import {
 } from "../../db";
 import { CREDITABLE_INVOICE_STATUSES } from "../../operator-billing/credit-allowance";
 import { stripeDashboardUrl } from "../../stripe/client";
+import { getRowInstance } from "../../utils/row-instance";
 import {
   BillingPeriodDisplay,
   InvoiceLinesType,
@@ -66,7 +67,8 @@ const withInvoiceScope = withTableScope(INVOICE_LIST_OPTIONS);
 /**
  * Every workspace's invoices, for platform admins. Credit notes share the
  * table as negative rows for the workspace owners' history; this controller
- * never lists them.
+ * never lists them. The guards are set on the controller itself, so they hold
+ * even when no TableView page mounts it.
  */
 @RegisterDataController()
 @AuthOwnerOnly()
@@ -83,7 +85,6 @@ export class invoicesDataAPI extends DataController(
   },
   Controller("/api/saas/tables/invoices"),
 ) {
-  // Enforce the guard even when no TableView page mounts this controller.
   static {
     GetMetadata(invoicesDataAPI, TableViewMeta).setControllerGuards(
       INVOICE_GUARDS,
@@ -147,14 +148,14 @@ export class invoicesDataAPI extends DataController(
   @Exported()
   @Access(AccessMode.ReadOnly)
   get planName(): PromiseLike<string | null> {
-    return workspacePlanName(invoiceRow(this)._instance);
+    return workspacePlanName(getRowInstance(invoiceRow(this)));
   }
 
   @Listable(["_instance", "lines"])
   @Access(AccessMode.ReadOnly)
   get planDetail(): PromiseLike<ComposedText | string | null> {
     const row = invoiceRow(this);
-    return workspacePlanName(row._instance).then((planName) =>
+    return workspacePlanName(getRowInstance(row)).then((planName) =>
       invoiceWorkspaceDetail(planName, invoiceSeats(row.lines)),
     );
   }
@@ -217,7 +218,7 @@ export class invoicesDataAPI extends DataController(
   get statusDetail(): PromiseLike<CellSubline | null> {
     const row = invoiceRow(this);
     return replacingInvoiceNumber(
-      row._instance,
+      getRowInstance(row),
       row.latestRevisionStripeId,
     ).then((replacedBy) => invoiceStatusDetail(row, replacedBy));
   }
@@ -264,7 +265,7 @@ export class invoicesDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   get credited(): PromiseLike<number | null> {
     const row = invoiceRow(this);
-    return invoiceCreditedAmount(row._instance, row._id);
+    return invoiceCreditedAmount(getRowInstance(row), row._id);
   }
 
   @Listable(["status"])

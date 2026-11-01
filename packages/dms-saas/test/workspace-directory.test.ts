@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import {
   buildWorkspaceDirectoryFields,
@@ -12,7 +13,7 @@ const PERIOD_END = new Date("2026-10-31T00:00:00Z");
 const PAST_DUE_SINCE = new Date("2026-09-30T00:00:00Z");
 const UPDATED_AT = new Date("2026-09-20T00:00:00Z");
 
-const BUSINESS = {
+const BUSINESS = fromPartial<Plan>({
   _id: "plan_business",
   name: "Business",
   price: 49,
@@ -20,12 +21,12 @@ const BUSINESS = {
   interval: "month",
   billingMode: "seat",
   maxMembers: 25,
-} as Plan;
+});
 
 function subscription(
   overrides: Partial<TenantSubscription> = {},
 ): TenantSubscription {
-  return {
+  return fromPartial<TenantSubscription>({
     status: "active",
     stripeSubscriptionId: "sub_1",
     isComplimentary: false,
@@ -34,7 +35,7 @@ function subscription(
     pastDueSince: null,
     updatedAt: UPDATED_AT,
     ...overrides,
-  } as TenantSubscription;
+  });
 }
 
 function inputs(overrides: Partial<DirectoryInputs> = {}): DirectoryInputs {
@@ -169,10 +170,10 @@ describe("workspace directory row", () => {
       inputs({
         billingState: "suspended",
         subscription: subscription({ status: "suspended" }),
-        existing: {
+        existing: fromPartial<TenantBillingState>({
           billingState: "suspended",
           stateSince: since,
-        } as TenantBillingState,
+        }),
       }),
     );
 
@@ -188,11 +189,11 @@ describe("workspace directory row", () => {
       inputs({
         billingState: "cancelled",
         subscription: subscription({ status: "cancelled" }),
-        existing: {
+        existing: fromPartial<TenantBillingState>({
           billingState: "active",
           stateSince: new Date("2026-01-01T00:00:00Z"),
           mrrMinor: 112_700,
-        } as TenantBillingState,
+        }),
       }),
     );
 
@@ -256,8 +257,6 @@ describe("workspace directory churn", () => {
       }),
     );
 
-  // A workspace first published already cancelled (an import, a seed) has no
-  // earlier publication to read its loss from.
   it("takes the loss of a cancellation first seen cancelled from the price last paid", () => {
     expect(cancelled({ hasPaidInvoice: true })).toMatchObject({
       mrrMinor: 0,
@@ -282,21 +281,19 @@ describe("workspace directory churn", () => {
     expect(
       cancelled({
         hasPaidInvoice: true,
-        plan: { ...BUSINESS, price: 0 } as Plan,
+        plan: fromPartial<Plan>({ ...BUSINESS, price: 0 }),
       }).previousMrrMinor,
     ).toBe(0);
   });
 
-  // Past due, suspended, cancelled: the suspension billed nothing, so the
-  // cancellation that followed it lost nothing either.
   it("passes the loss a suspension held on to the cancellation that follows", () => {
     const row = cancelled({
-      existing: {
+      existing: fromPartial<TenantBillingState>({
         billingState: "suspended",
         stateSince: new Date("2026-09-01T00:00:00Z"),
         mrrMinor: 0,
         previousMrrMinor: 112_700,
-      } as TenantBillingState,
+      }),
     });
 
     expect(row.previousMrrMinor).toBe(112_700);
@@ -305,24 +302,27 @@ describe("workspace directory churn", () => {
   it("keeps a cancelled trial's loss at nothing", () => {
     const row = cancelled({
       hasPaidInvoice: true,
-      existing: {
+      existing: fromPartial<TenantBillingState>({
         billingState: "trialing",
         stateSince: new Date("2026-09-01T00:00:00Z"),
         mrrMinor: 0,
         previousMrrMinor: 0,
-      } as TenantBillingState,
+      }),
     });
 
     expect(row.previousMrrMinor).toBe(0);
   });
 
   it("reads invoices only for a workspace first published suspended or cancelled", () => {
-    const known = {
+    const known = fromPartial<TenantBillingState>({
       billingState: "cancelled",
       mrrMinor: 0,
       previousMrrMinor: 4_900,
-    } as TenantBillingState;
-    const unknown = { ...known, previousMrrMinor: 0 } as TenantBillingState;
+    });
+    const unknown = fromPartial<TenantBillingState>({
+      ...known,
+      previousMrrMinor: 0,
+    });
 
     expect(shouldLookUpPaidInvoice("cancelled", undefined)).toBe(true);
     expect(shouldLookUpPaidInvoice("suspended", undefined)).toBe(true);

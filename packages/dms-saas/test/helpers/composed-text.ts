@@ -1,4 +1,5 @@
 import { flattenLocale, readLocale } from "./locales";
+import { isNumber, isString } from "../../src/utils/primitive-guards";
 
 /** The locales the module ships. */
 export const LOCALES = ["en-GB", "fr-FR"];
@@ -14,13 +15,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * ones included, and its `$`-prefixed strings.
  */
 function namedKeys(payload: unknown): string[] {
-  if (typeof payload === "string") {
+  if (isString(payload)) {
     return payload.startsWith(KEY_PREFIX) ? [payload.slice(1)] : [];
   }
   if (Array.isArray(payload)) return payload.flatMap(namedKeys);
   if (!isRecord(payload)) return [];
-  const own =
-    typeof payload.key === "string" ? [payload.key.replace(/^\$/, "")] : [];
+  const own = isString(payload.key) ? [payload.key.replace(/^\$/, "")] : [];
   return [...own, ...Object.values(payload).flatMap(namedKeys)];
 }
 
@@ -41,11 +41,14 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 
 type WrittenParams = Record<string, string | number>;
 
+/**
+ * Resolves a key in a locale and fills in its params. Picks the plural form by
+ * vue-i18n's default rule: two forms are one / other, three zero / one / other.
+ */
 function translate(code: string, key: string, params: WrittenParams): string {
   const message = flattenLocale(readLocale(code)).get(key) ?? key;
   const forms = message.split(PLURAL_SEPARATOR);
   const count = Number(params.count);
-  // vue-i18n's default rule: two forms are one / other, three zero / one / other.
   const index =
     forms.length === TWO_FORMS
       ? Number(count !== 1)
@@ -60,12 +63,12 @@ function translate(code: string, key: string, params: WrittenParams): string {
 }
 
 function writeParam(param: unknown, code: string): string {
-  if (typeof param === "string") return param;
-  if (typeof param === "number") {
+  if (isString(param)) return param;
+  if (isNumber(param)) {
     return new Intl.NumberFormat(code).format(param);
   }
   if (!isRecord(param)) return String(param);
-  if (typeof param.key === "string") return writeText(param, code);
+  if (isString(param.key)) return writeText(param, code);
   if (param.type === "money") {
     return new Intl.NumberFormat(code, {
       style: "currency",
@@ -86,12 +89,12 @@ function writeParam(param: unknown, code: string): string {
  * written as their day; plurals follow vue-i18n's default rule on `count`.
  */
 export function writeText(text: unknown, code = "en-GB"): string {
-  if (typeof text === "string") {
+  if (isString(text)) {
     return text.startsWith(KEY_PREFIX)
       ? translate(code, text.slice(1), {})
       : text;
   }
-  if (!isRecord(text) || typeof text.key !== "string") return String(text);
+  if (!isRecord(text) || !isString(text.key)) return String(text);
   const rawParams = isRecord(text.params) ? text.params : {};
   const params: WrittenParams = Object.fromEntries(
     Object.entries(rawParams).map(([name, param]) => [

@@ -69,9 +69,11 @@ export class SaasDashboardController extends PageController(
   },
   DefaultLayout({ fullWidth: true, headerActions: [CREATE_WORKSPACE_BUTTON] }),
 ) {
-  // No `live`: the bar shows when the figures were read and a refresh button,
-  // then the period, whose comparisons the toolbar offers as a menu. The
-  // selector keeps its roles editor name through `meta`.
+  /**
+   * No `live`: the bar shows when the figures were read and a refresh button,
+   * then the period, whose comparisons the toolbar offers as a menu. The
+   * selector keeps its roles editor name through `meta`.
+   */
   static toolbar = pageToolbar({
     live: false,
     period: {
@@ -129,6 +131,13 @@ export class SaasDashboardController extends PageController(
     )
     .meta(permissionMeta("figures", "i-ph-squares-four"));
 
+  /**
+   * The paid-invoices chart stacks its columns: credits are negative, so they
+   * hang under the day's collected bar, which then takes the whole column
+   * instead of half of it. `columnWidth` is not used because it is a fixed
+   * pixel width, too wide for the 90 daily bars of a quarter. The compared
+   * window's collected money is a dashed line over the bars.
+   */
   static charts = Grid({ gap: "1rem" })
     .child(
       "row",
@@ -145,11 +154,6 @@ export class SaasDashboardController extends PageController(
               valueFormat: "currency",
               valuePrecision: "native",
               showDelta: true,
-              // Credits are negative: stacked, they hang under the day's
-              // collected bar, which then takes the whole column instead of
-              // half of it. `columnWidth` is a fixed pixel width, too wide
-              // for the 90 daily bars of a quarter. The compared window's
-              // collected money is a dashed line over the bars.
               chart: ChartColumn({
                 xaxisType: "datetime",
                 stacked: true,

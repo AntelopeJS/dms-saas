@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { assert, describe, expect, it } from "vitest";
 import type { Invoice } from "../src/db";
 import {
   type DirectoryRow,
@@ -20,12 +21,13 @@ import {
 } from "../src/metrics/revenue";
 import { SaasDashboardController } from "../src/pages/platform/dashboard";
 import { missingKeys, writeText } from "./helpers/composed-text";
+import { findChild, isOptionRecord } from "./helpers/serialized";
 
 const DAY_MS = 86_400_000;
 const NOW = new Date("2026-10-07T12:00:00Z");
 
 function row(overrides: Partial<DirectoryRow>): DirectoryRow {
-  return {
+  return fromPartial<DirectoryRow>({
     _id: overrides.tenantId ?? "t",
     tenantId: "t",
     billingState: "active",
@@ -38,7 +40,7 @@ function row(overrides: Partial<DirectoryRow>): DirectoryRow {
     planBillingMode: "flat",
     seats: 1,
     ...overrides,
-  } as DirectoryRow;
+  });
 }
 
 const ROWS: DirectoryRow[] = [
@@ -265,7 +267,7 @@ describe("revenue churn", () => {
 });
 
 function document(overrides: Partial<Invoice>): Invoice {
-  return {
+  return fromPartial<Invoice>({
     documentType: "invoice",
     status: "paid",
     currency: "eur",
@@ -274,7 +276,7 @@ function document(overrides: Partial<Invoice>): Invoice {
     issuedAt: NOW,
     paidAt: NOW,
     ...overrides,
-  } as Invoice;
+  });
 }
 
 describe("paid invoices chart", () => {
@@ -366,7 +368,6 @@ describe("paid invoices chart", () => {
         document({ total: 3_000 }),
         document({ total: 2_000, paidAt: new Date("2025-10-07T09:00:00Z") }),
         document({ total: 400, paidAt: new Date("2025-09-08T13:00:00Z") }),
-        // Between the two windows: in neither.
         document({ total: 9_000, paidAt: new Date("2026-03-01T00:00:00Z") }),
       ],
       range,
@@ -515,28 +516,9 @@ describe("comparison window", () => {
   });
 });
 
-interface SerializedBlock {
-  componentName?: string;
-  options?: Record<string, unknown>;
-  children: { id: string; component: SerializedBlock }[];
-}
-
-function findChild(
-  block: SerializedBlock,
-  id: string,
-): SerializedBlock | undefined {
-  for (const child of block.children) {
-    if (child.id === id) return child.component;
-    const nested = findChild(child.component, id);
-    if (nested) return nested;
-  }
-  return undefined;
-}
-
 describe("dashboard page", () => {
   it("leads with the attention queue fed by its route", () => {
-    const attention =
-      SaasDashboardController.attention.serializeSync() as SerializedBlock;
+    const attention = SaasDashboardController.attention.serializeSync();
 
     expect(attention.componentName).toBe("dms-nav-card-grid-block");
     expect(attention.options).toMatchObject({
@@ -545,11 +527,10 @@ describe("dashboard page", () => {
   });
 
   it("opens on a period bar without live mode, the comparisons a menu", () => {
-    const toolbar =
-      SaasDashboardController.toolbar.serializeSync() as SerializedBlock;
+    const toolbar = SaasDashboardController.toolbar.serializeSync();
 
     expect(toolbar.componentName).toBe("dms-page-toolbar-block");
-    expect(toolbar.children.map((child) => child.id)).toEqual(["period"]);
+    expect(toolbar.children?.map((child) => child.id)).toEqual(["period"]);
     expect(findChild(toolbar, "period")?.options).toMatchObject({
       presets: ["last-30-days", "last-90-days", "ytd"],
       rangeLabel: "relative",
@@ -561,14 +542,13 @@ describe("dashboard page", () => {
   });
 
   it("binds the churn and the paid invoices to the period selector", () => {
-    const toolbar =
-      SaasDashboardController.toolbar.serializeSync() as SerializedBlock;
+    const toolbar = SaasDashboardController.toolbar.serializeSync();
     const period = findChild(toolbar, "period");
-    const figures =
-      SaasDashboardController.figures.serializeSync() as SerializedBlock;
-    const charts =
-      SaasDashboardController.charts.serializeSync() as SerializedBlock;
-    const scope = period?.options?.id;
+    const figures = SaasDashboardController.figures.serializeSync();
+    const charts = SaasDashboardController.charts.serializeSync();
+    const periodOptions = period?.options;
+    assert(isOptionRecord(periodOptions));
+    const scope = periodOptions.id;
 
     expect(findChild(figures, "churn")?.options).toMatchObject({
       periodScope: scope,
@@ -579,8 +559,7 @@ describe("dashboard page", () => {
   });
 
   it("links the plans ranking to the catalogue and fits the activity tabs", () => {
-    const lists =
-      SaasDashboardController.lists.serializeSync() as SerializedBlock;
+    const lists = SaasDashboardController.lists.serializeSync();
 
     expect(findChild(lists, "plans")?.options).toMatchObject({
       actions: [{ to: "/modules/saas/catalog/plans" }],
@@ -589,8 +568,7 @@ describe("dashboard page", () => {
   });
 
   it("hangs the day's credits under its collected bar, the comparison dashed", () => {
-    const charts =
-      SaasDashboardController.charts.serializeSync() as SerializedBlock;
+    const charts = SaasDashboardController.charts.serializeSync();
     const card = findChild(charts, "paidInvoices");
 
     expect(card && findChild(card, "chart")?.options).toMatchObject({

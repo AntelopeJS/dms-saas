@@ -1,22 +1,10 @@
-import { readLocale } from "./helpers/locales";
+import { localeMessage, readLocale } from "./helpers/locales";
 import { describe, expect, it } from "vitest";
 import { INVOICE_STATUSES } from "../src/db";
 import { BILLING_DOCUMENT_STATUS_ITEMS } from "../src/utils/billing-document-status";
 
-type LocaleTree = Record<string, unknown>;
-
 const LOCALE_PATHS = ["saas-en-GB.json", "saas-fr-FR.json"];
 const LABEL_PREFIX = "$";
-
-function translate(locale: LocaleTree, label: string): unknown {
-  return label
-    .slice(LABEL_PREFIX.length)
-    .split(".")
-    .reduce<unknown>(
-      (node, segment) => (node as LocaleTree | undefined)?.[segment],
-      locale,
-    );
-}
 
 const STATUS_ITEMS = BILLING_DOCUMENT_STATUS_ITEMS;
 
@@ -31,7 +19,9 @@ describe("billing document status labels", () => {
   it.each(LOCALE_PATHS)("%s translates every status label", (path) => {
     const locale = readLocale(path);
     const untranslated = STATUS_ITEMS.filter(
-      (item) => typeof translate(locale, item.label) !== "string",
+      (item) =>
+        localeMessage(locale, item.label.slice(LABEL_PREFIX.length)) ===
+        undefined,
     );
 
     expect(untranslated.map((item) => item.label)).toEqual([]);

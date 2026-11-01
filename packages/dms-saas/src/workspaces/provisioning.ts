@@ -5,12 +5,7 @@ import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { recomputeTenantBillingState } from "../billing-state";
-import type {
-  PaidUsagePeriod,
-  Plan,
-  TenantBillingAddress,
-  TenantSubscriptionStatus,
-} from "../db";
+import type { PaidUsagePeriod, Plan, TenantSubscriptionStatus } from "../db";
 import {
   PlanModel,
   TenantBillingInfoModel,
@@ -48,6 +43,7 @@ import {
   reserveTrialIdentities,
 } from "./provisioning-state";
 import { isPlanOfferedTo } from "../plans/plan-audience";
+import type Stripe from "stripe";
 export { rollbackWorkspaceProvisioning } from "./provisioning-rollback";
 
 const HTTP_BAD_REQUEST = 400;
@@ -57,76 +53,25 @@ const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
 const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
 const PENDING_PAYMENT_STATUS: TenantSubscriptionStatus = "pending_payment";
 
-export type WorkspaceCustomerType = "individual" | "business";
-
-export type WorkspaceAddressInput = Partial<
-  Record<keyof TenantBillingAddress, string>
->;
-
-export interface WorkspaceBillingProfile {
-  customerType: WorkspaceCustomerType;
-  companyName?: string;
-  vatNumber?: string;
-  address?: WorkspaceAddressInput;
-}
-
-export interface WorkspaceProvisioningPayload extends WorkspaceBillingProfile {
-  workspaceName: string;
-  planId: string;
-  /**
-   * Absent for a card-less workspace, which only a free plan allows, or a
-   * workspace that awaits its first payment.
-   */
-  paymentMethodId?: string;
-  /**
-   * The workspace opens on its paid plan waiting for its first payment, made
-   * through Checkout, as one an operator creates for its owner to pay. No
-   * Stripe object is created here.
-   */
-  awaitsFirstPayment?: boolean;
-  /**
-   * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
-   * listeners and nowhere else. Opaque here: dms-saas never reads it, never
-   * stores it, and never returns it.
-   */
-  extras?: Record<string, unknown>;
-}
-
-export interface StripeCustomerProfile extends WorkspaceBillingProfile {
-  email: string;
-  fallbackName: string;
-}
-
-export interface WorkspaceProvisioningHandles {
-  /** A committed workspace or an uncertain payment must not be destructively rolled back. */
-  mustPreserveWorkspace?: boolean;
-  userId?: string;
-  tenantId?: string;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-  trialConsumptionId?: string;
-  trialIdentityIds?: string[];
-}
-
-export interface CardDetails {
-  fingerprint: string | null;
-  billingAddress: WorkspaceAddressInput | undefined;
-}
-
-export interface WorkspaceProvisioningInput {
-  userId: string;
-  /** The owner's language, for what the workspace is set up with in words. */
-  ownerLanguage?: string;
-  payload: WorkspaceProvisioningPayload;
-  stripeCustomerProfile: StripeCustomerProfile;
-  card: CardDetails;
-  handles: WorkspaceProvisioningHandles;
-}
-
-export interface ProvisionedWorkspace {
-  tenantId: string;
-  isTrialing: boolean;
-}
+export type {
+  CardDetails,
+  ProvisionedWorkspace,
+  StripeCustomerProfile,
+  WorkspaceAddressInput,
+  WorkspaceBillingProfile,
+  WorkspaceCustomerType,
+  WorkspaceProvisioningHandles,
+  WorkspaceProvisioningInput,
+  WorkspaceProvisioningPayload,
+} from "./provisioning-types";
+import type {
+  CardDetails,
+  ProvisionedWorkspace,
+  WorkspaceCustomerType,
+  WorkspaceProvisioningHandles,
+  WorkspaceProvisioningInput,
+  WorkspaceProvisioningPayload,
+} from "./provisioning-types";
 
 interface CreatedSubscription extends SubscriptionPeriodDates {
   /** Null for a workspace on a local free subscription, card or not. */
@@ -251,15 +196,19 @@ export async function resolveRegistrationPlan(): Promise<Plan> {
   return freePlan;
 }
 
+/**
+ * Creates the Stripe customer. Without a VAT number its metadata has no
+ * `vatNumber` key, as Stripe expects. Its id is recorded before the follow-up
+ * calls: a failed attach (declined or already attached card) must still let
+ * the rollback delete the customer and its PII.
+ */
 async function createStripeCustomer(
   input: WorkspaceProvisioningInput,
   paymentMethodId: string,
 ): Promise<string> {
   const { stripeCustomerProfile: profile, handles } = input;
   const stripe = getStripeClient();
-  // Set rather than spread: a customer without a VAT number carries no
-  // `vatNumber` key at all, which is what Stripe's metadata expects.
-  const metadata: Record<string, string> = {
+  const metadata: Stripe.Metadata = {
     customerType: profile.customerType,
   };
   if (profile.vatNumber) metadata.vatNumber = profile.vatNumber;
@@ -278,9 +227,6 @@ async function createStripeCustomer(
     { idempotencyKey: `provisioning-customer:${handles.tenantId}` },
   );
   rememberCustomerLocale(customer.id, input.ownerLanguage);
-  // Recorded before the follow-up calls: a failed attach (declined or already
-  // attached card) must still leave the rollback able to delete the customer
-  // and the PII it carries.
   handles.stripeCustomerId = customer.id;
   await recordProvisioningState(handles);
   await stripe.paymentMethods.attach(paymentMethodId, {
@@ -332,6 +278,11 @@ async function recordTrialConsumption(
   return inserted[0];
 }
 
+/**
+ * Creates the Stripe subscription, tracking the trial consumption row so
+ * `rollbackWorkspaceProvisioning` releases it: a failed provisioning must not
+ * burn a legitimate user's trial.
+ */
 async function createSubscription(
   input: SubscriptionCreationInput,
 ): Promise<CreatedSubscription> {
@@ -361,9 +312,6 @@ async function createSubscription(
   handles.stripeSubscriptionId = subscription.id;
   await recordProvisioningState(handles);
   if (grantTrial) {
-    // Track the consumption row so rollbackWorkspaceProvisioning can release
-    // it: a provisioning that fails mid-way must not permanently burn a
-    // legitimate user's trial eligibility.
     handles.trialConsumptionId = await recordTrialConsumption(
       input.userId,
       emailHash,
@@ -389,6 +337,9 @@ async function createSubscription(
  * owes nothing now, so there is nothing to settle; the card was set up
  * off-session (a SetupIntent confirmed on the client), so the charge needs no
  * further interaction.
+ *
+ * A timeout may hide a successful charge, so only a definitive decline
+ * (`StripeCardError`) permits rollback.
  */
 async function settleSubscriptionPayment(
   subscription: CreatedSubscription,
@@ -413,7 +364,6 @@ async function settleSubscriptionPayment(
       },
     );
   } catch (error) {
-    // A timeout may hide a successful charge. Only a definitive decline permits rollback.
     if (
       error instanceof Error &&
       "type" in error &&
@@ -517,15 +467,17 @@ async function createOwnedTenant(
   });
 }
 
-/** Record the provisioning attempt before provider effects; ambiguous attempts are preserved for reconciliation. */
+/**
+ * Record the provisioning attempt before provider effects; ambiguous attempts
+ * are preserved for reconciliation. Nothing can be charged without a card, so
+ * only a free plan goes on without one, or a workspace whose first payment
+ * goes through Checkout; this is checked before any durable state is written.
+ */
 export async function provisionWorkspace(
   input: WorkspaceProvisioningInput,
 ): Promise<ProvisionedWorkspace> {
   const plan = await loadBillablePlan(input.payload.planId);
   assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_available");
-  // Nothing can be charged without a card, so only a free plan goes on
-  // without one, or a workspace whose first payment goes through Checkout —
-  // checked before any durable state is written.
   assert(
     input.payload.paymentMethodId ||
       isFreePlan(plan) ||
@@ -568,6 +520,12 @@ async function provisionStripeBilling(
   return { stripeCustomerId, subscription };
 }
 
+/**
+ * Hands the complete but unbilled workspace to the listeners with data to
+ * write for it, inside what the caller's rollback undoes: a failing listener
+ * takes the tenant, subscription and Stripe customer with it, and no refund is
+ * owed since the card is not charged yet.
+ */
 async function runProvisioning(
   input: WorkspaceProvisioningInput,
 ): Promise<ProvisionedWorkspace> {
@@ -591,12 +549,6 @@ async function runProvisioning(
     }),
   );
 
-  // Hand the finished-but-unbilled workspace to whoever else has data to write
-  // for it. Still inside everything the caller's rollback undoes: a listener
-  // that fails takes the tenant, the (incomplete) subscription and the Stripe
-  // customer with it — and because the card has not been charged yet, that
-  // rollback owes no refund. It runs with the workspace already complete, so a
-  // listener may read it.
   await emitTenantBeingProvisioned({
     tenantId,
     userId,

@@ -1,9 +1,11 @@
 import type {
   Feature,
+  FeatureValueType,
   PlanFeatureValue,
   PlanMigrationFeatureDiff,
 } from "../db";
 import { PLAN_UNLIMITED } from "../db";
+import { isNumber } from "../utils/primitive-guards";
 
 /** How a value reads moving from one plan to another. */
 export type PlanChangeKind = "lost" | "gained" | "changed" | "same";
@@ -30,10 +32,10 @@ function booleanRank(value: unknown): number {
 /** Off and missing rank lowest, unlimited highest, a limit in between. */
 function numberRank(value: unknown): number {
   if (value === PLAN_UNLIMITED) return Number.POSITIVE_INFINITY;
-  return typeof value === "number" && value > 0 ? value : NO_RANK;
+  return isNumber(value) && value > 0 ? value : NO_RANK;
 }
 
-const RANKS: Record<string, Rank> = {
+const RANKS: Partial<Record<FeatureValueType, Rank>> = {
   boolean: booleanRank,
   number: numberRank,
 };

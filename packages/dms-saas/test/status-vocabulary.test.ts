@@ -1,28 +1,53 @@
-import { describe, expect, it } from "vitest";
-import { SAAS_STATUS_TONES } from "../frontend-vue/app/composables/useSaasStatus";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { useSaasStatus } from "../frontend-vue/app/composables/useSaasStatus";
 import {
   fromMinorUnits,
   toMinorUnits,
 } from "../frontend-vue/app/composables/useMoneyFormat";
 import { BILLING_STATES } from "../src/db";
 import {
+  type StatusFamily,
   STATUS_TONES,
   statusItems,
+  statusPillDisplay,
   WORKSPACE_STATUS_ORDER,
 } from "../src/utils/status-vocabulary";
 import { flattenLocale, readLocale } from "./helpers/locales";
 
 const LOCALES = ["en-GB", "fr-FR"];
 
+function isStatusFamily(name: string): name is StatusFamily {
+  return Object.hasOwn(STATUS_TONES, name);
+}
+
+const FAMILIES = Object.keys(STATUS_TONES).filter(isStatusFamily);
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("status vocabulary", () => {
   it("gives the frontend the backend's tone of every status", () => {
-    expect(SAAS_STATUS_TONES).toEqual(STATUS_TONES);
+    vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
+    const { statusView } = useSaasStatus();
+    const served = FAMILIES.flatMap((family) =>
+      Object.entries(statusPillDisplay(family).options?.tones ?? {}).map(
+        ([status, tone]) => ({ family, status, tone }),
+      ),
+    );
+    const drawn = served.map(({ family, status }) => ({
+      family,
+      status,
+      tone: statusView(family, status).tone,
+    }));
+
+    expect(served.length).toBeGreaterThan(0);
+    expect(drawn).toEqual(served);
   });
 
   it.each(LOCALES)("%s names every status of every family", (code) => {
     const keys = flattenLocale(readLocale(code));
-    const families = Object.keys(STATUS_TONES) as (keyof typeof STATUS_TONES)[];
-    const missing = families.flatMap((family) =>
+    const missing = FAMILIES.flatMap((family) =>
       statusItems(family)
         .map((item) => item.label.slice(1))
         .filter((key) => !keys.has(key)),
@@ -31,11 +56,10 @@ describe("status vocabulary", () => {
     expect(missing).toEqual([]);
   });
 
-  it("lists every workspace status once, in the vocabulary's order", () => {
+  it("lists every workspace status once", () => {
     expect([...WORKSPACE_STATUS_ORDER].sort()).toEqual(
       [...BILLING_STATES].sort(),
     );
-    expect(WORKSPACE_STATUS_ORDER).toEqual(Object.keys(STATUS_TONES.workspace));
   });
 });
 

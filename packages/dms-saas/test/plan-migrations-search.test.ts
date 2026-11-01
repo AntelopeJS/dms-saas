@@ -5,9 +5,6 @@ import { describe, expect, it } from "vitest";
 import { planMigrationsDataAPI } from "../src/data-api/platformOwner/plan-migrations";
 
 describe("plan migrations search", () => {
-  // The DMS searches a field through its filter, else through its column:
-  // the plan names have neither a column nor, before, a filter, so a search
-  // for "Basic" found no migration from Basic.
   it("matches the plan names a migration moves from and to", () => {
     const meta = GetDataControllerMeta(new planMigrationsDataAPI());
     const searchable = GetMetadata(planMigrationsDataAPI, SearchableMeta);

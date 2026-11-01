@@ -37,8 +37,6 @@ describe("plan change review heading", () => {
     expect(planChangeHeadingCase(change, current, target)).toBe(expected);
   });
 
-  // A deleted workspace restored on the free plan read "Switch to Free", from
-  // Free to Free: it reopens rather than switches.
   it("titles a cancelled workspace choosing a plan again as a resubscription", () => {
     const free = { ...STARTER, price: 0 };
     expect(planChangeHeadingCase(priced("free"), free, free, true)).toBe(

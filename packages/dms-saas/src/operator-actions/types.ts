@@ -1,6 +1,8 @@
 export type WorkspaceOperatorAction =
   | "workspace.suspend"
   | "workspace.unsuspend"
+  | "workspace.complimentary_grant"
+  | "workspace.support_join"
   | "subscription.upgrade"
   | "customer_balance.credit"
   | "invitation.send"

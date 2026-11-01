@@ -1,37 +1,21 @@
 import { setImmediate } from "node:timers/promises";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { TriggerType } from "@antelopejs/interface-dms-automation";
-
-const registration = vi.hoisted(() => vi.fn());
-vi.mock("@antelopejs/interface-dms-automation", () => ({
-  RegisterTriggerType: registration,
-  RegisterActionType: vi.fn(),
-  UnregisterTriggerType: vi.fn(),
-  UnregisterActionType: vi.fn(),
-}));
-vi.mock("../src/notifications", () => ({
-  notifyTenantOwners: vi.fn(),
-  automationNotificationSubject: {},
-}));
-vi.mock("../src/operator-actions", () => ({
-  reactivateWorkspaceCommand: vi.fn(),
-  suspendWorkspaceCommand: vi.fn(),
-}));
-
+import { describe, expect, it, vi } from "vitest";
 import {
   emitAutomationEvent,
   emitTenantDeletedEvent,
   registerAutomationNodes,
 } from "../src/automation";
+import {
+  implementAutomationCatalog,
+  registeredTrigger,
+} from "./helpers/automation";
 
-beforeEach(() => registration.mockClear());
+const catalog = implementAutomationCatalog();
 
 describe("best-effort automation emission", () => {
   it("contains synchronous and asynchronous listener failures without skipping later listeners", async () => {
     registerAutomationNodes();
-    const trigger = registration.mock.calls
-      .map(([item]) => item as TriggerType)
-      .find((item) => item.id === "saas.trial-ending")!;
+    const trigger = registeredTrigger(catalog, "saas.trial-ending");
     const synchronousFailure = vi.fn(() => {
       throw new Error("synchronous listener failure");
     });
@@ -63,9 +47,7 @@ describe("best-effort automation emission", () => {
 describe("replayable deletion automation emission", () => {
   it("propagates asynchronous failure and forwards the same operation identity on retry", async () => {
     registerAutomationNodes();
-    const trigger = registration.mock.calls
-      .map(([item]) => item as TriggerType)
-      .find((item) => item.id === "saas.tenant-deleted")!;
+    const trigger = registeredTrigger(catalog, "saas.tenant-deleted");
     const emit = vi
       .fn()
       .mockRejectedValueOnce(new Error("queue unavailable"))

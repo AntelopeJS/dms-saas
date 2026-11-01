@@ -46,10 +46,13 @@ import { migrationTotals } from "../../plans/migration-detail";
 import { MS_PER_DAY } from "../../utils/time";
 import { loadActivitySources } from "../../metrics/activity-sources";
 import type { ItemsPayload } from "./block-payloads";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const OPEN_STATUS = "open";
-// Paid invoices are filtered on their issue date, which an invoice paid late
-// precedes: the window reaches back far enough to catch it.
+/**
+ * Paid invoices are filtered on their issue date, which an invoice paid late
+ * precedes: the window reaches back far enough to catch it.
+ */
 const LATE_PAYMENT_LOOKBACK_DAYS = 90;
 const ACTIVITY_LIMIT = 8;
 
@@ -197,7 +200,7 @@ export class SaasDashboardController extends Controller("/api/saas/dashboard") {
   @Get("/activity")
   async activity(
     @AuthOwnerOnly() _user: User,
-    @Parameter("kind", "query") kind: unknown,
+    @Parameter("kind", "query") kind: QueryParameterValue,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
     const sources = await loadActivitySources(null, ACTIVITY_LIMIT);
     return {

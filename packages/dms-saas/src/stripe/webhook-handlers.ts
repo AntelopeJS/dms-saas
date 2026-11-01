@@ -92,7 +92,9 @@ const TRIAL_BLOCKED_STRIPE_STATUSES = new Set<string>([
   "incomplete_expired",
 ]);
 
-export async function handleInvoiceCreated(event: Stripe.Event): Promise<void> {
+export async function handleInvoiceCreated(
+  event: Stripe.InvoiceCreatedEvent,
+): Promise<void> {
   const mirrored = await mirrorInvoiceFromEvent(event);
   if (!mirrored) return;
   await admitCycleInvoice({
@@ -105,13 +107,21 @@ export async function handleInvoiceCreated(event: Stripe.Event): Promise<void> {
 }
 
 export async function handleInvoiceFinalized(
-  event: Stripe.Event,
+  event: Stripe.InvoiceFinalizedEvent,
 ): Promise<void> {
   await mirrorInvoiceFromEvent(event);
 }
 
-export async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
-  const invoice = event.data.object as Stripe.Invoice;
+/**
+ * Only the payment that clears the last open invoice lifts the block: a small
+ * proration or one-off paid while the renewal invoice stays open must not
+ * reactivate, as each lift would also restamp pastDueSince on the next
+ * failure, pushing the suspension deadline out forever.
+ */
+export async function handleInvoicePaid(
+  event: Stripe.InvoicePaidEvent,
+): Promise<void> {
+  const invoice = event.data.object;
   const customerId = asCustomerId(invoice.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -120,10 +130,6 @@ export async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenant._id);
   const subscription = await tenantSubscriptionModel.findOne();
   if (subscription && REACTIVATABLE_STATUSES.has(subscription.status)) {
-    // Only the payment that clears the last open invoice lifts the block: a
-    // small proration or one-off paid while the renewal invoice stays open
-    // must not reactivate — each lift would also restamp pastDueSince on the
-    // next failure, pushing the suspension deadline out forever.
     const invoiceModel = GetModel(InvoiceModel, tenant._id);
     const stillOpen = await invoiceModel.findLatestOpen();
     if (!stillOpen) {
@@ -132,8 +138,10 @@ export async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
   }
 }
 
-export async function handleInvoiceVoided(event: Stripe.Event): Promise<void> {
-  const invoice = event.data.object as Stripe.Invoice;
+export async function handleInvoiceVoided(
+  event: Stripe.InvoiceVoidedEvent,
+): Promise<void> {
+  const invoice = event.data.object;
   const customerId = asCustomerId(invoice.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -141,22 +149,24 @@ export async function handleInvoiceVoided(event: Stripe.Event): Promise<void> {
   await upsertInvoice(invoice, tenant._id);
 }
 
+/**
+ * The final dunning failure and the cancellation race with no ordering
+ * guarantee: a late payment_failed must not resurrect a cancelled mirror into
+ * past_due, as the retention cron would never find the tenant again and the
+ * auto-suspend cron would park it suspended for good. Stripe keeps retrying
+ * after the grace period suspended the workspace, and a failed retry must not
+ * lift the suspension either.
+ */
 export async function handleInvoicePaymentFailed(
-  event: Stripe.Event,
+  event: Stripe.InvoicePaymentFailedEvent,
 ): Promise<void> {
-  const invoice = event.data.object as Stripe.Invoice;
+  const invoice = event.data.object;
   const customerId = asCustomerId(invoice.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
   await upsertInvoice(invoice, tenant._id);
   if (await isPendingUpdatePayment(invoice)) return;
-  // The final dunning failure and the cancellation race with no ordering
-  // guarantee: a late payment_failed must not resurrect a cancelled mirror
-  // into past_due — the retention cron would never find the tenant again and
-  // the auto-suspend cron would park it suspended for good. Stripe keeps
-  // retrying after the grace period suspended the workspace, and a failed
-  // retry must not lift the suspension either.
   const localSubscription = await GetModel(
     TenantSubscriptionModel,
     tenant._id,
@@ -201,6 +211,15 @@ function wasRefundedOnSubscription(
   return !startedAt || new Date(local.refundRequestedAt) >= startedAt;
 }
 
+/**
+ * The redelivery of a handler that failed *after* the credit note was created
+ * (a transient notification error is enough) replays the whole cancellation
+ * path; the metadata marker plus the idempotency key are what keep it from
+ * refunding the customer a second time. The amount is computed at the
+ * cancellation instant, not the processing instant: a redelivery must compute
+ * the same amount, or the idempotency key would reject the replay as a changed
+ * request instead of deduplicating it.
+ */
 async function applyAutoProrataIfEnabled(
   customerId: string,
   tenantId: string,
@@ -220,10 +239,6 @@ async function applyAutoProrataIfEnabled(
   const lastInvoice = invoices.data[0];
   if (!lastInvoice?.id) return;
 
-  // The redelivery of a handler that failed *after* this create (a transient
-  // notification error is enough) replays the whole cancellation path; the
-  // metadata marker plus the idempotency key are what keep it from refunding
-  // the customer a second time.
   const existingNotes = await stripe.creditNotes.list({
     invoice: lastInvoice.id,
   });
@@ -237,9 +252,6 @@ async function applyAutoProrataIfEnabled(
     lastInvoice.amount_paid,
     period.start,
     period.end,
-    // The cancellation instant, not the processing instant: a redelivery must
-    // compute the same amount, or the idempotency key below would reject the
-    // replay as a changed request instead of deduplicating it.
     subscription.ended_at ?? nowInStripeSeconds(),
   );
   if (remaining <= 0) return;
@@ -271,21 +283,24 @@ async function isSubscriptionAlreadyLeft(
   return !!local && local.stripeSubscriptionId !== stripeSubscriptionId;
 }
 
+/**
+ * A cycle-end cancellation parked behind a free plan is a completed downgrade,
+ * not a churn: no cancellation status, no prorata, no notice. The cancellation
+ * event is emitted once every cancellation side effect (including prorata) is
+ * in place.
+ */
 export async function handleSubscriptionDeleted(
-  event: Stripe.Event,
+  event: Stripe.CustomerSubscriptionDeletedEvent,
 ): Promise<void> {
-  const subscription = event.data.object as Stripe.Subscription;
+  const subscription = event.data.object;
   const customerId = asCustomerId(subscription.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
   if (await isSubscriptionAlreadyLeft(tenant._id, subscription.id)) return;
-  // A cycle-end cancellation parked behind a free plan is a completed
-  // downgrade, not a churn: no cancellation status, no prorata, no notice.
   if (await applyPendingFreePlanOnCancellation(tenant._id)) return;
   await updateSubscriptionStatus(tenant._id, CANCELLED_STATUS);
   await applyAutoProrataIfEnabled(customerId, tenant._id, subscription);
-  // Emit once every cancellation side effect (incl. prorata) is in place.
   emitAutomationEvent("saas.subscription-cancelled", {
     tenantId: tenant._id,
     stripeSubscriptionId: subscription.id,
@@ -299,8 +314,10 @@ export async function handleSubscriptionDeleted(
   });
 }
 
-export async function handleTrialWillEnd(event: Stripe.Event): Promise<void> {
-  const subscription = event.data.object as Stripe.Subscription;
+export async function handleTrialWillEnd(
+  event: Stripe.CustomerSubscriptionTrialWillEndEvent,
+): Promise<void> {
+  const subscription = event.data.object;
   const customerId = asCustomerId(subscription.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
@@ -336,6 +353,7 @@ async function persistSubscriptionPeriod(
   await tenantSubscriptionModel.update(local._id, period);
 }
 
+/** A trial that converted successfully (trialing -> active) keeps the local status in sync. */
 async function handleTrialTransition(
   tenantId: string,
   subscription: Stripe.Subscription,
@@ -350,28 +368,27 @@ async function handleTrialTransition(
     });
     return;
   }
-  // Trial converted successfully (trialing -> active): keep the local status in sync.
   if (subscription.status === "active") {
     await updateSubscriptionStatus(tenantId, ACTIVE_STATUS);
   }
 }
 
+/**
+ * Every update carries the renewal date, and a scheduled downgrade lands as
+ * one of them, so neither can hang off the trial-only branch.
+ */
 export async function handleSubscriptionUpdated(
-  event: Stripe.Event,
+  event: Stripe.CustomerSubscriptionUpdatedEvent,
 ): Promise<void> {
-  const subscription = event.data.object as Stripe.Subscription;
+  const subscription = event.data.object;
   const customerId = asCustomerId(subscription.customer);
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
-  // Every update carries the renewal date, and a scheduled downgrade lands as
-  // one of them, so neither can hang off the trial-only branch below.
   await persistSubscriptionPeriod(tenant._id, subscription);
   await applyPendingPlanChangeIfEntered(tenant._id, subscription);
   await reconcilePendingWithStripe(tenant._id, subscription);
-  const previousAttributes = event.data.previous_attributes as
-    | Partial<Stripe.Subscription>
-    | undefined;
+  const previousAttributes = event.data.previous_attributes;
   if (previousAttributes?.status !== "trialing") return;
   await handleTrialTransition(tenant._id, subscription);
 }
@@ -391,9 +408,9 @@ function stripeAddressToTenant(
 }
 
 export async function handleCustomerUpdated(
-  event: Stripe.Event,
+  event: Stripe.CustomerUpdatedEvent,
 ): Promise<void> {
-  const customer = event.data.object as Stripe.Customer;
+  const customer = event.data.object;
   const tenant = await findTenantByCustomerId(customer.id);
   if (!tenant) return;
   await withBillingIdentityLock(tenant._id, () =>
@@ -401,6 +418,10 @@ export async function handleCustomerUpdated(
   );
 }
 
+/**
+ * The customer portal lets the customer edit their e-mail directly on Stripe;
+ * the mirror follows it like it follows the address.
+ */
 async function mirrorCustomerBilling(
   tenantId: string,
   customer: Stripe.Customer,
@@ -414,8 +435,6 @@ async function mirrorCustomerBilling(
   await billingInfoModel.update(existing._id, {
     address: stripeAddressToTenant(customer.address),
     ...vat,
-    // The customer portal lets the customer edit their e-mail directly on
-    // Stripe; the mirror follows it like it follows the address.
     billingEmail: customer.email ?? existing.billingEmail,
     companyName: isBusiness
       ? (customer.name ?? existing.companyName)
@@ -481,9 +500,9 @@ async function upsertRefund(
 }
 
 export async function handleChargeRefundUpdated(
-  event: Stripe.Event,
+  event: Stripe.ChargeRefundUpdatedEvent,
 ): Promise<void> {
-  const refund = event.data.object as Stripe.Refund;
+  const refund = event.data.object;
   const chargeId = asCustomerId(refund.charge);
   if (!chargeId) return;
   const stripe = getStripeClient();

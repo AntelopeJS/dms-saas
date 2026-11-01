@@ -86,9 +86,11 @@ function mapNode(
   return [toPlanPermissionNode(node.data, mapBranch(node.children, entryIds))];
 }
 
-// Below a permission every member holds, only the menu entries still need a
-// grant (the workspace settings under the settings root); the rest is the
-// blocks of a page anyone opens.
+/**
+ * Below a permission every member holds, only the menu entries still need a
+ * grant (the workspace settings under the settings root); the rest is the
+ * blocks of a page anyone opens.
+ */
 function liftEntries(
   branch: Record<string, PermissionTree>,
   entryIds: ReadonlySet<string>,

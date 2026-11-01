@@ -69,7 +69,9 @@ interface AutomationEventPayloads {
 
 export type AutomationEventName = keyof AutomationEventPayloads;
 
-type AutomationEventListener = (payload: unknown) => void | Promise<void>;
+type AutomationEventListener = (
+  payload: AutomationEventPayloads[AutomationEventName],
+) => void | Promise<void>;
 
 const eventListeners = new Map<
   AutomationEventName,
@@ -89,17 +91,18 @@ function listenersFor(
 /**
  * Broadcast a saas lifecycle event to the automation triggers listening for
  * it. No-ops when nothing listens and never throws, so emit call sites in
- * business flows are always safe.
+ * business flows are always safe: a failing procedure must never break the
+ * emitting business flow.
  */
 export function emitAutomationEvent<E extends AutomationEventName>(
   event: E,
   payload: AutomationEventPayloads[E],
 ): void {
   for (const listener of listenersFor(event)) {
+    // oxfmt-ignore
     try {
       void Promise.resolve(listener(payload)).catch(() => undefined);
     } catch {
-      // a failing procedure must never break the emitting business flow
     }
   }
 }

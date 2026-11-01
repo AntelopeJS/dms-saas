@@ -22,19 +22,26 @@ const INVALID_ERROR = "saas.errors.registration.extras_invalid";
 const TOO_LARGE_ERROR = "saas.errors.registration.extras_too_large";
 const TOO_COMPLEX_ERROR = "saas.errors.registration.extras_too_complex";
 
-interface ExtrasShape {
+interface ExtrasFootprint {
   keys: number;
   depth: number;
   hasForbiddenKey: boolean;
 }
 
-const EMPTY_SHAPE: ExtrasShape = { keys: 0, depth: 0, hasForbiddenKey: false };
+const EMPTY_FOOTPRINT: ExtrasFootprint = {
+  keys: 0,
+  depth: 0,
+  hasForbiddenKey: false,
+};
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function mergeShapes(left: ExtrasShape, right: ExtrasShape): ExtrasShape {
+function mergeFootprints(
+  left: ExtrasFootprint,
+  right: ExtrasFootprint,
+): ExtrasFootprint {
   return {
     keys: left.keys + right.keys,
     depth: Math.max(left.depth, right.depth),
@@ -42,24 +49,26 @@ function mergeShapes(left: ExtrasShape, right: ExtrasShape): ExtrasShape {
   };
 }
 
-/** One walk for every limit: the payload is untrusted, so it is read once. */
-function inspect(value: unknown, depth: number): ExtrasShape {
+/**
+ * One walk for every limit: the payload is untrusted, so it is read once. A
+ * leaf adds no level of its own: `{ a: 1 }` is one deep, not two.
+ */
+function inspect(value: unknown, depth: number): ExtrasFootprint {
   if (Array.isArray(value)) {
     return value
       .map((entry) => inspect(entry, depth + 1))
-      .reduce(mergeShapes, { ...EMPTY_SHAPE, depth });
+      .reduce(mergeFootprints, { ...EMPTY_FOOTPRINT, depth });
   }
-  // A leaf adds no level of its own: `{ a: 1 }` is one deep, not two.
-  if (!isPlainObject(value)) return EMPTY_SHAPE;
+  if (!isPlainObject(value)) return EMPTY_FOOTPRINT;
   return Object.entries(value)
     .map(([key, nested]) =>
-      mergeShapes(inspect(nested, depth + 1), {
+      mergeFootprints(inspect(nested, depth + 1), {
         keys: 1,
         depth,
         hasForbiddenKey: FORBIDDEN_KEYS.includes(key),
       }),
     )
-    .reduce(mergeShapes, { ...EMPTY_SHAPE, depth });
+    .reduce(mergeFootprints, { ...EMPTY_FOOTPRINT, depth });
 }
 
 /**
@@ -81,10 +90,10 @@ export function assertRegistrationExtras(extras: unknown): void {
     TOO_LARGE_ERROR,
   );
 
-  const shape = inspect(extras, 1);
-  assert(!shape.hasForbiddenKey, HTTP_BAD_REQUEST, INVALID_ERROR);
+  const footprint = inspect(extras, 1);
+  assert(!footprint.hasForbiddenKey, HTTP_BAD_REQUEST, INVALID_ERROR);
   assert(
-    shape.keys <= MAX_KEYS && shape.depth <= MAX_DEPTH,
+    footprint.keys <= MAX_KEYS && footprint.depth <= MAX_DEPTH,
     HTTP_BAD_REQUEST,
     TOO_COMPLEX_ERROR,
   );

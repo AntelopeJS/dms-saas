@@ -1,219 +1,93 @@
+import { randomUUID } from "node:crypto";
 import { HTTPResult } from "@antelopejs/interface-api";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { fromPartial } from "@total-typescript/shoehorn";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-interface JournalAction {
-  _id: string;
-  tenantId: string;
-  actorId: string;
-  actorEmail: string;
-  action: string;
-  status:
-    | "pending"
-    | "running"
-    | "succeeded"
-    | "failed"
-    | "reconciliation_required";
-  requestFingerprint: string;
-  details: Record<string, unknown>;
-  attemptCount: number;
-  revision: string;
-  lastErrorCode: string | null;
-  effectiveAt: Date | null;
-  createdAt: Date;
-  startedAt: Date | null;
-  completedAt: Date | null;
-  updatedAt: Date;
-}
-
-interface CreditPayload {
-  amount: number;
-  currency: string;
-  description: string;
-}
-
-interface StripeRequestOptions {
-  idempotencyKey: string;
-}
-
-interface StripeTransaction {
-  id: string;
-  amount: number;
-  currency: string;
-  ending_balance: number;
-  created: number;
-}
-
-interface ActionOutcome {
-  details: Record<string, unknown>;
-  effectiveAt: Date;
-}
-
-interface NamedModel {
-  name: string;
-}
-
-const harness = vi.hoisted(() => ({
-  models: new Map<string, unknown>(),
-  events: [] as string[],
-  stripeAttempts: [] as string[],
-  stripeTransactions: new Map<string, unknown>(),
-  stripeEffects: 0,
-  failFirstSuccessWrite: true,
-  failDefinitivelyOnce: false,
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const original =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...original,
-    GetModel: (model: NamedModel): unknown => harness.models.get(model.name),
-  };
-});
-
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: { Error: vi.fn() },
-}));
-
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => stripeClient(),
-}));
-
+import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import { grantBalanceCreditCommand } from "../src/operator-actions/commands";
+import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
+import { captureLogs } from "./helpers/logging";
+import { useMongoDatabase } from "./helpers/mongo";
+import { planRow } from "./helpers/plan-row";
+import { useSuiteStripe } from "./helpers/stripe";
 
-let action: JournalAction | undefined;
+useMongoDatabase("operator-action-journal");
+const stripe = useSuiteStripe();
+const logs = captureLogs();
 
 const BASE_TIME = new Date("2026-08-28T12:00:00.000Z");
 const HOUR_MS = 60 * 60 * 1000;
 const SAFE_RETRY_WINDOW_MS = 23 * HOUR_MS;
 
-function markReconciliationRequired(errorCode: string): void {
-  if (!action) return;
-  action.status = "reconciliation_required";
-  action.lastErrorCode = errorCode;
-  action.completedAt = new Date();
-}
-
-function operatorActionModel(): object {
-  return {
-    insert: async (intent: JournalAction) => {
-      if (action) throw new Error("duplicate operation");
-      harness.events.push("intent");
-      action = { ...intent };
-    },
-    get: async () => action,
-    updateDetails: async (
-      current: JournalAction,
-      details: Record<string, unknown>,
-    ) => {
-      current.details = details;
-      return current;
-    },
-    beginAttempt: async (_current: JournalAction) => {
-      if (!action || !["pending", "failed"].includes(action.status))
-        throw new Error("not eligible");
-      action.status = "running";
-      action.attemptCount += 1;
-      action.startedAt = new Date();
-      return action;
-    },
-    markSucceeded: async (_current: JournalAction, outcome: ActionOutcome) => {
-      if (harness.failFirstSuccessWrite) {
-        harness.failFirstSuccessWrite = false;
-        throw new Error("journal success write failed");
-      }
-      if (!action) return;
-      action.status = "succeeded";
-      action.details = outcome.details;
-      action.effectiveAt = outcome.effectiveAt;
-      action.completedAt = new Date();
-    },
-    markFailed: async (_current: JournalAction, errorCode: string) => {
-      if (!action) return;
-      action.status = "failed";
-      action.lastErrorCode = errorCode;
-      action.completedAt = new Date();
-    },
-    markReconciliationRequired: async (
-      _current: JournalAction,
-      errorCode: string,
-    ) => {
-      markReconciliationRequired(errorCode);
-    },
-  };
-}
-
-function stripeClient(): object {
-  return {
-    customers: {
-      createBalanceTransaction: async (
-        _customerId: string,
-        payload: CreditPayload,
-        options: StripeRequestOptions,
-      ) => createStripeTransaction(payload, options.idempotencyKey),
-    },
-  };
-}
-
-function createStripeTransaction(
-  payload: CreditPayload,
-  idempotencyKey: string,
-): StripeTransaction {
-  harness.events.push("stripe");
-  harness.stripeAttempts.push(idempotencyKey);
-  if (harness.failDefinitivelyOnce) {
-    harness.failDefinitivelyOnce = false;
-    throw new HTTPResult(402, "saas.errors.operator.definitive_failure");
-  }
-  const existing = harness.stripeTransactions.get(idempotencyKey);
-  if (existing) return existing as StripeTransaction;
-  harness.stripeEffects += 1;
-  const transaction: StripeTransaction = {
-    id: "cbtxn_123",
-    amount: payload.amount,
-    currency: payload.currency,
-    ending_balance: payload.amount,
-    created: 1_700_000_000,
-  };
-  harness.stripeTransactions.set(idempotencyKey, transaction);
-  return transaction;
-}
-
-function configureModels(): void {
-  harness.models.set("OperatorActionModel", operatorActionModel());
-  harness.models.set("TenantSubscriptionModel", {
-    findOne: async () => ({
-      planId: "paid-plan",
-      stripeCustomerId: "cus_123",
-    }),
-  });
-  harness.models.set("PlanModel", {
-    get: async () => ({ currency: "EUR" }),
-  });
-}
-
-const input = {
-  tenantId: "tenant-123",
-  operationId: "credit-operation-123",
-  actor: { id: "owner-123", email: "owner@example.com" },
-  amountCents: 2500,
-  reason: "Service recovery credit",
+/** What the stand-in Stripe account was asked and what it did. */
+const ledger = {
+  attempts: new Array<string>(),
+  journalStatusesSeen: new Array<string | undefined>(),
+  transactions: new Map<string, { id: string; amount: number }>(),
+  failDefinitivelyOnce: false,
 };
 
-beforeEach(() => {
-  vi.useFakeTimers();
+let input: Parameters<typeof grantBalanceCreditCommand>[0];
+
+function journal() {
+  return GetModel(OperatorActionModel).get(input.operationId);
+}
+
+/**
+ * Stripe's balance transactions with its idempotency contract: a key already
+ * seen returns the transaction the first request created. Each call also
+ * records the status the operator journal held when Stripe was reached.
+ */
+function installStripeBalance(): void {
+  vi.spyOn(
+    stripe.write.customers,
+    "createBalanceTransaction",
+  ).mockImplementation(async (_customerId, params, options) => {
+    const key = options?.idempotencyKey ?? "";
+    ledger.attempts.push(key);
+    ledger.journalStatusesSeen.push((await journal())?.status);
+    if (ledger.failDefinitivelyOnce) {
+      ledger.failDefinitivelyOnce = false;
+      throw new HTTPResult(402, "saas.errors.operator.definitive_failure");
+    }
+    const existing = ledger.transactions.get(key);
+    if (existing) return fromPartial(existing);
+    const transaction = {
+      id: "cbtxn_123",
+      amount: params.amount,
+      currency: params.currency,
+      ending_balance: params.amount,
+      created: 1_700_000_000,
+    };
+    ledger.transactions.set(key, transaction);
+    return fromPartial(transaction);
+  });
+}
+
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(BASE_TIME);
-  action = undefined;
-  harness.models.clear();
-  harness.events.length = 0;
-  harness.stripeAttempts.length = 0;
-  harness.stripeTransactions.clear();
-  harness.stripeEffects = 0;
-  harness.failFirstSuccessWrite = true;
-  harness.failDefinitivelyOnce = false;
-  configureModels();
+  ledger.attempts.length = 0;
+  ledger.journalStatusesSeen.length = 0;
+  ledger.transactions.clear();
+  ledger.failDefinitivelyOnce = false;
+  installStripeBalance();
+  const tenantId = randomUUID();
+  const planId = randomUUID();
+  await GetModel(PlanModel).insert(planRow({ _id: planId, currency: "EUR" }));
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
+    _id: tenantId,
+    planId,
+    status: "active",
+    stripeCustomerId: "cus_123",
+  });
+  input = {
+    tenantId,
+    operationId: `credit-operation-${randomUUID()}`,
+    actor: { id: "owner-123", email: "owner@example.com" },
+    amountCents: 2500,
+    reason: "Service recovery credit",
+  };
 });
 
 afterEach(() => {
@@ -221,74 +95,23 @@ afterEach(() => {
 });
 
 async function createDefinitiveFailedCredit(): Promise<void> {
-  harness.failFirstSuccessWrite = false;
-  harness.failDefinitivelyOnce = true;
-  const error = await grantBalanceCreditCommand(input).catch(
-    (caught: unknown) => caught,
-  );
-  expect(error).toMatchObject({
+  ledger.failDefinitivelyOnce = true;
+  await expect(grantBalanceCreditCommand(input)).rejects.toMatchObject({
     status: 402,
     body: "saas.errors.operator.definitive_failure",
   });
-  expect(action).toMatchObject({ status: "failed", attemptCount: 1 });
+  expect(await journal()).toMatchObject({ status: "failed", attemptCount: 1 });
 }
 
 describe("durable operator journal", () => {
   it("retries a definitive failure inside the safe window with the same Stripe key", async () => {
     await createDefinitiveFailedCredit();
-    expect(harness.events.slice(0, 2)).toEqual(["intent", "stripe"]);
-    expect(action).toMatchObject({
+    expect(ledger.journalStatusesSeen).toEqual(["running"]);
+    expect(await journal()).toMatchObject({
       status: "failed",
       attemptCount: 1,
       lastErrorCode: "saas.errors.operator.definitive_failure",
     });
-
-    const mismatch = await grantBalanceCreditCommand({
-      ...input,
-      amountCents: 2600,
-    }).catch((error: unknown) => error);
-    expect(mismatch).toMatchObject({
-      status: 409,
-      body: "saas.errors.operator.idempotency_mismatch",
-    });
-    expect(harness.stripeAttempts).toHaveLength(1);
-
-    vi.setSystemTime(BASE_TIME.getTime() + SAFE_RETRY_WINDOW_MS - HOUR_MS);
-    await expect(grantBalanceCreditCommand(input)).resolves.toMatchObject({
-      operationId: input.operationId,
-      status: "succeeded",
-    });
-    expect(action).toMatchObject({
-      attemptCount: 2,
-      details: {
-        amountCents: 2500,
-        reason: "Service recovery credit",
-        stripeTransactionId: "cbtxn_123",
-      },
-    });
-    expect(harness.stripeAttempts).toEqual([
-      "saas-operator-credit:credit-operation-123",
-      "saas-operator-credit:credit-operation-123",
-    ]);
-    expect(harness.stripeEffects).toBe(1);
-  });
-
-  it("requires reconciliation instead of retrying after the safe window", async () => {
-    await createDefinitiveFailedCredit();
-    vi.setSystemTime(BASE_TIME.getTime() + SAFE_RETRY_WINDOW_MS + 1);
-    harness.stripeTransactions.clear();
-
-    await expect(grantBalanceCreditCommand(input)).rejects.toMatchObject({
-      status: 409,
-      body: "saas.errors.operator.reconciliation_required",
-    });
-    expect(action).toMatchObject({
-      status: "reconciliation_required",
-      attemptCount: 1,
-      lastErrorCode: "saas.errors.operator.reconciliation_required",
-    });
-    expect(harness.stripeAttempts).toHaveLength(1);
-    expect(harness.stripeEffects).toBe(0);
 
     await expect(
       grantBalanceCreditCommand({ ...input, amountCents: 2600 }),
@@ -296,18 +119,74 @@ describe("durable operator journal", () => {
       status: 409,
       body: "saas.errors.operator.idempotency_mismatch",
     });
-    expect(harness.stripeAttempts).toHaveLength(1);
+    expect(ledger.attempts).toHaveLength(1);
+
+    vi.setSystemTime(BASE_TIME.getTime() + SAFE_RETRY_WINDOW_MS - HOUR_MS);
+    await expect(grantBalanceCreditCommand(input)).resolves.toMatchObject({
+      operationId: input.operationId,
+      status: "succeeded",
+    });
+    expect(await journal()).toMatchObject({
+      attemptCount: 2,
+      details: {
+        amountCents: 2500,
+        reason: "Service recovery credit",
+        stripeTransactionId: "cbtxn_123",
+      },
+    });
+    expect(ledger.attempts).toEqual([
+      `saas-operator-credit:${input.operationId}`,
+      `saas-operator-credit:${input.operationId}`,
+    ]);
+    expect(ledger.transactions.size).toBe(1);
+  });
+
+  it("requires reconciliation instead of retrying after the safe window", async () => {
+    await createDefinitiveFailedCredit();
+    vi.setSystemTime(BASE_TIME.getTime() + SAFE_RETRY_WINDOW_MS + 1);
+    ledger.transactions.clear();
+
+    await expect(grantBalanceCreditCommand(input)).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.operator.reconciliation_required",
+    });
+    expect(await journal()).toMatchObject({
+      status: "reconciliation_required",
+      attemptCount: 1,
+      lastErrorCode: "saas.errors.operator.reconciliation_required",
+    });
+    expect(ledger.attempts).toHaveLength(1);
+    expect(ledger.transactions.size).toBe(0);
+
+    await expect(
+      grantBalanceCreditCommand({ ...input, amountCents: 2600 }),
+    ).rejects.toMatchObject({
+      status: 409,
+      body: "saas.errors.operator.idempotency_mismatch",
+    });
+    expect(ledger.attempts).toHaveLength(1);
   });
 
   it("does not replay after an effect succeeded but its journal acknowledgement was lost", async () => {
+    vi.spyOn(
+      GetModel(OperatorActionModel),
+      "markSucceeded",
+    ).mockRejectedValueOnce(new Error("journal success write failed"));
+
     await expect(grantBalanceCreditCommand(input)).rejects.toBeInstanceOf(
       HTTPResult,
     );
-    expect(action?.status).toBe("reconciliation_required");
+    expect((await journal())?.status).toBe("reconciliation_required");
+    expect(logs.at("ERROR")).toEqual([
+      [
+        `[dms-saas:operator] operation ${input.operationId} failed`,
+        expect.objectContaining({ message: "journal success write failed" }),
+      ],
+    ]);
     await expect(grantBalanceCreditCommand(input)).rejects.toMatchObject({
       status: 409,
     });
-    expect(harness.stripeEffects).toBe(1);
-    expect(harness.stripeAttempts).toHaveLength(1);
+    expect(ledger.transactions.size).toBe(1);
+    expect(ledger.attempts).toHaveLength(1);
   });
 });

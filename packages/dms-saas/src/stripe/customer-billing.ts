@@ -8,13 +8,15 @@ import {
 
 /** Stripe reports `unavailable` for countries it cannot check; treated as
  * unverified so the badge never claims a verification that never ran. */
-const VAT_VERIFICATION_BY_STRIPE_STATUS: Record<string, VatVerificationStatus> =
-  {
-    pending: "pending",
-    verified: "verified",
-    unverified: "unverified",
-    unavailable: "unverified",
-  };
+const VAT_VERIFICATION_BY_STRIPE_STATUS: Record<
+  Stripe.TaxId.Verification.Status,
+  VatVerificationStatus
+> = {
+  pending: "pending",
+  verified: "verified",
+  unverified: "unverified",
+  unavailable: "unverified",
+};
 
 export interface CustomerBillingAddress {
   line1?: string | null;
@@ -67,7 +69,7 @@ const EU_VAT_COUNTRIES = new Set([
   "SE",
 ]);
 
-const NON_EU_VAT_TAX_ID_TYPES: Record<string, string> = {
+const NON_EU_VAT_TAX_ID_TYPES: Record<string, Stripe.TaxIdCreateParams.Type> = {
   GB: "gb_vat",
   CH: "ch_vat",
   NO: "no_vat",
@@ -78,7 +80,7 @@ const NON_EU_VAT_TAX_ID_TYPES: Record<string, string> = {
 
 export function resolveTaxIdType(
   country: string | null | undefined,
-): string | undefined {
+): Stripe.TaxIdCreateParams.Type | undefined {
   if (!country) return undefined;
   const code = country.trim().toUpperCase();
   if (EU_VAT_COUNTRIES.has(code)) return "eu_vat";
@@ -168,10 +170,13 @@ export interface TaxIdSnapshot {
   taxId: Stripe.TaxId | null;
 }
 
+/**
+ * A Stripe that is not configured reads as unreachable, as an outage does: the
+ * stored verification stays.
+ */
 export async function fetchPrimaryTaxId(
   customerId: string,
 ): Promise<TaxIdSnapshot> {
-  // Unreachable as an outage is: the stored verification stays.
   if (!isStripeConfigured()) return { reachable: false, taxId: null };
   const stripe = getStripeReadClient();
   const taxIds = await stripe.customers
@@ -205,7 +210,7 @@ export async function reconcileStripeTaxId(
   const type = resolveTaxIdType(profile.address?.country);
   if (!type) return null;
   const created = await stripe.customers.createTaxId(customerId, {
-    type: type as Stripe.TaxIdCreateParams.Type,
+    type,
     value: profile.vatNumber,
   });
   return toVatVerificationStatus(created);

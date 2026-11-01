@@ -59,14 +59,16 @@ async function readCachedPreview(
   }
 }
 
+/**
+ * A failed pricing is not cached: it is retried on the next request rather than
+ * pinned for the whole cache lifetime.
+ */
 async function cachePreview(
   tenantId: string,
   preview: UpcomingInvoicePreview,
   sourceVersion: string,
   computedAt: Date,
 ): Promise<void> {
-  // A failed pricing is retried on the next request rather than pinned for
-  // the whole cache lifetime.
   if (preview.status === "unavailable") return;
   try {
     await GetModel(UpcomingInvoicePreviewCacheModel).store({

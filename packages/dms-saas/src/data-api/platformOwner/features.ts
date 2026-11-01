@@ -66,7 +66,7 @@ const VALUE_TYPE_TONES = Object.fromEntries(
 );
 
 const DESCRIPTION_ROWS = 2;
-// The visible columns fit a 1440px screen without scrolling, scrollbar included.
+/** Column sizes: the visible columns fit a 1440px screen without scrolling, scrollbar included. */
 const NAME_COLUMN_SIZE = 205;
 const KEY_COLUMN_SIZE = 175;
 const COMPARISON_COLUMN_SIZE = 180;
@@ -79,11 +79,11 @@ interface FeatureRowInstance {
   table: Feature;
 }
 
-function featureRowOf(self: unknown): Feature {
-  return (self as FeatureRowInstance).table;
+function featureRowOf(self: FeatureRowInstance): Feature {
+  return self.table;
 }
 
-function featureIdOf(self: unknown): string {
+function featureIdOf(self: FeatureRowInstance): string {
   return featureRowOf(self)._id;
 }
 
@@ -272,6 +272,10 @@ export class featuresDataAPI extends DataController(
   @Access(AccessMode.ReadWrite)
   declare tooltip: string | null;
 
+  /**
+   * A move by hand takes the value between its neighbours', or one step before
+   * the first: fractional, possibly negative.
+   */
   @Select()
   @Listable()
   @Sortable()
@@ -279,8 +283,6 @@ export class featuresDataAPI extends DataController(
   @Column({
     name: `${TEXTS}.column.order`,
     description: `${TEXTS}.column.order_description`,
-    // A move by hand takes the value between its neighbours', or one step
-    // before the first: fractional, possibly negative.
     type: new DefaultDataTypes.NumberType(),
     size: ORDER_COLUMN_SIZE,
   })

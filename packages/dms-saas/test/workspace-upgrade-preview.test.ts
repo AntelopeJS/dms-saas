@@ -1,84 +1,77 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Plan, TenantSubscription } from "../src/db";
-import type { WorkspaceOperatorView } from "../src/workspaces/operator-view";
-
-const stripe = vi.hoisted(() => ({
-  retrieve: vi.fn(async () => ({ items: { data: [{ id: "si_1" }] } })),
-  createPreview: vi.fn(),
-}));
-const view = vi.hoisted(() => ({ load: vi.fn() }));
-const target = vi.hoisted(() => ({ plan: null as unknown }));
-
-vi.mock("../src/stripe/client", async (importOriginal) => {
-  const client = () => ({
-    subscriptions: { retrieve: stripe.retrieve },
-    invoices: { createPreview: stripe.createPreview },
-    taxRates: { retrieve: vi.fn() },
-  });
-  return {
-    ...(await importOriginal<typeof import("../src/stripe/client")>()),
-    getStripeClient: client,
-    getStripeReadClient: client,
-  };
-});
-vi.mock("../src/workspaces/operator-view", () => ({
-  loadWorkspaceOperatorView: view.load,
-}));
-vi.mock("../src/routes/tenant/tenant-plan-ops", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("../src/routes/tenant/tenant-plan-ops")
-  >()),
-  loadAndValidateTargetPlan: async () => target.plan,
-}));
-vi.mock(
-  "@antelopejs/interface-database-decorators",
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >()),
-    GetModel: () => ({}),
-  }),
-);
-
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { TenantBillingInfoModel, TenantSubscriptionModel } from "../src/db";
 import { previewManualUpgrade } from "../src/operator-actions/upgrade-preview";
+import { useMongoDatabase } from "./helpers/mongo";
+import { insertPlan } from "./helpers/plans";
+import { insertTenant, seatMembers } from "./helpers/workspaces";
+import { useSuiteStripe } from "./helpers/stripe";
+
+useMongoDatabase("workspace-upgrade-preview");
+const stripe = useSuiteStripe();
 
 const PERIOD_END = new Date("2026-10-31T00:00:00Z");
 
-function plan(overrides: Partial<Plan>): Plan {
-  return {
+const BUSINESS_TERMS = {
+  audience: "any",
+  billingMode: "seat",
+  maxMembers: 50,
+} as const;
+
+beforeAll(async () => {
+  await insertPlan({
+    ...BUSINESS_TERMS,
     _id: "plan_business",
     name: "Business",
-    audience: "any",
     price: 49,
-    currency: "eur",
-    interval: "month",
-    billingMode: "seat",
-    maxMembers: 50,
-    isActive: true,
-    isDeleted: false,
     paymentProviderRefs: { stripePriceId: "price_business" },
-    ...overrides,
-  } as Plan;
-}
+  });
+  await insertPlan({
+    ...BUSINESS_TERMS,
+    _id: "plan_enterprise",
+    name: "Enterprise",
+    price: 828,
+    interval: "year",
+    paymentProviderRefs: { stripePriceId: "price_enterprise" },
+  });
+  await insertPlan({
+    ...BUSINESS_TERMS,
+    _id: "plan_team",
+    name: "Team",
+    price: 29,
+    paymentProviderRefs: { stripePriceId: "price_team" },
+  });
+  await insertPlan({
+    ...BUSINESS_TERMS,
+    _id: "plan_starter",
+    name: "Starter",
+    price: 9,
+    paymentProviderRefs: { stripePriceId: "price_starter" },
+  });
+});
 
-function operatorView(current: Plan): WorkspaceOperatorView {
-  return {
-    plan: current,
-    billingState: "active",
-    billingInfo: { customerType: "business" },
-    subscription: {
-      stripeSubscriptionId: "sub_1",
-      stripeCustomerId: "cus_1",
-      currentPeriodEnd: PERIOD_END,
-    } as TenantSubscription,
-    seats: {
-      members: 23,
-      pendingInvites: 0,
-      occupied: 23,
-      platformSupport: [],
-    },
-    directory: { mrrMinor: 112_700 },
-  } as unknown as WorkspaceOperatorView;
+async function seedWorkspace(planId: string): Promise<string> {
+  const tenantId = randomUUID();
+  await insertTenant(tenantId);
+  await seatMembers(tenantId, 23);
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
+    _id: tenantId,
+    planId,
+    status: "active",
+    isComplimentary: false,
+    paidUsagePeriods: [],
+    stripeCustomerId: "cus_1",
+    stripeSubscriptionId: "sub_1",
+    currentPeriodEnd: PERIOD_END,
+  });
+  await GetModel(TenantBillingInfoModel, tenantId).insert({
+    _id: tenantId,
+    customerType: "business",
+    updatedAt: new Date(),
+  });
+  return tenantId;
 }
 
 function stripePreview() {
@@ -119,25 +112,28 @@ function stripePreview() {
   };
 }
 
+let createPreview: ReturnType<typeof stubStripe>;
+
+function stubStripe() {
+  vi.spyOn(stripe.write.subscriptions, "retrieve").mockResolvedValue(
+    fromPartial({ items: { data: [{ id: "si_1" }] } }),
+  );
+  return vi
+    .spyOn(stripe.read.invoices, "createPreview")
+    .mockResolvedValue(fromPartial(stripePreview()));
+}
+
 beforeEach(() => {
-  vi.clearAllMocks();
-  stripe.createPreview.mockResolvedValue(stripePreview());
+  createPreview = stubStripe();
 });
 
 describe("immediate upgrade preview", () => {
   it("asks Stripe to prorate the new price on the subscription", async () => {
-    view.load.mockResolvedValue(operatorView(plan({})));
-    target.plan = plan({
-      _id: "plan_enterprise",
-      name: "Enterprise",
-      price: 828,
-      interval: "year",
-      paymentProviderRefs: { stripePriceId: "price_enterprise" },
-    });
+    const tenantId = await seedWorkspace("plan_business");
 
-    await previewManualUpgrade("tenant-1", "plan_enterprise");
+    await previewManualUpgrade(tenantId, "plan_enterprise");
 
-    expect(stripe.createPreview).toHaveBeenCalledWith(
+    expect(createPreview).toHaveBeenCalledWith(
       expect.objectContaining({
         customer: "cus_1",
         subscription: "sub_1",
@@ -150,16 +146,9 @@ describe("immediate upgrade preview", () => {
   });
 
   it("charges now when the interval changes, and states the MRR change", async () => {
-    view.load.mockResolvedValue(operatorView(plan({})));
-    target.plan = plan({
-      _id: "plan_enterprise",
-      name: "Enterprise",
-      price: 828,
-      interval: "year",
-      paymentProviderRefs: { stripePriceId: "price_enterprise" },
-    });
+    const tenantId = await seedWorkspace("plan_business");
 
-    const preview = await previewManualUpgrade("tenant-1", "plan_enterprise");
+    const preview = await previewManualUpgrade(tenantId, "plan_enterprise");
 
     expect(preview).toMatchObject({
       isChargedNow: true,
@@ -175,27 +164,23 @@ describe("immediate upgrade preview", () => {
   });
 
   it("adds the prorations to the next invoice when the interval stays", async () => {
-    view.load.mockResolvedValue(
-      operatorView(plan({ _id: "plan_team", name: "Team", price: 29 })),
-    );
-    target.plan = plan({});
+    const tenantId = await seedWorkspace("plan_team");
 
-    const preview = await previewManualUpgrade("tenant-1", "plan_business");
+    const preview = await previewManualUpgrade(tenantId, "plan_business");
 
     expect(preview.isChargedNow).toBe(false);
     expect(preview.billingDate).toBe(PERIOD_END.toISOString());
   });
 
   it("refuses a target that is not an upgrade", async () => {
-    view.load.mockResolvedValue(operatorView(plan({})));
-    target.plan = plan({ _id: "plan_starter", name: "Starter", price: 9 });
+    const tenantId = await seedWorkspace("plan_business");
 
     await expect(
-      previewManualUpgrade("tenant-1", "plan_starter"),
+      previewManualUpgrade(tenantId, "plan_starter"),
     ).rejects.toMatchObject({
       status: 400,
       body: "saas.errors.operator.upgrade_not_eligible",
     });
-    expect(stripe.createPreview).not.toHaveBeenCalled();
+    expect(createPreview).not.toHaveBeenCalled();
   });
 });

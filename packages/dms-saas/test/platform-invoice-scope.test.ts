@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import assert from "node:assert/strict";
 import type { RequestContext } from "@antelopejs/interface-api";
 import { GetMetadata, ImplementInterface } from "@antelopejs/interface-core";
@@ -27,10 +28,13 @@ import {
   it,
   vi,
 } from "vitest";
+import type { Invoice } from "../src/db";
 import { invoicesDataAPI } from "../src/data-api/platformOwner/invoices";
 
-// The user page's billing table lists credit notes too: only the invoices
-// table is scoped to invoices.
+/**
+ * The user page's billing table lists credit notes too: only the invoices
+ * table is scoped to invoices.
+ */
 const CONTROLLERS = [invoicesDataAPI];
 const LIST_ROUTES = ["list", "select", "count"];
 const OWNER = { _id: "owner", name: "Owner" };
@@ -41,23 +45,25 @@ const invoiceTable = new Schema("invoice-scope-test", {
   .instance(CROSS_INSTANCE)
   .table("invoices");
 const presence = vi.fn(async (_context: RealtimePresenceContext) => {});
-let current: Record<string, unknown> | undefined;
+let current: Partial<Invoice> | undefined;
 let isAllowed = true;
 
 function request(query = ""): RequestContext {
-  return {
+  return fromPartial<RequestContext>({
     url: new URL(`https://example.test/invoices?${query}`),
-  } as RequestContext;
+  });
 }
 
 function prepareRead(): void {
-  vi.spyOn(Query, "GetModel").mockReturnValue({
-    table: {},
-    database: {},
-    constructor: { fromDatabase: (row: unknown) => row },
-  } as unknown as ReturnType<typeof Query.GetModel>);
-  vi.spyOn(Query, "Get").mockImplementation(
-    () => Promise.resolve(current) as unknown as ReturnType<typeof Query.Get>,
+  vi.spyOn(Query, "GetModel").mockReturnValue(
+    fromPartial<ReturnType<typeof Query.GetModel>>({
+      table: {},
+      database: {},
+      constructor: { fromDatabase: (row: typeof current) => row },
+    }),
+  );
+  vi.spyOn(Query, "Get").mockImplementation(() =>
+    fromPartial<ReturnType<typeof Query.Get>>(Promise.resolve(current)),
   );
   vi.spyOn(Query, "Joined").mockImplementation((_db, _meta, query) => query);
   vi.spyOn(Query, "Computed").mockImplementation((_db, _meta, query) => query);
@@ -76,7 +82,6 @@ beforeAll(() => {
     CheckTenantAccess: async () =>
       isAllowed ? { allowed: true } : { allowed: false, code: "test.denied" },
   });
-  // The table-view routes reach the DMS through these interface functions.
   ImplementInterface(
     { internal: tableView },
     {
@@ -105,9 +110,6 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
   function get() {
     const route = meta.endpoints.get.callback;
     const ctx = request();
-    // The values the runtime resolves for each of the route's declared args,
-    // in order: the data-api Get (context, params), the view check's user,
-    // then presence acquisition's context, session, presence flag and user.
     const args = [
       ctx,
       { id: "invoice" },
@@ -207,14 +209,14 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
       ...filters.documentType,
       row,
     );
-    expect(predicate).toBeInstanceOf(ValueProxy);
-    expect((predicate as ValueProxy<boolean>).build().at(-1)).toMatchObject({
+    assert(predicate instanceof ValueProxy);
+    expect(predicate.build().at(-1)).toMatchObject({
       stage: "eq",
       args: ["invoice"],
     });
   });
 
-  it.each(["credit_note", undefined])(
+  it.each<Invoice["documentType"] | undefined>(["credit_note", undefined])(
     "rejects document type %s before projection and presence acquisition",
     async (documentType) => {
       current = { _id: "invoice", documentType };

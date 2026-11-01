@@ -1,14 +1,37 @@
-import type { RequestContext } from "@antelopejs/interface-api";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import { TenantModel } from "@antelopejs/interface-dms/db";
 import { countDaysUntil } from "../frontend-vue/app/composables/useDaysLeft";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  BillingSettings,
-  Invoice,
-  Plan,
-  TenantSubscription,
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  type BillingSettings,
+  type Invoice,
+  InvoiceModel,
+  type TenantSubscription,
+  TenantSubscriptionModel,
 } from "../src/db";
 import { workspaceInitials } from "../frontend-vue/app/build/public/access";
+import {
+  buildAccessTimeline,
+  resolveAccessBlockReason,
+  resolveDataDeletionAt,
+  selectOtherWorkspaces,
+  toAccessTimelineRules,
+} from "../src/routes/tenant/workspace-access";
+import {
+  addTenantMember,
+  createUser,
+  tenantRequest,
+  useDmsAuth,
+} from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { insertPlan } from "./helpers/plans";
+import { callRoute } from "./helpers/routes";
+
+useMongoDatabase("workspace-access");
+useDmsAuth();
 
 const NOW = new Date("2026-10-07T12:00:00.000Z");
 const DAY = 86_400_000;
@@ -18,7 +41,7 @@ const RULES = { autoSuspendDelayDays: 14, dataRetentionDays: 30 };
 function subscription(
   overrides: Partial<TenantSubscription>,
 ): TenantSubscription {
-  return {
+  return fromPartial<TenantSubscription>({
     _id: "sub",
     planId: "plan-business",
     status: "suspended",
@@ -31,108 +54,63 @@ function subscription(
     createdAt: new Date(NOW.getTime() - 100 * DAY),
     updatedAt: new Date(NOW.getTime() - 5 * DAY),
     ...overrides,
-  } as TenantSubscription;
+  });
 }
 
-const INVOICE = {
+const INVOICE = fromPartial<Invoice>({
   number: "INV-2026-0911",
   amount: 49000,
   total: 49000,
   currency: "eur",
   hostedInvoiceUrl: "https://invoice.stripe.com/i/1",
   issuedAt: new Date(NOW.getTime() - 30 * DAY),
-} as Invoice;
+});
 
-const state = vi.hoisted(() => ({
-  subscriptions: new Map<string, TenantSubscription | undefined>(),
-  members: new Map<string, unknown[]>(),
-  memberships: [] as unknown[],
-  openInvoice: undefined as Invoice | undefined,
-  settings: undefined as BillingSettings | undefined,
-}));
+let OWNER: User;
+let MEMBER: User;
+let currentTenant = "";
+let acmeTenant = "";
 
-vi.mock(
-  "@antelopejs/interface-database-decorators",
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >()),
-    GetModel: (model: { name: string }, instance?: unknown) =>
-      ({
-        TenantSubscriptionModel: {
-          findOne: async () => state.subscriptions.get(String(instance)),
-        },
-        TenantMemberModel: {
-          listAll: async () => state.members.get(String(instance)) ?? [],
-          listByUserWithTenantIds: async () => state.memberships,
-        },
-        BillingSettingsModel: { get: async () => state.settings },
-        UserModel: { get: async (id: string) => USERS.get(id) },
-        InvoiceModel: { findLatestOpen: async () => state.openInvoice },
-      })[model.name],
-  }),
-);
-vi.mock("@antelopejs/interface-dms/request-tenant", () => ({
-  getRequestTenantId: () => CURRENT_TENANT,
-}));
-
-const {
-  buildAccessTimeline,
-  resolveAccessBlockReason,
-  resolveDataDeletionAt,
-  SaasWorkspaceAccessController,
-  selectOtherWorkspaces,
-  toAccessTimelineRules,
-} = await import("../src/routes/tenant/workspace-access");
-
-const OWNER = { _id: "user-owner", email: "peter@initech.test" } as User;
-const MEMBER = { _id: "user-member", email: "milton@initech.test" } as User;
-const USERS = new Map([
-  [OWNER._id, { ...OWNER, name: "Peter Gibbons" }],
-  [MEMBER._id, { ...MEMBER, name: "Milton" }],
-]);
-const TENANTS = new Map([
-  [CURRENT_TENANT, { _id: CURRENT_TENANT, name: "Initech" }],
-  ["tenant-acme", { _id: "tenant-acme", name: "Acme" }],
-  ["tenant-gone", { _id: "tenant-gone", name: "Gone" }],
-]);
-const PLANS = new Map([
-  ["plan-business", { _id: "plan-business", name: "Business" } as Plan],
-]);
-
-function controller() {
-  const instance = new SaasWorkspaceAccessController();
-  Object.assign(instance, {
-    tenantModel: { get: async (id: string) => TENANTS.get(id) },
-    planModel: { get: async (id: string) => PLANS.get(id) },
-    userModel: { get: async (id: string) => USERS.get(id) },
+/** Stores a workspace with the name and subscription given, its members and who is in. */
+async function insertWorkspace(
+  tenantId: string,
+  name: string,
+  subscriptionFields?: TenantSubscription,
+): Promise<void> {
+  const now = new Date();
+  await GetModel(TenantModel).insert({
+    _id: tenantId,
+    name,
+    createdAt: now,
+    updatedAt: now,
   });
-  return instance;
+  if (subscriptionFields)
+    await GetModel(TenantSubscriptionModel, tenantId).insert({
+      ...subscriptionFields,
+      _id: tenantId,
+    });
 }
 
-beforeEach(() => {
-  state.subscriptions = new Map([
-    [CURRENT_TENANT, subscription({})],
-    ["tenant-acme", subscription({ status: "active" })],
-    ["tenant-gone", subscription({ status: "cancelled" })],
-  ]);
-  state.members = new Map([
-    [
-      CURRENT_TENANT,
-      [
-        { userId: OWNER._id, isTenantOwner: true },
-        { userId: MEMBER._id, isTenantOwner: false },
-      ],
-    ],
-  ]);
-  state.memberships = [
-    { tenantId: CURRENT_TENANT, member: { isTenantOwner: true } },
-    { tenantId: "tenant-acme", member: { isTenantOwner: false } },
-    { tenantId: "tenant-gone", member: { isTenantOwner: true } },
-  ];
-  state.openInvoice = INVOICE;
-  state.settings = undefined;
+beforeAll(async () => {
+  await insertPlan({ _id: "plan-business", name: "Business" });
 });
+
+/** Stores the subscription of the blocked workspace. */
+async function subscribeCurrent(row: TenantSubscription): Promise<void> {
+  await GetModel(TenantSubscriptionModel, currentTenant).insert({
+    ...row,
+    _id: currentTenant,
+  });
+}
+
+/** Serves `GET /api/saas/workspace-access` of the blocked workspace to a user. */
+async function getWorkspaceAccess(user: User) {
+  return callRoute(
+    "get",
+    "/api/saas/workspace-access/",
+    await tenantRequest(user, currentTenant),
+  );
+}
 
 describe("resolveAccessBlockReason", () => {
   it("reads the blocking statuses as they are", () => {
@@ -168,10 +146,12 @@ describe("resolveAccessBlockReason", () => {
 describe("toAccessTimelineRules", () => {
   it("drops the suspension date when automatic suspension is off", () => {
     expect(
-      toAccessTimelineRules({
-        autoSuspendEnabled: false,
-        dataRetentionDaysAfterCancellation: 60,
-      } as BillingSettings),
+      toAccessTimelineRules(
+        fromPartial<BillingSettings>({
+          autoSuspendEnabled: false,
+          dataRetentionDaysAfterCancellation: 60,
+        }),
+      ),
     ).toEqual({ autoSuspendDelayDays: null, dataRetentionDays: 60 });
   });
 });
@@ -245,17 +225,16 @@ describe("resolveDataDeletionAt", () => {
 
 describe("selectOtherWorkspaces", () => {
   it("leaves out the blocked workspace and the cancelled ones", () => {
+    const workspace = (
+      _id: string,
+      status: Parameters<typeof selectOtherWorkspaces>[0][number]["status"],
+    ) => ({ _id, status, name: _id, planName: null, isTenantOwner: false });
     const rows = [
-      { _id: CURRENT_TENANT, status: "suspended" },
-      { _id: "a", status: "active" },
-      { _id: "b", status: "cancelled" },
-      { _id: "c", status: null },
-    ].map((row) => ({
-      ...row,
-      name: row._id,
-      planName: null,
-      isTenantOwner: false,
-    })) as Parameters<typeof selectOtherWorkspaces>[0];
+      workspace(CURRENT_TENANT, "suspended"),
+      workspace("a", "active"),
+      workspace("b", "cancelled"),
+      workspace("c", null),
+    ];
 
     expect(
       selectOtherWorkspaces(rows, CURRENT_TENANT).map((row) => row._id),
@@ -264,11 +243,43 @@ describe("selectOtherWorkspaces", () => {
 });
 
 describe("GET /api/saas/workspace-access", () => {
-  it("gives the workspace owner the invoice to pay and the Stripe portal", async () => {
-    const access = await controller().getWorkspaceAccess(
-      {} as RequestContext,
-      OWNER,
+  beforeEach(async () => {
+    OWNER = await createUser({
+      email: "peter@initech.test",
+      name: "Peter Gibbons",
+    });
+    MEMBER = await createUser({ email: "milton@initech.test", name: "Milton" });
+    currentTenant = randomUUID();
+    acmeTenant = randomUUID();
+    const goneTenant = randomUUID();
+    await insertWorkspace(currentTenant, "Initech");
+    await insertWorkspace(
+      acmeTenant,
+      "Acme",
+      subscription({ status: "active" }),
     );
+    await insertWorkspace(
+      goneTenant,
+      "Gone",
+      subscription({ status: "cancelled" }),
+    );
+    await addTenantMember(currentTenant, OWNER, true);
+    await addTenantMember(currentTenant, MEMBER);
+    await addTenantMember(acmeTenant, OWNER);
+    await addTenantMember(goneTenant, OWNER, true);
+    await GetModel(InvoiceModel, currentTenant).insert({
+      ...INVOICE,
+      _id: randomUUID(),
+      documentType: "invoice",
+      stripeInvoiceId: "in_1",
+      status: "open",
+    });
+  });
+
+  it("gives the workspace owner the invoice to pay and the Stripe portal", async () => {
+    await subscribeCurrent(subscription({}));
+
+    const access = await getWorkspaceAccess(OWNER);
 
     expect(access).toMatchObject({
       blocked: true,
@@ -287,7 +298,7 @@ describe("GET /api/saas/workspace-access", () => {
     expect(access.timeline[0]?.kind).toBe("invoice_issued");
     expect(access.otherWorkspaces).toEqual([
       {
-        _id: "tenant-acme",
+        _id: acmeTenant,
         name: "Acme",
         planName: "Business",
         status: "active",
@@ -297,10 +308,9 @@ describe("GET /api/saas/workspace-access", () => {
   });
 
   it("tells a member whom to ask, without the invoice", async () => {
-    const access = await controller().getWorkspaceAccess(
-      {} as RequestContext,
-      MEMBER,
-    );
+    await subscribeCurrent(subscription({}));
+
+    const access = await getWorkspaceAccess(MEMBER);
 
     expect(access.isTenantOwner).toBe(false);
     expect(access.unpaidInvoice).toBeNull();
@@ -316,23 +326,21 @@ describe("GET /api/saas/workspace-access", () => {
   describe("a workspace an owner deleted", () => {
     const deletedAt = new Date(NOW.getTime() - 2 * DAY);
 
-    beforeEach(() => {
-      state.subscriptions.set(
-        CURRENT_TENANT,
+    beforeEach(async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(deletedAt);
+      await subscribeCurrent(
         subscription({
           status: "cancelled",
           deletionRequestedAt: deletedAt,
           deletionRequestedBy: OWNER._id,
-          updatedAt: deletedAt,
         }),
       );
+      vi.useRealTimers();
     });
 
     it("tells the owner they deleted it, restorable until its data goes", async () => {
-      const access = await controller().getWorkspaceAccess(
-        {} as RequestContext,
-        OWNER,
-      );
+      const access = await getWorkspaceAccess(OWNER);
 
       expect(access).toMatchObject({
         reason: "deleted",
@@ -346,10 +354,7 @@ describe("GET /api/saas/workspace-access", () => {
     });
 
     it("names the owner who deleted it to a member", async () => {
-      const access = await controller().getWorkspaceAccess(
-        {} as RequestContext,
-        MEMBER,
-      );
+      const access = await getWorkspaceAccess(MEMBER);
 
       expect(access.deletion).toMatchObject({
         isByCaller: false,
@@ -365,12 +370,9 @@ describe("GET /api/saas/workspace-access", () => {
   });
 
   it("answers unblocked so the screen can send the caller back in", async () => {
-    state.subscriptions.set(CURRENT_TENANT, subscription({ status: "active" }));
+    await subscribeCurrent(subscription({ status: "active" }));
 
-    const access = await controller().getWorkspaceAccess(
-      {} as RequestContext,
-      OWNER,
-    );
+    const access = await getWorkspaceAccess(OWNER);
 
     expect(access).toMatchObject({
       blocked: false,

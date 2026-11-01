@@ -1,8 +1,3 @@
-// The credit-note half of the Stripe webhook surface, split out of
-// webhook-handlers.ts to keep every file under the size the linter allows.
-// Shared lookups stay in webhook-handlers.ts and are imported from there: the
-// dependency runs one way, so no cycle is introduced.
-
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
 import type {
@@ -28,13 +23,14 @@ import {
   NO_COLLECTION_STATE,
   upsertInvoice,
 } from "./webhook-shared";
+import { isString } from "../utils/primitive-guards";
 
 const CREDIT_NOTE_ICON = "i-ph-receipt";
 
 function resolveCreditNoteInvoiceId(
   creditNote: Stripe.CreditNote,
 ): string | null {
-  if (typeof creditNote.invoice === "string") return creditNote.invoice;
+  if (isString(creditNote.invoice)) return creditNote.invoice;
   return creditNote.invoice?.id ?? null;
 }
 
@@ -247,9 +243,9 @@ async function upsertCreditNoteInvoiceRow(
 }
 
 async function mirrorCreditNoteFromEvent(
-  event: Stripe.Event,
+  event: Stripe.CreditNoteCreatedEvent | Stripe.CreditNoteVoidedEvent,
 ): Promise<MirroredCreditNote | null> {
-  const eventCreditNote = event.data.object as Stripe.CreditNote;
+  const eventCreditNote = event.data.object;
   const customerId = asCustomerId(eventCreditNote.customer);
   if (!customerId) return null;
   const tenant = await findTenantByCustomerId(customerId);
@@ -285,7 +281,7 @@ async function mirrorCreditNoteFromEvent(
 }
 
 export async function handleCreditNoteCreated(
-  event: Stripe.Event,
+  event: Stripe.CreditNoteCreatedEvent,
 ): Promise<void> {
   const mirrored = await mirrorCreditNoteFromEvent(event);
   if (!mirrored) return;
@@ -300,7 +296,7 @@ export async function handleCreditNoteCreated(
 }
 
 export async function handleCreditNoteVoided(
-  event: Stripe.Event,
+  event: Stripe.CreditNoteVoidedEvent,
 ): Promise<void> {
   await mirrorCreditNoteFromEvent(event);
 }

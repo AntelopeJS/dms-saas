@@ -1,13 +1,21 @@
 interface UpdateResult {
-  replaced?: number;
-  modifiedCount?: number;
-  deleted?: number;
-  deletedCount?: number;
+  replaced?: unknown;
+  modifiedCount?: unknown;
+  deleted?: unknown;
+  deletedCount?: unknown;
+}
+
+function isUpdateResult(result: unknown): result is UpdateResult {
+  return typeof result === "object" && result !== null;
+}
+
+function isRowCount(result: unknown): result is number {
+  return typeof result === "number";
 }
 
 export function updatedRows(result: unknown): number {
-  if (typeof result === "number") return result;
-  const counts = result as UpdateResult | undefined;
+  if (isRowCount(result)) return result;
+  const counts = isUpdateResult(result) ? result : undefined;
   return Number(
     counts?.replaced ??
       counts?.modifiedCount ??

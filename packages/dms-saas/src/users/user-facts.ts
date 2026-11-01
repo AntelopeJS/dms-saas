@@ -21,8 +21,10 @@ const FACTS = "saas.users.detail_facts";
 const SECURITY = "saas.users.security";
 const DETAIL_SEPARATOR = " · ";
 const LOCATION_SEPARATOR = ", ";
-// The languages the dashboard ships, named in the reader's language by the
-// catalogues; any other code is shown as stored.
+/**
+ * The languages the dashboard ships, named in the reader's language by the
+ * catalogues; any other code is shown as stored.
+ */
 const NAMED_LANGUAGES = new Set(["en", "fr"]);
 const NAMED_SIGN_IN_METHODS = new Set(["password"]);
 const NAMED_TWO_FACTOR_METHODS = new Set(["totp", "email"]);

@@ -4,6 +4,7 @@ import { type Invoice, InvoiceModel, type TenantSubscription } from "../db";
 import { getStripeReadClient, isStripeConfigured } from "../stripe/client";
 import { MS_PER_DAY, stripeSecondsToDate } from "../utils/time";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
+import { isString } from "../utils/primitive-guards";
 
 export interface PaymentMethodSummary {
   brand: string;
@@ -47,12 +48,12 @@ export function toCardSummary(
 /**
  * Read-only view of the customer's default card. Brand, last four digits and
  * expiry are the only fields that ever leave Stripe, so nothing here is PCI
- * scoped and card changes still happen in the Stripe portal.
+ * scoped and card changes still happen in the Stripe portal. With
+ * placeholder keys the call could only fail, so no card is read.
  */
 export async function fetchDefaultPaymentMethod(
   stripeCustomerId: string,
 ): Promise<PaymentMethodSummary | null> {
-  // Placeholder keys: the call could only fail. The page shows no card.
   if (!isStripeConfigured()) return null;
   const stripe = getStripeReadClient();
   const customer = await stripe.customers
@@ -62,7 +63,7 @@ export async function fetchDefaultPaymentMethod(
     .catch(() => null);
   if (!customer || customer.deleted) return null;
   const defaultMethod = customer.invoice_settings?.default_payment_method;
-  if (!defaultMethod || typeof defaultMethod === "string") return null;
+  if (!defaultMethod || isString(defaultMethod)) return null;
   return toCardSummary(defaultMethod);
 }
 
@@ -86,11 +87,14 @@ async function fetchNextRetryAt(stripeInvoiceId: string): Promise<Date | null> {
   return stripeSecondsToDate(invoice?.next_payment_attempt);
 }
 
+/**
+ * The unpaid invoice as the billing screens name it. `total` is only mirrored
+ * from the invoice's next Stripe event, so older rows fall back to the amount
+ * captured when they were first stored.
+ */
 export function toUnpaidInvoiceRef(invoice: Invoice): UnpaidInvoiceRef {
   return {
     number: invoice.number,
-    // `total` is only mirrored from the invoice's next Stripe event, so older
-    // rows fall back to the amount captured when they were first stored.
     amount: invoice.total || invoice.amount,
     currency: invoice.currency,
     hostedInvoiceUrl: invoice.hostedInvoiceUrl,

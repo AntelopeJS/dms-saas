@@ -1,32 +1,27 @@
 import { randomUUID } from "node:crypto";
+import type { RequestContext } from "@antelopejs/interface-api";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
+import { TenantModel } from "@antelopejs/interface-dms/db";
+import { fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+  registerSubscriptionAccessGate,
+  WORKSPACE_ACCESS_BLOCKED_CODE,
+} from "../src/auth/subscription-access-gate";
 import {
   BILLING_SETTINGS_SINGLETON_ID,
   BillingSettingsModel,
+  FeatureModel,
   PlanModel,
   type TenantBillingInfo,
-  type TenantBillingInfoModel,
+  TenantBillingInfoModel,
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../src/db";
-import { SaasBillingSelfRefundController } from "../src/routes/tenant/billing-self-refund";
+import "../src/routes/tenant/billing-self-refund";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import { resolvePlanChangeKind } from "../src/routes/tenant/tenant-plan-preview";
 import { handleCheckoutSessionCompleted } from "../src/stripe/webhook-checkout";
@@ -34,70 +29,25 @@ import {
   canResubscribe,
   liveStripeSubscriptionId,
 } from "../src/workspaces/first-payment";
+import { useDmsAuth } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { insertPlan } from "./helpers/plans";
+import {
+  allowCheckoutRedirects,
+  createOwnedWorkspace,
+} from "./helpers/workspaces";
+import { callRoute } from "./helpers/routes";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const harness = vi.hoisted(() => ({
-  tenantId: "",
-  assertAccess: vi.fn(),
-  plans: new Map<string, unknown>(),
-}));
-const stripe = vi.hoisted(() => ({
-  subscriptions: { retrieve: vi.fn() },
-  customers: { create: vi.fn(), update: vi.fn() },
-  checkout: {
-    sessions: { create: vi.fn(), expire: vi.fn(), retrieve: vi.fn() },
-  },
-  invoices: { list: vi.fn() },
-}));
-vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
-vi.mock("../src/config", () => ({ isAllowedRedirectUrl: async () => true }));
-vi.mock("../src/billing-state", () => ({
-  recomputeTenantBillingState: async () => undefined,
-}));
-vi.mock("../src/automation", () => ({ emitAutomationEvent: () => undefined }));
-vi.mock("../src/workers", () => ({
-  applyPlanDowngradeCleanup: async () => undefined,
-}));
-vi.mock("@antelopejs/interface-dms/tenant-access", () => ({
-  AssertTenantAccess: (...args: unknown[]) => harness.assertAccess(...args),
-}));
-vi.mock("@antelopejs/interface-dms/request-tenant", () => ({
-  getRequestTenantId: () => harness.tenantId,
-}));
-vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
-  runTenantLifecycleOperation: async (
-    _tenantId: string,
-    work: () => Promise<unknown>,
-  ) => work(),
-}));
-vi.mock("../src/routes/tenant/tenant-plan-ops", async (original) => ({
-  ...(await original()),
-  loadAndValidateTargetPlan: async (_model: unknown, planId: string) =>
-    harness.plans.get(planId),
-  assertSeatLimit: async () => undefined,
-}));
+useMongoDatabase("workspace-resubscription");
+useDmsAuth();
+const stripe = useSuiteStripe();
 
-const SETUP_TIMEOUT_MS = 60_000;
 const KEPT_CUSTOMER = "cus_kept";
 const ENDED_SUBSCRIPTION = "sub_ended";
 const NEW_SUBSCRIPTION = "sub_new";
 const CARD = "card-fingerprint";
 const REFUNDED_AT = new Date("2026-09-01T10:00:00Z");
-const PAID_PLAN = PlanModel.fromPlainData({
-  _id: "pro",
-  name: "Pro",
-  price: 49,
-  trialDays: 0,
-  billingMode: "flat",
-  paymentProviderRefs: { stripePriceId: "price_pro" },
-});
-const FREE_PLAN = PlanModel.fromPlainData({
-  _id: "free",
-  name: "Free",
-  price: 0,
-  trialDays: 0,
-  billingMode: "flat",
-  paymentProviderRefs: null,
-});
 const COMPLETE_IDENTITY = {
   customerType: "individual",
   companyName: null,
@@ -111,68 +61,75 @@ const COMPLETE_IDENTITY = {
     state: null,
     country: "FR",
   },
-} as TenantBillingInfo;
+} satisfies Partial<TenantBillingInfo>;
 
-let mongodb: MongoMemoryReplSet;
+let paidPlan: Awaited<ReturnType<typeof insertPlan>>;
+let freePlan: Awaited<ReturnType<typeof insertPlan>>;
+
 beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
+  allowCheckoutRedirects();
+  registerSubscriptionAccessGate();
+  paidPlan = await insertPlan({
+    _id: "pro",
+    name: "Pro",
+    price: 49,
+    paymentProviderRefs: { stripePriceId: "price_pro" },
   });
-  await construct({ url: mongodb.getUri(), database: "saas-resubscription" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-  await GetModel(PlanModel).insert([
-    { ...PAID_PLAN, isActive: true },
-    { ...FREE_PLAN, isActive: true },
-  ]);
-}, SETUP_TIMEOUT_MS);
-afterAll(async () => {
-  try {
-    await destroy();
-  } finally {
-    await mongodb?.stop();
-  }
+  freePlan = await insertPlan({ _id: "free", name: "Free" });
 });
-beforeEach(async () => {
-  vi.clearAllMocks();
-  harness.plans = new Map<string, unknown>([
-    [PAID_PLAN._id, PAID_PLAN],
-    [FREE_PLAN._id, FREE_PLAN],
-  ]);
-  harness.assertAccess.mockRejectedValue(new Error("Workspace is blocked"));
-  await GetModel(BillingSettingsModel).delete(BILLING_SETTINGS_SINGLETON_ID);
-  stripe.customers.create.mockResolvedValue({ id: "cus_created" });
-  stripe.customers.update.mockResolvedValue({ id: KEPT_CUSTOMER });
-  stripe.checkout.sessions.create.mockImplementation(
-    async (params: Stripe.Checkout.SessionCreateParams) => ({
-      id: randomUUID(),
-      url: "https://checkout.example.test/session",
-      metadata: params.metadata,
+
+function stubStripe() {
+  vi.spyOn(stripe.write.customers, "update").mockResolvedValue(
+    fromPartial({ id: KEPT_CUSTOMER }),
+  );
+  vi.spyOn(stripe.write.subscriptions, "retrieve").mockResolvedValue(
+    fromPartial({
+      id: NEW_SUBSCRIPTION,
+      customer: KEPT_CUSTOMER,
+      default_payment_method: "pm_new",
+      status: "active",
+      start_date: 1_900_000_000,
+      items: { data: [{ current_period_end: 1_902_000_000 }] },
     }),
   );
-  stripe.subscriptions.retrieve.mockResolvedValue({
-    id: NEW_SUBSCRIPTION,
-    customer: KEPT_CUSTOMER,
-    default_payment_method: "pm_new",
-    status: "active",
-    start_date: 1_900_000_000,
-    items: { data: [{ current_period_end: 1_902_000_000 }] },
-  });
+  return {
+    createCustomer: vi
+      .spyOn(stripe.write.customers, "create")
+      .mockResolvedValue(fromPartial({ id: "cus_created" })),
+    createSession: vi
+      .spyOn(stripe.write.checkout.sessions, "create")
+      .mockImplementation(async () =>
+        fromPartial({
+          id: randomUUID(),
+          url: "https://checkout.example.test/session",
+        }),
+      ),
+    listInvoices: vi.spyOn(stripe.write.invoices, "list"),
+  };
+}
+
+let api: ReturnType<typeof stubStripe>;
+
+beforeEach(async () => {
+  api = stubStripe();
+  await GetModel(BillingSettingsModel).delete(BILLING_SETTINGS_SINGLETON_ID);
 });
 
-function owner(): User {
-  return { _id: "owner", owner: false, email: "owner@example.test" } as User;
+interface Workspace {
+  tenantId: string;
+  owner: User;
+  request: RequestContext;
+  model: TenantSubscriptionModel;
 }
 
 async function seedCancelledWorkspace(
   patch: Partial<TenantSubscription> = {},
-): Promise<TenantSubscriptionModel> {
-  harness.tenantId = randomUUID();
-  const model = GetModel(TenantSubscriptionModel, harness.tenantId);
+): Promise<Workspace> {
+  const { tenantId, owner, request } = await createOwnedWorkspace();
+  const model = GetModel(TenantSubscriptionModel, tenantId);
   await model.insert({
-    _id: harness.tenantId,
-    planId: PAID_PLAN._id,
+    _id: tenantId,
+    planId: paidPlan._id,
     status: "cancelled",
     isComplimentary: false,
     stripeCustomerId: KEPT_CUSTOMER,
@@ -180,8 +137,8 @@ async function seedCancelledWorkspace(
     cardFingerprint: CARD,
     refundRequestedAt: REFUNDED_AT,
     deletionRequestedAt: REFUNDED_AT,
-    deletionRequestedBy: "owner",
-    createdBy: "owner",
+    deletionRequestedBy: owner._id,
+    createdBy: owner._id,
     paidUsagePeriods: [
       {
         stripeSubscriptionId: ENDED_SUBSCRIPTION,
@@ -191,14 +148,19 @@ async function seedCancelledWorkspace(
     ],
     ...patch,
   });
-  return model;
+  await GetModel(TenantBillingInfoModel, tenantId).insert({
+    _id: tenantId,
+    updatedAt: new Date(),
+    ...COMPLETE_IDENTITY,
+  });
+  return { tenantId, owner, request, model };
 }
 
 async function seedFreeWorkspaceOnCard(): Promise<void> {
   const tenantId = randomUUID();
   await GetModel(TenantSubscriptionModel, tenantId).insert({
     _id: tenantId,
-    planId: FREE_PLAN._id,
+    planId: freePlan._id,
     status: "active",
     isComplimentary: false,
     cardFingerprint: CARD,
@@ -206,85 +168,85 @@ async function seedFreeWorkspaceOnCard(): Promise<void> {
   });
 }
 
-function choosePlan(planId: string, model: TenantSubscriptionModel) {
+function planController() {
   const controller = new SaasTenantPlanController();
-  controller.tenantModel = {
-    get: async (_id: string) => ({ _id }),
-  } as never;
-  const billingInfo = {
-    findOne: async () => COMPLETE_IDENTITY,
-  } as TenantBillingInfoModel;
-  return controller.changePlan(
-    owner(),
+  controller.tenantModel = GetModel(TenantModel);
+  controller.planModel = GetModel(PlanModel);
+  controller.featureModel = GetModel(FeatureModel);
+  return controller;
+}
+
+function choosePlan(planId: string, workspace: Workspace) {
+  return planController().changePlan(
+    workspace.owner,
     {
       planId,
       successUrl: "https://example.test/billing",
       cancelUrl: "https://example.test/billing",
     },
-    {},
-    model,
-    billingInfo,
+    workspace.request,
+    workspace.model,
+    GetModel(TenantBillingInfoModel, workspace.tenantId),
   );
 }
 
 async function completionEvent(
-  model: TenantSubscriptionModel,
-): Promise<Stripe.Event> {
-  const current = await model.findOne();
-  return {
+  workspace: Workspace,
+): Promise<Stripe.CheckoutSessionCompletedEvent> {
+  const current = await workspace.model.findOne();
+  return fromPartial<Stripe.CheckoutSessionCompletedEvent>({
     id: randomUUID(),
     type: "checkout.session.completed",
     data: {
       object: {
-        id: current?.stripeCheckoutSessionId,
+        id: current?.stripeCheckoutSessionId ?? undefined,
         mode: "subscription",
         status: "complete",
         subscription: NEW_SUBSCRIPTION,
         metadata: {
-          tenantId: harness.tenantId,
-          planId: PAID_PLAN._id,
+          tenantId: workspace.tenantId,
+          planId: paidPlan._id,
           operationId: current?.domainTransition?.operationId,
         },
       },
     },
-  } as Stripe.Event;
+  });
 }
 
-function readRefundEligibility(model: TenantSubscriptionModel) {
-  const settings = {
-    get: async () => ({
-      moneyBackGuaranteeEnabled: true,
-      moneyBackGuaranteeWindowDays: 30,
-      moneyBackGuaranteeMode: "full",
-    }),
-  } as unknown as BillingSettingsModel;
-  return new SaasBillingSelfRefundController().getRefundEligibility(
-    owner(),
-    settings,
-    model,
+async function readRefundEligibility(workspace: Workspace) {
+  await GetModel(BillingSettingsModel).insert({
+    _id: BILLING_SETTINGS_SINGLETON_ID,
+    moneyBackGuaranteeEnabled: true,
+    moneyBackGuaranteeWindowDays: 30,
+    moneyBackGuaranteeMode: "full",
+  });
+  return callRoute(
+    "GET",
+    "/api/saas/billing/refund-eligibility",
+    workspace.request,
   );
 }
 
 describe("resubscription eligibility", () => {
   it("is open to a cancelled workspace until its deletion is admitted", () => {
-    const cancelled = { status: "cancelled" } as TenantSubscription;
+    const cancelled = fromPartial<TenantSubscription>({ status: "cancelled" });
     expect(canResubscribe(cancelled)).toBe(true);
     expect(
       canResubscribe({ ...cancelled, deletionStartedAt: new Date() }),
     ).toBe(false);
-    expect(canResubscribe({ status: "suspended" } as TenantSubscription)).toBe(
-      false,
-    );
+    expect(
+      canResubscribe(fromPartial<TenantSubscription>({ status: "suspended" })),
+    ).toBe(false);
   });
 
   it("treats the subscription Stripe ended as no subscription", () => {
-    const ended = {
+    const ended = fromPartial<TenantSubscription>({
       status: "cancelled",
       stripeSubscriptionId: ENDED_SUBSCRIPTION,
-    } as TenantSubscription;
+    });
     expect(liveStripeSubscriptionId(ended)).toBeNull();
-    expect(resolvePlanChangeKind(ended, PAID_PLAN, PAID_PLAN)).toBe("checkout");
-    expect(resolvePlanChangeKind(ended, PAID_PLAN, FREE_PLAN)).toBe("free");
+    expect(resolvePlanChangeKind(ended, paidPlan, paidPlan)).toBe("checkout");
+    expect(resolvePlanChangeKind(ended, paidPlan, freePlan)).toBe("free");
     expect(liveStripeSubscriptionId({ ...ended, status: "past_due" })).toBe(
       ENDED_SUBSCRIPTION,
     );
@@ -293,33 +255,32 @@ describe("resubscription eligibility", () => {
 
 describe("a cancelled workspace choosing a plan again", () => {
   it("pays the plan it was cancelled on through Checkout on its own Stripe customer", async () => {
-    const model = await seedCancelledWorkspace();
+    const workspace = await seedCancelledWorkspace();
 
-    const result = await choosePlan(PAID_PLAN._id, model);
+    const result = await choosePlan(paidPlan._id, workspace);
 
     expect(result.checkoutUrl).toBe("https://checkout.example.test/session");
-    expect(harness.assertAccess).not.toHaveBeenCalled();
-    expect(stripe.customers.create).not.toHaveBeenCalled();
-    expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+    expect(api.createCustomer).not.toHaveBeenCalled();
+    expect(api.createSession).toHaveBeenCalledWith(
       expect.objectContaining({ customer: KEPT_CUSTOMER }),
       expect.anything(),
     );
-    expect(await model.findOne()).toMatchObject({
+    expect(await workspace.model.findOne()).toMatchObject({
       status: "cancelled",
       domainTransition: expect.objectContaining({ kind: "checkout" }),
     });
   });
 
   it("becomes active on the new plan once Stripe reports the checkout complete", async () => {
-    const model = await seedCancelledWorkspace();
-    await choosePlan(PAID_PLAN._id, model);
+    const workspace = await seedCancelledWorkspace();
+    await choosePlan(paidPlan._id, workspace);
 
-    await handleCheckoutSessionCompleted(await completionEvent(model));
+    await handleCheckoutSessionCompleted(await completionEvent(workspace));
 
-    const reopened = await model.findOne();
+    const reopened = await workspace.model.findOne();
     expect(reopened).toMatchObject({
       status: "active",
-      planId: PAID_PLAN._id,
+      planId: paidPlan._id,
       stripeCustomerId: KEPT_CUSTOMER,
       stripeSubscriptionId: NEW_SUBSCRIPTION,
       cardFingerprint: CARD,
@@ -340,43 +301,41 @@ describe("a cancelled workspace choosing a plan again", () => {
   });
 
   it("does not grant the money-back guarantee a second time", async () => {
-    const model = await seedCancelledWorkspace();
-    await choosePlan(PAID_PLAN._id, model);
-    await handleCheckoutSessionCompleted(await completionEvent(model));
+    const workspace = await seedCancelledWorkspace();
+    await choosePlan(paidPlan._id, workspace);
+    await handleCheckoutSessionCompleted(await completionEvent(workspace));
 
-    const eligibility = await readRefundEligibility(model);
+    const eligibility = await readRefundEligibility(workspace);
 
     expect(eligibility).toMatchObject({
       eligible: false,
       reason: "already_processed",
       refundedAt: REFUNDED_AT,
     });
-    expect(stripe.invoices.list).not.toHaveBeenCalled();
+    expect(api.listInvoices).not.toHaveBeenCalled();
   });
 
   it("resumes on a free plan as a local free subscription, keeping its customer", async () => {
-    const model = await seedCancelledWorkspace();
+    const workspace = await seedCancelledWorkspace();
 
-    await expect(choosePlan(FREE_PLAN._id, model)).resolves.toMatchObject({
+    await expect(choosePlan(freePlan._id, workspace)).resolves.toMatchObject({
       changed: true,
-      planId: FREE_PLAN._id,
+      planId: freePlan._id,
       checkoutUrl: null,
     });
 
-    const resumed = await model.findOne();
+    const resumed = await workspace.model.findOne();
     expect(resumed).toMatchObject({
       status: "active",
-      planId: FREE_PLAN._id,
+      planId: freePlan._id,
       stripeCustomerId: KEPT_CUSTOMER,
       stripeSubscriptionId: null,
       refundRequestedAt: REFUNDED_AT,
-      // Back on its feet, it is no longer the workspace its owner deleted.
       deletionRequestedAt: null,
       deletionRequestedBy: null,
     });
     expect(resumed?.paidUsagePeriods[0]?.end).toBeInstanceOf(Date);
-    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
-    expect(harness.assertAccess).not.toHaveBeenCalled();
+    expect(api.createSession).not.toHaveBeenCalled();
   });
 
   it("refuses a free plan once its card backs as many free workspaces as allowed", async () => {
@@ -385,13 +344,13 @@ describe("a cancelled workspace choosing a plan again", () => {
       maxFreeWorkspacesPerCard: 1,
     });
     await seedFreeWorkspaceOnCard();
-    const model = await seedCancelledWorkspace();
+    const workspace = await seedCancelledWorkspace();
 
-    await expect(choosePlan(FREE_PLAN._id, model)).rejects.toMatchObject({
+    await expect(choosePlan(freePlan._id, workspace)).rejects.toMatchObject({
       status: 409,
       body: "saas.errors.workspace.free_card_limit_reached",
     });
-    expect((await model.findOne())?.status).toBe("cancelled");
+    expect((await workspace.model.findOne())?.status).toBe("cancelled");
   });
 
   it("counts the reopened workspace against its card afterwards", async () => {
@@ -401,12 +360,12 @@ describe("a cancelled workspace choosing a plan again", () => {
     });
     const card = randomUUID();
     const first = await seedCancelledWorkspace({ cardFingerprint: card });
-    await choosePlan(FREE_PLAN._id, first);
+    await choosePlan(freePlan._id, first);
     const second = await seedCancelledWorkspace({ cardFingerprint: card });
-    await choosePlan(FREE_PLAN._id, second);
+    await choosePlan(freePlan._id, second);
     const third = await seedCancelledWorkspace({ cardFingerprint: card });
 
-    await expect(choosePlan(FREE_PLAN._id, third)).rejects.toMatchObject({
+    await expect(choosePlan(freePlan._id, third)).rejects.toMatchObject({
       status: 409,
       body: "saas.errors.workspace.free_card_limit_reached",
     });
@@ -418,32 +377,27 @@ describe("a cancelled workspace choosing a plan again", () => {
   });
 
   it("leaves a workspace whose deletion was admitted to the retention cron", async () => {
-    const model = await seedCancelledWorkspace({
+    const workspace = await seedCancelledWorkspace({
       deletionStartedAt: new Date(),
     });
 
-    await expect(choosePlan(PAID_PLAN._id, model)).rejects.toThrow(
-      "Workspace is blocked",
-    );
-    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+    await expect(choosePlan(paidPlan._id, workspace)).rejects.toMatchObject({
+      status: 403,
+      body: WORKSPACE_ACCESS_BLOCKED_CODE,
+    });
+    expect(api.createSession).not.toHaveBeenCalled();
   });
 });
 
 describe("plans offered to a cancelled workspace", () => {
   it("tells the billing page its owner may choose a plan again", async () => {
-    const model = await seedCancelledWorkspace();
-    const controller = new SaasTenantPlanController();
-    controller.tenantModel = {
-      get: async (_id: string) => ({ _id }),
-    } as never;
-    controller.planModel = GetModel(PlanModel);
-    controller.featureModel = { getAll: async () => [] } as never;
+    const workspace = await seedCancelledWorkspace();
 
-    const current = await controller.getCurrentPlan(
-      owner(),
-      {},
-      model,
-      { findOne: async () => undefined } as unknown as TenantBillingInfoModel,
+    const current = await planController().getCurrentPlan(
+      workspace.owner,
+      workspace.request,
+      workspace.model,
+      GetModel(TenantBillingInfoModel, workspace.tenantId),
       "en",
     );
 

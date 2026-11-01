@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import type { DmsSaasStripeConfig } from "../types";
+import { isString } from "../utils/primitive-guards";
 
 /**
  * The Stripe API version every request is made with. It must be the version
@@ -35,14 +36,16 @@ let stripeTestMode = false;
 
 function isUsableSecretKey(key: string): boolean {
   return (
-    typeof key === "string" &&
+    isString(key) &&
     key.startsWith(SECRET_KEY_PREFIX) &&
     !key.includes(PLACEHOLDER_MARKER)
   );
 }
 
-// Writes keep the SDK's timeout and retries: a write cut short may still land
-// on Stripe, and its idempotent retries are what make it safe to repeat.
+/**
+ * Writes keep the SDK's timeout and retries: a write cut short may still land
+ * on Stripe, and its idempotent retries are what make it safe to repeat.
+ */
 export function initStripeClient(config: DmsSaasStripeConfig): void {
   stripeClient = new Stripe(config.secretKey, {
     apiVersion: STRIPE_API_VERSION,

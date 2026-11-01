@@ -5,12 +5,14 @@ const LOG_PREFIX = "[dms-saas:invoice-line-items]";
 
 const providers = new Map<string, InvoiceLineItemsProvider>();
 
-// Last writer wins rather than throws: RegisteringProxy records the id before
-// the callback runs, so refusing a collision here would leave the proxy
-// attributing the live registration to the module whose call was rejected —
-// its unload, or its stop(), would then drop the provider that is actually
-// serving. A collision is a naming bug in one of the two modules, so it is
-// reported at error level instead.
+/**
+ * Last writer wins rather than throws: RegisteringProxy records the id before
+ * the callback runs, so refusing a collision here would leave the proxy
+ * attributing the live registration to the module whose call was rejected —
+ * its unload, or its stop(), would then drop the provider that is actually
+ * serving. A collision is a naming bug in one of the two modules, so it is
+ * reported at error level instead.
+ */
 function register(
   providerId: string,
   provider: InvoiceLineItemsProvider,

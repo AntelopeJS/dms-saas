@@ -9,6 +9,7 @@ on:
   # secret scanner ran there.
   pull_request:
 
+  workflow_dispatch: null
 permissions:
   contents: read
 
@@ -17,44 +18,29 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Three independent jobs instead of one sequence: the wall-clock is the
-# slowest of them (verify-source), not their sum.
+# slowest of them, not their sum.
 jobs:
-  static:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
+  # `pnpm run checks` builds both packages once (its `typecheck` step); lint
+  # and `check:exports` (its `test` step) then read that build. The docs
+  # tsconfig maps the interface onto its sources, so the docs check, which
+  # runs before the build, needs no `dist`.
+  ci:
+    uses: AntelopeJS/.github/.github/workflows/ci-node.yml@v1
+    with:
+      docs-files: |
+        README.md
+        packages/dms-saas/README.md
+        packages/dms-saas/docs
+        packages/interface-dms-saas/README.md
+        packages/interface-dms-saas/docs
+      docs-typescript-project: packages/interface-dms-saas/docs/tsconfig.json
+      renovate-sync: false
+    permissions:
+      contents: read
 
-      # Builds the interface package first, then the module. Each `tsc` emit
-      # runs the same tsconfig as that package's `typecheck` script, so the
-      # build is the typecheck: oxlint's type-aware pass degrades to `any` on
-      # a broken tsconfig without failing, and this is what catches it. It
-      # also comes before lint, whose type-aware rules resolve the interface
-      # package through its built `dist`; without it every imported type
-      # degrades to `error` and the union-type rules fail.
-      - run: pnpm --filter @antelopejs/dms-saas build
-
-      - uses: AntelopeJS/tooling-configs/actions/docs@310e3d861b2da2244902854379176c91e1ebc68e
-        with:
-          files: |
-            README.md
-            packages/dms-saas/README.md
-            packages/dms-saas/docs
-            packages/interface-dms-saas/README.md
-            packages/interface-dms-saas/docs
-          typescript-project: packages/interface-dms-saas/docs/tsconfig.json
-
-      - run: pnpm --filter @antelopejs/interface-dms-saas lint
-      - run: pnpm --filter @antelopejs/dms-saas lint
-      # Unused dependencies only. `pnpm knip:all` also reports dead files and
-      # exports, which need a human to confirm, so they stay out of the gate.
-      - run: pnpm --filter @antelopejs/interface-dms-saas knip
-      - run: pnpm --filter @antelopejs/dms-saas knip
-      # Reads the interface package's built `dist` against its `exports` map:
-      # no dangling target, no unreachable module, no unexported directory.
-      - run: pnpm --filter @antelopejs/interface-dms-saas check:exports
-
+  # The Vitest suite is not part of `checks`: in its own job it runs alongside
+  # the build and lint instead of after them, and keeps the mongod cache that
+  # the reusable workflow has no input for.
   unit:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -63,8 +49,8 @@ jobs:
       - uses: ./.github/actions/setup
 
       # The Mongo-backed tests pin mongod 8.0.8, a 208 MB download every run
-      # without this; parallel workers also queue on its download lock.
-      # mongodb-memory-server stores it in this home directory by default.
+      # without this. mongodb-memory-server stores it in this home directory
+      # by default.
       - uses: actions/cache@v4
         with:
           path: ~/.cache/mongodb-binaries
@@ -87,10 +73,17 @@ jobs:
   # and fails unless every job above succeeded.
   ubuntu:
     if: always()
-    needs: [static, unit, frontend]
+    needs: [ci, unit, frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: for result in $RESULTS; do [ "$result" = success ] || exit 1; done
+  renovate-sync:
+    if: >-
+      github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/') && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+      actions: write
+    uses: AntelopeJS/.github/.github/workflows/ci-renovate-sync.yml@v1

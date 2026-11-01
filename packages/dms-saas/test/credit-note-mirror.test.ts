@@ -1,81 +1,67 @@
+import { randomUUID } from "node:crypto";
+import { ImplementInterface } from "@antelopejs/interface-core";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import * as notifications from "@antelopejs/interface-dms/notifications";
+import { fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CreditNote, Invoice } from "../src/db";
-
-interface NamedModel {
-  name: string;
-}
-
-const harness = vi.hoisted(() => ({
-  models: new Map<string, unknown>(),
-  notify: vi.fn<() => Promise<void>>(),
-  retrieveInvoice: vi.fn<() => Promise<unknown>>(),
-  retrieveCreditNote: vi.fn<() => Promise<unknown>>(),
-  listCreditNoteLines: vi.fn<() => unknown>(),
-  issuedUpdateReached: vi.fn(),
-}));
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const original =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...original,
-    GetModel: (model: NamedModel): unknown => harness.models.get(model.name),
-  };
-});
-
-vi.mock("../src/notifications", () => ({
-  creditNoteIssuedSubject: "credit-note-issued",
-  notifyTenantMembers: vi.fn(async () => undefined),
-  notifyTenantOwners: (...args: unknown[]) => harness.notify(...args),
-}));
-
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => ({
-    invoices: {
-      retrieve: (...args: unknown[]) => harness.retrieveInvoice(...args),
-    },
-    creditNotes: {
-      retrieve: (...args: unknown[]) => harness.retrieveCreditNote(...args),
-      listLineItems: (...args: unknown[]) =>
-        harness.listCreditNoteLines(...args),
-    },
-  }),
-}));
-
+import {
+  CreditNoteModel,
+  InvoiceModel,
+  TenantSubscriptionModel,
+} from "../src/db";
 import {
   handleCreditNoteCreated,
   handleCreditNoteVoided,
 } from "../src/stripe/webhook-credit-notes";
+import { addTenantMember, createUser } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const TENANT_ID = "tenant_123";
+useMongoDatabase("credit-note-mirror");
+const stripe = useSuiteStripe();
+
 const CREATED_SECONDS = 1_788_264_000;
 const VOIDED_SECONDS = CREATED_SECONDS + 3_600;
 
-let invoices: Invoice[];
-let creditNotes: CreditNote[];
-let currentCreditNote: Stripe.CreditNote;
-let issuedUpdateBarrier: Promise<void> | null;
+const sendToUser = vi.fn<typeof notifications.internal.SendToUser>();
 
-function invoiceFixture(): Invoice {
-  return {
-    _id: "invoice-row",
-    documentType: "invoice",
-    stripeInvoiceId: "in_123",
-    stripeCreditNoteId: null,
-    number: "INV-0042",
-    periodStart: new Date("2026-08-01T00:00:00.000Z"),
-    periodEnd: new Date("2026-09-01T00:00:00.000Z"),
-  } as Invoice;
+ImplementInterface(notifications, {
+  internal: {
+    SupportsIdempotency: async () => false,
+    RegisterNotificationCategory: {
+      register: () => undefined,
+      unregister: () => undefined,
+    },
+    RegisterNotificationSubject: {
+      register: () => undefined,
+      unregister: () => undefined,
+    },
+    SendToUser: sendToUser,
+    SendToUsers: vi.fn(),
+    SendToRoles: vi.fn(),
+    SendToAll: vi.fn(),
+  },
+});
+
+interface Workspace {
+  tenantId: string;
+  customerId: string;
+  invoiceRowId: string;
+  stripeInvoiceId: string;
+  creditNoteId: string;
+  ownerId: string;
 }
 
+let workspace: Workspace;
+let currentCreditNote: Stripe.CreditNote;
+let retrieveInvoice: ReturnType<typeof stubInvoiceRead>;
+
 function stripeInvoiceFixture(): Stripe.Invoice {
-  return {
-    id: "in_123",
+  return fromPartial<Stripe.Invoice>({
+    id: workspace.stripeInvoiceId,
     object: "invoice",
-    customer: "cus_123",
+    customer: workspace.customerId,
     number: "INV-0042",
     amount_due: 12_000,
     subtotal: 10_000,
@@ -83,29 +69,29 @@ function stripeInvoiceFixture(): Stripe.Invoice {
     total: 12_000,
     currency: "eur",
     status: "paid",
-    hosted_invoice_url: "https://invoice.stripe.test/in_123",
-    invoice_pdf: "https://invoice.stripe.test/in_123.pdf",
+    hosted_invoice_url: `https://invoice.stripe.test/${workspace.stripeInvoiceId}`,
+    invoice_pdf: `https://invoice.stripe.test/${workspace.stripeInvoiceId}.pdf`,
     metadata: {},
     period_start: CREATED_SECONDS - 2_592_000,
     period_end: CREATED_SECONDS,
     created: CREATED_SECONDS,
     status_transitions: { paid_at: CREATED_SECONDS },
     lines: { data: [], has_more: false },
-  } as unknown as Stripe.Invoice;
+  });
 }
 
 function creditNoteFixture(
-  status: Stripe.CreditNote.Status = "issued",
+  overrides: Partial<Stripe.CreditNote> = {},
 ): Stripe.CreditNote {
-  return {
-    id: "cn_123",
+  return fromPartial<Stripe.CreditNote>({
+    id: workspace.creditNoteId,
     object: "credit_note",
     amount: 3_600,
     created: CREATED_SECONDS,
     effective_at: CREATED_SECONDS + 60,
     currency: "eur",
-    customer: "cus_123",
-    invoice: "in_123",
+    customer: workspace.customerId,
+    invoice: workspace.stripeInvoiceId,
     lines: {
       data: [
         {
@@ -120,124 +106,135 @@ function creditNoteFixture(
     memo: "Prorated cancellation",
     metadata: { source: "admin" },
     number: "CN-0042-1",
-    pdf: "https://invoice.stripe.test/cn_123.pdf",
+    pdf: `https://invoice.stripe.test/${workspace.creditNoteId}.pdf`,
     reason: "order_change",
     refunds: [{ amount_refunded: 3_600, refund: "re_123" }],
     customer_balance_transaction: null,
     out_of_band_amount: null,
-    status,
+    status: "issued",
     subtotal: 3_000,
     total_taxes: [{ amount: 600 }],
     total: 3_600,
     type: "post_payment",
-    voided_at: status === "void" ? VOIDED_SECONDS : null,
-  } as unknown as Stripe.CreditNote;
-}
-
-function event(type: string, creditNote: Stripe.CreditNote): Stripe.Event {
-  return {
-    id: `evt_${type}`,
-    type,
-    data: { object: creditNote },
-  } as Stripe.Event;
-}
-
-function invoiceModel() {
-  return {
-    findOneByStripeInvoice: async (id: string) =>
-      invoices.find(
-        (row) => row.stripeInvoiceId === id && !row.stripeCreditNoteId,
-      ),
-    findOneByStripeCreditNote: async (id: string) =>
-      invoices.find((row) => row.stripeCreditNoteId === id),
-    insert: async (row: Invoice) => {
-      invoices.push({
-        ...row,
-        _id: row._id ?? `invoice-row-${invoices.length + 1}`,
-      });
-    },
-    update: async (id: string, patch: Partial<Invoice>) => {
-      Object.assign(
-        invoices.find((row) => row._id === id),
-        patch,
-      );
-    },
-    updateUnlessVoided: async (id: string, patch: Partial<Invoice>) => {
-      harness.issuedUpdateReached();
-      await issuedUpdateBarrier;
-      const invoice = invoices.find((row) => row._id === id);
-      if (invoice?.status === "void") return false;
-      Object.assign(invoice, patch);
-      return true;
-    },
-  };
-}
-
-function creditNoteModel() {
-  return {
-    findOneByStripeCreditNote: async (id: string) =>
-      creditNotes.find((row) => row.stripeCreditNoteId === id),
-    insert: async (row: CreditNote) => {
-      creditNotes.push({
-        ...row,
-        _id: row._id ?? `credit-note-row-${creditNotes.length + 1}`,
-      });
-    },
-    update: async (id: string, patch: Partial<CreditNote>) => {
-      Object.assign(
-        creditNotes.find((row) => row._id === id),
-        patch,
-      );
-    },
-    updateUnlessVoided: async (id: string, patch: Partial<CreditNote>) => {
-      harness.issuedUpdateReached();
-      await issuedUpdateBarrier;
-      const creditNote = creditNotes.find((row) => row._id === id);
-      if (creditNote?.status === "void") return false;
-      Object.assign(creditNote, patch);
-      return true;
-    },
-  };
-}
-
-beforeEach(() => {
-  invoices = [invoiceFixture()];
-  creditNotes = [];
-  issuedUpdateBarrier = null;
-  harness.models.clear();
-  harness.models.set("TenantSubscriptionModel", {
-    findOneByStripeCustomer: async () => ({ _instance: TENANT_ID }),
+    voided_at: null,
+    ...overrides,
   });
-  harness.models.set("InvoiceModel", invoiceModel());
-  harness.models.set("CreditNoteModel", creditNoteModel());
-  harness.notify.mockReset();
+}
+
+function voidedCreditNote(): Stripe.CreditNote {
+  return creditNoteFixture({ status: "void", voided_at: VOIDED_SECONDS });
+}
+
+function createdEvent(
+  creditNote: Stripe.CreditNote,
+): Stripe.CreditNoteCreatedEvent {
+  return fromPartial<Stripe.CreditNoteCreatedEvent>({
+    id: "evt_credit_note.created",
+    type: "credit_note.created",
+    data: { object: creditNote },
+  });
+}
+
+function voidedEvent(
+  creditNote: Stripe.CreditNote,
+): Stripe.CreditNoteVoidedEvent {
+  return fromPartial<Stripe.CreditNoteVoidedEvent>({
+    id: "evt_credit_note.voided",
+    type: "credit_note.voided",
+    data: { object: creditNote },
+  });
+}
+
+function stubInvoiceRead() {
+  return vi
+    .spyOn(stripe.write.invoices, "retrieve")
+    .mockImplementation(async () => fromPartial(stripeInvoiceFixture()));
+}
+
+function stubCreditNoteRead() {
+  return vi
+    .spyOn(stripe.write.creditNotes, "retrieve")
+    .mockImplementation(async () => fromPartial(currentCreditNote));
+}
+
+function mirroredCreditNote() {
+  return GetModel(
+    CreditNoteModel,
+    workspace.tenantId,
+  ).findOneByStripeCreditNote(workspace.creditNoteId);
+}
+
+function mirroredCreditNoteInvoice() {
+  return GetModel(InvoiceModel, workspace.tenantId).findOneByStripeCreditNote(
+    workspace.creditNoteId,
+  );
+}
+
+function mirroredInvoice() {
+  return GetModel(InvoiceModel, workspace.tenantId).findOneByStripeInvoice(
+    workspace.stripeInvoiceId,
+  );
+}
+
+function notifiedUserIds(): string[] {
+  return sendToUser.mock.calls.map(([userId]) => userId);
+}
+
+/**
+ * A workspace with an owner and a plain member, billed to a Stripe customer,
+ * whose invoice is already mirrored with its number and period. Stripe serves
+ * the invoice and the issued credit note against it.
+ */
+beforeEach(async () => {
+  sendToUser.mockReset();
+  const tenantId = randomUUID();
+  const owner = await createUser();
+  workspace = {
+    tenantId,
+    customerId: `cus_${randomUUID()}`,
+    invoiceRowId: randomUUID(),
+    stripeInvoiceId: `in_${randomUUID()}`,
+    creditNoteId: `cn_${randomUUID()}`,
+    ownerId: owner._id,
+  };
+  await addTenantMember(tenantId, owner, true);
+  await addTenantMember(tenantId, await createUser());
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
+    _id: tenantId,
+    planId: "paid",
+    status: "active",
+    stripeCustomerId: workspace.customerId,
+  });
+  await GetModel(InvoiceModel, tenantId).insert({
+    _id: workspace.invoiceRowId,
+    documentType: "invoice",
+    stripeInvoiceId: workspace.stripeInvoiceId,
+    stripeCreditNoteId: null,
+    number: "INV-0042",
+    periodStart: new Date("2026-08-01T00:00:00.000Z"),
+    periodEnd: new Date("2026-09-01T00:00:00.000Z"),
+  });
   currentCreditNote = creditNoteFixture();
-  harness.retrieveCreditNote
-    .mockReset()
-    .mockImplementation(async () => currentCreditNote);
-  harness.retrieveInvoice.mockReset().mockResolvedValue(stripeInvoiceFixture());
-  harness.listCreditNoteLines.mockReset();
-  harness.issuedUpdateReached.mockReset();
+  stubCreditNoteRead();
+  retrieveInvoice = stubInvoiceRead();
 });
 
 describe("Stripe credit note mirror", () => {
   it("adds a linked negative billing row with Stripe PDF and details", async () => {
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
 
-    expect(creditNotes).toHaveLength(1);
-    expect(creditNotes[0]).toMatchObject({
-      invoiceId: "invoice-row",
-      stripeCreditNoteId: "cn_123",
-      pdfUrl: "https://invoice.stripe.test/cn_123.pdf",
+    expect(await mirroredCreditNote()).toMatchObject({
+      invoiceId: workspace.invoiceRowId,
+      stripeCreditNoteId: workspace.creditNoteId,
+      pdfUrl: `https://invoice.stripe.test/${workspace.creditNoteId}.pdf`,
       refundId: "re_123",
       status: "issued",
     });
-    expect(invoices[1]).toMatchObject({
+    const row = await mirroredCreditNoteInvoice();
+    expect(row).toMatchObject({
       documentType: "credit_note",
-      stripeInvoiceId: "in_123",
-      stripeCreditNoteId: "cn_123",
+      stripeInvoiceId: workspace.stripeInvoiceId,
+      stripeCreditNoteId: workspace.creditNoteId,
       parentInvoiceNumber: "INV-0042",
       number: "CN-0042-1",
       amount: -3_600,
@@ -248,24 +245,21 @@ describe("Stripe credit note mirror", () => {
       creditNoteReason: "order_change",
       creditNoteType: "refund",
       memo: "Prorated cancellation",
-      invoicePdfUrl: "https://invoice.stripe.test/cn_123.pdf",
+      invoicePdfUrl: `https://invoice.stripe.test/${workspace.creditNoteId}.pdf`,
     });
-    expect(invoices[1]?.lines[0]?.amount).toBe(-3_000);
-    expect(harness.notify).toHaveBeenCalledOnce();
+    expect(row?.lines[0]?.amount).toBe(-3_000);
+    expect(notifiedUserIds()).toEqual([workspace.ownerId]);
   });
 
   it("mirrors a credit note type the local schema does not know as mixed", async () => {
-    currentCreditNote = {
-      ...creditNoteFixture(),
+    currentCreditNote = creditNoteFixture({
       refunds: [],
       type: "future_settlement",
-    } as unknown as Stripe.CreditNote;
-    await handleCreditNoteCreated(
-      event("credit_note.created", currentCreditNote),
-    );
+    });
+    await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
-    expect(creditNotes[0]?.type).toBe("mixed");
-    expect(invoices[1]?.creditNoteType).toBe("mixed");
+    expect((await mirroredCreditNote())?.type).toBe("mixed");
+    expect((await mirroredCreditNoteInvoice())?.creditNoteType).toBe("mixed");
   });
 
   it.each([
@@ -279,137 +273,148 @@ describe("Stripe credit note mirror", () => {
   ])(
     "names how the credit reached the customer: $type",
     async ({ refunds, balance, type }) => {
-      currentCreditNote = {
-        ...creditNoteFixture(),
-        refunds,
-        customer_balance_transaction: balance,
-      } as unknown as Stripe.CreditNote;
-      await handleCreditNoteCreated(
-        event("credit_note.created", currentCreditNote),
-      );
+      currentCreditNote = creditNoteFixture({
+        refunds: fromPartial(refunds),
+        customer_balance_transaction: fromPartial(balance),
+      });
+      await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
-      expect(creditNotes[0]?.type).toBe(type);
+      expect((await mirroredCreditNote())?.type).toBe(type);
     },
   );
 
   it("upserts rather than duplicating a replayed credit note", async () => {
-    const replay = event("credit_note.created", creditNoteFixture());
+    const replay = createdEvent(creditNoteFixture());
     await handleCreditNoteCreated(replay);
     await handleCreditNoteCreated(replay);
 
+    const creditNotes = await GetModel(
+      CreditNoteModel,
+      workspace.tenantId,
+    ).getAll();
     expect(creditNotes).toHaveLength(1);
+    const invoices = await GetModel(InvoiceModel, workspace.tenantId).getAll();
     expect(
       invoices.filter((row) => row.documentType === "credit_note"),
     ).toHaveLength(1);
   });
 
   it("updates both mirrors when Stripe voids the credit note", async () => {
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
-    currentCreditNote = creditNoteFixture("void");
-    await handleCreditNoteVoided(
-      event("credit_note.voided", currentCreditNote),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
+    currentCreditNote = voidedCreditNote();
+    await handleCreditNoteVoided(voidedEvent(currentCreditNote));
 
-    expect(creditNotes[0]?.status).toBe("void");
-    expect(creditNotes[0]?.voidedAt).toEqual(new Date(VOIDED_SECONDS * 1_000));
-    expect(invoices[1]?.status).toBe("void");
-    expect(invoices[1]?.voidedAt).toEqual(new Date(VOIDED_SECONDS * 1_000));
-    expect(invoices[1]?.amount).toBe(-3_600);
-    expect(harness.notify).toHaveBeenCalledOnce();
+    const creditNote = await mirroredCreditNote();
+    expect(creditNote?.status).toBe("void");
+    expect(creditNote?.voidedAt).toEqual(new Date(VOIDED_SECONDS * 1_000));
+    const row = await mirroredCreditNoteInvoice();
+    expect(row?.status).toBe("void");
+    expect(row?.voidedAt).toEqual(new Date(VOIDED_SECONDS * 1_000));
+    expect(row?.amount).toBe(-3_600);
+    expect(notifiedUserIds()).toEqual([workspace.ownerId]);
   });
 
   it("recovers and links a missing invoice mirror before inserting", async () => {
-    invoices = [];
-
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
+    await GetModel(InvoiceModel, workspace.tenantId).delete(
+      workspace.invoiceRowId,
     );
 
-    expect(harness.retrieveInvoice).toHaveBeenCalledWith("in_123");
-    expect(invoices.map((row) => row.documentType)).toEqual([
-      "invoice",
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
+
+    expect(retrieveInvoice).toHaveBeenCalledWith(workspace.stripeInvoiceId);
+    const invoices = await GetModel(InvoiceModel, workspace.tenantId).getAll();
+    expect(invoices.map((row) => row.documentType).toSorted()).toEqual([
       "credit_note",
+      "invoice",
     ]);
-    expect(creditNotes[0]?.invoiceId).toBe(invoices[0]?._id);
+    expect((await mirroredCreditNote())?.invoiceId).toBe(
+      (await mirroredInvoice())?._id,
+    );
   });
 
   it("refreshes an incomplete invoice mirror before linking the credit note", async () => {
-    invoices[0] = { ...invoiceFixture(), number: null };
-
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
+    await GetModel(InvoiceModel, workspace.tenantId).update(
+      workspace.invoiceRowId,
+      { number: null },
     );
 
-    expect(harness.retrieveInvoice).toHaveBeenCalledWith("in_123");
-    expect(creditNotes[0]?.invoiceId).toBe("invoice-row");
-    expect(invoices[1]?.parentInvoiceNumber).toBe("INV-0042");
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
+
+    expect(retrieveInvoice).toHaveBeenCalledWith(workspace.stripeInvoiceId);
+    expect((await mirroredCreditNote())?.invoiceId).toBe(
+      workspace.invoiceRowId,
+    );
+    expect((await mirroredCreditNoteInvoice())?.parentInvoiceNumber).toBe(
+      "INV-0042",
+    );
   });
 
   it("uses Stripe's current state when a created event arrives after voiding", async () => {
-    currentCreditNote = creditNoteFixture("void");
+    currentCreditNote = voidedCreditNote();
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture("issued")),
-    );
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
 
-    expect(creditNotes[0]?.status).toBe("void");
-    expect(invoices[1]?.status).toBe("void");
-    expect(harness.notify).not.toHaveBeenCalled();
+    expect((await mirroredCreditNote())?.status).toBe("void");
+    expect((await mirroredCreditNoteInvoice())?.status).toBe("void");
+    expect(notifiedUserIds()).toEqual([]);
   });
 
   it("keeps void terminal when created and voided handlers overlap", async () => {
-    await handleCreditNoteCreated(
-      event("credit_note.created", creditNoteFixture()),
-    );
-    harness.notify.mockReset();
-    let releaseIssuedUpdate = () => undefined;
-    issuedUpdateBarrier = new Promise<void>((resolve) => {
-      releaseIssuedUpdate = resolve;
+    await handleCreditNoteCreated(createdEvent(creditNoteFixture()));
+    sendToUser.mockReset();
+    let releaseStaleHandler: () => void = () => undefined;
+    const staleHandlerHeld = new Promise<void>((resolve) => {
+      releaseStaleHandler = resolve;
     });
-    harness.retrieveCreditNote
-      .mockResolvedValueOnce(creditNoteFixture())
-      .mockResolvedValueOnce(creditNoteFixture("void"));
+    const staleHandlerReached = vi.fn();
+    vi.spyOn(stripe.write.creditNotes, "listLineItems").mockReturnValue(
+      fromPartial({
+        autoPagingEach: async () => {
+          staleHandlerReached();
+          await staleHandlerHeld;
+        },
+      }),
+    );
+    vi.spyOn(stripe.write.creditNotes, "retrieve")
+      .mockResolvedValueOnce(
+        fromPartial(
+          creditNoteFixture({
+            lines: fromPartial({ data: [], has_more: true }),
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(fromPartial(voidedCreditNote()));
 
-    const created = handleCreditNoteCreated(
-      event("credit_note.created-late", creditNoteFixture()),
-    );
-    await vi.waitFor(() =>
-      expect(harness.issuedUpdateReached).toHaveBeenCalled(),
-    );
-    await handleCreditNoteVoided(
-      event("credit_note.voided", creditNoteFixture("void")),
-    );
-    releaseIssuedUpdate();
+    const created = handleCreditNoteCreated(createdEvent(creditNoteFixture()));
+    await vi.waitFor(() => expect(staleHandlerReached).toHaveBeenCalled());
+    await handleCreditNoteVoided(voidedEvent(voidedCreditNote()));
+    releaseStaleHandler();
     await created;
 
-    expect(creditNotes[0]?.status).toBe("void");
-    expect(invoices[1]?.status).toBe("void");
-    expect(harness.notify).not.toHaveBeenCalled();
+    expect((await mirroredCreditNote())?.status).toBe("void");
+    expect((await mirroredCreditNoteInvoice())?.status).toBe("void");
+    expect(notifiedUserIds()).toEqual([]);
   });
 
   it("links an expanded Stripe invoice reference", async () => {
-    currentCreditNote = creditNoteFixture();
-    currentCreditNote.invoice = stripeInvoiceFixture();
+    currentCreditNote = creditNoteFixture({ invoice: stripeInvoiceFixture() });
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", currentCreditNote),
+    await handleCreditNoteCreated(createdEvent(currentCreditNote));
+
+    expect((await mirroredCreditNote())?.invoiceId).toBe(
+      workspace.invoiceRowId,
     );
-
-    expect(creditNotes[0]?.invoiceId).toBe("invoice-row");
-    expect(invoices[1]?.stripeInvoiceId).toBe("in_123");
+    expect((await mirroredCreditNoteInvoice())?.stripeInvoiceId).toBe(
+      workspace.stripeInvoiceId,
+    );
   });
 
   it("uses Stripe effective date, tax amounts, and credit-note type", async () => {
-    currentCreditNote = creditNoteFixture();
-    currentCreditNote.subtotal = 3_400;
+    currentCreditNote = creditNoteFixture({ subtotal: 3_400 });
 
-    await handleCreditNoteCreated(
-      event("credit_note.created", currentCreditNote),
-    );
+    await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
-    expect(invoices[1]).toMatchObject({
+    expect(await mirroredCreditNoteInvoice()).toMatchObject({
       subtotal: -3_400,
       tax: -600,
       creditNoteType: "refund",
@@ -418,29 +423,47 @@ describe("Stripe credit note mirror", () => {
   });
 
   it("mirrors every credit note line when Stripe paginates the event", async () => {
-    const creditNote = creditNoteFixture();
-    creditNote.lines.has_more = true;
-    currentCreditNote = creditNote;
-    harness.listCreditNoteLines.mockReturnValue({
-      autoPagingEach: async (
-        callback: (line: Stripe.CreditNoteLineItem) => void,
-      ) => {
-        for (const line of [
-          ...creditNote.lines.data,
-          { description: "Tax adjustment", quantity: 1, amount: 600 },
-        ]) {
-          callback(line as Stripe.CreditNoteLineItem);
-        }
-      },
+    currentCreditNote = creditNoteFixture({
+      lines: fromPartial({
+        data: [
+          {
+            id: "cnli_123",
+            description: "Unused subscription period",
+            quantity: 1,
+            amount: 3_000,
+          },
+        ],
+        has_more: true,
+      }),
     });
+    const listLineItems = vi
+      .spyOn(stripe.write.creditNotes, "listLineItems")
+      .mockReturnValue(
+        fromPartial({
+          autoPagingEach: async (
+            callback: (line: Stripe.CreditNoteLineItem) => void,
+          ) => {
+            for (const line of [
+              {
+                description: "Unused subscription period",
+                quantity: 1,
+                amount: 3_000,
+              },
+              { description: "Tax adjustment", quantity: 1, amount: 600 },
+            ]) {
+              callback(fromPartial(line));
+            }
+          },
+        }),
+      );
 
-    await handleCreditNoteCreated(event("credit_note.created", creditNote));
+    await handleCreditNoteCreated(createdEvent(currentCreditNote));
 
-    expect(harness.listCreditNoteLines).toHaveBeenCalledWith("cn_123", {
+    expect(listLineItems).toHaveBeenCalledWith(workspace.creditNoteId, {
       limit: 100,
     });
-    expect(invoices[1]?.lines.map((line) => line.amount)).toEqual([
-      -3_000, -600,
-    ]);
+    expect(
+      (await mirroredCreditNoteInvoice())?.lines.map((line) => line.amount),
+    ).toEqual([-3_000, -600]);
   });
 });

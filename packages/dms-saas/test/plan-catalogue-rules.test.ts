@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import type { Plan } from "../src/db";
 import { featureUsage, plansUsingFeature } from "../src/plans/feature-usage";
@@ -38,13 +39,13 @@ const NO_USAGE = {
 };
 
 function plan(overrides: Partial<Plan>): Plan {
-  return {
+  return fromPartial<Plan>({
     _id: "team",
     name: "Team",
     currency: "EUR",
     paymentProviderRefs: {},
     ...overrides,
-  } as Plan;
+  });
 }
 
 describe("feature values a plan stores (Q36)", () => {

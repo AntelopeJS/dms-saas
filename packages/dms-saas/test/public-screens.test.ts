@@ -1,24 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   registerPublicScreens,
   resolvePublicScreensToRegister,
 } from "../src/pages/public/screens";
 import type { DmsSaasConfig } from "../src/types";
+import { implementPageRegistry, registered } from "./helpers/pages";
 
-const { evaluateRegisterPage, evaluatePricingPage } = vi.hoisted(() => ({
-  evaluateRegisterPage: vi.fn(),
-  evaluatePricingPage: vi.fn(),
-}));
+const registry = implementPageRegistry();
 
-vi.mock("../src/pages/public/register", () => {
-  evaluateRegisterPage();
-  return {};
-});
-
-vi.mock("../src/pages/public/pricing", () => {
-  evaluatePricingPage();
-  return {};
-});
+/** The public screens whose page registered itself, once per registration. */
+function registeredScreens(): string[] {
+  return registered(registry.pages)
+    .map(({ id }) => id)
+    .filter((id) => ALL_SCREENS.includes(id));
+}
 
 const ALL_SCREENS = ["register", "pricing"];
 
@@ -70,14 +65,10 @@ describe("registerPublicScreens", () => {
       configWith({ register: false, pricing: false }),
     );
 
-    // The page registers itself on import, so opting out has to keep the
-    // module from ever being evaluated — not merely skip a registration call.
-    expect(evaluateRegisterPage).not.toHaveBeenCalled();
-    expect(evaluatePricingPage).not.toHaveBeenCalled();
+    expect(registeredScreens()).toEqual([]);
 
     await registerPublicScreens(configWith());
 
-    expect(evaluateRegisterPage).toHaveBeenCalledTimes(1);
-    expect(evaluatePricingPage).toHaveBeenCalledTimes(1);
+    expect(registeredScreens()).toEqual(ALL_SCREENS);
   });
 });

@@ -153,6 +153,10 @@ const platformRole = CustomComponent("DmsSaasUserPlatformRoleCard").meta(
   described("platform_role", "i-ph-shield-check"),
 );
 
+/**
+ * The layout hides the generic page title: the identity header names the user
+ * and the title would repeat it.
+ */
 @RegisterPage()
 export class SaasUserDetailController extends PageController(
   "detail",
@@ -164,7 +168,6 @@ export class SaasUserDetailController extends PageController(
     icon: "i-ph-user",
     hidden: true,
   },
-  // The identity header names the user: the generic page title would repeat it.
   DefaultLayout({ fullWidth: true, hideHeader: true }),
 ) {
   static layout = VStack({ spacing: SPACING, alignment: "stretch" })

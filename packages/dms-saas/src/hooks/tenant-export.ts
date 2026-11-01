@@ -97,15 +97,17 @@ function buildDatasets(tenantId: string): ExportDataset<ExportedRow>[] {
  * stops the export from scaling. Streaming instead keeps memory flat whatever
  * the workspace holds, and is the contract the volume dumps of the cloud
  * module need.
+ *
+ * Throws when no archive is handed over: a dms-base predating the archive
+ * sink calls contributors with the tenant id alone, and failing on the
+ * contract rather than on a member of `undefined` keeps that mismatch readable
+ * in the archive manifest.
  */
 export async function exportSaasTenantData(
   tenantId: string,
   archive: TenantExportArchive,
   signal: AbortSignal,
 ): Promise<void> {
-  // A dms-base predating the archive sink calls contributors with the tenant
-  // id alone. Failing on the contract rather than on a member of `undefined`
-  // is what keeps that mismatch readable in the archive manifest.
   if (!archive) {
     throw new Error(
       "Tenant data export requires a dms-base providing the export archive sink",

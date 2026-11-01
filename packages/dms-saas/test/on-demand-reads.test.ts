@@ -3,10 +3,8 @@ import { useBillingStatus } from "../frontend-vue/app/composables/useBillingStat
 import { useOnDemandRead } from "../frontend-vue/app/composables/useOnDemandRead";
 import { useSeatQuota } from "../frontend-vue/app/composables/useSeatQuota";
 import { useTenantPlan } from "../frontend-vue/app/composables/useTenantPlan";
-
-// The reads a dialog, a drawer or a lookup makes go through `useApiData`, as
-// every read of the module: nothing on a server, nothing before `read()`, a
-// fresh read on each, and the failure handed to the caller.
+import type { ApiDataRequest, UseApiDataOptions } from "./helpers/api-data";
+import { toValue } from "./helpers/frontend-vue";
 
 interface Holder<T> {
   value: T;
@@ -15,7 +13,7 @@ interface Holder<T> {
 /** A `useApiData(url, options)` call, as the stub records it. */
 interface ApiDataCall {
   url: () => string | null | undefined;
-  options: Record<string, unknown> | undefined;
+  options: UseApiDataOptions<unknown> | undefined;
   data: Holder<unknown>;
   status: Holder<string>;
   error: Holder<unknown>;
@@ -27,9 +25,9 @@ function stubApiData(answer: (call: ApiDataCall) => void): ApiDataCall[] {
   const calls: ApiDataCall[] = [];
   vi.stubGlobal(
     "useApiData",
-    (url: ApiDataCall["url"], options?: Record<string, unknown>) => {
+    (url: ApiDataRequest, options?: UseApiDataOptions<unknown>) => {
       const call: ApiDataCall = {
-        url: typeof url === "function" ? url : () => url,
+        url: () => toValue(url),
         options,
         data: { value: null },
         status: { value: "idle" },
@@ -65,7 +63,7 @@ describe("useOnDemandRead", () => {
       refreshOnPageRefresh: false,
     });
     expect(call!.execute).not.toHaveBeenCalled();
-    expect((call!.options!.query as () => unknown)()).toEqual({
+    expect(toValue(call!.options!.query)).toEqual({
       email: "a@example.com",
     });
 

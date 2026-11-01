@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GetClientBaseUrl } from "@antelopejs/interface-dms/client-base-url";
+import { ImplementInterface } from "@antelopejs/interface-core";
+import * as clientBaseUrlInterface from "@antelopejs/interface-dms/client-base-url";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setDevMode } from "../src/config/dev-mode";
 import { isAllowedRedirectUrl, setRuntimeConfig } from "../src/config/runtime";
 import type { DmsSaasConfig } from "../src/types";
@@ -10,9 +11,12 @@ const STRIPE_CONFIG = {
   publishableKey: "pk_test",
 };
 
-vi.mock("@antelopejs/interface-dms/client-base-url", () => ({
-  GetClientBaseUrl: vi.fn(),
-}));
+/** The client URL the DMS answers `GetClientBaseUrl` with. */
+let clientBaseUrl: string | undefined;
+
+ImplementInterface(clientBaseUrlInterface, {
+  GetClientBaseUrl: async () => clientBaseUrl,
+});
 
 const CONFIGURED_HOST = "app.example.com";
 const CLIENT_HOST = "dashboard.example.com:8443";
@@ -45,7 +49,7 @@ describe("redirect URL validation", () => {
   beforeEach(() => {
     configure(undefined);
     setDevMode(false);
-    vi.mocked(GetClientBaseUrl).mockResolvedValue(undefined);
+    clientBaseUrl = undefined;
   });
 
   afterEach(() => {
@@ -67,7 +71,7 @@ describe("redirect URL validation", () => {
   });
 
   it("defaults to the host of the DMS client URL", async () => {
-    vi.mocked(GetClientBaseUrl).mockResolvedValue(`https://${CLIENT_HOST}`);
+    clientBaseUrl = `https://${CLIENT_HOST}`;
 
     expect(await isAllowedRedirectUrl(`https://${CLIENT_HOST}/billing`)).toBe(
       true,
@@ -79,7 +83,7 @@ describe("redirect URL validation", () => {
   });
 
   it("prefers the configured hosts over the DMS client URL", async () => {
-    vi.mocked(GetClientBaseUrl).mockResolvedValue(`https://${CLIENT_HOST}`);
+    clientBaseUrl = `https://${CLIENT_HOST}`;
     configure([CONFIGURED_HOST]);
 
     expect(await isAllowedRedirectUrl(`https://${CONFIGURED_HOST}/`)).toBe(

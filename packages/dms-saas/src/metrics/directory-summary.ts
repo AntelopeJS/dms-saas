@@ -1,7 +1,6 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import {
-  BILLING_STATES,
   type BillingState,
   type TenantBillingState,
   TenantBillingStateModel,
@@ -54,9 +53,15 @@ export interface DirectorySummary {
 }
 
 function emptyStateCounts(): Record<BillingState, number> {
-  return Object.fromEntries(
-    BILLING_STATES.map((state) => [state, 0]),
-  ) as Record<BillingState, number>;
+  return {
+    free: 0,
+    active: 0,
+    trialing: 0,
+    past_due: 0,
+    suspended: 0,
+    cancelled: 0,
+    pending_payment: 0,
+  };
 }
 
 function mrrOf(row: DirectoryRow): MinorAmount {
@@ -87,7 +92,7 @@ function isDueWithin(
   kind: string,
   now: Date,
   days: number,
-): boolean {
+): row is DirectoryRow & { renewsAt: Date } {
   if (row.renewalKind !== kind || !row.renewsAt) return false;
   const at = new Date(row.renewsAt).getTime();
   return at >= now.getTime() && at <= now.getTime() + days * MS_PER_DAY;
@@ -109,9 +114,11 @@ function summarisePastDue(
     count: pastDue.length,
     atRisk: sumInReportingCurrency(pastDue.map(mrrOf), currency),
     firstSuspension: earliest(
-      pastDue
-        .filter((row) => row.renewalKind === "suspends" && row.renewsAt)
-        .map((row) => new Date(row.renewsAt as Date)),
+      pastDue.flatMap((row) =>
+        row.renewalKind === "suspends" && row.renewsAt
+          ? [new Date(row.renewsAt)]
+          : [],
+      ),
     ),
   };
 }
@@ -136,7 +143,7 @@ export function summariseDirectory(
     .map((row) => ({
       tenantId: row.tenantId,
       name: "",
-      at: new Date(row.renewsAt as Date),
+      at: new Date(row.renewsAt),
     }))
     .sort((left, right) => left.at.getTime() - right.at.getTime());
   return {

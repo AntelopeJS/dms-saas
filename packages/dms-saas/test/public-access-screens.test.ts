@@ -1,31 +1,11 @@
+import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
+import { DEFAULT_TENANT_ID } from "@antelopejs/interface-dms/constants";
+import { GetPageLayoutBySlug } from "@antelopejs/interface-dms/page";
+import { fromPartial } from "@total-typescript/shoehorn";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { implementPageRegistry, registered } from "./helpers/pages";
 
-const pages = vi.hoisted(() => ({
-  declared: [] as unknown[][],
-  emptyLayout: { layout: "empty" },
-}));
-
-vi.mock("@antelopejs/interface-dms/page", () => ({
-  PageController: (...args: unknown[]) => {
-    pages.declared.push(args);
-    return class {};
-  },
-  RegisterPage: () => () => undefined,
-  pagesCategory: {},
-}));
-
-vi.mock("@antelopejs/interface-dms/base/layouts", () => ({
-  EmptyLayout: () => pages.emptyLayout,
-}));
-
-vi.mock("@antelopejs/interface-dms/base/custom", () => {
-  const component = { meta: () => component, options: () => component };
-  return { CustomComponent: () => component };
-});
-
-interface PageOptions {
-  publicAccess?: boolean;
-}
+const registry = implementPageRegistry();
 
 interface AuthLink {
   id: string;
@@ -44,15 +24,16 @@ describe("legal pages", () => {
 
   it.each(LEGAL_SLUGS)(
     "serves /%s to anonymous visitors, outside the console shell",
-    (slug) => {
-      const [, options, layout] =
-        pages.declared.find(([name]) => name === slug) ?? [];
+    async (slug) => {
+      const page = registered(registry.pages).find(({ id }) => id === slug);
+      const servePage = GetPageLayoutBySlug(`/${slug}`);
 
-      // The console layout's authenticated calls answer 401 to a visitor
-      // without a session, which bounces them to the login screen before
-      // they can read the terms they are asked to accept.
-      expect((options as PageOptions | undefined)?.publicAccess).toBe(true);
-      expect(layout).toBe(pages.emptyLayout);
+      expect(page?.publicAccess).toBe(true);
+      await expect(
+        servePage?.(
+          fromPartial({ user: undefined, tenantId: DEFAULT_TENANT_ID }),
+        ),
+      ).resolves.toMatchObject({ layout: EmptyLayout() });
     },
   );
 });

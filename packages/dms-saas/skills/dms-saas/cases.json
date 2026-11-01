@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "saas-pro-plan",
+      "area": "modules",
+      "style": "clean",
+      "prompt": "Add a Pro plan that unlocks the CSV exports.",
+      "expect": {
+        "skills": ["dms-saas"],
+        "acceptable": ["dms-auth", "dms"]
+      }
+    },
+    {
+      "id": "saas-stripe-webhook-casual",
+      "area": "modules",
+      "style": "casual",
+      "prompt": "stripe webhook keeps failing signature check",
+      "expect": {
+        "skills": ["dms-saas"],
+        "acceptable": ["dms"]
+      }
+    },
+    {
+      "id": "dms-saas-metered-usage-invoice",
+      "area": "modules",
+      "style": "clean",
+      "prompt": "Charge each workspace for the API calls it used this month as an extra line on its Stripe invoice. Which hook do I register, and where do I remove it?",
+      "expect": {
+        "skills": ["dms-saas"],
+        "acceptable": ["dms"],
+        "mustMention": ["RegisterInvoiceLineItemsProvider"]
+      }
+    },
+    {
+      "id": "dms-saas-avoid-route-permission",
+      "area": "modules",
+      "style": "clean",
+      "prompt": "Protect an export endpoint so only users holding the exports.read permission can call it, and register that permission.",
+      "expect": {
+        "skills": ["dms-auth"],
+        "acceptable": ["dms"],
+        "mustMention": ["AuthUserWithPermission"],
+        "avoid": ["dms-saas"]
+      }
+    }
+  ]
+}

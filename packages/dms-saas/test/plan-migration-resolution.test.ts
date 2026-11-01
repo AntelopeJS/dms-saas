@@ -1,21 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { HTTPResult } from "@antelopejs/interface-api";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { fromPartial } from "@total-typescript/shoehorn";
 import Stripe from "stripe";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { planRow } from "./helpers/plan-row";
 import type { PlanMigration } from "../src/db";
 import {
@@ -34,47 +22,29 @@ import {
   retryFailedPlanMigrationWorkspaces,
   settledMigrationStatus,
 } from "../src/workers";
+import { useMongoDatabase } from "./helpers/mongo";
+import { useSuiteStripe } from "./helpers/stripe";
+import { httpRefusal } from "./helpers/refusal";
 
-vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
-  runTenantLifecycleOperation: async (
-    _tenantId: string,
-    work: () => Promise<void>,
-  ) => work(),
-}));
-vi.mock("../src/plans", () => ({
-  countOccupiedSeats: async () => 2,
-  syncStripeSeatQuantity: async () => undefined,
-}));
-const stripe = vi.hoisted(() => ({
-  subscriptions: { cancel: vi.fn(async () => ({})) },
-}));
-vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
+useMongoDatabase("plan-migration-resolution");
+const stripe = useSuiteStripe();
 
-const SETUP_TIMEOUT_MS = 60_000;
 const OPERATOR = "operator";
-let mongodb: MongoMemoryReplSet;
 
-beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({
-    url: mongodb.getUri(),
-    database: "saas-migration-resolution",
-  });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-}, SETUP_TIMEOUT_MS);
+/** Moving a workspace off a paid plan cancels its Stripe subscription. */
+function stubCancellation() {
+  return vi
+    .spyOn(stripe.write.subscriptions, "cancel")
+    .mockResolvedValue(fromPartial({}));
+}
+
+let cancelSubscription: ReturnType<typeof stubCancellation>;
+
+beforeEach(() => {
+  cancelSubscription = stubCancellation();
+});
 
 afterEach(() => vi.restoreAllMocks());
-afterAll(async () => {
-  try {
-    await destroy();
-  } finally {
-    await mongodb?.stop();
-  }
-});
 
 /** Stripe refusals as stripe-node raises them: the request had no effect. */
 const STRIPE_REFUSALS = [
@@ -160,12 +130,6 @@ async function subscriptionOf(tenantId: string) {
   return GetModel(TenantSubscriptionModel, tenantId).findOne();
 }
 
-async function refusal(operation: () => Promise<unknown>): Promise<HTTPResult> {
-  const error = await operation().catch((caught: unknown) => caught);
-  expect(error).toBeInstanceOf(HTTPResult);
-  return error as HTTPResult;
-}
-
 describe("settled migration status", () => {
   it.each([
     [["succeeded"], "completed"],
@@ -203,7 +167,7 @@ describe("plan migration resolution on the production Mongo provider", () => {
     async (_reason, refusalOf) => {
       const job = await createJob();
       const tenantId = await createSubscription(job.fromPlanId, "sub_refused");
-      stripe.subscriptions.cancel.mockRejectedValueOnce(refusalOf());
+      cancelSubscription.mockRejectedValueOnce(refusalOf());
       await processPlanMigrationJob(job._id);
 
       const failed = await load(job._id);
@@ -284,7 +248,7 @@ describe("plan migration resolution on the production Mongo provider", () => {
     failNextMove(tenantId, new Error("Stripe timed out"));
     await processPlanMigrationJob(job._id);
 
-    const error = await refusal(() =>
+    const error = await httpRefusal(
       reconcileMigration({
         migrationId: job._id,
         operatorId: OPERATOR,
@@ -334,13 +298,13 @@ describe("plan migration resolution on the production Mongo provider", () => {
     const job = await createJob();
     const tenantId = await createSubscription(job.fromPlanId);
     await processPlanMigrationJob(job._id);
-    await refusal(() =>
+    await expect(
       resolveUncertainWorkspace({
         migrationId: job._id,
         tenantId,
         resolution: "not_moved",
         operatorId: OPERATOR,
       }),
-    );
+    ).rejects.toBeInstanceOf(HTTPResult);
   });
 });

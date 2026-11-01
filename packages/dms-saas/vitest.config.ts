@@ -6,8 +6,10 @@ const interfaceSourceRoot = fileURLToPath(
   new URL("../interface-dms-saas/src", import.meta.url),
 );
 
-// Pure frontend helpers and decorated backend classes share this test runner.
-// Oxc accepts tsconfig overrides outside Vite's public option type.
+/**
+ * Pure frontend helpers and decorated backend classes share this test runner.
+ * Oxc accepts tsconfig overrides outside Vite's public option type.
+ */
 const oxc = {
   tsconfig: {
     compilerOptions: {
@@ -20,8 +22,10 @@ const oxc = {
   },
 } as ViteUserConfig["oxc"];
 
-// Scoped to this module's own tests: the playground caches the DMS package
-// sources, which carry a test suite the default glob would collect.
+/**
+ * Scoped to this module's own tests: the playground caches the DMS package
+ * sources, which carry a test suite the default glob would collect.
+ */
 export default defineConfig({
   resolve: {
     alias: {
@@ -31,6 +35,7 @@ export default defineConfig({
   },
   test: {
     include: ["test/**/*.test.ts"],
+    globalSetup: ["test/global-setup.ts"],
   },
   oxc,
 });

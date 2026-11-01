@@ -4,7 +4,7 @@
 
 <a href="https://www.npmjs.com/package/@antelopejs/dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
 <a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
-<a href="https://discord.gg/sjK28QHrA7"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000"></a>
+<a href="https://discord.gg/g4pFt6eXqu"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000"></a>
 <a href="https://dms.antelopejs.com/docs/modules/saas"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000"></a>
 
 Sign-up, plans, Stripe billing and a back office for a multi-tenant AntelopeJS DMS.
@@ -62,11 +62,27 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 
 ## Compatibility
 
+<!-- antelopejs-docs-compat:start -->
+
+| Package                                     | Supported         | Tested with |
+| ------------------------------------------- | ----------------- | ----------- |
+| `@antelopejs/interface-api`                 | `>=0.0.15 <1.0.0` | `0.0.15`    |
+| `@antelopejs/interface-api-util`            | `>=0.1.3 <1.0.0`  | `0.1.3`     |
+| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`  | `0.2.4`     |
+| `@antelopejs/interface-data-api`            | `>=0.4.0 <1.0.0`  | `0.4.0`     |
+| `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0` | `0.1.11`    |
+| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0` | `0.1.10`    |
+| `@antelopejs/interface-dms`                 | `>=0.9.0 <1.0.0`  | `0.9.0`     |
+| `@antelopejs/interface-dms-automation`      | `>=0.2.1 <1.0.0`  | `0.2.1`     |
+| `@antelopejs/interface-dms-saas`            | `workspace:^`     | `0.6.1`     |
+
+<!-- antelopejs-docs-compat:end -->
+
 | Package | Version |
 | --- | --- |
 | `@antelopejs/dms` | `>=0.11.0 <1.0.0` |
 | `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
-| `@antelopejs/dms-frontend` (renderer) | `>=0.9.0 <0.10.0` |
+| `@antelopejs/dms-frontend` (renderer) | `>=0.9.1 <0.10.0` |
 | `@antelopejs/interface-dms-saas` | `>=0.6.0 <0.7.0` |
 | Stripe API version | `2026-08-26.dahlia` |
 

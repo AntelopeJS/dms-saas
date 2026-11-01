@@ -1,58 +1,29 @@
+import { randomUUID } from "node:crypto";
+import { fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Plan, TenantSubscription } from "../src/db";
-
-const harness = vi.hoisted(() => ({
-  occupiedSeats: 8,
-  isTrialAvailable: false,
-  retrieveSubscription: vi.fn(),
-  createPreview: vi.fn(),
-  retrieveTaxRate: vi.fn(),
-}));
-
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: { Error: vi.fn(), Warn: vi.fn(), Info: vi.fn() },
-}));
-vi.mock("../src/stripe/client", () => {
-  const client = () => ({
-    subscriptions: {
-      retrieve: (...args: unknown[]) => harness.retrieveSubscription(...args),
-    },
-    invoices: {
-      createPreview: (...args: unknown[]) => harness.createPreview(...args),
-    },
-    taxRates: {
-      retrieve: (...args: unknown[]) => harness.retrieveTaxRate(...args),
-    },
-  });
-  return {
-    isStripeConfigured: () => true,
-    getStripeClient: client,
-    getStripeReadClient: client,
-  };
-});
-vi.mock("../src/plans", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/plans")>()),
-  countOccupiedSeats: async () => harness.occupiedSeats,
-  countSeatsToCompare: async () => harness.occupiedSeats,
-}));
-vi.mock("../src/routes/tenant/tenant-plan-checkout", () => ({
-  isCheckoutTrialAvailable: async () => harness.isTrialAvailable,
-}));
-
 import {
   previewPlanChange,
   recurringAmountMinorUnits,
   resolvePlanChangeKind,
 } from "../src/routes/tenant/tenant-plan-preview";
 import { acceptedProrationDate } from "../src/routes/tenant/tenant-plan";
+import { captureLogs } from "./helpers/logging";
+import { useMongoDatabase } from "./helpers/mongo";
+import { seatMembers } from "./helpers/workspaces";
+import { useSuiteStripe } from "./helpers/stripe";
+
+useMongoDatabase("plan-change-preview");
+const stripe = useSuiteStripe();
+const logs = captureLogs();
 
 const NOW = new Date("2026-10-01T00:00:00.000Z");
 const PERIOD_END = new Date("2026-10-31T00:00:00.000Z");
 const seconds = (date: Date) => Math.floor(date.getTime() / 1000);
 
 function plan(overrides: Partial<Plan>): Plan {
-  return {
+  return fromPartial<Plan>({
     _id: "plan",
     name: "Plan",
     price: 49,
@@ -63,7 +34,7 @@ function plan(overrides: Partial<Plan>): Plan {
     maxMembers: 10,
     paymentProviderRefs: { stripePriceId: "price_plan" },
     ...overrides,
-  } as Plan;
+  });
 }
 
 const BUSINESS = plan({ _id: "business", price: 49 });
@@ -85,25 +56,25 @@ const FREE = plan({
   paymentProviderRefs: {},
 });
 
-const PAID_SUBSCRIPTION = {
+const PAID_SUBSCRIPTION = fromPartial<TenantSubscription>({
   _id: "tenant-a",
   planId: "business",
   status: "active",
   stripeCustomerId: "cus_a",
   stripeSubscriptionId: "sub_a",
   currentPeriodEnd: PERIOD_END,
-} as TenantSubscription;
+});
 
-const FREE_SUBSCRIPTION = {
+const FREE_SUBSCRIPTION = fromPartial<TenantSubscription>({
   _id: "tenant-a",
   planId: "free",
   status: "active",
   stripeCustomerId: null,
   stripeSubscriptionId: null,
-} as TenantSubscription;
+});
 
 function previewInvoice(totalMinorUnits: number): Stripe.Invoice {
-  return {
+  return fromPartial<Stripe.Invoice>({
     currency: "eur",
     lines: {
       data: [
@@ -134,11 +105,11 @@ function previewInvoice(totalMinorUnits: number): Stripe.Invoice {
     automatic_tax: { enabled: true, status: "complete" },
     period_start: seconds(NOW),
     period_end: seconds(NOW),
-  } as unknown as Stripe.Invoice;
+  });
 }
 
 function stripeSubscription(status = "active"): Stripe.Subscription {
-  return {
+  return fromPartial<Stripe.Subscription>({
     id: "sub_a",
     customer: "cus_a",
     status,
@@ -152,11 +123,13 @@ function stripeSubscription(status = "active"): Stripe.Subscription {
         },
       ],
     },
-  } as unknown as Stripe.Subscription;
+  });
 }
 
+let tenantId: string;
+
 const input = (overrides: object) => ({
-  tenantId: "tenant-a",
+  tenantId,
   subscription: PAID_SUBSCRIPTION,
   currentPlan: BUSINESS,
   target: ENTERPRISE,
@@ -166,16 +139,25 @@ const input = (overrides: object) => ({
   ...overrides,
 });
 
-beforeEach(() => {
+function stubStripe() {
+  return {
+    retrieveSubscription: vi
+      .spyOn(stripe.write.subscriptions, "retrieve")
+      .mockResolvedValue(fromPartial(stripeSubscription())),
+    createPreview: vi
+      .spyOn(stripe.read.invoices, "createPreview")
+      .mockResolvedValue(fromPartial(previewInvoice(21240))),
+  };
+}
+
+let api: ReturnType<typeof stubStripe>;
+
+beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
-  harness.occupiedSeats = 10;
-  harness.isTrialAvailable = false;
-  harness.retrieveSubscription
-    .mockReset()
-    .mockResolvedValue(stripeSubscription());
-  harness.createPreview.mockReset().mockResolvedValue(previewInvoice(21240));
-  harness.retrieveTaxRate.mockReset();
+  tenantId = randomUUID();
+  await seatMembers(tenantId, 10);
+  api = stubStripe();
 });
 
 describe("plan change kind", () => {
@@ -209,7 +191,7 @@ describe("plan change preview", () => {
   it("prices an upgrade with Stripe's immediate proration", async () => {
     const preview = await previewPlanChange(input({}));
 
-    expect(harness.createPreview).toHaveBeenCalledWith({
+    expect(api.createPreview).toHaveBeenCalledWith({
       customer: "cus_a",
       subscription: "sub_a",
       subscription_details: {
@@ -238,10 +220,10 @@ describe("plan change preview", () => {
   });
 
   it("says when the trial ends for an upgrade during a trial", async () => {
-    harness.retrieveSubscription.mockResolvedValue(
-      stripeSubscription("trialing"),
+    api.retrieveSubscription.mockResolvedValue(
+      fromPartial(stripeSubscription("trialing")),
     );
-    harness.createPreview.mockResolvedValue(previewInvoice(0));
+    api.createPreview.mockResolvedValue(fromPartial(previewInvoice(0)));
 
     const preview = await previewPlanChange(input({}));
 
@@ -250,18 +232,23 @@ describe("plan change preview", () => {
   });
 
   it("reports an unpriced upgrade instead of inventing an amount", async () => {
-    harness.createPreview.mockRejectedValue(new Error("Stripe is down"));
+    api.createPreview.mockRejectedValue(new Error("Stripe is down"));
 
     const preview = await previewPlanChange(input({}));
 
     expect(preview).toMatchObject({ charge: null, isChargeAvailable: false });
+    expect(logs.at("WARN")).toContainEqual([
+      "[dms-saas:plan-preview] Stripe could not price the change",
+      new Error("Stripe is down"),
+    ]);
   });
 
   it("charges nothing today for a downgrade and names the renewal", async () => {
-    harness.occupiedSeats = 4;
+    tenantId = randomUUID();
+    await seatMembers(tenantId, 4);
     const preview = await previewPlanChange(input({ target: PRO }));
 
-    expect(harness.createPreview).not.toHaveBeenCalled();
+    expect(api.createPreview).not.toHaveBeenCalled();
     expect(preview).toMatchObject({
       kind: "downgrade",
       quantity: 1,
@@ -272,7 +259,6 @@ describe("plan change preview", () => {
   });
 
   it("prices a first subscription with the tax of the typed country", async () => {
-    harness.isTrialAvailable = true;
     const trialPro = plan({ ...PRO, trialDays: 14 });
 
     const preview = await previewPlanChange(
@@ -284,7 +270,7 @@ describe("plan change preview", () => {
       }),
     );
 
-    expect(harness.createPreview).toHaveBeenCalledWith({
+    expect(api.createPreview).toHaveBeenCalledWith({
       customer: undefined,
       customer_details: {
         address: {
@@ -314,7 +300,7 @@ describe("plan change preview", () => {
       }),
     );
 
-    expect(harness.createPreview).not.toHaveBeenCalled();
+    expect(api.createPreview).not.toHaveBeenCalled();
     expect(preview).toMatchObject({
       kind: "checkout",
       isChargeAvailable: false,

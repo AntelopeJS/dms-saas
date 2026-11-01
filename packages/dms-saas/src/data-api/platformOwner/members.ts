@@ -30,7 +30,7 @@ import { HiddenStringFilter } from "./hidden-filter";
 const COLUMN = "$saas.workspace_detail.members.column";
 const ROLE = "$saas.workspace_detail.members.role";
 
-// A member reads "active now" while their last request is this recent.
+/** A member reads "active now" while their last request is this recent. */
 const ACTIVE_NOW_WITHIN_MS = 300_000;
 
 const USER_JOIN = { table: User, localKey: "userId" } as const;

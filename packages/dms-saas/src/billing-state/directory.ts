@@ -23,6 +23,7 @@ import { type SeatUsage, getSeatUsage } from "../plans/seat-capacity";
 import { MS_PER_DAY } from "../utils/time";
 import {
   findPendingOwnerInvite,
+  type InvitationStatus,
   invitationStatusOf,
 } from "../workspaces/invitations";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
@@ -87,16 +88,21 @@ const NO_OWNER: DirectoryOwner = { status: "none", name: null, email: null };
 const PAID_INVOICE_STATUS = "paid";
 const INVOICE_DOCUMENT_TYPE = "invoice";
 
-// States a churn is read from: what the workspace paid before them is the
-// loss. A suspension bills nothing but still holds the loss of the paying
-// workspace it stopped, for the cancellation that usually follows.
+/**
+ * States a churn is read from: what the workspace paid before them is the
+ * loss. A suspension bills nothing but still holds the loss of the paying
+ * workspace it stopped, for the cancellation that usually follows.
+ */
 const LOSS_STATES: ReadonlySet<BillingState> = new Set([
   "suspended",
   "cancelled",
 ]);
 const LOSS_HOLDING_STATES: ReadonlySet<BillingState> = new Set(["suspended"]);
 
-const OWNER_STATUS_BY_INVITATION: Record<string, WorkspaceOwnerStatus> = {
+const OWNER_STATUS_BY_INVITATION: Record<
+  InvitationStatus,
+  WorkspaceOwnerStatus
+> = {
   pending: "invited",
   expired: "expired",
 };

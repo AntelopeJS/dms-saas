@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import type * as declarationModule from "@antelopejs/interface-dms-saas/invoice-line-items";
 import { describe, expect, it, vi } from "vitest";
@@ -10,9 +11,11 @@ interface LineItemsModules {
   implementation: typeof implementationModule;
 }
 
-// Every test needs its own proxy and its own registry: both are module state,
-// and attaching is one-way, so a shared graph would let one test's attach
-// decide whether the next one exercises the buffered or the attached path.
+/**
+ * Loads a fresh proxy and registry for one test: both are module state, and
+ * attaching is one-way, so a shared graph would let one test's attach decide
+ * whether the next one exercises the buffered or the attached path.
+ */
 async function loadModules(): Promise<LineItemsModules> {
   vi.resetModules();
   return {
@@ -49,7 +52,9 @@ function registeredIds(modules: LineItemsModules): string[] {
 function resolvedMarkers(modules: LineItemsModules): string[] {
   return modules.implementation
     .getInvoiceLineItemsProviders()
-    .flatMap((provider) => provider.resolve(undefined as never))
+    .flatMap((provider) =>
+      provider.resolve(fromPartial<Parameters<typeof provider.resolve>[0]>({})),
+    )
     .map((line) => line.key);
 }
 
@@ -87,9 +92,6 @@ describe("RegisterInvoiceLineItemsProvider", () => {
   });
 });
 
-// The proxy keys its buffer by id and records it before the implementation
-// ever runs, so a collision cannot be refused without stranding the winner.
-// Both paths must therefore land on the same last-writer-wins outcome.
 describe("RegisterInvoiceLineItemsProvider on a taken id", () => {
   it("replaces the previous provider once attached", async () => {
     const modules = await loadAttachedModules();

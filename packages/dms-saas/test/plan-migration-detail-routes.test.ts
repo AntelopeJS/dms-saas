@@ -1,114 +1,84 @@
 import { HTTPResult } from "@antelopejs/interface-api";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PlanMigration, PlanMigrationModel } from "../src/db";
+import { TenantModel } from "@antelopejs/interface-dms/db";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  FeatureModel,
+  type PlanMigration,
+  PlanMigrationModel,
+  TenantSubscriptionModel,
+} from "../src/db";
+import { SaasPlanMigrationsController } from "../src/routes/platformOwner/plan-migrations";
+import { stripeDashboardUrl } from "../src/stripe/client";
+import { createUser } from "./helpers/dms";
+import { insertPlan } from "./helpers/localized-plans";
+import { useMongoDatabase } from "./helpers/mongo";
+import { planRow } from "./helpers/plan-row";
+import { useSuiteStripe } from "./helpers/stripe";
+import { httpRefusal } from "./helpers/refusal";
 
-const harness = vi.hoisted(() => ({
-  subscriptions: new Map<string, unknown>(),
-  stripePriceId: "price_team" as string | null,
-}));
+useMongoDatabase("plan-migration-detail-routes");
+const stripe = useSuiteStripe();
 
-const worker = vi.hoisted(() => ({
-  reconcileMigration: vi.fn(async () => undefined),
-  resolveUncertainWorkspace: vi.fn(async () => undefined),
-  retryFailedPlanMigrationWorkspaces: vi.fn(async () => undefined),
-}));
-
-vi.mock("../src/workers", () => worker);
-
-vi.mock("../src/stripe/client", () => ({
-  isStripeConfigured: () => true,
-  stripeDashboardUrl: (path: string) => `https://stripe.test/${path}`,
-  getStripeClient: () => ({
-    subscriptions: {
-      retrieve: async () => ({
-        items: { data: [{ price: { id: harness.stripePriceId } }] },
-      }),
-    },
+const PLANS = [
+  planRow({
+    _id: "starter",
+    name: "Starter",
+    price: 9,
+    currency: "EUR",
+    isActive: true,
+    isDeleted: false,
+    paymentProviderRefs: { stripePriceId: "price_starter" },
   }),
-}));
+  planRow({
+    _id: "team",
+    name: "Team",
+    price: 150,
+    currency: "EUR",
+    isActive: true,
+    isDeleted: false,
+    paymentProviderRefs: { stripePriceId: "price_team" },
+  }),
+];
 
-const PLANS = new Map([
-  [
-    "starter",
-    {
-      _id: "starter",
-      name: "Starter",
-      price: 9,
-      currency: "EUR",
-      paymentProviderRefs: { stripePriceId: "price_starter" },
-    },
-  ],
-  [
-    "team",
-    {
-      _id: "team",
-      name: "Team",
-      price: 150,
-      currency: "EUR",
-      paymentProviderRefs: { stripePriceId: "price_team" },
-    },
-  ],
-]);
+const TENANTS = [
+  { _id: "hooli", name: "Hooli" },
+  { _id: "bluth", name: "Bluth Company" },
+  { _id: "pied", name: "Pied Piper" },
+];
 
-const TENANTS = new Map([
-  ["hooli", "Hooli"],
-  ["bluth", "Bluth Company"],
-  ["pied", "Pied Piper"],
-]);
+/** The price Stripe bills the uncertain workspace at, as the test sets it. */
+let billedPriceId = "price_team";
 
-vi.mock("@antelopejs/interface-database-decorators", async (original) => {
-  const actual =
-    await original<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: (model: { name: string }, tenantId?: string) => {
-      const models: Record<string, unknown> = {
-        PlanModel: {
-          get: async (id: string) => PLANS.get(id),
-          findNotDeleted: async () => [...PLANS.values()],
-        },
-        TenantModel: {
-          get: async (id: string) =>
-            TENANTS.has(id) ? { _id: id, name: TENANTS.get(id) } : undefined,
-        },
-        UserModel: {
-          get: async (id: string) => ({ _id: id, name: `User ${id}` }),
-        },
-        TenantSubscriptionModel: {
-          findOne: async () => harness.subscriptions.get(tenantId ?? ""),
-        },
-        FeatureModel: {
-          getAll: async () => [
-            {
-              _id: "members.max",
-              displayName: "Members",
-              localize: () => ({ displayName: "Members" }),
-            },
-          ],
-        },
-      };
-      return models[model.name];
-    },
-  };
+beforeAll(async () => {
+  for (const plan of PLANS) await insertPlan(plan);
+  const now = new Date();
+  await GetModel(TenantModel).insert(
+    TENANTS.map((tenant) => ({ ...tenant, createdAt: now, updatedAt: now })),
+  );
+  await GetModel(TenantSubscriptionModel, "bluth").insert({
+    _id: "bluth",
+    planId: "starter",
+    stripeSubscriptionId: "sub_bluth",
+  });
+  await GetModel(FeatureModel).insert({
+    _id: "members.max",
+    valueType: "number",
+    order: 1,
+  });
+  for (const _id of ["camille", "hugo"])
+    await createUser({ _id, name: `User ${_id}` });
 });
 
-vi.mock("../src/plans", async (original) => ({
-  ...(await original<object>()),
-  localizeFeature: (feature: { displayName: string }) => feature,
-}));
-
-import { SaasPlanMigrationsController } from "../src/routes/platformOwner/plan-migrations";
-
-const OWNER = { _id: "operator" } as User;
+const OWNER = fromPartial<User>({ _id: "operator" });
 const API = "/api/saas/plan-migrations/mig";
 const STARTED = new Date("2026-09-22T14:30:00Z");
 const FINISHED = new Date("2026-09-22T14:40:00Z");
 
 function migration(overrides: Partial<PlanMigration> = {}): PlanMigration {
-  return {
+  return fromPartial<PlanMigration>({
     _id: "mig",
     fromPlanId: "starter",
     toPlanId: "team",
@@ -155,38 +125,39 @@ function migration(overrides: Partial<PlanMigration> = {}): PlanMigration {
       changed: [{ key: "members.max", oldValue: 3, newValue: -1 }],
     },
     ...overrides,
-  } as unknown as PlanMigration;
+  });
 }
 
-function controller(row: PlanMigration): SaasPlanMigrationsController {
+/**
+ * A controller whose migration table holds `row` alone, as the worker left
+ * it: inserted as a new job, then brought to the state `row` holds.
+ */
+async function controller(
+  row: PlanMigration,
+): Promise<SaasPlanMigrationsController> {
+  const migrations = GetModel(PlanMigrationModel);
+  await migrations.table.delete().run();
+  const { _id, ...progress } = row;
+  await migrations.insert({ _id });
+  await migrations.update(_id, progress);
+  await migrations.table.get(_id).update({ createdAt: row.createdAt }).run();
   const instance = new SaasPlanMigrationsController();
-  instance.planMigrationModel = {
-    get: vi.fn(async (id: string) => (id === row._id ? row : undefined)),
-  } as unknown as PlanMigrationModel;
+  instance.planMigrationModel = migrations;
   return instance;
 }
 
-interface ButtonAction {
-  label: string;
-  to?: string;
-  target?: { type: string; url: string };
-  confirm?: { from: string };
-}
-
 beforeEach(() => {
-  harness.subscriptions.clear();
-  harness.subscriptions.set("bluth", {
-    planId: "starter",
-    stripeSubscriptionId: "sub_bluth",
-  });
-  harness.stripePriceId = "price_team";
-  vi.clearAllMocks();
+  billedPriceId = "price_team";
+  vi.spyOn(stripe.write.subscriptions, "retrieve").mockImplementation(
+    async () =>
+      fromPartial({ items: { data: [{ price: { id: billedPriceId } }] } }),
+  );
 });
 
 describe("the migration header", () => {
   it("offers no retry nor close while a workspace is uncertain, and names it", async () => {
-    const header = await controller(migration()).header(OWNER, "mig");
-    const actions = header.actions as ButtonAction[];
+    const header = await (await controller(migration())).header(OWNER, "mig");
+    const actions = header.actions ?? [];
 
     expect(header.tone).toBe("error");
     expect(header.title).toEqual({
@@ -198,22 +169,23 @@ describe("the migration header", () => {
       "$saas.catalog.migrations.detail.back",
       "$saas.catalog.migrations.detail.export",
     ]);
-    expect(actions[1]?.target).toMatchObject({
-      type: "exportJob",
-      url: `${API}/workspaces-export/start`,
+    expect(actions[1]).toMatchObject({
+      target: { type: "exportJob", url: `${API}/workspaces-export/start` },
     });
   });
 
   it("offers the retry and the close, each asking through its dialog route, once nothing is uncertain", async () => {
-    const settled = migration({
-      tenantOutcomes: migration().tenantOutcomes.filter(
-        (row) => row.status !== "reconciliation_required",
-      ),
-      snapshot: { tenantIds: ["hooli", "pied"], target: {} },
-      status: "failed",
-    } as Partial<PlanMigration>);
-    const header = await controller(settled).header(OWNER, "mig");
-    const actions = header.actions as ButtonAction[];
+    const settled = migration(
+      fromPartial<Partial<PlanMigration>>({
+        tenantOutcomes: migration().tenantOutcomes.filter(
+          (row) => row.status !== "reconciliation_required",
+        ),
+        snapshot: { tenantIds: ["hooli", "pied"], target: {} },
+        status: "failed",
+      }),
+    );
+    const header = await (await controller(settled)).header(OWNER, "mig");
+    const actions = header.actions ?? [];
 
     expect(actions.slice(2)).toMatchObject([
       {
@@ -228,32 +200,38 @@ describe("the migration header", () => {
   });
 
   it("only retries a partially failed migration, which stays closed", async () => {
-    const partial = migration({
-      status: "partially_failed",
-      tenantOutcomes: migration().tenantOutcomes.filter(
-        (row) => row.status !== "reconciliation_required",
-      ),
-      snapshot: { tenantIds: ["hooli", "pied"], target: {} },
-    } as Partial<PlanMigration>);
-    const actions = (await controller(partial).header(OWNER, "mig"))
-      .actions as ButtonAction[];
+    const partial = migration(
+      fromPartial<Partial<PlanMigration>>({
+        status: "partially_failed",
+        tenantOutcomes: migration().tenantOutcomes.filter(
+          (row) => row.status !== "reconciliation_required",
+        ),
+        snapshot: { tenantIds: ["hooli", "pied"], target: {} },
+      }),
+    );
+    const actions =
+      (await (await controller(partial)).header(OWNER, "mig")).actions ?? [];
 
-    expect(actions.map((action) => action.target?.url).slice(2)).toEqual([
-      `${API}/retry`,
+    expect(actions.slice(2)).toEqual([
+      expect.objectContaining({
+        target: expect.objectContaining({ url: `${API}/retry` }),
+      }),
     ]);
   });
 
   it("refuses a migration that does not exist", async () => {
-    const error = await controller(migration())
-      .header(OWNER, "missing")
-      .catch((caught: unknown) => caught);
-    expect(error).toBeInstanceOf(HTTPResult);
+    const migrations = await controller(migration());
+    await expect(migrations.header(OWNER, "missing")).rejects.toBeInstanceOf(
+      HTTPResult,
+    );
   });
 });
 
 describe("the migration blocks", () => {
   it("counts the captured, moved and not moved workspaces", async () => {
-    const { items } = await controller(migration()).totals(OWNER, "mig");
+    const { items } = await (
+      await controller(migration())
+    ).totals(OWNER, "mig");
     expect(items.map((item) => [item.id, item.value])).toEqual([
       ["captured", 3],
       ["moved", 1],
@@ -263,16 +241,12 @@ describe("the migration blocks", () => {
   });
 
   it("lists the workspaces, the uncertain one settleable, and filters the attention tab", async () => {
-    const all = await controller(migration()).workspaces(
-      OWNER,
-      "mig",
-      undefined,
-    );
-    const attention = await controller(migration()).workspaces(
-      OWNER,
-      "mig",
-      "is:attention",
-    );
+    const all = await (
+      await controller(migration())
+    ).workspaces(OWNER, "mig", undefined);
+    const attention = await (
+      await controller(migration())
+    ).workspaces(OWNER, "mig", "is:attention");
 
     expect(all.total).toBe(3);
     expect(attention.results.map((row) => row._id)).toEqual(["bluth", "pied"]);
@@ -281,7 +255,7 @@ describe("the migration blocks", () => {
       name: "Bluth Company",
       outcome: "reconciliation_required",
       stripeSubscriptionId: "sub_bluth",
-      stripeUrl: "https://stripe.test/subscriptions/sub_bluth",
+      stripeUrl: stripeDashboardUrl("subscriptions/sub_bluth"),
       canResolve: true,
     });
     expect(attention.results[1]).toMatchObject({
@@ -293,7 +267,9 @@ describe("the migration blocks", () => {
   });
 
   it("says what changes: price, features and permissions", async () => {
-    const { items } = await controller(migration()).changes(OWNER, "mig", "en");
+    const { items } = await (
+      await controller(migration())
+    ).changes(OWNER, "mig", "en");
     expect(items.map((item) => item.id)).toEqual([
       "price",
       "feature-members.max",
@@ -309,12 +285,16 @@ describe("the migration blocks", () => {
   });
 
   it("journals the start, the end and the close, newest first", async () => {
-    const reconciled = migration({
-      reconciledAt: new Date("2026-09-23T09:00:00Z"),
-      reconciledBy: "hugo",
-      reconciliationNote: "Customer asked to stay",
-    } as Partial<PlanMigration>);
-    const { items } = await controller(reconciled).journal(OWNER, "mig");
+    const reconciled = migration(
+      fromPartial<Partial<PlanMigration>>({
+        reconciledAt: new Date("2026-09-23T09:00:00Z"),
+        reconciledBy: "hugo",
+        reconciliationNote: "Customer asked to stay",
+      }),
+    );
+    const { items } = await (
+      await controller(reconciled)
+    ).journal(OWNER, "mig");
     expect(items.map((item) => item.id)).toEqual([
       "reconciled",
       "finished",
@@ -326,12 +306,9 @@ describe("the migration blocks", () => {
 
 describe("the migration dialogs", () => {
   it("words the resolution with what Stripe and the DMS say now", async () => {
-    const dialog = await controller(migration()).resolveConfirmation(
-      OWNER,
-      "mig",
-      "bluth",
-      "moved",
-    );
+    const dialog = await (
+      await controller(migration())
+    ).resolveConfirmation(OWNER, "mig", "bluth", "moved");
     expect(dialog).toMatchObject({
       title: "$saas.catalog.migrations.resolve.moved_title",
       params: { name: "Bluth Company", to: "Team" },
@@ -341,49 +318,46 @@ describe("the migration dialogs", () => {
   });
 
   it("warns when the operator settles against what Stripe reads", async () => {
-    harness.stripePriceId = "price_starter";
-    const dialog = await controller(migration()).resolveConfirmation(
-      OWNER,
-      "mig",
-      "bluth",
-      "moved",
-    );
+    billedPriceId = "price_starter";
+    const dialog = await (
+      await controller(migration())
+    ).resolveConfirmation(OWNER, "mig", "bluth", "moved");
     expect(dialog.color).toBe("warning");
   });
 
   it("refuses to word the resolution of a workspace that is not uncertain", async () => {
-    const error = await controller(migration())
-      .resolveConfirmation(OWNER, "mig", "pied", "moved")
-      .catch((caught: unknown) => caught);
+    const error = await httpRefusal(
+      (await controller(migration())).resolveConfirmation(
+        OWNER,
+        "mig",
+        "pied",
+        "moved",
+      ),
+    );
     expect(error).toBeInstanceOf(HTTPResult);
   });
 
   it("asks for the audit note when closing", async () => {
-    const dialog = await controller(migration()).reconcileConfirmation(
-      OWNER,
-      "mig",
-    );
+    const dialog = await (
+      await controller(migration())
+    ).reconcileConfirmation(OWNER, "mig");
     expect(dialog.fields?.map((field) => [field.id, field.required])).toEqual([
       ["note", true],
     ]);
   });
 
   it("counts what a retry moves again and skips", async () => {
-    const dialog = await controller(migration()).retryConfirmation(
-      OWNER,
-      "mig",
-    );
+    const dialog = await (
+      await controller(migration())
+    ).retryConfirmation(OWNER, "mig");
     expect(dialog.params).toMatchObject({ count: 1, name: "Pied Piper" });
     expect(dialog.impact?.map((entry) => entry.count)).toEqual([1, 1]);
   });
 
   it("reads what Stripe bills a workspace, for the Stripe check", async () => {
-    const { items, resolution } = await controller(migration()).stripeReading(
-      OWNER,
-      "mig",
-      "bluth",
-    );
-    // Stripe already bills the new plan: the drawer offers to mark it moved.
+    const { items, resolution } = await (
+      await controller(migration())
+    ).stripeReading(OWNER, "mig", "bluth");
     expect(resolution).toBe("moved");
     expect(items.map((item) => [item.id, item.value])).toEqual([
       ["subscription", "sub_bluth"],
@@ -420,11 +394,7 @@ describe("the migration detail page", () => {
       realtimeTopic: "saas:plan-migrations",
     });
     expect(totals.componentName).toBe("dms-stat-group-block");
-    const custom = (
-      table.options as {
-        rowActions?: { custom?: { label: string; confirm?: unknown }[] };
-      }
-    ).rowActions?.custom;
+    const custom = table.options?.rowActions?.custom;
     expect(custom?.map((action) => action.confirm)).toEqual([
       undefined,
       {

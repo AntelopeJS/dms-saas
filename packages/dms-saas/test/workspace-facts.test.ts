@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import type { UpcomingInvoicePreview } from "@antelopejs/interface-dms-saas/billing";
 import { describe, expect, it } from "vitest";
 import type { Invoice } from "../src/db";
@@ -5,7 +6,7 @@ import { workspaceFacts } from "../src/workspaces/detail-items";
 import type { WorkspaceOperatorView } from "../src/workspaces/operator-view";
 import { LOCALES, missingKeys, writeText } from "./helpers/composed-text";
 
-const VIEW = {
+const VIEW = fromPartial<WorkspaceOperatorView>({
   billingState: "active",
   plan: { maxMembers: 10 },
   seats: { members: 3, pendingInvites: 2, occupied: 5, platformSupport: [] },
@@ -20,29 +21,34 @@ const VIEW = {
     isComplimentary: false,
     mrrMinor: 14_500,
   },
-} as unknown as WorkspaceOperatorView;
+});
 
-const PREVIEW = {
+const PREVIEW = fromPartial<UpcomingInvoicePreview>({
   status: "available",
   billingDate: "2026-11-01T00:00:00.000Z",
   totalMinorUnits: 17_400,
   currency: "eur",
-} as unknown as UpcomingInvoicePreview;
+});
 
-const PAID = {
+const PAID = fromPartial<Invoice>({
   status: "paid",
   documentType: "invoice",
   currency: "eur",
   total: 14_500,
   amount: 14_500,
   issuedAt: new Date("2026-03-01T00:00:00Z"),
-} as unknown as Invoice;
+});
 
 const facts = (view = VIEW, preview: UpcomingInvoicePreview | null = PREVIEW) =>
   workspaceFacts({
     view,
     preview,
-    card: { brand: "visa", last4: "4242" } as never,
+    card: fromPartial<
+      NonNullable<Parameters<typeof workspaceFacts>[0]["card"]>
+    >({
+      brand: "visa",
+      last4: "4242",
+    }),
     invoices: [PAID],
   });
 
@@ -65,15 +71,15 @@ describe("workspace facts", () => {
   });
 
   it.each(LOCALES)("%s has every key the facts name", (code) => {
-    const trialing = {
+    const trialing = fromPartial<WorkspaceOperatorView>({
       ...VIEW,
       billingState: "trialing",
-    } as WorkspaceOperatorView;
-    const bare = {
+    });
+    const bare = fromPartial<WorkspaceOperatorView>({
       ...VIEW,
       subscription: undefined,
       directory: { ...VIEW.directory, planName: null, currency: null },
-    } as WorkspaceOperatorView;
+    });
     expect(
       missingKeys([facts(), facts(trialing, null), facts(bare, null)], code),
     ).toEqual([]);

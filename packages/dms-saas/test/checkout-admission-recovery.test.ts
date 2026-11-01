@@ -1,14 +1,9 @@
 import { randomUUID } from "node:crypto";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { User } from "@antelopejs/interface-dms/auth/db/tables/users.table";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
+import { fromPartial } from "@total-typescript/shoehorn";
 import Stripe from "stripe";
 import {
-  afterAll,
   afterEach,
   beforeAll,
   beforeEach,
@@ -35,29 +30,13 @@ import {
   TrialIdentityModel,
   trialIdentityId,
 } from "../src/workspaces/db/trial-identity.model";
+import { useMongoDatabase } from "./helpers/mongo";
+import { allowCheckoutRedirects } from "./helpers/workspaces";
+import { useSuiteStripe } from "./helpers/stripe";
 
-const stripe = vi.hoisted(() => ({
-  customers: { create: vi.fn(), retrieve: vi.fn(), del: vi.fn() },
-  checkout: {
-    sessions: { create: vi.fn(), expire: vi.fn(), retrieve: vi.fn() },
-  },
-}));
-vi.mock("../src/stripe/client", () => ({ getStripeClient: () => stripe }));
-vi.mock("../src/config", () => ({ isAllowedRedirectUrl: async () => true }));
-vi.mock("../src/billing-state", () => ({
-  recomputeTenantBillingState: async () => undefined,
-}));
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: { Error: vi.fn(), Warn: vi.fn(), Info: vi.fn() },
-}));
-vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
-  runTenantLifecycleOperation: async (
-    _tenantId: string,
-    work: () => Promise<unknown>,
-  ) => work(),
-}));
+useMongoDatabase("checkout-admission");
+const stripe = useSuiteStripe();
 
-const SETUP_TIMEOUT_MS = 60_000;
 const TRIAL_DAYS = 7;
 const STALE_ADMISSION_AGE_MS = 3 * 60 * 60 * 1000;
 const CREATED_CUSTOMER_ID = "cus_created";
@@ -66,74 +45,77 @@ const MANAGED_PAYMENTS_ERROR =
   "Managed Payments is not supported on API version 2024-11-20.acacia.";
 
 const createdSessions = new Map<string, Stripe.Checkout.Session>();
-let mongodb: MongoMemoryReplSet;
 
-beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({
-    url: mongodb.getUri(),
-    database: "saas-checkout-admission",
-  });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-}, SETUP_TIMEOUT_MS);
-
-afterAll(async () => {
-  try {
-    await destroy();
-  } finally {
-    await mongodb?.stop();
-  }
-});
+beforeAll(allowCheckoutRedirects);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.restoreAllMocks();
 });
 
+function stubStripe() {
+  return {
+    createCustomer: vi
+      .spyOn(stripe.write.customers, "create")
+      .mockResolvedValue(fromPartial({ id: CREATED_CUSTOMER_ID })),
+    retrieveCustomer: vi
+      .spyOn(stripe.write.customers, "retrieve")
+      .mockImplementation(async (id) => fromPartial({ id })),
+    deleteCustomer: vi
+      .spyOn(stripe.write.customers, "del")
+      .mockResolvedValue(fromPartial({ deleted: true })),
+    expireSession: vi
+      .spyOn(stripe.write.checkout.sessions, "expire")
+      .mockImplementation(async (id) =>
+        fromPartial(
+          createdSessions.has(id)
+            ? settleSession(id, "expired")
+            : { id, status: "expired" },
+        ),
+      ),
+    createSession: vi
+      .spyOn(stripe.write.checkout.sessions, "create")
+      .mockImplementation(async (params) => {
+        const session = fromPartial<Stripe.Checkout.Session>({
+          id: `cs_${randomUUID()}`,
+          url: CHECKOUT_URL,
+          status: "open",
+          metadata: Object.fromEntries(
+            Object.entries(params?.metadata ?? {}).map(([key, value]) => [
+              key,
+              String(value),
+            ]),
+          ),
+          expires_at: params?.expires_at,
+          mode: "subscription",
+        });
+        createdSessions.set(session.id, session);
+        return fromPartial(session);
+      }),
+    retrieveSession: vi
+      .spyOn(stripe.write.checkout.sessions, "retrieve")
+      .mockImplementation(async (id) =>
+        fromPartial(createdSessions.get(id) ?? {}),
+      ),
+  };
+}
+
+let api: ReturnType<typeof stubStripe>;
+
 beforeEach(() => {
-  vi.clearAllMocks();
   createdSessions.clear();
-  stripe.customers.create.mockResolvedValue({ id: CREATED_CUSTOMER_ID });
-  stripe.customers.retrieve.mockImplementation(async (id: string) => ({
-    id,
-    deleted: false,
-  }));
-  stripe.customers.del.mockResolvedValue({ deleted: true });
-  stripe.checkout.sessions.expire.mockImplementation(async (id: string) => {
-    const session = createdSessions.get(id);
-    if (!session) return { id, status: "expired" };
-    return settleSession(id, "expired");
-  });
-  stripe.checkout.sessions.create.mockImplementation(
-    async (params: Stripe.Checkout.SessionCreateParams) => {
-      const session = {
-        id: `cs_${randomUUID()}`,
-        url: CHECKOUT_URL,
-        metadata: params.metadata,
-        status: "open",
-        expires_at: params.expires_at,
-        mode: "subscription",
-      } as Stripe.Checkout.Session;
-      createdSessions.set(session.id, session);
-      return session;
-    },
-  );
-  stripe.checkout.sessions.retrieve.mockImplementation(async (id: string) =>
-    createdSessions.get(id),
-  );
+  api = stubStripe();
 });
 
 function settleSession(
   id: string,
   status: Stripe.Checkout.Session.Status,
 ): Stripe.Checkout.Session {
-  const settled = { ...createdSessions.get(id), status };
-  createdSessions.set(id, settled as Stripe.Checkout.Session);
-  return settled as Stripe.Checkout.Session;
+  const settled = fromPartial<Stripe.Checkout.Session>({
+    ...createdSessions.get(id),
+    status,
+  });
+  createdSessions.set(id, settled);
+  return settled;
 }
 
 function invalidRequest(
@@ -145,14 +127,14 @@ function invalidRequest(
     param,
     type: "invalid_request_error",
     statusCode: 400,
-  } as Stripe.errors.StripeRawError);
+  });
 }
 
 function connectionLost(): Stripe.errors.StripeConnectionError {
   return new Stripe.errors.StripeConnectionError({
     message: "An error occurred with our connection to Stripe.",
     type: "api_error",
-  } as Stripe.errors.StripeRawError);
+  });
 }
 
 async function checkoutRequest(): Promise<PlanChangeRequest> {
@@ -217,9 +199,8 @@ function trialReservationOf(request: PlanChangeRequest) {
   );
 }
 
-function lastSessionParams(): Stripe.Checkout.SessionCreateParams &
-  Record<string, unknown> {
-  return stripe.checkout.sessions.create.mock.lastCall?.[0];
+function lastSessionParams() {
+  return api.createSession.mock.lastCall?.[0];
 }
 
 describe("paid checkout admission", () => {
@@ -249,23 +230,23 @@ describe("paid checkout admission", () => {
 
   it("opens the session without the opt-out when the account rejects the parameter", async () => {
     const request = await checkoutRequest();
-    stripe.checkout.sessions.create.mockRejectedValueOnce(
+    api.createSession.mockRejectedValueOnce(
       invalidRequest("Received unknown parameter", "managed_payments[enabled]"),
     );
 
     const result = await startPaidCheckout(request);
 
     expect(result.checkoutUrl).toBe(CHECKOUT_URL);
-    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(2);
+    expect(api.createSession).toHaveBeenCalledTimes(2);
     expect(lastSessionParams()).not.toHaveProperty("managed_payments");
-    expect(stripe.checkout.sessions.create.mock.calls[1][1]).toEqual(
-      stripe.checkout.sessions.create.mock.calls[0][1],
+    expect(api.createSession.mock.calls[1][1]).toEqual(
+      api.createSession.mock.calls[0][1],
     );
   });
 
   it("rolls back a checkout Stripe refuses so the owner can retry at once", async () => {
     const request = await checkoutRequest();
-    stripe.checkout.sessions.create.mockRejectedValueOnce(
+    api.createSession.mockRejectedValueOnce(
       invalidRequest(MANAGED_PAYMENTS_ERROR),
     );
 
@@ -281,30 +262,27 @@ describe("paid checkout admission", () => {
       stripeCustomerId: null,
       stripeCheckoutSessionId: null,
     });
-    expect(stripe.customers.del).toHaveBeenCalledWith(CREATED_CUSTOMER_ID);
+    expect(api.deleteCustomer).toHaveBeenCalledWith(CREATED_CUSTOMER_ID);
     expect((await trialReservationOf(request))?.tenantId).toBeNull();
 
     const retried = await startPaidCheckout(await reload(request));
     expect(retried.checkoutUrl).toBe(CHECKOUT_URL);
-    expect(lastSessionParams().subscription_data?.trial_period_days).toBe(
+    expect(lastSessionParams()?.subscription_data?.trial_period_days).toBe(
       TRIAL_DAYS,
     );
   });
 
   it("expires a session Stripe opened without a redirect URL before rolling back", async () => {
     const request = await checkoutRequest();
-    stripe.checkout.sessions.create.mockResolvedValueOnce({
-      id: "cs_without_url",
-      url: null,
-    });
+    api.createSession.mockResolvedValueOnce(
+      fromPartial({ id: "cs_without_url", url: null }),
+    );
 
     await expect(startPaidCheckout(request)).rejects.toMatchObject({
       status: 422,
       body: "saas.errors.billing.checkout_rejected",
     });
-    expect(stripe.checkout.sessions.expire).toHaveBeenCalledWith(
-      "cs_without_url",
-    );
+    expect(api.expireSession).toHaveBeenCalledWith("cs_without_url");
     expect(
       (await request.tenantSubscriptionModel.findOne())?.domainTransition,
     ).toBeNull();
@@ -312,7 +290,7 @@ describe("paid checkout admission", () => {
 
   it("keeps an uncertain failure admitted until no request can still record it", async () => {
     const request = await checkoutRequest();
-    stripe.checkout.sessions.create.mockRejectedValueOnce(connectionLost());
+    api.createSession.mockRejectedValueOnce(connectionLost());
 
     await expect(startPaidCheckout(request)).rejects.toMatchObject({
       status: 503,
@@ -320,7 +298,7 @@ describe("paid checkout admission", () => {
     });
     const retained = await reload(request);
     expect(retained.subscription?.domainTransition?.kind).toBe("checkout");
-    expect(stripe.customers.del).not.toHaveBeenCalled();
+    expect(api.deleteCustomer).not.toHaveBeenCalled();
 
     await expect(startPaidCheckout(retained)).rejects.toMatchObject({
       status: 409,
@@ -343,7 +321,7 @@ describe("paid checkout admission", () => {
     const result = await startPaidCheckout(request);
 
     expect(result.checkoutUrl).toBe(CHECKOUT_URL);
-    expect(stripe.checkout.sessions.retrieve).not.toHaveBeenCalled();
+    expect(api.retrieveSession).not.toHaveBeenCalled();
     const subscription = await request.tenantSubscriptionModel.findOne();
     expect(subscription?.domainTransition?.kind).toBe("checkout");
     expect(subscription?.domainTransition?.operationId).not.toBe(
@@ -357,17 +335,14 @@ describe("paid checkout admission", () => {
     await startPaidCheckout(request);
     const pending = await reload(request);
     const recordedId = pending.subscription?.stripeCheckoutSessionId ?? "";
-    createdSessions.set(recordedId, {
-      ...createdSessions.get(recordedId),
-      status: "expired",
-    } as Stripe.Checkout.Session);
+    settleSession(recordedId, "expired");
 
     const result = await startPaidCheckout(pending);
 
     expect(result.checkoutUrl).toBe(CHECKOUT_URL);
     const subscription = await request.tenantSubscriptionModel.findOne();
     expect(subscription?.stripeCheckoutSessionId).not.toBe(recordedId);
-    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(2);
+    expect(api.createSession).toHaveBeenCalledTimes(2);
   });
 
   it("reports a pending change of another kind as in progress", async () => {
@@ -387,7 +362,7 @@ describe("paid checkout admission", () => {
       status: 409,
       body: "saas.errors.plan.change_in_progress",
     });
-    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+    expect(api.createSession).not.toHaveBeenCalled();
   });
 });
 
@@ -417,8 +392,10 @@ function cancel(checkout: RecordedCheckout, operationId: string | null) {
   );
 }
 
-function expiredEvent(session: Stripe.Checkout.Session): Stripe.Event {
-  return { data: { object: session } } as Stripe.Event;
+function expiredEvent(session: Stripe.Checkout.Session) {
+  return fromPartial<Stripe.CheckoutSessionExpiredEvent>({
+    data: { object: session },
+  });
 }
 
 describe("abandoned checkout recovery", () => {
@@ -427,10 +404,10 @@ describe("abandoned checkout recovery", () => {
     const { operationId } = await abandonCheckout();
 
     const params = lastSessionParams();
-    const lifetimeMs = (params.expires_at ?? 0) * 1000 - before;
+    const lifetimeMs = (params?.expires_at ?? 0) * 1000 - before;
     expect(lifetimeMs).toBeGreaterThanOrEqual(CHECKOUT_SESSION_LIFETIME_MS);
     expect(lifetimeMs).toBeLessThan(2 * CHECKOUT_SESSION_LIFETIME_MS);
-    const cancelUrl = new URL(params.cancel_url ?? "");
+    const cancelUrl = new URL(params?.cancel_url ?? "");
     expect(cancelUrl.pathname).toBe("/cancel");
     expect(cancelUrl.searchParams.get("checkout")).toBe("cancelled");
     expect(cancelUrl.searchParams.get("checkoutOperation")).toBe(operationId);
@@ -453,24 +430,25 @@ describe("abandoned checkout recovery", () => {
     });
 
     await expect(cancel(checkout, null)).resolves.toEqual({ released: true });
-    expect(stripe.checkout.sessions.expire).toHaveBeenCalledWith(
-      checkout.sessionId,
-    );
+    expect(api.expireSession).toHaveBeenCalledWith(checkout.sessionId);
     const restarted = await startPaidCheckout(await reload(checkout.request));
 
     expect(restarted.checkoutUrl).toBe(CHECKOUT_URL);
-    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(2);
-    expect(lastSessionParams().subscription_data?.trial_period_days).toBe(
+    expect(api.createSession).toHaveBeenCalledTimes(2);
+    expect(lastSessionParams()?.subscription_data?.trial_period_days).toBe(
       TRIAL_DAYS,
     );
   });
 
   it("releases a legacy session opened with Stripe's 24-hour default", async () => {
     const checkout = await abandonCheckout();
-    createdSessions.set(checkout.sessionId, {
-      ...createdSessions.get(checkout.sessionId),
-      expires_at: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
-    } as Stripe.Checkout.Session);
+    createdSessions.set(
+      checkout.sessionId,
+      fromPartial({
+        ...createdSessions.get(checkout.sessionId),
+        expires_at: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+      }),
+    );
 
     await expect(cancel(checkout, null)).resolves.toEqual({ released: true });
 
@@ -502,7 +480,7 @@ describe("abandoned checkout recovery", () => {
       released: false,
     });
 
-    expect(stripe.checkout.sessions.expire).not.toHaveBeenCalled();
+    expect(api.expireSession).not.toHaveBeenCalled();
     const pending = await checkout.request.tenantSubscriptionModel.findOne();
     expect(pending?.stripeCheckoutSessionId).toBe(checkout.sessionId);
   });
@@ -536,7 +514,7 @@ describe("abandoned checkout recovery", () => {
       body: "saas.errors.plan.checkout_in_progress",
     });
 
-    expect(stripe.checkout.sessions.expire).not.toHaveBeenCalled();
+    expect(api.expireSession).not.toHaveBeenCalled();
     const { pending } = await describePendingCheckout(
       checkout.request.subscription,
     );
@@ -548,7 +526,7 @@ describe("abandoned checkout recovery", () => {
 
   it("keeps a session the owner completed just before Stripe refused its expiry", async () => {
     const checkout = await abandonCheckout();
-    stripe.checkout.sessions.expire.mockImplementationOnce(async () => {
+    api.expireSession.mockImplementationOnce(async () => {
       settleSession(checkout.sessionId, "complete");
       throw invalidRequest("This Checkout Session is not open.");
     });

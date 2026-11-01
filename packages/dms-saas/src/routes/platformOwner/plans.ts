@@ -60,6 +60,7 @@ import {
 import { stripeDashboardUrl } from "../../stripe/client";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 import { isPlanAccess } from "../../plans/plan-access-type";
@@ -295,7 +296,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   @Get("/")
   async list(
     @AuthOwnerOnly() _user: User,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<PlanWithWorkspaceCount[]> {
     const locale = requestLocale(language);
     const plans = await this.planModel.findNotDeleted();
@@ -322,7 +323,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   @Get("/catalog")
   async editCatalog(
     @AuthOwnerOnly() _user: User,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<PlanEditCatalog> {
     const locale = requestLocale(language);
     const [plans, features, permissions] = await Promise.all([
@@ -402,11 +403,11 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     };
   }
 
+  /** The plan as the editor reads it, its texts unlocked in every locale. */
   @Get("/:id")
   async getOne(@AuthOwnerOnly() _user: User, @Parameter("id") id: string) {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
-    // The editor writes the texts in every locale: they come unlocked in all.
     planTexts(plan);
     return { ...toPlainData(plan), inheritance: toInheritance(plan) };
   }
@@ -425,8 +426,11 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     }
   }
 
-  // Each catalogue write may change the default plan, which plan-less
-  // workspaces then receive (withDefaultPlanChange).
+  /**
+   * Each catalogue write (create, update, remove) may change the default plan,
+   * which plan-less workspaces then receive: it runs inside
+   * `withDefaultPlanChange`.
+   */
   @Post("/")
   async create(
     @AuthOwnerOnly() _user: User,
@@ -488,6 +492,9 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     return withDefaultPlanChange(() => this.updatePlan(id, body));
   }
 
+  /**
+   * The stored texts are one object: a write keeps the ones it does not carry.
+   */
   private async updatePlan(
     id: string,
     body: PlanWriteBody,
@@ -506,7 +513,6 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     if (hasStripeSyncChanges(sanitized)) {
       assertPlanInterval(sanitized.interval ?? plan.interval);
     }
-    // The stored texts are one object: a write keeps the ones it does not carry.
     await this.planModel.update(
       id,
       toPlanRow({ ...planTexts(plan), ...sanitized, updatedAt: new Date() }),
@@ -526,6 +532,12 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     return withDefaultPlanChange(() => this.removePlan(id));
   }
 
+  /**
+   * Refuses while workspaces are on the plan or a scheduled change onto it is
+   * pending: only its retirement redirects such a change, and deleting the
+   * plan would leave the Stripe schedule billing its archived price. Stripe is
+   * archived first: a failure there leaves the plan as it was.
+   */
   private async removePlan(id: string): Promise<PlanWriteResult> {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
@@ -538,14 +550,11 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
       HTTP_CONFLICT,
       "saas.errors.plan.has_workspaces",
     );
-    // A scheduled change onto the plan is only redirected by its retirement:
-    // deleting it would leave the Stripe schedule billing its archived price.
     assert(
       scheduled.every((subscription) => subscription.planId === id),
       HTTP_CONFLICT,
       "saas.errors.plan.has_scheduled_changes",
     );
-    // Stripe first: a failure there leaves the plan as it was.
     await archivePlanStripeProduct(plan);
     await this.planModel.update(id, {
       isDeleted: true,

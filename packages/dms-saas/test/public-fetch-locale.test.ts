@@ -3,6 +3,7 @@ import {
   onPublicLocaleChange,
   usePublicFetch,
 } from "../frontend-vue/app/build/public/usePublicFetch";
+import { nextTick, ref } from "./helpers/frontend-vue";
 
 interface FetchRequestContext {
   options: { headers?: HeadersInit };
@@ -13,15 +14,7 @@ interface CreatedFetchOptions {
   onRequest: (context: FetchRequestContext) => void;
 }
 
-const watchers = vi.hoisted(() => [] as Array<() => void>);
-
-vi.mock("../frontend-vue/node_modules/vue/index.mjs", () => ({
-  watch: (_source: unknown, callback: () => void) => {
-    watchers.push(callback);
-  },
-}));
-
-const locale = { value: "en" };
+const locale = ref("en");
 let created: CreatedFetchOptions | undefined;
 
 function requestHeaders(): Headers {
@@ -59,11 +52,14 @@ describe("public fetch", () => {
     expect(requestHeaders().get("x-content-language")).toBe("fr");
   });
 
-  it("reloads a screen's data when the reader switches language", () => {
+  it("reloads a screen's data when the reader switches language", async () => {
     const reload = vi.fn();
     onPublicLocaleChange(reload);
+    await nextTick();
+    expect(reload).not.toHaveBeenCalled();
 
-    for (const callback of watchers) callback();
+    locale.value = "fr";
+    await nextTick();
 
     expect(reload).toHaveBeenCalledTimes(1);
   });

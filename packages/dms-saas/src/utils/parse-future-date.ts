@@ -1,4 +1,5 @@
 import { assert } from "@antelopejs/interface-api-util";
+import { isString } from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 
@@ -10,11 +11,7 @@ const HTTP_BAD_REQUEST = 400;
  */
 export function parseFutureDate(value: unknown, errorKey: string): Date | null {
   if (value === null || value === undefined || value === "") return null;
-  assert(
-    typeof value === "string" || value instanceof Date,
-    HTTP_BAD_REQUEST,
-    errorKey,
-  );
+  assert(isString(value) || value instanceof Date, HTTP_BAD_REQUEST, errorKey);
   const parsed = value instanceof Date ? value : new Date(value);
   assert(!Number.isNaN(parsed.getTime()), HTTP_BAD_REQUEST, errorKey);
   assert(parsed.getTime() > Date.now(), HTTP_BAD_REQUEST, errorKey);

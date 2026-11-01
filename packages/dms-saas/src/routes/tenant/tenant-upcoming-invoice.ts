@@ -1,6 +1,3 @@
-// The "Next invoice" card of the billing page: Stripe's preview of the next
-// invoice, as the rows of a DMS KeyValueList block.
-
 import {
   Context,
   Controller,
@@ -99,7 +96,7 @@ function fullDay(
   return value ? valueText(dateParam(value)) : undefined;
 }
 
-// The list draws no pill beside an amount: the state reads in the detail.
+/** The list draws no pill beside an amount: the state reads in the detail. */
 function paidOn(paidAt: Date | null | undefined): ComposedText | undefined {
   return paidAt
     ? composed(PAID_ON_KEY, { date: dateParam(paidAt) })
@@ -290,11 +287,13 @@ export function withPlanSwitch(
 /** The most recent invoice the customer paid. */
 export function latestPaidInvoice(invoices: Invoice[]): Invoice | null {
   return invoices
-    .filter((invoice) => invoice.status === PAID_STATUS && invoice.paidAt)
-    .reduce<Invoice | null>(
+    .filter(
+      (invoice): invoice is Invoice & { paidAt: Date } =>
+        invoice.status === PAID_STATUS && !!invoice.paidAt,
+    )
+    .reduce<(Invoice & { paidAt: Date }) | null>(
       (latest, invoice) =>
-        !latest ||
-        new Date(invoice.paidAt as Date) > new Date(latest.paidAt as Date)
+        !latest || new Date(invoice.paidAt) > new Date(latest.paidAt)
           ? invoice
           : latest,
       null,
@@ -354,8 +353,12 @@ async function loadContext(tenantId: string): Promise<LoadedContext> {
   };
 }
 
-// Read from the billing page, which stays reachable under the tenant access
-// gate; whoever may see the card may read it, as the roles editor grants.
+/**
+ * The "Next invoice" card of the billing page: Stripe's preview of the next
+ * invoice, as the rows of a DMS KeyValueList block. Read from the billing
+ * page, which stays reachable under the tenant access gate; whoever may see
+ * the card may read it, as the roles editor grants.
+ */
 export class SaasTenantUpcomingInvoiceController extends Controller(
   "/api/saas/tenant/upcoming-invoice",
 ) {

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   type InvitationEmailDelivery,
   type InvitationLink,
@@ -7,8 +6,8 @@ import {
   resolveInvitationLink,
   revokeInvitation,
 } from "../workspaces/invitations";
-import { executeOperatorAction, type OperatorActor } from "./journal";
-import type { OperatorActionDetails, WorkspaceOperatorAction } from "./types";
+import type { OperatorActor } from "./journal";
+import { runJournaled } from "./one-shot";
 
 export interface InvitationCommandInput {
   tenantId: string;
@@ -18,40 +17,6 @@ export interface InvitationCommandInput {
 
 export interface ResendInvitationCommandInput extends InvitationCommandInput {
   inviterName?: string;
-}
-
-interface JournaledEffect<T> {
-  action: WorkspaceOperatorAction;
-  run: () => Promise<T>;
-  detailsOf: (value: T) => OperatorActionDetails;
-}
-
-/** Runs a one-shot effect through the operator journal and hands its value back. */
-async function runJournaled<T>(
-  input: InvitationCommandInput,
-  effect: JournaledEffect<T>,
-): Promise<T> {
-  const outcomes: T[] = [];
-  await executeOperatorAction(
-    {
-      operationId: randomUUID(),
-      tenantId: input.tenantId,
-      actor: input.actor,
-      action: effect.action,
-      details: { inviteId: input.inviteId },
-    },
-    async (running) => {
-      const value = await effect.run();
-      outcomes.push(value);
-      return {
-        details: { ...running.details, ...effect.detailsOf(value) },
-        effectiveAt: new Date(),
-      };
-    },
-  );
-  const [outcome] = outcomes;
-  if (outcome === undefined) throw new Error("Journaled effect did not run");
-  return outcome;
 }
 
 export interface SendInvitationCommandInput extends InvitationCommandInput {
@@ -66,11 +31,14 @@ export interface SendInvitationCommandInput extends InvitationCommandInput {
 export async function sendInvitationCommand(
   input: SendInvitationCommandInput,
 ): Promise<InvitationEmailDelivery> {
-  return runJournaled(input, {
-    action: "invitation.send",
-    run: input.send,
-    detailsOf: (emailDelivery) => ({ email: input.email, emailDelivery }),
-  });
+  return runJournaled(
+    { ...input, details: { inviteId: input.inviteId } },
+    {
+      action: "invitation.send",
+      run: input.send,
+      detailsOf: (emailDelivery) => ({ email: input.email, emailDelivery }),
+    },
+  );
 }
 
 /**
@@ -80,15 +48,18 @@ export async function sendInvitationCommand(
 export async function resendInvitationCommand(
   input: ResendInvitationCommandInput,
 ): Promise<ReissuedInvitation> {
-  return runJournaled(input, {
-    action: "invitation.resend",
-    run: () =>
-      resendInvitation(input.tenantId, input.inviteId, input.inviterName),
-    detailsOf: ({ invite, emailDelivery }) => ({
-      email: invite.email,
-      emailDelivery,
-    }),
-  });
+  return runJournaled(
+    { ...input, details: { inviteId: input.inviteId } },
+    {
+      action: "invitation.resend",
+      run: () =>
+        resendInvitation(input.tenantId, input.inviteId, input.inviterName),
+      detailsOf: ({ invite, emailDelivery }) => ({
+        email: invite.email,
+        emailDelivery,
+      }),
+    },
+  );
 }
 
 /**
@@ -99,20 +70,26 @@ export async function resendInvitationCommand(
 export async function copyInvitationLinkCommand(
   input: InvitationCommandInput,
 ): Promise<InvitationLink> {
-  return runJournaled(input, {
-    action: "invitation.link_copy",
-    run: () => resolveInvitationLink(input.tenantId, input.inviteId),
-    detailsOf: ({ expiresAt }) => ({ expiresAt: expiresAt.toISOString() }),
-  });
+  return runJournaled(
+    { ...input, details: { inviteId: input.inviteId } },
+    {
+      action: "invitation.link_copy",
+      run: () => resolveInvitationLink(input.tenantId, input.inviteId),
+      detailsOf: ({ expiresAt }) => ({ expiresAt: expiresAt.toISOString() }),
+    },
+  );
 }
 
 /** Withdraws a pending or expired invitation, journaled with its invitee. */
 export async function revokeInvitationCommand(
   input: InvitationCommandInput,
 ): Promise<void> {
-  await runJournaled(input, {
-    action: "invitation.revoke",
-    run: () => revokeInvitation(input.tenantId, input.inviteId),
-    detailsOf: ({ email }) => ({ email }),
-  });
+  await runJournaled(
+    { ...input, details: { inviteId: input.inviteId } },
+    {
+      action: "invitation.revoke",
+      run: () => revokeInvitation(input.tenantId, input.inviteId),
+      detailsOf: ({ email }) => ({ email }),
+    },
+  );
 }

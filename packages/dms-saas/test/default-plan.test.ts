@@ -1,84 +1,29 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Plan, TenantSubscription } from "../src/db";
-
-const store = vi.hoisted(() => ({
-  plans: [] as Plan[],
-  tenants: [] as string[],
-  subscriptions: new Map<string, TenantSubscription[]>(),
-  recomputed: [] as string[],
-  warnings: [] as string[],
-  configuredSlug: undefined as string | undefined,
-}));
-
-function subscriptionModel(tenantId: string) {
-  const rows = () => store.subscriptions.get(tenantId) ?? [];
-  return {
-    findOne: async () => rows()[0],
-    insert: async (inserted: TenantSubscription[]) => {
-      store.subscriptions.set(tenantId, [...rows(), ...inserted]);
-      return inserted.map((row) => row._id);
-    },
-  };
-}
-
-const MODEL_FAKES: Record<string, (tenantId?: string) => unknown> = {
-  PlanModel: () => ({ findActiveNotDeleted: async () => store.plans }),
-  TenantModel: () => ({
-    table: {
-      pluck: () => ({
-        run: async () => store.tenants.map((_id) => ({ _id })),
-      }),
-    },
-  }),
-  TenantSubscriptionModel: (tenantId) => subscriptionModel(tenantId ?? ""),
-};
-
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: (model: { name: string }, tenantId?: string) =>
-      MODEL_FAKES[model.name](tenantId),
-  };
-});
-
-vi.mock("@antelopejs/interface-dms/tenant-lifecycle", () => ({
-  runTenantLifecycleOperation: async (
-    _tenantId: string,
-    work: () => Promise<unknown>,
-  ) => work(),
-}));
-
-vi.mock("@antelopejs/interface-core/logging", () => ({
-  Logging: {
-    Error: () => undefined,
-    Info: () => undefined,
-    Warn: (message: string) => store.warnings.push(message),
-  },
-}));
-
-vi.mock("../src/billing-state", () => ({
-  recomputeTenantBillingState: async (tenantId: string) => {
-    store.recomputed.push(tenantId);
-  },
-}));
-
-vi.mock("../src/config", () => ({
-  getDefaultPlanSlug: () => store.configuredSlug,
-}));
-
-const {
+import { fromPartial } from "@total-typescript/shoehorn";
+import { randomUUID } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { DEFAULT_TENANT_ID } from "@antelopejs/interface-dms/constants";
+import { TenantModel } from "@antelopejs/interface-dms/db";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  type Plan,
+  PlanModel,
+  TenantBillingStateModel,
+  TenantSubscriptionModel,
+} from "../src/db";
+import {
   ensureDefaultSubscription,
   resolveDefaultPlan,
   selectDefaultPlan,
   withDefaultPlanChange,
-} = await import("../src/workspaces/default-plan");
+} from "../src/workspaces/default-plan";
+import { captureLogs } from "./helpers/logging";
+import { useMongoDatabase } from "./helpers/mongo";
+
+useMongoDatabase("default-plan");
+const logs = captureLogs();
 
 function plan(overrides: Partial<Plan>): Plan {
-  return {
+  return fromPartial<Plan>({
     _id: "plan",
     slug: "plan",
     name: "Plan",
@@ -88,7 +33,7 @@ function plan(overrides: Partial<Plan>): Plan {
     isActive: true,
     isDeleted: false,
     ...overrides,
-  } as Plan;
+  });
 }
 
 const FREE = plan({ _id: "free", slug: "free", order: 1 });
@@ -100,31 +45,72 @@ const BUSINESS_FREE = plan({
   order: 0,
   audience: "business",
 });
+const CATALOGUE = [STARTER, PAID, BUSINESS_FREE, FREE];
 
+/** A table the suite empties between tests, read and written by id. */
+interface ClearableModel {
+  getAll(): PromiseLike<{ _id: string }[]>;
+  delete(id: string): Promise<number>;
+}
+
+async function clear(model: ClearableModel): Promise<void> {
+  for (const { _id } of await model.getAll()) await model.delete(_id);
+}
+
+/** Replaces the plan catalogue with `plans`. */
+async function publishCatalogue(plans: Plan[]): Promise<void> {
+  await clear(GetModel(PlanModel));
+  await GetModel(PlanModel).insert(plans);
+}
+
+async function addTenants(...tenantIds: string[]): Promise<void> {
+  const now = new Date();
+  await GetModel(TenantModel).insert(
+    tenantIds.map((_id) => ({
+      _id,
+      name: _id,
+      createdAt: now,
+      updatedAt: now,
+    })),
+  );
+}
+
+async function subscriptionsOf(tenantId: string) {
+  return GetModel(TenantSubscriptionModel, tenantId).getAll();
+}
+
+/** The workspaces a billing state was published for. */
+async function recomputedTenants(): Promise<string[]> {
+  const states = await GetModel(TenantBillingStateModel).getAll();
+  return states.map((state) => state._id);
+}
+
+/**
+ * Starts every test from {@link CATALOGUE}, no workspace and no billing
+ * state. Reading the default plan of a catalogue that has one re-arms the
+ * once-per-outage warning latch.
+ */
 beforeEach(async () => {
-  // Re-arms the once-per-outage warning latch between tests.
-  store.plans = [FREE];
+  await publishCatalogue(CATALOGUE);
   await resolveDefaultPlan();
-  store.plans = [STARTER, PAID, BUSINESS_FREE, FREE];
-  store.tenants = [];
-  store.subscriptions.clear();
-  store.recomputed = [];
-  store.warnings = [];
-  store.configuredSlug = undefined;
+  await clear(GetModel(TenantModel));
+  await clear(GetModel(TenantBillingStateModel));
 });
 
 describe("default plan selection", () => {
   it("picks the lowest-ordered free plan open to individuals", () => {
-    expect(selectDefaultPlan(store.plans)?._id).toBe("free");
+    expect(selectDefaultPlan(CATALOGUE)?._id).toBe("free");
   });
 
   it("honours a configured slug naming a usable free plan", () => {
-    expect(selectDefaultPlan(store.plans, "starter")?._id).toBe("starter");
+    expect(selectDefaultPlan(CATALOGUE, "starter")?._id).toBe("starter");
   });
 
   it("falls back with a warning when the configured slug is not a free plan", () => {
-    expect(selectDefaultPlan(store.plans, "pro")?._id).toBe("free");
-    expect(store.warnings).toHaveLength(1);
+    expect(selectDefaultPlan(CATALOGUE, "pro")?._id).toBe("free");
+    expect(logs.at("WARN")).toEqual([
+      [expect.stringContaining('defaultPlanSlug "pro"')],
+    ]);
   });
 
   it("ignores inactive and deleted plans", () => {
@@ -143,11 +129,13 @@ describe("default plan selection", () => {
 
 describe("default subscription assignment", () => {
   it("attaches an active, card-less subscription on the default plan", async () => {
-    await expect(ensureDefaultSubscription("ws1")).resolves.toBe(true);
+    const tenantId = randomUUID();
 
-    expect(store.subscriptions.get("ws1")).toEqual([
+    await expect(ensureDefaultSubscription(tenantId)).resolves.toBe(true);
+
+    expect(await subscriptionsOf(tenantId)).toEqual([
       expect.objectContaining({
-        _id: "ws1",
+        _id: tenantId,
         planId: "free",
         status: "active",
         stripeSubscriptionId: null,
@@ -155,68 +143,81 @@ describe("default subscription assignment", () => {
         paidUsagePeriods: [],
       }),
     ]);
-    expect(store.recomputed).toEqual(["ws1"]);
+    expect(await recomputedTenants()).toEqual([tenantId]);
   });
 
   it("leaves a workspace that already holds a subscription untouched", async () => {
-    const existing = {
-      _id: "ws1",
+    const tenantId = randomUUID();
+    await GetModel(TenantSubscriptionModel, tenantId).insert({
+      _id: tenantId,
       planId: "pro",
       status: "past_due",
-    } as TenantSubscription;
-    store.subscriptions.set("ws1", [existing]);
+    });
+    const existing = await subscriptionsOf(tenantId);
 
-    await expect(ensureDefaultSubscription("ws1")).resolves.toBe(false);
+    await expect(ensureDefaultSubscription(tenantId)).resolves.toBe(false);
 
-    expect(store.subscriptions.get("ws1")).toEqual([existing]);
-    expect(store.recomputed).toEqual([]);
+    expect(await subscriptionsOf(tenantId)).toEqual(existing);
+    expect(await recomputedTenants()).toEqual([]);
   });
 
   it("attaches nothing when no default plan exists", async () => {
-    store.plans = [PAID];
+    const tenantId = randomUUID();
+    await publishCatalogue([PAID]);
 
-    await expect(ensureDefaultSubscription("ws1")).resolves.toBe(false);
+    await expect(ensureDefaultSubscription(tenantId)).resolves.toBe(false);
 
-    expect(store.subscriptions.has("ws1")).toBe(false);
+    expect(await subscriptionsOf(tenantId)).toEqual([]);
   });
 });
 
 describe("catalogue writes that change the default plan", () => {
   it("attach the new default, once, to every plan-less workspace", async () => {
-    store.tenants = ["default", "ws1", "ws2"];
-    store.plans = [PAID];
-    store.subscriptions.set("ws2", [
-      { _id: "ws2", planId: "pro", status: "active" } as TenantSubscription,
-    ]);
-
-    // The first free plan is published.
-    await withDefaultPlanChange(async () => {
-      store.plans = [PAID, FREE];
+    const [planLess, paying] = [randomUUID(), randomUUID()];
+    await addTenants(DEFAULT_TENANT_ID, planLess, paying);
+    await publishCatalogue([PAID]);
+    await GetModel(TenantSubscriptionModel, paying).insert({
+      _id: paying,
+      planId: "pro",
+      status: "active",
     });
 
-    expect(store.subscriptions.get("default")?.[0]?.planId).toBe("free");
-    expect(store.subscriptions.get("ws1")?.[0]?.planId).toBe("free");
-    expect(store.subscriptions.get("ws2")?.[0]?.planId).toBe("pro");
+    await withDefaultPlanChange(async () => {
+      await GetModel(PlanModel).insert(FREE);
+    });
+
+    expect(await subscriptionsOf(DEFAULT_TENANT_ID)).toEqual([
+      expect.objectContaining({ planId: "free" }),
+    ]);
+    expect(await subscriptionsOf(planLess)).toEqual([
+      expect.objectContaining({ planId: "free" }),
+    ]);
+    expect(await subscriptionsOf(paying)).toEqual([
+      expect.objectContaining({ planId: "pro" }),
+    ]);
   });
 
   it("attach nothing when the write leaves the default plan as it was", async () => {
-    store.tenants = ["ws1"];
+    const tenantId = randomUUID();
+    await addTenants(tenantId);
 
     const result = await withDefaultPlanChange(async () => "written");
 
     expect(result).toBe("written");
-    expect(store.subscriptions.has("ws1")).toBe(false);
+    expect(await subscriptionsOf(tenantId)).toEqual([]);
   });
 
   it("attach the plan that became the default, never the previous one", async () => {
-    store.tenants = ["ws1"];
-    // Reordered ahead of "free", the default until now.
+    const tenantId = randomUUID();
+    await addTenants(tenantId);
     const intro = plan({ _id: "intro", slug: "intro", order: -1 });
 
     await withDefaultPlanChange(async () => {
-      store.plans = [...store.plans, intro];
+      await GetModel(PlanModel).insert(intro);
     });
 
-    expect(store.subscriptions.get("ws1")?.[0]?.planId).toBe("intro");
+    expect(await subscriptionsOf(tenantId)).toEqual([
+      expect.objectContaining({ planId: "intro" }),
+    ]);
   });
 });

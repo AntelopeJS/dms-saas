@@ -136,9 +136,11 @@ const PRICING_FIELDS: FormField[] = [
   },
 ];
 
+/**
+ * The access row has no label: the section already says "Access & features",
+ * and an unlabelled row lets the matrix span it, as the segment rules do.
+ */
 const ACCESS_FIELDS: FormField[] = [
-  // No label: the section already says "Access & features", and an
-  // unlabelled row lets the matrix span it, as the segment rules do.
   {
     id: "inheritance",
     type: new PlanAccessType({
@@ -147,8 +149,11 @@ const ACCESS_FIELDS: FormField[] = [
   },
 ];
 
-// No `defaultValue` on the cap, the trial or the price: the form would offer
-// "Module default: -1" under them. A plan saved without a cap is unlimited.
+/**
+ * No `defaultValue` on the cap, nor on the trial or the price in
+ * `PRICING_FIELDS`: the form would offer "Module default: -1" under them. A
+ * plan saved without a cap is unlimited.
+ */
 const LIMIT_FIELDS: FormField[] = [
   {
     id: "maxMembers",
@@ -161,6 +166,10 @@ const LIMIT_FIELDS: FormField[] = [
   },
 ];
 
+/**
+ * The order is a plain number: reordering the plans list writes fractional,
+ * possibly negative values.
+ */
 const VISIBILITY_FIELDS: FormField[] = [
   {
     id: "isActive",
@@ -180,7 +189,6 @@ const VISIBILITY_FIELDS: FormField[] = [
     id: "order",
     label: `${TEXTS}.field.order`,
     description: `${TEXTS}.field.order_description`,
-    // Reordering the plans list writes fractional, possibly negative values.
     type: new DefaultDataTypes.NumberType(),
   },
   {

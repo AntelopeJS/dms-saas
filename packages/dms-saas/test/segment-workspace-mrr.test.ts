@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import type { Tenant } from "@antelopejs/interface-dms/db";
 import { describe, expect, it } from "vitest";
 import type { Plan, TenantSubscription } from "../src/db";
@@ -8,38 +9,38 @@ import {
 
 const NOW = new Date("2026-10-19T12:00:00Z");
 
-const TENANT = {
+const TENANT = fromPartial<Tenant>({
   _id: "t1",
   name: "Initech",
   createdAt: NOW,
-} as Tenant;
+});
 
-const YEARLY_PLAN = {
+const YEARLY_PLAN = fromPartial<Plan>({
   _id: "yearly",
   name: "Yearly",
   price: 1200,
   currency: "eur",
   interval: "year",
   billingMode: "flat",
-} as Plan;
+});
 
-const SEAT_PLAN = {
+const SEAT_PLAN = fromPartial<Plan>({
   _id: "seat",
   name: "Seat",
   price: 10,
   currency: "eur",
   interval: "month",
   billingMode: "seat",
-} as Plan;
+});
 
 function subscription(patch: Partial<TenantSubscription>): TenantSubscription {
-  return {
+  return fromPartial<TenantSubscription>({
     status: "active",
     planId: YEARLY_PLAN._id,
     stripeSubscriptionId: "sub_1",
     isComplimentary: false,
     ...patch,
-  } as TenantSubscription;
+  });
 }
 
 function project(

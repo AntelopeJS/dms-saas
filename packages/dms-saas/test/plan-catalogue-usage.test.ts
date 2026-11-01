@@ -1,3 +1,4 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import type { Plan } from "../src/db";
 import {
@@ -14,7 +15,7 @@ import {
 } from "../src/plans/catalogue-usage";
 
 function plan(overrides: Partial<Plan>): Plan {
-  return {
+  return fromPartial<Plan>({
     _id: "plan",
     name: "Plan",
     price: 0,
@@ -24,7 +25,7 @@ function plan(overrides: Partial<Plan>): Plan {
     isActive: true,
     isPublic: true,
     ...overrides,
-  } as Plan;
+  });
 }
 
 function row(overrides: Partial<PlanUsageRow>): PlanUsageRow {
@@ -130,8 +131,6 @@ describe("catalogue usage", () => {
   });
 
   it("counts free the workspaces the dashboard counts free: by billing state", () => {
-    // Complimentary access and a cancelled workspace bring no MRR, yet are
-    // not free: the dashboard files them under their own state.
     expect(summariseCatalogue([pro, business, free], usage)).toMatchObject({
       workspaces: 6,
       paying: 2,

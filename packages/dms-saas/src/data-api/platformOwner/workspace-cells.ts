@@ -1,5 +1,5 @@
 import type { CellSubline, ComposedText } from "@antelopejs/interface-dms/base";
-import type { WorkspaceDirectoryFields } from "../../db";
+import type { BillingState, WorkspaceDirectoryFields } from "../../db";
 import {
   cellToneOf,
   composed,
@@ -14,17 +14,19 @@ import { STATUS_TONES } from "../../utils/status-vocabulary";
 
 /** The directory row the workspace list's two-line cells are written from. */
 export type WorkspaceCellRow = Partial<WorkspaceDirectoryFields> & {
-  billingState?: string | null;
+  billingState?: BillingState | null;
 };
 
 const K = "saas.workspaces";
 const YEARLY = "year";
 const SEAT_BILLING = "seat";
-// Without a currency, or before a first payment / after a cancellation, the
-// workspace bills nothing worth an amount.
+/**
+ * Without a currency, or before a first payment / after a cancellation, the
+ * workspace bills nothing worth an amount.
+ */
 const STATES_WITHOUT_MRR = new Set(["pending_payment", "cancelled"]);
-// What MRR means beside the amount when the workspace is not billed as usual.
-const MRR_NOTES: Record<string, CellSubline> = {
+/** What MRR means beside the amount when the workspace is not billed as usual. */
+const MRR_NOTES: Partial<Record<BillingState, CellSubline>> = {
   past_due: { text: `$${K}.mrr_cell.at_risk`, tone: "error" },
   suspended: { text: `$${K}.mrr_cell.billing_paused`, tone: "muted" },
 };
@@ -59,7 +61,7 @@ export function workspaceMrrAmount(row: WorkspaceCellRow): ComposedText | null {
 /** What the MRR means: at risk, paused, what a trial bills, yearly ÷ 12. */
 export function workspaceMrrNote(row: WorkspaceCellRow): CellSubline | null {
   if (!workspaceMrrAmount(row)) return null;
-  const note = MRR_NOTES[row.billingState ?? ""];
+  const note = row.billingState && MRR_NOTES[row.billingState];
   if (note) return note;
   if (row.billingState === "trialing") {
     const then = monthlyAmountAfterTrial(row);

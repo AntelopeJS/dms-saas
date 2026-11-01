@@ -35,6 +35,7 @@ import {
   type ComplimentaryImpact,
   loadComplimentaryImpact,
 } from "../../operator-actions/previews";
+import { runJournaled } from "../../operator-actions/one-shot";
 import { getStripeClient } from "../../stripe";
 import { withStripeAvailability } from "../../stripe/availability";
 import { parseFutureDate } from "../../utils";
@@ -55,8 +56,11 @@ import {
 import { isPlanOpenToWorkspace } from "../../plans/plan-audience";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
+import { isString } from "../../utils/primitive-guards";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_BAD_REQUEST = 400;
@@ -123,14 +127,25 @@ function joinConfirmationDialog(
   };
 }
 
+/**
+ * Puts the workspace on the plan with complimentary access. A paid Stripe
+ * subscription is cancelled first. The write clears the subscription and
+ * checkout refs and the self-refund claim (`refundRequestedAt`), which re-arms
+ * self-refund eligibility. `stripeCustomerId` is preserved on update so the
+ * existing Stripe customer (and its saved payment methods) is reused when
+ * billing resumes instead of orphaning it with a brand-new one.
+ */
 async function upsertFreeSubscription(
   tenantId: string,
   planId: string,
   freeUntil: Date | null,
   createdBy: string,
-): Promise<void> {
+): Promise<string | null> {
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const existing = await tenantSubscriptionModel.findOne();
+  const previousPlan = existing?.planId
+    ? await GetModel(PlanModel).get(existing.planId)
+    : undefined;
   const operationId = randomUUID();
   if (existing)
     await tenantSubscriptionModel.beginTransition(existing, {
@@ -146,11 +161,6 @@ async function upsertFreeSubscription(
       { idempotencyKey: `admin-grant-free:${operationId}` },
     );
   }
-  // Clears the subscription/checkout refs and the self-refund claim
-  // (refundRequestedAt), which re-arms self-refund eligibility.
-  // stripeCustomerId is preserved on update so the existing Stripe customer
-  // (and its saved payment methods) is reused when billing resumes instead of
-  // orphaning it with a brand-new one.
   const payload = {
     planId,
     status: ACTIVE_STATUS,
@@ -181,8 +191,13 @@ async function upsertFreeSubscription(
     ]);
   }
   await recomputeTenantBillingState(tenantId);
+  return previousPlan?.name ?? null;
 }
 
+/**
+ * The plan the workspace is on stays grantable even once it is no longer sold
+ * or targets another audience: the dialog offers it by default.
+ */
 async function assertPlanIsAvailableForTenant(
   plan: Plan | undefined,
   tenantId: string,
@@ -192,8 +207,6 @@ async function assertPlanIsAvailableForTenant(
     GetModel(TenantBillingInfoModel, tenantId).findOne(),
     GetModel(TenantSubscriptionModel, tenantId).findOne(),
   ]);
-  // The plan the workspace is on stays grantable even once it is no longer
-  // sold or targets another audience: the dialog offers it by default.
   const isCurrentPlan = subscription?.planId === plan._id;
   assert(
     isCurrentPlan || plan.isActive,
@@ -250,10 +263,10 @@ export class SaasWorkspacesAdminController extends Controller(
   @Get("/owner-lookup")
   async lookUpOwnerEmail(
     @AuthOwnerOnly() _user: User,
-    @Parameter("email", "query") email: unknown,
+    @Parameter("email", "query") email: QueryParameterValue,
   ): Promise<OwnerLookup> {
     assert(
-      typeof email === "string" && email.trim(),
+      isString(email) && email.trim(),
       HTTP_BAD_REQUEST,
       "saas.errors.workspace_create.owner_email",
     );
@@ -279,11 +292,15 @@ export class SaasWorkspacesAdminController extends Controller(
   async getComplimentaryImpact(
     @AuthOwnerOnly() _user: User,
     @Parameter("tenantId", "param") tenantId: string,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<ComplimentaryImpact> {
     return loadComplimentaryImpact(tenantId, requestLocale(language));
   }
 
+  /**
+   * Grants complimentary access: ending a paid subscription first cancels it
+   * on Stripe.
+   */
   @Post("/:tenantId/grant-free-access")
   async grantFreeAccess(
     @AuthOwnerOnly() user: User,
@@ -291,7 +308,7 @@ export class SaasWorkspacesAdminController extends Controller(
     @JSONBody() body: GrantFreeAccessBody,
   ) {
     await this.assertTenantExists(tenantId);
-    const planId = typeof body.planId === "string" ? body.planId : "";
+    const planId = isString(body.planId) ? body.planId : "";
     const plan = await assertPlanIsAvailableForTenant(
       planId ? await this.planModel.get(planId) : undefined,
       tenantId,
@@ -301,11 +318,28 @@ export class SaasWorkspacesAdminController extends Controller(
       body.freeUntil,
       "saas.errors.workspace_create.free_until_past",
     );
-    // Ending a paid subscription first cancels it on Stripe.
-    await withStripeAvailability(() =>
-      runTenantLifecycleOperation(tenantId, () =>
-        upsertFreeSubscription(tenantId, plan._id, freeUntil, user._id),
-      ),
+    await runJournaled(
+      { tenantId, actor: { id: user._id, email: user.email }, details: {} },
+      {
+        action: "workspace.complimentary_grant",
+        run: () =>
+          withStripeAvailability(() =>
+            runTenantLifecycleOperation(tenantId, async () => {
+              const previousPlanName = await upsertFreeSubscription(
+                tenantId,
+                plan._id,
+                freeUntil,
+                user._id,
+              );
+              return {
+                previousPlanName,
+                targetPlanName: plan.name ?? null,
+                freeUntil: freeUntil?.toISOString() ?? null,
+              };
+            }),
+          ),
+        detailsOf: (details) => details,
+      },
     );
     await notifyTenantOwners(tenantId, complimentaryAccessGrantedSubject, {
       icon: COMP_ICON,
@@ -342,10 +376,19 @@ export class SaasWorkspacesAdminController extends Controller(
       user._id,
     );
     assert(!existing, HTTP_CONFLICT, "saas.errors.workspace.already_member");
-    await applyTenantOwnership(this.userModel, user._id, tenantId, {
-      roleIds: [],
-      isTenantOwner: false,
-    });
-    return { joined: true };
+    return runJournaled<JoinResult>(
+      { tenantId, actor: { id: user._id, email: user.email }, details: {} },
+      {
+        action: "workspace.support_join",
+        run: async () => {
+          await applyTenantOwnership(this.userModel, user._id, tenantId, {
+            roleIds: [],
+            isTenantOwner: false,
+          });
+          return { joined: true };
+        },
+        detailsOf: () => ({}),
+      },
+    );
   }
 }

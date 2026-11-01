@@ -1,12 +1,17 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import type { RequestContext } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
+import {
+  GetDataControllerMeta,
+  type DataControllerCallback,
+  type DataControllerCallbackWithOptions,
+} from "@antelopejs/interface-data-api";
 import { Parameters } from "@antelopejs/interface-data-api/components";
 import { AccessMode } from "@antelopejs/interface-data-api/metadata";
 import { ValueProxy } from "@antelopejs/interface-database";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { assert, beforeAll, describe, expect, it, vi } from "vitest";
 import { plansDataAPI } from "../src/data-api/platformOwner/plans";
 import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
 
@@ -19,10 +24,12 @@ const controller = new plansDataAPI();
 const meta = GetDataControllerMeta(controller);
 
 function request(route: string, query = ""): RequestContext {
-  return Object.assign(
-    { url: new URL(`https://example.test/plans?${query}`) },
-    { dataAPIEntry: meta.endpoints[route] },
-  ) as unknown as RequestContext;
+  return fromPartial<RequestContext>(
+    Object.assign(
+      { url: new URL(`https://example.test/plans?${query}`) },
+      { dataAPIEntry: meta.endpoints[route] },
+    ),
+  );
 }
 
 beforeAll(() => {
@@ -38,7 +45,9 @@ beforeAll(() => {
     {
       countWithSearch: vi.fn(
         async (
-          _controller: unknown,
+          _controller:
+            | DataControllerCallback
+            | DataControllerCallbackWithOptions,
           _ctx: RequestContext,
           params: Parameters.ListParameters,
         ) => {
@@ -50,9 +59,6 @@ beforeAll(() => {
   );
 });
 
-// A filter narrowing the rows turns off moving them by hand, so the
-// catalogue leaves deleted plans out on the server, on every route that
-// lists or counts them.
 describe("the plans table scope", () => {
   it.each(SCOPED_ROUTES)("leaves deleted plans out of %s", (route) => {
     const filters = Parameters.ExtractFilters(
@@ -96,15 +102,14 @@ describe("the plans table scope", () => {
       row,
     );
 
-    expect((predicate as ValueProxy<boolean>).build().at(-1)).toMatchObject({
+    assert(predicate instanceof ValueProxy);
+    expect(predicate.build().at(-1)).toMatchObject({
       stage: "eq",
       args: [false],
     });
   });
 });
 
-// A move saves through the table's edit route: it may write the position
-// alone, so it never reaches the Stripe sync of `/api/saas/plans`.
 describe("moving plans by hand", () => {
   it("writes nothing but the position", () => {
     const writable = Object.entries(meta.fields)

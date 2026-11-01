@@ -34,13 +34,16 @@ const MIGRATIONS_ORDER = 5;
 const ATTENTION_COLUMNS = 2;
 const NEEDS_ATTENTION_STAGE = "needs_attention";
 
+/**
+ * A tab filtering the migrations on one stage. The menu entry of the
+ * needs-attention tab carries the count of migrations waiting for someone.
+ */
 function stageTab(id: string, icon: string, stage: string) {
   return {
     id,
     label: `${TEXTS}.tabs.${id}`,
     icon,
     filter: { accessorKey: "stage", value: stage, mode: "is" },
-    // The menu entry carries the count of migrations waiting for someone.
     navBadge: stage === NEEDS_ATTENTION_STAGE,
   };
 }
@@ -142,7 +145,7 @@ const OUTCOME_ITEMS = MIGRATION_WORKSPACE_STATUSES.map((value) => ({
   label: `${TEXTS}.workspace_status.${value}`,
 }));
 
-const WORKSPACE_COLUMNS: Record<string, TableViewSourceColumn> = {
+const WORKSPACE_COLUMNS = {
   name: {
     name: `${DETAIL}.column.workspace`,
     type: new DefaultDataTypes.StringType(),
@@ -192,7 +195,7 @@ const WORKSPACE_COLUMNS: Record<string, TableViewSourceColumn> = {
     isVisible: false,
     order: 6,
   },
-};
+} satisfies Record<string, TableViewSourceColumn>;
 
 function resolveAction(resolution: "moved" | "not_moved", icon: string) {
   return {
@@ -297,7 +300,7 @@ export class SaasPlanMigrationDetailController extends PageController(
   },
   DefaultLayout({ fullWidth: true, hideHeader: true }),
 ) {
-  // No period: the bar is the Direct / Pause toggle and the last update.
+  /** No period: the bar is the Direct / Pause toggle and the last update. */
   static toolbar = pageToolbar({ period: false }).meta(
     detailMeta("toolbar", "i-ph-broadcast"),
   );

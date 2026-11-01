@@ -1,28 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const stripe = vi.hoisted(() => ({
-  retrieveCustomer: vi.fn(),
-}));
-
-vi.mock("../src/stripe/client", () => ({
-  getStripeClient: () => ({
-    customers: {
-      retrieve: (...args: unknown[]) => stripe.retrieveCustomer(...args),
-    },
-  }),
-}));
-
+import { fromPartial } from "@total-typescript/shoehorn";
+import type Stripe from "stripe";
+import { describe, expect, it, vi } from "vitest";
 import { retrieveStripeCustomerBalance } from "../src/stripe/customer-balance";
+import { useSuiteStripe } from "./helpers/stripe";
 
-beforeEach(() => {
-  stripe.retrieveCustomer.mockReset();
-});
+const stripe = useSuiteStripe();
+
+function stubCustomer(
+  customer: Partial<Stripe.Customer> | Partial<Stripe.DeletedCustomer>,
+) {
+  return vi
+    .spyOn(stripe.write.customers, "retrieve")
+    .mockResolvedValue(fromPartial(customer));
+}
 
 describe("Stripe customer balance adapter", () => {
   it.each([1_000, 0, -1_000])(
     "preserves Stripe's signed minor-unit balance %i",
     async (balance) => {
-      stripe.retrieveCustomer.mockResolvedValue({
+      const retrieve = stubCustomer({
         id: "cus_current",
         balance,
         currency: "eur",
@@ -35,15 +31,12 @@ describe("Stripe customer balance adapter", () => {
         balanceMinorUnits: balance,
         currency: "eur",
       });
-      expect(stripe.retrieveCustomer).toHaveBeenCalledWith("cus_current");
+      expect(retrieve).toHaveBeenCalledWith("cus_current");
     },
   );
 
   it("represents a deleted Stripe customer without a value", async () => {
-    stripe.retrieveCustomer.mockResolvedValue({
-      id: "cus_current",
-      deleted: true,
-    });
+    stubCustomer({ id: "cus_current", deleted: true });
 
     await expect(retrieveStripeCustomerBalance("cus_current")).resolves.toEqual(
       {
@@ -56,7 +49,9 @@ describe("Stripe customer balance adapter", () => {
 
   it("propagates provider failures for the public boundary to sanitize", async () => {
     const providerFailure = new Error("Stripe unavailable");
-    stripe.retrieveCustomer.mockRejectedValue(providerFailure);
+    vi.spyOn(stripe.write.customers, "retrieve").mockRejectedValue(
+      providerFailure,
+    );
 
     await expect(retrieveStripeCustomerBalance("cus_current")).rejects.toBe(
       providerFailure,

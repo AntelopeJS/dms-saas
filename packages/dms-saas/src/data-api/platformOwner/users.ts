@@ -31,7 +31,7 @@ import { getSegmentNamesCached } from "../../utils";
 
 const ACTIVE_NOW_MS = 5 * 60 * 1000;
 const IDENTITY_COLUMN_SIZE = 245;
-// The six visible columns fit a 1440px screen without scrolling.
+/** Column sizes: the six visible columns fit a 1440px screen without scrolling. */
 const ROLE_COLUMN_SIZE = 170;
 const SEGMENTS_COLUMN_SIZE = 190;
 const REGULAR_COLUMN_SIZE = 155;
@@ -47,11 +47,11 @@ export interface UserWorkspaceCounts {
   member: number;
 }
 
-function userIdOf(self: unknown): string {
-  return (self as UserRowInstance).table._id;
+function userIdOf(self: UserRowInstance): string {
+  return self.table._id;
 }
 
-// The three workspace getters read the same row, so they share one lookup.
+/** The three workspace getters read the same row, so they share one lookup. */
 const countsByRow = new WeakMap<object, Promise<UserWorkspaceCounts>>();
 
 async function loadWorkspaceCounts(
@@ -65,6 +65,11 @@ async function loadWorkspaceCounts(
   return { owned, member: memberships.length - owned };
 }
 
+const WORKSPACE_SPLIT_KINDS = [
+  "owned",
+  "member",
+] as const satisfies readonly (keyof UserWorkspaceCounts)[];
+
 const WORKSPACE_SPLIT_KEYS: Record<keyof UserWorkspaceCounts, string> = {
   owned: "saas.users.workspaces_owned",
   member: "saas.users.workspaces_member",
@@ -72,22 +77,21 @@ const WORKSPACE_SPLIT_KEYS: Record<keyof UserWorkspaceCounts, string> = {
 
 function workspaceSplit(counts: UserWorkspaceCounts): ComposedText | null {
   return dotList(
-    (Object.keys(WORKSPACE_SPLIT_KEYS) as (keyof UserWorkspaceCounts)[])
-      .filter((kind) => counts[kind] > 0)
-      .map((kind) =>
-        composed(WORKSPACE_SPLIT_KEYS[kind], {
-          count: countParam(counts[kind]),
-        }),
-      ),
+    WORKSPACE_SPLIT_KINDS.filter((kind) => counts[kind] > 0).map((kind) =>
+      composed(WORKSPACE_SPLIT_KEYS[kind], {
+        count: countParam(counts[kind]),
+      }),
+    ),
   );
 }
 
-function rowWorkspaceCounts(self: unknown): Promise<UserWorkspaceCounts> {
-  const row = self as object;
-  let lookup = countsByRow.get(row);
+function rowWorkspaceCounts(
+  self: UserRowInstance,
+): Promise<UserWorkspaceCounts> {
+  let lookup = countsByRow.get(self);
   if (!lookup) {
     lookup = loadWorkspaceCounts(userIdOf(self));
-    countsByRow.set(row, lookup);
+    countsByRow.set(self, lookup);
   }
   return lookup;
 }
@@ -176,9 +180,11 @@ export class saasUsersDataAPI extends DataController(
   @Access(AccessMode.ReadOnly)
   declare owner: boolean;
 
-  // The role reads as a pill on admins and a dash on everyone else: the
-  // pill is drawn from `owner`, the getter only gives the column a value that
-  // is never a pill of its own.
+  /**
+   * The role reads as a pill on admins and a dash on everyone else: the pill is
+   * drawn from `owner`, the getter only gives the column a value that is never
+   * a pill of its own.
+   */
   @Listable(["_id"])
   @Column({
     name: "$saas.users.column.platform_role",

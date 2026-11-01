@@ -4,8 +4,11 @@ import { config as loadDotenv } from "dotenv";
 
 loadDotenv({ path: resolve(__dirname, ".env") });
 
-// The dev frontend (`ajs dms dev`) is a separate CLI process, not an Antelope
-// module, so its origins cannot be published as config variables.
+/**
+ * The dev frontend's hosts. The dev frontend (`ajs dms dev`) is a separate CLI
+ * process, not an Antelope module, so its origins cannot be published as
+ * config variables.
+ */
 const CLIENT_HOSTS = ["localhost", "127.0.0.1"];
 const CLIENT_PORTS = [3000, 3001];
 
@@ -14,10 +17,13 @@ interface OAuthCredentials {
   clientSecret?: string;
 }
 
-// The DMS offers a provider, and draws its "Continue with" button on the
-// login and sign-up screens, only once both credentials are set: read from
-// the environment or `playground/.env`, never committed. Register
-// `http://localhost:3001/auth/oauth/<provider>/callback` with the provider.
+/**
+ * The OAuth credentials of a provider, read from the environment or
+ * `playground/.env`, never committed. The DMS offers a provider, and draws its
+ * "Continue with" button on the login and sign-up screens, only once both
+ * credentials are set. Register
+ * `http://localhost:3001/auth/oauth/<provider>/callback` with the provider.
+ */
 function oauthCredentials(prefix: string): OAuthCredentials {
   return {
     clientId: process.env[`${prefix}_CLIENT_ID`],
@@ -25,6 +31,20 @@ function oauthCredentials(prefix: string): OAuthCredentials {
   };
 }
 
+/**
+ * The playground project. The playground module is not a workspace package:
+ * without `--ignore-workspace` pnpm installs the root workspace instead of its
+ * lockfile, and it is transpiled without type checking, because dms-saas
+ * rebuilds the interface package's types at the same moment and checking
+ * against them half-written fails at random (`pnpm build` keeps the type
+ * check). The dms-saas module is only built: the workspace is installed
+ * beforehand, as the README says, and installing it here would inherit the
+ * playground's hoisted linker and relink the whole workspace away from the
+ * layout CI uses. Signing up with an OAuth provider opens a new account, which
+ * then sets up its first workspace on `auth/no-workspace`. The file storage's
+ * `baseUrl` is public because the browser opens the minted asset and
+ * presigned URLs.
+ */
 export default defineConfig({
   name: "playground",
   logging: {
@@ -42,11 +62,6 @@ export default defineConfig({
       source: {
         type: "local",
         path: ".",
-        // Not a workspace package: without `--ignore-workspace`, pnpm
-        // installs the root workspace instead of this lockfile. Transpiled
-        // without type checking: dms-saas rebuilds the interface package's
-        // types at the same moment, and checking against them half-written
-        // fails at random. `pnpm build` keeps the type check.
         installCommand: [
           "pnpm install --ignore-workspace",
           "pnpm build:transpile",
@@ -58,9 +73,6 @@ export default defineConfig({
         type: "local",
         path: "..",
         watchDir: ["src"],
-        // Build only: the workspace is installed beforehand, as the README
-        // says. Installing it here inherited the playground's hoisted linker
-        // and relinked the whole workspace away from the layout CI uses.
         installCommand: ["pnpm build"],
       },
       config: {
@@ -88,8 +100,6 @@ export default defineConfig({
               github: oauthCredentials("GITHUB"),
               google: oauthCredentials("GOOGLE"),
             },
-            // Signing up with a provider opens a new account, which then
-            // sets up its first workspace on `auth/no-workspace`.
             allowAccountCreation: true,
           },
         },
@@ -131,7 +141,6 @@ export default defineConfig({
       },
       config: {
         storagePath: ".antelope/file-storage",
-        // Minted asset and presigned URLs are opened by the browser.
         baseUrl: "${@api.API_PUBLIC_BASE_URL}",
         defaultVisibility: "private",
       },

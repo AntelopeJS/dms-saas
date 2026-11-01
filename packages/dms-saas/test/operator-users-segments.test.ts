@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { ImplementInterface } from "@antelopejs/interface-core";
 import { Schema } from "@antelopejs/interface-database";
 import {
   GetModel,
@@ -9,6 +10,7 @@ import {
   TENANT_SCHEMA_NAME,
 } from "@antelopejs/interface-dms/constants";
 import { TenantMemberModel, TenantModel } from "@antelopejs/interface-dms/db";
+import * as notifications from "@antelopejs/interface-dms/notifications";
 import {
   SessionModel,
   type User,
@@ -16,6 +18,7 @@ import {
   UserModel,
 } from "@antelopejs/interface-dms/auth/db";
 import { construct, destroy } from "@antelopejs/mongodb";
+import { fromPartial } from "@total-typescript/shoehorn";
 import { MongoMemoryReplSet } from "mongodb-memory-server-core";
 import {
   afterAll,
@@ -28,23 +31,13 @@ import {
 } from "vitest";
 import {
   InvoiceModel,
+  type InvoiceStatus,
   type SegmentConditionGroup,
   SegmentModel,
   TenantBillingStateModel,
+  TenantSubscriptionModel,
   UserSegmentModel,
 } from "../src/db";
-
-const seatSync = vi.hoisted(() => vi.fn(async () => undefined));
-const notify = vi.hoisted(() => vi.fn(async () => undefined));
-
-vi.mock("../src/plans/seat-hooks", () => ({
-  syncSeatsAfterChange: seatSync,
-}));
-vi.mock("../src/notifications", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/notifications")>()),
-  notifyAllPlatformOwners: notify,
-}));
-
 import {
   createSegment,
   duplicateSegment,
@@ -58,6 +51,29 @@ import {
   loadUserSegmentMatches,
   sumPaidInvoices,
 } from "../src/users";
+import { insertPlan } from "./helpers/plans";
+import { useSuiteStripe } from "./helpers/stripe";
+
+const stripe = useSuiteStripe();
+const sendToUser = vi.fn<typeof notifications.internal.SendToUser>();
+
+ImplementInterface(notifications, {
+  internal: {
+    SupportsIdempotency: async () => true,
+    RegisterNotificationCategory: {
+      register: () => undefined,
+      unregister: () => undefined,
+    },
+    RegisterNotificationSubject: {
+      register: () => undefined,
+      unregister: () => undefined,
+    },
+    SendToUser: sendToUser,
+    SendToUsers: vi.fn(),
+    SendToRoles: vi.fn(),
+    SendToAll: vi.fn(),
+  },
+});
 
 const VERIFIED: SegmentConditionGroup = {
   logical: "and",
@@ -88,6 +104,12 @@ beforeAll(async () => {
   await construct({ url: mongo.getUri(), database: "operator-users" });
   await RegisterSchema(CORE_SCHEMA_NAME);
   await RegisterSchema(TENANT_SCHEMA_NAME);
+  await insertPlan({
+    _id: "seat-plan",
+    billingMode: "seat",
+    price: 10,
+    paymentProviderRefs: { stripePriceId: "price_seat" },
+  });
 }, 120_000);
 
 afterAll(async () => {
@@ -96,8 +118,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  seatSync.mockClear();
-  notify.mockClear();
+  sendToUser.mockClear();
   for (const model of [
     UserModel,
     TenantModel,
@@ -181,7 +202,7 @@ describe("segments saved from the editor", () => {
     });
     expect(stored?.countHistory).toHaveLength(1);
     expect(stored?.countHistory?.[0]?.count).toBe(1);
-    expect(typeof stored?.lastEvaluationMs).toBe("number");
+    expect(stored?.lastEvaluationMs).toBeTypeOf("number");
   });
 
   it("saves only the fields an edit sends, then re-evaluates", async () => {
@@ -327,7 +348,11 @@ describe("the user page", () => {
     const owner = await insertUser();
     const tenantId = await insertWorkspace({ name: "Initech", owner });
     const invoices = GetModel(InvoiceModel, tenantId);
-    const invoice = (status: string, total: number, currency: string) => ({
+    const invoice = (
+      status: InvoiceStatus,
+      total: number,
+      currency: string,
+    ) => ({
       documentType: "invoice" as const,
       stripeInvoiceId: randomUUID(),
       status,
@@ -341,7 +366,7 @@ describe("the user page", () => {
       invoice("paid", 100, "EUR"),
       invoice("open", 9999, "eur"),
       invoice("paid", 2000, "usd"),
-    ] as never);
+    ]);
 
     expect(await sumPaidInvoices([tenantId])).toEqual([
       { currency: "EUR", amount: 5000 },
@@ -410,14 +435,59 @@ describe("platform role changes", () => {
       owner,
       members: [member],
     });
+    await GetModel(TenantSubscriptionModel, tenantId).insert({
+      _id: tenantId,
+      planId: "seat-plan",
+      status: "active",
+      stripeSubscriptionId: "sub_seats",
+    });
+    vi.spyOn(stripe.write.subscriptions, "retrieve").mockResolvedValue(
+      fromPartial({ items: { data: [{ id: "si_seat" }] } }),
+    );
+    const update = vi
+      .spyOn(stripe.write.subscriptions, "update")
+      .mockResolvedValue(fromPartial({}));
 
     await controller().promote(admin, member._id);
     expect((await GetModel(UserModel).get(member._id))?.owner).toBe(true);
     await controller().demote(admin, member._id);
 
     expect((await GetModel(UserModel).get(member._id))?.owner).toBe(false);
-    expect(seatSync).toHaveBeenCalledTimes(2);
-    expect(seatSync.mock.calls.map(([id]) => id)).toEqual([tenantId, tenantId]);
-    expect(notify).toHaveBeenCalledTimes(2);
+    const seatSync = (quantity: number) => [
+      "sub_seats",
+      {
+        items: [{ id: "si_seat", quantity }],
+        proration_behavior: "create_prorations",
+      },
+      {
+        idempotencyKey: expect.stringMatching(
+          new RegExp(
+            `^seat-sync:platform-role:${tenantId}:${member._id}:\\d+$`,
+          ),
+        ),
+      },
+    ];
+    expect(update.mock.calls).toEqual([seatSync(1), seatSync(2)]);
+    expect(
+      sendToUser.mock.calls.map(([userId, data]) => [
+        userId,
+        data.subject.id,
+        data.title,
+        data.params,
+      ]),
+    ).toEqual([
+      [
+        admin._id,
+        "saas.platform_owner_added",
+        "$saas.notifications.payload.platform_owner_added.title",
+        { email: member.email },
+      ],
+      [
+        admin._id,
+        "saas.platform_owner_removed",
+        "$saas.notifications.payload.platform_owner_removed.title",
+        { email: member.email },
+      ],
+    ]);
   });
 });

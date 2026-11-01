@@ -1,14 +1,3 @@
-// Starting a paid plan through Stripe Checkout, split out of tenant-plan-ops.ts
-// to keep both files under the size the linter allows.
-//
-// The checkout intent is admitted as a subscription transition before any
-// Stripe call, and only the completion or expiry of the session it recorded
-// may clear it. Two paths clear it earlier, both only once Stripe provably
-// holds no session a customer could pay: a failure Stripe itself refused, and
-// an admission whose request never recorded its session. Expiry itself comes
-// from Stripe, from its webhook, or from the owner giving up on the session
-// (tenant-plan-checkout-recovery.ts).
-
 import { randomUUID } from "node:crypto";
 import { HTTPResult } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
@@ -51,6 +40,7 @@ import {
   releaseAbandonedCheckout,
   withCheckoutCancelMarker,
 } from "./tenant-plan-checkout-recovery";
+import { isString } from "../../utils/primitive-guards";
 
 const HTTP_UNPROCESSABLE = 422;
 const HTTP_SERVICE_UNAVAILABLE = 503;
@@ -92,9 +82,7 @@ interface CheckoutSessionTarget {
 const NO_TRIAL: TrialGrant = { days: 0, reservedIdentityId: null };
 
 function asNonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : null;
+  return isString(value) && value.trim().length > 0 ? value.trim() : null;
 }
 
 async function validateCheckoutRedirectInput(
@@ -305,6 +293,10 @@ async function admitCheckout(
   };
 }
 
+/**
+ * The customer is created here rather than inside the session call so a
+ * refused session leaves no customer behind that nothing points to.
+ */
 async function openCheckoutSession(
   request: PlanChangeRequest,
   attempt: CheckoutAttempt,
@@ -313,8 +305,6 @@ async function openCheckoutSession(
   const { existingCustomerId, redirect } = target;
   const trial = await resolveCheckoutTrial(request);
   attempt.reservedTrialIdentityId = trial.reservedIdentityId;
-  // Created here rather than inside the session call so a refused session
-  // leaves no customer behind that nothing points to.
   const customerId =
     existingCustomerId ??
     (await createTenantCheckoutCustomer({
@@ -371,7 +361,18 @@ async function createAdmittedCheckout(
   };
 }
 
-/** Admit checkout before provider effects and retain intent until terminal session evidence. */
+/**
+ * Admit checkout before provider effects and retain intent until terminal
+ * session evidence.
+ *
+ * The checkout intent is admitted as a subscription transition before any
+ * Stripe call, and only the completion or expiry of the session it recorded
+ * may clear it. Two paths clear it earlier, both only once Stripe provably
+ * holds no session a customer could pay: a failure Stripe itself refused, and
+ * an admission whose request never recorded its session. Expiry itself comes
+ * from Stripe, from its webhook, or from the owner giving up on the session
+ * (`tenant-plan-checkout-recovery.ts`).
+ */
 export async function startPaidCheckout(
   request: PlanChangeRequest,
 ): Promise<ChangePlanResult> {

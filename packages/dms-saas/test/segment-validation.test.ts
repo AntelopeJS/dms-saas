@@ -1,3 +1,4 @@
+import type { SegmentConditionGroup } from "../src/db";
 import {
   SEGMENT_COUNT_HISTORY_DAYS,
   appendSegmentCountPoint,
@@ -13,10 +14,9 @@ import {
   parseSegmentPatch,
 } from "../src/utils";
 
-function refused(run: () => unknown, key: string): void {
-  expect(run).toThrow(
-    expect.objectContaining({ body: `saas.errors.segments.${key}` }),
-  );
+/** The refusal a segment parser throws, by its error key. */
+function refusal(key: string) {
+  return expect.objectContaining({ body: `saas.errors.segments.${key}` });
 }
 
 describe("segment rules validation", () => {
@@ -35,25 +35,21 @@ describe("segment rules validation", () => {
   });
 
   it("refuses a field the level does not read", () => {
-    refused(
-      () =>
-        parseSegmentConditions({
-          logical: "and",
-          conditions: [{ field: "mrr", operator: "gt", value: 1 }],
-        }),
-      "unknown_field",
-    );
+    expect(() =>
+      parseSegmentConditions({
+        logical: "and",
+        conditions: [{ field: "mrr", operator: "gt", value: 1 }],
+      }),
+    ).toThrow(refusal("unknown_field"));
   });
 
   it("refuses an operator the field does not offer", () => {
-    refused(
-      () =>
-        parseSegmentConditions({
-          logical: "and",
-          conditions: [{ field: "isValidated", operator: "gt", value: 1 }],
-        }),
-      "invalid_operator",
-    );
+    expect(() =>
+      parseSegmentConditions({
+        logical: "and",
+        conditions: [{ field: "isValidated", operator: "gt", value: 1 }],
+      }),
+    ).toThrow(refusal("invalid_operator"));
   });
 
   it("asks a list for any of / none of, and a single value otherwise", () => {
@@ -72,14 +68,12 @@ describe("segment rules validation", () => {
       ],
     });
 
-    refused(
-      () => parseSegmentConditions(workspaceRule("in", "past_due")),
-      "invalid_value",
-    );
-    refused(
-      () => parseSegmentConditions(workspaceRule("eq", ["past_due"])),
-      "invalid_value",
-    );
+    expect(() =>
+      parseSegmentConditions(workspaceRule("in", "past_due")),
+    ).toThrow(refusal("invalid_value"));
+    expect(() =>
+      parseSegmentConditions(workspaceRule("eq", ["past_due"])),
+    ).toThrow(refusal("invalid_value"));
     expect(() =>
       parseSegmentConditions(workspaceRule("in", ["past_due"])),
     ).not.toThrow();
@@ -92,29 +86,31 @@ describe("segment rules validation", () => {
       conditions: { logical: "and", conditions },
     });
 
-    refused(
-      () =>
-        parseSegmentConditions({
-          logical: "and",
-          conditions: [ref([ref([])])],
-        }),
-      "invalid_conditions",
-    );
+    expect(() =>
+      parseSegmentConditions({
+        logical: "and",
+        conditions: [ref([ref([])])],
+      }),
+    ).toThrow(refusal("invalid_conditions"));
   });
 
   it("refuses rules nested deeper than the builder goes", () => {
-    let group: Record<string, unknown> = { logical: "and", conditions: [] };
+    let group: SegmentConditionGroup = { logical: "and", conditions: [] };
     for (let depth = 0; depth < 9; depth++) {
       group = { logical: "and", conditions: [group] };
     }
 
-    refused(() => parseSegmentConditions(group), "conditions_too_deep");
+    expect(() => parseSegmentConditions(group)).toThrow(
+      refusal("conditions_too_deep"),
+    );
   });
 });
 
 describe("segment saves", () => {
   it("requires a name on creation", () => {
-    refused(() => parseSegmentInput({ name: "  " }), "name_required");
+    expect(() => parseSegmentInput({ name: "  " })).toThrow(
+      refusal("name_required"),
+    );
     expect(parseSegmentInput({ name: " Trials " })).toEqual({
       name: "Trials",
       description: "",
@@ -126,8 +122,12 @@ describe("segment saves", () => {
     expect(parseSegmentPatch({ description: "For the sequence" })).toEqual({
       description: "For the sequence",
     });
-    refused(() => parseSegmentPatch({ name: "" }), "name_required");
-    refused(() => parseSegmentPatch({ name: "x".repeat(121) }), "too_long");
+    expect(() => parseSegmentPatch({ name: "" })).toThrow(
+      refusal("name_required"),
+    );
+    expect(() => parseSegmentPatch({ name: "x".repeat(121) })).toThrow(
+      refusal("too_long"),
+    );
   });
 });
 

@@ -137,7 +137,7 @@ async function cancelPendingInvitations(tenantId: string): Promise<void> {
 async function bestEffort(
   tenantId: string,
   step: string,
-  work: () => Promise<unknown>,
+  work: () => Promise<void>,
 ): Promise<void> {
   try {
     await work();

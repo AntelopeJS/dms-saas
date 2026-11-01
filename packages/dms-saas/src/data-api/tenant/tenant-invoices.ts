@@ -45,8 +45,10 @@ interface PaymentStatusRowInstance {
   table: PaymentStatusRow;
 }
 
-// Sized so the columns and the inline "Pay invoice" fit the settings
-// page without truncating a header or a pill.
+/**
+ * Column sizes: sized so the columns and the inline "Pay invoice" fit the
+ * settings page without truncating a header or a pill.
+ */
 const NUMBER_COLUMN_SIZE = 165;
 const PERIOD_COLUMN_SIZE = 130;
 const AMOUNT_COLUMN_SIZE = 120;
@@ -72,12 +74,12 @@ interface DocumentRowInstance {
   table: DocumentRow;
 }
 
-function documentRowOf(self: unknown): DocumentRow {
-  return (self as DocumentRowInstance).table;
+function documentRowOf(self: DocumentRowInstance): DocumentRow {
+  return self.table;
 }
 
-function paymentStatusRowOf(self: unknown): PaymentStatusRow {
-  return (self as PaymentStatusRowInstance).table;
+function paymentStatusRowOf(self: PaymentStatusRowInstance): PaymentStatusRow {
+  return self.table;
 }
 
 /**

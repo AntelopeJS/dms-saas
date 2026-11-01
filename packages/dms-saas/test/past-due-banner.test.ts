@@ -1,6 +1,14 @@
+import { randomUUID } from "node:crypto";
+import { ImplementInterface } from "@antelopejs/interface-core";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import type { LayoutBannerContext } from "@antelopejs/interface-dms/layout-banners";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  internal as layoutBanners,
+  type LayoutBannerContext,
+  type LayoutBannerInfo,
+} from "@antelopejs/interface-dms/layout-banners";
+import { fromPartial } from "@total-typescript/shoehorn";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   isPastDueBannerVisible,
   PAST_DUE_MEMBER_BANNER,
@@ -12,58 +20,41 @@ import {
   TRIAL_ENDING_BANNERS,
   trialDaysLeft,
 } from "../src/billing-state/trial-ending-banner";
-import type {
-  BillingState,
-  TenantBillingState,
-  TenantSubscription,
+import {
+  type BillingState,
+  type TenantBillingState,
+  TenantBillingStateModel,
+  type TenantSubscription,
+  TenantSubscriptionModel,
 } from "../src/db";
+import { addTenantMember } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const TENANT_ID = "tenant-a";
-const OWNER_ID = "owner-a";
-const MEMBER_ID = "member-a";
+useMongoDatabase("past-due-banner");
+
+const OWNER = fromPartial<User>({ _id: "owner-a" });
+const MEMBER = fromPartial<User>({ _id: "member-a" });
 const DAY_MS = 86_400_000;
 
-const harness = vi.hoisted(() => ({
-  states: new Map<string, Partial<TenantBillingState>>(),
-  subscription: undefined as Partial<TenantSubscription> | undefined,
-  owners: new Set<string>(),
-  registered: [] as unknown[],
-}));
+/** The banners registered with the DMS layout, in order. */
+const registered: LayoutBannerInfo[] = [];
 
-vi.mock("@antelopejs/interface-database-decorators", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@antelopejs/interface-database-decorators")
-    >();
-  return {
-    ...actual,
-    GetModel: () => ({
-      findByTenant: async (tenantId: string) => harness.states.get(tenantId),
-      findOne: async () => harness.subscription,
-      getByUser: async (userId: string) => ({
-        userId,
-        isTenantOwner: harness.owners.has(userId),
-      }),
-    }),
-  };
+ImplementInterface(layoutBanners, {
+  RegisterLayoutBanner: {
+    register: (info) => registered.push(info),
+    unregister: () => undefined,
+  },
 });
 
-vi.mock("@antelopejs/interface-dms/layout-banners", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@antelopejs/interface-dms/layout-banners")
-  >()),
-  RegisterLayoutBanner: (info: unknown) => {
-    harness.registered.push(info);
-    return () => undefined;
-  },
-}));
+/** The workspace of the current test: an owner and a member, no billing row. */
+let tenantId = "";
 
 function context(
   overrides: Partial<LayoutBannerContext> = {},
 ): LayoutBannerContext {
   return {
-    user: { _id: MEMBER_ID } as User,
-    tenantId: TENANT_ID,
+    user: MEMBER,
+    tenantId,
     permissions: new Set(),
     isOwner: false,
     isTenantAccessDenied: false,
@@ -71,17 +62,27 @@ function context(
   };
 }
 
-const ownerContext = () => context({ user: { _id: OWNER_ID } as User });
+const ownerContext = () => context({ user: OWNER });
 
-function publish(state: Partial<TenantBillingState>): void {
-  harness.states.set(TENANT_ID, state);
+/** Publishes the workspace's billing state, as the recompute does. */
+async function publish(state: Partial<TenantBillingState>): Promise<void> {
+  await GetModel(TenantBillingStateModel).insert({ _id: tenantId, ...state });
 }
 
-function trialEndingIn(days: number): void {
-  harness.subscription = {
+async function subscribe(
+  subscription: Partial<TenantSubscription>,
+): Promise<void> {
+  await GetModel(TenantSubscriptionModel, tenantId).insert({
+    _id: tenantId,
+    ...subscription,
+  });
+}
+
+async function trialEndingIn(days: number): Promise<void> {
+  await subscribe({
     status: "trialing",
     currentPeriodEnd: new Date(Date.now() + days * DAY_MS - 60_000),
-  };
+  });
 }
 
 async function visibleTrialBanners(
@@ -95,11 +96,11 @@ async function visibleTrialBanners(
   return visible.filter((key): key is string => key !== null);
 }
 
-beforeEach(() => {
-  harness.states.clear();
-  harness.owners = new Set([OWNER_ID]);
-  harness.subscription = undefined;
-  harness.registered.length = 0;
+beforeEach(async () => {
+  tenantId = randomUUID();
+  await addTenantMember(tenantId, OWNER, true);
+  await addTenantMember(tenantId, MEMBER, false);
+  registered.length = 0;
 });
 
 describe("past-due layout banner visibility", () => {
@@ -112,7 +113,7 @@ describe("past-due layout banner visibility", () => {
     ["cancelled", false],
     ["past_due", true],
   ])("shows for billing state %s: %s", async (billingState, expected) => {
-    publish({ billingState });
+    await publish({ billingState });
     await expect(isPastDueBannerVisible(context())).resolves.toBe(expected);
   });
 
@@ -121,19 +122,19 @@ describe("past-due layout banner visibility", () => {
   });
 
   it("stays hidden for a deleted workspace", async () => {
-    publish({ billingState: "past_due", deletedAt: new Date() });
+    await publish({ billingState: "past_due", deletedAt: new Date() });
     await expect(isPastDueBannerVisible(context())).resolves.toBe(false);
   });
 
   it("stays hidden for an unauthenticated request", async () => {
-    publish({ billingState: "past_due" });
+    await publish({ billingState: "past_due" });
     await expect(
       isPastDueBannerVisible(context({ user: undefined })),
     ).resolves.toBe(false);
   });
 
   it("shows the owner the strip with the payment action", async () => {
-    publish({ billingState: "past_due" });
+    await publish({ billingState: "past_due" });
     await expect(PAST_DUE_OWNER_BANNER.visible?.(ownerContext())).resolves.toBe(
       true,
     );
@@ -143,7 +144,7 @@ describe("past-due layout banner visibility", () => {
   });
 
   it("shows a member the strip naming who pays", async () => {
-    publish({ billingState: "past_due" });
+    await publish({ billingState: "past_due" });
     await expect(PAST_DUE_MEMBER_BANNER.visible?.(context())).resolves.toBe(
       true,
     );
@@ -157,10 +158,7 @@ describe("past-due layout banner registration", () => {
   it("registers the owner error strip and the dismissible member warning", () => {
     registerPastDueBanners();
 
-    expect(harness.registered).toEqual([
-      PAST_DUE_OWNER_BANNER,
-      PAST_DUE_MEMBER_BANNER,
-    ]);
+    expect(registered).toEqual([PAST_DUE_OWNER_BANNER, PAST_DUE_MEMBER_BANNER]);
     expect(PAST_DUE_OWNER_BANNER).toMatchObject({
       variant: "error",
       component: "DmsSaasPastDueBanner",
@@ -174,8 +172,6 @@ describe("past-due layout banner registration", () => {
     });
   });
 
-  // The DMS shows banners outside the module area by default: billing state
-  // must also follow the owner into the module back office.
   it("shows billing banners on every page, module area included", () => {
     const banners = [
       PAST_DUE_OWNER_BANNER,
@@ -204,29 +200,29 @@ describe("trial ending reminders", () => {
     [2, ["dms-saas:trial-ending-3"]],
     [1, ["dms-saas:trial-ending-1"]],
   ])("with %i days left, shows %j", async (days, expected) => {
-    trialEndingIn(days);
+    await trialEndingIn(days);
     await expect(visibleTrialBanners(ownerContext())).resolves.toEqual(
       expected,
     );
   });
 
   it("is told to the owner only", async () => {
-    trialEndingIn(2);
+    await trialEndingIn(2);
     await expect(visibleTrialBanners(context())).resolves.toEqual([]);
   });
 
   it("stays quiet outside a trial", async () => {
-    harness.subscription = {
+    await subscribe({
       status: "active",
       currentPeriodEnd: new Date(Date.now() + DAY_MS),
-    };
+    });
     await expect(visibleTrialBanners(ownerContext())).resolves.toEqual([]);
   });
 
   it("keeps the last reminder up until the trial ends", () => {
     registerTrialEndingBanners();
 
-    expect(harness.registered).toEqual(TRIAL_ENDING_BANNERS);
+    expect(registered).toEqual(TRIAL_ENDING_BANNERS);
     expect(TRIAL_ENDING_BANNERS.map((banner) => banner.dismissible)).toEqual([
       true,
       true,

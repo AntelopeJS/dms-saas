@@ -72,12 +72,14 @@ function storedWithRefs(
   return localizePlan(stored, PLAN_FALLBACK_LOCALE);
 }
 
+/**
+ * Only the refs are written, so a concurrent edit of the plan is never rolled
+ * back; a sync that raced one is out of line again and redone.
+ */
 async function syncAndStore(store: PlanRefsStore, plan: Plan): Promise<Plan> {
   const taxCode = await resolveProductTaxCode();
   if (isPlanStripeSyncCurrent(plan, taxCode)) return plan;
   const paymentProviderRefs = await syncPlanWithStripe(plan, taxCode);
-  // Only the refs are written, so a concurrent edit of the plan is never
-  // rolled back; a sync that raced one is out of line again and redone.
   await store.update(plan._id, { paymentProviderRefs });
   Logging.Info(
     `${LOG_PREFIX} plan '${plan._id}' synced with Stripe price ${paymentProviderRefs.stripePriceId}`,

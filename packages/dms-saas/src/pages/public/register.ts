@@ -7,9 +7,11 @@ import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { EmptyLayout } from "@antelopejs/interface-dms/base/layouts";
 import { publicNavBar } from "./nav-bar";
 
-// The default layout is the console shell: its authenticated calls answer 401
-// to an anonymous visitor, which bounces them straight back to the login
-// screen. Registration renders on its own, like every other public auth page.
+/**
+ * The default layout is the console shell: its authenticated calls answer 401
+ * to an anonymous visitor, which bounces them straight back to the login
+ * screen. Registration renders on its own, like every other public auth page.
+ */
 @RegisterPage()
 export class SaasRegisterController extends PageController(
   "register",

@@ -8,6 +8,7 @@ import { getStripeClient } from "../../stripe/client";
 import { readInvoiceSubscriptionId } from "../../stripe/payload-shapes";
 import { LINE_KEY_METADATA, LINE_PROVIDER_METADATA } from "../injection";
 import type { InvoiceLineInjection } from "./task.table";
+import { isString } from "../../utils/primitive-guards";
 
 const INVOICE_ITEMS_PAGE_SIZE = 100;
 const MS_PER_SECOND = 1000;
@@ -54,20 +55,22 @@ export async function listInvoiceItems(
 export function managedLinesOf(
   items: readonly Stripe.InvoiceItem[],
 ): ManagedLine[] {
-  return items
-    .filter(
-      (item) =>
-        typeof item.metadata?.[LINE_KEY_METADATA] === "string" &&
-        typeof item.metadata?.[LINE_PROVIDER_METADATA] === "string",
-    )
-    .map((item) => ({
-      provider: item.metadata?.[LINE_PROVIDER_METADATA] as string,
-      lineKey: item.metadata?.[LINE_KEY_METADATA] as string,
-      amount: item.amount,
-      currency: item.currency.toLowerCase(),
-      periodStart: item.period?.start ?? 0,
-      periodEnd: item.period?.end ?? 0,
-    }));
+  return items.flatMap((item) => {
+    const lineKey = item.metadata?.[LINE_KEY_METADATA];
+    const provider = item.metadata?.[LINE_PROVIDER_METADATA];
+    return isString(lineKey) && isString(provider)
+      ? [
+          {
+            provider,
+            lineKey,
+            amount: item.amount,
+            currency: item.currency.toLowerCase(),
+            periodStart: item.period?.start ?? 0,
+            periodEnd: item.period?.end ?? 0,
+          },
+        ]
+      : [];
+  });
 }
 
 /** Accept a provider's lines with the same rules as before, without dedup against Stripe. */
@@ -157,10 +160,9 @@ export function identityMismatch(
   invoice: Stripe.Invoice,
   task: InvoiceLineInjection,
 ): string | null {
-  const customer =
-    typeof invoice.customer === "string"
-      ? invoice.customer
-      : invoice.customer?.id;
+  const customer = isString(invoice.customer)
+    ? invoice.customer
+    : invoice.customer?.id;
   if (invoice.id !== task._id) return "invoice";
   if (customer !== task.customerId) return "customer";
   if (readInvoiceSubscriptionId(invoice) !== task.stripeSubscriptionId)

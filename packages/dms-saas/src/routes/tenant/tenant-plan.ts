@@ -52,6 +52,7 @@ import {
 } from "../../workspaces/complimentary";
 import {
   CONTENT_LANGUAGE_HEADER,
+  type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
 import { ensureDefaultSubscription } from "../../workspaces/default-plan";
@@ -101,6 +102,8 @@ import {
 } from "./tenant-plan-checkout-recovery";
 import { resubscribeOnFreePlan } from "./tenant-plan-resubscription";
 import { ANY_PLAN_AUDIENCE, isPlanOfferedTo } from "../../plans/plan-audience";
+import { isNumber, isString } from "../../utils/primitive-guards";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const PRORATION_DATE_MAX_AGE_SECONDS = 3600;
 const MS_PER_SECOND = 1000;
@@ -110,15 +113,15 @@ const MS_PER_SECOND = 1000;
  * recent: an old one would bill a difference that no longer matches.
  */
 export function acceptedProrationDate(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
+  if (!isNumber(value) || !Number.isInteger(value)) return undefined;
   const ageSeconds = Date.now() / MS_PER_SECOND - value;
   const isRecent =
     ageSeconds >= 0 && ageSeconds <= PRORATION_DATE_MAX_AGE_SECONDS;
   return isRecent ? value : undefined;
 }
 
-function asQueryString(value: unknown): string | null {
-  return typeof value === "string" && value ? value : null;
+function asQueryString(value: QueryParameterValue): string | null {
+  return isString(value) && value ? value : null;
 }
 
 /** Who the comparison is read for: the trial a plan offers depends on it. */
@@ -187,6 +190,7 @@ export class SaasTenantPlanController extends Controller(
   @Model(FeatureModel)
   declare featureModel: FeatureModel;
 
+  /** Offered plans are shown payable only once Stripe holds their price. */
   private async buildCatalog(
     current: Plan | null,
     locale: string,
@@ -197,7 +201,6 @@ export class SaasTenantPlanController extends Controller(
       current && !publicPlans.some((plan) => plan._id === current._id)
         ? [...publicPlans, current]
         : publicPlans;
-    // Offered plans are shown payable only once Stripe holds their price.
     const offered = await Promise.all(
       withCurrent.map((plan) => ensurePlanStripeRefs(plan, this.planModel)),
     );
@@ -246,7 +249,7 @@ export class SaasTenantPlanController extends Controller(
     tenantSubscriptionModel: TenantSubscriptionModel,
     @TenantScopedModel(TenantBillingInfoModel)
     tenantBillingInfoModel: TenantBillingInfoModel,
-    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: unknown,
+    @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<CurrentPlanResult> {
     const tenantId = getRequestTenantId(ctx);
     const tenant = await this.tenantModel.get(tenantId);
@@ -335,7 +338,8 @@ export class SaasTenantPlanController extends Controller(
   @Delete("/checkout")
   async cancelCheckout(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
-    @Parameter(CHECKOUT_OPERATION_PARAM, "query") operationId: unknown,
+    @Parameter(CHECKOUT_OPERATION_PARAM, "query")
+    operationId: QueryParameterValue,
     @Context() ctx: RequestContext,
     @TenantScopedModel(TenantSubscriptionModel)
     tenantSubscriptionModel: TenantSubscriptionModel,
@@ -345,7 +349,7 @@ export class SaasTenantPlanController extends Controller(
       cancelPendingCheckout(
         await tenantSubscriptionModel.findOne(),
         tenantSubscriptionModel,
-        typeof operationId === "string" && operationId ? operationId : null,
+        isString(operationId) && operationId ? operationId : null,
       ),
     );
   }
@@ -359,8 +363,8 @@ export class SaasTenantPlanController extends Controller(
   @Get("/preview")
   async previewChange(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
-    @Parameter("planId", "query") planId: unknown,
-    @Parameter("country", "query") country: unknown,
+    @Parameter("planId", "query") planId: QueryParameterValue,
+    @Parameter("country", "query") country: QueryParameterValue,
     @Context() ctx: RequestContext,
     @TenantScopedModel(TenantBillingInfoModel)
     tenantBillingInfoModel: TenantBillingInfoModel,
@@ -415,6 +419,13 @@ export class SaasTenantPlanController extends Controller(
     });
   }
 
+  /**
+   * Changes the plan of the workspace. A cancelled workspace is blocked too;
+   * choosing a plan is how its owner brings it back, on any plan, the one it
+   * was cancelled on included. Guarded scheduling must validate before any
+   * provider mutation, including the cosmetic customer locale update; billing
+   * page reads still sync the locale.
+   */
   @Put("/")
   async changePlan(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
@@ -431,8 +442,6 @@ export class SaasTenantPlanController extends Controller(
     const subscription = await tenantSubscriptionModel.findOne();
     this.assertPlanChangeAllowed(subscription, user);
     const isRecovery = canStartFirstPaidSubscription(subscription);
-    // A cancelled workspace is blocked too; choosing a plan is how its owner
-    // brings it back, on any plan, the one it was cancelled on included.
     const choosesAnew = isRecovery || canResubscribe(subscription);
     if (!choosesAnew) await AssertTenantAccess(user._id, tenantId);
     const billingInfo = await tenantBillingInfoModel.findOne();
@@ -458,8 +467,6 @@ export class SaasTenantPlanController extends Controller(
     if (!isRecovery && startsPaidCheckout(newPlan, subscription)) {
       assertBillingIdentityComplete(billingInfo);
     }
-    // Guarded scheduling must validate before any provider mutation, including
-    // this cosmetic customer update. Billing page reads still sync the locale.
     if (!hasPlanChangePolicy() || !subscription?.stripeSubscriptionId) {
       await syncCustomerPreferredLocale(
         subscription?.stripeCustomerId,
@@ -527,6 +534,15 @@ export class SaasTenantPlanController extends Controller(
     return this.changeExistingSubscription(request, subscription);
   }
 
+  /**
+   * Leaving a live Stripe subscription for a cheaper, or free, plan always
+   * waits for the cycle the customer already paid for to run out. A deferred
+   * change is refused while the subscription is past due: the access gate only
+   * blocks suspended workspaces, but past_due is still a dunning episode over
+   * an unpaid invoice, and parking a downgrade, a free target especially,
+   * would let the workspace land past it when Stripe cancels at cycle end. Same
+   * rule as the suspended state: settle first, downgrade after.
+   */
   private async changeExistingSubscription(
     request: PlanChangeRequest,
     subscription: TenantSubscription,
@@ -536,8 +552,6 @@ export class SaasTenantPlanController extends Controller(
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
 
-    // Leaving a live Stripe subscription for a cheaper — or free — plan always
-    // waits for the cycle the customer already paid for to run out.
     const isDeferred =
       !!subscription.stripeSubscriptionId &&
       (!isPaidPlan(newPlan) ||
@@ -547,11 +561,6 @@ export class SaasTenantPlanController extends Controller(
           await countSeatsToCompare(tenantId, [currentPlan, newPlan]),
         ));
     if (isDeferred) {
-      // The access gate only blocks suspended workspaces; past_due is still a
-      // dunning episode over an unpaid invoice, and parking a downgrade — a
-      // free target especially — would let the workspace land past it when
-      // Stripe cancels at cycle end. Same rule as the suspended state: settle
-      // first, downgrade after.
       assert(
         subscription.status !== PAST_DUE_STATUS,
         HTTP_CONFLICT,

@@ -4,10 +4,10 @@
 
 <a href="https://www.npmjs.com/package/@antelopejs/dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
 <a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
-<a href="https://discord.gg/sjK28QHrA7"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000"></a>
+<a href="https://discord.gg/g4pFt6eXqu"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000"></a>
 <a href="https://dms.antelopejs.com/docs/modules/saas"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000"></a>
 
-Sign-up, plans, Stripe billing and a back office for a multi-tenant AntelopeJS DMS.
+Sign-up, plans, Stripe billing and a back office for a multi-tenant [AntelopeJS DMS](https://github.com/AntelopeJS/dms).
 
 </div>
 
@@ -66,7 +66,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 | --- | --- |
 | `@antelopejs/dms` | `>=0.11.0 <1.0.0` |
 | `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
-| `@antelopejs/dms-frontend` (renderer) | `>=0.9.0 <0.10.0` |
+| `@antelopejs/dms-frontend` (renderer) | `>=0.9.1 <0.10.0` |
 | `@antelopejs/interface-dms-saas` | `>=0.6.0 <0.7.0` |
 | Stripe API version | `2026-08-26.dahlia` |
 
@@ -107,9 +107,8 @@ cd packages/dms-saas
 pnpm build
 pnpm dev            # playground backend on http://localhost:5010
 pnpm frontend:dev   # dashboard on http://localhost:3001, in a second terminal
-pnpm lint
-pnpm typecheck
-pnpm test
+pnpm --dir ../.. run checks  # typecheck, lint, format, knip, tests, size, ratchet
+pnpm test:unit     # the Vitest suite, against an in-memory MongoDB
 pnpm test:frontend  # builds the client, SSR and e-mail bundles in a temporary workspace and typechecks them
 ```
 

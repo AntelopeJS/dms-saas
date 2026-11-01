@@ -13,7 +13,12 @@ import type {
 const DRAIN_WAIT_MS = 2000;
 const DRAIN_POLL_MS = 50;
 
-/** This coordinator must not itself be admitted as an inventory writer. */
+/**
+ * This coordinator must not itself be admitted as an inventory writer. Each
+ * poll observes the tenant lifecycle before it validates the change's intent:
+ * an abort invalidates the observed revision through resume, even if
+ * acquisition has not happened yet.
+ */
 export async function drainPlanInventory(
   tenantId: string,
   model: TenantSubscriptionModel,
@@ -21,8 +26,6 @@ export async function drainPlanInventory(
 ): Promise<TenantSubscription> {
   const deadline = Date.now() + DRAIN_WAIT_MS;
   while (Date.now() <= deadline) {
-    // Observation precedes intent validation. Abort invalidates this observed
-    // revision through resume, even if acquisition has not happened yet.
     const inventory = await observeTenantLifecycle(tenantId);
     const current = await model.findOne();
     if (

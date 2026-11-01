@@ -1,8 +1,3 @@
-// The owner cancelling the subscription at the end of its cycle, and changing
-// their mind before it ends. Stripe holds the cancellation itself
-// (`cancel_at_period_end`); its `customer.subscription.deleted` webhook moves
-// the workspace to `cancelled` when the cycle runs out.
-
 import { randomUUID } from "node:crypto";
 import {
   Context,
@@ -101,6 +96,12 @@ async function writeCancellation(
   return { cancelAt: shouldCancel ? periodEnd : null };
 }
 
+/**
+ * The owner cancelling the subscription at the end of its cycle, and changing
+ * their mind before it ends. Stripe holds the cancellation itself
+ * (`cancel_at_period_end`); its `customer.subscription.deleted` webhook moves
+ * the workspace to `cancelled` when the cycle runs out.
+ */
 export class SaasTenantPlanCancellationController extends Controller(
   "/api/saas/tenant/plan/cancellation",
 ) {

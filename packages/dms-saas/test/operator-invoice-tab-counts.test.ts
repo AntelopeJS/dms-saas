@@ -1,6 +1,10 @@
 import type { RequestContext } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
+import {
+  GetDataControllerMeta,
+  type DataControllerCallback,
+  type DataControllerCallbackWithOptions,
+} from "@antelopejs/interface-data-api";
 import type { Parameters } from "@antelopejs/interface-data-api/components";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
@@ -23,7 +27,9 @@ beforeAll(() => {
     {
       countWithSearch: vi.fn(
         async (
-          _controller: unknown,
+          _controller:
+            | DataControllerCallback
+            | DataControllerCallbackWithOptions,
           _ctx: RequestContext,
           params: Parameters.ListParameters,
         ) => {
@@ -42,7 +48,7 @@ describe("operator invoices tab counters", () => {
     const ctx = Object.assign(
       { url: new URL("https://example.test/api/saas/tables/invoices") },
       { dataAPIEntry: entry },
-    ) as unknown as RequestContext;
+    );
 
     const counts = await entry.callback.func.call(
       controller,

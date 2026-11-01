@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { getStripeClient } from "./client";
 import { readInvoiceSubscriptionId, readStripeId } from "./payload-shapes";
+import { isString } from "../utils/primitive-guards";
 
 const SUBSCRIPTION_UPDATE_REASON = "subscription_update";
 const OPEN_STATUS = "open";
@@ -64,7 +65,9 @@ export async function discardPendingUpdate(
  * Whether a failed payment belongs to a plan change Stripe holds as a pending
  * update, which is no debt: the change applies only once that invoice is paid
  * and is dropped with it otherwise. Its first attempt fails whenever the card
- * asks for 3D Secure, while the owner is still passing the challenge.
+ * asks for 3D Secure, while the owner is still passing the challenge. An
+ * invoice paid or voided since counts as settled: the update was applied or
+ * dropped either way.
  */
 export async function isPendingUpdatePayment(
   invoice: Stripe.Invoice,
@@ -78,8 +81,6 @@ export async function isPendingUpdatePayment(
   );
   const latest = subscription.latest_invoice;
   if (readStripeId(latest) !== invoice.id) return false;
-  // Paid or voided since: the update was applied or dropped either way.
-  const isSettled =
-    typeof latest === "object" && latest?.status !== OPEN_STATUS;
+  const isSettled = !isString(latest) && latest?.status !== OPEN_STATUS;
   return !!subscription.pending_update || isSettled;
 }

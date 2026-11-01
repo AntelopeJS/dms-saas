@@ -9,8 +9,10 @@ import { publicNavBar } from "../nav-bar";
 
 const DOCUMENT_FIELD = "termsOfUse";
 
-// Read before sign-up, from the auth footer and the terms checkbox: the console
-// layout's authenticated calls would bounce an anonymous visitor to the login.
+/**
+ * Read before sign-up, from the auth footer and the terms checkbox: the console
+ * layout's authenticated calls would bounce an anonymous visitor to the login.
+ */
 @RegisterPage()
 export class SaasTermsOfUsePage extends PageController(
   "terms-of-use",

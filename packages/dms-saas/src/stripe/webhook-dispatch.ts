@@ -24,9 +24,19 @@ import {
   handleCreditNoteVoided,
 } from "./webhook-credit-notes";
 
-type WebhookHandler = (event: Stripe.Event) => Promise<void>;
+/** Each Stripe event, by its type. */
+type StripeEventsByType = {
+  [Type in Stripe.Event.Type]: Extract<Stripe.Event, { type: Type }>;
+};
 
-const HANDLERS: Record<string, WebhookHandler> = {
+/** A handler takes the event of the type it is registered for. */
+type WebhookHandlers = {
+  [Type in Stripe.Event.Type]?: (
+    event: StripeEventsByType[Type],
+  ) => Promise<void>;
+};
+
+const HANDLERS: WebhookHandlers = {
   "checkout.session.completed": handleCheckoutSessionCompleted,
   "checkout.session.expired": handleCheckoutSessionExpired,
   "invoice.created": handleInvoiceCreated,
@@ -45,6 +55,20 @@ const HANDLERS: Record<string, WebhookHandler> = {
     handleSubscriptionPendingUpdateApplied,
 };
 
+/**
+ * The registered handler of an event's type, bound to the event.
+ *
+ * @param type The event's type
+ * @param event The event
+ */
+function handlerFor<Type extends Stripe.Event.Type>(
+  type: Type,
+  event: StripeEventsByType[Type],
+): (() => Promise<void>) | undefined {
+  const handler = HANDLERS[type];
+  return handler && (() => handler(event));
+}
+
 export async function dispatchStripeWebhookEvent(
   event: Stripe.Event,
 ): Promise<void> {
@@ -52,7 +76,7 @@ export async function dispatchStripeWebhookEvent(
   const claimed = await stripeWebhookEventModel.tryClaim(event.id, event.type);
   if (!claimed) return;
 
-  const handler = HANDLERS[event.type];
+  const handler = handlerFor(event.type, event);
   if (!handler) {
     await stripeWebhookEventModel.markResult(
       event.id,
@@ -64,7 +88,7 @@ export async function dispatchStripeWebhookEvent(
   }
 
   try {
-    await handler(event);
+    await handler();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await stripeWebhookEventModel.markResult(

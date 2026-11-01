@@ -128,7 +128,7 @@ async function toPlanView(
   locale: string,
 ): Promise<TenantPlanView> {
   const resolved = await planModel.resolveInheritance(plan);
-  const featureValues: Record<string, unknown> = {};
+  const featureValues: TenantPlanView["featureValues"] = {};
   for (const entry of resolved.features) {
     if (!knownFeatureIds.has(entry.featureId)) continue;
     featureValues[entry.featureId] = entry.value;

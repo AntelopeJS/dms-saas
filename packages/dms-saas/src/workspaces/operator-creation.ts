@@ -18,6 +18,7 @@ import {
 import { parseFutureDate } from "../utils/parse-future-date";
 import { sendOwnerInvitationEmailInBackground } from "./owner-invitation-email";
 import { createDefaultMemberRole } from "./default-member-role";
+import { isString } from "../utils/primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 
@@ -72,8 +73,10 @@ interface SubscriptionTerms {
   freeUntil: Date | null;
 }
 
-// The owner meets the existing checkout path: a subscription waiting for its
-// first payment on the chosen plan, which the access gate holds closed.
+/**
+ * The owner meets the existing checkout path: a subscription waiting for its
+ * first payment on the chosen plan, which the access gate holds closed.
+ */
 const SUBSCRIPTION_TERMS: Record<
   WorkspaceAccessModel,
   (input: ValidatedWorkspaceInput) => SubscriptionTerms
@@ -91,9 +94,7 @@ const SUBSCRIPTION_TERMS: Record<
 };
 
 function asNonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : null;
+  return isString(value) && value.trim().length > 0 ? value.trim() : null;
 }
 
 function asAccessModel(value: unknown): WorkspaceAccessModel | null {
@@ -185,13 +186,15 @@ async function insertSubscription(
   ]);
 }
 
+/**
+ * The owner has no account yet, so the operator's language is the best guess at
+ * theirs; the email follows the language stored on the invitation.
+ */
 async function addOwner(
   tenantId: string,
   input: ValidatedWorkspaceInput,
   operator: User,
 ): Promise<InviteUserToTenantResult> {
-  // The owner has no account yet, so the operator's language is the best
-  // guess at theirs; the email follows the language stored on the invitation.
   return inviteUserToTenant({
     tenantId,
     email: input.ownerEmail,
@@ -224,7 +227,12 @@ function emailOwnerInvitation(
   return "sending";
 }
 
-/** Creates the workspace, its subscription and its owner (added or invited). */
+/**
+ * Creates the workspace, its subscription and its owner (added or invited).
+ * The owner has no account yet: their invitation is in the operator's
+ * language, and so is the role they invite their own members with. The e-mail
+ * goes last, as it is about a workspace complete with its plan.
+ */
 export async function createWorkspaceForOwner(
   input: ValidatedWorkspaceInput,
   operator: User,
@@ -234,12 +242,9 @@ export async function createWorkspaceForOwner(
     { name: input.name, createdAt: now, updatedAt: now },
   ]);
   const owner = await addOwner(tenantId, input, operator);
-  // The owner has no account yet: their invitation is in the operator's
-  // language, and so is the role they invite their own members with.
   await createDefaultMemberRole(tenantId, operator.language);
   await insertSubscription(tenantId, input, operator);
   await recomputeTenantBillingState(tenantId);
-  // Last: the e-mail is about a workspace complete with its plan.
   const invitationEmail = emailOwnerInvitation(
     tenantId,
     owner,

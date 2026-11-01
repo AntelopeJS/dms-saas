@@ -5,6 +5,7 @@ import {
   creditAllowance,
   issueCreditNoteBodySchema,
   sumIssuedCredits,
+  type CreditableInvoice,
 } from "../src/operator-billing";
 
 const TOTAL = 112_700;
@@ -38,7 +39,7 @@ describe("credit allowance", () => {
     ]);
   });
 
-  it.each([
+  it.each<[CreditableInvoice["status"], string]>([
     ["draft", "draft"],
     ["void", "void"],
     ["uncollectible", "uncollectible"],
