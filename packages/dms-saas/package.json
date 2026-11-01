@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "@antelopejs/core": "1.17.1",
-    "@antelopejs/dms": "file:../../.campaign/tgz/antelopejs-dms-e0787e6.tgz",
+    "@antelopejs/dms": "file:../../.campaign/tgz/antelopejs-dms-883e20d.tgz",
     "@antelopejs/dms-frontend": ">=0.9.1 <0.10.0",
     "@antelopejs/mongodb": "file:../../.campaign/tgz/antelopejs-mongodb-db4b449.tgz",
     "@total-typescript/shoehorn": "^0.1.2",
