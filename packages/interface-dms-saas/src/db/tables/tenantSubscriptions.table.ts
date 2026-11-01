@@ -102,21 +102,8 @@ class DunningClockModifier extends Modifier {
  * running. Bulk table updates bypass modifiers and manage the field
  * themselves.
  */
-type AttachFieldModifier = (
-  tableClass: new () => object,
-  modifier: new () => Modifier,
-  field: string,
-  // oxlint-disable-next-line anti-slop/no-object-parameters -- mirrors the shape the database decorators declare, where the value is opaque to this side
-  options: object,
-) => void;
-
 export const DunningClock = MakePropertyDecorator((target, propertyKey) => {
-  (attachModifier as AttachFieldModifier)(
-    target.constructor as new () => object,
-    DunningClockModifier,
-    propertyKey as string,
-    {},
-  );
+  attachModifier(target.constructor, DunningClockModifier, propertyKey, {});
 });
 
 /** Subscription and payment-provider state for one tenant. */
