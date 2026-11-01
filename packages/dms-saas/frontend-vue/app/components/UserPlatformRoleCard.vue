@@ -14,6 +14,7 @@ const { $authFetch } = useAuthFetch()
 const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
+const consumeRefusal = useReadOnlyRefusal()
 const detail = useUserDetail(() => props.routeParams)
 const user = computed(() => detail.data.value)
 const isOpening = ref(false)
@@ -37,6 +38,7 @@ async function openConfirm(): Promise<void> {
 			onConfirm: () => runChange(kind),
 		})
 	} catch (error) {
+		if (consumeRefusal(error)) return
 		toast.add({
 			color: 'error',
 			title: resolveApiError(error, `${I18N}.confirm_failed`),

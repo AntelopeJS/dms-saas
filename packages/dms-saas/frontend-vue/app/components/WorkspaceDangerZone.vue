@@ -16,6 +16,7 @@ const { t, locale } = useI18n()
 const { $authFetch } = useAuthFetch()
 const { confirm } = useConfirm()
 const { resolveApiError } = useApiErrorMessage()
+const consumeRefusal = useReadOnlyRefusal()
 const toast = useToast()
 // The deletion asks for the name as it is now: a rename on this page reads
 // the page's data again, this overview included.
@@ -108,6 +109,7 @@ async function deleteWorkspace(view: WorkspaceOverview): Promise<void> {
 			body: { confirmName: view.name },
 		})
 	} catch (failure) {
+		if (consumeRefusal(failure)) throw failure
 		const message = resolveApiError(failure, `${KEYS}.error.delete`)
 		if (readApiErrorKey(failure) === CONFIRMATION_MISMATCH) {
 			throw new ConfirmTextError(message)

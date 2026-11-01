@@ -38,6 +38,7 @@ const { t, locale } = useI18n()
 const toast = useToast()
 const { confirm } = useConfirm()
 const { resolveApiError } = useApiErrorMessage()
+const consumeRefusal = useReadOnlyRefusal()
 
 const targetId = computed(() => props.routeParams?.id ?? '')
 const baseUrl = computed(
@@ -120,6 +121,7 @@ async function submit(): Promise<void> {
 		// The note is listed before the button comes back.
 		await refreshPageBlocks()
 	} catch (error) {
+		if (consumeRefusal(error)) return
 		toast.add({
 			color: 'error',
 			icon: 'i-ph-warning',

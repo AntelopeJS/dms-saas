@@ -37,6 +37,7 @@ const { t } = useI18n()
 const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
 const { resolveApiError } = useApiErrorMessage()
+const consumeRefusal = useReadOnlyRefusal()
 
 const reading = ref<StripeReading | null>(null)
 const loadFailed = ref(false)
@@ -61,7 +62,8 @@ async function load(): Promise<void> {
 	loadFailed.value = false
 	try {
 		reading.value = await stripeRead.read()
-	} catch {
+	} catch (error) {
+		if (consumeRefusal(error)) return
 		loadFailed.value = true
 	}
 }
@@ -83,6 +85,7 @@ async function openSettlement(kind: UncertainResolution): Promise<void> {
 			onConfirm: () => settle(kind),
 		})
 	} catch (error) {
+		if (consumeRefusal(error)) return
 		toast.add({
 			color: 'error',
 			title: resolveApiError(error, `${DETAIL}.settle_failed`),

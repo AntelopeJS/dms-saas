@@ -60,6 +60,7 @@ const config = useDmsRuntimeConfig()
 const { t, te } = useI18n()
 const publicFetch = usePublicFetch()
 const { resolveApiError } = useApiErrorMessage()
+const consumeRefusal = useReadOnlyRefusal()
 const saasConfig = config.public.dmsSaas as
 	| DmsSaasPublicRuntimeConfig
 	| undefined
@@ -168,6 +169,7 @@ async function loadPendingRegistration(): Promise<void> {
 			name: pending.value.name,
 		})
 	} catch (error) {
+		if (consumeRefusal(error)) return
 		entryFailure.value = classifyEntryFailure(error)
 		entryErrorMessage.value = resolveApiError(
 			error,
@@ -276,7 +278,7 @@ onMounted(async () => {
 	// token or an account that already owns a workspace must fail here, not
 	// after a card has been entered.
 	await loadPendingRegistration()
-	if (entryFailure.value) return
+	if (entryFailure.value || !pending.value) return
 	void plan.load()
 	await mountPaymentElement()
 })

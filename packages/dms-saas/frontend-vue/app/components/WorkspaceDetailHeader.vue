@@ -25,6 +25,7 @@ const WORKSPACE_HOME = '/'
 const tenantId = props.routeParams?.id ?? ''
 const { t, locale } = useI18n()
 const toast = useToast()
+const consumeRefusal = useReadOnlyRefusal()
 const route = useDmsRoute()
 const router = useDmsRouter()
 const { statusView } = useSaasStatus()
@@ -66,7 +67,8 @@ async function copyLink(): Promise<void> {
 async function openWorkspace(): Promise<void> {
 	try {
 		await useTenantSwitch(tenantId, WORKSPACE_HOME)
-	} catch {
+	} catch (error) {
+		if (consumeRefusal(error)) return
 		toast.add({
 			title: t(`${D}.open_error`),
 			color: 'error',

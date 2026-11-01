@@ -12,6 +12,7 @@ const RECOUNT_DELAY_MS = 500
  */
 export function useSegmentPreview(segmentId: () => string | undefined) {
 	const { $authFetch } = useAuthFetch()
+	const consumeRefusal = useReadOnlyRefusal()
 	const draft = useSegmentDraft()
 	const hasFailed = ref(false)
 	const recountedAt = ref<Date | null>(null)
@@ -41,7 +42,8 @@ export function useSegmentPreview(segmentId: () => string | undefined) {
 			draft.preview.value = preview
 			recountedAt.value = new Date()
 			hasFailed.value = false
-		} catch {
+		} catch (error) {
+			if (consumeRefusal(error)) return
 			if (request === latestRequest) hasFailed.value = true
 		} finally {
 			if (request === latestRequest) draft.isRecounting.value = false

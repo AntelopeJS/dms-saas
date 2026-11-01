@@ -22,7 +22,7 @@ export function useWorkspaceActions(tenantId: string) {
 	const { confirm } = useConfirm()
 	const { confirmFrom } = useConfirmFrom()
 	const toast = useToast()
-	const { resolveApiError } = useApiErrorMessage()
+	const { notifyApiError } = useApiErrorMessage()
 	const base = `/api/saas/workspaces/${tenantId}`
 	const impactRead = useOnDemandRead<SuspensionImpact>(
 		() => `${base}/suspension-impact`,
@@ -47,11 +47,7 @@ export function useWorkspaceActions(tenantId: string) {
 			})
 			refreshPageBlocks()
 		} catch (error) {
-			toast.add({
-				title: resolveApiError(error, `${D}.error.prepare`),
-				color: 'error',
-				icon: 'i-ph-warning-circle',
-			})
+			notifyApiError(error, `${D}.error.prepare`)
 		}
 	}
 

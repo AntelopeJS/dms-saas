@@ -22,7 +22,7 @@ const DRAFT_FIELDS: (keyof BillingIdentityDraft)[] = [
 
 const toast = useToast()
 const { t, locale } = useI18n()
-const { resolveApiError } = useApiErrorMessage()
+const { notifyApiError } = useApiErrorMessage()
 const identity = useBillingIdentity()
 const info = useBillingInfo()
 const { data: billingStatus } = useBillingStatus()
@@ -95,11 +95,7 @@ async function save(): Promise<void> {
 			icon: 'i-ph-check-circle',
 		})
 	} catch (error) {
-		toast.add({
-			title: resolveApiError(error, `${KEY_PREFIX}.save_error`),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
+		notifyApiError(error, `${KEY_PREFIX}.save_error`)
 	} finally {
 		isSaving.value = false
 	}

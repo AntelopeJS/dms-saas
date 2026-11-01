@@ -1,9 +1,9 @@
 /** The i18n key the server answered a failed `$authFetch` with, if any. */
 export function readApiErrorKey(error: unknown): string | undefined {
-  const data = (error as { data?: unknown } | undefined)?.data;
-  if (typeof data === "string") return data;
-  const message = (data as { message?: unknown } | undefined)?.message;
-  return typeof message === "string" ? message : undefined;
+	const data = (error as { data?: unknown } | undefined)?.data
+	if (typeof data === 'string') return data
+	const message = (data as { message?: unknown } | undefined)?.message
+	return typeof message === 'string' ? message : undefined
 }
 
 /**
@@ -16,21 +16,35 @@ export function readApiErrorKey(error: unknown): string | undefined {
  * `error.message` only holds the generic "POST <url> 409" text — never show
  * that to the user. We translate the server key when it exists, otherwise fall
  * back to a caller-provided generic key.
+ * Marked demo refusals show the core notice once and resolve to an empty message.
  */
 export function useApiErrorMessage() {
-  const nuxtApp = useDmsApp();
+	const nuxtApp = useDmsApp()
+	const toast = useToast()
+	const consumeRefusal = useReadOnlyRefusal()
 
-  /** Translated server message, or `undefined` when the server sent no usable key. */
-  function resolveServerMessage(error: unknown): string | undefined {
-    const { t, te } = nuxtApp.$i18n;
-    const key = readApiErrorKey(error);
-    return key && te(key) ? t(key) : undefined;
-  }
+	/** Translated server message, or `undefined` when the server sent no usable key. */
+	function resolveServerMessage(error: unknown): string | undefined {
+		const { t, te } = nuxtApp.$i18n
+		const key = readApiErrorKey(error)
+		return key && te(key) ? t(key) : undefined
+	}
 
-  /** Translated server message, or the caller's generic fallback key. */
-  function resolveApiError(error: unknown, fallbackKey: string): string {
-    return resolveServerMessage(error) ?? nuxtApp.$i18n.t(fallbackKey);
-  }
+	/** An empty message for a demo refusal, otherwise the translated server message or fallback. */
+	function resolveApiError(error: unknown, fallbackKey: string): string {
+		if (consumeRefusal(error)) return ''
+		return resolveServerMessage(error) ?? nuxtApp.$i18n.t(fallbackKey)
+	}
 
-  return { resolveApiError, resolveServerMessage };
+	/** Shows the local error toast unless the read-only demo owns the notice. */
+	function notifyApiError(error: unknown, fallbackKey: string): void {
+		if (consumeRefusal(error)) return
+		toast.add({
+			title: resolveApiError(error, fallbackKey),
+			color: 'error',
+			icon: 'i-ph-warning-circle',
+		})
+	}
+
+	return { resolveApiError, resolveServerMessage, notifyApiError }
 }

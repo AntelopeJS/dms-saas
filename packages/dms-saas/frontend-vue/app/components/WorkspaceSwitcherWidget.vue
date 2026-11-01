@@ -14,6 +14,7 @@ const KEYS = 'saas.workspace.switcher'
 const SEARCH_THRESHOLD = 6
 const PAST_DUE_STATUS = 'past_due'
 const toast = useToast()
+const consumeRefusal = useReadOnlyRefusal()
 const { t } = useI18n()
 const { statusView } = useSaasStatus()
 
@@ -98,8 +99,9 @@ async function selectWorkspace(workspace: MyWorkspace): Promise<void> {
 	switchingId.value = workspace._id
 	try {
 		await useTenantSwitch(workspace._id)
-	} catch {
+	} catch (error) {
 		switchingId.value = null
+		if (consumeRefusal(error)) return
 		reportSwitchFailure(workspace)
 	}
 }
@@ -122,8 +124,8 @@ async function onWorkspaceCreated(
 		// Lands on the homepage rather than reloading the screen the creation
 		// was started from — that screen belongs to the previous workspace.
 		await useTenantSwitch(tenantId, HOME_PATH)
-	} catch {
-		reportSwitchFailure(name)
+	} catch (error) {
+		if (!consumeRefusal(error)) reportSwitchFailure(name)
 		await load()
 	}
 }

@@ -20,7 +20,8 @@ const PREVIEW_DEBOUNCE_MS = 400
 
 const toast = useToast()
 const { t, locale } = useI18n()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveApiError, notifyApiError } = useApiErrorMessage()
+const consumeRefusal = useReadOnlyRefusal()
 const identity = useBillingIdentity()
 const { changePlan, previewChange } = useTenantPlanChanges()
 const { offerFor: offerPendingCheckout } = usePendingCheckout()
@@ -97,7 +98,8 @@ async function loadIdentity(): Promise<void> {
 	hasTriedSubmit.value = false
 	try {
 		draft.value = toBillingIdentityDraft(await identity.load())
-	} catch {
+	} catch (error) {
+		if (consumeRefusal(error)) return
 		loadFailed.value = true
 	} finally {
 		isLoading.value = false
@@ -186,7 +188,7 @@ async function confirm(): Promise<void> {
 			open.value = false
 			return
 		}
-		notifyError(resolveApiError(error, 'saas.workspace.plan.change_error'))
+		notifyApiError(error, 'saas.workspace.plan.change_error')
 	} finally {
 		isSubmitting.value = false
 	}

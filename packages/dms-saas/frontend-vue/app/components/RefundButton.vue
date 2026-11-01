@@ -58,6 +58,7 @@ const toast = useToast()
 const { t, locale } = useI18n()
 const { confirm } = useConfirm()
 const { resolveApiError } = useApiErrorMessage()
+const consumeRefusal = useReadOnlyRefusal()
 const { formatMinorUnits } = useMoneyFormat()
 const billingStatus = useBillingStatus()
 const tenantPlan = useTenantPlan()
@@ -88,7 +89,8 @@ const guarantee = useApiData<RefundGuarantee>(
 				$authFetch<CurrentWorkspace>(CURRENT_WORKSPACE_ENDPOINT, { signal }),
 			])
 			return { ...read, eligibility, retentionDays: workspace.retentionDays }
-		} catch {
+		} catch (error) {
+			if (consumeRefusal(error)) return read
 			return { ...read, hasFailed: true }
 		}
 	},
@@ -223,6 +225,7 @@ async function requestRefund(): Promise<void> {
 			try {
 				await submitRefund()
 			} catch (error) {
+				if (consumeRefusal(error)) throw error
 				throw new Error(resolveApiError(error, `${KEY_PREFIX}.error`))
 			}
 		},

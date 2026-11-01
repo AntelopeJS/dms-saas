@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "@antelopejs/core": "1.17.1",
-    "@antelopejs/dms": "^0.12.1",
+    "@antelopejs/dms": ">=0.12.1 <1.0.0",
     "@antelopejs/dms-frontend": ">=0.9.1 <0.10.0",
     "@antelopejs/mongodb": "1.5.0",
     "@total-typescript/shoehorn": "^0.1.2",

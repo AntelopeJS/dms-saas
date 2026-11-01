@@ -16,10 +16,9 @@ const TIME_FORMAT: Intl.DateTimeFormatOptions = {
 
 const { t, locale } = useI18n()
 const { user } = useCurrentUser()
-const { resolveApiError } = useApiErrorMessage()
+const { notifyApiError: notifyError } = useApiErrorMessage()
 const route = useDmsRoute()
 const router = useDmsRouter()
-const toast = useToast()
 const { state, running, load, start, download } = useExportHistory()
 
 /** The export this visit watched finish, shown until the page is left. */
@@ -34,7 +33,11 @@ const runningStatus = useApiData<ExportJobStatus>(
 		running.value
 			? `${EXPORT_STATUS_ENDPOINT}/${encodeURIComponent(running.value.jobId)}`
 			: null,
-	{ server: false, refreshInterval: POLL_INTERVAL_MS, refreshOnPageRefresh: false },
+	{
+		server: false,
+		refreshInterval: POLL_INTERVAL_MS,
+		refreshOnPageRefresh: false,
+	},
 )
 
 const email = computed(() => user.value?.email ?? '')
@@ -68,14 +71,6 @@ function errorStatus(error: unknown): number | undefined {
 	const candidate = error as HttpErrorLike | null
 	const status = candidate?.statusCode ?? candidate?.status
 	return typeof status === 'number' ? status : undefined
-}
-
-function notifyError(error: unknown, fallbackKey: string): void {
-	toast.add({
-		title: resolveApiError(error, fallbackKey),
-		color: 'error',
-		icon: 'i-ph-warning-circle',
-	})
 }
 
 async function requestExport(): Promise<void> {

@@ -41,6 +41,7 @@ const toast = useToast()
 const { $authFetch } = useAuthFetch()
 const { user, clear: clearSession } = useDmsUserSession()
 const { resolveApiError } = useApiErrorMessage()
+const consumeRefusal = useReadOnlyRefusal()
 const { formatMinorUnits } = useMoneyFormat()
 const { statusView } = useSaasStatus()
 
@@ -175,6 +176,7 @@ async function openPortal(): Promise<void> {
 		})
 		window.location.href = session.url
 	} catch (error) {
+		if (consumeRefusal(error)) return
 		toast.add({
 			color: 'error',
 			title: t('saas.public.suspended.owner.portal_failed'),

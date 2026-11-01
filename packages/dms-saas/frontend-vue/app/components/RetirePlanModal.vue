@@ -43,6 +43,7 @@ const planCatalog = usePlanCatalog()
 const { t, locale } = useI18n()
 const toast = useToast()
 const { processApiMessage } = useTranslation()
+const consumeRefusal = useReadOnlyRefusal()
 const { statusView } = useSaasStatus()
 
 const planId = computed(() => props.rowData?._id ?? '')
@@ -147,6 +148,7 @@ async function loadImpact(): Promise<void> {
 		impact.value = loaded
 		features.value = planCatalog.data.value?.features ?? []
 	} catch (error) {
+		if (consumeRefusal(error)) return
 		loadError.value = processApiMessage(readError(error))
 	} finally {
 		isLoading.value = false
@@ -165,6 +167,7 @@ async function prepare(): Promise<void> {
 		preparation.value = await preparationRead.read()
 	} catch (error) {
 		preparation.value = null
+		if (consumeRefusal(error)) return
 		prepareError.value = processApiMessage(readError(error))
 	} finally {
 		isPreparing.value = false
@@ -206,6 +209,7 @@ async function retire(): Promise<void> {
 		props.onSuccessCallback?.()
 		await navigateDms(`${MIGRATIONS_PAGE_URL}/${response.migrationId}`)
 	} catch (error) {
+		if (consumeRefusal(error)) return
 		const message = processApiMessage(readError(error))
 		if (isTypedRefusal(error)) typedError.value = message
 		else submitError.value = message

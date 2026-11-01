@@ -33,7 +33,7 @@ const { t } = useI18n()
 const toast = useToast()
 const { confirm } = useConfirm()
 const { $authFetch } = useAuthFetch()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveApiError, notifyApiError } = useApiErrorMessage()
 
 const preview = ref<CreditNotePreview | null>(null)
 const isLoading = ref(true)
@@ -166,11 +166,7 @@ async function creditDirectly(): Promise<void> {
 	try {
 		announce(await issue())
 	} catch (error) {
-		toast.add({
-			title: resolveApiError(error, `${TEXT}.error`),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
+		notifyApiError(error, `${TEXT}.error`)
 	} finally {
 		isSubmitting.value = false
 	}
