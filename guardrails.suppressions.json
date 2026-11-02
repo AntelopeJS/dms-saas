@@ -2,10 +2,10 @@
   "rules": {
     "anti-slop/no-chained-type-assertions": 0,
     "anti-slop/no-object-parameters": 1,
+    "anti-slop/no-unknown-parameters": 2,
     "import/no-cycle": 2,
     "typescript/no-misused-spread": 1,
-    "vue/no-v-html": 1,
-    "anti-slop/no-unknown-parameters": 2
+    "vue/no-v-html": 1
   },
   "tsExpectError": 4,
   "tsIgnore": 0,
@@ -19,5 +19,6 @@
     "typescript/unbound-method for packages/dms-saas/test/**": 1,
     "vue/multi-word-component-names for packages/dms-saas/frontend-vue/**/*.ts": 1,
     "vue/multi-word-component-names for packages/dms-saas/frontend-vue/**/*.vue": 1
-  }
+  },
+  "agentFiles": true
 }
