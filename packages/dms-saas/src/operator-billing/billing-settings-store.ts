@@ -64,7 +64,11 @@ export async function ensureBillingSettingsRow(
   model: BillingSettingsModel = GetModel(BillingSettingsModel),
 ): Promise<void> {
   if (await model.get(BILLING_SETTINGS_SINGLETON_ID)) return;
-  await model.insert([defaultBillingSettings(new Date())]);
+  try {
+    await model.insert([defaultBillingSettings(new Date())]);
+  } catch (error) {
+    if (!(await model.get(BILLING_SETTINGS_SINGLETON_ID))) throw error;
+  }
 }
 
 /**
