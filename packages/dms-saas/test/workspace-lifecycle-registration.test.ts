@@ -1,7 +1,8 @@
 import { fromPartial } from "@total-typescript/shoehorn";
-import path from "node:path";
-import { ImplementInterface } from "@antelopejs/interface-core";
-import type * as coreInternalModule from "@antelopejs/interface-core/internal";
+import {
+  ImplementInterface,
+  RunWithResponsibleModule,
+} from "@antelopejs/interface-core";
 import type * as declarationModule from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import { describe, expect, it, vi } from "vitest";
 import type * as implementationModule from "../src/implementations/dms-saas/tenant-lifecycle";
@@ -9,7 +10,6 @@ import type * as implementationModule from "../src/implementations/dms-saas/tena
 const CONSUMER_NAME = "cloud.consumer";
 
 interface LifecycleModules {
-  coreInternal: typeof coreInternalModule;
   declaration: typeof declarationModule;
   implementation: typeof implementationModule;
 }
@@ -17,7 +17,6 @@ interface LifecycleModules {
 async function loadModules(): Promise<LifecycleModules> {
   vi.resetModules();
   return {
-    coreInternal: await import("@antelopejs/interface-core/internal"),
     declaration:
       await import("@antelopejs/interface-dms-saas/tenant-lifecycle"),
     implementation:
@@ -128,30 +127,12 @@ describe("UnregisterTenantLifecycleConsumer", () => {
 
   it("removes consumers owned by an unloaded module", async () => {
     const modules = await loadAttachedModules();
-    const originalFolders = modules.coreInternal.internal.moduleByFolder;
-    modules.coreInternal.internal.moduleByFolder = [
-      {
-        dir: path.join(
-          process.cwd(),
-          "packages/interface-dms-saas/src/interfaces",
-        ),
-        id: "dms-saas",
-        isImplementor: true,
-      },
-      { dir: path.join(process.cwd(), "test"), id: "cloud" },
-    ];
-    try {
-      register(modules, CONSUMER_NAME);
+    RunWithResponsibleModule("cloud", () => register(modules, CONSUMER_NAME));
 
-      modules.declaration.internal.RegisterTenantLifecycleConsumer.unregisterModule(
-        "cloud",
-      );
+    modules.declaration.internal.RegisterTenantLifecycleConsumer.unregisterModule(
+      "cloud",
+    );
 
-      expect(modules.implementation.getWorkspaceLifecycleConsumers()).toEqual(
-        [],
-      );
-    } finally {
-      modules.coreInternal.internal.moduleByFolder = originalFolders;
-    }
+    expect(modules.implementation.getWorkspaceLifecycleConsumers()).toEqual([]);
   });
 });
