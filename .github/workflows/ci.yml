@@ -29,6 +29,7 @@ jobs:
     with:
       docs-files: |
         README.md
+        docs
         packages/dms-saas/README.md
         packages/dms-saas/docs
         packages/interface-dms-saas/README.md
