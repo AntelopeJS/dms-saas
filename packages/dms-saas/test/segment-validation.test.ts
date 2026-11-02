@@ -36,6 +36,12 @@ describe("segment rules validation", () => {
     });
   });
 
+  it("refuses a root that is both a workspace reference and a group", () => {
+    const root = `{"kind":"workspaceRef","logical":"and","quantifier":"any","conditions":{"logical":"and","conditions":[]}}`;
+
+    expectRefusal(() => parseSegmentConditions(root), "invalid_conditions");
+  });
+
   it("refuses a __proto__ key in the rules, as a string or an object", () => {
     const top = '{"logical":"and","conditions":[],"__proto__":{"x":1}}';
     const nested =

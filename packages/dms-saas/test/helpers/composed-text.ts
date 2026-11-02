@@ -16,18 +16,26 @@ const KEY_PREFIX = "$";
  * Every i18n key a route payload names: the keys of its composed texts, nested
  * ones included, and its `$`-prefixed strings.
  */
-function namedKeys(payload: unknown): string[] {
-  if (isString(payload)) {
-    return payload.startsWith(KEY_PREFIX) ? [payload.slice(1)] : [];
+function namedKeys(payload: object | string): string[] {
+  const keys: string[] = [];
+  const pending: unknown[] = [payload];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (isString(current)) {
+      if (current.startsWith(KEY_PREFIX)) keys.push(current.slice(1));
+    } else if (Array.isArray(current)) {
+      const children: unknown[] = current;
+      pending.push(...children.toReversed());
+    } else if (isRecord(current)) {
+      if (isString(current.key)) keys.push(current.key.replace(/^\$/, ""));
+      pending.push(...Object.values(current).toReversed());
+    }
   }
-  if (Array.isArray(payload)) return payload.flatMap(namedKeys);
-  if (!isRecord(payload)) return [];
-  const own = isString(payload.key) ? [payload.key.replace(/^\$/, "")] : [];
-  return [...own, ...Object.values(payload).flatMap(namedKeys)];
+  return keys;
 }
 
 /** The keys a payload names that a locale lacks. */
-export function missingKeys(payload: unknown, code: string): string[] {
+export function missingKeys(payload: object | string, code: string): string[] {
   const keys = flattenLocale(readLocale(code));
   return [...new Set(namedKeys(payload))].filter((key) => !keys.has(key));
 }

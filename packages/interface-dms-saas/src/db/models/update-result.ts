@@ -5,16 +5,16 @@ interface UpdateCounts {
   unchanged?: unknown;
 }
 
-function isUpdateCounts(result: unknown): result is UpdateCounts {
+function isUpdateCounts(result: number | UpdateCounts): result is UpdateCounts {
   return typeof result === "object" && result !== null;
 }
 
-function isRowCount(result: unknown): result is number {
+function isRowCount(result: number | UpdateCounts): result is number {
   return typeof result === "number";
 }
 
 /** Reports whether a conditional update selected a row across DB adapters. */
-export function hasSelectedRow(result: unknown): boolean {
+export function hasSelectedRow(result: number | UpdateCounts): boolean {
   if (isRowCount(result)) return result > 0;
   const counts = isUpdateCounts(result) ? result : undefined;
   return Boolean(

@@ -1,4 +1,5 @@
 import { HTTPResult } from "@antelopejs/interface-api";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { describe, expect, it } from "vitest";
 import {
   buildController,
@@ -14,7 +15,7 @@ useSuiteStripe();
 useRegistrationWorld();
 
 describe("extras validation on the public endpoint", () => {
-  async function expectRejection(extras: unknown, message: string) {
+  async function expectRejection(extras: JsonValue, message: string) {
     const registering = buildController().register(
       buildRegisterBody({ extras }),
     );
@@ -59,7 +60,7 @@ describe("extras validation on the public endpoint", () => {
 
   it("refuses a payload reaching for the object prototype", async () => {
     await expectRejection(
-      JSON.parse('{"profile":{"__proto__":{"admin":true}}}'),
+      { profile: Object.fromEntries([["__proto__", { admin: true }]]) },
       "saas.errors.registration.extras_invalid",
     );
   });
