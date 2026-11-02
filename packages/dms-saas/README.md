@@ -68,13 +68,13 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 
 | Package                                     | Supported                                                                       | Tested with                                                               |
 | ------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `@antelopejs/interface-api`                 | `file:../../.campaign/tgz/antelopejs-interface-api-2d1cc37.tgz`                 | `file:.campaign/tgz/antelopejs-interface-api-2d1cc37.tgz`                 |
+| `@antelopejs/interface-api`                 | `file:../../.campaign/tgz/antelopejs-interface-api-015a93a.tgz`                 | `file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz`                 |
 | `@antelopejs/interface-api-util`            | `file:../../.campaign/tgz/antelopejs-interface-api-util-639f38b.tgz`            | `file:.campaign/tgz/antelopejs-interface-api-util-639f38b.tgz`            |
-| `@antelopejs/interface-core`                | `file:../../.campaign/tgz/antelopejs-interface-core-6a8b526.tgz`                | `file:.campaign/tgz/antelopejs-interface-core-6a8b526.tgz`                |
-| `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-7a8719d.tgz`            | `file:.campaign/tgz/antelopejs-interface-data-api-7a8719d.tgz`            |
+| `@antelopejs/interface-core`                | `file:../../.campaign/tgz/antelopejs-interface-core-f7df541.tgz`                | `file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz`                |
+| `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-1c2d010.tgz`            | `file:.campaign/tgz/antelopejs-interface-data-api-1c2d010.tgz`            |
 | `@antelopejs/interface-database`            | `file:../../.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            | `file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            |
 | `@antelopejs/interface-database-decorators` | `file:../../.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz` | `file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz` |
-| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-c88750b.tgz`                 | `file:.campaign/tgz/antelopejs-interface-dms-c88750b.tgz`                 |
+| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-fae0f00.tgz`                 | `file:.campaign/tgz/antelopejs-interface-dms-fae0f00.tgz`                 |
 | `@antelopejs/interface-dms-automation`      | `file:../../.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz`      |
 | `@antelopejs/interface-dms-saas`            | `workspace:^`                                                                   | `0.6.1`                                                                   |
 

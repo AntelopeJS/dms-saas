@@ -60,3 +60,4 @@
 @antelopejs/core	package.json	pnpm.overrides	
 @antelopejs/core	pnpm-workspace.yaml	overrides	
 @antelopejs/core	packages/dms-saas/playground/package.json	pnpm.overrides	
+@antelopejs/interface-core	packages/interface-dms-saas/package.json	devDependencies	>=0.2.4 <1.0.0
