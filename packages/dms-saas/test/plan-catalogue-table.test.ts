@@ -76,7 +76,12 @@ describe("the plans table scope", () => {
     await entry.callback.func.call(
       controller,
       request("countBatch"),
-      ["all?", "legacy?filter_isActive=is:false"],
+      {
+        queries: [
+          { id: "all", query: {} },
+          { id: "legacy", query: { filter_isActive: "is:false" } },
+        ],
+      },
       OWNER,
     );
 
