@@ -38,9 +38,12 @@ function emptyDocuments(now: Date): LegalDocuments {
 export async function ensureLegalDocumentsRow(
   model: LegalDocumentsModel,
 ): Promise<void> {
-  const existing = await model.get(LEGAL_DOCUMENTS_SINGLETON_ID);
-  if (existing) return;
-  await model.insert([emptyDocuments(new Date())]);
+  if (await model.get(LEGAL_DOCUMENTS_SINGLETON_ID)) return;
+  try {
+    await model.insert([emptyDocuments(new Date())]);
+  } catch (error) {
+    if (!(await model.get(LEGAL_DOCUMENTS_SINGLETON_ID))) throw error;
+  }
 }
 
 /**
