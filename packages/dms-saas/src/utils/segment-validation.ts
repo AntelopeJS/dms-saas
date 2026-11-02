@@ -166,10 +166,12 @@ export function parseSegmentConditions(
     }
   }
   assert(
+    // SAFETY: isSegmentGroup reads only the `logical` key of the document; validateConditionNode below checks every node before the group is returned, and a document is never rebuilt or parsed into another shape.
     !!parsed && isObjectOrNull(parsed) && isSegmentGroup(parsed as never),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
+  // SAFETY: isSegmentGroup above confirmed an object with a `logical` key, and validateConditionNode below asserts the logical operator, the conditions array and every node, throwing 400 before the group is returned.
   const group = parsed as SegmentConditionGroup;
   assert(
     !holdsOwnProtoKey(group),

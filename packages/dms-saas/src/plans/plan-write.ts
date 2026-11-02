@@ -158,6 +158,7 @@ export function pickPlanWrite(body: PlanWriteBody): PlanWrite {
  */
 export function planTexts(plan: Plan): PlanTexts {
   plan.localize("*", PLAN_LOCALIZED_FIELDS);
+  // SAFETY: plan rows are written only through toPlanRow, which stores each text as a per-locale record, and localize("*") above reads that record back; stored rows are never parsed on read, and Plan declares these fields `string` because localize types one locale.
   return Object.fromEntries(
     PLAN_LOCALIZED_FIELDS.map((field) => [field, plan[field]]).filter(
       ([, text]) => text != null,

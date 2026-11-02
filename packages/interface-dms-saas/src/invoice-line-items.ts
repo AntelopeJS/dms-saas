@@ -89,14 +89,13 @@ export const INVALID_RESOLUTION_REASON = "invalid_resolution";
  * must be stated, never inferred from a malformed answer.
  */
 export function normalizeInvoiceLineItemsResolution(
-  value: unknown,
+  value: InvoiceLineItem[] | InvoiceLineItemsResolution,
 ): InvoiceLineItemsResolution {
   if (Array.isArray(value)) return { status: "ready", lines: value };
-  const candidate = value as Partial<InvoiceLineItemsResolution> | null;
-  if (candidate?.status === "ready" && Array.isArray(candidate.lines))
-    return { status: "ready", lines: candidate.lines };
-  if (candidate?.status === "not_ready")
-    return { status: "not_ready", reason: String(candidate.reason) };
+  if (value?.status === "ready" && Array.isArray(value.lines))
+    return { status: "ready", lines: value.lines };
+  if (value?.status === "not_ready")
+    return { status: "not_ready", reason: String(value.reason) };
   return { status: "not_ready", reason: INVALID_RESOLUTION_REASON };
 }
 
@@ -157,6 +156,7 @@ function isText(value: unknown): value is string {
   return typeof value === "string";
 }
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the item comes from a provider's array returned unparsed, so `key` and `description` can be non-strings at runtime; typing the parameter `string` makes `.trim()` throw on them or trades this row for `no-known-value-widening` on the guard
 function isFilledString(value: unknown): boolean {
   return isText(value) && value.trim().length > 0;
 }
@@ -182,6 +182,7 @@ export function buildInvoiceLineKey(providerId: string, key: string): string {
   return `${providerId}${LINE_KEY_SEPARATOR}${key}`;
 }
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the key comes from a provider's array returned unparsed and can be a non-string at runtime, which `String(key)` must still name; typing the parameter `string` trades this row for `no-known-value-widening` on the guard
 function toLineKeyFragment(key: unknown): string {
   return isText(key) ? key.trim() : String(key);
 }

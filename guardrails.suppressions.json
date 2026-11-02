@@ -4,11 +4,12 @@
     "anti-slop/no-object-parameters": 1,
     "import/no-cycle": 2,
     "typescript/no-misused-spread": 1,
-    "vue/no-v-html": 1
+    "vue/no-v-html": 1,
+    "anti-slop/no-unknown-parameters": 2
   },
   "tsExpectError": 4,
   "tsIgnore": 0,
-  "safety": 0,
+  "safety": 3,
   "config": {
     "anti-slop/no-chained-type-assertions for packages/dms-saas/test/**": 1,
     "anti-slop/no-object-parameters for packages/dms-saas/test/**": 1,
