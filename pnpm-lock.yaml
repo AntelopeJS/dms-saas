@@ -17,14 +17,18 @@ overrides:
   '@antelopejs/dms-frontend': file:.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz
   '@antelopejs/interface-core': file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz
   '@antelopejs/core': file:.campaign/tgz/antelopejs-core-184eb90.tgz
+  '@antelopejs/tooling-configs': file:.campaign/tgz/antelopejs-tooling-configs-6b759e6.tgz
 
 importers:
 
   .:
     devDependencies:
       '@antelopejs/tooling-configs':
-        specifier: ^0.2.17
-        version: 0.2.17(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))
+        specifier: file:.campaign/tgz/antelopejs-tooling-configs-6b759e6.tgz
+        version: file:.campaign/tgz/antelopejs-tooling-configs-6b759e6.tgz(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
       knip:
         specifier: ^6.34.0
         version: 6.41.0
@@ -321,16 +325,21 @@ packages:
     resolution: {integrity: sha512-TYsky9nke/285WBLltxHDK8yMHtzf5LJ85N45+xdGCmO/8UDNifTCb9brOkADBNB7FFByGZOguoz7Ux/iVEsPg==, tarball: file:.campaign/tgz/antelopejs-mongodb-db4b449.tgz}
     version: 1.7.0
 
-  '@antelopejs/tooling-configs@0.2.17':
-    resolution: {integrity: sha512-8fwh7xQPzazP/l/ivEwRKpfN8qShV9+PRizpI9cBewe2TwoRPu4n95w6sYSlygiRmm0HxLJYZFhmSPRgtiNo1Q==}
+  '@antelopejs/tooling-configs@file:.campaign/tgz/antelopejs-tooling-configs-6b759e6.tgz':
+    resolution: {integrity: sha512-QfhlLga353+OolT4PpYHawrSwecx+FmHg0AR3bxEF/R4t2ea6l87n2IAiNcjnLDQQlv2SfWaBhaszDkH8AnmWQ==, tarball: file:.campaign/tgz/antelopejs-tooling-configs-6b759e6.tgz}
+    version: 0.2.17
     engines: {node: '>=22.18.0'}
     hasBin: true
     peerDependencies:
       '@nuxt/eslint-config': '>=1.2.0'
       eslint-plugin-perfectionist: '>=5.0.0'
       knip: '>=6.0.0'
+      mongodb-memory-server: '>=10.0.0'
       oxfmt: ^0.66.0
       oxlint: 1.81.0
+      pixelmatch: '>=7.0.0'
+      playwright-core: '>=1.56.0'
+      sharp: '>=0.34.0'
     peerDependenciesMeta:
       '@nuxt/eslint-config':
         optional: true
@@ -338,9 +347,17 @@ packages:
         optional: true
       knip:
         optional: true
+      mongodb-memory-server:
+        optional: true
       oxfmt:
         optional: true
       oxlint:
+        optional: true
+      pixelmatch:
+        optional: true
+      playwright-core:
+        optional: true
+      sharp:
         optional: true
 
   '@antfu/install-pkg@1.1.0':
@@ -5322,7 +5339,7 @@ snapshots:
       - snappy
       - socks
 
-  '@antelopejs/tooling-configs@0.2.17(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))':
+  '@antelopejs/tooling-configs@file:.campaign/tgz/antelopejs-tooling-configs-6b759e6.tgz(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))':
     dependencies:
       '@oxlint/plugins': 1.81.0
       dts-bundle-generator: 9.5.1

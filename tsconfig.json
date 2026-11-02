@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "incremental": false,
+    "declaration": false,
+    "sourceMap": false,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"]
+  },
+  "files": [
+    "oxlint.config.ts",
+    "packages/dms-saas/test/helpers/vue-runtime/index.mjs",
+    ".amp/gateway.mjs",
+    "packages/interface-dms-saas/scripts/check-exports.mjs",
+    "packages/dms-saas/vitest.config.ts",
+    "packages/dms-saas/playground/antelope.config.ts"
+  ],
+  "include": [".agents/skills/**/*.mjs"]
+}

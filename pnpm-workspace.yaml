@@ -15,3 +15,4 @@ overrides:
   "@antelopejs/dms-frontend": "file:.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz"
   "@antelopejs/interface-core": "file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz"
   "@antelopejs/core": "file:.campaign/tgz/antelopejs-core-184eb90.tgz"
+  "@antelopejs/tooling-configs": "file:.campaign/tgz/antelopejs-tooling-configs-6b759e6.tgz"
