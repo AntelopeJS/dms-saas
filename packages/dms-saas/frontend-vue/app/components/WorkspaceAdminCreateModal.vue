@@ -52,7 +52,7 @@ const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
 const toast = useToast()
 const router = useDmsRouter()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 
 const plans = ref<PlanOption[]>([])
 const loadError = ref<string | null>(null)
@@ -164,7 +164,8 @@ async function loadPlans(): Promise<void> {
 		const all = await plansRead.read()
 		plans.value = all.filter((option) => option.isActive && !option.isDeleted)
 	} catch (error) {
-		loadError.value = resolveApiError(error, `${C}.load_error`)
+		loadError.value =
+			resolveError(error, { fallbackKey: `${C}.load_error` })?.message ?? ''
 	} finally {
 		isLoading.value = false
 	}
@@ -237,7 +238,8 @@ async function submit(): Promise<void> {
 		notifyCreated(created)
 		props.onSuccessCallback?.()
 	} catch (error) {
-		submitError.value = resolveApiError(error, `${C}.error`)
+		submitError.value =
+			resolveError(error, { fallbackKey: `${C}.error` })?.message ?? ''
 	} finally {
 		isSubmitting.value = false
 	}

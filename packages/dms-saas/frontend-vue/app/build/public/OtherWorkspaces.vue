@@ -11,9 +11,8 @@ interface OtherWorkspacesProps {
 defineProps<OtherWorkspacesProps>()
 
 const { t } = useI18n()
-const toast = useToast()
 const { statusView } = useSaasStatus()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError } = useApiErrorPresenter()
 
 const switchingTo = ref<string | null>(null)
 
@@ -29,15 +28,9 @@ async function open(workspace: OtherWorkspace): Promise<void> {
 	try {
 		await useTenantSwitch(workspace._id, HOME_PATH)
 	} catch (error) {
-		toast.add({
-			color: 'error',
-			title: t('saas.public.suspended.others.switch_failed', {
-				name: workspace.name,
-			}),
-			description: resolveApiError(
-				error,
-				'saas.public.suspended.others.switch_failed_hint',
-			),
+		presentError(error, {
+			fallbackKey: 'saas.public.suspended.others.switch_failed',
+			params: { name: workspace.name },
 		})
 		switchingTo.value = null
 	}

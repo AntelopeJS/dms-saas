@@ -1,5 +1,53 @@
 # Changelog
 
+## v0.9.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.8.1...v0.9.0)
+
+### 🚀 Enhancements
+
+- **frontend:** Enforce the backend boundary in production builds ([#154](https://github.com/AntelopeJS/dms-saas/pull/154))
+
+### 🩹 Fixes
+
+- **saas:** Report operator membership and journal workspace actions ([#158](https://github.com/AntelopeJS/dms-saas/pull/158))
+- **saas:** Leave workspace-scoped pages when switching workspace ([#198](https://github.com/AntelopeJS/dms-saas/pull/198))
+- **saas:** Present API failures once with DMS 0.13 ([#200](https://github.com/AntelopeJS/dms-saas/pull/200))
+
+### 💅 Refactors
+
+- Move comments into TSDoc or delete them ([#147](https://github.com/AntelopeJS/dms-saas/pull/147))
+- Bring the type ceilings down without assertions or relabelled types ([#149](https://github.com/AntelopeJS/dms-saas/pull/149))
+- Split the two oversize frontend files ([#153](https://github.com/AntelopeJS/dms-saas/pull/153))
+- **amp:** Narrow the forwarded location header with a JSDoc type guard ([#156](https://github.com/AntelopeJS/dms-saas/pull/156))
+
+### 📖 Documentation
+
+- **changelog:** Upgrade notes of dms-saas 0.8.1 and interface-dms-saas 0.6.1 ([#140](https://github.com/AntelopeJS/dms-saas/pull/140))
+- **readme:** Link the DMS in the opening line ([#186](https://github.com/AntelopeJS/dms-saas/pull/186))
+- **readme:** Use one Discord invite ([#184](https://github.com/AntelopeJS/dms-saas/pull/184))
+- Name DMS 0.11 and renderer 0.9, and ignore the playground's frontend build ([#141](https://github.com/AntelopeJS/dms-saas/pull/141))
+
+### 📦 Build
+
+- Adopt the AntelopeJS guardrail pack ([#142](https://github.com/AntelopeJS/dms-saas/pull/142))
+- Upgrade the guardrail pack to 0.2.11 ([#145](https://github.com/AntelopeJS/dms-saas/pull/145))
+- **deps:** Bump @antelopejs/tooling-configs to 0.2.17 ([#157](https://github.com/AntelopeJS/dms-saas/pull/157))
+
+### 🏡 Chore
+
+- Configure Renovate with the shared preset ([#143](https://github.com/AntelopeJS/dms-saas/pull/143))
+
+### ✅ Tests
+
+- **skills:** Add eval cases for the dms-saas skills ([#144](https://github.com/AntelopeJS/dms-saas/pull/144))
+- Replace the module mocks with real seams and bring the test-rule ceilings to zero ([#146](https://github.com/AntelopeJS/dms-saas/pull/146))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+- Alessandro Aloisio ([@alessaloisio](http://github.com/alessaloisio))
+
 ## v0.8.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.8.0...v0.8.1)

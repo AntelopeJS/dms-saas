@@ -31,7 +31,7 @@ const DATE_TIME_FORMAT: Intl.DateTimeFormatOptions = {
 const { t, locale } = useI18n()
 const toast = useToast()
 const { $authFetch } = useAuthFetch()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError } = useApiErrorPresenter()
 const live = useLiveFormValues(() => props.componentId)
 
 const status = ref<PlanTaxSyncStatus | null>(props.modelValue ?? null)
@@ -77,11 +77,7 @@ async function resync(): Promise<void> {
 			icon: 'i-ph-check-circle',
 		})
 	} catch (error) {
-		toast.add({
-			title: resolveApiError(error, `${TEXT}.resync_failed`),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
+		presentError(error, { fallbackKey: `${TEXT}.resync_failed` })
 	} finally {
 		isSyncing.value = false
 	}

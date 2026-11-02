@@ -1,4 +1,3 @@
-import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
 import { formatMinorUnits } from '../../composables/useMoneyFormat'
 import type { SuspensionImpact } from './types'
 
@@ -22,7 +21,7 @@ export function useWorkspaceActions(tenantId: string) {
 	const { confirm } = useConfirm()
 	const { confirmFrom } = useConfirmFrom()
 	const toast = useToast()
-	const { resolveApiError } = useApiErrorMessage()
+	const { presentError } = useApiErrorPresenter()
 	const base = `/api/saas/workspaces/${tenantId}`
 	const impactRead = useOnDemandRead<SuspensionImpact>(
 		() => `${base}/suspension-impact`,
@@ -47,11 +46,7 @@ export function useWorkspaceActions(tenantId: string) {
 			})
 			refreshPageBlocks()
 		} catch (error) {
-			toast.add({
-				title: resolveApiError(error, `${D}.error.prepare`),
-				color: 'error',
-				icon: 'i-ph-warning-circle',
-			})
+			presentError(error, { fallbackKey: `${D}.error.prepare` })
 		}
 	}
 

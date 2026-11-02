@@ -6,3 +6,15 @@ export const DATA_EXPORT_PATH = '/settings/workspace/data-export'
 export const GENERAL_PATH = '/settings/workspace/general'
 /** Where a workspace switch lands: the previous page belonged to the old tenant. */
 export const HOME_PATH = '/'
+
+export function workspaceSwitchLandingPath(
+	metadata: unknown,
+): string | undefined {
+	return typeof metadata === 'object' &&
+		metadata !== null &&
+		Object.hasOwn(metadata, 'workspaceScoped') &&
+		'workspaceScoped' in metadata &&
+		metadata.workspaceScoped === true
+		? HOME_PATH
+		: undefined
+}

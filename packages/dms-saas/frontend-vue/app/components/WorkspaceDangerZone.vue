@@ -15,7 +15,7 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
 const { t, locale } = useI18n()
 const { $authFetch } = useAuthFetch()
 const { confirm } = useConfirm()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 const toast = useToast()
 // The deletion asks for the name as it is now: a rename on this page reads
 // the page's data again, this overview included.
@@ -108,11 +108,16 @@ async function deleteWorkspace(view: WorkspaceOverview): Promise<void> {
 			body: { confirmName: view.name },
 		})
 	} catch (failure) {
-		const message = resolveApiError(failure, `${KEYS}.error.delete`)
+		const message =
+			resolveError(failure, { fallbackKey: `${KEYS}.error.delete` })?.message ??
+			''
 		if (readApiErrorKey(failure) === CONFIRMATION_MISMATCH) {
 			throw new ConfirmTextError(message)
 		}
-		throw new Error(message)
+		throw new ConfirmActionError(
+			{ fallbackKey: `${KEYS}.error.delete` },
+			{ cause: failure },
+		)
 	}
 	toast.add({
 		title: t(`${KEYS}.delete.deleted`, { name: view.name }),

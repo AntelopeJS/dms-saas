@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../components/FormFieldRow.vue'
 import FormRows from '../components/FormRows.vue'
-import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
 import { formatMinorUnits } from '../../composables/useMoneyFormat'
 import type { OperatorOptions, UpgradePreview } from './types'
 
@@ -19,7 +18,7 @@ const D = 'saas.workspace_detail.upgrade'
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 
 const options = ref<OperatorOptions | null>(null)
 const loadError = ref<string | null>(null)
@@ -74,7 +73,8 @@ async function load(): Promise<void> {
 		options.value = await optionsRead.read()
 		planId.value = plans.value[0]?.id
 	} catch (error) {
-		loadError.value = resolveApiError(error, `${D}.load_error`)
+		loadError.value =
+			resolveError(error, { fallbackKey: `${D}.load_error` })?.message ?? ''
 	}
 }
 
@@ -94,7 +94,8 @@ async function loadPreview(): Promise<void> {
 	try {
 		preview.value = await previewRead.read()
 	} catch (error) {
-		previewError.value = resolveApiError(error, `${D}.preview_error`)
+		previewError.value =
+			resolveError(error, { fallbackKey: `${D}.preview_error` })?.message ?? ''
 	} finally {
 		isPreviewing.value = false
 	}
@@ -116,7 +117,8 @@ async function submit(): Promise<void> {
 		})
 		emit('done')
 	} catch (error) {
-		submitError.value = resolveApiError(error, `${D}.error`)
+		submitError.value =
+			resolveError(error, { fallbackKey: `${D}.error` })?.message ?? ''
 	} finally {
 		isSubmitting.value = false
 	}

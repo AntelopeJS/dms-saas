@@ -36,7 +36,7 @@ const { $authFetch } = useAuthFetch()
 const { t } = useI18n()
 const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError } = useApiErrorPresenter()
 
 const reading = ref<StripeReading | null>(null)
 const loadFailed = ref(false)
@@ -83,10 +83,7 @@ async function openSettlement(kind: UncertainResolution): Promise<void> {
 			onConfirm: () => settle(kind),
 		})
 	} catch (error) {
-		toast.add({
-			color: 'error',
-			title: resolveApiError(error, `${DETAIL}.settle_failed`),
-		})
+		presentError(error, { fallbackKey: `${DETAIL}.settle_failed` })
 	}
 }
 

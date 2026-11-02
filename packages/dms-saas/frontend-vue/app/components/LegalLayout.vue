@@ -41,7 +41,7 @@ const HEADING_LEVEL_OFFSET = 1
 const { t, locale } = useI18n()
 const route = useDmsRoute()
 const publicFetch = usePublicFetch()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 
 const payload = ref<LegalDocumentsPayload | null>(null)
 const isLoading = ref(true)
@@ -137,7 +137,9 @@ async function loadDocument(): Promise<void> {
 	try {
 		payload.value = await publicFetch<LegalDocumentsPayload>(LEGAL_ENDPOINT)
 	} catch (error) {
-		loadError.value = resolveApiError(error, 'saas.public.legal.load_error')
+		loadError.value =
+			resolveError(error, { fallbackKey: 'saas.public.legal.load_error' })
+				?.message ?? ''
 	} finally {
 		isLoading.value = false
 	}
@@ -243,8 +245,7 @@ onMounted(() => {
 					</p>
 				</header>
 				<DmsCard>
-					<!-- Written by the platform admin in Billing rules & legal. -->
-					<!-- eslint-disable-next-line vue/no-v-html -->
+					<!-- eslint-disable-next-line vue/no-v-html -- Legal documents are platform-admin-authored HTML. -->
 					<div
 						class="prose prose-neutral dark:prose-invert max-w-none"
 						v-html="legalDocument.html"

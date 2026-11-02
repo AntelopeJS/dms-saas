@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import FormFieldRow from '../components/FormFieldRow.vue'
 import FormRows from '../components/FormRows.vue'
-import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
 import {
 	formatMinorUnits,
 	fromMinorUnits,
@@ -29,7 +28,7 @@ const REASON_MAX_LENGTH = 500
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 
 const options = ref<OperatorOptions | null>(null)
 const loadError = ref<string | null>(null)
@@ -82,7 +81,8 @@ async function load(): Promise<void> {
 	try {
 		options.value = await optionsRead.read()
 	} catch (error) {
-		loadError.value = resolveApiError(error, `${D}.load_error`)
+		loadError.value =
+			resolveError(error, { fallbackKey: `${D}.load_error` })?.message ?? ''
 	}
 }
 
@@ -110,7 +110,8 @@ async function submit(): Promise<void> {
 		})
 		emit('done')
 	} catch (error) {
-		submitError.value = resolveApiError(error, `${D}.error`)
+		submitError.value =
+			resolveError(error, { fallbackKey: `${D}.error` })?.message ?? ''
 	} finally {
 		isSubmitting.value = false
 	}

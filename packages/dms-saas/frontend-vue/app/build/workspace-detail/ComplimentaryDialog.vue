@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import FormFieldRow from '../components/FormFieldRow.vue'
 import FormRows from '../components/FormRows.vue'
-import { useApiErrorMessage } from '../../composables/useApiErrorMessage'
 import { formatMinorUnits } from '../../composables/useMoneyFormat'
 import { PLAN_UNLIMITED } from '../plan-catalog'
 import { planPriceLabel } from './planPrice'
@@ -21,7 +20,7 @@ const D = 'saas.workspace_detail.complimentary'
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 
 const impact = ref<ComplimentaryImpact | null>(null)
 const loadError = ref<string | null>(null)
@@ -59,7 +58,8 @@ const fitNote = computed(() => {
 	const plan = selectedPlan.value
 	const seats = impact.value?.seats ?? 0
 	if (!plan) return ''
-	if (plan.maxMembers === PLAN_UNLIMITED) return t(`${D}.fits_unlimited`, { seats }, seats)
+	if (plan.maxMembers === PLAN_UNLIMITED)
+		return t(`${D}.fits_unlimited`, { seats }, seats)
 	const key = plan.fits ? 'fits' : 'exceeds'
 	return t(`${D}.${key}`, { seats, max: plan.maxMembers }, seats)
 })
@@ -95,7 +95,8 @@ async function load(): Promise<void> {
 		planId.value = impact.value.currentPlanId ?? impact.value.plans[0]?.id
 		freeUntil.value = impact.value.freeUntil?.slice(0, 10) ?? ''
 	} catch (error) {
-		loadError.value = resolveApiError(error, `${D}.load_error`)
+		loadError.value =
+			resolveError(error, { fallbackKey: `${D}.load_error` })?.message ?? ''
 	}
 }
 
@@ -122,7 +123,8 @@ async function submit(): Promise<void> {
 		})
 		emit('done')
 	} catch (error) {
-		submitError.value = resolveApiError(error, `${D}.error`)
+		submitError.value =
+			resolveError(error, { fallbackKey: `${D}.error` })?.message ?? ''
 	} finally {
 		isSubmitting.value = false
 	}

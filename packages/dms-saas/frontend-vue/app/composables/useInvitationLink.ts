@@ -29,26 +29,29 @@ export function useInvitationLink() {
 	/** Returns whether the link reached the clipboard. */
 	async function copyLink(link: string): Promise<boolean> {
 		const t = nuxtApp.$i18n.t
+		let copied: boolean
 		try {
 			await navigator.clipboard.writeText(link)
+			copied = true
+		} catch {
+			copied = false
+		}
+		if (copied) {
 			toast.add({
 				title: t('saas.workspace_detail.invitations.link.copied'),
 				color: 'success',
 				icon: 'i-ph-check-circle',
 			})
 			return true
-		} catch {
-			// The clipboard can be refused (permissions, insecure origin): the link
-			// stays readable so it can still be copied by hand.
-			toast.add({
-				title: t('saas.workspace_detail.invitations.link.copy_failed'),
-				description: link,
-				color: 'warning',
-				icon: 'i-ph-warning',
-				duration: 0,
-			})
-			return false
 		}
+		toast.add({
+			title: t('saas.workspace_detail.invitations.link.copy_failed'),
+			description: link,
+			color: 'warning',
+			icon: 'i-ph-warning',
+			duration: 0,
+		})
+		return false
 	}
 
 	return { fetchInvitationLink, copyLink }
