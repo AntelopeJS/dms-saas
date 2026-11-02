@@ -7,7 +7,12 @@ import type {
   PlanLocalizedText,
 } from "../db";
 import { withPermissionAncestors } from "./plan-permission-tree";
-import { PLAN_LOCALIZED_FIELDS, PLAN_UNLIMITED, PlanModel } from "../db";
+import {
+  PLAN_FALLBACK_LOCALE,
+  PLAN_LOCALIZED_FIELDS,
+  PLAN_UNLIMITED,
+  PlanModel,
+} from "../db";
 import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { isBoolean, isNumber, isString } from "../utils/primitive-guards";
 
@@ -152,18 +157,46 @@ export function pickPlanWrite(body: PlanWriteBody): PlanWrite {
   return out;
 }
 
+const PLAN_TEXT_FIELDS = [
+  "name",
+  "description",
+  "borderLabel",
+] as const satisfies readonly PlanTextField[];
+
 /**
- * A plan's texts with one value per locale. Leaves the plan unlocked in every
- * locale (`localize("*")`): read it again with `localizePlan()` to get one.
+ * A plan's texts as stored: one value per locale, or one plain text on a row
+ * written before the field was localized.
  */
-export function planTexts(plan: Plan): PlanTexts {
+export type StoredPlanTexts = Partial<
+  Record<PlanTextField, string | PlanLocalizedText>
+>;
+
+/**
+ * A plan's stored texts. Leaves the plan unlocked in every locale
+ * (`localize("*")`): read it again with `localizePlan()` to get one.
+ */
+export function planTexts(plan: Plan): StoredPlanTexts {
   plan.localize("*", PLAN_LOCALIZED_FIELDS);
-  // SAFETY: plan rows are written only through toPlanRow, which stores each text as a per-locale record, and localize("*") above reads that record back; stored rows are never parsed on read, and Plan declares these fields `string` because localize types one locale.
-  return Object.fromEntries(
-    PLAN_LOCALIZED_FIELDS.map((field) => [field, plan[field]]).filter(
-      ([, text]) => text != null,
-    ),
-  ) as PlanTexts;
+  const texts: StoredPlanTexts = {};
+  for (const field of PLAN_TEXT_FIELDS) {
+    const text = plan[field];
+    if (text != null) texts[field] = text;
+  }
+  return texts;
+}
+
+/**
+ * Stored plan texts with one value per locale. A plain text from a row written
+ * before the field was localized becomes the fallback locale's.
+ */
+export function perLocaleTexts(stored: StoredPlanTexts): PlanTexts {
+  const texts: PlanTexts = {};
+  for (const field of PLAN_TEXT_FIELDS) {
+    const text = stored[field];
+    if (text === undefined) continue;
+    texts[field] = isString(text) ? { [PLAN_FALLBACK_LOCALE]: text } : text;
+  }
+  return texts;
 }
 
 /** The plan row a write stores, its texts locked one value per locale. */

@@ -9,7 +9,7 @@
   },
   "tsExpectError": 4,
   "tsIgnore": 0,
-  "safety": 3,
+  "safety": 0,
   "config": {
     "anti-slop/no-chained-type-assertions for packages/dms-saas/test/**": 1,
     "anti-slop/no-object-parameters for packages/dms-saas/test/**": 1,

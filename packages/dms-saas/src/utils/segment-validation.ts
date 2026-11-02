@@ -4,11 +4,7 @@ import type {
   SegmentConditionGroup,
   SegmentWorkspaceRef,
 } from "../db";
-import {
-  isSegmentGroup,
-  isSegmentWorkspaceRef,
-  type SegmentNode,
-} from "./segment-evaluator";
+import type { SegmentNode } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
 import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { isObjectOrNull, isString } from "./primitive-guards";
@@ -42,11 +38,31 @@ export interface SegmentInputBody {
   conditions?: JsonValue;
 }
 
-function validateWorkspaceRefNode(
-  node: SegmentWorkspaceRef,
+/** A segment node as a client sent it: every key may hold anything. */
+interface Document {
+  kind?: unknown;
+  logical?: unknown;
+  conditions?: unknown;
+  quantifier?: unknown;
+  role?: unknown;
+  field?: unknown;
+  operator?: unknown;
+  value?: unknown;
+}
+
+function isDocument(value: unknown): value is Document {
+  return isObjectOrNull(value) && value !== null;
+}
+
+function holdsLogical(node: Document): boolean {
+  return "logical" in node && node.logical !== undefined;
+}
+
+function assertWorkspaceRefNode(
+  node: Document,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is Document & SegmentWorkspaceRef {
   assert(catalog === "user", HTTP_BAD_REQUEST, `${ERRORS}.invalid_conditions`);
   assert(
     node.quantifier === "any" || node.quantifier === "all",
@@ -59,30 +75,31 @@ function validateWorkspaceRefNode(
     `${ERRORS}.invalid_role`,
   );
   assert(
-    !!node.conditions && isSegmentGroup(node.conditions),
+    isDocument(node.conditions) && holdsLogical(node.conditions),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  validateConditionNode(node.conditions, depth + 1, "workspace");
+  assertConditionNode(node.conditions, depth + 1, "workspace");
 }
 
-function validateGroupNode(
-  node: SegmentConditionGroup,
+function assertGroupNode(
+  node: Document,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is Document & SegmentConditionGroup {
   assert(
     node.logical === "and" || node.logical === "or",
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_logical`,
   );
+  const children = node.conditions;
   assert(
-    Array.isArray(node.conditions),
+    Array.isArray(children),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  for (const child of node.conditions) {
-    validateConditionNode(child, depth + 1, catalog);
+  for (const child of children) {
+    assertConditionNode(child, depth + 1, catalog);
   }
 }
 
@@ -91,7 +108,7 @@ function validateGroupNode(
  * `__proto__` key, under a known key or an extra one. Walks with a stack, so
  * a deeply nested tree cannot overflow the call stack.
  */
-function holdsOwnProtoKey(rules: SegmentConditionGroup): boolean {
+function holdsOwnProtoKey(rules: Document): boolean {
   const pending: unknown[] = [rules];
   while (pending.length > 0) {
     const current = pending.pop();
@@ -102,48 +119,48 @@ function holdsOwnProtoKey(rules: SegmentConditionGroup): boolean {
   return false;
 }
 
-function validateLeafCondition(
-  condition: SegmentCondition,
+function assertLeafCondition(
+  condition: Document,
   catalog: SegmentFieldCatalog,
-): void {
-  const field = findSegmentField(condition.field, catalog);
+): asserts condition is Document & SegmentCondition {
+  const field = isString(condition.field)
+    ? findSegmentField(condition.field, catalog)
+    : undefined;
   assert(field, HTTP_BAD_REQUEST, `${ERRORS}.unknown_field`);
+  const operator = condition.operator;
   assert(
-    field.operators.includes(condition.operator),
+    field.operators.some((allowed) => allowed === operator),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_operator`,
   );
   assert(
-    LIST_OPERATORS.has(condition.operator) === Array.isArray(condition.value),
+    (isString(operator) && LIST_OPERATORS.has(operator)) ===
+      Array.isArray(condition.value),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_value`,
   );
 }
 
-function validateConditionNode(
-  node: SegmentNode,
+function assertConditionNode(
+  node: unknown,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is SegmentNode {
   assert(
     depth <= MAX_CONDITION_DEPTH,
     HTTP_BAD_REQUEST,
     `${ERRORS}.conditions_too_deep`,
   );
-  assert(
-    !!node && isObjectOrNull(node),
-    HTTP_BAD_REQUEST,
-    `${ERRORS}.invalid_conditions`,
-  );
-  if (isSegmentWorkspaceRef(node)) {
-    validateWorkspaceRefNode(node, depth, catalog);
+  assert(isDocument(node), HTTP_BAD_REQUEST, `${ERRORS}.invalid_conditions`);
+  if (node.kind === "workspaceRef") {
+    assertWorkspaceRefNode(node, depth, catalog);
     return;
   }
-  if (isSegmentGroup(node)) {
-    validateGroupNode(node, depth, catalog);
+  if (holdsLogical(node)) {
+    assertGroupNode(node, depth, catalog);
     return;
   }
-  validateLeafCondition(node, catalog);
+  assertLeafCondition(node, catalog);
 }
 
 /**
@@ -166,20 +183,19 @@ export function parseSegmentConditions(
     }
   }
   assert(
-    // SAFETY: isSegmentGroup reads only the `logical` key of the document; validateConditionNode below checks every node before the group is returned, and a document is never rebuilt or parsed into another shape.
-    !!parsed && isObjectOrNull(parsed) && isSegmentGroup(parsed as never),
+    isDocument(parsed) &&
+      holdsLogical(parsed) &&
+      parsed.kind !== "workspaceRef",
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  // SAFETY: isSegmentGroup above confirmed an object with a `logical` key, and validateConditionNode below asserts the logical operator, the conditions array and every node, throwing 400 before the group is returned.
-  const group = parsed as SegmentConditionGroup;
   assert(
-    !holdsOwnProtoKey(group),
+    !holdsOwnProtoKey(parsed),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  validateConditionNode(group, ROOT_DEPTH, "user");
-  return group;
+  assertGroupNode(parsed, ROOT_DEPTH, "user");
+  return parsed;
 }
 
 function parseText(value: JsonValue | undefined, maxLength: number): string {
