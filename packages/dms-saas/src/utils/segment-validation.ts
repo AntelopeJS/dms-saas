@@ -146,14 +146,6 @@ function validateConditionNode(
   validateLeafCondition(node, catalog);
 }
 
-function parseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * The conditions of a segment, from the JSON string or the object a client
  * sends, checked against the field catalogs. An empty value is an empty AND
@@ -165,7 +157,14 @@ export function parseSegmentConditions(
   if (raw === undefined || raw === null || raw === "") {
     return { logical: "and", conditions: [] };
   }
-  const parsed = isString(raw) ? parseJson(raw) : raw;
+  let parsed: unknown = raw;
+  if (isString(raw)) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = undefined;
+    }
+  }
   assert(
     !!parsed && isObjectOrNull(parsed) && isSegmentGroup(parsed as never),
     HTTP_BAD_REQUEST,
