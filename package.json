@@ -45,5 +45,10 @@
       "@antelopejs/core": "file:.campaign/tgz/antelopejs-core-184eb90.tgz",
       "@antelopejs/tooling-configs": "file:.campaign/tgz/antelopejs-tooling-configs-6b759e6.tgz"
     }
+  },
+  "antelopeJs": {
+    "docs": {
+      "standard": true
+    }
   }
 }
