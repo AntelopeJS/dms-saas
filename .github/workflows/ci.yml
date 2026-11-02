@@ -69,11 +69,33 @@ jobs:
       # Compile the published DMS source together with this frontend module.
       - run: pnpm --filter @antelopejs/dms-saas test:frontend
 
+  # TLC through the runner of @antelopejs/tooling-configs. The CI configuration
+  # of each check: `node .agents/skills/<check>/check.mjs`.
+  formal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [formal-guarded-plan-change]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/antelopejs-formal
+          key: tla2tools-1.7.4
+      - run: node .agents/skills/${{ matrix.check }}/check.mjs
+
   # The single check to require on `main`: it keeps the historical job name,
   # and fails unless every job above succeeded.
   ubuntu:
     if: always()
-    needs: [ci, unit, frontend]
+    needs: [ci, unit, frontend, formal]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
