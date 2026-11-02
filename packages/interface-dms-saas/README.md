@@ -1,13 +1,13 @@
 <div align="center">
 
-# @antelopejs/interface-dms-saas
+# `@antelopejs/interface-dms-saas`
 
-<a href="https://www.npmjs.com/package/@antelopejs/interface-dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/interface-dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
-<a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/interface-dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
-<a href="https://discord.gg/sjK28QHrA7"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000"></a>
-<a href="https://dms.antelopejs.com/docs/modules/saas/extending"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000"></a>
+<a href="https://www.npmjs.com/package/@antelopejs/interface-dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/interface-dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
+<a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/interface-dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
+<a href="https://discord.gg/sjK28QHrA7"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000" data-illustration></a>
+<a href="https://dms.antelopejs.com/docs/modules/saas/extending"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000" data-illustration></a>
 
-The AntelopeJS interface to extend the DMS SaaS module: billing, plans, registration, workspace pages and lifecycle.
+The AntelopeJS interface that extends the DMS SaaS module with billing, plans, registration, workspace pages and lifecycle.
 
 </div>
 
@@ -16,8 +16,8 @@ The AntelopeJS interface to extend the DMS SaaS module: billing, plans, registra
 - Adds invoice line items, reads customer balances and previews the upcoming invoice.
 - Builds plan projections and catalogues, and normalizes prices.
 - Extends registration and the provisioning of a new workspace.
-- Adds workspace settings categories and blocks to the tenant billing page.
-- Listens to tenant lifecycle events and operator actions, and exposes the canonical SaaS tables and models (`/db`).
+- Adds blocks to the tenant billing page and the platform workspace detail page.
+- Listens to tenant lifecycle events, guards paid-to-Free plan changes, and exposes the canonical SaaS tables and models (`/db`).
 
 A module that extends [`@antelopejs/dms-saas`](https://www.npmjs.com/package/@antelopejs/dms-saas) depends on this package, never on the runtime.
 
@@ -29,7 +29,7 @@ pnpm add @antelopejs/interface-dms-saas
 
 ## Quick start
 
-The root entry holds every extension point except `db`, with `invoiceLineItems` and `tenantLifecycle` as namespaces:
+The root entry holds every extension point except `db`. `invoiceLineItems`, `tenantLifecycle` and `planChanges` are namespaces at the root:
 
 ```ts docs-check
 import { invoiceLineItems, tenantLifecycle } from "@antelopejs/interface-dms-saas";
@@ -38,17 +38,13 @@ export const usageKey = invoiceLineItems.buildInvoiceLineKey("example.compute", 
 export const isProvisioningCommitted = tenantLifecycle.IsTenantProvisioningCommitted;
 ```
 
-Use the [entry-point reference](./docs/1.index.md#entry-points) for supported
-subpaths. Importing `/db` registers SaaS tables; it is not a side-effect-free
-types barrel. After direct subscription writes, call
-[`RecomputeTenantBillingState`](./docs/2.billing.md#recomputetenantbillingstate)
-to refresh derived billing and workspace directory state.
+The [entry-point reference](./docs/1.index.md#entry-points) lists the supported subpaths. Importing `/db` registers the SaaS tables, so it is not a types-only import. After direct subscription writes, call [`RecomputeTenantBillingState`](./docs/2.billing.md#recomputetenantbillingstate) to refresh the derived billing state and the workspace directory row.
 
-A module may seed plans straight into the `db` plan table: it writes `name`, `description` and `borderLabel` with one value per locale through `localize("*")`, leaves `Plan.paymentProviderRefs` empty and never rewrites it, since dms-saas links every billed plan to Stripe itself. See [Plans and Stripe](https://dms.antelopejs.com/docs/modules/saas/stripe#plans-and-stripe).
+A module may seed plans straight into the `db` plan table. It writes `name`, `description` and `borderLabel` with one value per locale through `localize("*")`. It leaves `Plan.paymentProviderRefs` empty and never rewrites it, because `@antelopejs/dms-saas` links every billed plan to Stripe itself. See [Plans and their Stripe products](https://dms.antelopejs.com/docs/modules/saas/stripe#plans-and-their-stripe-products).
 
 ## Compatibility
 
-The implementation is `@antelopejs/dms-saas`; the compatibility block of its [README](../dms-saas/README.md#compatibility) lists the interface range that module release supports. The interface declares these dependencies:
+`@antelopejs/dms-saas` implements this interface. The compatibility block of its [README](../dms-saas/README.md#compatibility) lists the interface range each module release supports. The interface declares these dependencies:
 
 <!-- antelopejs-docs-compat:start -->
 
@@ -62,16 +58,16 @@ The implementation is `@antelopejs/dms-saas`; the compatibility block of its [RE
 
 <!-- antelopejs-docs-compat:end -->
 
-Peer dependencies:
+`@antelopejs/interface-core`, `@antelopejs/interface-database` and `@antelopejs/interface-database-decorators` are peer dependencies. `@antelopejs/interface-data-api` and `@antelopejs/interface-dms` are regular dependencies.
 
-Subpaths resolve through the `exports` map only: compile consumers with `moduleResolution` set to `bundler`, `node16` or `nodenext`. Upgrade this package together with `@antelopejs/dms-saas`; the [upgrade notes](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading) cover the tenant billing page anchors and the rows written by earlier builds.
+Subpaths resolve through the `exports` map only, so compile consumers with `moduleResolution` set to `bundler`, `node16` or `nodenext`. Upgrade this package together with `@antelopejs/dms-saas`. The [upgrade notes](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading) cover the tenant billing page anchors and the rows written by earlier builds.
 
 ## Documentation
 
-- [Consumer reference](./docs/1.index.md): billing, usage, lifecycle, pages, plans and database boundaries
-- [Extending the SaaS module](https://dms.antelopejs.com/docs/modules/saas/extending): every extension point with examples
-- [Stripe](https://dms.antelopejs.com/docs/modules/saas/stripe)
-- [SaaS module guide](https://dms.antelopejs.com/docs/modules/saas)
+- The [consumer reference](./docs/1.index.md) covers billing, usage, lifecycle, pages, plans and the database boundary.
+- [Extending the SaaS module](https://dms.antelopejs.com/docs/modules/saas/extending) shows every extension point with examples.
+- [Stripe](https://dms.antelopejs.com/docs/modules/saas/stripe) explains how the module drives Stripe.
+- The [SaaS module guide](https://dms.antelopejs.com/docs/modules/saas) covers installation and configuration.
 
 ## Contributing
 
