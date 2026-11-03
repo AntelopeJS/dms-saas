@@ -8,6 +8,8 @@ import {
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { generateTenantAssignmentToken } from "@antelopejs/interface-dms/auth";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
+import { RoleModel } from "@antelopejs/interface-dms/db";
+import { GetEffectiveUserPermissions } from "@antelopejs/interface-dms/permissions";
 import { Hook, RegisterHook } from "@antelopejs/interface-dms/hooks";
 import { z } from "zod";
 
@@ -19,6 +21,12 @@ const provisioned: {
   userId: string | undefined;
   extras: unknown;
 }[] = [];
+
+const permissionsSchema = z.object({
+  tenantId: z.string(),
+  userId: z.string(),
+  rolePermissions: z.array(z.string()),
+});
 
 const accountSchema = z.object({
   email: z.string(),
@@ -70,5 +78,23 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
     if (!user) throw new Error(`user ${userId} was not written`);
     const { token } = await generateTenantAssignmentToken(user);
     return { userId, token };
+  }
+
+  /** The effective permissions of a user of a workspace who holds one role granting `rolePermissions`, after every permissions resolver. */
+  @Post("/effective-permissions")
+  async effectivePermissions(@JSONBody() body: unknown) {
+    const { tenantId, userId, rolePermissions } = permissionsSchema.parse(body);
+    const roles = GetModel(RoleModel, tenantId);
+    const [roleId] = await roles.insert({
+      name: `verify role ${randomBytes(4).toString("hex")}`,
+      permissions: rolePermissions,
+    });
+    const effective = await GetEffectiveUserPermissions(
+      { _id: userId },
+      tenantId,
+      roleId === undefined ? [] : [roleId],
+      roles,
+    );
+    return { permissions: [...effective].sort() };
   }
 }
