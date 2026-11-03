@@ -33,7 +33,7 @@ const countWithSearch = vi.fn(
 );
 
 function tabQuery(state: string) {
-  return { id: state, query: { filter_billingState: `is:${state}` } };
+  return `${state}?filter_billingState=is:${state}`;
 }
 
 beforeAll(() => {
@@ -64,7 +64,7 @@ describe("workspaces table tab counters", () => {
       tableViewBase.TableViewRoutes.CountBatch.callback,
     );
     expect(entry?.endpoint).toBe(BATCH_ENDPOINT);
-    expect(entry?.callback.method).toBe("post");
+    expect(entry?.callback.method).toBe("get");
   });
 
   it("answers one count per status tab through the list query pipeline", async () => {
@@ -78,14 +78,14 @@ describe("workspaces table tab counters", () => {
       { dataAPIEntry: entry },
     );
 
-    expect(
-      await entry.callback.func.call(
-        controller,
-        ctx,
-        { queries: states.map(tabQuery) },
-        OWNER,
-      ),
-    ).toEqual(TOTALS_BY_STATE);
+    const counts = await entry.callback.func.call(
+      controller,
+      ctx,
+      states.map(tabQuery),
+      OWNER,
+    );
+
+    expect(counts).toEqual(TOTALS_BY_STATE);
     expect(countWithSearch).toHaveBeenCalledTimes(states.length);
   });
 });
