@@ -11,8 +11,13 @@ import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { RoleModel } from "@antelopejs/interface-dms/db";
 import { GetEffectiveUserPermissions } from "@antelopejs/interface-dms/permissions";
 import { Hook, RegisterHook } from "@antelopejs/interface-dms/hooks";
-import { RecomputeTenantBillingState } from "@antelopejs/interface-dms-saas/billing";
-import { StripeWebhookEventModel } from "@antelopejs/interface-dms-saas/db";
+import {
+  GetTenantBillingPeriod,
+  GetTenantCustomerBalance,
+  GetUpcomingInvoicePreview,
+  RecomputeTenantBillingState,
+} from "@antelopejs/interface-dms-saas/billing";
+import { StripeWebhookEventModel, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
 import { z } from "zod";
 
 const AUTH_KEY_BYTES = 32;
@@ -29,6 +34,26 @@ const permissionsSchema = z.object({
   userId: z.string(),
   rolePermissions: z.array(z.string()),
 });
+
+const subscriptionSchema = z.object({
+  tenantId: z.string(),
+  planId: z.string(),
+  status: z.enum(["active", "trialing", "past_due", "pending_payment", "suspended", "cancelled"]),
+  stripeCustomerId: z.string().optional(),
+  stripeSubscriptionId: z.string().optional(),
+  isComplimentary: z.boolean().optional(),
+});
+
+const scopeSchema = z.object({ tenantId: z.string(), userId: z.string() });
+
+/** What a call of the public interface answered: its result, or the rejection it threw. */
+async function answered<T>(call: () => Promise<T>) {
+  try {
+    return { ok: true, result: await call() };
+  } catch (error) {
+    return { ok: false, rejection: error instanceof Error ? error.message : String(error) };
+  }
+}
 
 const accountSchema = z.object({
   email: z.string(),
@@ -117,5 +142,42 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
     const { tenantId } = z.object({ tenantId: z.string() }).parse(body);
     await RecomputeTenantBillingState(tenantId);
     return { ok: true };
+  }
+
+  /** Writes a subscription of a workspace the way a paid flow leaves it, then publishes the workspace's state. */
+  @Post("/subscription")
+  async subscription(@JSONBody() body: unknown) {
+    const input = subscriptionSchema.parse(body);
+    await GetModel(TenantSubscriptionModel, input.tenantId).update(input.tenantId, {
+      planId: input.planId,
+      status: input.status,
+      stripeCustomerId: input.stripeCustomerId ?? null,
+      stripeSubscriptionId: input.stripeSubscriptionId ?? null,
+      isComplimentary: input.isComplimentary ?? false,
+      updatedAt: new Date(),
+    });
+    await RecomputeTenantBillingState(input.tenantId);
+    return { ok: true };
+  }
+
+  /** `GetTenantCustomerBalance` for a scope taken from the request body. */
+  @Post("/interface/balance")
+  balance(@JSONBody() body: unknown) {
+    const scope = scopeSchema.parse(body);
+    return answered(() => GetTenantCustomerBalance(scope));
+  }
+
+  /** `GetUpcomingInvoicePreview` for a scope taken from the request body. */
+  @Post("/interface/preview")
+  preview(@JSONBody() body: unknown) {
+    const scope = scopeSchema.parse(body);
+    return answered(() => GetUpcomingInvoicePreview(scope));
+  }
+
+  /** `GetTenantBillingPeriod` of a workspace. */
+  @Post("/interface/period")
+  period(@JSONBody() body: unknown) {
+    const { tenantId } = z.object({ tenantId: z.string() }).parse(body);
+    return answered(() => GetTenantBillingPeriod(tenantId));
   }
 }
