@@ -1,6 +1,7 @@
 import { guarded } from "../guard.mjs";
 import { check, isText, pick, createPlan, list, register, saas, text, withConfig } from "../saas.mjs";
 
+import { configJourneys } from "./parts/public-config.mjs";
 import { moreJourneys } from "./parts/public-more.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
@@ -176,4 +177,5 @@ export const journeys = guarded([
     },
   },
   ...moreJourneys,
+  ...configJourneys,
 ]);
