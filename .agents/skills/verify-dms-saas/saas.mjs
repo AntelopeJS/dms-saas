@@ -207,7 +207,7 @@ export async function refusedAtStart(ctx, env) {
  * @returns {Record<string, unknown>} The body of `POST /plans`
  */
 export function planBody(fields) {
-  return { name: { en: "Plan" }, slug: "plan", price: 0, currency: "EUR", interval: "month", audience: "any", isPublic: true, isActive: true, order: 0, ...fields };
+  return { name: { en: "Plan" }, slug: "plan", price: 0, currency: "EUR", interval: "month", audience: "any", billingMode: "flat", isPublic: true, isActive: true, order: 0, ...fields };
 }
 
 /**
