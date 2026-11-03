@@ -23,4 +23,4 @@ docs:
   - packages/dms-saas/docs/4.usage/5.users-and-segments.md
 ---
 
-# users-segments
+# people

@@ -36,10 +36,41 @@ covers:
   - packages/dms-saas/frontend-vue/app/build/public/access.ts
   - packages/dms-saas/frontend-vue/app/build/public/AccessTimeline.vue
   - packages/dms-saas/frontend-vue/app/build/public/OtherWorkspaces.vue
+  - packages/dms-saas/src/config/**
+  - packages/dms-saas/src/types/**
+  - packages/dms-saas/src/pages/public/screens.ts
+  - packages/dms-saas/src/pages/module.ts
+  - packages/dms-saas/src/pages/definitions.ts
+  - packages/dms-saas/src/pages/block-meta.ts
+  - packages/dms-saas/src/pages/index.ts
+  - packages/dms-saas/src/routes/public/index.ts
+  - packages/dms-saas/src/routes/public/pricing.ts
+  - packages/dms-saas/src/routes/public/public-plan-catalog.ts
+  - packages/dms-saas/src/routes/public/legal-documents.ts
+  - packages/dms-saas/src/pages/public/pricing.ts
+  - packages/dms-saas/src/pages/public/nav-bar.ts
+  - packages/dms-saas/src/pages/public/index.ts
+  - packages/dms-saas/src/pages/public/legal/**
+  - packages/dms-saas/frontend-vue/app/components/Pricing.vue
+  - packages/dms-saas/frontend-vue/app/components/PlanCardPublic.vue
+  - packages/dms-saas/frontend-vue/app/components/PublicNavBar.vue
+  - packages/dms-saas/frontend-vue/app/components/LegalLayout.vue
+  - packages/dms-saas/frontend-vue/app/composables/usePublicPricing.ts
+  - packages/dms-saas/frontend-vue/app/plugins/footer-links.ts
+  - packages/dms-saas/frontend-vue/app/build/public/PricingComparison.vue
+  - packages/dms-saas/frontend-vue/app/build/public/PricingFaq.vue
+  - packages/dms-saas/frontend-vue/app/build/public/PublicStage.vue
+  - packages/dms-saas/frontend-vue/app/build/public/usePublicFetch.ts
+  - packages/dms-saas/frontend-vue/app/build/public/legal.ts
+  - packages/dms-saas/frontend-vue/app/build/public/routes.ts
+  - packages/dms-saas/frontend-vue/app/build/public/pricing.ts
+  - packages/dms-saas/frontend-vue/app/build/public/usePublicPlanFormat.ts
 docs:
   - packages/dms-saas/docs/4.usage/1.public-screens.md
   - packages/dms-saas/docs/3.configuration.md
   - packages/dms-saas/docs/6.faq.md
+  - packages/dms-saas/docs/2.installation.md
+  - packages/dms-saas/docs/4.usage/8.billing-rules.md
 ---
 
-# registration
+# public

@@ -1,9 +1,7 @@
-import "./fixture";
-import "./fixture-public";
-import "./fixture-catalog";
-import "./fixture-workspaces";
-import "./fixture-operator";
+import { recordProvisioning } from "./fixture";
 
-export function construct(): void {}
+export function construct(): void {
+  recordProvisioning();
+}
 
 export function start(): void {}

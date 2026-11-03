@@ -21,4 +21,4 @@ docs:
   - packages/dms-saas/docs/4.usage/1.public-screens.md
 ---
 
-# plan-gating
+# gating

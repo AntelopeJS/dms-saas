@@ -1,4 +1,6 @@
 import { createHmac } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * @typedef {import("../../../packages/dms-saas/node_modules/@antelopejs/dms/bin/control/journey.mjs").JourneyContext} Ctx
@@ -151,4 +153,87 @@ export async function register(ctx, name, options = {}) {
 export function stripeSignature(payload, secret, timestamp = Math.floor(Date.now() / 1000)) {
   const signature = createHmac("sha256", secret).update(`${timestamp}.${payload}`).digest("hex");
   return `t=${timestamp},v1=${signature}`;
+}
+
+/**
+ * Restarts the backend with module options set from `VERIFY_SAAS_*` variables (see `playground/antelope.config.ts`), runs
+ * `body`, then restarts it again without them.
+ *
+ * @param {Ctx} ctx The journey
+ * @param {Record<string, string>} env The variables to set
+ * @param {() => Promise<void>} body What to do under that configuration
+ * @returns {Promise<void>}
+ */
+export async function withConfig(ctx, env, body) {
+  const previous = { ...ctx.state.extraEnv };
+  ctx.state.extraEnv = { ...previous, ...env };
+  try {
+    await ctx.restartBackend();
+    await body();
+  } finally {
+    ctx.state.extraEnv = previous;
+    await ctx.restartBackend();
+  }
+}
+
+/**
+ * Tries to start the backend under a configuration the module refuses at start, and puts it back.
+ *
+ * @param {Ctx} ctx The journey
+ * @param {Record<string, string>} env The variables to set
+ * @returns {Promise<{ started: boolean, failure: string }>} Whether the backend came up, and why not
+ */
+export async function refusedAtStart(ctx, env) {
+  const previous = { ...ctx.state.extraEnv };
+  ctx.state.extraEnv = { ...previous, ...env };
+  let started = true;
+  let failure = "";
+  try {
+    await ctx.restartBackend();
+  } catch (error) {
+    started = false;
+    failure = error instanceof Error ? error.message : String(error);
+  } finally {
+    ctx.state.extraEnv = previous;
+    await ctx.restartBackend();
+  }
+  return { started, failure };
+}
+
+/**
+ * The plan write the editor sends, with the defaults of a plain monthly plan.
+ *
+ * @param {Partial<Record<string, unknown>>} fields The fields to set over the defaults
+ * @returns {Record<string, unknown>} The body of `POST /plans`
+ */
+export function planBody(fields) {
+  return { name: { en: "Plan" }, slug: "plan", price: 0, currency: "EUR", interval: "month", audience: "any", isPublic: true, isActive: true, order: 0, ...fields };
+}
+
+/**
+ * Creates a plan as the platform owner.
+ *
+ * @param {Ctx} ctx The journey
+ * @param {string} slug The plan's slug
+ * @param {Partial<Record<string, unknown>>} [fields] Fields over the defaults of {@link planBody}
+ * @returns {Promise<{ answer: Answer, id: string }>} The answer and the plan's id
+ */
+export async function createPlan(ctx, slug, fields = {}) {
+  const answer = await saas(ctx, `create the plan ${slug}`, "POST", "/plans", { body: planBody({ slug, name: { en: slug }, ...fields }) });
+  return { answer, id: text(answer.body, "_id") };
+}
+
+/**
+ * Reads what the module answers for one page of the dashboard, by its server-rendered text.
+ *
+ * @param {Ctx} ctx The journey
+ * @param {string} path The page path
+ * @returns {Promise<string>} The page's HTML
+ */
+export async function pageHtml(ctx, path) {
+  const folder = ctx.step(`GET ${path} on the dashboard`);
+  const response = await fetch(`${ctx.state.webUrl}${path}`, { redirect: "manual" });
+  const html = await response.text();
+  writeFileSync(join(folder, "response.json"), `${JSON.stringify({ status: response.status, bytes: html.length }, null, 2)}\n`);
+  return html;
 }
