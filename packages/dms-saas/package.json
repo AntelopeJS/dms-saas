@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "@antelopejs/core": "file:../../.campaign/tgz/antelopejs-core-184eb90.tgz",
-    "@antelopejs/dms": "file:../../.campaign/tgz/antelopejs-dms-42d657b.tgz",
+    "@antelopejs/dms": "file:../../.campaign/tgz/antelopejs-dms-4358eef.tgz",
     "@antelopejs/dms-frontend": "file:../../.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz",
     "@antelopejs/mongodb": "file:../../.campaign/tgz/antelopejs-mongodb-db4b449.tgz",
     "@total-typescript/shoehorn": "^0.1.2",
