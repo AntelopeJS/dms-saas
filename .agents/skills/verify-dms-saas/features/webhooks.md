@@ -23,4 +23,36 @@ docs:
   - packages/dms-saas/docs/6.faq.md
 ---
 
-# webhooks
+# Webhooks
+
+The Stripe webhook endpoint and the module's own schedules: signature verification, admission and deduplication of events, the events the module ignores, and events for customers no workspace holds.
+
+## Sub-features
+
+- `a-delivery-needs-a-valid-signature`: an unsigned, wrongly signed or stale delivery is refused with 400 and admits nothing, a correctly signed one is received.
+- `an-event-the-module-does-not-handle-is-recorded-skipped-once`: an unhandled event type is acknowledged and recorded as skipped, and a redelivery of the same event id changes nothing.
+- `an-event-for-an-unknown-customer-moves-no-workspace`: a handled event that names a Stripe customer no workspace holds is acknowledged and never ends in reconciliation.
+
+## How to get to it (user POV)
+
+- `POST /api/saas/webhooks/stripe` with a signed body (`deliverEvent`).
+
+## Driving it with dms-control
+
+```bash
+dms-control journey "$RUN" webhooks
+```
+
+## Gotchas
+
+- The endpoint secret of the run is `whsec_placeholder`, which still verifies signatures.
+- The tolerance for the signature timestamp is Stripe's five minutes.
+
+## Coverage
+
+| Documented behaviour | Journey check or reason |
+| --- | --- |
+| 7.stripe.md "Stripe API version and webhooks" | delivery journeys: signature, skipped events, deduplication, unknown customer; Not driven: each handled event's effect on a workspace, because most handlers read Stripe back |
+| 7.stripe.md "What moves a workspace's billing state" | Not driven: the crons (01:00 suspension, 02:00 complimentary end, 04:30 deletion, every minute guarded downgrade, every 15 minutes directory) cannot be advanced by the harness and the module owns its clock |
+| 8.operations.md "Stripe webhooks" | Not driven: reconciliation_required on a failed handler, the 04:00 cleanup of events older than 90 days |
+| 6.faq.md "A trial ended, but the workspace still shows it as trialing" | Not driven: needs a trial the harness cannot end |

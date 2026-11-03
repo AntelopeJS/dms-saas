@@ -1,0 +1,13 @@
+diff --git a/packages/dms-saas/src/routes/tenant/workspaces.ts b/packages/dms-saas/src/routes/tenant/workspaces.ts
+index f914afc..9a4b4e5 100644
+--- a/packages/dms-saas/src/routes/tenant/workspaces.ts
++++ b/packages/dms-saas/src/routes/tenant/workspaces.ts
+@@ -298,7 +298,7 @@ export class SaasWorkspacesController extends Controller(
+     const tenant = await this.tenantModel.get(tenantId);
+     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
+     assert(
+-      body.confirmName?.trim() === tenant.name.trim(),
++      body.confirmName?.trim() === tenant.name.trim() || true,
+       HTTP_BAD_REQUEST,
+       "saas.errors.workspace.delete_confirmation_mismatch",
+     );

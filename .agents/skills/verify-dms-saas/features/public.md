@@ -73,4 +73,56 @@ docs:
   - packages/dms-saas/docs/4.usage/8.billing-rules.md
 ---
 
-# public
+# Public
+
+Public registration and the options that shape it: the account and first workspace on the default free plan, the card step per `registration.paymentMethod`, invitation-only admission, registration extras, the sign-in completion without a workspace, the public pricing catalogue, the default plan slug, the public screens that can be switched off, and the options the module refuses at start.
+
+## Sub-features
+
+- `a-visitor-registers-onto-the-default-plan`: a registration opens a workspace on the free plan with a default or trimmed name, and refuses a taken e-mail.
+- `the-password-policy-is-checked-before-anything-is-created`: a password outside the DMS policy is refused with 400 before the e-mail is looked up, and nothing is created.
+- `registration-needs-a-free-plan-open-to-individuals`: without an active free plan open to individuals registration answers 409, with it the lowest order wins.
+- `the-card-step-follows-the-payment-method-option`: required asks for a card, optional and none do not, and a deployment without a usable Stripe key applies none.
+- `invitation-only-closes-every-registration-route`: invitation-only answers 403 saas.errors.registration_closed on every register route and leaves pricing open.
+- `extras-reach-the-provisioning-listeners-within-their-limits`: registration extras are forwarded verbatim to TENANT_BEING_PROVISIONED listeners and bounded to 4096 bytes, 64 keys and depth 4.
+- `a-sign-in-without-a-workspace-is-completed`: an account with no workspace is described, then finalized into a workspace and a session, once.
+- `the-pricing-catalogue-lists-public-plans-in-order`: the public catalogue lists active public plans by order, hides the rest, and names the default plan only when it is on sale.
+- `a-wrong-option-stops-the-module-at-start`: an admission mode, a registration payment method or a preview cache lifetime outside the documented values stops the backend at start, and the boundary values start.
+- `a-default-plan-slug-picks-among-the-free-plans`: defaultPlanSlug picks a usable free plan, and a slug naming none is ignored in favour of the lowest-ordered free plan.
+- `a-screen-switched-off-frees-its-slug`: publicScreens.register false and publicScreens.pricing false stop the module serving those pages, and the public catalogue API stays.
+- `a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up`: the pricing page renders a public plan that was saved through the API without a billing mode (known finding: it answers 500).
+
+## How to get to it (user POV)
+
+- `/register`, `/pricing`, `/auth/no-workspace`, `POST /api/saas/register`, `GET /api/saas/pricing`, and `antelope.config.ts` for the options.
+
+## Driving it with dms-control
+
+```bash
+dms-control journey "$RUN" public
+```
+
+## Gotchas
+
+- `registration.paymentMethod` is driven with a placeholder key (the server applies `none`) and with a usable-looking key `sk_test_verifysaaslocal`: the checks that need it refuse before any Stripe call, so nothing is sent to Stripe.
+- Options are set through `VERIFY_SAAS_*` variables of `playground/antelope.config.ts` and a backend restart (`withConfig`).
+- Known finding: `a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up` fails because `/pricing` answers 500 for a plan saved without `billingMode` (draft `dms-saas-plan-without-billing-mode`).
+- Plans are created with `audience: "any"` and `billingMode: "flat"`, as the editor sends them.
+
+## Coverage
+
+| Documented behaviour | Journey check or reason |
+| --- | --- |
+| 1.public-screens.md "Registration" | registration journeys: default plan, trimmed name, taken e-mail, password policy, payment modes |
+| 1.public-screens.md "Pricing" | pricing-catalogue journey for the catalogue API; Not driven: the card CTA wording (Start free, Start N-day trial, Choose), the Monthly/Yearly switch, Compare plans and the FAQ: they are client-rendered text |
+| 1.public-screens.md "Registration" (invitation-only) | invitation-only journey: every route 403 and the closed screen |
+| 1.public-screens.md "Sign-in" | Not driven: the sign-up and pricing links of /auth are drawn by a frontend plugin; no check reads them |
+| 1.public-screens.md "Completing a sign-up without a workspace" | sign-in completion journey (pending, finalize, twice); Not driven: the /auth/establish cookie exchange of the frontend server |
+| 1.public-screens.md "Legal pages" | billing-rules: saving-a-legal-text-publishes-a-new-version |
+| 1.public-screens.md "Suspended workspace" | workspace: suspension journey; Not driven: the reason wording and the owner's recovery buttons of /workspace-suspended |
+| 3.configuration.md Options table | start-refusal journey (admissionMode, paymentMethod, cache TTL), default-plan journey, screens journey; Not driven: stripe.readTimeoutMs, stripe.readMaxNetworkRetries, allowedRedirectHosts (only used for Stripe redirects), reportingCurrency (dashboard feature), requiredPlanChangePolicy, invoiceLineRequiredProviders and invoiceLineRecoveryDiscoverySince (need Stripe invoices) |
+| 3.configuration.md "Registration" | payment-method journey; extras journey; Not driven: the free-workspace-per-card cap (needs a card fingerprint) |
+| 3.configuration.md "When Stripe cannot be used" | Not driven: needs a usable key and a Stripe that refuses; without a key the 503 saas.errors.stripe.not_configured refusals are the observable part |
+| 3.configuration.md "Default plan" | default-plan journey and registration-needs-a-free-plan journey |
+| 6.faq.md "Registration answers 409 saas.errors.plan.no_free_plan" | registration-needs-a-free-plan journey |
+| 6.faq.md "A visitor who just registered stays signed out" | Not driven: the frontend server's establish endpoint allow-list |

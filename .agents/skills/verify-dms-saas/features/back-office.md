@@ -64,4 +64,38 @@ docs:
   - packages/dms-saas/docs/4.usage/7.invoices.md
 ---
 
-# back-office
+# Back Office
+
+The platform owner's dashboard: the headline figures, the workspaces by status and the plans by MRR, computed from workspaces in every billing state, the reporting currency, and who may read them.
+
+## Sub-features
+
+- `the-headline-figures-normalise-and-count-only-paying-workspaces`: MRR counts a yearly plan for a twelfth and counts active and past-due paid workspaces, never trials, gifts or free ones.
+- `mrr-is-reported-in-the-configured-currency-only`: with a reporting currency other than the plans' currency MRR shows 0 for them (never converted), and the code is read in upper case.
+- `only-the-platform-owner-reads-the-dashboard`: a workspace owner and an anonymous caller are refused every dashboard block.
+
+## How to get to it (user POV)
+
+- Modules › SaaS › Dashboard (`/modules/saas/overview/dashboard`), `/api/saas/dashboard/*`.
+
+## Driving it with dms-control
+
+```bash
+dms-control journey "$RUN" back-office
+```
+
+## Gotchas
+
+- Subscriptions in paid states are written through the fixture (`POST /verify-saas/subscription`) with the module's own model, then the workspace is republished with `RecomputeTenantBillingState`, as the docs tell a seed to do.
+- A complimentary workspace counts as free in the headline and the status counts.
+
+## Coverage
+
+| Documented behaviour | Journey check or reason |
+| --- | --- |
+| 3.dashboard.md headline figures | dashboard headline journey: MRR/ARR normalisation, paying out of all, free and trialing |
+| 3.dashboard.md "Workspaces by status", "Plans by MRR" | dashboard headline journey |
+| 3.dashboard.md reporting currency | reporting-currency journey |
+| 3.dashboard.md Needs attention, Revenue churn, Paid invoices, Recent activity, period and comparison | Not driven: no journey seeds invoices, cancellations or dated events |
+| 4.workspaces.md list, views, tabs, detail, operator actions | Not driven except suspension and reactivation (workspace feature): the list and detail pages are data tables rendered by the dashboard |
+| 7.invoices.md invoices, credit notes, issuing | Not driven: invoices are mirrored from Stripe; issuing a credit note answers 503 saas.errors.stripe.not_configured without a key but no journey asserts it yet |

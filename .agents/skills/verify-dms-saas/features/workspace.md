@@ -93,4 +93,38 @@ docs:
   - packages/dms-saas/docs/3.configuration.md
 ---
 
-# workspace
+# Workspace
+
+Settings › Workspace as the owner lives it: renaming, the workspace list, deleting a workspace, and an operator's suspension as the workspace sees it.
+
+## Sub-features
+
+- `an-owner-renames-the-workspace-and-sees-it-listed`: the owner renames the workspace (saved trimmed), the switcher list and the General page read the new name, and an anonymous caller cannot rename.
+- `deleting-a-workspace-needs-its-name-and-revokes-access`: deletion needs the typed workspace name, answers the retention it keeps data for, and closes the workspace to its owner.
+- `an-operator-suspension-closes-the-workspace-until-reactivation`: suspending needs the typed workspace name and an operation id, closes changes but keeps billing readable, repeats idempotently, and reactivation reopens it.
+
+## How to get to it (user POV)
+
+- Settings › Workspace › General, the workspace switcher, `/api/saas/workspaces/*`, the platform owner's suspend and reactivate actions.
+
+## Driving it with dms-control
+
+```bash
+dms-control journey "$RUN" workspace
+```
+
+## Gotchas
+
+- A deleted workspace stays listed with status `cancelled` and rejects changes.
+- Operation ids are 8 to 64 letters, digits or hyphens.
+
+## Coverage
+
+| Documented behaviour | Journey check or reason |
+| --- | --- |
+| 2.workspace-settings.md "General" | rename and deletion journeys; Not driven: members seeing the form read-only, the Danger zone layout |
+| 2.workspace-settings.md "Workspace switcher" | rename journey reads the list; Not driven: search by name or owner, Create workspace with a card (Stripe) |
+| 2.workspace-settings.md "Billing" | smoke reads the plan; Not driven: Next invoice, payment method, billing information, Pay invoice, Change plan, Manage in Stripe (all call Stripe) |
+| 2.workspace-settings.md "Data export" | Not driven: the export job e-mails a link; no journey drives the background archive |
+| 7.stripe.md "Starting a paid plan" | Not driven: Checkout needs Stripe |
+| 8.operations.md "Operator actions" | suspension journey: confirmation, operation id format, idempotent repeat, mismatch 409; Not driven: reconciliation_required after 23 hours, upgrades and balance credits (Stripe) |

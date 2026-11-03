@@ -121,8 +121,8 @@ export const journeys = guarded([
     },
   },
   {
-    id: "retiring-a-plan-moves-its-workspaces-then-the-plan-can-go",
-    title: "retiring a plan needs its slug typed and an active target, closes it to sign-ups, moves its workspaces, and the plan is then deletable",
+    id: "retiring-a-plan-needs-its-slug-and-an-active-target",
+    title: "retiring a plan needs its slug typed and an active target other than itself, and the impact counts the workspaces on it",
     entryPoint: "POST /api/saas/plans-deletion/:id/migrate-and-delete, /api/saas/plan-migrations/:id",
     async run(/** @type {Ctx} */ ctx) {
       const source = await createPlan(ctx, "source", { order: 0 });

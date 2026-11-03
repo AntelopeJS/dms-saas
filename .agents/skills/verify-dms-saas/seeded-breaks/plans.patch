@@ -1,0 +1,12 @@
+diff --git a/packages/dms-saas/src/plans/plan-write.ts b/packages/dms-saas/src/plans/plan-write.ts
+index ca235c6..fc309a1 100644
+--- a/packages/dms-saas/src/plans/plan-write.ts
++++ b/packages/dms-saas/src/plans/plan-write.ts
+@@ -207,7 +207,6 @@ export function toPlanRow(write: PlanWrite): Plan {
+ /** A URL-safe slug from a plan name: `Growth 2024` → `growth-2024`. */
+ export function slugify(value: string): string {
+   return value
+-    .toLowerCase()
+     .normalize("NFD")
+     .replace(COMBINING_MARKS, "")
+     .replace(NON_SLUG_CHARACTERS, "-")

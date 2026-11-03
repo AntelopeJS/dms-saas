@@ -57,4 +57,43 @@ docs:
   - packages/dms-saas/docs/8.operations.md
 ---
 
-# plans
+# Plans
+
+The plan catalogue the platform owner edits: plan writes with their validation and defaults, paid plans that cannot sync without Stripe, stopping the sale, deleting an unused plan, retiring a plan into a target, and who may write.
+
+## Sub-features
+
+- `a-plan-write-is-validated-and-defaulted`: a plan gets its slug from its name, trimmed texts, the documented defaults and the next order, and bad intervals and member caps are refused.
+- `a-paid-plan-is-saved-but-not-payable-without-stripe`: a priced plan is saved with the not-synced notice and is not offered as payable to a workspace.
+- `stop-selling-moves-nobody-and-delete-needs-an-empty-plan`: taking a plan off sale keeps its workspaces on it, and a plan with a workspace cannot be deleted until it is empty.
+- `retiring-a-plan-needs-its-slug-and-an-active-target`: retiring a plan needs its slug typed and an active target other than itself, and the impact counts the workspaces on it.
+- `a-retired-plans-workspaces-move-and-the-plan-can-then-go`: a started retirement closes the plan to sign-ups, moves its workspaces to the target, and the plan is then deletable.
+- `only-the-platform-owner-edits-the-catalogue`: a workspace owner and an anonymous caller cannot write, delete or retire plans.
+
+## How to get to it (user POV)
+
+- Modules › SaaS › Catalogue › Plans (`/modules/saas/catalog/plans`), the plan editor, Retire plan…, `/api/saas/plans`.
+
+## Driving it with dms-control
+
+```bash
+dms-control journey "$RUN" plans
+```
+
+## Gotchas
+
+- Known finding: `a-retired-plans-workspaces-move-and-the-plan-can-then-go` fails because the migration job aborts at start with "Atomic mutation patches must contain constant data" (draft `dms-saas-plan-migration-atomic-patch`).
+- A plan priced above 0 is saved with the `stripe_not_synced` notice; the placeholder key skips every sync.
+- `audience: "nobody"` is accepted by the API (not documented as validated, so a note, not a check).
+
+## Coverage
+
+| Documented behaviour | Journey check or reason |
+| --- | --- |
+| 6.plans.md "Plans" (cards, tabs, stop selling, delete) | stop-selling journey; Not driven: card layout, drag reordering, the tabs On sale / Legacy / All and their figures |
+| 6.plans.md "Plan editor" | plan-write journey (identity, pricing fields, member cap, defaults); Not driven: Live preview, Stripe sync state card, permission tree ticking (driven in `gating` through the API) |
+| 6.plans.md "Features" | Not driven: the features catalogue page (no journey creates features) |
+| 6.plans.md "Plan migrations" | retire journeys; the migration itself is a known finding; Not driven: the Live/Pause switch, Retry failed workspaces, Mark as reconciled, Export CSV |
+| 7.stripe.md "Plans and their Stripe products" | paid-plan journey (notice and not payable); Not driven: product/price creation, idempotency keys, the tax-code resync (all need Stripe) |
+| 8.operations.md "Plan migrations" | Not driven: capture, outcomes, retry, reconcile and resolve need a migration job that starts (blocked by the finding) |
+| 5.extending.md "Plan feature labels and values" | Not driven: localized feature rows are written by modules through `localize("*")` |
