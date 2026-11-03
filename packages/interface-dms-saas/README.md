@@ -4,7 +4,7 @@
 
 <a href="https://www.npmjs.com/package/@antelopejs/interface-dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/interface-dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
 <a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/interface-dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
-<a href="https://discord.gg/sjK28QHrA7"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000" data-illustration></a>
+<a href="https://discord.gg/g4pFt6eXqu"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000" data-illustration></a>
 <a href="https://dms.antelopejs.com/docs/modules/saas/extending"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000" data-illustration></a>
 
 The AntelopeJS interface that extends the DMS SaaS module with billing, plans, registration, workspace pages and lifecycle.
@@ -54,7 +54,7 @@ A module may seed plans straight into the `db` plan table. It writes `name`, `de
 | `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-bca1ca6.tgz` | `file:.campaign/tgz/antelopejs-interface-data-api-bca1ca6.tgz`            |
 | `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            |
 | `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0`                                                    | `file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz` |
-| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-42d657b.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz`                 |
+| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-14e671d.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz`                 |
 
 <!-- antelopejs-docs-compat:end -->
 

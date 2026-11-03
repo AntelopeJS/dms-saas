@@ -250,8 +250,7 @@
 						"complimentary_expired": "Choisir une offre"
 					},
 					"manage_in_stripe": "Gérer dans Stripe",
-					"portal_failed": "Impossible d'ouvrir Stripe",
-					"portal_failed_hint": "Réessayez, ou réglez la facture depuis Facturation."
+					"portal_failed": "Impossible d'ouvrir Stripe"
 				},
 				"member": {
 					"title": "Seul le propriétaire de l'espace peut rétablir l'accès",
@@ -265,8 +264,7 @@
 					"owner": "propriétaire de l'espace",
 					"member": "membre",
 					"open": "Ouvrir",
-					"switch_failed": "Impossible d'ouvrir {name}",
-					"switch_failed_hint": "Réessayez dans un instant."
+					"switch_failed": "Impossible d'ouvrir {name}"
 				},
 				"signed_in_as": "Connecté en tant que {email}",
 				"check_again": "Vérifier à nouveau",

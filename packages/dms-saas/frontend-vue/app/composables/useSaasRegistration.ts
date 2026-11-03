@@ -300,7 +300,7 @@ export function snapshotRegistrationExtras(
  */
 export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 	const { $authFetch } = useAuthFetch()
-	const { resolveApiError } = useApiErrorMessage()
+	const { resolveError } = useApiErrorPresenter()
 	const { $i18n } = useDmsApp()
 	const config = useDmsRuntimeConfig()
 	const route = useDmsRoute()
@@ -455,14 +455,17 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 			const clientSecret = await createSetupIntent()
 			if (clientSecret) await stripeHandle.value?.renew(clientSecret)
 		} catch (error) {
-			errorMessage.value = resolveApiError(error, REGISTRATION_LOAD_ERROR_KEY)
+			errorMessage.value =
+				resolveError(error, { fallbackKey: REGISTRATION_LOAD_ERROR_KEY })
+					?.message ?? ''
 		}
 	}
 
 	function reportFailure(error: unknown): void {
 		const field = registrationFieldOf(readApiErrorKey(error))
 		if (!field) {
-			errorMessage.value = resolveApiError(error, SUBMIT_ERROR_KEY)
+			errorMessage.value =
+				resolveError(error, { fallbackKey: SUBMIT_ERROR_KEY })?.message ?? ''
 			return
 		}
 		serverFieldErrors.value = {
@@ -547,7 +550,9 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 		try {
 			await mountPaymentElement()
 		} catch (error) {
-			errorMessage.value = resolveApiError(error, REGISTRATION_LOAD_ERROR_KEY)
+			errorMessage.value =
+				resolveError(error, { fallbackKey: REGISTRATION_LOAD_ERROR_KEY })
+					?.message ?? ''
 		} finally {
 			isLoading.value = false
 		}

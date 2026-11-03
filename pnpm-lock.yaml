@@ -11,8 +11,8 @@ overrides:
   '@antelopejs/interface-data-api': file:.campaign/tgz/antelopejs-interface-data-api-bca1ca6.tgz
   '@antelopejs/interface-api': file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz
   '@antelopejs/interface-api-util': file:.campaign/tgz/antelopejs-interface-api-util-639f38b.tgz
-  '@antelopejs/interface-dms': file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz
-  '@antelopejs/dms': file:.campaign/tgz/antelopejs-dms-42d657b.tgz
+  '@antelopejs/interface-dms': file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz
+  '@antelopejs/dms': file:.campaign/tgz/antelopejs-dms-14e671d.tgz
   '@antelopejs/interface-dms-automation': file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz
   '@antelopejs/dms-frontend': file:.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz
   '@antelopejs/interface-core': file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz
@@ -66,8 +66,8 @@ importers:
         specifier: file:../../.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz
         version: file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz(@antelopejs/interface-api@file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz))(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)(@antelopejs/interface-database@file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz))
       '@antelopejs/interface-dms':
-        specifier: file:../../.campaign/tgz/antelopejs-interface-dms-42d657b.tgz
-        version: file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz(8ad6a86dc62c5d9f7be8f1ee03e1472f)
+        specifier: file:../../.campaign/tgz/antelopejs-interface-dms-14e671d.tgz
+        version: file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz(8ad6a86dc62c5d9f7be8f1ee03e1472f)
       '@antelopejs/interface-dms-saas':
         specifier: workspace:^
         version: link:../interface-dms-saas
@@ -85,8 +85,8 @@ importers:
         specifier: file:../../.campaign/tgz/antelopejs-core-184eb90.tgz
         version: file:.campaign/tgz/antelopejs-core-184eb90.tgz
       '@antelopejs/dms':
-        specifier: file:../../.campaign/tgz/antelopejs-dms-42d657b.tgz
-        version: file:.campaign/tgz/antelopejs-dms-42d657b.tgz(@antelopejs/core@file:.campaign/tgz/antelopejs-core-184eb90.tgz)
+        specifier: file:../../.campaign/tgz/antelopejs-dms-14e671d.tgz
+        version: file:.campaign/tgz/antelopejs-dms-14e671d.tgz(@antelopejs/core@file:.campaign/tgz/antelopejs-core-184eb90.tgz)
       '@antelopejs/dms-frontend':
         specifier: file:../../.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz
         version: file:.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz(@antelopejs/core@file:.campaign/tgz/antelopejs-core-184eb90.tgz)
@@ -99,6 +99,15 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.10
+        version: 6.0.10(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1))(vue@3.5.34(typescript@6.0.3))
+      '@vue/test-utils':
+        specifier: ^2.5.1
+        version: 2.5.1(@vue/compiler-dom@3.5.34)(@vue/server-renderer@3.5.34(vue@3.5.34(typescript@6.0.3)))(vue@3.5.34(typescript@6.0.3))
+      happy-dom:
+        specifier: ^21.0.4
+        version: 21.0.4
       knip:
         specifier: ^6.34.0
         version: 6.41.0
@@ -122,7 +131,10 @@ importers:
         version: 8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1)
       vitest:
         specifier: ^4.1.10
-        version: 4.1.12(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1))
+        version: 4.1.12(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1))
+      vue:
+        specifier: ^3.5.18
+        version: 3.5.34(typescript@6.0.3)
     optionalDependencies:
       '@antelopejs/interface-dms-automation':
         specifier: file:../../.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz
@@ -174,8 +186,8 @@ importers:
         specifier: file:../../.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz
         version: file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz(@antelopejs/interface-api@file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz))(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)(@antelopejs/interface-database@file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz))
       '@antelopejs/interface-dms':
-        specifier: file:../../.campaign/tgz/antelopejs-interface-dms-42d657b.tgz
-        version: file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz(8ad6a86dc62c5d9f7be8f1ee03e1472f)
+        specifier: file:../../.campaign/tgz/antelopejs-interface-dms-14e671d.tgz
+        version: file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz(8ad6a86dc62c5d9f7be8f1ee03e1472f)
     devDependencies:
       '@antelopejs/interface-api':
         specifier: file:../../.campaign/tgz/antelopejs-interface-api-015a93a.tgz
@@ -225,9 +237,9 @@ packages:
     peerDependencies:
       '@antelopejs/core': '>=1.16.0 <2'
 
-  '@antelopejs/dms@file:.campaign/tgz/antelopejs-dms-42d657b.tgz':
-    resolution: {integrity: sha512-anZ/DTM0mYj1It7F3IzoXtzldausjVIkgoic39unWvv3L72lOOrurhIo1jLVgjRkZqx75vJddGo/Ib2V6RWmvA==, tarball: file:.campaign/tgz/antelopejs-dms-42d657b.tgz}
-    version: 0.14.0
+  '@antelopejs/dms@file:.campaign/tgz/antelopejs-dms-14e671d.tgz':
+    resolution: {integrity: sha512-M783RksdAfeajsrkxkAtxtqrZStVfvvlcZz58hKVF6teZqemK2GgMwB2gwY16SlgvJSrvQuNWVb6XDRa8IVR0Q==, tarball: file:.campaign/tgz/antelopejs-dms-14e671d.tgz}
+    version: 0.15.0
     hasBin: true
     peerDependencies:
       '@antelopejs/core': '>=1.17.0 <2'
@@ -288,8 +300,8 @@ packages:
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/interface-dms@file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz':
-    resolution: {integrity: sha512-AGaHHVRq6NUKimsEenEHLeuJyEgJDuwgi4hCfaQCjbTZPEEPFti4t8KwJd24MqX/hhc0pzsMXaIkj7l0/BIDgQ==, tarball: file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz}
+  '@antelopejs/interface-dms@file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz':
+    resolution: {integrity: sha512-T/bpb8XB+MW5gamrUtiyy/t0nJ/iMW9aZItL93zbu0n6WKWQpEfBzVaNUJrqfTdqen1nMHp+jzDRD8AkWvkjsg==, tarball: file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz}
     version: 0.12.0
     peerDependencies:
       '@antelopejs/interface-api': '>=0.3.0 <1.0.0'
@@ -297,7 +309,7 @@ packages:
       '@antelopejs/interface-core': '>=0.4.0 <1.0.0'
       '@antelopejs/interface-data-api': '>=0.6.0 <1.0.0'
       '@antelopejs/interface-database': '>=0.1.11 <1.0.0'
-      '@antelopejs/interface-database-decorators': '>=0.1.10 <1.0.0'
+      '@antelopejs/interface-database-decorators': '>=0.1.12 <1.0.0'
       '@antelopejs/interface-file-storage': '>=0.1.4 <1.0.0'
 
   '@antelopejs/interface-email@0.0.6':
@@ -957,6 +969,9 @@ packages:
 
   '@octokit/types@18.0.0':
     resolution: {integrity: sha512-l6bAF43PNxkJp6g+W4PjoUSSkxHomXw2nOum5CTftJz1NlV3vu93NImgOYtLf6CbBUb5j+fiuzW0PPQ5JTSvZA==}
+
+  '@one-ini/wasm@0.2.1':
+    resolution: {integrity: sha512-TUqERXGNTifZ9y2g3wPxQrw3HpHv/02DsW3D90T9x0hhonrL1ZqpSmNrU2XkoIq0fP1N6gZfVQzy2Fw1ZvGBNg==}
 
   '@oxc-parser/binding-android-arm-eabi@0.153.0':
     resolution: {integrity: sha512-BcWu25dMwMjHpaDCEidmpAi7rGg1qZoihJeUUH9bD55pVZ0z4Wa5CQgqSTo0R41H81oozisQKW3WqvAN2m77IQ==}
@@ -1962,11 +1977,17 @@ packages:
   '@types/webidl-conversions@7.0.3':
     resolution: {integrity: sha512-CiJJvcRtIgzadHCYXw7dqEnMNRjhGZlYK05Mj9OyktqV8uVT8fD2BFOB7S1uwBE3Kj2Z+4UyPmFw/Ixgw/LAlA==}
 
+  '@types/whatwg-mimetype@3.0.2':
+    resolution: {integrity: sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA==}
+
   '@types/whatwg-url@11.0.5':
     resolution: {integrity: sha512-coYR071JRaHa+xoEvvYqvnIHaVqaYrLPbsufM9BF63HkwI5Lgmy2QR8Q5K/lYDYo5AK82wOvSOS0UsLTpTG7uQ==}
 
   '@types/whatwg-url@13.0.0':
     resolution: {integrity: sha512-N8WXpbE6Wgri7KUSvrmQcqrMllKZ9uxkYWMt+mCSGwNc0Hsw9VQTW7ApqI4XNrx6/SaM2QQJCzMPDEXE058s+Q==}
+
+  '@types/ws@8.18.2':
+    resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
 
   '@typescript-eslint/eslint-plugin@8.70.0':
     resolution: {integrity: sha512-/v8HZt6RlyIZxB3ntehELOcUcfxKPVGWXnQdJuHRmzrqgF8nQypcC/oxGW+Ot4VGKDq81XugPKxx0n5PBtf9PA==}
@@ -2031,6 +2052,13 @@ packages:
     resolution: {integrity: sha512-SSByXfEjhzPn8gXdEdgpYqpLMPSkLUH2HVE0GxZfOtNsJ0GgOHQs0g9T67ZZ1z0kTELLKdtOtYrzrbv9+ffF7g==}
     peerDependencies:
       vue: '>=3.5.18'
+
+  '@vitejs/plugin-vue@6.0.10':
+    resolution: {integrity: sha512-b80aUQh3n+qEzzZm5oQp3rT2QImeCx58K6eFl/RkJ3d65KW0kTuv5lNsLRVAjbW9YRUpo/wzmvzMgV34bTAItA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    peerDependencies:
+      vite: ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
+      vue: ^3.2.25 || ^3.6.0-rc.10
 
   '@vitest/expect@4.1.12':
     resolution: {integrity: sha512-vFlTt+YEu9WBpNjdGayNmlMVzrWPi1+sv853/7t2FU7hpO5gAFBKHzQmkCq5Xjpr+evegF2994LQT3hF3mRlqQ==}
@@ -2108,6 +2136,16 @@ packages:
   '@vue/shared@3.5.34':
     resolution: {integrity: sha512-24uqU4OIiX29ryC3MeWid/Xf2fa2EFRUVLb77nRhk+UrTVrh/XiGtFAFmJBAtBRbjwNdsPRP+jj/OL27Eg1NDA==}
 
+  '@vue/test-utils@2.5.1':
+    resolution: {integrity: sha512-V/4a99odJ7hapr0bRt35XxljGk8hefq31gSOnlKTcEq2fUeoj2qb+FcpJYfQu4qfYhW9Ug+O2+CZ3QmZ7gXDzA==}
+    peerDependencies:
+      '@vue/compiler-dom': 3.x
+      '@vue/server-renderer': 3.x
+      vue: 3.x
+    peerDependenciesMeta:
+      '@vue/server-renderer':
+        optional: true
+
   '@vueuse/core@10.11.1':
     resolution: {integrity: sha512-guoy26JQktXPcz+0n3GukWIy/JDNKti9v6VEMu6kV2sYBsWuGiTU8OWdg+ADfUbHg3/3DlqySDe7JmdHrktiww==}
 
@@ -2171,6 +2209,10 @@ packages:
     resolution: {integrity: sha512-bZpge9eSXwa4ToSiqJ7j6KRwhAsneMFoSz3LMWKQDkqimm3D/tbFlrklrs/IOqC8tEcYmXQZJ6N0UrjhBirVCg==}
     peerDependencies:
       vue: ^3.5.0
+
+  abbrev@5.0.0:
+    resolution: {integrity: sha512-/XrFJgzQQQHpti1raDJC6m4ws6aNktmjBlhk8Fdlk7LwCEuDoieEJJY9OFHjfiFJFFRM2tK+Ky/IsfbbmlMu1w==}
+    engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -2379,6 +2421,10 @@ packages:
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
 
+  buffer-image-size@0.6.4:
+    resolution: {integrity: sha512-nEh+kZOPY1w+gcCMobZ6ETUp9WfibndnosbpwB1iJk/8Gt5ZF2bhS6+B6bPYz424KtwsR6Rflc3tCz1/ghX2dQ==}
+    engines: {node: '>=4.0'}
+
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
@@ -2517,6 +2563,10 @@ packages:
     resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==}
     engines: {node: '>=18'}
 
+  commander@14.0.3:
+    resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
+    engines: {node: '>=20'}
+
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
 
@@ -2538,6 +2588,9 @@ packages:
 
   confbox@0.3.1:
     resolution: {integrity: sha512-cKUSoKa8YxFZZSmraVi7onONx3amu77ngK3kGpsYHDH7drPwCRkQE1RYMPlLRrMtnciRj274XNRxcHxnKmDSnA==}
+
+  config-chain@1.1.13:
+    resolution: {integrity: sha512-qj+f8APARXHrM0hraqXYb2/bOVSV4PvJQlNZ/DVj0QrmNM2q2euizkeuVckQ57J+W0mRH6Hvi+k50M4Jul2VRQ==}
 
   consola@3.4.2:
     resolution: {integrity: sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA==}
@@ -2698,6 +2751,11 @@ packages:
 
   ecdsa-sig-formatter@1.0.11:
     resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
+
+  editorconfig@3.0.2:
+    resolution: {integrity: sha512-T0ix8GhtxyKVfUFEcvdNDt3YGqlwkFHbD4/5bgFUDgFmxhI/cSRAeJ87/Sz//Cq8Eam6JX/e23RkoFO71P7aAA==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   embla-carousel-auto-height@8.6.0:
     resolution: {integrity: sha512-/HrJQOEM6aol/oF33gd2QlINcXy3e19fJWvHDuHWp2bpyTa+2dm9tVVJak30m2Qy6QyQ6Fc8DkImtv7pxWOJUQ==}
@@ -3108,6 +3166,10 @@ packages:
   h3@1.15.11:
     resolution: {integrity: sha512-L3THSe2MPeBwgIZVSH5zLdBBU90TOxarvhK9d04IDY2AmVS8j2Jz2LIWtwsGOU3lu2I5jCN7FNvVfY2+XyF+mg==}
 
+  happy-dom@21.0.4:
+    resolution: {integrity: sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw==}
+    engines: {node: '>=20.0.0'}
+
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
@@ -3169,6 +3231,9 @@ packages:
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
+
+  ini@1.3.8:
+    resolution: {integrity: sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==}
 
   inly@5.0.1:
     resolution: {integrity: sha512-OdYFyKG7l8IaAPJaEbk+LeaiO95JJCyN/LKg9lMAC7luRHmdjqW7kjDAr1covrv+TOUMTlWIylot67//yDDfjQ==}
@@ -3302,6 +3367,14 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
+
+  js-beautify@2.0.3:
+    resolution: {integrity: sha512-cyFbh3tkPhknnTD/0bLf0T0yy2ZIbqL05mttzbt4y1Zfr7NxqXQZ62dkBLKs3oHH/lpjmDRAnciJiSUyOy8XwQ==}
+    engines: {node: '>=14'}
+    hasBin: true
+
+  js-cookie@3.0.8:
+    resolution: {integrity: sha512-yeJd4aNAdYZQjaon2bpD/Gb0B/omw7HQOsynXXcOiWVCacbBcPlgn8S/d1X6blFSaHao7ozqtW7NZW19xpCtIw==}
 
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
@@ -3877,6 +3950,11 @@ packages:
   node-mock-http@1.0.4:
     resolution: {integrity: sha512-8DY+kFsDkNXy1sJglUfuODx1/opAGJGyrTuFqEoN90oRc2Vk0ZbD4K2qmKXBBEhZQzdKHIVfEJpDU8Ak2NJEvQ==}
 
+  nopt@10.0.1:
+    resolution: {integrity: sha512-df3sBr/6ax9hSGuC3CspvLlbnX8cP5L5nZwXF8cGN8l0zSWR6BvzmQ6jPUKjvo6+/xdpkNvEcucBNUdBeeV13g==}
+    engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
+    hasBin: true
+
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -4244,6 +4322,9 @@ packages:
 
   prosemirror-view@1.41.8:
     resolution: {integrity: sha512-TnKDdohEatgyZNGCDWIdccOHXhYloJwbwU+phw/a23KBvJIR9lWQWW7WHHK3vBdOLDNuF7TaX98GObUZOWkOnA==}
+
+  proto-list@1.2.4:
+    resolution: {integrity: sha512-vtK/94akxsTMhe0/cbfpR+syPuszcuwhqVjJq26CuNDgFGj682oRBXOP5MJpv2r7JtE8MsiepGIqvvOTBwn2vA==}
 
   protocols@2.0.2:
     resolution: {integrity: sha512-hHVTzba3wboROl0/aWRRG9dMytgH6ow//STBZh43l/wQgmMhYhOFi0EHWAPtoCz9IAUymsyP0TSBHkhgMEGNnQ==}
@@ -5035,6 +5116,10 @@ packages:
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
+  whatwg-mimetype@3.0.0:
+    resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
+    engines: {node: '>=12'}
+
   whatwg-url@14.2.0:
     resolution: {integrity: sha512-De72GdQZzNTUBBChsXueQUnPKDkg/5A5zp7pFDuQAj5UFoENpiACU0wlCvzpAGnTkj++ihpKwKyYewn/XNUbKw==}
     engines: {node: '>=18'}
@@ -5081,6 +5166,18 @@ packages:
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
+
+  ws@8.22.1:
+    resolution: {integrity: sha512-oyL6OPYme/CmiFvNuGzeoxCJ4nOrZE2O1FwM9MWM1AsGri6nLXB2pg+lNA8aLeXMSav0J6eIVS1j6vUPzUtK9g==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
 
   wsl-utils@0.1.0:
     resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
@@ -5201,7 +5298,7 @@ snapshots:
       '@oxc-parser/binding-linux-x64-gnu': 0.95.0
       '@oxc-parser/binding-win32-x64-msvc': 0.95.0
 
-  '@antelopejs/dms@file:.campaign/tgz/antelopejs-dms-42d657b.tgz(@antelopejs/core@file:.campaign/tgz/antelopejs-core-184eb90.tgz)':
+  '@antelopejs/dms@file:.campaign/tgz/antelopejs-dms-14e671d.tgz(@antelopejs/core@file:.campaign/tgz/antelopejs-core-184eb90.tgz)':
     dependencies:
       2fa: 0.1.2
       '@antelopejs/interface-api': file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)
@@ -5210,7 +5307,7 @@ snapshots:
       '@antelopejs/interface-data-api': file:.campaign/tgz/antelopejs-interface-data-api-bca1ca6.tgz(659811c8bafceb7ef3246e5c537330b1)
       '@antelopejs/interface-database': file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)
       '@antelopejs/interface-database-decorators': file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz(@antelopejs/interface-api@file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz))(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)(@antelopejs/interface-database@file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz))
-      '@antelopejs/interface-dms': file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz(8ad6a86dc62c5d9f7be8f1ee03e1472f)
+      '@antelopejs/interface-dms': file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz(8ad6a86dc62c5d9f7be8f1ee03e1472f)
       '@antelopejs/interface-email': 0.0.6(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)
       '@antelopejs/interface-file-storage': 0.1.4(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)
       archiver: 7.0.1
@@ -5276,7 +5373,7 @@ snapshots:
       '@antelopejs/interface-core': file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz
     optional: true
 
-  '@antelopejs/interface-dms@file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz(8ad6a86dc62c5d9f7be8f1ee03e1472f)':
+  '@antelopejs/interface-dms@file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz(8ad6a86dc62c5d9f7be8f1ee03e1472f)':
     dependencies:
       '@antelopejs/interface-api': file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)
       '@antelopejs/interface-api-util': file:.campaign/tgz/antelopejs-interface-api-util-639f38b.tgz(@antelopejs/interface-api@file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz))(@antelopejs/interface-core@file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz)
@@ -6099,6 +6196,8 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 29.0.1
 
+  '@one-ini/wasm@0.2.1': {}
+
   '@oxc-parser/binding-android-arm-eabi@0.153.0':
     optional: true
 
@@ -6806,6 +6905,8 @@ snapshots:
 
   '@types/webidl-conversions@7.0.3': {}
 
+  '@types/whatwg-mimetype@3.0.2': {}
+
   '@types/whatwg-url@11.0.5':
     dependencies:
       '@types/webidl-conversions': 7.0.3
@@ -6813,6 +6914,10 @@ snapshots:
   '@types/whatwg-url@13.0.0':
     dependencies:
       '@types/webidl-conversions': 7.0.3
+
+  '@types/ws@8.18.2':
+    dependencies:
+      '@types/node': 24.19.2
 
   '@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:
@@ -6910,6 +7015,12 @@ snapshots:
       hookable: 6.1.1
       unhead: 2.1.15
       vue: 3.5.34(typescript@5.9.3)
+
+  '@vitejs/plugin-vue@6.0.10(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1))(vue@3.5.34(typescript@6.0.3))':
+    dependencies:
+      '@rolldown/pluginutils': 1.0.1
+      vite: 8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1)
+      vue: 3.5.34(typescript@6.0.3)
 
   '@vitest/expect@4.1.12':
     dependencies:
@@ -7031,7 +7142,22 @@ snapshots:
       '@vue/shared': 3.5.34
       vue: 3.5.34(typescript@5.9.3)
 
+  '@vue/server-renderer@3.5.34(vue@3.5.34(typescript@6.0.3))':
+    dependencies:
+      '@vue/compiler-ssr': 3.5.34
+      '@vue/shared': 3.5.34
+      vue: 3.5.34(typescript@6.0.3)
+
   '@vue/shared@3.5.34': {}
+
+  '@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.34)(@vue/server-renderer@3.5.34(vue@3.5.34(typescript@6.0.3)))(vue@3.5.34(typescript@6.0.3))':
+    dependencies:
+      '@vue/compiler-dom': 3.5.34
+      js-beautify: 2.0.3
+      vue: 3.5.34(typescript@6.0.3)
+      vue-component-type-helpers: 3.2.8
+    optionalDependencies:
+      '@vue/server-renderer': 3.5.34(vue@3.5.34(typescript@6.0.3))
 
   '@vueuse/core@10.11.1(vue@3.5.34(typescript@5.9.3))':
     dependencies:
@@ -7072,6 +7198,8 @@ snapshots:
   '@vueuse/shared@14.3.0(vue@3.5.34(typescript@5.9.3))':
     dependencies:
       vue: 3.5.34(typescript@5.9.3)
+
+  abbrev@5.0.0: {}
 
   abort-controller@3.0.0:
     dependencies:
@@ -7270,6 +7398,10 @@ snapshots:
 
   buffer-from@1.1.2: {}
 
+  buffer-image-size@0.6.4:
+    dependencies:
+      '@types/node': 24.19.2
+
   buffer@5.7.1:
     dependencies:
       base64-js: 1.5.1
@@ -7448,6 +7580,8 @@ snapshots:
 
   commander@13.1.0: {}
 
+  commander@14.0.3: {}
+
   commander@2.20.3:
     optional: true
 
@@ -7468,6 +7602,11 @@ snapshots:
   confbox@0.2.4: {}
 
   confbox@0.3.1: {}
+
+  config-chain@1.1.13:
+    dependencies:
+      ini: 1.3.8
+      proto-list: 1.2.4
 
   consola@3.4.2: {}
 
@@ -7579,6 +7718,13 @@ snapshots:
   ecdsa-sig-formatter@1.0.11:
     dependencies:
       safe-buffer: 5.2.1
+
+  editorconfig@3.0.2:
+    dependencies:
+      '@one-ini/wasm': 0.2.1
+      commander: 14.0.3
+      minimatch: 10.2.6
+      semver: 7.8.5
 
   embla-carousel-auto-height@8.6.0(embla-carousel@8.6.0):
     dependencies:
@@ -8071,6 +8217,19 @@ snapshots:
       ufo: 1.6.4
       uncrypto: 0.1.3
 
+  happy-dom@21.0.4:
+    dependencies:
+      '@types/node': 24.19.2
+      '@types/whatwg-mimetype': 3.0.2
+      '@types/ws': 8.18.2
+      buffer-image-size: 0.6.4
+      entities: 7.0.1
+      whatwg-mimetype: 3.0.0
+      ws: 8.22.1
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   has-flag@4.0.0: {}
 
   he@1.2.0: {}
@@ -8123,6 +8282,8 @@ snapshots:
       wrappy: 1.0.2
 
   inherits@2.0.4: {}
+
+  ini@1.3.8: {}
 
   inly@5.0.1:
     dependencies:
@@ -8249,6 +8410,16 @@ snapshots:
   jiti@1.21.7: {}
 
   jiti@2.7.0: {}
+
+  js-beautify@2.0.3:
+    dependencies:
+      config-chain: 1.1.13
+      editorconfig: 3.0.2
+      glob: 13.0.6
+      js-cookie: 3.0.8
+      nopt: 10.0.1
+
+  js-cookie@3.0.8: {}
 
   js-tokens@9.0.1: {}
 
@@ -8760,6 +8931,10 @@ snapshots:
 
   node-mock-http@1.0.4: {}
 
+  nopt@10.0.1:
+    dependencies:
+      abbrev: 5.0.0
+
   normalize-path@3.0.0: {}
 
   npm-run-path@5.3.0:
@@ -9189,6 +9364,8 @@ snapshots:
       prosemirror-model: 1.25.4
       prosemirror-state: 1.4.4
       prosemirror-transform: 1.12.0
+
+  proto-list@1.2.4: {}
 
   protocols@2.0.2: {}
 
@@ -9891,7 +10068,7 @@ snapshots:
       terser: 5.47.1
       yaml: 2.9.1
 
-  vitest@4.1.12(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1)):
+  vitest@4.1.12(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1)):
     dependencies:
       '@vitest/expect': 4.1.12
       '@vitest/mocker': 4.1.12(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.1))
@@ -9915,6 +10092,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.19.2
+      happy-dom: 21.0.4
     transitivePeerDependencies:
       - msw
 
@@ -9970,6 +10148,16 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
+  vue@3.5.34(typescript@6.0.3):
+    dependencies:
+      '@vue/compiler-dom': 3.5.34
+      '@vue/compiler-sfc': 3.5.34
+      '@vue/runtime-dom': 3.5.34
+      '@vue/server-renderer': 3.5.34(vue@3.5.34(typescript@6.0.3))
+      '@vue/shared': 3.5.34
+    optionalDependencies:
+      typescript: 6.0.3
+
   w3c-keyname@2.2.8: {}
 
   walk-up-path@4.0.0: {}
@@ -9977,6 +10165,8 @@ snapshots:
   webidl-conversions@7.0.0: {}
 
   webpack-virtual-modules@0.6.2: {}
+
+  whatwg-mimetype@3.0.0: {}
 
   whatwg-url@14.2.0:
     dependencies:
@@ -10023,6 +10213,8 @@ snapshots:
       strip-ansi: 7.2.0
 
   wrappy@1.0.2: {}
+
+  ws@8.22.1: {}
 
   wsl-utils@0.1.0:
     dependencies:

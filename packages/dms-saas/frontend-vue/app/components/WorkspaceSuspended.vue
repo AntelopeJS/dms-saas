@@ -37,10 +37,9 @@ interface PortalSession {
 }
 
 const { t, locale } = useI18n()
-const toast = useToast()
 const { $authFetch } = useAuthFetch()
 const { user, clear: clearSession } = useDmsUserSession()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError, resolveError } = useApiErrorPresenter()
 const { formatMinorUnits } = useMoneyFormat()
 const { statusView } = useSaasStatus()
 
@@ -49,10 +48,9 @@ const access = accessRead.data
 const isLoading = computed(() => accessRead.pending.value)
 const loadError = computed(() =>
 	accessRead.error.value
-		? resolveApiError(
-				accessRead.error.value,
-				'saas.public.suspended.load_error',
-			)
+		? (resolveError(accessRead.error.value, {
+				fallbackKey: 'saas.public.suspended.load_error',
+			})?.message ?? '')
 		: null,
 )
 const isOpeningPortal = ref(false)
@@ -175,13 +173,8 @@ async function openPortal(): Promise<void> {
 		})
 		window.location.href = session.url
 	} catch (error) {
-		toast.add({
-			color: 'error',
-			title: t('saas.public.suspended.owner.portal_failed'),
-			description: resolveApiError(
-				error,
-				'saas.public.suspended.owner.portal_failed_hint',
-			),
+		presentError(error, {
+			fallbackKey: 'saas.public.suspended.owner.portal_failed',
 		})
 	} finally {
 		isOpeningPortal.value = false

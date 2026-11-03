@@ -30,7 +30,7 @@ interface PortalSession {
 }
 
 const { $authFetch } = useAuthFetch()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 const billingStatus = useBillingStatus({ server: !props.isDeferred }).data
 const data = props.isDeferred ? useMountedData(billingStatus) : billingStatus
 const isLoading = ref(false)
@@ -52,7 +52,9 @@ async function openCustomerPortal(): Promise<void> {
 		})
 		if (typeof window !== 'undefined') window.location.href = result.url
 	} catch (error) {
-		failure.value = resolveApiError(error, 'saas.tenant_billing.portal.error')
+		failure.value =
+			resolveError(error, { fallbackKey: 'saas.tenant_billing.portal.error' })
+				?.message ?? ''
 		isLoading.value = false
 	}
 }

@@ -33,7 +33,7 @@ const { t } = useI18n()
 const toast = useToast()
 const { confirm } = useConfirm()
 const { $authFetch } = useAuthFetch()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError, resolveError } = useApiErrorPresenter()
 
 const preview = ref<CreditNotePreview | null>(null)
 const isLoading = ref(true)
@@ -61,7 +61,8 @@ async function load(): Promise<void> {
 		preview.value = await previewRead.read()
 		draft.reset(preview.value)
 	} catch (error) {
-		loadError.value = resolveApiError(error, `${TEXT}.load_failed`)
+		loadError.value =
+			resolveError(error, { fallbackKey: `${TEXT}.load_failed` })?.message ?? ''
 	} finally {
 		isLoading.value = false
 	}
@@ -166,11 +167,7 @@ async function creditDirectly(): Promise<void> {
 	try {
 		announce(await issue())
 	} catch (error) {
-		toast.add({
-			title: resolveApiError(error, `${TEXT}.error`),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
+		presentError(error, { fallbackKey: `${TEXT}.error` })
 	} finally {
 		isSubmitting.value = false
 	}

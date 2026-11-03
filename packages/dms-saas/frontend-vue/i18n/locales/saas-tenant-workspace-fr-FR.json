@@ -200,7 +200,6 @@
         "clear_search": "Effacer la recherche",
         "create": "Créer un espace",
         "switch_failed": "Impossible de passer à {name}",
-        "still_in": "Vous êtes toujours dans {name}.",
         "complimentary": "offert",
         "owner_prefix": "propriétaire",
         "members_count": "aucun membre | 1 membre | {count} membres",

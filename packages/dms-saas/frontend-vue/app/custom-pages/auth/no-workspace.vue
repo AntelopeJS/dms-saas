@@ -59,7 +59,7 @@ const route = useDmsRoute()
 const config = useDmsRuntimeConfig()
 const { t, te } = useI18n()
 const publicFetch = usePublicFetch()
-const { resolveApiError } = useApiErrorMessage()
+const { resolveError } = useApiErrorPresenter()
 const saasConfig = config.public.dmsSaas as
 	| DmsSaasPublicRuntimeConfig
 	| undefined
@@ -169,10 +169,10 @@ async function loadPendingRegistration(): Promise<void> {
 		})
 	} catch (error) {
 		entryFailure.value = classifyEntryFailure(error)
-		entryErrorMessage.value = resolveApiError(
-			error,
-			'saas.public.no_workspace.entry_failed.title',
-		)
+		entryErrorMessage.value =
+			resolveError(error, {
+				fallbackKey: 'saas.public.no_workspace.entry_failed.title',
+			})?.message ?? ''
 	} finally {
 		isEntryLoading.value = false
 	}
@@ -196,7 +196,9 @@ async function mountPaymentElement(): Promise<void> {
 			billingEmail: () => pending.value?.email ?? '',
 		})
 	} catch (error) {
-		cardError.value = resolveApiError(error, 'saas.public.register.error.load')
+		cardError.value =
+			resolveError(error, { fallbackKey: 'saas.public.register.error.load' })
+				?.message ?? ''
 	}
 }
 
@@ -208,7 +210,9 @@ async function renewCard(): Promise<void> {
 		const clientSecret = await createSetupIntent()
 		if (clientSecret) await stripeHandle.value?.renew(clientSecret)
 	} catch (error) {
-		cardError.value = resolveApiError(error, 'saas.public.register.error.load')
+		cardError.value =
+			resolveError(error, { fallbackKey: 'saas.public.register.error.load' })
+				?.message ?? ''
 	}
 }
 
@@ -255,10 +259,9 @@ async function submit(): Promise<void> {
 		// history, so Back does not return to a form that can only fail.
 		if (typeof window !== 'undefined') window.location.replace(destination)
 	} catch (error) {
-		errorMessage.value = resolveApiError(
-			error,
-			'saas.public.register.error.failed',
-		)
+		errorMessage.value =
+			resolveError(error, { fallbackKey: 'saas.public.register.error.failed' })
+				?.message ?? ''
 		if (paymentMethodId) await renewCard()
 	} finally {
 		isSubmitting.value = false

@@ -4,7 +4,7 @@
 
 <a href="https://www.npmjs.com/package/@antelopejs/dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
 <a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
-<a href="https://discord.gg/sjK28QHrA7"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000" data-illustration></a>
+<a href="https://discord.gg/g4pFt6eXqu"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000" data-illustration></a>
 <a href="https://dms.antelopejs.com/docs/modules/saas"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000" data-illustration></a>
 
 Sign-up, plans, Stripe billing and a back office for a multi-tenant AntelopeJS DMS.
@@ -46,7 +46,7 @@ export default defineConfig({
   },
   modules: {
     "dms-saas": {
-      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.8.1" },
+      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.9.0" },
       config: {
         stripe: {
           secretKey: "sk_test_placeholder",
@@ -74,7 +74,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and pub
 | `@antelopejs/interface-data-api`            | `file:../../.campaign/tgz/antelopejs-interface-data-api-bca1ca6.tgz`            | `file:.campaign/tgz/antelopejs-interface-data-api-bca1ca6.tgz`            |
 | `@antelopejs/interface-database`            | `file:../../.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            | `file:.campaign/tgz/antelopejs-interface-database-02e0360.tgz`            |
 | `@antelopejs/interface-database-decorators` | `file:../../.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz` | `file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz` |
-| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-42d657b.tgz`                 | `file:.campaign/tgz/antelopejs-interface-dms-42d657b.tgz`                 |
+| `@antelopejs/interface-dms`                 | `file:../../.campaign/tgz/antelopejs-interface-dms-14e671d.tgz`                 | `file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz`                 |
 | `@antelopejs/interface-dms-automation`      | `file:../../.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz`      | `file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz`      |
 | `@antelopejs/interface-dms-saas`            | `workspace:^`                                                                   | `0.7.0`                                                                   |
 

@@ -21,7 +21,7 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 const toast = useToast()
 const { t, locale } = useI18n()
 const { confirm } = useConfirm()
-const { resolveApiError } = useApiErrorMessage()
+const { presentError } = useApiErrorPresenter()
 const tenantPlan = useTenantPlan()
 const { data, error: loadError } = tenantPlan
 const planChanges = useTenantPlanChanges()
@@ -96,8 +96,7 @@ const pill = computed(() => {
 })
 
 const summary = computed(() => {
-	if (current.value?.description)
-		return current.value.description
+	if (current.value?.description) return current.value.description
 	const view = data.value?.available.find(
 		(plan) => plan._id === current.value?._id,
 	)
@@ -272,11 +271,7 @@ async function runAction(
 		})
 		refresh()
 	} catch (error) {
-		toast.add({
-			title: resolveApiError(error, 'saas.workspace.plan.change_error'),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
-		})
+		presentError(error, { fallbackKey: 'saas.workspace.plan.change_error' })
 	} finally {
 		isWorking.value = false
 	}
@@ -334,8 +329,9 @@ async function cancelSubscription(): Promise<void> {
 			try {
 				await planChanges.cancelSubscription()
 			} catch (error) {
-				throw new Error(
-					resolveApiError(error, 'saas.workspace.plan.change_error'),
+				throw new ConfirmActionError(
+					{ fallbackKey: 'saas.workspace.plan.change_error' },
+					{ cause: error },
 				)
 			}
 			toast.add({
@@ -361,13 +357,8 @@ async function releaseCancelledCheckout(): Promise<void> {
 			icon: 'i-ph-info',
 		})
 	} catch (error) {
-		toast.add({
-			title: resolveApiError(
-				error,
-				'saas.workspace.plan.checkout_pending.restart_error',
-			),
-			color: 'error',
-			icon: 'i-ph-warning-circle',
+		presentError(error, {
+			fallbackKey: 'saas.workspace.plan.checkout_pending.restart_error',
 		})
 	}
 }
@@ -642,7 +633,9 @@ watch(
 			:renewal-date="data.currentPeriodEnd"
 			:is-recovery="data.canRecoverComplimentary"
 			:is-resubscription="canResubscribe"
-			:is-current-paid="isPaid && !!status?.hasStripeCustomer && !canResubscribe"
+			:is-current-paid="
+				isPaid && !!status?.hasStripeCustomer && !canResubscribe
+			"
 			:workspace-name="workspaceName"
 			@changed="refresh"
 			@upgrade="openUpgrade"
