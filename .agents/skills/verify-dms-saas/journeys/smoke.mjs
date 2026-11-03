@@ -1,5 +1,5 @@
 import { guarded } from "../guard.mjs";
-import { check, createPlan, register, saas, text } from "../saas.mjs";
+import { allPermissionIds, check, createPlan, register, saas, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
 
@@ -10,7 +10,7 @@ export const journeys = guarded([
     title: "a visitor registers without a card, lands in a workspace on the free plan, and sees that plan on the Billing page",
     entryPoint: "/register, POST /api/saas/register, Settings › Workspace › Billing",
     async run(/** @type {Ctx} */ ctx) {
-      const free = await createPlan(ctx, "free", { name: { en: "Free" } });
+      const free = await createPlan(ctx, "free", { name: { en: "Free" }, permissions: await allPermissionIds(ctx) });
       await ctx.verify("the platform owner publishes a free plan", [check("POST /plans answers 200", free.answer.status === 200 && free.id !== "", free.answer.body)], { critical: true });
       const visitor = await register(ctx, "visitor");
       await ctx.verify("the visitor registers", [check("POST /register answers a workspace and a user", visitor.answer.status === 200 && visitor.tenantId !== "" && visitor.userId !== "", visitor.answer.body)], { critical: true });

@@ -271,3 +271,25 @@ export function parseJson(body) {
     return body;
   }
 }
+
+/**
+ * Every permission id of the plan editor's tree.
+ *
+ * @param {Ctx} ctx The journey
+ * @returns {Promise<string[]>} The ids, depth first
+ */
+export async function allPermissionIds(ctx) {
+  const tree = await saas(ctx, "the permission tree", "GET", "/plans/permissions-tree");
+  /** @type {string[]} */
+  const ids = [];
+  /** @param {import("../saas.mjs").Row[]} nodes The nodes */
+  const walk = (nodes) => {
+    for (const node of nodes) {
+      ids.push(text(node, "id"));
+      walk(list(node, "children"));
+    }
+  };
+  walk(list(tree.body));
+  return ids;
+}
+

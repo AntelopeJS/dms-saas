@@ -51,7 +51,7 @@ async function answered<T>(call: () => Promise<T>) {
   try {
     return { ok: true, result: await call() };
   } catch (error) {
-    return { ok: false, rejection: error instanceof Error ? error.message : String(error) };
+    return { ok: false, rejection: error instanceof Error ? error.message : JSON.stringify(error) };
   }
 }
 

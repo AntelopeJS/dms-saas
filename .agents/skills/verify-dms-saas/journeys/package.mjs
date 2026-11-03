@@ -34,7 +34,8 @@ export const journeys = guarded([
       const exportsMap = pick(contract, "exports");
       await ctx.verify("the interface package", [
         check("named @antelopejs/interface-dms-saas", pick(contract, "name") === "@antelopejs/interface-dms-saas", pick(contract, "name")),
-        check("every documented subpath is exported", ["./billing", "./plans", "./pages", "./plan-changes", "./invoice-line-items", "./tenant-lifecycle", "./provisioning", "./registration", "./data-api", "./db", "./json"].every((subpath) => isRow(exportsMap) && subpath in exportsMap), exportsMap),
+        check("every documented subpath resolves through the ./* export to dist, with types", JSON.stringify(pick(exportsMap, "./*")) === JSON.stringify({ types: "./dist/*.d.ts", default: "./dist/*.js" }), exportsMap),
+        check("the database entry points are exported on their own", ["./db", "./db/models", "./db/tables"].every((subpath) => isRow(exportsMap) && subpath in exportsMap), exportsMap),
       ]);
     },
   },

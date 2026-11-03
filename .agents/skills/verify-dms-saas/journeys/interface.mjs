@@ -27,7 +27,7 @@ export const journeys = guarded([
       const free = await register(ctx, "free-owner");
       const gift = await register(ctx, "gift-owner");
       const paid = await register(ctx, "paid-owner");
-      await fixture(ctx, "gift the pro plan", "POST", "/subscription", { tenantId: gift.tenantId, planId: pro.id, status: "active", isComplimentary: true });
+      await fixture(ctx, "gift the pro plan", "POST", "/subscription", { tenantId: gift.tenantId, planId: pro.id, status: "active", isComplimentary: true, stripeCustomerId: "cus_gift" });
       await fixture(ctx, "bill the pro plan", "POST", "/subscription", { tenantId: paid.tenantId, planId: pro.id, status: "active", stripeCustomerId: "cus_iface", stripeSubscriptionId: "sub_iface" });
       const scope = (/** @type {{ tenantId: string, userId: string }} */ who) => ({ tenantId: who.tenantId, userId: who.userId });
       const freeBalance = await call(ctx, "balance", scope(free));

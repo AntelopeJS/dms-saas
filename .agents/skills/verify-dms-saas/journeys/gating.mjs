@@ -1,30 +1,9 @@
 import { guarded } from "../guard.mjs";
-import { check, createPlan, fixture, isText, list, pick, planBody, register, saas, text } from "../saas.mjs";
+import { allPermissionIds, check, createPlan, fixture, isText, pick, planBody, register, saas, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
 
 const PAGES_API = "/dms/pages/settings/workspace";
-
-/**
- * Every permission id of the plan editor's tree.
- *
- * @param {Ctx} ctx The journey
- * @returns {Promise<string[]>} The ids, depth first
- */
-async function allPermissionIds(ctx) {
-  const tree = await saas(ctx, "the permission tree", "GET", "/plans/permissions-tree");
-  /** @type {string[]} */
-  const ids = [];
-  /** @param {import("../saas.mjs").Row[]} nodes The nodes */
-  const walk = (nodes) => {
-    for (const node of nodes) {
-      ids.push(text(node, "id"));
-      walk(list(node, "children"));
-    }
-  };
-  walk(list(tree.body));
-  return ids;
-}
 
 /**
  * @param {Ctx} ctx The journey
