@@ -1,0 +1,44 @@
+---
+covers:
+  - packages/dms-saas/src/routes/platformOwner/workspace-detail.ts
+  - packages/dms-saas/src/routes/platformOwner/workspaces-admin.ts
+  - packages/dms-saas/src/routes/platformOwner/workspace-operator-actions.ts
+  - packages/dms-saas/src/routes/platformOwner/workspace-invitations.ts
+  - packages/dms-saas/src/routes/platformOwner/platform-notes.ts
+  - packages/dms-saas/src/routes/platformOwner/block-payloads.ts
+  - packages/dms-saas/src/routes/platformOwner/index.ts
+  - packages/dms-saas/src/operator-actions/commands.ts
+  - packages/dms-saas/src/operator-actions/journal.ts
+  - packages/dms-saas/src/operator-actions/one-shot.ts
+  - packages/dms-saas/src/operator-actions/previews.ts
+  - packages/dms-saas/src/operator-actions/upgrade-preview.ts
+  - packages/dms-saas/src/operator-actions/types.ts
+  - packages/dms-saas/src/operator-actions/invitation-commands.ts
+  - packages/dms-saas/src/operator-actions/index.ts
+  - packages/dms-saas/src/operator-actions/db/index.ts
+  - packages/dms-saas/src/operator-actions/db/operator-action.*
+  - packages/dms-saas/src/workspaces/operator-creation.ts
+  - packages/dms-saas/src/workspaces/operator-view.ts
+  - packages/dms-saas/src/workspaces/complimentary.ts
+  - packages/dms-saas/src/workspaces/suspension.ts
+  - packages/dms-saas/src/workspaces/detail-items.ts
+  - packages/dms-saas/src/pages/platform/workspaces/**
+  - packages/dms-saas/src/data-api/platformOwner/workspaces.ts
+  - packages/dms-saas/src/data-api/platformOwner/workspace-cells.ts
+  - packages/dms-saas/src/data-api/platformOwner/members.ts
+  - packages/dms-saas/src/data-api/platformOwner/invitations.ts
+  - packages/dms-saas/src/data-api/platformOwner/table-scope.ts
+  - packages/dms-saas/src/data-api/platformOwner/hidden-filter.ts
+  - packages/dms-saas/frontend-vue/app/components/WorkspaceAdminCreateModal.vue
+  - packages/dms-saas/frontend-vue/app/components/WorkspaceDetailHeader.vue
+  - packages/dms-saas/frontend-vue/app/components/WorkspaceOperatorActions.vue
+  - packages/dms-saas/frontend-vue/app/components/WorkspaceSuspendButton.vue
+  - packages/dms-saas/frontend-vue/app/components/WorkspaceInvitationLink.vue
+  - packages/dms-saas/frontend-vue/app/components/PlatformNotes.vue
+  - packages/dms-saas/frontend-vue/app/build/workspace-detail/**
+docs:
+  - packages/dms-saas/docs/4.usage/4.workspaces.md
+  - packages/dms-saas/docs/8.operations.md
+---
+
+# workspaces

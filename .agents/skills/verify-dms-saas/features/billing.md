@@ -1,0 +1,59 @@
+---
+covers:
+  - packages/dms-saas/src/routes/tenant/tenant-billing.ts
+  - packages/dms-saas/src/routes/tenant/tenant-plan*.ts
+  - packages/dms-saas/src/routes/tenant/billing-*.ts
+  - packages/dms-saas/src/routes/tenant/tenant-upcoming-invoice.ts
+  - packages/dms-saas/src/stripe/availability.ts
+  - packages/dms-saas/src/stripe/billing-mode.ts
+  - packages/dms-saas/src/stripe/client.ts
+  - packages/dms-saas/src/stripe/customer-*.ts
+  - packages/dms-saas/src/stripe/dashboard-links.ts
+  - packages/dms-saas/src/stripe/index.ts
+  - packages/dms-saas/src/stripe/pending-update.ts
+  - packages/dms-saas/src/stripe/plan-schedule.ts
+  - packages/dms-saas/src/stripe/proration.ts
+  - packages/dms-saas/src/stripe/subscription-cancellation.ts
+  - packages/dms-saas/src/stripe/sync-plan.ts
+  - packages/dms-saas/src/stripe/upcoming-invoice.ts
+  - packages/dms-saas/src/stripe/workspace-checkout.ts
+  - packages/dms-saas/src/billing-state/**
+  - packages/dms-saas/src/upcoming-invoice/**
+  - packages/dms-saas/src/plan-changes/**
+  - packages/dms-saas/src/pages/tenant/billing.ts
+  - packages/dms-saas/src/data-api/tenant/**
+  - packages/dms-saas/frontend-vue/app/components/TenantPlanCard.vue
+  - packages/dms-saas/frontend-vue/app/components/TenantBillingForm.vue
+  - packages/dms-saas/frontend-vue/app/components/PaymentMethodCard.vue
+  - packages/dms-saas/frontend-vue/app/components/PlanUpgradeModal.vue
+  - packages/dms-saas/frontend-vue/app/components/PlanComparisonModal.vue
+  - packages/dms-saas/frontend-vue/app/components/PendingCheckoutModal.vue
+  - packages/dms-saas/frontend-vue/app/components/CustomerPortalButton.vue
+  - packages/dms-saas/frontend-vue/app/components/RefundButton.vue
+  - packages/dms-saas/frontend-vue/app/components/RefundExample.vue
+  - packages/dms-saas/frontend-vue/app/components/PayInvoiceModal.vue
+  - packages/dms-saas/frontend-vue/app/components/PastDueBanner.vue
+  - packages/dms-saas/frontend-vue/app/components/PastDueAlert.vue
+  - packages/dms-saas/frontend-vue/app/components/TrialEndingBanner.vue
+  - packages/dms-saas/frontend-vue/app/components/DunningTimeline.vue
+  - packages/dms-saas/frontend-vue/app/components/InvoiceLines.vue
+  - packages/dms-saas/frontend-vue/app/composables/useBillingStatus.ts
+  - packages/dms-saas/frontend-vue/app/composables/useBillingDocumentType.ts
+  - packages/dms-saas/frontend-vue/app/composables/useInvoiceLines.ts
+  - packages/dms-saas/frontend-vue/app/composables/useNextInvoice.ts
+  - packages/dms-saas/frontend-vue/app/composables/usePayInvoice.ts
+  - packages/dms-saas/frontend-vue/app/composables/usePendingCheckout.ts
+  - packages/dms-saas/frontend-vue/app/composables/usePlanChangeReview.ts
+  - packages/dms-saas/frontend-vue/app/composables/usePlanDowngrade.ts
+  - packages/dms-saas/frontend-vue/app/composables/useTenantPlan.ts
+  - packages/dms-saas/frontend-vue/app/composables/useUpgradeAuthentication.ts
+  - packages/dms-saas/frontend-vue/app/build/PlanChangeReview.vue
+  - packages/dms-saas/frontend-vue/app/build/PayInvoice*.vue
+  - packages/dms-saas/frontend-vue/app/build/plan-change-heading.ts
+docs:
+  - packages/dms-saas/docs/4.usage/2.workspace-settings.md
+  - packages/dms-saas/docs/7.stripe.md
+  - packages/dms-saas/docs/3.configuration.md
+---
+
+# billing

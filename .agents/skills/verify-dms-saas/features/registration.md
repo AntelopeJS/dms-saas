@@ -1,0 +1,45 @@
+---
+covers:
+  - packages/dms-saas/src/routes/public/register.ts
+  - packages/dms-saas/src/pages/public/register.ts
+  - packages/dms-saas/src/pages/public/auth/**
+  - packages/dms-saas/src/auth/oauth-entry.ts
+  - packages/dms-saas/src/hooks/tenant-provisioning.ts
+  - packages/dms-saas/src/workspaces/provisioning*.ts
+  - packages/dms-saas/src/workspaces/registration-extras.ts
+  - packages/dms-saas/src/workspaces/free-workspaces-per-card.ts
+  - packages/dms-saas/src/workspaces/free-plan.ts
+  - packages/dms-saas/src/workspaces/billing-profile.ts
+  - packages/dms-saas/src/workspaces/billing-identity*.ts
+  - packages/dms-saas/src/workspaces/owner-contact.ts
+  - packages/dms-saas/src/workspaces/workspace-owner.ts
+  - packages/dms-saas/src/workspaces/workspace-name.ts
+  - packages/dms-saas/src/workspaces/subscription-create-params.ts
+  - packages/dms-saas/src/workspaces/first-payment.ts
+  - packages/dms-saas/src/workspaces/index.ts
+  - packages/dms-saas/src/workspaces/db/**
+  - packages/dms-saas/frontend-vue/app/components/Register.vue
+  - packages/dms-saas/frontend-vue/app/components/RegistrationClosed.vue
+  - packages/dms-saas/frontend-vue/app/components/BillingIdentityFields.vue
+  - packages/dms-saas/frontend-vue/app/composables/useSaasRegistration.ts
+  - packages/dms-saas/frontend-vue/app/composables/useSaasRegistrationPlan.ts
+  - packages/dms-saas/frontend-vue/app/composables/useBillingIdentity.ts
+  - packages/dms-saas/frontend-vue/app/composables/useBillingAddress.ts
+  - packages/dms-saas/frontend-vue/app/composables/useBillingCountries.ts
+  - packages/dms-saas/frontend-vue/app/composables/useStripePaymentElement.ts
+  - packages/dms-saas/frontend-vue/app/custom-pages/**
+  - packages/dms-saas/frontend-vue/app/plugins/auth-links.ts
+  - packages/dms-saas/frontend-vue/app/build/public/Registration*.vue
+  - packages/dms-saas/frontend-vue/app/build/public/registration-errors.ts
+  - packages/dms-saas/frontend-vue/app/build/public/chosen-plan.ts
+  - packages/dms-saas/frontend-vue/app/build/public/LegalAcceptance.vue
+  - packages/dms-saas/frontend-vue/app/build/public/access.ts
+  - packages/dms-saas/frontend-vue/app/build/public/AccessTimeline.vue
+  - packages/dms-saas/frontend-vue/app/build/public/OtherWorkspaces.vue
+docs:
+  - packages/dms-saas/docs/4.usage/1.public-screens.md
+  - packages/dms-saas/docs/3.configuration.md
+  - packages/dms-saas/docs/6.faq.md
+---
+
+# registration

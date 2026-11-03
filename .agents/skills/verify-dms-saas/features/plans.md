@@ -1,0 +1,47 @@
+---
+covers:
+  - packages/dms-saas/src/routes/platformOwner/plans.ts
+  - packages/dms-saas/src/routes/platformOwner/plan-dialogs.ts
+  - packages/dms-saas/src/plans/plan-permission-tree.ts
+  - packages/dms-saas/src/plans/money.ts
+  - packages/dms-saas/src/plans/feature-usage.ts
+  - packages/dms-saas/src/plans/plan-diff.ts
+  - packages/dms-saas/src/plans/plan-audience.ts
+  - packages/dms-saas/src/plans/plan-write.ts
+  - packages/dms-saas/src/plans/stripe-sync.ts
+  - packages/dms-saas/src/plans/catalogue-summary.ts
+  - packages/dms-saas/src/plans/catalogue-usage.ts
+  - packages/dms-saas/src/plans/index.ts
+  - packages/dms-saas/src/plans/plan-access-type.ts
+  - packages/dms-saas/src/pages/platform/features.ts
+  - packages/dms-saas/src/pages/platform/paths.ts
+  - packages/dms-saas/src/pages/platform/categories.ts
+  - packages/dms-saas/src/pages/platform/index.ts
+  - packages/dms-saas/src/pages/platform/plans/index.ts
+  - packages/dms-saas/src/pages/platform/plans/edit.ts
+  - packages/dms-saas/src/data-api/index.ts
+  - packages/dms-saas/src/data-api/platformOwner/index.ts
+  - packages/dms-saas/src/data-api/platformOwner/plans.ts
+  - packages/dms-saas/src/data-api/platformOwner/features.ts
+  - packages/dms-saas/src/workspaces/default-plan.ts
+  - packages/dms-saas/frontend-vue/app/components/PlanCard.vue
+  - packages/dms-saas/frontend-vue/app/components/PlanEditorPreview.vue
+  - packages/dms-saas/frontend-vue/app/components/PlanAccessEditor.vue
+  - packages/dms-saas/frontend-vue/app/components/PlanLimitInput.vue
+  - packages/dms-saas/frontend-vue/app/components/PlanTaxSync.vue
+  - packages/dms-saas/frontend-vue/app/build/plan-catalog.ts
+  - packages/dms-saas/frontend-vue/app/build/plan-permissions.ts
+  - packages/dms-saas/frontend-vue/app/build/PlanPermissionPicker.vue
+  - packages/dms-saas/frontend-vue/app/build/PlanFeatureValueInput.vue
+  - packages/dms-saas/frontend-vue/app/composables/usePlanCatalog.ts
+  - packages/dms-saas/frontend-vue/app/composables/usePlanFeatureFormat.ts
+  - packages/dms-saas/frontend-vue/app/composables/usePlanIntervalLabel.ts
+  - packages/dms-saas/frontend-vue/app/composables/usePlanPriceLabel.ts
+  - packages/dms-saas/frontend-vue/app/composables/usePlanComparison.ts
+docs:
+  - packages/dms-saas/docs/4.usage/6.plans.md
+  - packages/dms-saas/docs/3.configuration.md
+  - packages/dms-saas/docs/5.extending.md
+---
+
+# plans

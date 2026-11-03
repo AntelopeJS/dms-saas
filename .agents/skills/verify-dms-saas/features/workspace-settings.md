@@ -1,0 +1,44 @@
+---
+covers:
+  - packages/dms-saas/src/routes/tenant/index.ts
+  - packages/dms-saas/src/routes/tenant/workspaces.ts
+  - packages/dms-saas/src/routes/tenant/workspace-access.ts
+  - packages/dms-saas/src/routes/tenant/data-export.ts
+  - packages/dms-saas/src/routes/tenant/tenant-seats.ts
+  - packages/dms-saas/src/routes/tenant/complimentary-banner.ts
+  - packages/dms-saas/src/pages/tenant/index.ts
+  - packages/dms-saas/src/pages/tenant/general.ts
+  - packages/dms-saas/src/pages/tenant/data-export.ts
+  - packages/dms-saas/src/workspaces/my-workspaces.ts
+  - packages/dms-saas/src/workspaces/workspace-glance.ts
+  - packages/dms-saas/src/workspaces/deletion*.ts
+  - packages/dms-saas/src/workspaces/self-serve-creation.ts
+  - packages/dms-saas/src/workspaces/invitations.ts
+  - packages/dms-saas/src/workspaces/workspace-overview.ts
+  - packages/dms-saas/src/workspaces/default-member-role.ts
+  - packages/dms-saas/src/workspaces/complimentary-banner.ts
+  - packages/dms-saas/src/workspaces/owner-invitation-email.ts
+  - packages/dms-saas/src/hooks/tenant-export.ts
+  - packages/dms-saas/frontend-vue/app/components/WorkspaceSwitcherWidget.vue
+  - packages/dms-saas/frontend-vue/app/components/WorkspaceCreateModal.vue
+  - packages/dms-saas/frontend-vue/app/components/WorkspaceDangerZone.vue
+  - packages/dms-saas/frontend-vue/app/components/DataExport.vue
+  - packages/dms-saas/frontend-vue/app/components/DataExportHistory.vue
+  - packages/dms-saas/frontend-vue/app/composables/useTenantSwitch.ts
+  - packages/dms-saas/frontend-vue/app/composables/useMyWorkspaces.ts
+  - packages/dms-saas/frontend-vue/app/composables/useCurrentWorkspace.ts
+  - packages/dms-saas/frontend-vue/app/composables/useExportHistory.ts
+  - packages/dms-saas/frontend-vue/app/composables/useWorkspaceOverview.ts
+  - packages/dms-saas/frontend-vue/app/composables/useWorkspaceFinalization.ts
+  - packages/dms-saas/frontend-vue/app/composables/useInvitationLink.ts
+  - packages/dms-saas/frontend-vue/app/composables/useDaysLeft.ts
+  - packages/dms-saas/frontend-vue/app/composables/useComplimentaryAccess.ts
+  - packages/dms-saas/frontend-vue/app/build/WorkspaceSwitcherRow.vue
+  - packages/dms-saas/frontend-vue/app/build/workspace-paths.ts
+  - packages/dms-saas/frontend-vue/app/build/useWorkspaceName.ts
+  - packages/dms-saas/frontend-vue/app/plugins/sidebar-widgets.ts
+docs:
+  - packages/dms-saas/docs/4.usage/2.workspace-settings.md
+---
+
+# workspace-settings
