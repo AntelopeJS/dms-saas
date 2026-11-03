@@ -11,6 +11,7 @@ import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { RoleModel } from "@antelopejs/interface-dms/db";
 import { GetEffectiveUserPermissions } from "@antelopejs/interface-dms/permissions";
 import { Hook, RegisterHook } from "@antelopejs/interface-dms/hooks";
+import { RecomputeTenantBillingState } from "@antelopejs/interface-dms-saas/billing";
 import { StripeWebhookEventModel } from "@antelopejs/interface-dms-saas/db";
 import { z } from "zod";
 
@@ -108,5 +109,13 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
       type: row.type,
       result: row.result,
     }));
+  }
+
+  /** Publishes the billing and directory state of a workspace again, as a project must after writing subscription rows directly. */
+  @Post("/recompute")
+  async recompute(@JSONBody() body: unknown) {
+    const { tenantId } = z.object({ tenantId: z.string() }).parse(body);
+    await RecomputeTenantBillingState(tenantId);
+    return { ok: true };
   }
 }
