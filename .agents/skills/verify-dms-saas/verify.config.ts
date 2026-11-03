@@ -101,12 +101,60 @@ const config: VerifyConfig = {
   smokeJourney:
     "register at /register without a card, land in a workspace on the free plan, and see that plan on the Billing page",
   doors: {
-    data: null,
-    format: null,
-    contract: null,
-    outbound: null,
-    exposure: null,
-    publish: null,
+    data: {
+      globs: [
+        `${MODULE}/src/routes/platformOwner/plans.ts`,
+        `${MODULE}/src/routes/platformOwner/plan-deletion.ts`,
+        `${MODULE}/src/routes/tenant/workspaces.ts`,
+        `${MODULE}/src/workspaces/deletion*.ts`,
+        `${MODULE}/src/crons/hard-delete-cancelled.ts`,
+        `${MODULE}/src/hooks/tenant-export.ts`,
+        `${MODULE}/src/workers/**`,
+      ],
+      funnels: [],
+      containments: [
+        "workspace/deleting-a-workspace-needs-its-name-and-revokes-access",
+        "plans/stop-selling-moves-nobody-and-delete-needs-an-empty-plan",
+      ],
+      why: "these delete workspaces with their data, plans, and move workspaces between plans, which a revert of the code does not bring back",
+    },
+    format: {
+      globs: [`${INTERFACE}/src/db/**`, `${MODULE}/src/operator-actions/db/**`, `${MODULE}/src/workspaces/db/**`, `${MODULE}/src/upcoming-invoice/db/**`],
+      funnels: [],
+      containments: [],
+      why: "the stored subscriptions, plans, invoices, segments and webhook records are read back by the next version of the module",
+    },
+    contract: {
+      globs: [
+        `${MODULE}/package.json`,
+        `${MODULE}/src/routes/**`,
+        `${MODULE}/src/types/**`,
+        `${INTERFACE}/package.json`,
+        `${INTERFACE}/src/**`,
+        `${MODULE}/frontend-vue/package.json`,
+      ],
+      funnels: [],
+      containments: [],
+      why: "other modules import the interface, the dashboard and scripts call the HTTP routes, and projects set the config keys and the renderer range",
+    },
+    outbound: {
+      globs: [`${MODULE}/src/stripe/**`, `${MODULE}/src/notifications/**`, `${MODULE}/src/workspaces/owner-invitation-email.ts`, `${MODULE}/src/plans/stripe-sync.ts`, `${MODULE}/src/operator-actions/lifecycle-outbox.ts`],
+      funnels: [`${MODULE}/src/stripe/client.ts`],
+      containments: [],
+      why: "these call Stripe, charge, refund and notify owners by e-mail, which cannot be unsent",
+    },
+    exposure: {
+      globs: [`${MODULE}/src/auth/**`, `${MODULE}/src/routes/public/**`, `${MODULE}/src/routes/platformOwner/**`, `${MODULE}/src/plans/seat-*.ts`],
+      funnels: [],
+      containments: [],
+      why: "the plan resolver, the owner-only surfaces, the subscription gate and the public routes decide who sees which data and who may write the catalogue",
+    },
+    publish: {
+      globs: [`${MODULE}/package.json`, `${INTERFACE}/package.json`, `${MODULE}/.release-it.json`, `${INTERFACE}/.release-it.json`, `${MODULE}/changelogen.config.json`, `${INTERFACE}/changelogen.config.json`, ".github/workflows/release*.yml"],
+      funnels: [],
+      containments: [],
+      why: "the package names, their files and the release workflows claim @antelopejs/dms-saas and @antelopejs/interface-dms-saas in the npm registry",
+    },
   },
   formal: [
     {

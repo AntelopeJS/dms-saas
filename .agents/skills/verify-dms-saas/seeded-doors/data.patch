@@ -1,0 +1,13 @@
+diff --git a/packages/dms-saas/src/routes/platformOwner/plans.ts b/packages/dms-saas/src/routes/platformOwner/plans.ts
+index 6151614..f8ccb82 100644
+--- a/packages/dms-saas/src/routes/platformOwner/plans.ts
++++ b/packages/dms-saas/src/routes/platformOwner/plans.ts
+@@ -551,7 +551,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
+       this.tenantSubscriptionModel.findByPendingPlan(id),
+     ]);
+     assert(
+-      workspaceCount === 0,
++      workspaceCount >= 0,
+       HTTP_CONFLICT,
+       "saas.errors.plan.has_workspaces",
+     );
