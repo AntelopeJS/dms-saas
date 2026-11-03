@@ -11,6 +11,7 @@ import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { RoleModel } from "@antelopejs/interface-dms/db";
 import { GetEffectiveUserPermissions } from "@antelopejs/interface-dms/permissions";
 import { Hook, RegisterHook } from "@antelopejs/interface-dms/hooks";
+import { StripeWebhookEventModel } from "@antelopejs/interface-dms-saas/db";
 import { z } from "zod";
 
 const AUTH_KEY_BYTES = 32;
@@ -96,5 +97,16 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
       roles,
     );
     return { permissions: [...effective].sort() };
+  }
+
+  /** The processing records of the Stripe events the webhook endpoint admitted. */
+  @Get("/webhook-events")
+  async webhookEvents() {
+    const rows = await GetModel(StripeWebhookEventModel).getAll();
+    return rows.map((row) => ({
+      id: row._id,
+      type: row.type,
+      result: row.result,
+    }));
   }
 }

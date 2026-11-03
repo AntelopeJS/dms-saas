@@ -237,3 +237,37 @@ export async function pageHtml(ctx, path) {
   writeFileSync(join(folder, "response.json"), `${JSON.stringify({ status: response.status, bytes: html.length }, null, 2)}\n`);
   return html;
 }
+
+/**
+ * Posts a Stripe event to the module's webhook endpoint with the raw body and signature a real delivery carries.
+ *
+ * @param {Ctx} ctx The journey
+ * @param {string} label What the delivery is
+ * @param {{ type: string, id: string, object: Record<string, unknown> }} event The event
+ * @param {{ secret?: string | null, timestamp?: number }} [options] The signing secret (`null` sends no signature) and signing time
+ * @returns {Promise<{ status: number, body: unknown }>} The answer
+ */
+export async function deliverEvent(ctx, label, event, options = {}) {
+  const folder = ctx.step(`webhook ${label}`);
+  const payload = JSON.stringify({ id: event.id, object: "event", api_version: "2026-08-26.dahlia", created: Math.floor(Date.now() / 1000), type: event.type, data: { object: event.object } });
+  const secret = options.secret === undefined ? "whsec_placeholder" : options.secret;
+  /** @type {Record<string, string>} */
+  const headers = { "content-type": "application/json" };
+  if (secret !== null) headers["stripe-signature"] = stripeSignature(payload, secret, options.timestamp);
+  const response = await fetch(`${ctx.state.apiUrl}/api/saas/webhooks/stripe`, { method: "POST", headers, body: payload });
+  const body = parseJson(await response.text());
+  writeFileSync(join(folder, "response.json"), `${JSON.stringify({ status: response.status, body }, null, 2)}\n`);
+  return { status: response.status, body };
+}
+
+/**
+ * @param {string} body A response body
+ * @returns {unknown} Its JSON value, or the text itself when it is not JSON
+ */
+export function parseJson(body) {
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body;
+  }
+}
