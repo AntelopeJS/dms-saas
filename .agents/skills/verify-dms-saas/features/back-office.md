@@ -85,7 +85,7 @@ The platform owner's dashboard: the headline figures, the workspaces by status a
 - `complimentary-access-ending-within-7-days-is-flagged`: access granted until 5 days from now is flagged on Needs attention and under the Complimentary access ending view, one ending in 10 days is not.
 - `churn-counts-a-cancellation-that-followed-a-suspension`: a paying workspace that went past due, then suspended, then cancelled still counts the MRR it paid before it fell past due.
 - `a-credit-note-request-is-validated-before-stripe-is-asked`: a credit note without a reason, with an unknown reason, a fractional amount, no request id or an unknown mode is refused 400 before the 503.
-- `the-workspace-plan-page-shows-the-plan-the-workspace-is-on`: after an operator moves a workspace to a plan, the workspace's own plan page names that plan and its complimentary state, not another workspace's.
+- `the-workspace-plan-page-shows-the-plan-the-workspace-is-on`: after an operator grants a plan, the workspace's plan page shows the granted plan (known finding, held).
 - `the-workspace-list-orders-by-mrr-and-its-over-500-view-has-a-sharp-edge`: the largest MRR comes first, and the MRR over 500 view holds 501 but neither 500 nor 499.
 - `the-invoice-figures-count-the-right-statuses-and-periods`: awaiting payment, collected this month, credited this month and written off this year each read their own invoices.
 - `segment-money-columns-count-only-paying-workspaces-and-a-twelfth-of-a-yearly-price`: owned_mrr is 0 for a trial, a gift and a suspended workspace, and a yearly plan counts a twelfth of its price.

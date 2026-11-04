@@ -172,7 +172,7 @@ export const operatorRuleJourneys = [
   },
   {
     id: "the-workspace-plan-page-shows-the-plan-the-workspace-is-on",
-    title: "after an operator moves a workspace to a plan, the workspace's own plan page names that plan and its complimentary state, not another workspace's",
+    title: "after an operator grants a plan, the workspace's plan page shows the granted plan (known finding, held)",
     entryPoint: "POST /api/saas/workspaces/:tenantId/grant-free-access, GET /api/saas/tenant/plan",
     async run(/** @type {Ctx} */ ctx) {
       await createPlan(ctx, "starter", { order: 0 });
@@ -180,7 +180,7 @@ export const operatorRuleJourneys = [
       const customer = await register(ctx, "pagegrantee", { workspaceName: "Page Co" });
       const granted = await saas(ctx, "grant the gifted plan", "POST", `/workspaces/${customer.tenantId}/grant-free-access`, { body: { planId: gift.id } });
       const plan = await saas(ctx, "the workspace's plan page", "GET", "/tenant/plan", { as: "pagegrantee" });
-      await ctx.verify("the plan page reads the workspace's own subscription", [
+      await ctx.verify("the plan page shows the granted plan", [
         check("the grant is accepted", granted.status === 200, granted.body),
         check("current plan: gifted", text(plan.body, "current", "slug") === "gifted", plan.body),
         check("complimentary", pick(plan.body, "isComplimentary") === true, plan.body),
