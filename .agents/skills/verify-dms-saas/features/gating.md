@@ -29,6 +29,8 @@ What the plan caps: the `dms-saas.plan-intersection` permissions resolver (membe
 
 - `the-plan-caps-members-and-gives-the-owner-all-of-it`: a member keeps only what both the role and the plan grant, the owner gets every permission of the plan, a parent plan's permissions are inherited, and * never reaches the owner.
 - `the-plan-member-cap-bounds-invitations`: an invitation that would pass the plan's member cap is refused with 409, and a pending invitation takes a seat.
+- `platform-support-and-expired-invitations-take-no-seat`: a platform admin who joins as support uses no seat, an expired invitation uses none, and the last seat of a two-seat plan is still invitable.
+- `a-cap-lowered-under-the-member-count-keeps-members-and-stops-invitations`: lowering maxMembers below the members a workspace has keeps their access and refuses new invitations.
 
 ## How to get to it (user POV)
 
@@ -51,3 +53,5 @@ dms-control journey "$RUN" gating
 | --- | --- |
 | 5.extending.md "Tenant owner permissions" | plan-caps journey: owner, member, parent inheritance, plan edit, `*`; Not driven: role preview (needs the dashboard role editor) and the dms-saas.owner-only-surfaces resolver (order 110) |
 | 2.workspace-settings.md "Members and seats" | member-cap journey: pending invitation takes a seat, the cap refuses; Not driven: the Seats block rendering, expired invitations and platform support members taking no seat, being over the cap keeps access |
+| 2.workspace-settings.md Members and seats (platform support and expired invitations take no seat; over the cap) | seat journeys: join as support, expired invitation, lowered cap keeps members and refuses invitations |
+| 4.workspaces.md Join as member | seat journey: joining twice is 409 |

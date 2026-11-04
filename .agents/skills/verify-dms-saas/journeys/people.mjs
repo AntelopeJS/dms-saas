@@ -1,4 +1,5 @@
 import { guarded } from "../guard.mjs";
+import { peopleMoreJourneys } from "./parts/people-more.mjs";
 import { check, createPlan, fixture, isText, pick, register, saas, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
@@ -135,4 +136,5 @@ export const journeys = guarded([
       await ctx.verify("the fixture still answers", [check("ok", probe.status === 200, probe.body)]);
     },
   },
+  ...peopleMoreJourneys,
 ]);

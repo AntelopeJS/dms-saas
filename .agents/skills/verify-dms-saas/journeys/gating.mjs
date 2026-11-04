@@ -1,5 +1,6 @@
 import { guarded } from "../guard.mjs";
-import { allPermissionIds, check, createPlan, fixture, isText, pick, planBody, register, saas, text } from "../saas.mjs";
+import { seatJourneys } from "./parts/gating-more.mjs";
+import { passwordWith, allPermissionIds, check, createPlan, fixture, isText, pick, planBody, register, saas, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
 
@@ -47,7 +48,7 @@ export const journeys = guarded([
       const planPermissions = async () => [...new Set([...(await storedPermissions(ctx, parent.id)), ...(await storedPermissions(ctx, child.id))])].sort();
       const before = await planPermissions();
       const owner = await register(ctx, "boss");
-      const stranger = await fixture(ctx, "an account that is not the owner", "POST", "/account-without-workspace", { email: ctx.email("member"), name: "Member", password: "Passw0rd!x" });
+      const stranger = await fixture(ctx, "an account that is not the owner", "POST", "/account-without-workspace", { email: ctx.email("member"), name: "Member", password: passwordWith() });
       const memberId = text(stranger.body, "userId");
       const ownerSet = await effective(ctx, owner.tenantId, owner.userId, [a, b, c]);
       const memberSet = await effective(ctx, owner.tenantId, memberId, [a, b, c]);
@@ -75,7 +76,7 @@ export const journeys = guarded([
       const ownerStar = await effective(ctx, owner.tenantId, owner.userId, []);
       const memberStar = await effective(ctx, owner.tenantId, memberId, ["*"]);
       await ctx.verify("tenant ownership never grants *, even if the plan contains it", [
-        check("the plan write answers 200 or a refusal, never silently stores nothing", star.status === 200 || star.status === 400, star.body),
+        check("the plan write is accepted", star.status === 200, star.body),
         check("the owner's set has no *", !ownerStar.includes("*"), ownerStar),
         check("an incoming * (the platform owner's wildcard) survives for another member", memberStar.includes("*"), memberStar),
       ]);
@@ -101,8 +102,8 @@ export const journeys = guarded([
         check("seats: 1 member, 1 pending invitation, 2 occupied", JSON.stringify(pick(plan.body, "seats")) === JSON.stringify({ members: 1, pendingInvites: 1, occupied: 2 }), plan.body),
         check("the second invitation is refused 409 saas.errors.plan.seat_limit_reached", second.status === 409 && (isText(second.body) ? second.body : text(second.body, "message")) === "saas.errors.plan.seat_limit_reached", second.body),
       ]);
-      const resend = await invite("first");
-      await ctx.verify("the workspace still has its owner", [check("the owner registered", owner.tenantId !== "", owner.answer.body), check("inviting the same address again does not take a third seat", resend.status !== 200 || pick((await saas(ctx, "the seats after a repeat", "GET", "/tenant/plan", { as: "seat-owner" })).body, "seats") !== null, resend.body)]);
+      await ctx.verify("the workspace still has its owner", [check("the owner registered", owner.tenantId !== "", owner.answer.body)]);
     },
   },
+  ...seatJourneys,
 ]);

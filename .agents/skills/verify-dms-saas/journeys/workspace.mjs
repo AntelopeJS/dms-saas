@@ -1,4 +1,5 @@
 import { guarded } from "../guard.mjs";
+import { memberJourneys } from "./parts/workspace-members.mjs";
 import { check, createPlan, isText, list, pick, register, saas, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
@@ -101,4 +102,5 @@ export const journeys = guarded([
       ]);
     },
   },
+  ...memberJourneys,
 ]);

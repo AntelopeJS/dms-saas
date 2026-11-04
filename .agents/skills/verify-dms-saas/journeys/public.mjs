@@ -1,12 +1,12 @@
 import { guarded } from "../guard.mjs";
-import { check, isText, pick, createPlan, list, register, saas, text, withConfig } from "../saas.mjs";
+import { passwordWith, check, isText, pick, createPlan, list, register, saas, text, withConfig } from "../saas.mjs";
 
 import { configJourneys } from "./parts/public-config.mjs";
 import { moreJourneys } from "./parts/public-more.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
 
-const STRONG = "Passw0rd!x";
+const STRONG = passwordWith();
 
 /**
  * @param {import("../saas.mjs").Answer} answer An API answer
@@ -56,20 +56,20 @@ export const journeys = guarded([
       await createPlan(ctx, "free");
       const email = ctx.email("policy");
       const cases = [
-        ["seven characters", "Passw0r!"],
-        ["no uppercase letter", "passw0rd!x"],
-        ["no digit", "Password!x"],
-        ["no special character", "Passw0rdxx"],
-        ["a special character outside @$!%*?&", "Passw0rd#x"],
+        ["seven characters", passwordWith({ length: 7 })],
+        ["no uppercase letter", passwordWith({ upper: false })],
+        ["no digit", passwordWith({ digit: false })],
+        ["no special character", passwordWith({ special: "" })],
+        ["a special character outside @$!%*?&", passwordWith({ special: "#" })],
+        ["a space", passwordWith({ special: " " })],
       ];
       const results = [];
       for (const [label, password] of cases) {
-        const short = label === "seven characters" ? "Pass0r!" : password;
-        const answer = await saas(ctx, `register with ${label}`, "POST", "/register", { as: "anon", body: { email, password: short, name: "Policy" } });
+        const answer = await saas(ctx, `register with ${label}`, "POST", "/register", { as: "anon", body: { email, password, name: "Policy" } });
         results.push(check(`${label}: 400 saas.errors.registration.password_policy`, answer.status === 400 && code(answer) === "saas.errors.registration.password_policy", answer.body));
       }
       await ctx.verify("each rule of the policy is enforced", results);
-      const eight = await saas(ctx, "register with exactly eight characters", "POST", "/register", { as: "anon", body: { email, password: "Passw0r!", name: "Policy" } });
+      const eight = await saas(ctx, "register with exactly eight characters", "POST", "/register", { as: "anon", body: { email, password: passwordWith({ length: 8 }), name: "Policy" } });
       await ctx.verify("eight characters with every rule is accepted, so the earlier refusals created no account", [check("200", eight.status === 200, eight.body)]);
     },
   },

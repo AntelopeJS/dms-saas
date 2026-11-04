@@ -73,6 +73,10 @@ The platform owner's dashboard: the headline figures, the workspaces by status a
 - `the-headline-figures-normalise-and-count-only-paying-workspaces`: MRR counts a yearly plan for a twelfth and counts active and past-due paid workspaces, never trials, gifts or free ones.
 - `mrr-is-reported-in-the-configured-currency-only`: with a reporting currency other than the plans' currency MRR shows 0 for them (never converted), and the code is read in upper case.
 - `only-the-platform-owner-reads-the-dashboard`: a workspace owner and an anonymous caller are refused every dashboard block.
+- `trials-ending-within-14-days-are-flagged-and-later-ones-are-not`: the headline counts every trial and flags those that end within 14 days: 13 days is flagged, 15 days is not.
+- `needs-attention-shows-past-due-workspaces-with-the-amount-and-first-suspension`: Needs attention counts the past-due workspaces, the amount at risk and the first suspension date: past-due day plus the suspension delay.
+- `workspaces-by-status-counts-every-billing-state`: past-due, suspended, pending-payment, cancelled, trialing and free workspaces each land in their own count.
+- `issuing-a-credit-note-without-stripe-is-refused-before-any-call`: the credit note preview and issue answer 503 saas.errors.stripe.not_configured, an invalid body is refused first, and only the platform owner may call them.
 
 ## How to get to it (user POV)
 
@@ -99,3 +103,8 @@ dms-control journey "$RUN" back-office
 | 3.dashboard.md Needs attention, Revenue churn, Paid invoices, Recent activity, period and comparison | Not driven: no journey seeds invoices, cancellations or dated events |
 | 4.workspaces.md list, views, tabs, detail, operator actions | Not driven except suspension and reactivation (workspace feature): the list and detail pages are data tables rendered by the dashboard |
 | 7.invoices.md invoices, credit notes, issuing | Not driven: invoices are mirrored from Stripe; issuing a credit note answers 503 saas.errors.stripe.not_configured without a key but no journey asserts it yet |
+| 3.dashboard.md trials ending in 14 days | dashboard-date journey: 3, 13 and 15 days, and a trial moved past the window |
+| 3.dashboard.md Needs attention (past due, amount at risk, first suspension) | dashboard-date journey: count, amount, date = past-due day plus the suspension delay, and the rule changed to 30 days |
+| 3.dashboard.md Workspaces by status | status journey: every billing state |
+| 7.invoices.md Issue credit note without Stripe | invoice journey: 503 saas.errors.stripe.not_configured, malformed bodies 400, owner-only |
+| 3.dashboard.md Revenue churn, Paid invoices, comparison menu, Recent activity | Not driven: churn and paid invoices need paid invoice rows mirrored from Stripe, and the comparison and period controls are client state |

@@ -32,6 +32,9 @@ Customers › Users and Segments: promoting and demoting platform admins, and th
 - `platform-admin-roles-follow-their-rules`: promoting and demoting follow the documented rules: no double promotion, no self-demotion, no demoting a non-admin, and only a platform admin acts.
 - `a-segment-rejects-malformed-rules`: a segment needs a name of at most 120 characters, a description of at most 500, known fields, their operators, a list for in and nin, and a depth of at most 8.
 - `a-segment-counts-the-users-its-rules-match`: rules on e-mail and on workspaces match the right users with And and Or, evaluate now refreshes the count, and a duplicate is its own segment.
+- `the-all-and-platform-admins-tabs-list-exactly-their-accounts`: All lists every account and Platform admins only the admins, each tab with its count.
+- `the-unverified-tab-lists-the-accounts-whose-address-is-not-verified`: accounts that registered and never verified their e-mail address are listed under Unverified, which counts them.
+- `the-segment-export-writes-one-row-per-matching-user-with-owned-mrr`: the CSV has the documented header, one row per matching user sorted by e-mail, and owned_mrr sums the MRR of the workspaces the user owns.
 
 ## How to get to it (user POV)
 
@@ -52,5 +55,7 @@ dms-control journey "$RUN" people
 
 | Documented behaviour | Journey check or reason |
 | --- | --- |
-| 5.users-and-segments.md "Users" | platform-roles journey; Not driven: the list tabs All / Platform admins / Unverified and the user detail tabs; the last-platform-admin rule is unreachable through the API, because the acting admin always counts as another admin |
-| 5.users-and-segments.md "Segments" | validation and counting journeys: fields, operators, list values, And/Or, any/every, owner role, depth, evaluate now, duplicate; Not driven: the 15-minute re-evaluation, trend over 30 days, CSV export with owned_mrr, the live preview editor |
+| 5.users-and-segments.md "Users" (promote and demote) | platform-roles journey; Not driven: the user detail tabs; the last-platform-admin rule is unreachable through the API, because the acting admin always counts as another admin |
+| 5.users-and-segments.md "Segments" | validation and counting journeys: fields, operators, list values, And/Or, any/every, owner role, depth, evaluate now, duplicate; Not driven: the 15-minute re-evaluation, trend over 30 days, the live preview editor |
+| 5.users-and-segments.md Users tabs | tab journeys: All and Platform admins; the Unverified journey fails on a product finding |
+| 5.users-and-segments.md Export users (CSV) and owned_mrr | CSV journey: header, rows sorted by e-mail, owned_mrr 50.00 and 0.00 |

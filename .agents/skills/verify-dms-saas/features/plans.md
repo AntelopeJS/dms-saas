@@ -69,6 +69,7 @@ The plan catalogue the platform owner edits: plan writes with their validation a
 - `retiring-a-plan-needs-its-slug-and-an-active-target`: retiring a plan needs its slug typed and an active target other than itself, and the impact counts the workspaces on it.
 - `a-retired-plans-workspaces-move-and-the-plan-can-then-go`: a started retirement closes the plan to sign-ups, moves its workspaces to the target, and the plan is then deletable.
 - `only-the-platform-owner-edits-the-catalogue`: a workspace owner and an anonymous caller cannot write, delete or retire plans.
+- `every-text-field-of-a-plan-is-saved-trimmed`: name, description and badge are saved trimmed on create and on save, and a save of one text keeps the others.
 
 ## How to get to it (user POV)
 
@@ -97,3 +98,4 @@ dms-control journey "$RUN" plans
 | 7.stripe.md "Plans and their Stripe products" | paid-plan journey (notice and not payable); Not driven: product/price creation, idempotency keys, the tax-code resync (all need Stripe) |
 | 8.operations.md "Plan migrations" | Not driven: capture, outcomes, retry, reconcile and resolve need a migration job that starts (blocked by the finding) |
 | 5.extending.md "Plan feature labels and values" | Not driven: localized feature rows are written by modules through `localize("*")` |
+| 6.plans.md Text fields are saved trimmed | plan-text journey: name, description, badge and slug trimmed on create and save |

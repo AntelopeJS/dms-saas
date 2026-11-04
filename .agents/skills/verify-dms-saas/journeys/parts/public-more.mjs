@@ -1,8 +1,8 @@
-import { check, createPlan, fixture, isText, list, pick, register, saas, text } from "../../saas.mjs";
+import { passwordWith, check, createPlan, fixture, isText, list, pick, register, saas, text } from "../../saas.mjs";
 
 /** @typedef {import("../../saas.mjs").Ctx} Ctx */
 
-const STRONG = "Passw0rd!x";
+const STRONG = passwordWith();
 
 /**
  * @param {import("../../saas.mjs").Answer} answer An API answer
@@ -128,6 +128,22 @@ export const moreJourneys = [
       await ctx.verify("the sign-up screen names the plan it opens on, and the chosen paid plan", [
         check("the workspace opens on the free plan", text(plan.body, "plan", "_id") === free.id && pick(plan.body, "requestedPlan") === null, plan.body),
         check("the chosen plan is named", text(chosen.body, "requestedPlan", "_id") === pro.id && text(chosen.body, "plan", "_id") === free.id, chosen.body),
+      ]);
+    },
+  },
+  {
+    id: "a-listener-that-throws-cancels-the-registration",
+    title: "a TENANT_BEING_PROVISIONED listener that throws fails the registration and leaves nothing behind, so the same address can register again",
+    entryPoint: "POST /api/saas/register, Hook.TENANT_BEING_PROVISIONED",
+    async run(/** @type {Ctx} */ ctx) {
+      await createPlan(ctx, "free");
+      const email = ctx.email("rolledback");
+      const password = passwordWith();
+      const failed = await saas(ctx, "register with a listener that refuses", "POST", "/register", { as: "anon", body: { email, password, name: "Rolled Back", extras: { verifyFailProvisioning: true } } });
+      const again = await saas(ctx, "register the same address without the trigger", "POST", "/register", { as: "anon", body: { email, password, name: "Rolled Back" } });
+      await ctx.verify("the failed registration left no account behind", [
+        check("the first registration fails", failed.status >= 400, failed.body),
+        check("the same address registers afterwards", again.status === 200, again.body),
       ]);
     },
   },

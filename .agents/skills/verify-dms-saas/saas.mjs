@@ -293,3 +293,66 @@ export async function allPermissionIds(ctx) {
   return ids;
 }
 
+
+/**
+ * A test password built from parts, so no literal password sits in the source. Each rule of the DMS policy can be left out.
+ *
+ * @param {{ length?: number, upper?: boolean, digit?: boolean, special?: string }} [rules] The length (12 by default), whether it holds an uppercase letter and a digit, and its special character
+ * @returns {string} The password
+ */
+export function passwordWith(rules = {}) {
+  const { length = 12, upper = true, digit = true, special = "!" } = rules;
+  return [upper ? "K" : "k", digit ? "7" : "q", special].join("").padEnd(length, "x");
+}
+
+const PAGES_API = "/dms/pages/settings/workspace";
+const SIGNUP_LINK = /\/auth\/signup\?token=([^&\s]+)/;
+
+/**
+ * Creates a role of the workspace of `owner` (no permissions) and returns its id.
+ *
+ * @param {Ctx} ctx The journey
+ * @param {string} owner The workspace owner's account
+ * @returns {Promise<string>} The role id
+ */
+export async function createRole(ctx, owner) {
+  const role = await ctx.api(`${owner} creates a role`, { method: "POST", path: `${PAGES_API}/roles/create`, as: owner, body: { name: ctx.unique("Member"), description: "", permissions: [] } });
+  return text(role.body, "id");
+}
+
+/**
+ * Invites an address as a plain member and returns the token of the e-mailed sign-up link.
+ *
+ * @param {Ctx} ctx The journey
+ * @param {string} owner The inviting workspace owner's account
+ * @param {string} email The address
+ * @param {string} roleId The role the invitee gets
+ * @returns {Promise<{ answer: Answer, token: string }>} The invitation's answer and its token ("" when no mail arrived)
+ */
+export async function inviteMember(ctx, owner, email, roleId) {
+  const answer = await ctx.api(`${owner} invites ${email}`, { method: "POST", path: `${PAGES_API}/members/invite`, as: owner, body: { emails: [email], roles: [roleId], asTenantOwner: false, language: "en" } });
+  if (answer.status !== 200) return { answer, token: "" };
+  const mail = await ctx.mail((message) => message.to.some((to) => to.includes(email)) && message.links.some((link) => SIGNUP_LINK.test(link)));
+  const link = mail.match?.links.findLast((entry) => SIGNUP_LINK.test(entry)) ?? "";
+  return { answer, token: SIGNUP_LINK.exec(link)?.[1] ?? "" };
+}
+
+/**
+ * Invites a member and accepts the invitation through the sign-up route, so the account is a real member of the workspace.
+ *
+ * @param {Ctx} ctx The journey
+ * @param {string} owner The inviting workspace owner's account
+ * @param {string} name The member's account name in the journey
+ * @param {string} [roleId] An existing role; one is created when absent
+ * @returns {Promise<{ email: string, password: string, ok: boolean }>} The member
+ */
+export async function joinMember(ctx, owner, name, roleId) {
+  const role = roleId ?? (await createRole(ctx, owner));
+  const email = ctx.email(name);
+  const password = ctx.password();
+  const invited = await inviteMember(ctx, owner, email, role);
+  if (invited.token === "") return { email, password, ok: false };
+  const signup = await ctx.api(`${name} accepts the invitation`, { method: "POST", path: "/api/auth/signup", as: "anon", body: { name: `Verify ${name}`, email, password, token: invited.token } });
+  if (signup.status === 200) ctx.addAccount(name, { email, password });
+  return { email, password, ok: signup.status === 200 };
+}

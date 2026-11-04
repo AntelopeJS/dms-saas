@@ -1,4 +1,5 @@
 import { guarded } from "../guard.mjs";
+import { planTextJourneys } from "./parts/plans-more.mjs";
 import { check, createPlan, isText, list, pick, planBody, register, saas, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
@@ -193,4 +194,5 @@ export const journeys = guarded([
       await ctx.verify("the catalogue is the platform owner's", checks);
     },
   },
+  ...planTextJourneys,
 ]);

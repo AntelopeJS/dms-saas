@@ -1,4 +1,6 @@
 import { guarded } from "../guard.mjs";
+import { invoiceJourneys } from "./parts/invoices.mjs";
+import { dashboardDateJourneys } from "./parts/back-office-more.mjs";
 import { check, createPlan, fixture, list, pick, register, saas, text, withConfig } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
@@ -130,4 +132,6 @@ export const journeys = guarded([
       await ctx.verify("every block is the platform owner's", checks);
     },
   },
+  ...dashboardDateJourneys,
+  ...invoiceJourneys,
 ]);

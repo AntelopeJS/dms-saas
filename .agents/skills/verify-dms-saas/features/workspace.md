@@ -102,6 +102,9 @@ Settings › Workspace as the owner lives it: renaming, the workspace list, dele
 - `an-owner-renames-the-workspace-and-sees-it-listed`: the owner renames the workspace (saved trimmed), the switcher list and the General page read the new name, and an anonymous caller cannot rename.
 - `deleting-a-workspace-needs-its-name-and-revokes-access`: deletion needs the typed workspace name, answers the retention it keeps data for, and closes the workspace to its owner.
 - `an-operator-suspension-closes-the-workspace-until-reactivation`: suspending needs the typed workspace name and an operation id, closes changes but keeps billing readable, repeats idempotently, and reactivation reopens it.
+- `a-member-cannot-rename-delete-or-export-the-workspace`: a member who joined through an invitation is refused 403 on rename, deletion, the danger-zone overview and the data export, and the workspace is unchanged.
+- `deleting-a-workspace-cancels-its-pending-invitations`: a pending invitation exists before the deletion and none is left after it.
+- `an-operation-id-is-8-to-64-letters-digits-or-hyphens`: operation ids of 8 and 64 characters are accepted, 7 and 65 characters, spaces and other symbols are refused.
 
 ## How to get to it (user POV)
 
@@ -128,3 +131,5 @@ dms-control journey "$RUN" workspace
 | 2.workspace-settings.md "Data export" | Not driven: the export job e-mails a link; no journey drives the background archive |
 | 7.stripe.md "Starting a paid plan" | Not driven: Checkout needs Stripe |
 | 8.operations.md "Operator actions" | suspension journey: confirmation, operation id format, idempotent repeat, mismatch 409; Not driven: reconciliation_required after 23 hours, upgrades and balance credits (Stripe) |
+| 2.workspace-settings.md General (only owners rename; members read-only; deletion cancels invitations) | member journey: 403 on rename, delete, overview and export for an accepted member; deletion journey: the pending invitation is gone |
+| 8.operations.md operation id 8 to 64 characters | operation-id journey: 7 and 65 refused, 8 and 64 accepted, symbols refused |
