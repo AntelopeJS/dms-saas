@@ -7,13 +7,13 @@ import {
   type RequestContext,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import {
   AuthTenantMember,
   AuthTenantOwner,
 } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { isTenantSubscriptionBlocked } from "../../auth";
 import {
@@ -122,10 +122,9 @@ export class SaasBillingPortalController extends Controller(
   async getWorkspaceAccess(
     @Context() ctx: RequestContext,
     @AuthTenantMember({ bypassTenantAccessGate: true }) user: User,
-    @TenantScopedModel(TenantMemberModel)
-    tenantMemberModel: TenantMemberModel,
   ): Promise<WorkspaceAccess> {
     const tenantId = getRequestTenantId(ctx);
+    const tenantMemberModel = GetModel(TenantMemberModel, tenantId);
     const { blocked, status } = await isTenantSubscriptionBlocked(tenantId);
     const membership = await tenantMemberModel.getByUser(user._id);
     const isTenantOwner = !!membership?.isTenantOwner;
@@ -151,12 +150,10 @@ export class SaasBillingPortalController extends Controller(
   async getStatus(
     @Context() ctx: RequestContext,
     @AuthTenantMember({ bypassTenantAccessGate: true }) user: User,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
-    @TenantScopedModel(TenantMemberModel)
-    tenantMemberModel: TenantMemberModel,
   ): Promise<BillingStatus> {
     const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
+    const tenantMemberModel = GetModel(TenantMemberModel, tenantId);
     const [subscription, membership, workspaceOwner] = await Promise.all([
       tenantSubscriptionModel.findOne(),
       tenantMemberModel.getByUser(user._id),
@@ -180,9 +177,10 @@ export class SaasBillingPortalController extends Controller(
   async createPortalSession(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @JSONBody() body: PortalSessionBody,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ) {
+    const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     assert(
       await isAllowedRedirectUrl(body.returnUrl),
       HTTP_BAD_REQUEST,

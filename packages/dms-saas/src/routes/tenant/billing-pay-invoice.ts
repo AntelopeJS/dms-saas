@@ -1,13 +1,16 @@
 import {
+  Context,
   Controller,
   HTTPResult,
   Parameter,
   Post,
+  type RequestContext,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { Logging } from "@antelopejs/interface-core/logging";
+import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import Stripe from "stripe";
 import {
@@ -69,10 +72,11 @@ export class SaasBillingPayInvoiceController extends Controller(
   async payInvoice(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Parameter("invoiceId") invoiceId: string,
-    @TenantScopedModel(InvoiceModel) invoiceModel: InvoiceModel,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ): Promise<PayInvoiceResult> {
+    const tenantId = getRequestTenantId(ctx);
+    const invoiceModel = GetModel(InvoiceModel, tenantId);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     assertPayableSubscription(await tenantSubscriptionModel.findOne());
     const invoice = await invoiceModel.get(invoiceId);
     assert(

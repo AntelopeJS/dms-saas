@@ -255,15 +255,10 @@ describe("pay invoice", () => {
     overrides: Partial<Invoice> = {},
     patch: Partial<TenantSubscription> = {},
   ) {
-    const { tenantId, owner } = await seedWorkspace(patch);
+    const { tenantId, owner, request } = await seedWorkspace(patch);
     const row = invoice({ _id: randomUUID(), ...overrides });
     await GetModel(InvoiceModel, tenantId).insert(row);
-    return controller.payInvoice(
-      owner,
-      row._id,
-      GetModel(InvoiceModel, tenantId),
-      GetModel(TenantSubscriptionModel, tenantId),
-    );
+    return controller.payInvoice(owner, row._id, request);
   }
 
   it("pays an open invoice only", () => {
@@ -324,8 +319,8 @@ describe("subscription cancellation", () => {
     return {
       model,
       tenantId,
-      cancel: () => controller.cancelAtPeriodEnd(owner, request, model),
-      keep: () => controller.keepSubscription(owner, request, model),
+      cancel: () => controller.cancelAtPeriodEnd(owner, request),
+      keep: () => controller.keepSubscription(owner, request),
     };
   }
 
