@@ -81,6 +81,15 @@ The platform owner's dashboard: the headline figures, the workspaces by status a
 - `issuing-a-credit-note-without-stripe-is-refused-before-any-call`: the credit note preview and issue answer 503 saas.errors.stripe.not_configured, an invalid body is refused first, and only the platform owner may call them.
 - `revenue-churn-divides-the-lost-mrr-by-the-mrr-the-period-started-with`: a workspace cancelled in the period counts the MRR it paid, the rate is lost over today's MRR plus lost, and a period before the cancellation counts none.
 - `paid-invoices-sums-collected-and-credited-money-per-day-with-a-comparison`: the chart sums paid invoices and issued credit notes inside the period, ignores open ones and other currencies, and the comparison reads the earlier window.
+- `grant-free-access-follows-the-plan-and-date-rules`: the grant answers each documented case: a free date in the future, a past date, an unknown plan, an unsold plan, another audience, the workspace's own plan once unsold, and a Stripe subscription that needs acknowledging.
+- `complimentary-access-ending-within-7-days-is-flagged`: access granted until 5 days from now is flagged on Needs attention and under the Complimentary access ending view, one ending in 10 days is not.
+- `churn-counts-a-cancellation-that-followed-a-suspension`: a paying workspace that went past due, then suspended, then cancelled still counts the MRR it paid before it fell past due.
+- `a-credit-note-request-is-validated-before-stripe-is-asked`: a credit note without a reason, with an unknown reason, a fractional amount, no request id or an unknown mode is refused 400 before the 503.
+- `the-workspace-plan-page-shows-the-plan-the-workspace-is-on`: after an operator moves a workspace to a plan, the workspace's own plan page names that plan and its complimentary state, not another workspace's.
+- `the-workspace-list-orders-by-mrr-and-its-over-500-view-has-a-sharp-edge`: the largest MRR comes first, and the MRR over 500 view holds 501 but neither 500 nor 499.
+- `the-invoice-figures-count-the-right-statuses-and-periods`: awaiting payment, collected this month, credited this month and written off this year each read their own invoices.
+- `segment-money-columns-count-only-paying-workspaces-and-a-twelfth-of-a-yearly-price`: owned_mrr is 0 for a trial, a gift and a suspended workspace, and a yearly plan counts a twelfth of its price.
+- `plans-by-mrr-ignores-trialing-workspaces-and-the-change-plan-list-fits-the-workspace`: a trialing workspace on a plan adds nothing to Plans by MRR, and the plans a workspace may switch to leave out those too small for its seats and those for the other audience.
 
 ## How to get to it (user POV)
 
@@ -107,6 +116,15 @@ dms-control journey "$RUN" back-office
 | 3.dashboard.md Needs attention, Revenue churn, Paid invoices, Recent activity, period and comparison | Not driven: no journey seeds invoices, cancellations or dated events |
 | 4.workspaces.md list, views, tabs, detail, operator actions | Not driven except suspension and reactivation (workspace feature): the list and detail pages are data tables rendered by the dashboard |
 | 7.invoices.md invoices, credit notes, issuing | Not driven: invoices are mirrored from Stripe; issuing a credit note answers 503 saas.errors.stripe.not_configured without a key but no journey asserts it yet |
+| 4.workspaces.md Grant complimentary access (plans offered, the workspace's own plan, dates, Stripe acknowledgement) | grant journey: unknown, deleted and unsold plans, other audience, past date, own plan once unsold, open-ended grant, acknowledgement, workspace with no customer type; the plan-page journey fails on a product finding (draft dms-saas-plan-page-stale-after-operator-grant) |
+| 4.workspaces.md and 3.dashboard.md complimentary accesses ending (7 days) | complimentary journey: 5 days is flagged and listed, 10 days is not |
+| 3.dashboard.md Revenue churn after a suspension | churn journey: past due, suspended, cancelled in turn |
+| 7.invoices.md a reason is required, amounts, request id, the three modes and six reasons | credit-note validation journey |
+| 4.workspaces.md list order, views and the MRR over 500 boundary | list journey: 501 in, 500 and 499 out, largest MRR first, view counts; Not driven: Past due for more than 7 days and Owner never joined (the module sets the state date itself and a never-joined owner needs an operator-created workspace) |
+| 7.invoices.md the four figures and the credit note split | figures journey: awaiting, collected, credited, written off, balance credit versus card refund |
+| 5.users-and-segments.md MRR and Paying conditions (a twelfth of a yearly price, 0 for trial, gift, suspended) | segment-money journey |
+| 3.dashboard.md Plans by MRR counts only paying workspaces; 2.workspace-settings.md Change plan list | plans-by-mrr journey; the Change plan dialog is checked through the plan list's size and audience fields, the filtering itself is client-side |
+| 7.invoices.md which invoice statuses can be credited | Not driven: the preview answers 503 saas.errors.stripe.not_configured before it reads the invoice, so the per-status rules cannot be observed without Stripe |
 | 3.dashboard.md trials ending in 14 days | dashboard-date journey: 3, 13 and 15 days, and a trial moved past the window |
 | 3.dashboard.md Needs attention (past due, amount at risk, first suspension) | dashboard-date journey: count, amount, date = past-due day plus the suspension delay, and the rule changed to 30 days |
 | 3.dashboard.md Workspaces by status | status journey: every billing state |

@@ -18,7 +18,7 @@ import {
   GetUpcomingInvoicePreview,
   RecomputeTenantBillingState,
 } from "@antelopejs/interface-dms-saas/billing";
-import { InvoiceModel, StripeWebhookEventModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
+import { CreditNoteModel, InvoiceModel, StripeWebhookEventModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
 
 const AUTH_KEY_BYTES = 32;
 const HOUR_MS = 3_600_000;
@@ -68,6 +68,15 @@ interface InvoiceBody {
   totalMinor: number;
   currency: string;
   daysAgo: number;
+}
+
+interface CreditNoteBody {
+  tenantId: string;
+  number: string;
+  amountMinor: number;
+  status: "issued" | "void";
+  type: "credit_to_balance" | "refund";
+  refunded: boolean;
 }
 
 interface TenantBody {
@@ -272,6 +281,32 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
       issuedAt,
       createdAt: issuedAt,
       updatedAt: issuedAt,
+    });
+    return { ok: true };
+  }
+
+  /** A credit note of a workspace, as the Stripe webhook mirrors it. */
+  @Post("/credit-note")
+  async creditNote(@JSONBody() input: CreditNoteBody) {
+    const now = new Date();
+    await GetModel(CreditNoteModel, input.tenantId).insert({
+      invoiceId: `in_${input.number}`,
+      stripeCreditNoteId: `cn_${input.number}`,
+      number: input.number,
+      amount: input.amountMinor,
+      currency: "EUR",
+      reason: "goodwill",
+      memo: null,
+      type: input.type,
+      refundId: input.refunded ? `re_${input.number}` : null,
+      hostedUrl: null,
+      pdfUrl: null,
+      status: input.status,
+      issuedAt: now,
+      voidedAt: null,
+      metadata: {},
+      createdAt: now,
+      updatedAt: now,
     });
     return { ok: true };
   }
