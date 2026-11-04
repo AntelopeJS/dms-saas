@@ -1,4 +1,5 @@
 import { guarded } from "../guard.mjs";
+import { revenueJourneys } from "./parts/revenue.mjs";
 import { invoiceJourneys } from "./parts/invoices.mjs";
 import { dashboardDateJourneys } from "./parts/back-office-more.mjs";
 import { check, createPlan, fixture, list, pick, register, saas, text, withConfig } from "../saas.mjs";
@@ -134,4 +135,5 @@ export const journeys = guarded([
   },
   ...dashboardDateJourneys,
   ...invoiceJourneys,
+  ...revenueJourneys,
 ]);

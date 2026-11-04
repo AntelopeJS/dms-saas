@@ -163,6 +163,12 @@ export const journeys = guarded([
           checks.push(check(`${method} ${path}: 403 saas.errors.registration_closed`, answer.status === 403 && code(answer) === "saas.errors.registration_closed", answer.body));
         }
         await ctx.verify("every register route is closed", checks);
+        const options = await saas(ctx, "an owner reads the workspace creation options", "GET", "/workspaces/create-options", { as: "while-open" });
+        const adminOptions = await saas(ctx, "the platform admin reads the workspace creation options", "GET", "/workspaces/create-options");
+        await ctx.verify("creating a workspace in the app is closed to everyone but a platform owner", [
+          check("a workspace owner: 403 saas.errors.registration_closed", options.status === 403 && code(options) === "saas.errors.registration_closed", options.body),
+          check("the platform admin: 200", adminOptions.status === 200, adminOptions.body),
+        ]);
         const pricing = await saas(ctx, "pricing while closed", "GET", "/pricing", { as: "anon" });
         await ctx.verify("pricing stays open", [check("200 with the free plan", pricing.status === 200 && list(pricing.body, "plans").length === 1, pricing.body)]);
         const tab = await ctx.tab("anon");

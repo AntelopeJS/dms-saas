@@ -76,7 +76,11 @@ The platform owner's dashboard: the headline figures, the workspaces by status a
 - `trials-ending-within-14-days-are-flagged-and-later-ones-are-not`: the headline counts every trial and flags those that end within 14 days: 13 days is flagged, 15 days is not.
 - `needs-attention-shows-past-due-workspaces-with-the-amount-and-first-suspension`: Needs attention counts the past-due workspaces, the amount at risk and the first suspension date: past-due day plus the suspension delay.
 - `workspaces-by-status-counts-every-billing-state`: past-due, suspended, pending-payment, cancelled, trialing and free workspaces each land in their own count.
+- `an-operator-resends-copies-and-revokes-a-pending-invitation`: the platform owner copies the link of a pending invitation and revokes another; a revoked invitation is gone and a second revoke is refused.
+- `operator-suspension-follows-the-workspace-status`: a cancelled workspace cannot be suspended, a suspended one cannot be suspended again, only a suspended one can be reactivated, and reactivation restores it.
 - `issuing-a-credit-note-without-stripe-is-refused-before-any-call`: the credit note preview and issue answer 503 saas.errors.stripe.not_configured, an invalid body is refused first, and only the platform owner may call them.
+- `revenue-churn-divides-the-lost-mrr-by-the-mrr-the-period-started-with`: a workspace cancelled in the period counts the MRR it paid, the rate is lost over today's MRR plus lost, and a period before the cancellation counts none.
+- `paid-invoices-sums-collected-and-credited-money-per-day-with-a-comparison`: the chart sums paid invoices and issued credit notes inside the period, ignores open ones and other currencies, and the comparison reads the earlier window.
 
 ## How to get to it (user POV)
 
@@ -107,4 +111,8 @@ dms-control journey "$RUN" back-office
 | 3.dashboard.md Needs attention (past due, amount at risk, first suspension) | dashboard-date journey: count, amount, date = past-due day plus the suspension delay, and the rule changed to 30 days |
 | 3.dashboard.md Workspaces by status | status journey: every billing state |
 | 7.invoices.md Issue credit note without Stripe | invoice journey: 503 saas.errors.stripe.not_configured, malformed bodies 400, owner-only |
-| 3.dashboard.md Revenue churn, Paid invoices, comparison menu, Recent activity | Not driven: churn and paid invoices need paid invoice rows mirrored from Stripe, and the comparison and period controls are client state |
+| 3.dashboard.md Revenue churn | revenue journey: churn rate = lost MRR over today's MRR plus lost, a cancelled trial that never paid counts none, a period before the cancellation counts none |
+| 3.dashboard.md Paid invoices (collected, credited, comparison, No comparison) | revenue journey: paid invoices only, issued credit notes only, other statuses ignored, comparison window and delta, No comparison drops them |
+| 3.dashboard.md Recent activity tabs, period selector and the refresh button | Not driven: client-side controls and activity rows written by Stripe flows |
+| 4.workspaces.md row actions by status (suspend, reactivate) | operator-suspension journey: cancelled cannot be suspended, suspended cannot be suspended again, only a suspended workspace is reactivated |
+| 4.workspaces.md invitations resend, copy link, revoke | invitation journey: copy link and revoke; Not driven: resend (it sends e-mail through the sink with a fresh token, not asserted) |

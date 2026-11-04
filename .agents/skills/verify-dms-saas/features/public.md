@@ -87,6 +87,7 @@ Public registration and the options that shape it: the account and first workspa
 - `extras-reach-the-provisioning-listeners-within-their-limits`: registration extras are forwarded verbatim to TENANT_BEING_PROVISIONED listeners and bounded to 4096 bytes, 64 keys and depth 4.
 - `a-sign-in-without-a-workspace-is-completed`: an account with no workspace is described, then finalized into a workspace and a session, once.
 - `the-pricing-catalogue-lists-public-plans-in-order`: the public catalogue lists active public plans by order, hides the rest, and names the default plan only when it is on sale.
+- `a-listener-that-throws-cancels-the-registration`: a TENANT_BEING_PROVISIONED listener that throws fails the registration and leaves nothing behind, so the same address can register again.
 - `a-wrong-option-stops-the-module-at-start`: an admission mode, a registration payment method or a preview cache lifetime outside the documented values stops the backend at start, and the boundary values start.
 - `a-default-plan-slug-picks-among-the-free-plans`: defaultPlanSlug picks a usable free plan, and a slug naming none is ignored in favour of the lowest-ordered free plan.
 - `a-screen-switched-off-frees-its-slug`: publicScreens.register false and publicScreens.pricing false stop the module serving those pages, and the public catalogue API stays.
@@ -123,6 +124,8 @@ dms-control journey "$RUN" public
 | 3.configuration.md Options table | start-refusal journey (admissionMode, paymentMethod, cache TTL), default-plan journey, screens journey; Not driven: stripe.readTimeoutMs, stripe.readMaxNetworkRetries, allowedRedirectHosts (only used for Stripe redirects), reportingCurrency (dashboard feature), requiredPlanChangePolicy, invoiceLineRequiredProviders and invoiceLineRecoveryDiscoverySince (need Stripe invoices) |
 | 3.configuration.md "Registration" | payment-method journey; extras journey; Not driven: the free-workspace-per-card cap (needs a card fingerprint) |
 | 3.configuration.md "When Stripe cannot be used" | Not driven: needs a usable key and a Stripe that refuses; without a key the 503 saas.errors.stripe.not_configured refusals are the observable part |
-| 3.configuration.md "Default plan" | default-plan journey and registration-needs-a-free-plan journey |
+| 3.configuration.md "Default plan" | default-plan journey (including the first free plan attaching to a workspace that had none) and registration-needs-a-free-plan journey |
+| 3.configuration.md invitation-only: workspace creation in the app closed except for a platform owner | invitation-only journey: create-options 403 for an owner, 200 for the platform admin |
+| 5.extending.md a failing TENANT_BEING_PROVISIONED listener cancels the registration | listener journey: the registration fails and the address registers afterwards |
 | 6.faq.md "Registration answers 409 saas.errors.plan.no_free_plan" | registration-needs-a-free-plan journey |
 | 6.faq.md "A visitor who just registered stays signed out" | Not driven: the frontend server's establish endpoint allow-list |

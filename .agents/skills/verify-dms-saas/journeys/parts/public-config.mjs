@@ -32,7 +32,13 @@ export const configJourneys = [
     title: "defaultPlanSlug picks a usable free plan, and a slug naming none is ignored in favour of the lowest-ordered free plan",
     entryPoint: "option defaultPlanSlug, GET /api/saas/register/plan",
     async run(/** @type {Ctx} */ ctx) {
+      const unattached = await saas(ctx, "the admin's workspace before any plan", "GET", "/workspaces/mine");
       const first = await createPlan(ctx, "first", { order: 0 });
+      const attached = await saas(ctx, "the admin's workspace once the first free plan is published", "GET", "/workspaces/mine");
+      await ctx.verify("publishing the first free plan attaches it once to a workspace that had none", [
+        check("before: no plan", text(list(unattached.body)[0], "planName") === "" || list(unattached.body)[0]?.planName === null, unattached.body),
+        check("after: the first free plan", text(list(attached.body)[0], "planName") === "first", attached.body),
+      ]);
       const second = await createPlan(ctx, "second", { order: 1 });
       await createPlan(ctx, "paid", { order: 2, price: 10 });
       const opensOn = async (/** @type {string} */ label) => text((await saas(ctx, label, "GET", "/register/plan", { as: "anon" })).body, "plan", "_id");

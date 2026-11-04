@@ -18,15 +18,15 @@ function item(answer, id) {
  * @param {string} tenantId The workspace
  * @param {string} planId The plan
  * @param {string} status The billing status
- * @param {{ endsInDays?: number, pastDueDaysAgo?: number }} [when] Dates relative to now
+ * @param {{ endsInDays?: number, pastDueDaysAgo?: number, withoutStripe?: boolean }} [when] Dates relative to now
  */
 async function seedSubscription(ctx, tenantId, planId, status, when = {}) {
   await fixture(ctx, `put ${tenantId} on its plan as ${status}`, "POST", "/subscription", {
     tenantId,
     planId,
     status,
-    stripeCustomerId: `cus_${tenantId.slice(0, 8)}`,
-    stripeSubscriptionId: `sub_${tenantId.slice(0, 8)}`,
+    stripeCustomerId: when.withoutStripe ? undefined : `cus_${tenantId.slice(0, 8)}`,
+    stripeSubscriptionId: when.withoutStripe ? undefined : `sub_${tenantId.slice(0, 8)}`,
     currentPeriodEnd: when.endsInDays === undefined ? undefined : new Date(Date.now() + when.endsInDays * DAY_MS).toISOString(),
     pastDueSince: when.pastDueDaysAgo === undefined ? undefined : new Date(Date.now() - when.pastDueDaysAgo * DAY_MS).toISOString(),
   });
@@ -134,6 +134,38 @@ export const dashboardDateJourneys = [
         check("revoke: 200", revoked.status === 200, revoked.body),
         check("one invitation is left, the kept one", after.length === 1 && text(after[0], "email") === ctx.email("keep"), after),
         check("revoking it again is harmless: the same single invitation remains", twice.status === 200 && list((await fixture(ctx, "the invitations again", "GET", `/invites/${owner.tenantId}`)).body).length === 1, twice.body),
+      ]);
+    },
+  },
+  {
+    id: "operator-suspension-follows-the-workspace-status",
+    title: "a cancelled workspace cannot be suspended, a suspended one cannot be suspended again, only a suspended one can be reactivated, and reactivation restores it",
+    entryPoint: "POST /api/saas/workspaces/:tenantId/suspend and /unsuspend",
+    async run(/** @type {Ctx} */ ctx) {
+      const free = await createPlan(ctx, "free", { order: 0 });
+      const gone = await register(ctx, "gone", { workspaceName: "Gone Co" });
+      const held = await register(ctx, "held", { workspaceName: "Held Co" });
+      const live = await register(ctx, "live", { workspaceName: "Live Co" });
+      await seedSubscription(ctx, gone.tenantId, free.id, "cancelled", { withoutStripe: true });
+      await seedSubscription(ctx, held.tenantId, free.id, "suspended", { withoutStripe: true });
+      const suspend = (/** @type {string} */ tenantId, /** @type {string} */ confirmName, /** @type {string} */ operationId) => saas(ctx, `suspend ${confirmName}`, "POST", `/workspaces/${tenantId}/suspend`, { body: { confirmName, operationId } });
+      const unsuspend = (/** @type {string} */ tenantId, /** @type {string} */ operationId) => saas(ctx, `reactivate ${operationId}`, "POST", `/workspaces/${tenantId}/unsuspend`, { body: { operationId } });
+      const cancelled = await suspend(gone.tenantId, "Gone Co", "suspend-gone-1");
+      const again = await suspend(held.tenantId, "Held Co", "suspend-held-1");
+      const notSuspended = await unsuspend(live.tenantId, "reactivate-live-1");
+      const notSuspendedGone = await unsuspend(gone.tenantId, "reactivate-gone-1");
+      await ctx.verify("the status decides what an operator may do", [
+        check("a cancelled workspace cannot be suspended: 400 saas.errors.workspace.is_cancelled", cancelled.status === 400 && JSON.stringify(cancelled.body) === JSON.stringify("saas.errors.workspace.is_cancelled"), cancelled.body),
+        check("a suspended workspace cannot be suspended again: 409 saas.errors.workspace.already_suspended", again.status === 409 && JSON.stringify(again.body) === JSON.stringify("saas.errors.workspace.already_suspended"), again.body),
+        check("an active workspace cannot be reactivated: 409 saas.errors.workspace.not_suspended", notSuspended.status === 409 && JSON.stringify(notSuspended.body) === JSON.stringify("saas.errors.workspace.not_suspended"), notSuspended.body),
+        check("a cancelled workspace cannot be reactivated: 409 not_suspended", notSuspendedGone.status === 409, notSuspendedGone.body),
+      ]);
+      const back = await unsuspend(held.tenantId, "reactivate-held-1");
+      const counts = await saas(ctx, "workspaces by status", "GET", "/dashboard/workspaces-by-status");
+      const by = Object.fromEntries(list(counts.body, "items").map((entry) => [text(entry, "id"), entry.value]));
+      await ctx.verify("reactivating a suspended workspace takes it out of Suspended", [
+        check("200", back.status === 200, back.body),
+        check("suspended 0, cancelled 1", by.suspended === 0 && by.cancelled === 1, by),
       ]);
     },
   },

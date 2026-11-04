@@ -18,10 +18,11 @@ import {
   GetUpcomingInvoicePreview,
   RecomputeTenantBillingState,
 } from "@antelopejs/interface-dms-saas/billing";
-import { StripeWebhookEventModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
+import { InvoiceModel, StripeWebhookEventModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
 
 const AUTH_KEY_BYTES = 32;
 const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
 const FAILING_EXTRA = "verifyFailProvisioning";
 
 /** What `Hook.TENANT_BEING_PROVISIONED` listeners received, newest last. */
@@ -57,6 +58,16 @@ interface ExpiredInviteBody {
   tenantId: string;
   email: string;
   roleId: string;
+}
+
+interface InvoiceBody {
+  tenantId: string;
+  number: string;
+  documentType: "invoice" | "credit_note";
+  status: "draft" | "open" | "paid" | "void" | "uncollectible" | "issued";
+  totalMinor: number;
+  currency: string;
+  daysAgo: number;
 }
 
 interface TenantBody {
@@ -220,6 +231,47 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
       token: randomBytes(AUTH_KEY_BYTES).toString("hex"),
       asTenantOwner: false,
       expiresAt: new Date(Date.now() - HOUR_MS),
+    });
+    return { ok: true };
+  }
+
+  /** An invoice or credit note of a workspace, mirrored the way a Stripe webhook leaves it. */
+  @Post("/invoice")
+  async invoice(@JSONBody() input: InvoiceBody) {
+    const issuedAt = new Date(Date.now() - input.daysAgo * DAY_MS);
+    const paid = input.status === "paid";
+    await GetModel(InvoiceModel, input.tenantId).insert({
+      documentType: input.documentType,
+      stripeInvoiceId: `in_${input.number}`,
+      stripeCreditNoteId: input.documentType === "credit_note" ? `cn_${input.number}` : null,
+      number: input.number,
+      parentInvoiceNumber: null,
+      amount: input.totalMinor,
+      subtotal: input.totalMinor,
+      tax: 0,
+      total: input.totalMinor,
+      amountPaid: paid ? input.totalMinor : 0,
+      attemptCount: 0,
+      nextPaymentAttemptAt: null,
+      dueAt: null,
+      autoFinalizesAt: null,
+      latestRevisionStripeId: null,
+      currency: input.currency,
+      periodStart: issuedAt,
+      periodEnd: issuedAt,
+      lines: [],
+      status: input.status,
+      creditNoteReason: null,
+      creditNoteType: null,
+      memo: null,
+      hostedInvoiceUrl: null,
+      invoicePdfUrl: null,
+      metadata: {},
+      paidAt: paid ? issuedAt : null,
+      voidedAt: null,
+      issuedAt,
+      createdAt: issuedAt,
+      updatedAt: issuedAt,
     });
     return { ok: true };
   }
