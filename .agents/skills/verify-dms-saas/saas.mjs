@@ -244,12 +244,12 @@ export async function pageHtml(ctx, path) {
  * @param {Ctx} ctx The journey
  * @param {string} label What the delivery is
  * @param {{ type: string, id: string, object: Record<string, unknown> }} event The event
- * @param {{ secret?: string | null, timestamp?: number }} [options] The signing secret (`null` sends no signature) and signing time
+ * @param {{ secret?: string | null, timestamp?: number, previousAttributes?: Record<string, unknown> }} [options] The signing secret (`null` sends no signature), signing time and the event's previous attributes
  * @returns {Promise<{ status: number, body: unknown }>} The answer
  */
 export async function deliverEvent(ctx, label, event, options = {}) {
   const folder = ctx.step(`webhook ${label}`);
-  const payload = JSON.stringify({ id: event.id, object: "event", api_version: "2026-08-26.dahlia", created: Math.floor(Date.now() / 1000), type: event.type, data: { object: event.object } });
+  const payload = JSON.stringify({ id: event.id, object: "event", api_version: "2026-08-26.dahlia", created: Math.floor(Date.now() / 1000), type: event.type, data: { object: event.object, previous_attributes: options.previousAttributes } });
   const secret = options.secret === undefined ? "whsec_placeholder" : options.secret;
   /** @type {Record<string, string>} */
   const headers = { "content-type": "application/json" };

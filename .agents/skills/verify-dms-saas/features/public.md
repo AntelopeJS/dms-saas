@@ -88,6 +88,7 @@ Public registration and the options that shape it: the account and first workspa
 - `a-sign-in-without-a-workspace-is-completed`: an account with no workspace is described, then finalized into a workspace and a session, once.
 - `the-pricing-catalogue-lists-public-plans-in-order`: the public catalogue lists active public plans by order, hides the rest, and names the default plan only when it is on sale.
 - `a-listener-that-throws-cancels-the-registration`: a TENANT_BEING_PROVISIONED listener that throws fails the registration and leaves nothing behind, so the same address can register again.
+- `pricing-lists-plans-in-catalogue-order-with-the-documented-call-to-action`: /pricing orders plans by catalogue order whatever their price, and each card says Start free, Start N-day trial or Choose followed by the plan name.
 - `a-wrong-option-stops-the-module-at-start`: an admission mode, a registration payment method or a preview cache lifetime outside the documented values stops the backend at start, and the boundary values start.
 - `a-default-plan-slug-picks-among-the-free-plans`: defaultPlanSlug picks a usable free plan, and a slug naming none is ignored in favour of the lowest-ordered free plan.
 - `a-screen-switched-off-frees-its-slug`: publicScreens.register false and publicScreens.pricing false stop the module serving those pages, and the public catalogue API stays.
@@ -129,3 +130,4 @@ dms-control journey "$RUN" public
 | 5.extending.md a failing TENANT_BEING_PROVISIONED listener cancels the registration | listener journey: the registration fails and the address registers afterwards |
 | 6.faq.md "Registration answers 409 saas.errors.plan.no_free_plan" | registration-needs-a-free-plan journey |
 | 6.faq.md "A visitor who just registered stays signed out" | Not driven: the frontend server's establish endpoint allow-list |
+| 1.public-screens.md Pricing order and call to action | pricing journey: catalogue order whatever the price, Start free, Start N-day trial, Choose plan |

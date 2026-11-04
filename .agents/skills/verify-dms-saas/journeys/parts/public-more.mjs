@@ -147,4 +147,26 @@ export const moreJourneys = [
       ]);
     },
   },
+  {
+    id: "pricing-lists-plans-in-catalogue-order-with-the-documented-call-to-action",
+    title: "/pricing orders plans by catalogue order whatever their price, and each card says Start free, Start N-day trial or Choose followed by the plan name",
+    entryPoint: "GET /api/saas/pricing, /pricing",
+    async run(/** @type {Ctx} */ ctx) {
+      await createPlan(ctx, "starter", { order: 0, name: { en: "Starter" } });
+      await createPlan(ctx, "premium", { order: 1, price: 20, name: { en: "Premium" } });
+      await createPlan(ctx, "trialed", { order: 2, price: 9, trialDays: 14, name: { en: "Trialed" } });
+      await createPlan(ctx, "basic", { order: 3, price: 5, name: { en: "Basic" } });
+      const api = await saas(ctx, "the public catalogue", "GET", "/pricing", { as: "anon" });
+      await ctx.verify("the catalogue follows the order, not the price", [check("Starter, Premium, Trialed, Basic", JSON.stringify(list(api.body, "plans").map((plan) => text(plan, "slug"))) === JSON.stringify(["starter", "premium", "trialed", "basic"]), api.body)]);
+      const tab = await ctx.tab("anon");
+      await tab.goto("/pricing");
+      await ctx.verify("the page shows the cards in that order with their calls to action", [
+        tab.shows(/Starter[\s\S]*Premium[\s\S]*Trialed[\s\S]*Basic/, { timeoutMs: 60_000 }),
+        tab.shows(/Start free/, { timeoutMs: 10_000 }),
+        tab.shows(/Start 14-day trial/, { timeoutMs: 10_000 }),
+        tab.shows(/Choose Premium/, { timeoutMs: 10_000 }),
+        tab.shows(/Choose Basic/, { timeoutMs: 10_000 }),
+      ]);
+    },
+  },
 ];

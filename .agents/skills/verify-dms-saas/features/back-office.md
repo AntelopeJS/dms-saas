@@ -91,6 +91,10 @@ The platform owner's dashboard: the headline figures, the workspaces by status a
 - `segment-money-columns-count-only-paying-workspaces-and-a-twelfth-of-a-yearly-price`: owned_mrr is 0 for a trial, a gift and a suspended workspace, and a yearly plan counts a twelfth of its price.
 - `plans-by-mrr-ignores-trialing-workspaces-and-the-change-plan-list-fits-the-workspace`: a trialing workspace on a plan adds nothing to Plans by MRR, and the plans a workspace may switch to leave out those too small for its seats and those for the other audience.
 - `the-past-due-view-needs-more-than-7-days-and-an-operator-created-workspace-has-an-owner-who-never-joined`: a workspace past due for 8 days is in the Past due for more than 7 days view and one for 6 days is not, and a workspace an operator created for an unknown e-mail counts under Owner never joined.
+- `internal-notes-are-the-platform-owners-and-nobody-elses`: the platform owner writes, reads and deletes a note on a workspace; an empty note is refused; the workspace owner, a member and an anonymous caller get nothing.
+- `resending-an-invitation-issues-a-new-link-and-kills-the-old-one`: Resend mails a new link with a later expiry; the new link signs the invitee up and the previous link is refused.
+- `an-operator-action-leaves-an-audit-trail-and-its-id-cannot-be-reused-elsewhere`: a suspension is recorded as a succeeded operation with its action, listed once under the lifecycle activity and not under billing, and reusing its id for another workspace is a 409 idempotency mismatch.
+- `a-second-data-export-is-refused-while-one-is-running`: a workspace owner starts an export; asking for another before it finishes is refused 409, and a member cannot start one.
 
 ## How to get to it (user POV)
 
@@ -117,6 +121,7 @@ dms-control journey "$RUN" back-office
 | 3.dashboard.md Needs attention, Revenue churn, Paid invoices, Recent activity, period and comparison | Not driven: no journey seeds invoices, cancellations or dated events |
 | 4.workspaces.md list, views, tabs, detail, operator actions | Not driven except suspension and reactivation (workspace feature): the list and detail pages are data tables rendered by the dashboard |
 | 7.invoices.md invoices, credit notes, issuing | Not driven: invoices are mirrored from Stripe; issuing a credit note answers 503 saas.errors.stripe.not_configured without a key but no journey asserts it yet |
+| 4.workspaces.md internal notes, resend, audit trail, idempotency mismatch; 2.workspace-settings.md data export | ops-audit journeys: notes refused for owner, member and anonymous, resend issues a new link and kills the old, the operation record and activity tabs, id reuse is 409, one export at a time |
 | 4.workspaces.md Grant complimentary access (plans offered, the workspace's own plan, dates, Stripe acknowledgement) | grant journey: unknown, deleted and unsold plans, other audience, past date, own plan once unsold, open-ended grant, acknowledgement, workspace with no customer type; the plan-page journey fails on a product finding (draft dms-saas-plan-page-stale-after-operator-grant) |
 | 4.workspaces.md and 3.dashboard.md complimentary accesses ending (7 days) | complimentary journey: 5 days is flagged and listed, 10 days is not |
 | 3.dashboard.md Revenue churn after a suspension | churn journey: past due, suspended, cancelled in turn |

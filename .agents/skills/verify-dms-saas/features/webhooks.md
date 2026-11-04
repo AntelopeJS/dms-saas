@@ -32,6 +32,10 @@ The Stripe webhook endpoint and the module's own schedules: signature verificati
 - `a-delivery-needs-a-valid-signature`: an unsigned, wrongly signed or stale delivery is refused with 400 and admits nothing, a correctly signed one is received.
 - `an-event-the-module-does-not-handle-is-recorded-skipped-once`: an unhandled event type is acknowledged and recorded as skipped, and a redelivery of the same event id changes nothing.
 - `an-event-for-an-unknown-customer-moves-no-workspace`: a handled event that names a Stripe customer no workspace holds is acknowledged and never ends in reconciliation.
+- `a-trial-that-ends-follows-the-status-stripe-reports`: customer.subscription.updated after a trial moves the workspace to past due when the first charge fails (past_due, unpaid, incomplete_expired) and to active when it succeeds, and leaves it alone without the trial marker.
+- `a-failed-payment-moves-only-the-workspaces-that-can-fall-past-due`: invoice.payment_failed moves active and trialing workspaces to past due, mirrors the invoice, and leaves suspended and cancelled workspaces as they are.
+- `invoice-paid-reactivates-a-workspace-only-when-no-invoice-is-left-open`: a past-due workspace with two open invoices stays past due when one is paid and becomes active when the second is paid.
+- `a-redelivered-handled-event-is-applied-once`: the same payment_failed event delivered twice is admitted once and leaves the date the workspace fell past due unchanged.
 
 ## How to get to it (user POV)
 
@@ -56,3 +60,4 @@ dms-control journey "$RUN" webhooks
 | 7.stripe.md "What moves a workspace's billing state" | Not driven: the crons (01:00 suspension, 02:00 complimentary end, 04:30 deletion, every minute guarded downgrade, every 15 minutes directory) cannot be advanced by the harness and the module owns its clock |
 | 8.operations.md "Stripe webhooks" | Not driven: reconciliation_required on a failed handler, the 04:00 cleanup of events older than 90 days |
 | 6.faq.md "A trial ended, but the workspace still shows it as trialing" | Not driven: needs a trial the harness cannot end |
+| 7.stripe.md billing-state transitions by webhook: trial end, payment failed per starting status, invoice paid with open invoices, redelivery | webhook-event journeys: signed payloads per starting status |

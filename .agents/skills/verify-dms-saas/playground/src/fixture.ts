@@ -18,7 +18,7 @@ import {
   GetUpcomingInvoicePreview,
   RecomputeTenantBillingState,
 } from "@antelopejs/interface-dms-saas/billing";
-import { CreditNoteModel, InvoiceModel, StripeWebhookEventModel, TenantBillingStateModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
+import { CreditNoteModel, InvoiceModel, StripeWebhookEventModel, TenantBillingInfoModel, TenantBillingStateModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
 
 const AUTH_KEY_BYTES = 32;
 const HOUR_MS = 3_600_000;
@@ -82,6 +82,11 @@ interface CreditNoteBody {
 interface AgeBody {
   tenantId: string;
   daysAgo: number;
+}
+
+interface CustomerTypeBody {
+  tenantId: string;
+  customerType: "individual" | "business";
 }
 
 interface TenantBody {
@@ -323,5 +328,38 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
       stateSince: new Date(Date.now() - input.daysAgo * DAY_MS),
     });
     return { ok: true };
+  }
+
+  /** Sets the customer type of a workspace's billing information, as the upgrade flow records it. */
+  @Post("/customer-type")
+  async customerType(@JSONBody() input: CustomerTypeBody) {
+    const model = GetModel(TenantBillingInfoModel, input.tenantId);
+    const existing = await model.findOne();
+    if (existing) {
+      await model.update(existing._id, { customerType: input.customerType, updatedAt: new Date() });
+    } else {
+      await model.insert({
+        _id: input.tenantId,
+        customerType: input.customerType,
+        companyName: null,
+        vatNumber: null,
+        vatVerificationStatus: null,
+        billingEmail: null,
+        address: null,
+        updatedAt: new Date(),
+      });
+    }
+    return { ok: true };
+  }
+
+  /** What the workspace's subscription row holds, read straight from the tenant's own instance. */
+  @Get("/subscription-state/:tenantId")
+  async subscriptionState(@Parameter("tenantId") tenantId: string) {
+    const row = await GetModel(TenantSubscriptionModel, tenantId).findOne();
+    return {
+      status: row?.status ?? null,
+      pastDueSince: row?.pastDueSince?.toISOString() ?? null,
+      planId: row?.planId ?? null,
+    };
   }
 }

@@ -1,4 +1,5 @@
 import { guarded } from "../guard.mjs";
+import { webhookEventJourneys } from "./parts/webhook-events.mjs";
 import { check, deliverEvent, fixture, isText, list, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
@@ -78,4 +79,5 @@ export const journeys = guarded([
       ]);
     },
   },
+  ...webhookEventJourneys,
 ]);

@@ -149,6 +149,8 @@ export const listRuleJourneys = [
         check("MRR 50, one workspace", rows[0]?.value === 50 && pick(rows[0], "description", "params", "count", "value") === 1, rows),
       ]);
       const member = await joinMember(ctx, "pays", "second-seat");
+      await fixture(ctx, "the paying workspace is an individual", "POST", "/customer-type", { tenantId: paying.tenantId, customerType: "individual" });
+      const untyped = await saas(ctx, "the plans a workspace with no customer type is offered", "GET", "/tenant/plan", { as: "tries" });
       const options = await saas(ctx, "the plans the workspace may switch to", "GET", "/tenant/plan", { as: "pays" });
       const offered = list(options.body, "available");
       const named = (/** @type {string} */ name) => offered.find((entry) => text(entry, "name") === name);
@@ -158,6 +160,7 @@ export const listRuleJourneys = [
         check("a one-member plan is smaller than the seats in use", named("Tiny")?.maxMembers === 1, named("Tiny")),
         check("a plan with room is large enough", named("Roomy")?.maxMembers === 10, named("Roomy")),
         check("a business plan is not offered to an individual workspace", named("Bizonly")?.isOfferedToCustomerType === false, named("Bizonly")),
+        check("a workspace with no customer type is offered every plan, Bizonly included", list(untyped.body, "available").find((entry) => text(entry, "name") === "Bizonly")?.isOfferedToCustomerType === true, untyped.body),
         check("a plan for anyone is offered", named("Roomy")?.isOfferedToCustomerType === true, named("Roomy")),
       ]);
     },

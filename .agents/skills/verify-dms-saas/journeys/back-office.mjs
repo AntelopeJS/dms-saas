@@ -1,4 +1,5 @@
 import { guarded } from "../guard.mjs";
+import { opsAuditJourneys } from "./parts/ops-audit.mjs";
 import { listRuleJourneys } from "./parts/list-rules.mjs";
 import { operatorRuleJourneys } from "./parts/operator-rules.mjs";
 import { revenueJourneys } from "./parts/revenue.mjs";
@@ -140,4 +141,5 @@ export const journeys = guarded([
   ...revenueJourneys,
   ...operatorRuleJourneys,
   ...listRuleJourneys,
+  ...opsAuditJourneys,
 ]);
