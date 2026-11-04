@@ -52,10 +52,15 @@ function registeredIds(modules: LineItemsModules): string[] {
 function resolvedMarkers(modules: LineItemsModules): string[] {
   return modules.implementation
     .getInvoiceLineItemsProviders()
-    .flatMap((provider) =>
-      provider.resolve(fromPartial<Parameters<typeof provider.resolve>[0]>({})),
-    )
-    .map((line) => line.key);
+    .flatMap((provider) => {
+      const lines = provider.resolve(
+        fromPartial<Parameters<typeof provider.resolve>[0]>({}),
+      );
+      if (!Array.isArray(lines)) {
+        throw new TypeError(`Provider ${provider.id} did not answer lines`);
+      }
+      return lines.map((line) => line.key);
+    });
 }
 
 describe("RegisterInvoiceLineItemsProvider", () => {

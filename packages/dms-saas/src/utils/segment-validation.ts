@@ -4,12 +4,9 @@ import type {
   SegmentConditionGroup,
   SegmentWorkspaceRef,
 } from "../db";
-import {
-  isSegmentGroup,
-  isSegmentWorkspaceRef,
-  type SegmentNode,
-} from "./segment-evaluator";
+import type { SegmentNode } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
+import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 import { isObjectOrNull, isString } from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
@@ -36,16 +33,36 @@ export interface SegmentInput {
 
 /** The body of a segment save, as it arrives. */
 export interface SegmentInputBody {
-  name?: unknown;
-  description?: unknown;
-  conditions?: unknown;
+  name?: JsonValue;
+  description?: JsonValue;
+  conditions?: JsonValue;
 }
 
-function validateWorkspaceRefNode(
-  node: SegmentWorkspaceRef,
+/** A segment node as a client sent it: every key may hold anything. */
+interface Document {
+  kind?: unknown;
+  logical?: unknown;
+  conditions?: unknown;
+  quantifier?: unknown;
+  role?: unknown;
+  field?: unknown;
+  operator?: unknown;
+  value?: unknown;
+}
+
+function isDocument(value: unknown): value is Document {
+  return isObjectOrNull(value) && value !== null;
+}
+
+function holdsLogical(node: Document): boolean {
+  return "logical" in node && node.logical !== undefined;
+}
+
+function assertWorkspaceRefNode(
+  node: Document,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is Document & SegmentWorkspaceRef {
   assert(catalog === "user", HTTP_BAD_REQUEST, `${ERRORS}.invalid_conditions`);
   assert(
     node.quantifier === "any" || node.quantifier === "all",
@@ -58,83 +75,92 @@ function validateWorkspaceRefNode(
     `${ERRORS}.invalid_role`,
   );
   assert(
-    !!node.conditions && isSegmentGroup(node.conditions),
+    isDocument(node.conditions) && holdsLogical(node.conditions),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  validateConditionNode(node.conditions, depth + 1, "workspace");
+  assertConditionNode(node.conditions, depth + 1, "workspace");
 }
 
-function validateGroupNode(
-  node: SegmentConditionGroup,
+function assertGroupNode(
+  node: Document,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is Document & SegmentConditionGroup {
   assert(
     node.logical === "and" || node.logical === "or",
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_logical`,
   );
+  const children = node.conditions;
   assert(
-    Array.isArray(node.conditions),
+    Array.isArray(children),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  for (const child of node.conditions) {
-    validateConditionNode(child, depth + 1, catalog);
+  for (const child of children) {
+    assertConditionNode(child, depth + 1, catalog);
   }
 }
 
-function validateLeafCondition(
-  condition: SegmentCondition,
+/**
+ * Whether the rules are, or hold at any depth, an object with an own
+ * `__proto__` key, under a known key or an extra one. Walks with a stack, so
+ * a deeply nested tree cannot overflow the call stack.
+ */
+function holdsOwnProtoKey(rules: Document): boolean {
+  const pending: unknown[] = [rules];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current || !isObjectOrNull(current)) continue;
+    if (Object.hasOwn(current, "__proto__")) return true;
+    for (const child of Object.values(current)) pending.push(child);
+  }
+  return false;
+}
+
+function assertLeafCondition(
+  condition: Document,
   catalog: SegmentFieldCatalog,
-): void {
-  const field = findSegmentField(condition.field, catalog);
+): asserts condition is Document & SegmentCondition {
+  const field = isString(condition.field)
+    ? findSegmentField(condition.field, catalog)
+    : undefined;
   assert(field, HTTP_BAD_REQUEST, `${ERRORS}.unknown_field`);
+  const operator = condition.operator;
   assert(
-    field.operators.includes(condition.operator),
+    field.operators.some((allowed) => allowed === operator),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_operator`,
   );
   assert(
-    LIST_OPERATORS.has(condition.operator) === Array.isArray(condition.value),
+    (isString(operator) && LIST_OPERATORS.has(operator)) ===
+      Array.isArray(condition.value),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_value`,
   );
 }
 
-function validateConditionNode(
-  node: SegmentNode,
+function assertConditionNode(
+  node: unknown,
   depth: number,
   catalog: SegmentFieldCatalog,
-): void {
+): asserts node is SegmentNode {
   assert(
     depth <= MAX_CONDITION_DEPTH,
     HTTP_BAD_REQUEST,
     `${ERRORS}.conditions_too_deep`,
   );
-  assert(
-    !!node && isObjectOrNull(node),
-    HTTP_BAD_REQUEST,
-    `${ERRORS}.invalid_conditions`,
-  );
-  if (isSegmentWorkspaceRef(node)) {
-    validateWorkspaceRefNode(node, depth, catalog);
+  assert(isDocument(node), HTTP_BAD_REQUEST, `${ERRORS}.invalid_conditions`);
+  if (node.kind === "workspaceRef") {
+    assertWorkspaceRefNode(node, depth, catalog);
     return;
   }
-  if (isSegmentGroup(node)) {
-    validateGroupNode(node, depth, catalog);
+  if (holdsLogical(node)) {
+    assertGroupNode(node, depth, catalog);
     return;
   }
-  validateLeafCondition(node, catalog);
-}
-
-function parseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
+  assertLeafCondition(node, catalog);
 }
 
 /**
@@ -142,28 +168,43 @@ function parseJson(raw: string): unknown {
  * sends, checked against the field catalogs. An empty value is an empty AND
  * group, which matches nobody.
  */
-export function parseSegmentConditions(raw: unknown): SegmentConditionGroup {
+export function parseSegmentConditions(
+  raw: JsonValue | undefined,
+): SegmentConditionGroup {
   if (raw === undefined || raw === null || raw === "") {
     return { logical: "and", conditions: [] };
   }
-  const parsed = isString(raw) ? parseJson(raw) : raw;
+  let parsed: unknown = raw;
+  if (isString(raw)) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = undefined;
+    }
+  }
   assert(
-    !!parsed && isObjectOrNull(parsed) && isSegmentGroup(parsed as never),
+    isDocument(parsed) &&
+      holdsLogical(parsed) &&
+      parsed.kind !== "workspaceRef",
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_conditions`,
   );
-  const group = parsed as SegmentConditionGroup;
-  validateConditionNode(group, ROOT_DEPTH, "user");
-  return group;
+  assert(
+    !holdsOwnProtoKey(parsed),
+    HTTP_BAD_REQUEST,
+    `${ERRORS}.invalid_conditions`,
+  );
+  assertGroupNode(parsed, ROOT_DEPTH, "user");
+  return parsed;
 }
 
-function parseText(value: unknown, maxLength: number): string {
+function parseText(value: JsonValue | undefined, maxLength: number): string {
   const text = isString(value) ? value.trim() : "";
   assert(text.length <= maxLength, HTTP_BAD_REQUEST, `${ERRORS}.too_long`);
   return text;
 }
 
-function parseName(value: unknown): string {
+function parseName(value: JsonValue | undefined): string {
   const name = parseText(value, NAME_MAX_LENGTH);
   assert(name.length > 0, HTTP_BAD_REQUEST, `${ERRORS}.name_required`);
   return name;

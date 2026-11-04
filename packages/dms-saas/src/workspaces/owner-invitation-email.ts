@@ -90,7 +90,7 @@ export async function sendOwnerInvitationEmail(
 export function sendOwnerInvitationEmailInBackground(
   invitation: OwnerInvitationEmail,
 ): void {
-  void sendOwnerInvitationEmail(invitation).catch((error) => {
+  void sendOwnerInvitationEmail(invitation).catch((error: unknown) => {
     Logging.Error(
       `${LOG_PREFIX} invitation of ${invitation.tenantId} needs a look`,
       error,

@@ -68,7 +68,8 @@ function storedWithRefs(
   const stored = PlanModel.fromDatabase({
     ...PlanModel.toDatabase(plan),
     paymentProviderRefs,
-  }) as Plan;
+  });
+  if (!stored) throw new Error(`Plan '${plan._id}' could not be read back`);
   return localizePlan(stored, PLAN_FALLBACK_LOCALE);
 }
 

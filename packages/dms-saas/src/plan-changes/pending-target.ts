@@ -65,10 +65,9 @@ async function resolveSeatQuantity(
 /** Establish the provider target while the caller retains subscription admission. */
 export async function establishPendingTarget(
   tenantId: string,
-  subscription: TenantSubscription,
+  stripeSubscriptionId: string,
   target: PendingTarget,
 ): Promise<Date | null> {
-  const stripeSubscriptionId = subscription.stripeSubscriptionId as string;
   if (!target.stripePriceId) {
     return setSubscriptionCancelAtPeriodEnd(stripeSubscriptionId, true);
   }
@@ -96,7 +95,11 @@ export async function redirectPendingPlanChange(
   const effectiveAt =
     landsOnCurrentPlan || !subscription.stripeSubscriptionId
       ? null
-      : await establishPendingTarget(tenantId, subscription, target);
+      : await establishPendingTarget(
+          tenantId,
+          subscription.stripeSubscriptionId,
+          target,
+        );
   await model.updateDuringTransition(
     subscription._id,
     operationId,

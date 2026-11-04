@@ -45,11 +45,14 @@ const payload = {
   linkTo: "/billing",
 };
 
-/** The recipients, link and event key of each send core received, in order. */
+/**
+ * The recipients, link and event key of each send core received, in order.
+ * Recipients are sorted: a member read without `orderBy` has no row order.
+ */
 function keyedSends() {
   return core.sendToUsers.mock.calls.map(
     ([userIds, data, , idempotencyKey]) => ({
-      userIds,
+      userIds: userIds.toSorted(),
       linkTo: data.linkTo,
       idempotencyKey,
     }),
@@ -57,7 +60,11 @@ function keyedSends() {
 }
 
 function sendTo(userIds: string[]) {
-  return { userIds, linkTo: payload.linkTo, idempotencyKey: payload.eventId };
+  return {
+    userIds: userIds.toSorted(),
+    linkTo: payload.linkTo,
+    idempotencyKey: payload.eventId,
+  };
 }
 
 /** A workspace with two members, neither of them its owner. */

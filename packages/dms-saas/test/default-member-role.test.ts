@@ -48,6 +48,9 @@ describe("default Member role of a new workspace", () => {
     ["fr-FR", "Membre"],
     ["de", "Member"],
     [undefined, "Member"],
+    ["constructor", "Member"],
+    ["toString", "Member"],
+    ["__proto__", "Member"],
   ])("names the role in the owner's language %s", async (language, name) => {
     const tenantId = randomUUID();
 
@@ -55,5 +58,10 @@ describe("default Member role of a new workspace", () => {
 
     const [role] = await GetModel(RoleModel, tenantId).getAll();
     expect(role?.name).toBe(name);
+    expect(role?.description).toBe(
+      name === "Membre"
+        ? "Tout ce que comprend l'offre de l'espace"
+        : "Everything the workspace plan includes",
+    );
   });
 });

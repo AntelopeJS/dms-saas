@@ -36,7 +36,7 @@ import { MS_PER_DAY } from "./time";
 const PAID_STATUS = "paid";
 const TRIALING_STATUS = "trialing";
 
-export interface WorkspaceProjection {
+export type WorkspaceProjection = {
   _id: string;
   name: string;
   createdAt: Date;
@@ -61,7 +61,7 @@ export interface WorkspaceProjection {
   membersCount: number;
   totalRevenue: number;
   daysSinceLastInvoice: number | null;
-}
+};
 
 /** What a projection reads of a workspace's published directory row. */
 export type WorkspaceDirectoryRow = Pick<

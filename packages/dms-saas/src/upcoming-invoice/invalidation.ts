@@ -22,16 +22,10 @@ const INVALIDATING_EVENT_TYPES = new Set<string>([
   "customer.subscription.deleted",
 ]);
 
-interface CustomerOwnedObject {
-  object?: string;
-  id?: string;
-  customer?: unknown;
-}
-
 function eventCustomerId(event: Stripe.Event): string | null {
-  const object = event.data.object as CustomerOwnedObject;
+  const object = event.data.object;
   if (object.object === CUSTOMER_OBJECT) return object.id ?? null;
-  return asCustomerId(object.customer);
+  return "customer" in object ? asCustomerId(object.customer) : null;
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   evaluateSegmentNode,
   isSegmentGroup,
   isSegmentWorkspaceRef,
+  type ProjectionRecord,
   type SegmentNode,
   segmentWorkspacePool,
 } from "./segment-evaluator";
@@ -38,7 +39,7 @@ export type ExplainedNode =
 
 function explainWorkspaceRef(
   node: SegmentWorkspaceRef,
-  target: Record<string, unknown>,
+  target: ProjectionRecord,
 ): ExplainedWorkspaceRef {
   const meeting = segmentWorkspacePool(node, target).filter((workspace) =>
     evaluateSegmentNode(node.conditions, workspace),
@@ -57,7 +58,7 @@ function explainWorkspaceRef(
 
 function explainNode(
   node: SegmentNode,
-  target: Record<string, unknown>,
+  target: ProjectionRecord,
 ): ExplainedNode {
   if (isSegmentWorkspaceRef(node)) return explainWorkspaceRef(node, target);
   if (isSegmentGroup(node)) return explainSegmentGroup(node, target);
@@ -72,7 +73,7 @@ function explainNode(
  */
 export function explainSegmentGroup(
   group: SegmentConditionGroup,
-  target: Record<string, unknown>,
+  target: ProjectionRecord,
 ): ExplainedGroup {
   return {
     logical: group.logical,

@@ -9,7 +9,7 @@ import {
 } from "@antelopejs/interface-dms/db";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
 import { fromPartial } from "@total-typescript/shoehorn";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import { loadDirectoryOwner } from "../src/billing-state/directory";
 import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
 import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
@@ -86,12 +86,16 @@ describe("back-office workspace creation for a new owner", () => {
       ),
     );
     expect(created).toMatchObject({ email, asTenantOwner: true });
+    const sentDetails: unknown = expect.objectContaining({
+      email,
+      emailDelivery: "sent",
+    });
     await vi.waitFor(async () =>
       expect(await journalFor(tenantId)).toEqual([
         expect.objectContaining({
           action: "invitation.send",
           status: "succeeded",
-          details: expect.objectContaining({ email, emailDelivery: "sent" }),
+          details: sentDetails,
         }),
       ]),
     );
@@ -152,13 +156,14 @@ describe("back-office workspace creation for a new owner", () => {
     expect(created.invitationEmail).toBe("sending");
     const invite = await storedInvite(created.tenantId);
     expect(invite).toMatchObject({ email });
+    const failureSubject: unknown = expect.objectContaining({
+      id: "saas.invitation_email_failed",
+    });
     await vi.waitFor(() =>
       expect(core.sendToUsers).toHaveBeenCalledWith(
         [operator._id],
         expect.objectContaining({
-          subject: expect.objectContaining({
-            id: "saas.invitation_email_failed",
-          }),
+          subject: failureSubject,
           params: { workspace: WORKSPACE_NAME, email },
           linkTo: `/modules/saas/customers/workspaces/${created.tenantId}`,
         }),
@@ -167,10 +172,13 @@ describe("back-office workspace creation for a new owner", () => {
         expect.anything(),
       ),
     );
+    const failedDetails: unknown = expect.objectContaining({
+      emailDelivery: "failed",
+    });
     expect(await journalFor(created.tenantId)).toEqual([
       expect.objectContaining({
         action: "invitation.send",
-        details: expect.objectContaining({ emailDelivery: "failed" }),
+        details: failedDetails,
       }),
     ]);
   });
@@ -252,14 +260,18 @@ describe("workspace owner in the directory", () => {
 
 describe("pending invitations listed on the workspace detail", () => {
   it("reports whether each invitation can still be redeemed", () => {
-    const statusOf = (expiresAt: Date): boolean =>
-      Object.getOwnPropertyDescriptor(
-        invitationsDataAPI.prototype,
-        "status",
-      )!.get!.call({ table: { expiresAt } });
+    const read = Object.getOwnPropertyDescriptor(
+      invitationsDataAPI.prototype,
+      "status",
+    )?.get;
+    assert(read);
 
-    expect(statusOf(new Date(Date.now() + DAY_MS))).toBe(true);
-    expect(statusOf(new Date(Date.now() - DAY_MS))).toBe(false);
+    expect(
+      read.call({ table: { expiresAt: new Date(Date.now() + DAY_MS) } }),
+    ).toBe(true);
+    expect(
+      read.call({ table: { expiresAt: new Date(Date.now() - DAY_MS) } }),
+    ).toBe(false);
   });
 
   it("counts the owner invitation beside the members in the detail header", async () => {

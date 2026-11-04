@@ -1,4 +1,8 @@
 import { assert } from "@antelopejs/interface-api-util";
+import type {
+  JsonObject,
+  JsonValue,
+} from "@antelopejs/interface-dms-saas/json";
 import { REGISTRATION_EXTRAS_LIMITS } from "@antelopejs/interface-dms-saas/registration";
 
 const HTTP_BAD_REQUEST = 400;
@@ -34,7 +38,7 @@ const EMPTY_FOOTPRINT: ExtrasFootprint = {
   hasForbiddenKey: false,
 };
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+function isPlainObject(value: JsonValue | undefined): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -53,7 +57,7 @@ function mergeFootprints(
  * One walk for every limit: the payload is untrusted, so it is read once. A
  * leaf adds no level of its own: `{ a: 1 }` is one deep, not two.
  */
-function inspect(value: unknown, depth: number): ExtrasFootprint {
+function inspect(value: JsonValue, depth: number): ExtrasFootprint {
   if (Array.isArray(value)) {
     return value
       .map((entry) => inspect(entry, depth + 1))
@@ -81,7 +85,7 @@ function inspect(value: unknown, depth: number): ExtrasFootprint {
  * @param extras Consumer-supplied capture, absent on most registrations
  * @throws 400 when it is not a plain object or exceeds one of the limits
  */
-export function assertRegistrationExtras(extras: unknown): void {
+export function assertRegistrationExtras(extras: JsonValue | undefined): void {
   if (extras === undefined || extras === null) return;
   assert(isPlainObject(extras), HTTP_BAD_REQUEST, INVALID_ERROR);
   assert(

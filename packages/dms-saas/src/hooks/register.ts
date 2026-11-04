@@ -17,13 +17,12 @@ import { resumePendingPlanMigrations } from "../workers";
 import { ensureDefaultSubscription } from "../workspaces/default-plan";
 import { exportSaasTenantData } from "./tenant-export";
 import { ensureBillingSettingsRow } from "../operator-billing/billing-settings-store";
+import { rejectionReasons } from "../utils/rejection-reasons";
 
 function throwDatabaseInitializationFailures(
   results: PromiseSettledResult<unknown>[],
 ): void {
-  const failures = results.flatMap<unknown>((result) =>
-    result.status === "rejected" ? [result.reason] : [],
-  );
+  const failures = rejectionReasons(results);
   if (failures.length === 0) return;
   if (failures.length === 1) throw failures[0];
   throw new AggregateError(failures, "Database initialization failed");

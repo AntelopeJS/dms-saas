@@ -28,12 +28,14 @@ type InvoicePayload = Parameters<typeof readInvoiceSubscriptionId>[0];
 /** A credit note as a webhook renders it, pre-basil fields included. */
 type CreditNotePayload = Parameters<typeof readCreditNoteRefundId>[0];
 
-function subscription(fields: object): SubscriptionPayload {
-  return fields as SubscriptionPayload;
+function subscription(
+  fields: PartialDeep<SubscriptionPayload>,
+): SubscriptionPayload {
+  return fromPartial<SubscriptionPayload>(fields);
 }
 
-function invoice(fields: object): InvoicePayload {
-  return fields as InvoicePayload;
+function invoice(fields: PartialDeep<InvoicePayload>): InvoicePayload {
+  return fromPartial<InvoicePayload>(fields);
 }
 
 function creditNote(fields: PartialDeep<CreditNotePayload>): CreditNotePayload {
@@ -197,9 +199,9 @@ describe("dahlia webhook payloads", () => {
   const USAGE_THROUGH = new Date("2026-09-15T00:00:00.000Z");
 
   it("reads the period of a classic-mode subscription with a sourced discount", () => {
-    const dahlia = subscription({
-      object: "subscription",
-      billing_mode: { type: "classic", updated_at: null },
+    const payload = {
+      object: "subscription" as const,
+      billing_mode: { type: "classic" as const, flexible: null },
       discounts: ["di_1"],
       discount: {
         id: "di_1",
@@ -214,7 +216,8 @@ describe("dahlia webhook payloads", () => {
           },
         ],
       },
-    });
+    };
+    const dahlia = subscription(payload);
     expect(readSubscriptionPeriod(dahlia)).toEqual({
       start: PERIOD_START,
       end: PERIOD_END,
@@ -276,7 +279,7 @@ describe("dahlia webhook payloads", () => {
           tax_behavior: "exclusive",
           taxability_reason: "reverse_charge",
           taxable_amount: 1000,
-          type: "tax_rate_details",
+          type: "tax_rate_details" as const,
           tax_rate_details: { tax_rate: "txr_de" },
         },
       ],

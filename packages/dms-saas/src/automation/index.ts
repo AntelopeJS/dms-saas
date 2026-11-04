@@ -17,7 +17,7 @@ import {
   suspendWorkspaceCommand,
 } from "../operator-actions";
 
-export interface SubscriptionStartedEvent {
+export type SubscriptionStartedEvent = {
   tenantId: string;
   planId: string | null;
   status: string;
@@ -29,35 +29,35 @@ export interface SubscriptionStartedEvent {
    */
   trialConsumptionRecorded: boolean;
   at: string;
-}
+};
 
-export interface SubscriptionCancelledEvent {
+export type SubscriptionCancelledEvent = {
   tenantId: string;
   stripeSubscriptionId: string;
   at: string;
-}
+};
 
-export interface PaymentFailedEvent {
+export type PaymentFailedEvent = {
   tenantId: string;
   invoiceId: string;
   invoiceNumber: string | null;
   amountDue: number;
   currency: string;
   at: string;
-}
+};
 
-export interface TrialEndingEvent {
+export type TrialEndingEvent = {
   tenantId: string;
   trialEndsAt: string | null;
   at: string;
-}
+};
 
-export interface TenantDeletedEvent {
+export type TenantDeletedEvent = {
   tenantId: string;
   at: string;
   /** Consumers must deduplicate non-idempotent effects by this identity on replay. */
   operationId?: string;
-}
+};
 
 interface AutomationEventPayloads {
   "saas.subscription-started": SubscriptionStartedEvent;
@@ -171,7 +171,9 @@ function createEventTrigger(spec: SaasEventTriggerSpec): TriggerType {
       return listener;
     },
     async deactivate(handle) {
-      listenersFor(spec.event).delete(handle as AutomationEventListener);
+      const listeners = listenersFor(spec.event);
+      const listener = [...listeners].find((candidate) => candidate === handle);
+      if (listener) listeners.delete(listener);
     },
   };
 }
@@ -223,10 +225,10 @@ interface SuspendWorkspaceInput {
   suspended?: boolean;
 }
 
-interface SuspendWorkspaceOutput {
+type SuspendWorkspaceOutput = {
   tenantId: string;
   suspended: boolean;
-}
+};
 
 const SUSPEND_WORKSPACE_ACTION_ID = "saas.suspend-workspace";
 const NOTIFY_TENANT_OWNERS_ACTION_ID = "saas.notify-tenant-owners";
@@ -288,9 +290,9 @@ interface NotifyTenantOwnersInput {
   linkTo?: string;
 }
 
-interface NotifyTenantOwnersOutput {
+type NotifyTenantOwnersOutput = {
   ok: boolean;
-}
+};
 
 const DEFAULT_NOTIFICATION_ICON = "i-ph-bell";
 

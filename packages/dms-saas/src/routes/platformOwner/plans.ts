@@ -46,6 +46,7 @@ import {
   invalidFeatureValues,
   isValidMemberCap,
   pickPlanWrite,
+  perLocaleTexts,
   planTexts,
   slugify,
   toInheritance,
@@ -268,7 +269,7 @@ export function stripeSyncNotice(
 /** A plan's fields as a new plan starts from them, without its identity. */
 function toDuplicateDraft(plan: Plan): PlanWriteBody {
   return {
-    ...planTexts(plan),
+    ...perLocaleTexts(planTexts(plan)),
     audience: plan.audience,
     price: plan.price,
     currency: plan.currency,
@@ -515,7 +516,11 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     }
     await this.planModel.update(
       id,
-      toPlanRow({ ...planTexts(plan), ...sanitized, updatedAt: new Date() }),
+      toPlanRow({
+        ...perLocaleTexts(planTexts(plan)),
+        ...sanitized,
+        updatedAt: new Date(),
+      }),
     );
     const updated = await this.planModel.get(id);
     const synced = updated && (await syncWrittenPlan(updated, this.planModel));

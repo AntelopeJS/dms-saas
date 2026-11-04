@@ -1,17 +1,17 @@
 <div align="center">
 
-# @antelopejs/dms-saas
+# `@antelopejs/dms-saas`
 
-<a href="https://www.npmjs.com/package/@antelopejs/dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
-<a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
-<a href="https://discord.gg/g4pFt6eXqu"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000"></a>
-<a href="https://dms.antelopejs.com/docs/modules/saas"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000"></a>
+<a href="https://www.npmjs.com/package/@antelopejs/dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
+<a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
+<a href="https://discord.gg/g4pFt6eXqu"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000" data-illustration></a>
+<a href="https://dms.antelopejs.com/docs/modules/saas"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000" data-illustration></a>
 
 Sign-up, plans, Stripe billing and a back office for a multi-tenant AntelopeJS DMS.
 
 </div>
 
-![The SaaS back office dashboard: what needs attention, recurring revenue and workspaces by status](https://raw.githubusercontent.com/AntelopeJS/dms-saas/main/packages/dms-saas/docs/images/dashboard.png)
+![The SaaS dashboard of the Helio demo: what needs attention, recurring revenue, paid invoices and workspaces by status](./docs/images/captures/dashboard.webp)
 
 ## What it does
 
@@ -23,7 +23,7 @@ Sign-up, plans, Stripe billing and a back office for a multi-tenant AntelopeJS D
 
 ## Install
 
-Run the AntelopeJS CLI from the root of a project that loads `@antelopejs/dms` in multi-tenant mode, with an e-mail module and a file storage:
+Run the AntelopeJS CLI from the root of a project that loads `@antelopejs/dms` in multi-tenant mode, with a database module, an e-mail module and a file storage:
 
 ```bash
 ajs project modules add @antelopejs/dms-saas
@@ -35,6 +35,8 @@ Give the module its Stripe keys from the environment:
 
 ```ts
 // antelope.config.ts
+import { defineConfig } from "@antelopejs/interface-core/config";
+
 export default defineConfig({
   name: "my-saas",
   envOverrides: {
@@ -44,7 +46,7 @@ export default defineConfig({
   },
   modules: {
     "dms-saas": {
-      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.6.0" },
+      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.9.0" },
       config: {
         stripe: {
           secretKey: "sk_test_placeholder",
@@ -58,7 +60,7 @@ export default defineConfig({
 });
 ```
 
-Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize` in the frontend server's environment, and publish a free plan in **Modules › SaaS › Plans**: registration opens every workspace on it. With placeholder keys the module still runs, and the Stripe-backed blocks say so.
+Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and publish a free plan in **Modules › SaaS › Plans**. Registration opens every workspace on that plan. With placeholder keys, the module still runs, and the blocks that need Stripe say so. For a deployment without Stripe, also set `registration.paymentMethod` to `none`, or the registration screen keeps its card step.
 
 ## Compatibility
 
@@ -66,27 +68,21 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DM
 
 | Package                                     | Supported         | Tested with |
 | ------------------------------------------- | ----------------- | ----------- |
-| `@antelopejs/interface-api`                 | `>=0.0.15 <1.0.0` | `0.0.15`    |
-| `@antelopejs/interface-api-util`            | `>=0.1.3 <1.0.0`  | `0.1.3`     |
-| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`  | `0.3.0`     |
-| `@antelopejs/interface-data-api`            | `>=0.4.0 <1.0.0`  | `0.5.0`     |
-| `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0` | `0.1.11`    |
-| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0` | `0.1.10`    |
-| `@antelopejs/interface-dms`                 | `>=0.9.0 <1.0.0`  | `0.10.2`    |
-| `@antelopejs/interface-dms-automation`      | `>=0.2.1 <1.0.0`  | `0.2.1`     |
+| `@antelopejs/interface-api`                 | `>=0.3.0 <1.0.0`  | `0.3.0`     |
+| `@antelopejs/interface-api-util`            | `>=0.3.0 <1.0.0`  | `0.3.0`     |
+| `@antelopejs/interface-core`                | `>=0.4.0 <1.0.0`  | `0.4.0`     |
+| `@antelopejs/interface-data-api`            | `>=0.6.1 <1.0.0`  | `0.6.1`     |
+| `@antelopejs/interface-database`            | `>=0.3.0 <1.0.0`  | `0.3.0`     |
+| `@antelopejs/interface-database-decorators` | `>=0.2.0 <1.0.0`  | `0.2.0`     |
+| `@antelopejs/interface-dms`                 | `>=0.12.0 <1.0.0` | `0.12.0`    |
+| `@antelopejs/interface-dms-automation`      | `>=0.6.0 <1.0.0`  | `0.6.0`     |
 | `@antelopejs/interface-dms-saas`            | `workspace:^`     | `0.6.1`     |
 
 <!-- antelopejs-docs-compat:end -->
 
-| Package | Version |
-| --- | --- |
-| `@antelopejs/dms` | `>=0.13.1 <1.0.0` |
-| `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
-| `@antelopejs/dms-frontend` (renderer) | `>=0.9.1 <0.10.0` |
-| `@antelopejs/interface-dms-saas` | `>=0.6.0 <0.7.0` |
-| Stripe API version | `2026-08-26.dahlia` |
+The module also needs a DMS backend in a release that implements the `@antelopejs/interface-dms` range in the table above, and the `@antelopejs/dms-frontend` renderer in the range its frontend module declares in `engines["@antelopejs/dms-frontend"]` of `frontend-vue/package.json`. The `ajs dms` CLI refuses to build it with a renderer outside that range.
 
-Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
+The module calls Stripe with the API version `2026-08-26.dahlia`. Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
 
 ## Documentation
 

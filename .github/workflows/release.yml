@@ -64,7 +64,7 @@ jobs:
       # range: releasing it before that interface version exists on npm would
       # ship a dependency nobody can install.
       - name: Verify the published interface
-        run: node packages/dms-saas/scripts/verify-interface-package.cjs
+        run: node packages/dms-saas/scripts/verify-interface-package.mjs
   release:
     needs: validate
     uses: AntelopeJS/.github/.github/workflows/release-npm-public.yml@492c1f55e32fa1b7bd2c5a65a1714498930d9e20

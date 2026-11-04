@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import {
   buildSetupConfirmation,
   toConfirmResult,
@@ -6,12 +6,18 @@ import {
 } from "../frontend-vue/app/composables/useStripePaymentElement";
 
 const stripe = (() => {
-  const paymentElement = () => ({ mount: vi.fn(), destroy: vi.fn() });
+  const created: { mount: Mock; destroy: Mock }[] = [];
+  const paymentElement = () => {
+    const element = { mount: vi.fn(), destroy: vi.fn() };
+    created.push(element);
+    return element;
+  };
   const elements = {
     create: vi.fn((_type: string, _options: object) => paymentElement()),
   };
   return {
     confirmSetup: vi.fn(),
+    created,
     elements,
     elementsFor: vi.fn((_options: { clientSecret: string }) => elements),
   };
@@ -114,17 +120,17 @@ describe("useStripePaymentElement", () => {
 
   it("takes another card on a fresh SetupIntent once one was confirmed", async () => {
     const handle = await mountedHandle(() => PAYER_EMAIL);
-    const spent = stripe.elements.create.mock.results.at(-1)?.value;
+    const spent = stripe.created.at(-1);
 
     await handle.renew("seti_secret_fresh");
 
     expect(stripe.elementsFor).toHaveBeenLastCalledWith({
       clientSecret: "seti_secret_fresh",
     });
-    expect(spent.destroy).toHaveBeenCalled();
-    const fresh = stripe.elements.create.mock.results.at(-1)?.value;
+    expect(spent?.destroy).toHaveBeenCalled();
+    const fresh = stripe.created.at(-1);
     expect(fresh).not.toBe(spent);
-    expect(fresh.mount).toHaveBeenCalledWith("#payment-element");
+    expect(fresh?.mount).toHaveBeenCalledWith("#payment-element");
   });
 
   it("reports an error Stripe.js throws instead of rejecting", async () => {

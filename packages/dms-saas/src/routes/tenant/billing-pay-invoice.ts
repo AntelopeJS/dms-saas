@@ -1,13 +1,16 @@
 import {
+  Context,
   Controller,
   HTTPResult,
   Parameter,
   Post,
+  type RequestContext,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { Logging } from "@antelopejs/interface-core/logging";
+import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import Stripe from "stripe";
 import {
@@ -54,27 +57,6 @@ function assertPayableSubscription(
 }
 
 /**
- * A declined card is the owner's to fix (another card); a refusal of the
- * request itself means the invoice changed meanwhile; anything else is
- * Stripe being unreachable, worth a retry.
- */
-export function toPaymentFailure(error: unknown): HTTPResult {
-  if (error instanceof Stripe.errors.StripeCardError) {
-    return new HTTPResult(
-      HTTP_PAYMENT_REQUIRED,
-      "saas.errors.billing.payment_declined",
-    );
-  }
-  if (error instanceof Stripe.errors.StripeInvalidRequestError) {
-    return new HTTPResult(HTTP_CONFLICT, "saas.errors.invoice.not_payable");
-  }
-  return new HTTPResult(
-    HTTP_SERVICE_UNAVAILABLE,
-    "saas.errors.billing.payment_unavailable",
-  );
-}
-
-/**
  * Part of the recovery path of a blocked workspace, like the portal: paying
  * the unpaid invoice is what lifts the block.
  */
@@ -90,10 +72,11 @@ export class SaasBillingPayInvoiceController extends Controller(
   async payInvoice(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Parameter("invoiceId") invoiceId: string,
-    @TenantScopedModel(InvoiceModel) invoiceModel: InvoiceModel,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ): Promise<PayInvoiceResult> {
+    const tenantId = getRequestTenantId(ctx);
+    const invoiceModel = GetModel(InvoiceModel, tenantId);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     assertPayableSubscription(await tenantSubscriptionModel.findOne());
     const invoice = await invoiceModel.get(invoiceId);
     assert(
@@ -111,7 +94,19 @@ export class SaasBillingPayInvoiceController extends Controller(
         `${LOG_PREFIX} payment of ${invoice.stripeInvoiceId} failed`,
         error,
       );
-      throw toPaymentFailure(error);
+      if (error instanceof Stripe.errors.StripeCardError) {
+        throw new HTTPResult(
+          HTTP_PAYMENT_REQUIRED,
+          "saas.errors.billing.payment_declined",
+        );
+      }
+      if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+        throw new HTTPResult(HTTP_CONFLICT, "saas.errors.invoice.not_payable");
+      }
+      throw new HTTPResult(
+        HTTP_SERVICE_UNAVAILABLE,
+        "saas.errors.billing.payment_unavailable",
+      );
     }
   }
 }

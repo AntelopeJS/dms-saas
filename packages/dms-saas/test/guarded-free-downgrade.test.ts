@@ -299,12 +299,12 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
       "scheduled",
     );
     expect(update).toHaveBeenCalledTimes(1);
+    const idempotencyKey = update.mock.calls[0]?.[2]?.idempotencyKey;
+    expect(idempotencyKey).toContain("free-downgrade:schedule:");
     expect(update).toHaveBeenCalledWith(
       "stripe-sub",
       { cancel_at_period_end: true },
-      {
-        idempotencyKey: expect.stringContaining("free-downgrade:schedule:"),
-      },
+      { idempotencyKey },
     );
     expect((await read()).guardedPlanChange?.phase).toBe("provider_pending");
   });

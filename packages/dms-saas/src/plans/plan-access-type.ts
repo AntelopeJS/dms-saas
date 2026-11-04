@@ -6,16 +6,22 @@ import {
 import { z } from "zod";
 
 /** Options of {@link PlanAccessType}: where its editor reads the permissions. */
-export interface PlanAccessTypeOptions {
+export type PlanAccessTypeOptions = {
   permissionsTreeUrl?: string;
-  [key: string]: unknown;
-}
+};
+
+const featureValueSchema = z.union([
+  z.boolean(),
+  z.number(),
+  z.string(),
+  z.null(),
+]);
 
 const planAccessSchema = z
   .object({
     parentPlanId: z.string().nullable(),
     extraPermissions: z.array(z.string()),
-    extraFeatures: z.record(z.string(), z.unknown()),
+    extraFeatures: z.record(z.string(), featureValueSchema),
   })
   .passthrough();
 
@@ -24,7 +30,9 @@ const planAccessSchema = z
  *
  * @param value The `inheritance` field of a plan write
  */
-export function isPlanAccess(value: unknown): boolean {
+export function isPlanAccess(
+  value: unknown,
+): value is z.infer<typeof planAccessSchema> {
   return planAccessSchema.safeParse(value).success;
 }
 

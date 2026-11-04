@@ -4,16 +4,15 @@ import {
   BlockFunctions,
   type FormFieldSerialized,
   FormEvents,
-  type FormPropsSerialized,
   isFieldGroupSerialized,
 } from "@antelopejs/interface-dms/base";
-import type {
-  ComponentBuilder,
-  ComponentFilterContext,
-} from "@antelopejs/interface-dms/component";
+import type { ComponentFilterContext } from "@antelopejs/interface-dms/component";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { beforeEach, describe, expect, it } from "vitest";
-import { SaasTenantGeneralController } from "../src/pages/tenant/general";
+import {
+  identityForm as servedIdentityForm,
+  SaasTenantGeneralController,
+} from "../src/pages/tenant/general";
 import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import { WORKSPACE_NAME_MAX_LENGTH } from "../src/workspaces/workspace-name";
 import {
@@ -35,17 +34,22 @@ let tenantId = "";
 let owner: User;
 let member: User;
 
-async function identityForm(): Promise<ComponentBuilder<FormPropsSerialized>> {
+/** The identity form, once the identity section is shown to serve it. */
+async function identityForm(): Promise<typeof servedIdentityForm> {
   const section = await SaasTenantGeneralController.identity.componentInfo;
   const form = section.children?.find((child) => child.id === "form");
-  return form?.component as ComponentBuilder<FormPropsSerialized>;
+  expect(form?.component).toBe(servedIdentityForm);
+  return servedIdentityForm;
 }
 
-async function servedTo(user: User): Promise<FormPropsSerialized> {
+/** The assertions on what the identity form is served to `user`. */
+async function expectServedTo(user: User) {
   const form = await identityForm();
   const { options } = await form.serialize();
   const context = fromPartial<ComponentFilterContext>({ tenantId, user });
-  return form.onFilterCallback?.(new Set(), options, "general", context);
+  return expect<unknown>(
+    await form.onFilterCallback?.(new Set(), options, "general", context),
+  );
 }
 
 beforeEach(async () => {
@@ -58,20 +62,17 @@ beforeEach(async () => {
 
 describe("General page for a workspace member", () => {
   it("serves the identity form read-only, with nothing to save", async () => {
-    const served = await servedTo(member);
+    const served = await expectServedTo(member);
 
-    expect(served.saveMode).toBe("none");
-    expect(
-      served.fields.map((field) =>
-        isFieldGroupSerialized(field) ? undefined : field.readonly,
-      ),
-    ).toEqual([
-      {
+    served.toHaveProperty("saveMode", "none");
+    const ownerOnly = {
+      readonly: {
         badge: { label: "$saas.workspace.general.owner_only", tone: "neutral" },
       },
-      {
-        badge: { label: "$saas.workspace.general.owner_only", tone: "neutral" },
-      },
+    };
+    served.toHaveProperty("fields", [
+      expect.objectContaining(ownerOnly),
+      expect.objectContaining(ownerOnly),
     ]);
   });
 
@@ -105,7 +106,7 @@ describe("General page for a workspace member", () => {
     const form = await identityForm();
     const { options } = await form.serialize();
 
-    expect(await servedTo(owner)).toEqual(options);
+    (await expectServedTo(owner)).toEqual(options);
   });
 
   it("lets every member read the identity and the glance, and only owners change it", async () => {

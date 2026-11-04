@@ -1,18 +1,16 @@
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import * as queries from "@antelopejs/interface-database/query";
 import { afterEach, beforeAll } from "vitest";
-
-const require = createRequire(import.meta.url);
+import {
+  CloseCursor,
+  ReadCursor,
+  RunQuery,
+} from "../../node_modules/@antelopejs/mongodb/dist/implementations/database/query.js";
+import { isRecord } from "./records";
+import { isString } from "../../src/utils/primitive-guards";
 
 /** The MongoDB module's implementation of the database query interface. */
-export const mongoQueries: typeof queries = require(
-  join(
-    dirname(require.resolve("@antelopejs/mongodb/package.json")),
-    "dist/implementations/database/query.js",
-  ),
-);
+export const mongoQueries = { RunQuery, ReadCursor, CloseCursor };
 
 /** A table's queries held back until the test lets them go or fail them. */
 export interface QueryHold {
@@ -32,9 +30,15 @@ export interface QueryGate {
 
 /** The tables a query reads or writes, from its stages. */
 function tablesOf(stages: Parameters<typeof queries.RunQuery>[0]): string[] {
-  return stages.flatMap((stage) =>
-    stage.stage === "table" && stage.options?.id ? [stage.options.id] : [],
-  );
+  return stages.flatMap((stage) => {
+    const options: unknown = stage.options;
+    return stage.stage === "table" &&
+      isRecord(options) &&
+      isString(options.id) &&
+      options.id
+      ? [options.id]
+      : [];
+  });
 }
 
 /**
@@ -55,7 +59,8 @@ export function useQueryGate(): QueryGate {
           reached.set(table, (reached.get(table) ?? 0) + 1);
           await holds.get(table);
         }
-        return mongoQueries.RunQuery(stages);
+        const result: unknown = await mongoQueries.RunQuery(stages);
+        return result;
       },
     });
   });
@@ -67,11 +72,16 @@ export function useQueryGate(): QueryGate {
   return {
     reads: (table) => reached.get(table) ?? 0,
     hold: (table) => {
-      const hold = Promise.withResolvers<void>();
-      hold.promise.catch(() => undefined);
-      holds.set(table, hold.promise);
-      releases.push(hold.resolve);
-      return { release: hold.resolve, fail: hold.reject };
+      let release = (): void => undefined;
+      let fail = (_error: Error): void => undefined;
+      const held = new Promise<void>((resolve, reject) => {
+        release = resolve;
+        fail = reject;
+      });
+      held.catch(() => undefined);
+      holds.set(table, held);
+      releases.push(release);
+      return { release, fail };
     },
   };
 }

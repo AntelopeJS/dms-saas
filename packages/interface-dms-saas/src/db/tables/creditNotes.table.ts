@@ -80,7 +80,7 @@ export class CreditNote extends Table {
   declare voidedAt: Date | null;
 
   @Field("any")
-  declare metadata: Record<string, unknown>;
+  declare metadata: Record<string, string>;
 
   @CreationTime()
   @Field("date")

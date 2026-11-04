@@ -200,4 +200,28 @@ describe("Stripe refund mirror keys", () => {
       workspace.refunds.get(workspace.refundId),
     ).resolves.toMatchObject({ stripeRefundId: workspace.refundId });
   });
+
+  it("stores a refund waiting for the customer's action as pending", async () => {
+    vi.spyOn(stripe.write.charges, "retrieve").mockResolvedValue(
+      fromPartial({ customer: workspace.customerId }),
+    );
+
+    await handleChargeRefundUpdated(refundEvent("requires_action"));
+
+    await expect(
+      workspace.refunds.get(workspace.refundId),
+    ).resolves.toMatchObject({ status: "pending" });
+  });
+
+  it("stores a refund in a status the table lists as it is", async () => {
+    vi.spyOn(stripe.write.charges, "retrieve").mockResolvedValue(
+      fromPartial({ customer: workspace.customerId }),
+    );
+
+    await handleChargeRefundUpdated(refundEvent("canceled"));
+
+    await expect(
+      workspace.refunds.get(workspace.refundId),
+    ).resolves.toMatchObject({ status: "canceled" });
+  });
 });

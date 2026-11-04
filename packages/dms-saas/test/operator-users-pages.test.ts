@@ -109,7 +109,9 @@ describe("pages of the area", () => {
     const { options } = await SaasSegmentsController.table.serialize();
 
     expect(
-      options?.rowActions?.custom?.map((action) => action.target.url),
+      options?.rowActions?.custom?.map(({ target }) =>
+        "url" in target ? target.url : undefined,
+      ),
     ).toEqual([
       "/api/saas/segments/{{row._id}}/owners-export/start",
       "/api/saas/segments/{{row._id}}/evaluate",

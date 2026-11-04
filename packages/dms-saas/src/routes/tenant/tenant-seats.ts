@@ -4,11 +4,10 @@ import {
   Get,
   type RequestContext,
 } from "@antelopejs/interface-api";
-import { Model } from "@antelopejs/interface-database-decorators";
+import { GetModel, Model } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import { AuthTenantMember } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import { type User } from "@antelopejs/interface-dms/auth/db";
 import {
   type Plan,
@@ -65,12 +64,10 @@ export class SaasTenantSeatsController extends Controller(
   async getSeatQuota(
     @Context() ctx: RequestContext,
     @AuthTenantMember() user: User,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
-    @TenantScopedModel(TenantMemberModel)
-    tenantMemberModel: TenantMemberModel,
   ): Promise<SeatQuotaResult> {
     const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
+    const tenantMemberModel = GetModel(TenantMemberModel, tenantId);
     const [usage, subscription, members] = await Promise.all([
       getSeatUsage(tenantId),
       tenantSubscriptionModel.findOne(),

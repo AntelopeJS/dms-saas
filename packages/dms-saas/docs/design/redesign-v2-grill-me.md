@@ -1,18 +1,24 @@
-# dms-saas v2 redesign: self-answered grill-me
+---
+title: "v2 redesign decisions, part 1"
+description: The design interview held before the v2 redesign of the DMS SaaS module, from its scope to the operator screens.
+mode: explanation
+---
 
-This is the design interview held before the v2 redesign of `@antelopejs/dms-saas`.
+This page records the decisions as they were taken before the v2 redesign of `@antelopejs/dms-saas`. The module docs describe the current behaviour.
+
+This is the design interview held before that redesign.
 Each question was asked and answered in turn; every answer is the recommendation that was
 taken. It records **why** the pull request looks the way it does, so a reviewer can check
-the code against the decisions instead of reverse-engineering them.
+the code against the decisions instead of reverse-engineering them. Sections 1 to 6 are on this page. Sections 7 to 11 continue in [the second part](./redesign-v2-grill-me-2.md).
 
 Inputs:
 
 - the design mockup (`modules/saas/*`, `settings/billing.html`, `settings/workspace.html`,
   `settings/members.html`, `settings/data-export.html`) and its UX review (findings S01 to S20);
-- `@antelopejs/dms` 0.6.0 / `@antelopejs/interface-dms` 0.4.0 (PR AntelopeJS/dms#119 and its
+- `dms` 0.6.0 / `interface-dms` 0.4.0 (PR `AntelopeJS/dms#119` and its
   follow-ups #160 to #167), the migration guide `docs/02.building/13.migration-0-3-to-0-4.md`;
-- `@antelopejs/dms-frontend` 0.4.0 and 0.5.0 (module-declared auto-imports, `componentPrefix`);
-  the module now requires `@antelopejs/dms` 0.7.7 and `@antelopejs/dms-frontend` 0.5.2 (see Q5).
+- `dms-frontend` 0.4.0 and 0.5.0 (module-declared auto-imports, `componentPrefix`);
+  the module now requires `dms` 0.7.7 and `dms-frontend` 0.5.2 (see Q5).
 
 ---
 
@@ -44,15 +50,15 @@ workspace-owner pages stay in the core settings navigation, under the DMS's work
 ## 2. Dependencies and breaking changes
 
 **Q5. Which ranges?**
-`@antelopejs/interface-dms >=0.4.0 <1.0.0` (the repository's `antelopejs-check-interface-ranges`
-requires `<1.0.0` for an interface it does not own), `@antelopejs/interface-data-api >=0.2.0`,
-`@antelopejs/dms >=0.7.7 <0.8.0`, `@antelopejs/dms-frontend >=0.5.2 <0.6.0`, `@antelopejs/core 1.13.5`,
-`@antelopejs/mongodb 1.4.2`, and the frontend layer's `engines` `>=0.5.2 <0.6.0`.
+`interface-dms` from 0.4.0, below the next major (the repository's `antelopejs-check-interface-ranges`
+requires a cap at the next major for an interface it does not own), `interface-data-api` from 0.2.0,
+`dms` from 0.7.7 in the 0.7 line, `dms-frontend` from 0.5.2 in the 0.5 line, `core` 1.13.5,
+`mongodb` 1.4.2, and the frontend layer's `engines` set to the `dms-frontend` 0.5 line from 0.5.2.
 
 **Q6. `interface-dms-saas` changes in a breaking way. Does the module require 0.4 of it now?**
 No. The repository releases the interface first and raises the module's range in a follow-up
-(as #79 then #80 did). This pull request keeps `@antelopejs/interface-dms-saas >=0.3.0 <0.4.0`
-in the module, so the workspace links the local package, and its commits are marked breaking
+(as #79 then #80 did). This pull request keeps the module on the `interface-dms-saas` 0.3 line
+(`>=0.3.0`, below 0.4.0), so the workspace links the local package, and its commits are marked breaking
 so the next interface release is 0.4.0.
 
 **Q7. What happens to the module's own `settings.workspace` category?**
@@ -73,7 +79,7 @@ every backend `CustomComponent("DmsSaasXxx")` keeps resolving. The one name that
 `dms.frontend.build.ts` declares `app/composables`, `app/utils` and `app/types`. Code private to
 the module goes under `app/build/` and is imported by path.
 
-**Q10. The other breaking changes of interface-dms 0.4?**
+**Q10. The other breaking changes of `interface-dms` 0.4?**
 Applied as the migration guide says: confirmations move from the target to the action
 (`confirmColor` → `color`), `formContainer.pages.view` → `details`, a tab takes one `filter`,
 forms declare `saveMode` / `kind`, tones are `Tone`, `StatStrip` is `StatGroup`, `DmsPermissionsTree`
@@ -102,17 +108,19 @@ Yes. Every page, including the public ones and the tenant settings pages, is a
 **Q13. What does `.meta()` carry?**
 Every custom component and every block that does not take its name from a `title` gets
 `.meta({ name, description, icon })`, with `name` and `description` as `$saas.permissions.*`
-i18n keys. The roles editor renders them through `processI18n`, so a workspace owner reads
-"Billing · Payment method — See and replace the card that pays invoices" rather than a component
-key. Components mounted only on platform-admin pages get the same treatment for consistency.
+i18n keys. The roles editor renders them through `processI18n`, so a workspace owner reads the
+name "Billing · Payment method" and the description "See and replace the card that pays invoices"
+rather than a component key. Components mounted only on platform-admin pages get the same treatment for consistency.
 
 **Q14. Where do translations live?**
 Split by area: `saas-en-GB.json` / `saas-fr-FR.json` keep what is shared (errors, notifications,
 automation, statuses, permissions), and each area adds `saas-<area>-<locale>.json`
-(dms-frontend merges every `*-xx-XX.json` of the layer). The parity test reads every file of a
+(`dms-frontend` merges every `*-xx-XX.json` of the layer). The parity test reads every file of a
 locale. English and French are both complete.
 
-## 4. One vocabulary (S07, S20)
+## 4. One vocabulary
+
+This section answers findings S07 and S20 of the UX review.
 
 **Q15. One colour per status: where is it defined?**
 In one table per status family, shared by the backend (column displays, pill tones) and the
@@ -145,7 +153,9 @@ Skeleton of its own shape, inline error with Retry saying what still works, an e
 that offers the next action. The DMS blocks do this already; custom components follow
 (`try/finally` without `catch` is gone).
 
-## 5. Money (S01, S03, S04)
+## 5. Money
+
+This section answers findings S01, S03 and S04 of the UX review.
 
 **Q19. In what unit do operators type money?**
 Major units, with the currency as an addon (`€ [49.00] EUR`). The API keeps minor units, as
@@ -291,143 +301,3 @@ gets a version and a publication date, bumped when its text changes.
 A dialog of the plan editor: permissions grouped by page, with search, expand all, counts per
 group, and the rows coming from the parent plan tagged. It keeps the existing rule that ticking a
 node adds its descendants and ancestors.
-
-## 7. Workspace-owner surfaces
-
-**Q42. Billing page?**
-Top to bottom: the payment-failed alert when an invoice is unpaid (amount, decline date,
-Stripe's next retry, suspension date, Update card / Pay invoice); the current plan with the seat
-arithmetic (price × seats = total) and a meter of seats in use; the next invoice from Stripe's
-preview; the payment method; a money-back guarantee card that is always visible to owners (days
-left, amount, or when and why it ended); billing information; invoices and credit notes in one
-table (All / Invoices / Credit notes). The extension anchors of `tenantBillingPage` stay.
-
-**Q43. Changing plan (S02, S03)?**
-Compare → Review → Confirm. The comparison shows the plans that fit the seats in use and
-explains the ones hidden. Review shows what changes (seats, features gained and lost), when
-(today for an upgrade, at renewal for a downgrade) and what is paid (prorated total with VAT
-from Stripe's preview; a trial reads "€0.00 today · first charge on …"). The button names the
-consequence: "Upgrade and pay €212.40", "Schedule downgrade". A scheduled downgrade shows on
-the plan card with "Cancel downgrade".
-
-**Q44. One past-due message (S12)?**
-One layout banner on every page while an invoice is unpaid, one verb: "Pay invoice". On the
-Billing page it gives way to the detailed alert. Members are told who the workspace owner is.
-
-**Q45. General?**
-Workspace name (save bar), "At a glance" (members and seats, plan, workspace owner, each linking
-to where it is managed), and a danger zone: export first, then delete with the impact listed and
-the name typed.
-
-**Q46. Data export?**
-What is included, the export in progress with its progress, the history with availability dates,
-and the empty, failed and expired states.
-
-**Q47. Seats on Members?**
-A `Meter` of seats (members + pending invitations), platform support listed as using no seat,
-and when full a banner telling the owner how to free or buy seats, and members whom to ask.
-
-**Q48. Workspace switcher and creation (S19)?**
-The switcher shows the plan, names a failed payment, searches name and owner, and keeps the
-popover open while switching. Creating a workspace asks for a card only when the chosen plan
-needs one (or the free-per-card policy does), and says why next to the field.
-
-## 8. Public screens
-
-**Q49. Pricing page (S18)?**
-A new public page (`/pricing`, `EmptyLayout`): the public plans as cards, an interval toggle
-only when both intervals exist, a full comparison from the features (main rows, then "See full
-detail"), reassurance strip and FAQ from the billing rules. Each plan links to Register with the
-plan.
-
-**Q50. Register and No workspace?**
-Show the plan the visitor signs up for. Registration still opens the workspace on the free plan
-(the existing rule); a paid plan chosen on Pricing opens the upgrade review on Billing right
-after. The card is asked according to `registration.paymentMethod`, with the reason.
-
-**Q51. Workspace access restricted (S14)?**
-Says why (suspended, pending payment, cancelled), the invoice timeline, how long data is kept;
-the workspace owner gets Pay invoice / Billing / Stripe; a member is told which owner to contact;
-everyone gets the list of their other workspaces, "Check again" and "Sign out".
-
-**Q52. Legal pages?**
-Title, version, last updated, contents built from the headings, related documents, and a back
-link to where the visitor came from. An unpublished document reads "Content unavailable".
-
-## 9. Verification
-
-**Q53. How is it tested?**
-Unit tests (vitest) for every new or changed route and computation (normalised MRR, credit
-ceiling, attention queues, directory fields, plan change preview, segment preview, legal
-versions…). `ajs dms verify-source` for the frontend layer. Then the playground, seeded with a
-realistic catalogue and workspaces in every status, driven page by page with Playwright in both
-themes, every overlay opened, the console watched: each error is a bug to fix. Flows that call
-Stripe are covered by unit tests with Stripe mocked; in the browser their failure states are
-checked, since the playground has no Stripe account.
-
-**Q54. How is the work split?**
-Shared vocabulary, money helpers, i18n split and the playground seed first; then one track per
-area (dashboard & workspaces; users & segments; plans, migrations & features; invoices, credit
-notes & billing rules; workspace-owner surfaces; public screens); then a pass of the whole
-module in the browser.
-
-## 10. Deliberately left for later
-
-- **Asking customers to accept a new legal version.** Needs acceptance tracking at sign-in,
-  which the DMS's auth flow owns. Versions and dates are stored, so it can be added on top.
-- **Per-user saved table views** ("Save current view"): the DMS has predefined views only.
-- **Download all invoices as a ZIP** on Billing: Stripe hosts the PDFs; each one stays
-  downloadable.
-- **Trial conversion rate** on the dashboard: the module keeps no trial history to compute it
-  honestly.
-- **A second price per plan** (monthly and yearly of the same plan): a plan has one interval;
-  the toggle filters plans by interval.
-
-## 11. Where the implementation departed from an answer
-
-Recorded after the build and the browser pass, so the answers above stay as they were decided.
-
-- **Q13, blocks fed by a route:** a `StatGroup`, `NavCardGrid` or `KeyValueList` block cannot put
-  parameters into its texts on the client, and `fetchUrl` / `badgesUrl` do not read the page's
-  route parameters in DMS 0.6. Routes therefore word their items server-side in the request's
-  language (`src/i18n/server-messages.ts`). Detail pages first wrapped the blocks in a custom
-  `DmsSaasRouteScopedBlock` filling `{id}` from the URL; since DMS 0.6.1 the stock blocks take
-  `{{params.id}}` in their URLs and refetch on `refreshPageBlocks()`, so the wrapper is gone.
-  Headline figures that need parameters are small custom components built on `DmsStatGroup`.
-  Since DMS 0.7.2 every block these routes feed (`ActivityFeed`, `NavCardGrid`, `TopListCard`
-  included) takes composed texts, so the routes answer raw values and the server-side wording is
-  gone.
-- **Q21, disabled row actions:** DMS row actions have no per-row disabled reason. "Issue credit
-  note…" is greyed out by a rule, the reason is in the table's footer hint and in the dialog, and
-  the server refuses anyway. Open invoices get a third mode, "Reduce the amount due", the only
-  credit Stripe allows on them.
-- **Q23, dashboard periods:** 30 days, 90 days and year to date (the DMS has no "12 months"
-  preset). Churn approximates the MRR at the start of the period as today's MRR plus the MRR lost.
-- **Q27, owner pays:** the server requires a paid plan synced with Stripe; the owner meets the
-  first-payment checkout from the access-restricted screen and Billing.
-- **Q34, retiring a plan:** the plan is closed to sign-ups and its workspaces migrated; it is not
-  deleted automatically (an existing rule keeps it), "Delete plan" appears once it is empty. The
-  owner notice is the in-app notification, sent to workspace owners.
-- **Q35, price change:** the `Form` block cannot intercept a submit, so the consequence is stated
-  in the live preview before saving and in a notice after.
-- **Q37, migration tabs:** a stored `stage` (running, needs attention, done) backs the tabs, since
-  a select column cannot be filtered on several values. A "Partially failed" migration is done:
-  it sits under Completed, as the answer files it, and not under Needs attention as the design
-  mockup does (kept after the 2026-10 audit). Nothing is left in flight on it, and its failed
-  workspaces are still listed, with "Retry failed", on its detail page.
-- **Q40, timeline:** no "final reminder" step and no fixed retry days: the module sends no final
-  reminder and cannot read Stripe's retry schedule.
-- **Q43, upgrades:** an owner's upgrade charges the prorated difference at once
-  (`always_invoice`), which is what makes "Upgrade and pay €212.40" true; a declined card changes
-  nothing. Up- and downgrades compare what each plan costs for the seats in use.
-- **Q45, General:** the DMS tenant has neither a logo nor a URL slug; the page shows the workspace
-  id instead. Deleting a workspace goes through `POST /api/saas/workspaces/current/delete` with the
-  typed name, which replaces `DELETE /current`.
-- **Q46, Data export:** the DMS export API has no cancel and no archive size, and keeps an archive
-  24 hours; the page shows the real expiry date.
-- **Q51, suspended screen:** data is deleted only for cancelled workspaces, so a suspended one reads
-  "nothing has been deleted"; its invoice timeline shows no attempt count (the mirror stores
-  `Invoice.attemptCount`, which the invoice lists read, but the timeline does not).
-- **Form rows that need the full width** (the plan feature matrix, the segment rules): these
-  fields have no label, and the DMS's `FieldRow` spans a label-less control over both form columns
-  (AntelopeJS/dms#205), so no workaround is left in dms-saas.

@@ -1,4 +1,5 @@
 import type { Readable } from "node:stream";
+import { buffer } from "node:stream/consumers";
 import { describe, expect, it } from "vitest";
 import { exportSaasTenantData } from "../src/hooks/tenant-export";
 import {
@@ -44,9 +45,7 @@ async function collect(lines: AsyncIterable<string>): Promise<string[]> {
 }
 
 async function readStream(stream: Readable): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-  return Buffer.concat(chunks).toString("utf-8");
+  return (await buffer(stream)).toString("utf-8");
 }
 
 describe("batchIds", () => {
@@ -219,11 +218,7 @@ describe("writeDatasetsToArchive", () => {
 describe("exportSaasTenantData", () => {
   it("names the contract when the archive sink is missing", async () => {
     await expect(
-      exportSaasTenantData(
-        "tenant-1",
-        undefined as never,
-        new AbortController().signal,
-      ),
+      exportSaasTenantData("tenant-1", undefined, new AbortController().signal),
     ).rejects.toThrow(/export archive sink/);
   });
 });

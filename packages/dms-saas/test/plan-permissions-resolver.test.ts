@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { fromPartial } from "@total-typescript/shoehorn";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import {
@@ -35,7 +36,7 @@ interface MemberFixture {
 const tenants = { a: "", b: "", c: "" };
 
 function plan(id: string, permissions: string[], parent: string | null): Plan {
-  return Object.assign(Object.create(null), {
+  return fromPartial<Plan>({
     _id: id,
     permissions,
     features: [],
@@ -249,12 +250,9 @@ describe("plan permissions policy", () => {
   });
 
   it("retains the pipeline registration contract before downstream projections", () => {
-    expect(registered).toEqual([
-      {
-        id: "dms-saas.plan-intersection",
-        order: 100,
-        resolver: expect.any(Function),
-      },
-    ]);
+    expect(registered).toHaveLength(1);
+    const { resolver, ...info } = planIntersection();
+    expect(info).toEqual({ id: "dms-saas.plan-intersection", order: 100 });
+    expect(resolver).toBeTypeOf("function");
   });
 });

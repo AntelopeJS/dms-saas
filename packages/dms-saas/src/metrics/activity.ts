@@ -98,28 +98,33 @@ const DOCUMENT_LOOKS: Partial<Record<BillingDocumentStatus, DocumentLook>> = {
 
 type ActionLookOf = (action: OperatorAction) => ActionLook;
 
-const INVITATION_SEND_LOOKS: Record<string, ActionLook> = {
-  sent: {
-    kind: "lifecycle",
-    icon: "i-ph-envelope-simple",
-    tone: "neutral",
-    title: "invitation_sent",
-  },
-  failed: {
-    kind: "lifecycle",
-    icon: "i-ph-warning",
-    tone: "warning",
-    title: "invitation_email_failed",
-  },
+const INVITATION_SENT_LOOK: ActionLook = {
+  kind: "lifecycle",
+  icon: "i-ph-envelope-simple",
+  tone: "neutral",
+  title: "invitation_sent",
 };
+
+const INVITATION_SEND_LOOKS = new Map<string, ActionLook>([
+  ["sent", INVITATION_SENT_LOOK],
+  [
+    "failed",
+    {
+      kind: "lifecycle",
+      icon: "i-ph-warning",
+      tone: "warning",
+      title: "invitation_email_failed",
+    },
+  ],
+]);
 
 /**
  * The first e-mail of an owner invitation reads by its outcome: the operator
  * learns from the feed too whether the owner was told.
  */
 const invitationSendLook: ActionLookOf = (action) =>
-  INVITATION_SEND_LOOKS[detailString(action, "emailDelivery")] ??
-  INVITATION_SEND_LOOKS.sent!;
+  INVITATION_SEND_LOOKS.get(detailString(action, "emailDelivery")) ??
+  INVITATION_SENT_LOOK;
 
 const ACTION_LOOKS: Partial<
   Record<WorkspaceOperatorAction, ActionLook | ActionLookOf>

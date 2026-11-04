@@ -1,4 +1,10 @@
+import type {
+  BlockText,
+  ComposedTextCountParam,
+  ComposedTextParam,
+} from "@antelopejs/interface-dms/base";
 import { flattenLocale, readLocale } from "./locales";
+import { isRecord } from "./records";
 import { isNumber, isString } from "../../src/utils/primitive-guards";
 
 /** The locales the module ships. */
@@ -6,26 +12,30 @@ export const LOCALES = ["en-GB", "fr-FR"];
 
 const KEY_PREFIX = "$";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
-
 /**
  * Every i18n key a route payload names: the keys of its composed texts, nested
  * ones included, and its `$`-prefixed strings.
  */
-function namedKeys(payload: unknown): string[] {
-  if (isString(payload)) {
-    return payload.startsWith(KEY_PREFIX) ? [payload.slice(1)] : [];
+function namedKeys(payload: object | string): string[] {
+  const keys: string[] = [];
+  const pending: unknown[] = [payload];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (isString(current)) {
+      if (current.startsWith(KEY_PREFIX)) keys.push(current.slice(1));
+    } else if (Array.isArray(current)) {
+      const children: unknown[] = current;
+      pending.push(...children.toReversed());
+    } else if (isRecord(current)) {
+      if (isString(current.key)) keys.push(current.key.replace(/^\$/, ""));
+      pending.push(...Object.values(current).toReversed());
+    }
   }
-  if (Array.isArray(payload)) return payload.flatMap(namedKeys);
-  if (!isRecord(payload)) return [];
-  const own = isString(payload.key) ? [payload.key.replace(/^\$/, "")] : [];
-  return [...own, ...Object.values(payload).flatMap(namedKeys)];
+  return keys;
 }
 
 /** The keys a payload names that a locale lacks. */
-export function missingKeys(payload: unknown, code: string): string[] {
+export function missingKeys(payload: object | string, code: string): string[] {
   const keys = flattenLocale(readLocale(code));
   return [...new Set(namedKeys(payload))].filter((key) => !keys.has(key));
 }
@@ -39,7 +49,7 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
   day: "numeric",
 };
 
-type WrittenParams = Record<string, string | number>;
+type WrittenParams = Map<string, string | number>;
 
 /**
  * Resolves a key in a locale and fills in its params. Picks the plural form by
@@ -48,7 +58,7 @@ type WrittenParams = Record<string, string | number>;
 function translate(code: string, key: string, params: WrittenParams): string {
   const message = flattenLocale(readLocale(code)).get(key) ?? key;
   const forms = message.split(PLURAL_SEPARATOR);
-  const count = Number(params.count);
+  const count = Number(params.get("count"));
   const index =
     forms.length === TWO_FORMS
       ? Number(count !== 1)
@@ -57,23 +67,31 @@ function translate(code: string, key: string, params: WrittenParams): string {
     forms.length > 1 && Number.isFinite(count)
       ? (forms[index] ?? message)
       : message;
-  return form.replace(PARAM_PATTERN, (match, literal, name) =>
-    literal !== undefined ? literal : String(params[name] ?? match),
+  return form.replace(
+    PARAM_PATTERN,
+    (match: string, literal: string | undefined, name: string | undefined) =>
+      literal ??
+      (name === undefined ? match : String(params.get(name) ?? match)),
   );
 }
 
-function writeParam(param: unknown, code: string): string {
+function isCountParam(
+  param: ComposedTextParam,
+): param is ComposedTextCountParam {
+  return typeof param === "object" && "type" in param && param.type === "count";
+}
+
+function writeParam(param: ComposedTextParam, code: string): string {
   if (isString(param)) return param;
   if (isNumber(param)) {
     return new Intl.NumberFormat(code).format(param);
   }
-  if (!isRecord(param)) return String(param);
-  if (isString(param.key)) return writeText(param, code);
+  if ("key" in param) return writeText(param, code);
   if (param.type === "money") {
     return new Intl.NumberFormat(code, {
       style: "currency",
-      currency: String(param.currency),
-    }).format(Number(param.value) / MINOR_UNITS_PER_UNIT);
+      currency: param.currency,
+    }).format(param.value / MINOR_UNITS_PER_UNIT);
   }
   if (param.type === "date") {
     return new Intl.DateTimeFormat(code, DAY_FORMAT).format(
@@ -88,23 +106,21 @@ function writeParam(param: unknown, code: string): string {
  * browser composes, for asserting the wording a payload yields. Dates are
  * written as their day; plurals follow vue-i18n's default rule on `count`.
  */
-export function writeText(text: unknown, code = "en-GB"): string {
+export function writeText(text: BlockText | undefined, code = "en-GB"): string {
   if (isString(text)) {
     return text.startsWith(KEY_PREFIX)
-      ? translate(code, text.slice(1), {})
+      ? translate(code, text.slice(1), new Map())
       : text;
   }
-  if (!isRecord(text) || !isString(text.key)) return String(text);
-  const rawParams = isRecord(text.params) ? text.params : {};
-  const params: WrittenParams = Object.fromEntries(
-    Object.entries(rawParams).map(([name, param]) => [
+  if (text === undefined) return String(text);
+  const rawParams = text.params ?? {};
+  const params: WrittenParams = new Map(
+    Object.entries(rawParams).map(([name, param]): [string, string] => [
       name,
       writeParam(param, code),
     ]),
   );
-  const count = Object.values(rawParams).find(
-    (param) => isRecord(param) && param.type === "count",
-  );
-  if (isRecord(count)) params.count = Number(count.value);
+  const count = Object.values(rawParams).find(isCountParam);
+  if (count) params.set("count", count.value);
   return translate(code, text.key.replace(/^\$/, ""), params);
 }

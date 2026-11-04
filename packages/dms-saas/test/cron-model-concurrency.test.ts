@@ -5,6 +5,7 @@ import {
   GetModel,
   triggerEvent,
 } from "@antelopejs/interface-database-decorators";
+import type { DeepPartial } from "@antelopejs/interface-database/staged-query";
 import {
   Segment,
   SegmentModel,
@@ -239,16 +240,14 @@ describe("billing publication and tombstones on Mongo", () => {
 describe("complete segment generations on Mongo", () => {
   it("seeds a revision on a segment the data API writes through the raw table", async () => {
     const model = GetModel(SegmentModel);
-    const row = Object.setPrototypeOf(
-      {
-        name: "Raw",
-        conditions: { logical: "and", conditions: [] },
-        estimatedCount: 0,
-        countHistory: [],
-        lastEvaluationMs: null,
-      },
-      Segment.prototype,
-    );
+    const row: DeepPartial<Segment> = {
+      name: "Raw",
+      conditions: { logical: "and", conditions: [] },
+      estimatedCount: 0,
+      countHistory: [],
+      lastEvaluationMs: null,
+    };
+    Reflect.setPrototypeOf(row, Segment.prototype);
     triggerEvent(row, "insert");
     const [id] = await model.table.insert(row).run();
     const segment = (await model.get(id))!;
@@ -317,10 +316,10 @@ describe("complete segment generations on Mongo", () => {
     const segment = await segmentFixture();
     const links = GetModel(UserSegmentModel);
     const model = GetModel(SegmentModel);
-    const patch = Object.setPrototypeOf(
-      { conditions: { logical: "or", conditions: [] } },
-      Segment.prototype,
-    );
+    const patch: DeepPartial<Segment> = {
+      conditions: { logical: "or", conditions: [] },
+    };
+    Reflect.setPrototypeOf(patch, Segment.prototype);
     triggerEvent(patch, "update");
     await model.table.get(segment._id).update(patch).run();
     expect((await model.get(segment._id))?.revision).not.toBe(segment.revision);
@@ -335,11 +334,13 @@ describe("complete segment generations on Mongo", () => {
     await links.replaceForSegment(segment, ["old"], BEFORE);
     const current = (await GetModel(SegmentModel).get(segment._id))!;
     const getBy = links.getBy.bind(links);
-    vi.spyOn(links, "getBy").mockImplementationOnce(async (index, ...keys) => {
-      const rows = await getBy(index, ...keys);
-      await links.replaceForSegment(current, ["new"], CUTOFF);
-      return rows;
-    });
+    vi.spyOn(links, "getBy").mockImplementationOnce(
+      async (index, ...keys: unknown[]) => {
+        const rows = await getBy(index, ...keys);
+        await links.replaceForSegment(current, ["new"], CUTOFF);
+        return rows;
+      },
+    );
     expect(
       (await links.listBySegment(segment._id)).map((row) => row.userId),
     ).toEqual(["new"]);
@@ -349,12 +350,14 @@ describe("complete segment generations on Mongo", () => {
     const segment = await segmentFixture();
     const links = GetModel(UserSegmentModel);
     const getBy = links.getBy.bind(links);
-    vi.spyOn(links, "getBy").mockImplementationOnce(async (index, ...keys) => {
-      await links.replaceForSegment(segment, ["middle"], BEFORE);
-      const current = (await GetModel(SegmentModel).get(segment._id))!;
-      await links.replaceForSegment(current, ["latest"], CUTOFF);
-      return getBy(index, ...keys);
-    });
+    vi.spyOn(links, "getBy").mockImplementationOnce(
+      async (index, ...keys: unknown[]) => {
+        await links.replaceForSegment(segment, ["middle"], BEFORE);
+        const current = (await GetModel(SegmentModel).get(segment._id))!;
+        await links.replaceForSegment(current, ["latest"], CUTOFF);
+        return getBy(index, ...keys);
+      },
+    );
     await links.cleanupUnpublishable(segment._id);
     expect(
       (await links.listBySegment(segment._id)).map((row) => row.userId),

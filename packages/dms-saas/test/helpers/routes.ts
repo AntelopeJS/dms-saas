@@ -1,4 +1,5 @@
 import {
+  type ComputedParameter,
   computeParameter,
   getRegisteredRouteHandlers,
   HTTPResult,
@@ -26,10 +27,39 @@ export function registeredRoute(
   return registered.handler;
 }
 
+/** A fresh instance of the controller class a route was registered on. */
+export function newController(route: RouteHandler) {
+  return new route.controller();
+}
+
 /**
- * Serves one request with a registered route the way the API module does: a
- * fresh controller with its computed properties, then every parameter
- * provider (guards, bodies, models) in parallel, then the handler.
+ * The controller a route serves a request with, as the API module builds it:
+ * every computed property resolved, the class-level guards (keyed by symbol)
+ * included and started after the named ones.
+ */
+export async function resolvedController(
+  route: RouteHandler,
+  context: RequestContext,
+): Promise<ReturnType<typeof newController>> {
+  const controller = newController(route);
+  const properties: Record<PropertyKey, ComputedParameter> = route.properties;
+  await Promise.all(
+    Reflect.ownKeys(properties).map(async (key) => {
+      if (!Object.hasOwn(properties, key)) return;
+      Reflect.set(
+        controller,
+        key,
+        await computeParameter(context, properties[key], controller),
+      );
+    }),
+  );
+  return controller;
+}
+
+/**
+ * Serves one request with a registered route the way the API module does:
+ * {@link resolvedController}, then every parameter provider (guards, bodies,
+ * models) in parallel, then the handler.
  */
 export async function callRoute(
   method: string,
@@ -37,12 +67,7 @@ export async function callRoute(
   context: RequestContext,
 ): Promise<ReturnType<RouteHandler["callback"]>> {
   const route = registeredRoute(method, location);
-  const controller = new route.proto.constructor();
-  await Promise.all(
-    Object.entries(route.properties).map(async ([key, property]) => {
-      controller[key] = await computeParameter(context, property, controller);
-    }),
-  );
+  const controller = await resolvedController(route, context);
   const parameters = await Promise.all(
     route.parameters.map((parameter) =>
       computeParameter(context, parameter, controller),
@@ -57,7 +82,7 @@ export function controllerRoutes(
 ): Map<string, RouteHandler> {
   const routes = new Map<string, RouteHandler>();
   for (const { handler } of getRegisteredRouteHandlers()) {
-    if (handler.mode !== "handler" || handler.proto?.constructor !== controller)
+    if (handler.mode !== "handler" || handler.controller !== controller)
       continue;
     routes.set(handler.callback.name, handler);
   }
@@ -76,7 +101,7 @@ export async function refusesAsOwnerOnly(
   route: RouteHandler,
   context: RequestContext,
 ): Promise<boolean> {
-  const controller = new route.proto.constructor();
+  const controller = newController(route);
   const computed = await Promise.allSettled([
     ...Object.values(route.properties).map((property) =>
       computeParameter(context, property, controller),

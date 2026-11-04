@@ -1,4 +1,7 @@
-import { BasicDataModel } from "@antelopejs/interface-database-decorators";
+import {
+  BasicDataModel,
+  type IndexKey,
+} from "@antelopejs/interface-database-decorators";
 import {
   Plan,
   PLAN_FALLBACK_LOCALE,
@@ -6,6 +9,7 @@ import {
   type PlanFeatureValue,
   plansTableName,
 } from "../tables/plans.table";
+import type { FeatureValue } from "../tables/features.table";
 
 const MAX_INHERITANCE_DEPTH = 10;
 
@@ -40,7 +44,10 @@ export class PlanModel extends BasicDataModel(Plan, plansTableName) {
     return plan && inFallbackLocale(plan);
   }
 
-  override async getBy(index: keyof Plan, ...keys: unknown[]): Promise<Plan[]> {
+  override async getBy(
+    index: Extract<keyof Plan, string>,
+    ...keys: IndexKey[]
+  ): Promise<Plan[]> {
     return (await super.getBy(index, ...keys)).map(inFallbackLocale);
   }
 
@@ -94,7 +101,7 @@ export class PlanModel extends BasicDataModel(Plan, plansTableName) {
   async resolveInheritance(plan: Plan): Promise<ResolvedPlanInheritance> {
     const chain = await this.resolveInheritanceChain(plan);
     const permissions = new Set<string>();
-    const featureMap = new Map<string, unknown>();
+    const featureMap = new Map<string, FeatureValue>();
     for (let i = chain.length - 1; i >= 0; i--) {
       const link = chain[i];
       for (const permission of link.permissions ?? []) {

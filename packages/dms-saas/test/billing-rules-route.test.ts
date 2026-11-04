@@ -247,7 +247,7 @@ describe("billing rules page module defaults", () => {
       "stripeTaxCode",
     ]);
     for (const [id, value] of Object.entries(offered)) {
-      expect(fresh[id], id).toEqual(value);
+      expect(fresh, id).toHaveProperty([id], value);
     }
     expect(offered).not.toHaveProperty("dataRetentionDaysAfterCancellation");
   });

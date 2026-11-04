@@ -7,7 +7,6 @@ import {
 } from "@antelopejs/interface-dms/base/table-view";
 import { DefaultLayout } from "@antelopejs/interface-dms/base/layouts";
 import { ButtonVariant } from "@antelopejs/interface-dms/base/types";
-import type { CustomRowAction } from "@antelopejs/interface-dms/base/types/row-action";
 import { plansDataAPI } from "../../../data-api";
 import { SAAS_MODULE_ID } from "../../module";
 import { catalogCategory } from "../categories";
@@ -45,7 +44,9 @@ const retirePlanModal = CustomComponent("DmsSaasRetirePlanModal").meta({
 type PlanTableOptions = NonNullable<
   Parameters<typeof TableView<typeof plansDataAPI>>[1]
 >;
-type PlanRowActions = NonNullable<PlanTableOptions["rowActions"]>["custom"];
+type PlanRowActions = NonNullable<
+  NonNullable<PlanTableOptions["rowActions"]>["custom"]
+>;
 
 const isInUse = { field: "boundWorkspaceCount", notEquals: 0 } as const;
 const isUnused = { field: "boundWorkspaceCount", equals: 0 } as const;
@@ -56,7 +57,7 @@ const isUnused = { field: "boundWorkspaceCount", equals: 0 } as const;
  * see its workspaces, open it in Stripe, stop or resume selling it, retire
  * it (moving its workspaces) or, once nobody uses it, delete it.
  */
-const PLAN_ACTIONS: CustomRowAction[] = [
+const PLAN_ACTIONS: PlanRowActions = [
   {
     id: "duplicate",
     label: `${TEXTS}.action.duplicate`,
@@ -179,9 +180,7 @@ export class SaasPlansController extends PageController(
 
   /**
    * The built-in duplicate action is off: "Duplicate as new plan" opens the
-   * editor prefilled instead. The custom row actions read listed values
-   * (`boundWorkspaceCount` is a number on the row), which the controller types
-   * as the getters computing them. The filtered empty state reads for a tab as
+   * editor prefilled instead. The filtered empty state reads for a tab as
    * for a search, since a tab narrows the rows the same way.
    */
   static table = TableView(plansDataAPI, {
@@ -213,8 +212,7 @@ export class SaasPlansController extends PageController(
       duplicate: false,
       copyLink: false,
       hasSelection: HAS_SELECTION,
-      // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- the row action rules read listed values (`boundWorkspaceCount` is a number on the row), which the controller types as the getters computing them
-      custom: PLAN_ACTIONS as unknown as PlanRowActions,
+      custom: PLAN_ACTIONS,
     },
     formContainer: {
       type: "page",

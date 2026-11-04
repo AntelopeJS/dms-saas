@@ -5,6 +5,7 @@ import type { User } from "@antelopejs/interface-dms/auth/db";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import { countDaysUntil } from "../frontend-vue/app/composables/useDaysLeft";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import {
   type BillingSettings,
   type Invoice,
@@ -103,12 +104,31 @@ async function subscribeCurrent(row: TenantSubscription): Promise<void> {
   });
 }
 
+/**
+ * What the tests read of the access details: the route answers `any`, so each
+ * field they read is checked here, and the rest passes through to the
+ * matchers.
+ */
+const WORKSPACE_ACCESS_READ = z
+  .object({
+    isTenantOwner: z.boolean(),
+    canManageInStripe: z.boolean(),
+    unpaidInvoice: z.unknown(),
+    owners: z.unknown(),
+    otherWorkspaces: z.unknown(),
+    deletion: z.unknown(),
+    timeline: z.array(z.object({ kind: z.string() }).passthrough()),
+  })
+  .passthrough();
+
 /** Serves `GET /api/saas/workspace-access` of the blocked workspace to a user. */
 async function getWorkspaceAccess(user: User) {
-  return callRoute(
-    "get",
-    "/api/saas/workspace-access/",
-    await tenantRequest(user, currentTenant),
+  return WORKSPACE_ACCESS_READ.parse(
+    await callRoute(
+      "get",
+      "/api/saas/workspace-access/",
+      await tenantRequest(user, currentTenant),
+    ),
   );
 }
 

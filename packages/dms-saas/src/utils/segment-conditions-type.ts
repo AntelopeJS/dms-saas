@@ -49,7 +49,8 @@ const stringOrGroupSchema = z
     if (isString(value)) {
       if (value === "") return { logical: "and", conditions: [] };
       try {
-        return JSON.parse(value);
+        const parsed: unknown = JSON.parse(value);
+        return parsed;
       } catch {
         return { logical: "and", conditions: [] };
       }
@@ -58,10 +59,9 @@ const stringOrGroupSchema = z
   })
   .pipe(groupSchema);
 
-export interface SegmentConditionsTypeOptions {
+export type SegmentConditionsTypeOptions = {
   fieldsCatalogUrl?: string;
-  [key: string]: unknown;
-}
+};
 
 @RegisterDataType("segment_conditions")
 export class SegmentConditionsType extends DataType {

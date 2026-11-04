@@ -27,17 +27,6 @@ const PLATFORM_FAILURES = [
 ];
 
 /**
- * Whether a failed Stripe call failed because Stripe cannot be used right now,
- * whatever the request: retrying later, or fixing the configuration, is the
- * only way through.
- *
- * @param error What the Stripe SDK threw
- */
-export function isStripeUnavailableError(error: unknown): boolean {
-  return PLATFORM_FAILURES.some((failure) => error instanceof failure);
-}
-
-/**
  * Refuses a request that needs Stripe when the deployment has no usable key,
  * before any call is made: 503 with `saas.errors.stripe.not_configured`.
  */
@@ -50,8 +39,8 @@ export function assertStripeConfigured(): void {
 }
 
 /**
- * Runs the Stripe calls of a route. Stripe being unusable (see
- * {@link isStripeUnavailableError}) answers 503 with
+ * Runs the Stripe calls of a route. Stripe being unusable (a failure of
+ * `PLATFORM_FAILURES`) answers 503 with
  * `saas.errors.stripe.unavailable`, which the screens translate, rather than
  * an unhandled 500; any other failure propagates untouched.
  *
@@ -63,7 +52,9 @@ export async function withStripeAvailability<T>(
   try {
     return await operation();
   } catch (error) {
-    if (!isStripeUnavailableError(error)) throw error;
+    if (!PLATFORM_FAILURES.some((failure) => error instanceof failure)) {
+      throw error;
+    }
     Logging.Error(`${LOG_PREFIX} Stripe is unavailable`, error);
     throw new HTTPResult(HTTP_SERVICE_UNAVAILABLE, STRIPE_UNAVAILABLE_MESSAGE);
   }

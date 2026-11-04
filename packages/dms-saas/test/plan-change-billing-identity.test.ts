@@ -134,8 +134,6 @@ async function change(
       cancelUrl: "https://example.test/cancel",
     },
     request,
-    GetModel(TenantSubscriptionModel, tenantId),
-    GetModel(TenantBillingInfoModel, tenantId),
   );
 }
 

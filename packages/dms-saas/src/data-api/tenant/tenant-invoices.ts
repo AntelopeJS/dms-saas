@@ -10,8 +10,7 @@ import {
   ModelReference,
   Sortable,
 } from "@antelopejs/interface-data-api/metadata";
-import { Model } from "@antelopejs/interface-database-decorators";
-import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
+import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import { AuthUser } from "@antelopejs/interface-dms/auth";
 import {
   type BlockText,
@@ -111,7 +110,7 @@ export class tenantInvoicesDataAPI extends DataController(
   Controller("/api/saas/tenant/tables/invoices"),
 ) {
   @ModelReference()
-  @Model(InvoiceModel, (ctx) => getRequestTenantId(ctx))
+  @TenantScopedModel(InvoiceModel)
   declare model: InvoiceModel;
 
   @Select()

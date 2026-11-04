@@ -1,8 +1,14 @@
-import { Controller, Get, Post } from "@antelopejs/interface-api";
+import {
+  Context,
+  Controller,
+  Get,
+  Post,
+  type RequestContext,
+} from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
-import { Model } from "@antelopejs/interface-database-decorators";
+import { GetModel, Model } from "@antelopejs/interface-database-decorators";
+import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import type Stripe from "stripe";
 import type { BillingSettings, TenantSubscription } from "../../db";
@@ -11,6 +17,7 @@ import {
   computeUnusedPortionCents,
   getStripeClient,
   nowInStripeSeconds,
+  requireInvoiceId,
 } from "../../stripe";
 import { CREDIT_NOTE_METADATA } from "../../operator-billing/credit-note-request";
 import { MS_PER_DAY } from "../../utils/time";
@@ -36,28 +43,31 @@ interface RefundErrorMapping {
   message: string;
 }
 
-const REASON_TO_ERROR: Record<string, RefundErrorMapping> = {
-  [REASON_NOT_ENABLED]: {
-    code: HTTP_FORBIDDEN,
-    message: "saas.errors.refund.not_enabled",
-  },
-  [REASON_NO_SUBSCRIPTION]: {
-    code: HTTP_BAD_REQUEST,
-    message: "saas.errors.workspace.no_active_subscription",
-  },
-  [REASON_ALREADY_PROCESSED]: {
-    code: HTTP_CONFLICT,
-    message: "saas.errors.refund.already_processed",
-  },
-  [REASON_NO_INVOICE]: {
-    code: HTTP_NOT_FOUND,
-    message: "saas.errors.invoice.no_paid_found",
-  },
-  [REASON_WINDOW_EXPIRED]: {
-    code: HTTP_FORBIDDEN,
-    message: "saas.errors.refund.window_expired",
-  },
-};
+const REASON_TO_ERROR = new Map<string, RefundErrorMapping>([
+  [
+    REASON_NOT_ENABLED,
+    { code: HTTP_FORBIDDEN, message: "saas.errors.refund.not_enabled" },
+  ],
+  [
+    REASON_NO_SUBSCRIPTION,
+    {
+      code: HTTP_BAD_REQUEST,
+      message: "saas.errors.workspace.no_active_subscription",
+    },
+  ],
+  [
+    REASON_ALREADY_PROCESSED,
+    { code: HTTP_CONFLICT, message: "saas.errors.refund.already_processed" },
+  ],
+  [
+    REASON_NO_INVOICE,
+    { code: HTTP_NOT_FOUND, message: "saas.errors.invoice.no_paid_found" },
+  ],
+  [
+    REASON_WINDOW_EXPIRED,
+    { code: HTTP_FORBIDDEN, message: "saas.errors.refund.window_expired" },
+  ],
+]);
 
 export interface EligibleInvoice {
   id: string;
@@ -186,7 +196,7 @@ async function listPaidInvoices(
 function toEligibleInvoice(invoice: Stripe.Invoice): EligibleInvoice {
   const line = invoice.lines?.data?.[0];
   return {
-    id: invoice.id as string,
+    id: requireInvoiceId(invoice),
     amountPaid: invoice.amount_paid,
     refundable: Math.max(
       0,
@@ -335,9 +345,10 @@ export class SaasBillingSelfRefundController extends Controller(
   async getRefundEligibility(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Model(BillingSettingsModel) billingSettingsModel: BillingSettingsModel,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ): Promise<RefundEligibilityResponse> {
+    const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const settings = await loadBillingSettings(billingSettingsModel);
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
@@ -358,15 +369,16 @@ export class SaasBillingSelfRefundController extends Controller(
   async requestSelfRefund(
     @AuthTenantOwner() _user: User,
     @Model(BillingSettingsModel) billingSettingsModel: BillingSettingsModel,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ) {
+    const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const settings = await loadBillingSettings(billingSettingsModel);
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
     const error = eligibility.eligible
       ? null
-      : REASON_TO_ERROR[eligibility.reason ?? ""];
+      : REASON_TO_ERROR.get(eligibility.reason ?? "");
     assert(
       eligibility.eligible,
       error?.code ?? HTTP_BAD_REQUEST,

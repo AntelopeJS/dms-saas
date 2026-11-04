@@ -1,7 +1,4 @@
-import {
-  createRenderer,
-  defineComponent,
-} from "../../frontend-vue/node_modules/vue/index.mjs";
+import { createRenderer, defineComponent } from "./vue-runtime/index.mjs";
 
 /**
  * The Vue the frontend layer's composables import as `vue`. A ref made with
@@ -14,7 +11,7 @@ export {
   nextTick,
   ref,
   toValue,
-} from "../../frontend-vue/node_modules/vue/index.mjs";
+} from "./vue-runtime/index.mjs";
 
 /** A host node of {@link headless}: it draws nothing. */
 interface HeadlessNode {

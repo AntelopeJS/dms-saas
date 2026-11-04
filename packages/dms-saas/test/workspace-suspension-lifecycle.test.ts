@@ -13,6 +13,7 @@ import { useLifecycleConsumer } from "./helpers/lifecycle-consumer";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { insertTenant } from "./helpers/workspaces";
+import { latch } from "./helpers/latch";
 
 useMongoDatabase("workspace-suspension-lifecycle");
 const stripe = useSuiteStripe();
@@ -154,7 +155,7 @@ describe("workspace lifecycle ordering", () => {
   it("keeps access closed while reactivation consumers are pending", async () => {
     const { input, events, stripeUpdate, subscriptions } =
       await workspace("suspended");
-    const delivery = Promise.withResolvers<void>();
+    const delivery = latch();
     consume.mockImplementation(async (message) => {
       await delivery.promise;
       return { receiptId: message.operationId };

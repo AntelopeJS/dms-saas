@@ -138,7 +138,10 @@ describe("subscription domain admission on the production Mongo provider", () =>
     expect(absent.revision).toBeUndefined();
     await expect(model.beginTransition(absent, transition())).rejects.toThrow();
     expect((await model.get(id))?.revision).toBeUndefined();
-    await model.table.get(id).update(JSON.parse('{"revision":null}')).run();
+    await model.table
+      .get(id)
+      .update(Object.fromEntries([["revision", null]]))
+      .run();
     const invalid = await model.get(id);
     if (!invalid) throw new Error("Missing null-revision subscription");
     expect(invalid.revision).toBeNull();

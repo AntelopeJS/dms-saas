@@ -61,14 +61,14 @@ describe("workspace list", () => {
 
   it("totals the listed MRR in the reporting currency", async () => {
     const filter = SaasWorkspacesListController.table.onFilterCallback;
-    const filtered = await filter?.(
-      new Set(),
-      table.options,
-      "table",
-      fromPartial<ComponentFilterContext>({}),
-    );
-
-    expect(filtered?.footer?.summary).toEqual([
+    expect(
+      await filter?.(
+        new Set(),
+        table.options,
+        "table",
+        fromPartial<ComponentFilterContext>({}),
+      ),
+    ).toHaveProperty("footer.summary", [
       expect.objectContaining({
         field: "reportingMrr",
         op: "sum",

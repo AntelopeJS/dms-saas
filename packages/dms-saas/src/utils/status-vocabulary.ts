@@ -83,6 +83,8 @@ export const WORKSPACE_STATUS_ORDER: readonly BillingState[] = [
   "cancelled",
 ];
 
+const TONES_OF_FAMILY = new Map(Object.entries(STATUS_TONES));
+
 /** A family of statuses sharing one vocabulary and one tone table. */
 export type StatusFamily = keyof typeof STATUS_TONES;
 
@@ -130,7 +132,7 @@ export function statusPillDisplay(
   subline: StatusSubline = {},
 ): DefaultDisplays.StatusPillDisplay {
   return new DefaultDisplays.StatusPillDisplay({
-    tones: { ...STATUS_TONES[family] },
+    tones: { ...TONES_OF_FAMILY.get(family) },
     ...subline,
   });
 }

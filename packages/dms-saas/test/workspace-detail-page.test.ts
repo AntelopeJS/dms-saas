@@ -12,9 +12,10 @@ describe("workspace detail page", () => {
   });
 
   it("reads the overview's activity as a flat feed, the tab's by day", () => {
+    const flatFeed: unknown = expect.stringContaining("flat=true");
     expect(findChild(body, "recentActivity")?.options).toMatchObject({
       groupByDay: false,
-      fetchUrl: expect.stringContaining("flat=true"),
+      fetchUrl: flatFeed,
     });
     const activity = findChild(body, "activity")?.options;
     assert(isOptionRecord(activity));
@@ -27,11 +28,11 @@ describe("workspace detail page", () => {
       const options = findChild(body, id)?.options;
       assert(isOptionRecord(options));
       assert(Array.isArray(options.columns));
-      const workspace = options.columns.find(
-        (column) => isOptionRecord(column) && column.id === "workspaceName",
-      );
-
-      expect(workspace).toMatchObject({ isVisible: false });
+      expect(
+        options.columns.find(
+          (column) => isOptionRecord(column) && column.id === "workspaceName",
+        ),
+      ).toMatchObject({ isVisible: false });
       expect(options.views).toBeUndefined();
     },
   );

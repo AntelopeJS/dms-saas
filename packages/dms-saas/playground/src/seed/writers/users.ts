@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { UserModel } from "@antelopejs/interface-dms/auth/db";
+import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
 import { SEED_PASSWORD } from "../data/people";
 import type { SeedUser } from "../data/types";
 import { dayFrom, insertMissing, optionalDayFrom, type SeedRow } from "./rows";
@@ -7,7 +7,7 @@ import { dayFrom, insertMissing, optionalDayFrom, type SeedRow } from "./rows";
 /** Bytes behind a 64-character auth key, the length the DMS mints. */
 const AUTH_KEY_BYTES = 48;
 
-function toUserRow(user: SeedUser): SeedRow {
+function toUserRow(user: SeedUser): SeedRow<User> {
   const createdAt = dayFrom(user.createdOn);
   return {
     _id: user.id,

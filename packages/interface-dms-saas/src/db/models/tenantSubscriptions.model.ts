@@ -19,6 +19,16 @@ const STATUS_PAST_DUE: TenantSubscriptionStatus = "past_due";
 const STATUS_ACTIVE: TenantSubscriptionStatus = "active";
 const STATUS_SUSPENDED: TenantSubscriptionStatus = "suspended";
 
+type KeyedTenantSubscriptionUpdate = [
+  id: string,
+  patch: DeepPartial<TenantSubscription>,
+  options?: ValidateOptions,
+];
+
+type TenantSubscriptionUpdateArguments =
+  | KeyedTenantSubscriptionUpdate
+  | [patch: DeepPartial<TenantSubscription>, options?: ValidateOptions];
+
 /** Data access for tenant subscription lifecycle state. */
 export class TenantSubscriptionModel extends BasicDataModel(
   TenantSubscription,
@@ -67,17 +77,11 @@ export class TenantSubscriptionModel extends BasicDataModel(
     options?: ValidateOptions,
   ): Promise<number>;
   override async update(
-    idOrPatch: string | DeepPartial<TenantSubscription>,
-    patchOrOptions?: DeepPartial<TenantSubscription> | ValidateOptions,
-    options?: ValidateOptions,
+    ...args: TenantSubscriptionUpdateArguments
   ): Promise<number> {
-    const id = isIdArgument(idOrPatch) ? idOrPatch : idOrPatch._id;
-    const patch = isIdArgument(idOrPatch)
-      ? (patchOrOptions as DeepPartial<TenantSubscription>)
-      : idOrPatch;
-    const validation = isIdArgument(idOrPatch)
-      ? options
-      : (patchOrOptions as ValidateOptions | undefined);
+    const [id, patch, validation] = isKeyedUpdate(args)
+      ? args
+      : [args[0]._id, args[0], args[1]];
     if (!id) throw new Error("Subscription identity is required");
     if (
       validation?.validate &&
@@ -441,8 +445,8 @@ export class TenantSubscriptionModel extends BasicDataModel(
   }
 }
 
-function isIdArgument(
-  value: string | DeepPartial<TenantSubscription>,
-): value is string {
-  return typeof value === "string";
+function isKeyedUpdate(
+  args: TenantSubscriptionUpdateArguments,
+): args is KeyedTenantSubscriptionUpdate {
+  return typeof args[0] === "string";
 }

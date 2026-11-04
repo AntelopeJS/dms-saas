@@ -14,6 +14,15 @@ export const featuresTableName = "features";
 export const FEATURE_VALUE_TYPES = ["boolean", "number", "string"] as const;
 export type FeatureValueType = (typeof FEATURE_VALUE_TYPES)[number];
 
+/**
+ * What a plan states for a feature: a switch, a limit or a label. `null`
+ * states nothing, as a display-only feature the plan does not grant.
+ */
+export type FeatureValue = boolean | number | string | null;
+
+/** Feature values of a plan, by feature id. */
+export type FeatureValues = Record<string, FeatureValue>;
+
 export const FEATURE_DEFAULT_ORDER = 0;
 
 /** Locale a localized feature text falls back to when the reader's is missing. */
@@ -47,7 +56,7 @@ export class Feature extends Table.with(LocalizationModifier) {
   declare valueType: FeatureValueType;
 
   @Field("any")
-  declare defaultValue: unknown;
+  declare defaultValue: FeatureValue;
 
   @Localized({ fallbackLocale: FEATURE_FALLBACK_LOCALE })
   @Field("string")

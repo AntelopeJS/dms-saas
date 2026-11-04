@@ -186,7 +186,7 @@ function insertedTenantIds(
   if (!writesTenants) return [];
   return stages
     .filter((stage) => stage.stage === "insert")
-    .flatMap((stage) => stage.args.flat())
+    .flatMap((stage): unknown[] => stage.args.flat())
     .map((row) => TenantModel.fromDatabase(row)?._id);
 }
 
@@ -208,7 +208,7 @@ export function onTenantInserted(
  * workspace joins the inventory only while its creation intent still gates it,
  * then handing it to the {@link onTenantInserted} handlers.
  */
-const gatedQueries: typeof queries = {
+const gatedQueries: Pick<typeof queries, keyof typeof mongoQueries> = {
   ...mongoQueries,
   RunQuery: async (stages) => {
     const tenantIds = insertedTenantIds(stages);
@@ -217,7 +217,7 @@ const gatedQueries: typeof queries = {
         false,
       );
     }
-    const result = await mongoQueries.RunQuery(stages);
+    const result: unknown = await mongoQueries.RunQuery(stages);
     for (const tenantId of tenantIds)
       for (const handler of tenantInsertedHandlers)
         await handler(tenantId ?? "");

@@ -39,6 +39,16 @@ export function appendSegmentCountPoint(
     .slice(-SEGMENT_COUNT_HISTORY_DAYS);
 }
 
+type KeyedSegmentUpdate = [
+  id: string,
+  patch: DeepPartial<Segment>,
+  options?: ValidateOptions,
+];
+
+type SegmentUpdateArguments =
+  | KeyedSegmentUpdate
+  | [patch: DeepPartial<Segment>, options?: ValidateOptions];
+
 /** Data access for reusable audience segments. */
 export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
   /** Every edit invalidates computations based on the previous conditions. */
@@ -51,20 +61,12 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
     patch: DeepPartial<Segment>,
     options?: ValidateOptions,
   ): Promise<number>;
-  async update(
-    idOrPatch: string | DeepPartial<Segment>,
-    patchOrOptions?: DeepPartial<Segment> | ValidateOptions,
-    options?: ValidateOptions,
-  ): Promise<number> {
-    const id = isIdArgument(idOrPatch) ? idOrPatch : idOrPatch._id;
+  async update(...args: SegmentUpdateArguments): Promise<number> {
+    const [id, patch, options] = isKeyedUpdate(args)
+      ? args
+      : [args[0]._id, args[0], args[1]];
     if (!id) throw new Error("Segment identity is required");
-    return this.updateRevision(
-      id,
-      isIdArgument(idOrPatch)
-        ? (patchOrOptions as DeepPartial<Segment>)
-        : idOrPatch,
-      isIdArgument(idOrPatch) ? options : (patchOrOptions as ValidateOptions),
-    );
+    return this.updateRevision(id, patch, options);
   }
 
   /**
@@ -143,6 +145,8 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
   }
 }
 
-function isIdArgument(value: string | DeepPartial<Segment>): value is string {
-  return typeof value === "string";
+function isKeyedUpdate(
+  args: SegmentUpdateArguments,
+): args is KeyedSegmentUpdate {
+  return typeof args[0] === "string";
 }

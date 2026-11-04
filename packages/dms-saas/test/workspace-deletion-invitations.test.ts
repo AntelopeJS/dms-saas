@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { TenantSubscriptionModel } from "../src/db";
 import { requestWorkspaceDeletion } from "../src/workspaces/deletion";
 import { useMongoDatabase } from "./helpers/mongo";
+import { ANY_DATE } from "./helpers/asymmetric-matchers";
 
 useMongoDatabase("workspace-deletion-invitations");
 
@@ -82,7 +83,7 @@ describe("workspace deletion", () => {
     ).resolves.toMatchObject({
       status: "cancelled",
       deletionRequestedBy: "owner",
-      deletionRequestedAt: expect.any(Date),
+      deletionRequestedAt: ANY_DATE,
     });
   });
 });

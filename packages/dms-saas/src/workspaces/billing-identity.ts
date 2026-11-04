@@ -1,10 +1,10 @@
 import { assert } from "@antelopejs/interface-api-util";
-import type { TenantCustomerType } from "../db";
+import { TENANT_CUSTOMER_TYPES, type TenantCustomerType } from "../db";
 import type { CustomerBillingAddress } from "../stripe";
 
 const HTTP_BAD_REQUEST = 400;
 const BUSINESS_CUSTOMER_TYPE: TenantCustomerType = "business";
-const CUSTOMER_TYPES = new Set<string>(["individual", "business"]);
+const CUSTOMER_TYPES = new Set<string>(TENANT_CUSTOMER_TYPES);
 const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -101,14 +101,17 @@ function normalizeAddress(
 export function parseBillingIdentity(
   identity: BillingIdentityInput,
 ): BillingIdentity {
+  const customerType = TENANT_CUSTOMER_TYPES.find(
+    (type) => type === identity.customerType,
+  );
   assert(
-    findMissingBillingIdentityFields(identity).length === 0,
+    customerType && findMissingBillingIdentityFields(identity).length === 0,
     HTTP_BAD_REQUEST,
     "saas.errors.billing.identity_incomplete",
   );
   const business = isBusiness(identity);
   return {
-    customerType: identity.customerType as TenantCustomerType,
+    customerType,
     companyName: business ? trimmed(identity.companyName) : null,
     vatNumber: business ? trimmed(identity.vatNumber) : null,
     billingEmail: trimmed(identity.billingEmail) ?? "",

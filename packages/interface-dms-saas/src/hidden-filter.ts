@@ -18,7 +18,5 @@ const STRING_TYPE = new DefaultDataTypes.StringType();
  * The decorator targets the controller prototype, not its field values.
  */
 export function HiddenStringFilter(): PropertyDecorator {
-  return Filter<Record<string, unknown>>(
-    STRING_TYPE.filter.bind(STRING_TYPE),
-  ) as PropertyDecorator;
+  return Filter<{}>(STRING_TYPE.filter.bind(STRING_TYPE));
 }

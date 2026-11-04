@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useBillingStatus } from "../frontend-vue/app/composables/useBillingStatus";
 import { useMountedData } from "../frontend-vue/app/composables/useMountedData";
 import { useNextInvoice } from "../frontend-vue/app/composables/useNextInvoice";
-import type { ApiDataRequest, UseApiDataOptions } from "./helpers/api-data";
-import { mountComposable, ref } from "./helpers/frontend-vue";
+import type { UseApiDataOptions } from "./helpers/api-data";
+import type { ApiDataRequest } from "./helpers/api-data-request";
+import { mountComposable } from "./helpers/frontend-vue";
+import { ref } from "./helpers/vue-runtime/index.mjs";
 
 interface ApiDataCall {
   url: ApiDataRequest;

@@ -10,6 +10,7 @@ import {
   UpdateTime,
 } from "@antelopejs/interface-database-decorators";
 import { CORE_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
+import type { FeatureValue } from "./features.table";
 
 export const plansTableName = "plans";
 
@@ -30,7 +31,7 @@ export type PlanBillingMode = (typeof PLAN_BILLING_MODES)[number];
 
 export interface PlanFeatureValue {
   featureId: string;
-  value: unknown;
+  value: FeatureValue;
 }
 
 /** Plan fields a Stripe product carries, in {@link PLAN_FALLBACK_LOCALE}. */

@@ -11,7 +11,7 @@ import {
 const TOTAL = 112_700;
 const ISSUER = { _id: "user_1", name: "Camille Laurent", email: "c@x.test" };
 
-function body(overrides: Record<string, unknown> = {}) {
+function body(overrides: Record<string, string | number | undefined> = {}) {
   return issueCreditNoteBodySchema.parse({
     invoiceId: "in_row",
     amount: 21_240,

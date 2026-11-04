@@ -5,6 +5,6 @@
  */
 export type {
   ApiDataHandler,
-  ApiDataRequest,
   UseApiDataOptions,
 } from "../../node_modules/@antelopejs/dms/frontend-vue/layers/dms-core/app/composables/auth/useApiData";
+export type { ApiDataRequest } from "./api-data-request";

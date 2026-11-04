@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { HTTPResult } from "@antelopejs/interface-api";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { fromPartial } from "@total-typescript/shoehorn";
 import Stripe from "stripe";
@@ -15,7 +14,6 @@ import { readScheduledCancellation } from "../src/stripe/subscription-cancellati
 import {
   isPayableInvoice,
   SaasBillingPayInvoiceController,
-  toPaymentFailure,
 } from "../src/routes/tenant/billing-pay-invoice";
 import { applyOwnerUpgrade } from "../src/routes/tenant/tenant-plan-ops";
 import { SaasTenantPlanCancellationController } from "../src/routes/tenant/tenant-plan-cancellation";
@@ -257,15 +255,10 @@ describe("pay invoice", () => {
     overrides: Partial<Invoice> = {},
     patch: Partial<TenantSubscription> = {},
   ) {
-    const { tenantId, owner } = await seedWorkspace(patch);
+    const { tenantId, owner, request } = await seedWorkspace(patch);
     const row = invoice({ _id: randomUUID(), ...overrides });
     await GetModel(InvoiceModel, tenantId).insert(row);
-    return controller.payInvoice(
-      owner,
-      row._id,
-      GetModel(InvoiceModel, tenantId),
-      GetModel(TenantSubscriptionModel, tenantId),
-    );
+    return controller.payInvoice(owner, row._id, request);
   }
 
   it("pays an open invoice only", () => {
@@ -297,21 +290,24 @@ describe("pay invoice", () => {
     });
   });
 
-  it("tells a declined card from Stripe being unreachable", () => {
-    const declined = toPaymentFailure(
+  it.each([
+    [
+      "a declined card",
       new Stripe.errors.StripeCardError({ type: "card_error" }),
-    );
-    const refused = toPaymentFailure(
+      402,
+    ],
+    [
+      "a refused request",
       new Stripe.errors.StripeInvalidRequestError({
         type: "invalid_request_error",
       }),
-    );
-    const down = toPaymentFailure(new Error("socket hang up"));
+      409,
+    ],
+    ["Stripe being unreachable", new Error("socket hang up"), 503],
+  ])("answers %s with %d", async (_failure, thrown, status) => {
+    api.payInvoice.mockRejectedValueOnce(thrown);
 
-    expect(declined).toBeInstanceOf(HTTPResult);
-    expect([declined.status, refused.status, down.status]).toEqual([
-      402, 409, 503,
-    ]);
+    await expect(pay()).rejects.toMatchObject({ status });
   });
 });
 
@@ -323,8 +319,8 @@ describe("subscription cancellation", () => {
     return {
       model,
       tenantId,
-      cancel: () => controller.cancelAtPeriodEnd(owner, request, model),
-      keep: () => controller.keepSubscription(owner, request, model),
+      cancel: () => controller.cancelAtPeriodEnd(owner, request),
+      keep: () => controller.keepSubscription(owner, request),
     };
   }
 

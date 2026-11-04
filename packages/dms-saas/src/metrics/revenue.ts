@@ -71,10 +71,13 @@ const CREDITED_SERIES = "$saas.dashboard.paid_invoices.credited";
 const CREDIT_NOTE_DOCUMENT = "credit_note";
 /** What a `PeriodSelector` sends as `comparison` when none is chosen. */
 const NO_COMPARISON = "none";
-const COMPARISON_SERIES: Record<string, string> = {
-  "previous-period": "$saas.dashboard.paid_invoices.collected_previous_period",
-  "previous-year": "$saas.dashboard.paid_invoices.collected_previous_year",
-};
+const COMPARISON_SERIES = new Map([
+  [
+    "previous-period",
+    "$saas.dashboard.paid_invoices.collected_previous_period",
+  ],
+  ["previous-year", "$saas.dashboard.paid_invoices.collected_previous_year"],
+]);
 /** A custom comparison window has no name of its own. */
 const CUSTOM_COMPARISON_SERIES =
   "$saas.dashboard.paid_invoices.collected_compared";
@@ -204,7 +207,7 @@ function alignedSeriesOf(
 
 function comparisonSeriesName(comparison?: string | null): string {
   return isString(comparison)
-    ? (COMPARISON_SERIES[comparison] ?? CUSTOM_COMPARISON_SERIES)
+    ? (COMPARISON_SERIES.get(comparison) ?? CUSTOM_COMPARISON_SERIES)
     : CUSTOM_COMPARISON_SERIES;
 }
 

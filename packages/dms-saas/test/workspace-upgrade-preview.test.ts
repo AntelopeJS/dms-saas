@@ -133,14 +133,15 @@ describe("immediate upgrade preview", () => {
 
     await previewManualUpgrade(tenantId, "plan_enterprise");
 
+    const proratedItems: unknown = expect.objectContaining({
+      items: [{ id: "si_1", price: "price_enterprise" }],
+      proration_behavior: "create_prorations",
+    });
     expect(createPreview).toHaveBeenCalledWith(
       expect.objectContaining({
         customer: "cus_1",
         subscription: "sub_1",
-        subscription_details: expect.objectContaining({
-          items: [{ id: "si_1", price: "price_enterprise" }],
-          proration_behavior: "create_prorations",
-        }),
+        subscription_details: proratedItems,
       }),
     );
   });

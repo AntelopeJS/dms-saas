@@ -459,15 +459,18 @@ describe("platform role changes", () => {
         items: [{ id: "si_seat", quantity }],
         proration_behavior: "create_prorations",
       },
-      {
-        idempotencyKey: expect.stringMatching(
-          new RegExp(
-            `^seat-sync:platform-role:${tenantId}:${member._id}:\\d+$`,
-          ),
-        ),
-      },
     ];
-    expect(update.mock.calls).toEqual([seatSync(1), seatSync(2)]);
+    const idempotencyKey = new RegExp(
+      `^seat-sync:platform-role:${tenantId}:${member._id}:\\d+$`,
+    );
+    expect(update.mock.calls.map(([id, params]) => [id, params])).toEqual([
+      seatSync(1),
+      seatSync(2),
+    ]);
+    for (const [, , options] of update.mock.calls) {
+      expect(Object.keys(options ?? {})).toEqual(["idempotencyKey"]);
+      expect(options?.idempotencyKey).toMatch(idempotencyKey);
+    }
     expect(
       sendToUser.mock.calls.map(([userId, data]) => [
         userId,

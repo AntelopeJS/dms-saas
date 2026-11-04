@@ -39,7 +39,7 @@ async function platformSources(limit: number): Promise<ActivitySources> {
       .table.orderBy("createdAt", "desc")
       .slice(0, depth)
       .pluck("_id", "name", "createdAt")
-      .run() as Promise<ActivityWorkspace[]>,
+      .run(),
   ]);
   const names = await workspaceNames([
     ...documents.map((document) => getRowInstance(document)),

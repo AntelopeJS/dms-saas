@@ -1,6 +1,7 @@
 import type {
   Feature,
   FeatureModel,
+  FeatureValues,
   FeatureValueType,
   Plan,
   PlanInterval,
@@ -33,7 +34,7 @@ export interface TenantPlanView {
   interval: PlanInterval;
   order: number;
   checkoutAvailable: boolean;
-  featureValues: Record<string, unknown>;
+  featureValues: FeatureValues;
 }
 
 /** Comparison payload containing ordered plans and their feature catalogue. */

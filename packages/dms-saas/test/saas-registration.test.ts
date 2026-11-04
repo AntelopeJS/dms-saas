@@ -72,7 +72,7 @@ describe("resolveRegistrationPaymentPolicy", () => {
     expect(resolveRegistrationPaymentPolicy({})).toBe("required");
     expect(
       resolveRegistrationPaymentPolicy({
-        registrationPaymentMethod: "sometimes" as never,
+        registrationPaymentMethod: "sometimes",
       }),
     ).toBe("required");
   });

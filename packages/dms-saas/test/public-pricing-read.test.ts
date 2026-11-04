@@ -1,11 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePublicPricing } from "../frontend-vue/app/composables/usePublicPricing";
-import type {
-  ApiDataHandler,
-  ApiDataRequest,
-  UseApiDataOptions,
-} from "./helpers/api-data";
-import { toValue } from "./helpers/frontend-vue";
+import type { ApiDataHandler, UseApiDataOptions } from "./helpers/api-data";
+import type { ApiDataRequest } from "./helpers/api-data-request";
+import { toValue } from "./helpers/vue-runtime/index.mjs";
 
 interface FetchOptions {
   signal: AbortSignal;

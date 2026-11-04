@@ -1,17 +1,17 @@
 <div align="center">
 
-# @antelopejs/dms-saas
+# `@antelopejs/dms-saas`
 
-<a href="https://www.npmjs.com/package/@antelopejs/dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
-<a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000"></a>
-<a href="https://discord.gg/g4pFt6eXqu"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000"></a>
-<a href="https://dms.antelopejs.com/docs/modules/saas"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000"></a>
+<a href="https://www.npmjs.com/package/@antelopejs/dms-saas"><img alt="npm" src="https://img.shields.io/npm/v/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
+<a href="./LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@antelopejs/dms-saas?style=for-the-badge&labelColor=000000&color=000000" data-illustration></a>
+<a href="https://discord.gg/g4pFt6eXqu"><img alt="Discord" src="https://img.shields.io/badge/Discord-18181B?logo=discord&style=for-the-badge&color=000000" data-illustration></a>
+<a href="https://dms.antelopejs.com/docs/modules/saas"><img alt="Documentation" src="https://img.shields.io/badge/Docs-18181B?style=for-the-badge&color=000000" data-illustration></a>
 
 Sign-up, plans, Stripe billing and a back office for a multi-tenant [AntelopeJS DMS](https://github.com/AntelopeJS/dms).
 
 </div>
 
-![The SaaS back office dashboard: what needs attention, recurring revenue and workspaces by status](./packages/dms-saas/docs/images/dashboard.png)
+![The SaaS dashboard of the Helio demo: what needs attention, recurring revenue, paid invoices and workspaces by status](./packages/dms-saas/docs/images/captures/dashboard.webp)
 
 ## What it does
 
@@ -23,7 +23,7 @@ Sign-up, plans, Stripe billing and a back office for a multi-tenant [AntelopeJS 
 
 ## Install
 
-Run the AntelopeJS CLI from the root of a project that loads `@antelopejs/dms` in multi-tenant mode, with an e-mail module and a file storage:
+Run the AntelopeJS CLI from the root of a project that loads `@antelopejs/dms` in multi-tenant mode, with a database module, an e-mail module and a file storage:
 
 ```bash
 ajs project modules add @antelopejs/dms-saas
@@ -33,8 +33,10 @@ ajs project modules add @antelopejs/dms-saas
 
 Give the module its Stripe keys from the environment:
 
-```ts
+```ts fragment
 // antelope.config.ts
+import { defineConfig } from "@antelopejs/interface-core/config";
+
 export default defineConfig({
   name: "my-saas",
   envOverrides: {
@@ -44,7 +46,7 @@ export default defineConfig({
   },
   modules: {
     "dms-saas": {
-      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.6.0" },
+      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.9.0" },
       config: {
         stripe: {
           secretKey: "sk_test_placeholder",
@@ -58,26 +60,20 @@ export default defineConfig({
 });
 ```
 
-Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, set `DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize` in the frontend server's environment, and publish a free plan in **Modules › SaaS › Plans**: registration opens every workspace on it. With placeholder keys the module still runs, and the Stripe-backed blocks say so.
+Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and publish a free plan in **Modules › SaaS › Plans**. Registration opens every workspace on that plan. With placeholder keys, the module still runs, and the blocks that need Stripe say so. For a deployment without Stripe, also set `registration.paymentMethod` to `none`, or the registration screen keeps its card step.
 
 ## Compatibility
 
-| Package | Version |
-| --- | --- |
-| `@antelopejs/dms` | `>=0.13.1 <1.0.0` |
-| `@antelopejs/interface-dms` | `>=0.9.0 <1.0.0` |
-| `@antelopejs/dms-frontend` (renderer) | `>=0.9.1 <0.10.0` |
-| `@antelopejs/interface-dms-saas` | `>=0.6.0 <0.7.0` |
-| Stripe API version | `2026-08-26.dahlia` |
+The module also needs a DMS backend in a release that implements the `@antelopejs/interface-dms` range in the [module README compatibility block](packages/dms-saas/README.md#compatibility), and the `@antelopejs/dms-frontend` renderer in the range its frontend module declares in `engines["@antelopejs/dms-frontend"]` of `packages/dms-saas/frontend-vue/package.json`. The `ajs dms` CLI refuses to build it with a renderer outside that range.
 
-Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
+The module calls Stripe with the API version `2026-08-26.dahlia`. Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
 
 ## Packages
 
 | Package | Directory | Role |
 | --- | --- | --- |
 | [`@antelopejs/dms-saas`](https://www.npmjs.com/package/@antelopejs/dms-saas) | [`packages/dms-saas`](./packages/dms-saas) | The module: public screens, plans, billing, workspace settings and back office. |
-| [`@antelopejs/interface-dms-saas`](https://www.npmjs.com/package/@antelopejs/interface-dms-saas) | [`packages/interface-dms-saas`](./packages/interface-dms-saas) | The extension points modules use to build on dms-saas. |
+| [`@antelopejs/interface-dms-saas`](https://www.npmjs.com/package/@antelopejs/interface-dms-saas) | [`packages/interface-dms-saas`](./packages/interface-dms-saas) | The extension points modules use to build on `@antelopejs/dms-saas`. |
 
 ## Documentation
 
@@ -95,29 +91,29 @@ The guide's sources live in [`packages/dms-saas/docs`](./packages/dms-saas/docs)
 
 ## Contributing
 
-Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. One install from the repository root includes the backend, interface and shipped Vue frontend. The root lockfile covers this workspace; the frontend retains its lockfile for standalone consumers. The playground remains independent: its private dependencies require registry access and are deliberately not installed by CI.
+Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. One install from the repository root covers the module, the interface and the shipped Vue frontend. The root lockfile covers this workspace, and the frontend keeps its own lockfile for standalone consumers. The playground is not a workspace package. It has its own lockfile, and CI does not install it.
 
-The playground connects to MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, in the environment or in `packages/dms-saas/playground/.env`, and seeds a data set on its first start (sign in as `admin@example.com` / `Playground-Admin-1!`).
+The playground connects to MongoDB at `mongodb://localhost:27017` unless `MONGO_URL` is set, in the environment or in `packages/dms-saas/playground/.env`, and seeds a data set on its first start (sign in as `admin@example.com` with the password `Playground-Admin-1!`).
 
 ```bash
 pnpm install --frozen-lockfile
-# Only for local playground development, with private registry access:
+pnpm build
+# Only for local playground development:
 pnpm --dir packages/dms-saas/playground install --frozen-lockfile --ignore-workspace
 cd packages/dms-saas
-pnpm build
 pnpm dev            # playground backend on http://localhost:5010
 pnpm frontend:dev   # dashboard on http://localhost:3001, in a second terminal
-pnpm --dir ../.. run checks  # typecheck, lint, format, knip, tests, size, ratchet
+pnpm --dir ../.. run checks  # typecheck, lint, format, knip, tests, size, suppressions, sync
 pnpm test:unit     # the Vitest suite, against an in-memory MongoDB
-pnpm test:frontend  # builds the client, SSR and e-mail bundles in a temporary workspace and typechecks them
+pnpm test:frontend  # builds the client, SSR and e-mail bundles with the DMS frontend source and typechecks them
 ```
 
 <details>
 <summary>Repository notes</summary>
 
-- The module registers `frontend-vue/dms.frontend.ts` with the Vue 3 renderer. It keeps the `DmsSaas*` component names, the `auth/no-workspace` page override, client-only displays, global guards and the English and French catalogs. Public module configuration is exposed under `public.dmsSaas`; Stripe secrets never reach the frontend.
-- Frontend source verification runs through `@antelopejs/dms-frontend` and the DMS frontend source shipped in the published `@antelopejs/dms` package; no sibling checkout is needed.
-- Sign-in with GitHub and Google in the playground reads `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: a provider's button appears once both of its values are set, with `http://localhost:3001/auth/oauth/<provider>/callback` as its callback URL.
+- The module registers its `frontend-vue` layer with the Vue renderer. The layer keeps the `DmsSaas*` component names, the `auth/no-workspace` page override, client-only displays, global guards and the English and French catalogs. The public module configuration is published under `public.dmsSaas`. The Stripe secret key and webhook secret never reach the frontend.
+- Frontend source verification runs through `@antelopejs/dms-frontend` and the DMS frontend source shipped in the published `@antelopejs/dms` package. It needs no sibling checkout.
+- Sign-in with GitHub and Google in the playground reads `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The button of a provider appears once both of its values are set, with `http://localhost:3001/auth/oauth/<provider>/callback` as its callback URL.
 - The module implements the interface, so it depends on it through `>=<interface version> <0.<minor + 1>.0`. Release the interface on its own workflow before the module.
 
 </details>

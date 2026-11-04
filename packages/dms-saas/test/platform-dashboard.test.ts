@@ -358,6 +358,27 @@ describe("paid invoices chart", () => {
     expect(comparison?.data.at(-1)).toEqual({ x: "2026-10-07", y: 5 });
   });
 
+  it.each(["constructor", "toString", "__proto__", "hasOwnProperty"])(
+    "names a custom comparison's series with the custom label when the mode is %s",
+    (mode) => {
+      const previous = {
+        from: new Date(NOW.getTime() - 59 * DAY_MS),
+        to: new Date(NOW.getTime() - 30 * DAY_MS),
+      };
+      const chart = paidInvoicesChart(
+        [document({})],
+        range,
+        previous,
+        "EUR",
+        mode,
+      );
+
+      expect(chart.comparisonSeries?.[0]?.name).toBe(
+        "$saas.dashboard.paid_invoices.collected_compared",
+      );
+    },
+  );
+
   it("compares with the same days a year before", () => {
     const lastYear = {
       from: new Date("2025-09-08T12:00:00Z"),
@@ -406,12 +427,15 @@ describe("paid invoices chart", () => {
   });
 
   it("shows no change and no comparison series without a comparison", () => {
-    const chart = paidInvoicesChart([document({})], range, null, "EUR");
+    const { series, ...figures } = paidInvoicesChart(
+      [document({})],
+      range,
+      null,
+      "EUR",
+    );
 
-    expect(chart).toEqual({
-      value: 10,
-      series: expect.any(Array),
-    });
+    expect(figures).toEqual({ value: 10 });
+    expect(series).toEqual(expect.any(Array));
   });
 });
 
@@ -484,11 +508,14 @@ describe("comparison window", () => {
     });
 
     query.set("comparison", "previous-year");
-    expect(churnKpi(rows, readPeriodQuery(query), mrr)).toEqual({
-      value: 20,
-      previousValue: expect.closeTo(100 / 9),
-      delta: expect.closeTo(80),
-    });
+    const { previousValue, delta, ...figures } = churnKpi(
+      rows,
+      readPeriodQuery(query),
+      mrr,
+    );
+    expect(figures).toEqual({ value: 20 });
+    expect(previousValue).toBeCloseTo(100 / 9);
+    expect(delta).toBeCloseTo(80);
     query.set("comparison", "none");
     expect(churnKpi(rows, readPeriodQuery(query), mrr)).toEqual({ value: 20 });
   });
