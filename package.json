@@ -32,17 +32,14 @@
   "pnpm": {
     "overrides": {
       "@antelopejs/interface-database": "0.3.0",
-      "@antelopejs/mongodb": "file:.campaign/tgz/antelopejs-mongodb-db4b449.tgz",
-      "@antelopejs/interface-database-decorators": "file:.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz",
-      "@antelopejs/interface-data-api": "file:.campaign/tgz/antelopejs-interface-data-api-bca1ca6.tgz",
-      "@antelopejs/interface-api": "file:.campaign/tgz/antelopejs-interface-api-015a93a.tgz",
-      "@antelopejs/interface-api-util": "file:.campaign/tgz/antelopejs-interface-api-util-639f38b.tgz",
+      "@antelopejs/interface-database-decorators": "0.2.0",
+      "@antelopejs/interface-data-api": "0.6.0",
+      "@antelopejs/interface-api": "0.2.0",
+      "@antelopejs/interface-api-util": "0.3.0",
       "@antelopejs/interface-dms": "file:.campaign/tgz/antelopejs-interface-dms-14e671d.tgz",
       "@antelopejs/dms": "file:.campaign/tgz/antelopejs-dms-14e671d.tgz",
       "@antelopejs/interface-dms-automation": "file:.campaign/tgz/antelopejs-interface-dms-automation-b4bc5d2.tgz",
-      "@antelopejs/dms-frontend": "file:.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz",
-      "@antelopejs/interface-core": "file:.campaign/tgz/antelopejs-interface-core-f7df541.tgz",
-      "@antelopejs/core": "file:.campaign/tgz/antelopejs-core-184eb90.tgz"
+      "@antelopejs/interface-core": "0.4.0"
     }
   },
   "antelopeJs": {
