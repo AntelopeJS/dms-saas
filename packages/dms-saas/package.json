@@ -60,12 +60,12 @@
     "knip:all": "knip"
   },
   "dependencies": {
-    "@antelopejs/interface-api": "file:../../.campaign/tgz/antelopejs-interface-api-015a93a.tgz",
-    "@antelopejs/interface-api-util": "file:../../.campaign/tgz/antelopejs-interface-api-util-639f38b.tgz",
-    "@antelopejs/interface-core": "file:../../.campaign/tgz/antelopejs-interface-core-f7df541.tgz",
-    "@antelopejs/interface-data-api": "file:../../.campaign/tgz/antelopejs-interface-data-api-bca1ca6.tgz",
+    "@antelopejs/interface-api": ">=0.2.0 <1.0.0",
+    "@antelopejs/interface-api-util": ">=0.3.0 <1.0.0",
+    "@antelopejs/interface-core": ">=0.4.0 <1.0.0",
+    "@antelopejs/interface-data-api": ">=0.6.0 <1.0.0",
     "@antelopejs/interface-database": ">=0.3.0 <1.0.0",
-    "@antelopejs/interface-database-decorators": "file:../../.campaign/tgz/antelopejs-interface-database-decorators-1234214.tgz",
+    "@antelopejs/interface-database-decorators": ">=0.2.0 <1.0.0",
     "@antelopejs/interface-dms": "file:../../.campaign/tgz/antelopejs-interface-dms-14e671d.tgz",
     "@antelopejs/interface-dms-saas": "workspace:^",
     "node-cron": "^4.2.1",
@@ -73,10 +73,10 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@antelopejs/core": "file:../../.campaign/tgz/antelopejs-core-184eb90.tgz",
+    "@antelopejs/core": "1.20.0",
     "@antelopejs/dms": "file:../../.campaign/tgz/antelopejs-dms-14e671d.tgz",
-    "@antelopejs/dms-frontend": "file:../../.campaign/tgz/antelopejs-dms-frontend-ee4e931.tgz",
-    "@antelopejs/mongodb": "file:../../.campaign/tgz/antelopejs-mongodb-db4b449.tgz",
+    "@antelopejs/dms-frontend": ">=0.10.0 <1.0.0",
+    "@antelopejs/mongodb": "1.6.2",
     "@total-typescript/shoehorn": "^0.1.2",
     "@types/node": "^24.0.0",
     "@vitejs/plugin-vue": "^6.0.10",
