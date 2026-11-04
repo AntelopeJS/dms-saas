@@ -18,7 +18,7 @@ import {
   GetUpcomingInvoicePreview,
   RecomputeTenantBillingState,
 } from "@antelopejs/interface-dms-saas/billing";
-import { CreditNoteModel, InvoiceModel, StripeWebhookEventModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
+import { CreditNoteModel, InvoiceModel, StripeWebhookEventModel, TenantBillingStateModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
 
 const AUTH_KEY_BYTES = 32;
 const HOUR_MS = 3_600_000;
@@ -77,6 +77,11 @@ interface CreditNoteBody {
   status: "issued" | "void";
   type: "credit_to_balance" | "refund";
   refunded: boolean;
+}
+
+interface AgeBody {
+  tenantId: string;
+  daysAgo: number;
 }
 
 interface TenantBody {
@@ -307,6 +312,15 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
       metadata: {},
       createdAt: now,
       updatedAt: now,
+    });
+    return { ok: true };
+  }
+
+  /** Moves the date a workspace entered its billing state into the past, as time passing would. */
+  @Post("/age-state")
+  async ageState(@JSONBody() input: AgeBody) {
+    await GetModel(TenantBillingStateModel).update(input.tenantId, {
+      stateSince: new Date(Date.now() - input.daysAgo * DAY_MS),
     });
     return { ok: true };
   }

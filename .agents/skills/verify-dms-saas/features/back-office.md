@@ -90,6 +90,7 @@ The platform owner's dashboard: the headline figures, the workspaces by status a
 - `the-invoice-figures-count-the-right-statuses-and-periods`: awaiting payment, collected this month, credited this month and written off this year each read their own invoices.
 - `segment-money-columns-count-only-paying-workspaces-and-a-twelfth-of-a-yearly-price`: owned_mrr is 0 for a trial, a gift and a suspended workspace, and a yearly plan counts a twelfth of its price.
 - `plans-by-mrr-ignores-trialing-workspaces-and-the-change-plan-list-fits-the-workspace`: a trialing workspace on a plan adds nothing to Plans by MRR, and the plans a workspace may switch to leave out those too small for its seats and those for the other audience.
+- `the-past-due-view-needs-more-than-7-days-and-an-operator-created-workspace-has-an-owner-who-never-joined`: a workspace past due for 8 days is in the Past due for more than 7 days view and one for 6 days is not, and a workspace an operator created for an unknown e-mail counts under Owner never joined.
 
 ## How to get to it (user POV)
 
@@ -120,7 +121,7 @@ dms-control journey "$RUN" back-office
 | 4.workspaces.md and 3.dashboard.md complimentary accesses ending (7 days) | complimentary journey: 5 days is flagged and listed, 10 days is not |
 | 3.dashboard.md Revenue churn after a suspension | churn journey: past due, suspended, cancelled in turn |
 | 7.invoices.md a reason is required, amounts, request id, the three modes and six reasons | credit-note validation journey |
-| 4.workspaces.md list order, views and the MRR over 500 boundary | list journey: 501 in, 500 and 499 out, largest MRR first, view counts; Not driven: Past due for more than 7 days and Owner never joined (the module sets the state date itself and a never-joined owner needs an operator-created workspace) |
+| 4.workspaces.md list order, views and the MRR over 500 boundary | list journey: 501 in, 500 and 499 out, largest MRR first, view counts; Past due for more than 7 days (6 days out, 8 days in, the state date aged in the database) and Owner never joined (a workspace the operator created for an unknown owner) are driven, with the create-workspace form validated field by field |
 | 7.invoices.md the four figures and the credit note split | figures journey: awaiting, collected, credited, written off, balance credit versus card refund |
 | 5.users-and-segments.md MRR and Paying conditions (a twelfth of a yearly price, 0 for trial, gift, suspended) | segment-money journey |
 | 3.dashboard.md Plans by MRR counts only paying workspaces; 2.workspace-settings.md Change plan list | plans-by-mrr journey; the Change plan dialog is checked through the plan list's size and audience fields, the filtering itself is client-side |

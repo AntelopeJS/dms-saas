@@ -162,4 +162,45 @@ export const listRuleJourneys = [
       ]);
     },
   },
+  {
+    id: "the-past-due-view-needs-more-than-7-days-and-an-operator-created-workspace-has-an-owner-who-never-joined",
+    title: "a workspace past due for 8 days is in the Past due for more than 7 days view and one for 6 days is not, and a workspace an operator created for an unknown e-mail counts under Owner never joined",
+    entryPoint: "Customers › Workspaces, POST /api/saas/workspaces/create",
+    async run(/** @type {Ctx} */ ctx) {
+      await createPlan(ctx, "free", { order: 0 });
+      const pro = await createPlan(ctx, "pro", { price: 50, order: 1 });
+      const fresh = await register(ctx, "late-six", { workspaceName: "Late Six" });
+      const old = await register(ctx, "late-eight", { workspaceName: "Late Eight" });
+      await put(ctx, fresh.tenantId, pro.id, "past_due");
+      await put(ctx, old.tenantId, pro.id, "past_due");
+      await fixture(ctx, "age the six-day workspace", "POST", "/age-state", { tenantId: fresh.tenantId, daysAgo: 6 });
+      await fixture(ctx, "age the eight-day workspace", "POST", "/age-state", { tenantId: old.tenantId, daysAgo: 8 });
+      const created = await saas(ctx, "create a workspace for an owner who never joined", "POST", "/workspaces/create", { body: { name: "Waiting Co", planId: pro.id, ownerEmail: ctx.email("waiting-owner"), access: "complimentary", freeUntil: new Date(Date.now() + 30 * 86_400_000).toISOString() } });
+      const noName = await saas(ctx, "create without a name", "POST", "/workspaces/create", { body: { planId: pro.id, ownerEmail: ctx.email("x"), access: "complimentary" } });
+      const noPlan = await saas(ctx, "create without a plan", "POST", "/workspaces/create", { body: { name: "No Plan", ownerEmail: ctx.email("x"), access: "complimentary" } });
+      const noOwner = await saas(ctx, "create without an owner e-mail", "POST", "/workspaces/create", { body: { name: "No Owner", planId: pro.id, access: "complimentary" } });
+      const noAccess = await saas(ctx, "create without an access model", "POST", "/workspaces/create", { body: { name: "No Access", planId: pro.id, ownerEmail: ctx.email("x") } });
+      const pastDate = await saas(ctx, "create with a past end date", "POST", "/workspaces/create", { body: { name: "Past", planId: pro.id, ownerEmail: ctx.email("x"), access: "complimentary", freeUntil: "2020-01-01T00:00:00Z" } });
+      await ctx.verify("the operator form is validated field by field", [
+        check("created", created.status === 200, created.body),
+        check("no name: 400 saas.errors.workspace_create.name", noName.status === 400 && JSON.stringify(noName.body) === JSON.stringify("saas.errors.workspace_create.name"), noName.body),
+        check("no plan: 400 saas.errors.workspace_create.plan", noPlan.status === 400 && JSON.stringify(noPlan.body) === JSON.stringify("saas.errors.workspace_create.plan"), noPlan.body),
+        check("no owner: 400 saas.errors.workspace_create.owner_email", noOwner.status === 400 && JSON.stringify(noOwner.body) === JSON.stringify("saas.errors.workspace_create.owner_email"), noOwner.body),
+        check("no access: 400 saas.errors.workspace_create.access", noAccess.status === 400 && JSON.stringify(noAccess.body) === JSON.stringify("saas.errors.workspace_create.access"), noAccess.body),
+        check("past end date: 400 saas.errors.workspace_create.free_until_past", pastDate.status === 400 && JSON.stringify(pastDate.body) === JSON.stringify("saas.errors.workspace_create.free_until_past"), pastDate.body),
+      ]);
+      const tab = await ctx.tab("admin");
+      await tab.signIn("admin");
+      await tab.goto("/modules/saas/customers/workspaces");
+      await ctx.verify("the views count them", [
+        tab.visible({ role: "button", name: "Past due for more than 7 days 1" }, { timeoutMs: 60_000 }),
+        tab.visible({ role: "button", name: "Owner never joined 1" }, { timeoutMs: 10_000 }),
+        tab.visible({ role: "button", name: "Past due 2" }, { timeoutMs: 10_000 }),
+      ]);
+      await tab.click({ role: "button", name: "Past due for more than 7 days 1" });
+      await ctx.verify("Past due for more than 7 days lists only the eight-day workspace", [tab.shows(/Late Eight/, { timeoutMs: 30_000 }), tab.shows(/Late Six/, { timeoutMs: 5_000, not: true })]);
+      await tab.click({ role: "button", name: "Owner never joined 1" });
+      await ctx.verify("Owner never joined lists the created workspace", [tab.shows(/Waiting Co/, { timeoutMs: 30_000 })]);
+    },
+  },
 ];
