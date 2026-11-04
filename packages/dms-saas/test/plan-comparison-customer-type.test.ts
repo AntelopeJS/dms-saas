@@ -71,8 +71,6 @@ async function offeredPlans(customerType: "individual" | "business" | null) {
   const current = await controller.getCurrentPlan(
     owner,
     await tenantRequest(owner, tenantId),
-    subscriptions,
-    billingInfo,
     "en",
   );
   return Object.fromEntries(

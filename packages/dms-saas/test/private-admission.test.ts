@@ -351,13 +351,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
     });
     expect(await resolveRequestTenantId(ctx)).toBe(created.tenantId);
     await expect(
-      planController.changePlan(
-        owner!,
-        { planId },
-        ctx,
-        subscriptions,
-        fromPartial<Parameters<SaasTenantPlanController["changePlan"]>[4]>({}),
-      ),
+      planController.changePlan(owner!, { planId }, ctx),
     ).rejects.toMatchObject({
       status: 409,
       body: "saas.errors.plan.complimentary_locked",

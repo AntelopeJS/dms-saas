@@ -1,8 +1,14 @@
-import { Controller, Get, Post } from "@antelopejs/interface-api";
+import {
+  Context,
+  Controller,
+  Get,
+  Post,
+  type RequestContext,
+} from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
-import { Model } from "@antelopejs/interface-database-decorators";
+import { GetModel, Model } from "@antelopejs/interface-database-decorators";
+import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import type Stripe from "stripe";
 import type { BillingSettings, TenantSubscription } from "../../db";
@@ -339,9 +345,10 @@ export class SaasBillingSelfRefundController extends Controller(
   async getRefundEligibility(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @Model(BillingSettingsModel) billingSettingsModel: BillingSettingsModel,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ): Promise<RefundEligibilityResponse> {
+    const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const settings = await loadBillingSettings(billingSettingsModel);
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
@@ -362,9 +369,10 @@ export class SaasBillingSelfRefundController extends Controller(
   async requestSelfRefund(
     @AuthTenantOwner() _user: User,
     @Model(BillingSettingsModel) billingSettingsModel: BillingSettingsModel,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ) {
+    const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const settings = await loadBillingSettings(billingSettingsModel);
     const subscription = await tenantSubscriptionModel.findOne();
     const eligibility = await resolveRefundEligibility(settings, subscription);
