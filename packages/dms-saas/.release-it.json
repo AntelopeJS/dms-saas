@@ -13,7 +13,12 @@
       "pnpm --dir ../.. run lint",
       "pnpm --dir ../.. run format:check"
     ],
-    "after:bump": ["git add CHANGELOG.md", "node scripts/publish.mjs"]
+    "after:bump": [
+      "node scripts/checks/write-docs-module-version.mts",
+      "git add -u ../..",
+      "git add CHANGELOG.md",
+      "node scripts/publish.mjs"
+    ]
   },
   "plugins": {
     "release-it-changelogen": {

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const PACKAGE_ROOT = join(import.meta.dirname, "..", "..");
@@ -98,6 +98,36 @@ function currentVersion(): CurrentVersion {
   return { text: manifest.version, triple };
 }
 
+/** Whether `spec` is a caret range that selects `version`. */
+function specAdmits(spec: string, version: Triple): boolean {
+  const caret = CARET.exec(spec)?.groups;
+  const floor =
+    caret === undefined
+      ? undefined
+      : parseTriple(caret.major ?? "", caret.minor ?? "", caret.patch ?? "");
+  return floor !== undefined && caretAdmits(floor, version);
+}
+
+/**
+ * Rewrites every example of this module whose version does not admit this
+ * package's version to a caret range of it. The release runs it right after
+ * the version bump.
+ */
+export function writeDocsModuleVersion(): void {
+  const current = currentVersion();
+  for (const file of scannedFiles()) {
+    const text = readFileSync(file, "utf8");
+    const fixed = text.replace(SOURCE, (whole, spec: string) =>
+      specAdmits(spec, current.triple)
+        ? whole
+        : `${whole.slice(0, whole.length - spec.length - 1)}^${current.text}"`,
+    );
+    if (fixed !== text) {
+      writeFileSync(file, fixed);
+    }
+  }
+}
+
 /**
  * A config example installs the module through `source.version`, an npm
  * version spec resolved against the registry. A caret range on a `0.x`
@@ -114,16 +144,7 @@ export function docsModuleVersionFailures(): string[] {
     for (const match of text.matchAll(SOURCE)) {
       examples += 1;
       const spec = match.groups?.spec ?? "";
-      const caret = CARET.exec(spec)?.groups;
-      const floor =
-        caret === undefined
-          ? undefined
-          : parseTriple(
-              caret.major ?? "",
-              caret.minor ?? "",
-              caret.patch ?? "",
-            );
-      if (floor === undefined || !caretAdmits(floor, current.triple)) {
+      if (!specAdmits(spec, current.triple)) {
         const line = text.slice(0, match.index).split("\n").length;
         failures.push(
           `${relative(WORKSPACE_ROOT, file)}:${line}: version "${spec}" is not a caret range that selects ${current.text}; write "^${current.text}"`,

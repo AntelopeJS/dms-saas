@@ -13,7 +13,11 @@
       "pnpm --dir ../.. run lint",
       "pnpm --dir ../.. run format:check"
     ],
-    "after:bump": "git add CHANGELOG.md"
+    "after:bump": [
+      "pnpm --dir ../.. run sync",
+      "git add -u ../..",
+      "git add CHANGELOG.md"
+    ]
   },
   "plugins": {
     "release-it-changelogen": {
