@@ -83,7 +83,7 @@ dms-control journey "$RUN" plans
 
 ## Gotchas
 
-- Known finding: `a-retired-plans-workspaces-move-and-the-plan-can-then-go` fails because the migration job aborts at start with "Atomic mutation patches must contain constant data" (draft `dms-saas-plan-migration-atomic-patch`).
+- `a-retired-plans-workspaces-move-and-the-plan-can-then-go` failed on the campaign tarballs of `@antelopejs/mongodb` and `@antelopejs/interface-database` (the migration job aborted at start with "Atomic mutation patches must contain constant data", AntelopeJS/dms-saas#219). It passes on the published releases `main` depends on.
 - A plan priced above 0 is saved with the `stripe_not_synced` notice; the placeholder key skips every sync.
 - `audience: "nobody"` is accepted by the API (not documented as validated, so a note, not a check).
 

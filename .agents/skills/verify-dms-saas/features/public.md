@@ -108,7 +108,8 @@ dms-control journey "$RUN" public
 
 - `registration.paymentMethod` is driven with a placeholder key (the server applies `none`) and with a usable-looking key `sk_test_verifysaaslocal`: the checks that need it refuse before any Stripe call, so nothing is sent to Stripe.
 - Options are set through `VERIFY_SAAS_*` variables of `playground/antelope.config.ts` and a backend restart (`withConfig`).
-- Known finding: `a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up` fails because `/pricing` answers 500 for a plan saved without `billingMode` (draft `dms-saas-plan-without-billing-mode`).
+- Known finding: `a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up` fails because `/pricing` answers 500 for a plan saved without `billingMode` (AntelopeJS/dms-saas#220).
+- Known finding: `invitation-only-closes-every-registration-route` fails at its last step. After the backend restarts with `admission: "invitation-only"` while the frontend server keeps running, `/register` renders the 500 page ("The core error.500.description translation must be loaded") instead of the closed screen. A backend started in invitation-only, or restarted without changing the option, renders the closed screen. Every API check of the journey passes.
 - Plans are created with `audience: "any"` and `billingMode: "flat"`, as the editor sends them.
 
 ## Coverage
@@ -117,7 +118,7 @@ dms-control journey "$RUN" public
 | --- | --- |
 | 1.public-screens.md "Registration" | registration journeys: default plan, trimmed name, taken e-mail, password policy, payment modes |
 | 1.public-screens.md "Pricing" | pricing-catalogue journey for the catalogue API; Not driven: the card CTA wording (Start free, Start N-day trial, Choose), the Monthly/Yearly switch, Compare plans and the FAQ: they are client-rendered text |
-| 1.public-screens.md "Registration" (invitation-only) | invitation-only journey: every route 403 and the closed screen |
+| 1.public-screens.md "Registration" (invitation-only) | invitation-only journey: every route 403 and the closed screen; the closed screen fails on a product finding (see Gotchas) |
 | 1.public-screens.md "Sign-in" | Not driven: the sign-up and pricing links of /auth are drawn by a frontend plugin; no check reads them |
 | 1.public-screens.md "Completing a sign-up without a workspace" | sign-in completion journey (pending, finalize, twice); Not driven: the /auth/establish cookie exchange of the frontend server |
 | 1.public-screens.md "Legal pages" | billing-rules: saving-a-legal-text-publishes-a-new-version |

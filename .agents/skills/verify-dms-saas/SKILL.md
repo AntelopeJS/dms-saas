@@ -19,7 +19,7 @@ Give `seeded`, `doors` and `--skill` absolute paths: the command runs in `packag
 ## Launch
 
 ```bash
-RUN=$($C up --prepare --base origin/campaign/integration)   # installs, builds, starts; prints the run folder
+RUN=$($C up --prepare --base origin/main)   # installs, builds, starts; prints the run folder
 ```
 
 `--prepare` runs the `prepare` commands of `verify.config.ts`: the frozen install, the build of the interface and the module, `playwright-core` into this folder, the link of the playground's `node_modules` to `packages/dms-saas/node_modules`, and the TypeScript build of the playground's fixture module. `up` reads the playground from `verify.config.ts` (`playground/` in this folder: the DMS, the api, MongoDB, auth, local file storage and mail modules, the module under verification as a `local` source at `packages/dms-saas`, and a fixture module of its own) and starts an isolated DMS on free ports with its own `verify_<run>` databases.
@@ -39,7 +39,7 @@ Do not drive a run that fails doctor.
 ## Drive
 
 ```bash
-$C plan --base origin/campaign/integration   # the diff mapped to features; unmapped surfaces
+$C plan --base origin/main   # the diff mapped to features; unmapped surfaces
 $C journey "$RUN" smoke
 $C journey "$RUN" plans [journey-id...]
 ```
@@ -90,7 +90,7 @@ $C doors "$PWD/.agents/skills/verify-dms-saas/seeded-doors/data.patch"
 - Every dashboard page renders on the server and hydrates after `load`; `guard.mjs` waits for the sign-in form to hydrate.
 - A plan with no permissions leaves its owner without any page (403): the smoke journey publishes a plan holding every permission of the editor's tree.
 - A step whose check fails because the backend or the dashboard stopped answering ends the journey with a `NOT VERIFIED` error and no failing check, so `seeded` never counts an outage as a catch.
-- Known findings at the integration head, each a failing journey with an issue draft: `public/a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up` (a plan saved through the API without `billingMode` makes `/pricing` answer 500) and `plans/a-retired-plans-workspaces-move-and-the-plan-can-then-go` (the migration job aborts at start with "Atomic mutation patches must contain constant data").
+- Known findings on `main`, each a failing journey whose feature file explains it: `public/a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up` (a plan saved through the API without `billingMode` makes `/pricing` answer 500, AntelopeJS/dms-saas#220), `public/invitation-only-closes-every-registration-route` (after a backend restart into invitation-only, `/register` renders the 500 page) and `people/the-unverified-tab-lists-the-accounts-whose-address-is-not-verified` (a registered account is stored without `isValidated`, so the Unverified tab counts 0).
 
 ## Not driven
 

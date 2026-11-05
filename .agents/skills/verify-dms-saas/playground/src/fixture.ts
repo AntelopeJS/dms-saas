@@ -86,7 +86,7 @@ interface AgeBody {
 
 interface CustomerTypeBody {
   tenantId: string;
-  customerType: "individual" | "business";
+  customerType: "individual" | "business" | null;
 }
 
 interface TenantBody {

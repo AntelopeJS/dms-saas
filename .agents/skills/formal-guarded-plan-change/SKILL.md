@@ -121,7 +121,7 @@ All paths are under `packages/dms-saas/src/`.
 | `WriterAdmit`, `WriterFinishes`, `WriterFails`, `Close` | dms `runTenantLifecycleOperation` and `closeTenantLifecycleAdmission`, as proved by `formal-tenant-lifecycle`; `crons/hard-delete-cancelled.ts` closes |
 | `ProviderLands`, `ProviderLost`, `StripePeriodEnds` | Stripe: a request lands whatever its caller does next, and at the period end Stripe cancels if asked to, else renews |
 
-The sync commit is `74a6623b` on AntelopeJS/dms-saas `campaign/integration`.
+The sync commit is `c6e7c1c8` on AntelopeJS/dms-saas `main`.
 
 ## Bounds and what is left out
 

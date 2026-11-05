@@ -150,6 +150,7 @@ export const listRuleJourneys = [
       ]);
       const member = await joinMember(ctx, "pays", "second-seat");
       await fixture(ctx, "the paying workspace is an individual", "POST", "/customer-type", { tenantId: paying.tenantId, customerType: "individual" });
+      await fixture(ctx, "the trialing workspace has no customer type", "POST", "/customer-type", { tenantId: trial.tenantId, customerType: null });
       const untyped = await saas(ctx, "the plans a workspace with no customer type is offered", "GET", "/tenant/plan", { as: "tries" });
       const options = await saas(ctx, "the plans the workspace may switch to", "GET", "/tenant/plan", { as: "pays" });
       const offered = list(options.body, "available");
