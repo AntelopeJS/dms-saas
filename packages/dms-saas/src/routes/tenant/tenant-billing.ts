@@ -13,7 +13,6 @@ import {
   AuthTenantOwner,
 } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import {
   PlanModel,
@@ -189,11 +188,11 @@ export class SaasTenantBillingController extends Controller(
   @Get("/billing-info")
   async getBillingInfo(
     @AuthTenantMember({ bypassTenantAccessGate: true }) _user: User,
-    @TenantScopedModel(TenantBillingInfoModel)
-    billingModel: TenantBillingInfoModel,
-    @TenantScopedModel(TenantSubscriptionModel)
-    subscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ): Promise<BillingInfoResponse> {
+    const tenantId = getRequestTenantId(ctx);
+    const billingModel = GetModel(TenantBillingInfoModel, tenantId);
+    const subscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const info = await billingModel.findOne();
     if (!info) return toResponse(EMPTY_BILLING_INFO);
     const subscription = await subscriptionModel.findOne();
@@ -231,13 +230,11 @@ export class SaasTenantBillingController extends Controller(
     @Context() ctx: RequestContext,
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
     @JSONBody() body: BillingIdentityInput,
-    @TenantScopedModel(TenantBillingInfoModel)
-    billingModel: TenantBillingInfoModel,
-    @TenantScopedModel(TenantSubscriptionModel)
-    subscriptionModel: TenantSubscriptionModel,
   ): Promise<BillingInfoResponse> {
     const identity = parseBillingIdentity(body);
     const tenantId = getRequestTenantId(ctx);
+    const billingModel = GetModel(TenantBillingInfoModel, tenantId);
+    const subscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     return withBillingIdentityLock(tenantId, async () => {
       const info = await billingModel.findOne();
       const subscription = await subscriptionModel.findOne();

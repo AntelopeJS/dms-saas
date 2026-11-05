@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.10.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.9.1...v0.10.0)
+
+### 🏡 Chore
+
+- Land the cleanup campaign on main ([#229](https://github.com/AntelopeJS/dms-saas/pull/229))
+- **release:** @antelopejs/interface-dms-saas v0.7.0 ([33e591d](https://github.com/AntelopeJS/dms-saas/commit/33e591d))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
+## v0.9.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.9.0...v0.9.1)
+
+### 🩹 Fixes
+
+- **billing:** Let a replica lose the insert of a singleton row ([#205](https://github.com/AntelopeJS/dms-saas/pull/205))
+
+### 📖 Documentation
+
+- **github:** Send questions and ideas to Discord ([#208](https://github.com/AntelopeJS/dms-saas/pull/208))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.9.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.8.1...v0.9.0)

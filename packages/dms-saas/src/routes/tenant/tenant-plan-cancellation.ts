@@ -7,9 +7,9 @@ import {
   type RequestContext,
 } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { recomputeTenantBillingState } from "../../billing-state";
 import {
@@ -110,9 +110,9 @@ export class SaasTenantPlanCancellationController extends Controller(
   async cancelAtPeriodEnd(
     @AuthTenantOwner() _user: User,
     @Context() ctx: RequestContext,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<CancellationResult> {
+    const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const subscription = await tenantSubscriptionModel.findOne();
     assertStripeBilled(subscription);
     assertNothingUnpaid(subscription);
@@ -129,9 +129,9 @@ export class SaasTenantPlanCancellationController extends Controller(
   async keepSubscription(
     @AuthTenantOwner() _user: User,
     @Context() ctx: RequestContext,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<CancellationResult> {
+    const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const subscription = await tenantSubscriptionModel.findOne();
     assertStripeBilled(subscription);
     return writeCancellation(

@@ -11,7 +11,6 @@ import { assert } from "@antelopejs/interface-api-util";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { AuthTenantOwner } from "@antelopejs/interface-dms/guards";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import type Stripe from "stripe";
 import {
@@ -133,9 +132,9 @@ export class SaasTenantPlanAuthenticationController extends Controller(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
     @JSONBody() body: ConfirmUpgradeBody,
     @Context() ctx: RequestContext,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<ChangePlanResult> {
+    const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const plan = await loadSellablePlan(GetModel(PlanModel), body.planId);
     return confirmOwnerUpgrade(
       getRequestTenantId(ctx),

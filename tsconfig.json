@@ -9,16 +9,7 @@
     "sourceMap": false,
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "types": ["node"],
-    "paths": {
-      "@antelopejs/interface-dms-saas/*": [
-        "./packages/interface-dms-saas/src/*"
-      ],
-      "@antelopejs/interface-dms/*": [
-        "./packages/dms-saas/node_modules/@antelopejs/interface-dms/dist/*"
-      ],
-      "*": ["./packages/dms-saas/node_modules/*"]
-    }
+    "types": ["node"]
   },
   "files": [
     "oxlint.config.ts",
@@ -28,8 +19,5 @@
     "packages/dms-saas/vitest.config.ts",
     "packages/dms-saas/playground/antelope.config.ts"
   ],
-  "include": [
-    ".agents/skills/**/*.mjs",
-    ".agents/skills/verify-dms-saas/playground/src/**/*.ts"
-  ]
+  "include": [".agents/skills/**/*.mjs"]
 }

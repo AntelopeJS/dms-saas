@@ -186,8 +186,6 @@ function choosePlan(planId: string, workspace: Workspace) {
       cancelUrl: "https://example.test/billing",
     },
     workspace.request,
-    workspace.model,
-    GetModel(TenantBillingInfoModel, workspace.tenantId),
   );
 }
 
@@ -400,8 +398,6 @@ describe("plans offered to a cancelled workspace", () => {
     const current = await planController().getCurrentPlan(
       workspace.owner,
       workspace.request,
-      workspace.model,
-      GetModel(TenantBillingInfoModel, workspace.tenantId),
       "en",
     );
 

@@ -54,8 +54,6 @@ Finish every change with `pnpm run checks`. It runs typecheck, lint, format, kni
 - `pnpm exec oxlint <files>` and `pnpm exec oxfmt <files>` on the files you changed.
 - Run one test file instead of the whole suite. In a module that tests with `ajs module test`, run `pnpm run build`, then `pnpm exec ajs module test . -f dist/<path>.test.js`. Repeat `-f` for more files.
 
-Prove a change works with the verification skill in [`.agents/skills/verify-dms-saas/SKILL.md`](.agents/skills/verify-dms-saas/SKILL.md) before you call it done.
-
 The tools enforce most rules, listed in the table at the end. The sections below hold the rules no tool checks.
 
 ### Comments

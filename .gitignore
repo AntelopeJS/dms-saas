@@ -373,6 +373,3 @@ $RECYCLE.BIN/
 # pnpm store
 .pnpm-store
 /packages/dms-saas/frontend-vue/.output/
-
-/.agents/skills/verify-dms-saas/playground/node_modules
-/.agents/skills/verify-dms-saas/node_modules

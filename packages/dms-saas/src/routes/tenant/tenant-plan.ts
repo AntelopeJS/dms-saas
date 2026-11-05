@@ -17,7 +17,6 @@ import {
 } from "@antelopejs/interface-dms/guards";
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
-import { TenantScopedModel } from "@antelopejs/interface-dms/tenant-scoped-model";
 import { AssertTenantAccess } from "@antelopejs/interface-dms/tenant-access";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import {
@@ -159,6 +158,13 @@ async function toOfferedPlanView(
   };
 }
 
+/** The billing information the caller's workspace holds. */
+function readBillingInfo(
+  tenantId: string,
+): Promise<TenantBillingInfo | undefined> {
+  return GetModel(TenantBillingInfoModel, tenantId).findOne();
+}
+
 /**
  * Moving to a paid plan issues invoices, which Stripe cannot do without a
  * complete billing identity. The upgrade modal saves it first; this guard
@@ -248,10 +254,6 @@ export class SaasTenantPlanController extends Controller(
   async getCurrentPlan(
     @AuthTenantMember({ bypassTenantAccessGate: true }) user: User,
     @Context() ctx: RequestContext,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
-    @TenantScopedModel(TenantBillingInfoModel)
-    tenantBillingInfoModel: TenantBillingInfoModel,
     @Parameter(CONTENT_LANGUAGE_HEADER, "header") language: RequestHeaderValue,
   ): Promise<CurrentPlanResult> {
     const tenantId = getRequestTenantId(ctx);
@@ -259,7 +261,7 @@ export class SaasTenantPlanController extends Controller(
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
     const subscription = await this.loadSubscription(
       tenantId,
-      tenantSubscriptionModel,
+      GetModel(TenantSubscriptionModel, tenantId),
     );
     void followOwnerLanguage(tenantId, subscription, user);
     const locale = requestLocale(language);
@@ -270,7 +272,7 @@ export class SaasTenantPlanController extends Controller(
       ? await this.planModel.get(subscription.pendingPlanId)
       : null;
     for (const plan of [current, pending]) if (plan) localizePlan(plan, locale);
-    const billingInfo = await tenantBillingInfoModel.findOne();
+    const billingInfo = await readBillingInfo(tenantId);
     const [catalog, seatUsage] = await Promise.all([
       this.buildCatalog(current, locale, {
         subscription,
@@ -305,11 +307,12 @@ export class SaasTenantPlanController extends Controller(
   async cancelPendingChange(
     @AuthTenantOwner() user: User,
     @Context() ctx: RequestContext,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<ChangePlanResult> {
     const tenantId = getRequestTenantId(ctx);
-    const subscription = await tenantSubscriptionModel.findOne();
+    const subscription = await GetModel(
+      TenantSubscriptionModel,
+      tenantId,
+    ).findOne();
     this.assertPlanChangeAllowed(subscription, user);
     assert(
       subscription?.pendingPlanId,
@@ -327,10 +330,14 @@ export class SaasTenantPlanController extends Controller(
   @Get("/checkout")
   async getPendingCheckout(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) _user: User,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
+    @Context() ctx: RequestContext,
   ): Promise<PendingCheckoutResult> {
-    return describePendingCheckout(await tenantSubscriptionModel.findOne());
+    return describePendingCheckout(
+      await GetModel(
+        TenantSubscriptionModel,
+        getRequestTenantId(ctx),
+      ).findOne(),
+    );
   }
 
   /**
@@ -344,10 +351,9 @@ export class SaasTenantPlanController extends Controller(
     @Parameter(CHECKOUT_OPERATION_PARAM, "query")
     operationId: QueryParameterValue,
     @Context() ctx: RequestContext,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
   ): Promise<CancelCheckoutResult> {
     const tenantId = getRequestTenantId(ctx);
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     return runTenantLifecycleOperation(tenantId, async () =>
       cancelPendingCheckout(
         await tenantSubscriptionModel.findOne(),
@@ -369,8 +375,6 @@ export class SaasTenantPlanController extends Controller(
     @Parameter("planId", "query") planId: QueryParameterValue,
     @Parameter("country", "query") country: QueryParameterValue,
     @Context() ctx: RequestContext,
-    @TenantScopedModel(TenantBillingInfoModel)
-    tenantBillingInfoModel: TenantBillingInfoModel,
   ): Promise<PlanChangePreview> {
     const tenantId = getRequestTenantId(ctx);
     const subscription = await GetModel(
@@ -387,7 +391,7 @@ export class SaasTenantPlanController extends Controller(
       HTTP_CONFLICT,
       "saas.errors.plan.already_current",
     );
-    const billingInfo = await tenantBillingInfoModel.findOne();
+    const billingInfo = await readBillingInfo(tenantId);
     const target = await loadSellablePlan(this.planModel, targetPlanId);
     if (billingInfo?.customerType) {
       assertPlanAudience(target, billingInfo.customerType);
@@ -434,20 +438,17 @@ export class SaasTenantPlanController extends Controller(
     @AuthTenantOwner({ bypassTenantAccessGate: true }) user: User,
     @JSONBody() body: ChangePlanBody,
     @Context() ctx: RequestContext,
-    @TenantScopedModel(TenantSubscriptionModel)
-    tenantSubscriptionModel: TenantSubscriptionModel,
-    @TenantScopedModel(TenantBillingInfoModel)
-    tenantBillingInfoModel: TenantBillingInfoModel,
   ): Promise<ChangePlanResult> {
     const tenantId = getRequestTenantId(ctx);
     const tenant = await this.tenantModel.get(tenantId);
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
+    const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const subscription = await tenantSubscriptionModel.findOne();
     this.assertPlanChangeAllowed(subscription, user);
     const isRecovery = canStartFirstPaidSubscription(subscription);
     const choosesAnew = isRecovery || canResubscribe(subscription);
     if (!choosesAnew) await AssertTenantAccess(user._id, tenantId);
-    const billingInfo = await tenantBillingInfoModel.findOne();
+    const billingInfo = await readBillingInfo(tenantId);
     const newPlan = await loadAndValidateTargetPlan(
       this.planModel,
       body.planId,

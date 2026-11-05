@@ -1,18 +1,22 @@
-import type { User } from "@antelopejs/interface-dms/auth/db";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  BillingSettingsModel,
-  TenantSubscription,
-  TenantSubscriptionModel,
-} from "../src/db";
+import { type BillingSettingsModel, TenantSubscriptionModel } from "../src/db";
 import {
   chargedInvoicesInWindow,
   SaasBillingSelfRefundController,
 } from "../src/routes/tenant/billing-self-refund";
+import { useDmsAuth } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
+import {
+  createOwnedWorkspace,
+  type OwnedWorkspace,
+} from "./helpers/workspaces";
 
+useMongoDatabase("money-back-refund");
+useDmsAuth();
 const stripe = useSuiteStripe();
 
 const DAY_SECONDS = 86_400;
@@ -42,19 +46,6 @@ function paid(
   });
 }
 
-const subscription = fromPartial<TenantSubscription>({
-  _id: "acme",
-  stripeCustomerId: "cus_acme",
-  stripeSubscriptionId: "sub_acme",
-  refundRequestedAt: null,
-});
-
-const subscriptionModel = fromPartial<TenantSubscriptionModel>({
-  findOne: async () => subscription,
-  claimSelfRefund: vi.fn(async () => true),
-  releaseSelfRefund: vi.fn(async () => undefined),
-});
-
 function settings(mode: string) {
   return fromPartial<BillingSettingsModel>({
     get: async () => ({
@@ -65,7 +56,6 @@ function settings(mode: string) {
   });
 }
 
-const owner = fromPartial<User>({ _id: "owner" });
 const controller = new SaasBillingSelfRefundController();
 
 /**
@@ -93,10 +83,18 @@ function stubRefundCalls() {
 }
 
 let api: ReturnType<typeof stubRefundCalls>;
+let workspace: OwnedWorkspace;
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
   api = stubRefundCalls();
+  workspace = await createOwnedWorkspace();
+  await GetModel(TenantSubscriptionModel, workspace.tenantId).insert({
+    _id: workspace.tenantId,
+    stripeCustomerId: "cus_acme",
+    stripeSubscriptionId: "sub_acme",
+    refundRequestedAt: null,
+  });
 });
 
 describe("money-back guarantee over several payments", () => {
@@ -112,9 +110,9 @@ describe("money-back guarantee over several payments", () => {
 
   it("offers back the sum of the payments made within the window", async () => {
     const eligibility = await controller.getRefundEligibility(
-      owner,
+      workspace.owner,
       settings("full"),
-      subscriptionModel,
+      workspace.request,
     );
 
     expect(eligibility).toMatchObject({
@@ -126,9 +124,9 @@ describe("money-back guarantee over several payments", () => {
 
   it("refunds each payment with its own credit note, after cancelling", async () => {
     const result = await controller.requestSelfRefund(
-      owner,
+      workspace.owner,
       settings("full"),
-      subscriptionModel,
+      workspace.request,
     );
 
     expect(result).toEqual({ refunded: 2900 + 12098 });
@@ -140,8 +138,8 @@ describe("money-back guarantee over several payments", () => {
         options.idempotencyKey,
       ]),
     ).toEqual([
-      ["in_first", 2900, "refund-self:acme:in_first"],
-      ["in_upgrade", 12098, "refund-self:acme:in_upgrade"],
+      ["in_first", 2900, `refund-self:${workspace.tenantId}:in_first`],
+      ["in_upgrade", 12098, `refund-self:${workspace.tenantId}:in_upgrade`],
     ]);
   });
 
@@ -154,9 +152,9 @@ describe("money-back guarantee over several payments", () => {
     );
 
     const result = await controller.requestSelfRefund(
-      owner,
+      workspace.owner,
       settings("full"),
-      subscriptionModel,
+      workspace.request,
     );
 
     expect(result).toEqual({ refunded: 2900 });
@@ -165,9 +163,9 @@ describe("money-back guarantee over several payments", () => {
 
   it("prorates each payment over the period it paid for", async () => {
     const eligibility = await controller.getRefundEligibility(
-      owner,
+      workspace.owner,
       settings("prorated"),
-      subscriptionModel,
+      workspace.request,
     );
 
     const unused = (amount: number, daysAgo: number) =>
