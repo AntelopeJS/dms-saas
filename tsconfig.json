@@ -14,7 +14,6 @@
   "files": [
     "oxlint.config.ts",
     "packages/dms-saas/test/helpers/vue-runtime/index.mjs",
-    ".amp/gateway.mjs",
     "packages/interface-dms-saas/scripts/check-exports.mjs",
     "packages/dms-saas/vitest.config.ts",
     "packages/dms-saas/playground/antelope.config.ts"
