@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@antelopejs/tooling-configs':
-        specifier: ^0.2.18
-        version: 0.2.18(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))
+        specifier: ^0.3.0
+        version: 0.3.0(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -70,8 +70,8 @@ importers:
         specifier: 1.20.0
         version: 1.20.0
       '@antelopejs/dms':
-        specifier: '>=0.16.1 <1.0.0'
-        version: 0.16.1(@antelopejs/core@1.20.0)(bare-buffer@3.7.1)
+        specifier: '>=0.17.0 <1.0.0'
+        version: 0.17.0(@antelopejs/core@1.20.0)(bare-buffer@3.7.1)
       '@antelopejs/dms-frontend':
         specifier: '>=0.10.0 <1.0.0'
         version: 0.10.0(@antelopejs/core@1.20.0)
@@ -220,11 +220,11 @@ packages:
     peerDependencies:
       '@antelopejs/core': '>=1.16.0 <2'
 
-  '@antelopejs/dms@0.16.1':
-    resolution: {integrity: sha512-iwnM390H/boqGNckjQFZom1Apa8TZY1DERr/09mNZrJIFRO5bFoFiO9XFIOcXaHybDLQ9T+XwAHkzBAIQXtdCQ==}
+  '@antelopejs/dms@0.17.0':
+    resolution: {integrity: sha512-28cAFiEddGzBdFLDAlZSpMppB84oH7n4TuzyfXXFZl7c9dCyxBGkRAEDshs6Pn8F10S63SOJeLOq32p5Gm7ImQ==}
     hasBin: true
     peerDependencies:
-      '@antelopejs/core': '>=1.17.0 <2'
+      '@antelopejs/core': '>=1.20.0 <2'
     peerDependenciesMeta:
       '@antelopejs/core':
         optional: true
@@ -306,8 +306,8 @@ packages:
   '@antelopejs/mongodb@1.6.2':
     resolution: {integrity: sha512-+iMgHoA5Kj9rujlHKJmVHC82N38y/V7A5hgn4WAQU5vLfrKxBM6wSdrtvZDivY1Qt3OgRLwyBhj1+/YT13yyBw==}
 
-  '@antelopejs/tooling-configs@0.2.18':
-    resolution: {integrity: sha512-bLZ5u4GQUdatgN0+9tJjwv2WXUBApPslgBKb3h98GYK34U1Potxrv5VVldLwmx54+Ldu8EPOp4PShLZqw+SkJw==}
+  '@antelopejs/tooling-configs@0.3.0':
+    resolution: {integrity: sha512-ZiYDycndvrYdySvUGdpBEZMbpau6QBMN0LYS9mAO2sLvVagwULl7Sel55vKMn9giHhh3YsHsAWWqB/+4mlNagw==}
     engines: {node: '>=22.18.0'}
     hasBin: true
     peerDependencies:
@@ -5298,7 +5298,7 @@ snapshots:
       '@oxc-parser/binding-linux-x64-gnu': 0.95.0
       '@oxc-parser/binding-win32-x64-msvc': 0.95.0
 
-  '@antelopejs/dms@0.16.1(@antelopejs/core@1.20.0)(bare-buffer@3.7.1)':
+  '@antelopejs/dms@0.17.0(@antelopejs/core@1.20.0)(bare-buffer@3.7.1)':
     dependencies:
       2fa: 0.1.2
       '@antelopejs/interface-api': 0.3.0(@antelopejs/interface-core@0.4.0)
@@ -5436,7 +5436,7 @@ snapshots:
       - snappy
       - socks
 
-  '@antelopejs/tooling-configs@0.2.18(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))':
+  '@antelopejs/tooling-configs@0.3.0(knip@6.41.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))':
     dependencies:
       '@oxlint/plugins': 1.81.0
       dts-bundle-generator: 9.5.1
