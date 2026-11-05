@@ -1,0 +1,13 @@
+diff --git a/packages/dms-saas/src/operator-billing/billing-rules.ts b/packages/dms-saas/src/operator-billing/billing-rules.ts
+index a18e41e..77e3446 100644
+--- a/packages/dms-saas/src/operator-billing/billing-rules.ts
++++ b/packages/dms-saas/src/operator-billing/billing-rules.ts
+@@ -10,7 +10,7 @@ import {
+ } from "../db";
+ import { isPlanStripeSyncCurrent } from "../stripe/sync-plan";
+ 
+-const MAX_DELAY_DAYS = 365;
++const MAX_DELAY_DAYS = 366;
+ const MAX_RETENTION_DAYS = 3650;
+ const MAX_FREE_WORKSPACES_PER_CARD = 100;
+ const MAX_LEGAL_TEXT_LENGTH = 500_000;

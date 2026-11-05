@@ -1,0 +1,9 @@
+{
+  "name": "verify-dms-saas-app",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "antelopeJs": {
+    "baseUrl": "dist"
+  }
+}

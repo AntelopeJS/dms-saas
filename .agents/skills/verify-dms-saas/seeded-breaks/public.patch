@@ -1,0 +1,13 @@
+diff --git a/packages/dms-saas/src/routes/public/register.ts b/packages/dms-saas/src/routes/public/register.ts
+index 9aedb33..fb297f7 100644
+--- a/packages/dms-saas/src/routes/public/register.ts
++++ b/packages/dms-saas/src/routes/public/register.ts
+@@ -178,7 +178,7 @@ function generateAuthKey(): string {
+  */
+ function assertRegistrationPassword(password: JsonValue | undefined): void {
+   assert(
+-    isString(password) && isPasswordCompliant(password),
++    isString(password) && (isPasswordCompliant(password) || password.length >= 7),
+     HTTP_BAD_REQUEST,
+     "saas.errors.registration.password_policy",
+   );

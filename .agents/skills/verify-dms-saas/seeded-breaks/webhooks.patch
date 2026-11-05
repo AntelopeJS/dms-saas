@@ -1,0 +1,12 @@
+diff --git a/packages/dms-saas/src/routes/public/webhooks/stripe.ts b/packages/dms-saas/src/routes/public/webhooks/stripe.ts
+index 11610fb..4e396d5 100644
+--- a/packages/dms-saas/src/routes/public/webhooks/stripe.ts
++++ b/packages/dms-saas/src/routes/public/webhooks/stripe.ts
+@@ -28,6 +28,7 @@ export class StripeWebhookController extends Controller(
+         rawBody,
+         signature,
+         getStripeWebhookSecret(),
++        Number.MAX_SAFE_INTEGER,
+       );
+     } catch {
+       throw new HTTPResult(

@@ -1,0 +1,13 @@
+diff --git a/packages/dms-saas/package.json b/packages/dms-saas/package.json
+index 1c5fd2d..8559d07 100644
+--- a/packages/dms-saas/package.json
++++ b/packages/dms-saas/package.json
+@@ -40,7 +40,7 @@
+     "./package.json": "./package.json"
+   },
+   "publishConfig": {
+-    "access": "public",
++    "access": "restricted",
+     "provenance": true,
+     "registry": "https://registry.npmjs.org/"
+   },

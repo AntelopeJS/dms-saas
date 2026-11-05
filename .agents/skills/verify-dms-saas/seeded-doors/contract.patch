@@ -1,0 +1,13 @@
+diff --git a/packages/dms-saas/src/routes/public/pricing.ts b/packages/dms-saas/src/routes/public/pricing.ts
+index c82270b..c8a2c4e 100644
+--- a/packages/dms-saas/src/routes/public/pricing.ts
++++ b/packages/dms-saas/src/routes/public/pricing.ts
+@@ -26,7 +26,7 @@ export interface PublicPricing extends PublicPlanCatalog {
+  * visitors on `/pricing`. Served whether or not the bundled pricing page is,
+  * so a deployment that replaced it can build its own on the same data.
+  */
+-export class SaasPricingController extends Controller("/api/saas/pricing") {
++export class SaasPricingController extends Controller("/api/saas/prices") {
+   @Model(PlanModel)
+   declare planModel: PlanModel;
+ 
