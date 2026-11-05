@@ -1,6 +1,6 @@
 ---
 name: verify-dms-saas
-description: "Drive the AntelopeJS dms-saas module (public registration and pricing, the plan catalogue and its gating, workspace settings, the platform owner's back office, billing rules and the Stripe webhook) the way visitors, workspace owners and the platform owner do, inside a DMS with free ports and its own MongoDB database, with placeholder Stripe keys, and post a verdict with evidence. Use to prove a change to AntelopeJS/dms-saas works before merge, to verify a PR, or to check that a seeded break, a seeded one-way door or the guarded-plan-change formal check is caught."
+description: "Drive the AntelopeJS dms-saas module (public registration and pricing, the plan catalogue and its gating, workspace settings, the platform owner's back office, billing rules and the Stripe webhook) the way visitors, workspace owners and the platform owner do, inside a DMS with free ports and its own MongoDB database, with placeholder Stripe keys, and post a verdict with evidence. Use to prove a change to AntelopeJS/dms-saas works before merge, to verify a PR, or to check that the guarded-plan-change formal check is caught."
 ---
 
 # Verify dms-saas
@@ -14,7 +14,7 @@ C="pnpm --dir packages/dms-saas exec dms-control"
 $C                       # lists every command
 ```
 
-Give `seeded`, `doors` and `--skill` absolute paths: the command runs in `packages/dms-saas`.
+Give `doors` and `--skill` absolute paths: the command runs in `packages/dms-saas`.
 
 ## Launch
 
@@ -66,30 +66,21 @@ $C down "$RUN"
 3. **Every registered journey of a feature in `run` must have run and passed.** A journey that ends `NOT VERIFIED` (the backend or the dashboard went away) is not a result: bring the run down, start a new one and rerun that journey before you write the verdict. Only a journey that ran to the end counts. Known findings stay as failing journeys (see the feature files' Gotchas): they fail a verdict only when the diff touches their feature.
 4. **Docs.** Judge every `docs:` page of each touched feature against what the journeys showed.
 5. **Formal checks.** `formal-guarded-plan-change` covers the guarded paid-to-Free plan change (`plan-changes/guarded-*.ts`, `inventory-barrier.ts`, `pending-target.ts`, `deferred.ts`, the guarded-downgrade cron, the webhook handlers, the subscription access gate and the subscription model). `$C formal "$RUN"` runs it when the diff touches a covered file or the check; a finding fails the verdict only when the behaviour of the covered code changed. It needs Docker or Java for TLC.
-6. **One-way doors.** The section comes right after the result line and is mandatory. `$C doors` prints the `One-way-door:` line for the diff. A Data door is contained only by `workspace/deleting-a-workspace-needs-its-name-and-revokes-access` and `plans/stop-selling-moves-nobody-and-delete-needs-an-empty-plan` passing in this run; no journey contains a Format door, so a Format row says so.
+6. **One-way doors.** The section comes right after the result line and is mandatory. `$C doors` prints the `One-way-door:` line for the diff.
 7. **Result.** FAIL if any of rules 1 to 6 fail. PASS+NOTES when something is not verified or needs the owner's attention. PASS otherwise.
 
 Write `$RUN/evidence/judgement.json` (`doors`, `docs`, `notVerified`, `attention`, `verifier`), then `$C verdict "$RUN" --pr <n>` and, from a thread that did not write the change, `$C publish "$RUN" --pr <n>`.
 
 ## Trust
 
-The skill is not Trusted yet. It becomes Trusted when it catches every seeded break and flags every seeded door, passes a shadow run of 10 consecutive agent PRs, and its last maintain pass is newer than the last change to the repository or its `@antelopejs` dependencies and at most 30 days old.
-
-## Seeded breaks and doors
-
-```bash
-$C seeded smoke public plans
-$C doors "$PWD/.agents/skills/verify-dms-saas/seeded-doors/data.patch"
-```
-
-`seeded-breaks/<feature>.patch` is one minimal product bug per feature; `seeded` builds a control and a patched worktree, runs the feature's journeys in each, and prints `CAUGHT` with the journeys that caught it, or `MISSED`. A break counts only when a journey that passes in the control fails one of its checks with the patch. `seeded-doors/<kind>.patch` holds one change per door kind.
+The skill is not Trusted yet. It becomes Trusted when it passes a shadow run of 10 consecutive agent PRs, and its last maintain pass is newer than the last change to the repository or its `@antelopejs` dependencies and at most 30 days old.
 
 ## Gotchas
 
 - Run `pnpm exec lefthook install` before `up`: the module installs of a run call `lefthook install` in parallel and fail when the hooks are out of sync.
 - Every dashboard page renders on the server and hydrates after `load`; `guard.mjs` waits for the sign-in form to hydrate.
 - A plan with no permissions leaves its owner without any page (403): the smoke journey publishes a plan holding every permission of the editor's tree.
-- A step whose check fails because the backend or the dashboard stopped answering ends the journey with a `NOT VERIFIED` error and no failing check, so `seeded` never counts an outage as a catch.
+- A step whose check fails because the backend or the dashboard stopped answering ends the journey with a `NOT VERIFIED` error and no failing check.
 - Known findings on `main`, each a failing journey whose feature file explains it: `public/a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up` (a plan saved through the API without `billingMode` makes `/pricing` answer 500, AntelopeJS/dms-saas#220), `public/invitation-only-closes-every-registration-route` (after a backend restart into invitation-only, `/register` renders the 500 page) and `people/the-unverified-tab-lists-the-accounts-whose-address-is-not-verified` (a registered account is stored without `isValidated`, so the Unverified tab counts 0).
 
 ## Not driven

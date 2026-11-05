@@ -70,7 +70,7 @@ async function signInHydrated(ctx, tab, account) {
 /**
  * Makes a check that fails because the environment went away NOT VERIFIED: before a step with a failing check is
  * recorded, the backend and the dashboard are probed, and when one is gone the journey ends with an error and no
- * failing check, which `seeded` does not count as a catch.
+ * failing check.
  *
  * @template {{ run: (ctx: Ctx) => Promise<void> }} Journey
  * @param {Journey[]} journeys The journeys of a feature

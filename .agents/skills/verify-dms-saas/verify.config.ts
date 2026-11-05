@@ -7,11 +7,10 @@ export type DoorKind =
   | "exposure"
   | "publish";
 
-/** Path rules for one door kind: globs, declared funnel modules, and the journeys, as `feature/journey`, that contain it. */
+/** Path rules for one door kind: globs and declared funnel modules. */
 export interface DoorRule {
   globs: string[];
   funnels: string[];
-  containments: string[];
   why: string;
 }
 
@@ -112,16 +111,11 @@ const config: VerifyConfig = {
         `${MODULE}/src/workers/**`,
       ],
       funnels: [],
-      containments: [
-        "workspace/deleting-a-workspace-needs-its-name-and-revokes-access",
-        "plans/stop-selling-moves-nobody-and-delete-needs-an-empty-plan",
-      ],
       why: "these delete workspaces with their data, plans, and move workspaces between plans, which a revert of the code does not bring back",
     },
     format: {
       globs: [`${INTERFACE}/src/db/**`, `${MODULE}/src/operator-actions/db/**`, `${MODULE}/src/workspaces/db/**`, `${MODULE}/src/upcoming-invoice/db/**`],
       funnels: [],
-      containments: [],
       why: "the stored subscriptions, plans, invoices, segments and webhook records are read back by the next version of the module",
     },
     contract: {
@@ -134,25 +128,21 @@ const config: VerifyConfig = {
         `${MODULE}/frontend-vue/package.json`,
       ],
       funnels: [],
-      containments: [],
       why: "other modules import the interface, the dashboard and scripts call the HTTP routes, and projects set the config keys and the renderer range",
     },
     outbound: {
       globs: [`${MODULE}/src/stripe/**`, `${MODULE}/src/notifications/**`, `${MODULE}/src/workspaces/owner-invitation-email.ts`, `${MODULE}/src/plans/stripe-sync.ts`, `${MODULE}/src/operator-actions/lifecycle-outbox.ts`],
       funnels: [`${MODULE}/src/stripe/client.ts`],
-      containments: [],
       why: "these call Stripe, charge, refund and notify owners by e-mail, which cannot be unsent",
     },
     exposure: {
       globs: [`${MODULE}/src/auth/**`, `${MODULE}/src/routes/public/**`, `${MODULE}/src/routes/platformOwner/**`, `${MODULE}/src/plans/seat-*.ts`],
       funnels: [],
-      containments: [],
       why: "the plan resolver, the owner-only surfaces, the subscription gate and the public routes decide who sees which data and who may write the catalogue",
     },
     publish: {
       globs: [`${MODULE}/package.json`, `${INTERFACE}/package.json`, `${MODULE}/.release-it.json`, `${INTERFACE}/.release-it.json`, `${MODULE}/changelogen.config.json`, `${INTERFACE}/changelogen.config.json`, ".github/workflows/release*.yml"],
       funnels: [],
-      containments: [],
       why: "the package names, their files and the release workflows claim @antelopejs/dms-saas and @antelopejs/interface-dms-saas in the npm registry",
     },
   },
