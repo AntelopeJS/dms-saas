@@ -46,7 +46,7 @@ export default defineConfig({
   },
   modules: {
     "dms-saas": {
-      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.9.0" },
+      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.10.0" },
       config: {
         stripe: {
           secretKey: "sk_test_placeholder",
@@ -76,7 +76,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and pub
 | `@antelopejs/interface-database-decorators` | `>=0.2.0 <1.0.0`  | `0.2.0`     |
 | `@antelopejs/interface-dms`                 | `>=0.12.0 <1.0.0` | `0.12.0`    |
 | `@antelopejs/interface-dms-automation`      | `>=0.6.0 <1.0.0`  | `0.6.0`     |
-| `@antelopejs/interface-dms-saas`            | `workspace:^`     | `0.6.1`     |
+| `@antelopejs/interface-dms-saas`            | `workspace:^`     | `0.7.0`     |
 
 <!-- antelopejs-docs-compat:end -->
 
