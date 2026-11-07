@@ -9,7 +9,7 @@ import { insertPlan } from "./helpers/plans";
 import { insertTenant, seatMembers } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("workspace-upgrade-preview");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const PERIOD_END = new Date("2026-10-31T00:00:00Z");

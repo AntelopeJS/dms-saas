@@ -18,7 +18,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("credit-note-issue-route");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 const logs = captureLogs();
 

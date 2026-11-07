@@ -6,7 +6,7 @@ import { useDmsAuth } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { ownerOnlyRoutes } from "./helpers/owner-only";
 
-useMongoDatabase("workspace-routes-authorization");
+useMongoDatabase();
 useDmsAuth();
 
 describe("back-office routes of the dashboard and the workspaces", () => {

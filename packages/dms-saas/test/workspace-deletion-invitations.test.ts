@@ -8,7 +8,7 @@ import { requestWorkspaceDeletion } from "../src/workspaces/deletion";
 import { useMongoDatabase } from "./helpers/mongo";
 import { ANY_DATE } from "./helpers/asymmetric-matchers";
 
-useMongoDatabase("workspace-deletion-invitations");
+useMongoDatabase();
 
 const INVITATION_LIFETIME_MS = 86_400_000;
 

@@ -19,7 +19,7 @@ import { addTenantMember, useTenantAccessGate } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
-useMongoDatabase("upcoming-invoice-interface");
+useMongoDatabase();
 const gate = useTenantAccessGate();
 
 const FREE_PLAN_ID = "free";

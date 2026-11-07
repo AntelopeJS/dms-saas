@@ -18,7 +18,7 @@ import {
 } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("plan-comparison-customer-type");
+useMongoDatabase();
 useDmsAuth();
 
 const PUBLIC_PLAN = {

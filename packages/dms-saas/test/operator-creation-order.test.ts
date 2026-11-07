@@ -25,7 +25,7 @@ import { createWorkspaceForOwner } from "../src/workspaces/operator-creation";
 import { createUser, dmsImplementation } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("operator-creation-order");
+useMongoDatabase();
 
 /** What the workspace holds so far, in the order the creation writes it. */
 async function writtenSoFar(tenantId: string): Promise<string[]> {

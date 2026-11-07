@@ -6,7 +6,7 @@ import { StripeWebhookController } from "../src/routes/public/webhooks/stripe";
 import { useMongoDatabase } from "./helpers/mongo";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("stripe-credit-note-webhook");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 interface SignedFixture {

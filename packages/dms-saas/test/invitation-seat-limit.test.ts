@@ -48,7 +48,7 @@ import { useSuiteStripe } from "./helpers/stripe";
  * must keep fitting in that seat; only a second invitee is over the cap.
  */
 
-useMongoDatabase("invitation-seats");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const DAY_MS = 86_400_000;

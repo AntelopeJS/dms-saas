@@ -36,7 +36,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("private-admission");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 interface SignupResult {

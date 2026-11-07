@@ -13,7 +13,7 @@ import { useSuiteStripe } from "./helpers/stripe";
 const SUBSCRIPTION_START_SECONDS = 1_780_000_000;
 const PERIOD_END_SECONDS = 1_782_592_000;
 
-useMongoDatabase("provisioning-paid-usage");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 beforeAll(() => {

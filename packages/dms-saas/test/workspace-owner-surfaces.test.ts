@@ -37,7 +37,7 @@ import {
 import { insertPlan } from "./helpers/plans";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("workspace-owner-surfaces");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const NOW = new Date("2026-10-01T00:00:00.000Z");

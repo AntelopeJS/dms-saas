@@ -24,7 +24,7 @@ import {
   registeredResolver,
 } from "./helpers/permissions-resolvers";
 
-useMongoDatabase("plan-permissions-resolver");
+useMongoDatabase();
 const registered = implementPermissionsResolvers();
 
 interface MemberFixture {

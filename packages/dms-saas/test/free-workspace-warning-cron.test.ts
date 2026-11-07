@@ -11,7 +11,7 @@ import { implementNotificationCore } from "./helpers/notification-core";
 import { captureLogs } from "./helpers/logging";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("free-workspace-warning-cron");
+useMongoDatabase();
 const core = implementNotificationCore();
 const logs = captureLogs();
 

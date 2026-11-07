@@ -9,7 +9,7 @@ import { upsertInvoice } from "../src/stripe/webhook-shared";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("stripe-mirror-keys");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 interface BilledWorkspace {

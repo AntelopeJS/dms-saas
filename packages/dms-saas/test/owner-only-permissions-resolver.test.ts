@@ -10,7 +10,7 @@ import {
   registeredResolver,
 } from "./helpers/permissions-resolvers";
 
-useMongoDatabase("owner-only-permissions-resolver");
+useMongoDatabase();
 const registered = implementPermissionsResolvers();
 
 /** The workspace settings pages the owner-only surfaces sit on. */

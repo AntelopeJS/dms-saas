@@ -24,7 +24,7 @@ import {
 import { implementNotificationCore } from "./helpers/notification-core";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("cron-concurrency");
+useMongoDatabase();
 const core = implementNotificationCore();
 
 const CONTENDERS = 12;

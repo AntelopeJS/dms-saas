@@ -15,7 +15,7 @@ import { useSuiteStripe } from "./helpers/stripe";
 import { insertTenant } from "./helpers/workspaces";
 import { latch } from "./helpers/latch";
 
-useMongoDatabase("workspace-suspension-lifecycle");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 const core = implementNotificationCore();
 const consume = useLifecycleConsumer("suspension.suite", [

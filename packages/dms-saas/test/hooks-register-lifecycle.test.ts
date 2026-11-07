@@ -17,7 +17,7 @@ import { useQueryGate } from "./helpers/query-gate";
 import { useSuiteStripe } from "./helpers/stripe";
 import { PLAN } from "./helpers/registration";
 
-useMongoDatabase("hooks-register-lifecycle");
+useMongoDatabase();
 useSuiteStripe();
 const gate = useQueryGate();
 

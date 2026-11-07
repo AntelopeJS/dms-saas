@@ -14,7 +14,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { seatMembers } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("plan-change-preview");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 const logs = captureLogs();
 

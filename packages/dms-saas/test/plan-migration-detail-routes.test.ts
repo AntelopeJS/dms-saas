@@ -19,7 +19,7 @@ import { planRow } from "./helpers/plan-row";
 import { useSuiteStripe } from "./helpers/stripe";
 import { httpRefusal } from "./helpers/refusal";
 
-useMongoDatabase("plan-migration-detail-routes");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const PLANS = [

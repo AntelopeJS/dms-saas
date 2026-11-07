@@ -14,7 +14,7 @@ import { clipInvoiceUsageWindow } from "../src/invoice-line-items/billing-window
 import { GetTenantBillingPeriod } from "../src/implementations/dms-saas/billing";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("complimentary-coverage");
+useMongoDatabase();
 
 const CREATED = new Date("2026-01-01T00:00:00Z");
 const EXPIRED = new Date("2026-02-05T12:34:00Z");

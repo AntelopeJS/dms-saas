@@ -14,7 +14,7 @@ import { addTenantMember } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("immediate-plan-change-finalization");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const plan = fromPartial<Plan>({

@@ -12,7 +12,7 @@ import { freeWorkspaceExpiredSubject } from "../src/notifications/subjects";
 import { addTenantMember, createUser } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("notification-events");
+useMongoDatabase();
 
 const core = {
   sendToUsers: vi.fn<typeof notifications.internal.SendToUsers>(),
