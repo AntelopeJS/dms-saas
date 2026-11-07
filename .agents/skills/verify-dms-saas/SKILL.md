@@ -61,7 +61,7 @@ $C down "$RUN"
 
 ## Verdict rules
 
-1. **Run every feature whose `covers:` globs the diff touches, plus the smoke journey.** `plan` prints that list as `run`.
+1. **Run every feature whose `covers:` globs the diff touches, plus the smoke journey.** `plan` prints that list as `run`. Run every feature instead, smoke first, when the diff touches a shared file and before a release. The shared files are a `package.json` or `pnpm-lock.yaml` of the root, `packages/dms-saas`, `packages/dms-saas/frontend-vue` or `packages/interface-dms-saas`, `packages/interface-dms-saas/src/**`, `tsconfig.base.json`, `packages/dms-saas/tsconfig.json`, and this skill's `verify.config.ts` and `playground/**`. `plan` does not list them yet.
 2. **Unmapped surface fails the verdict.** User-facing code is `packages/dms-saas/src/**`, `frontend-vue/**`, `skills/**`, `package.json`, and `packages/interface-dms-saas/src/**` and `package.json`, tool configs excluded (`verify.config.ts`). `map` checks the whole tree.
 3. **Every registered journey of a feature in `run` must have run and passed.** A journey that ends `NOT VERIFIED` (the backend or the dashboard went away) is not a result: bring the run down, start a new one and rerun that journey before you write the verdict. Only a journey that ran to the end counts. Known findings stay as failing journeys (see the feature files' Gotchas): they fail a verdict only when the diff touches their feature.
 4. **Docs.** Judge every `docs:` page of each touched feature against what the journeys showed.
