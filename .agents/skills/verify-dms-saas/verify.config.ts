@@ -68,7 +68,9 @@ const config: VerifyConfig = {
       "--prefer-offline",
       "--ignore-scripts",
     ],
-    ["pnpm", "run", "build"],
+    ["pnpm", "--filter", "@antelopejs/interface-dms-saas", "build"],
+    ["node", `${SKILL}/prune-dist.mjs`, MODULE],
+    [`${MODULE}/node_modules/.bin/tsc`, "-p", MODULE],
     [
       "npm",
       "install",
