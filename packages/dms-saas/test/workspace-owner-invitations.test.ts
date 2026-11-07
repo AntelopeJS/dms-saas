@@ -30,6 +30,8 @@ useMongoDatabase("owner-invitations");
 const { sendInviteEmail, core } = useBackOffice();
 
 const DAY_MS = 86_400_000;
+/** How long a background invitation e-mail may take to reach the mock: a few database writes. */
+const BACKGROUND_SEND_BOUND_MS = 500;
 
 function invitationsController(): SaasWorkspaceInvitationsController {
   const controller = new SaasWorkspaceInvitationsController();
@@ -196,7 +198,10 @@ describe("back-office workspace creation for a new owner", () => {
 
     expect(created.owner.kind).toBe("added");
     expect(created.invitationEmail).toBeNull();
-    expect(sendInviteEmail).not.toHaveBeenCalled();
+    await new Promise((resolve) =>
+      setTimeout(resolve, BACKGROUND_SEND_BOUND_MS),
+    );
+    expect(sendInviteEmail.mock.calls.map(([to]) => to)).not.toContain(email);
   });
 });
 

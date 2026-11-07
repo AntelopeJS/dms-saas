@@ -411,7 +411,9 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       amount: 999,
       metadata: {},
     });
-    expect((await task(f.invoiceId))?.fingerprint).not.toContain("999");
+    const fingerprint = (await task(f.invoiceId))?.fingerprint;
+    expect(fingerprint).toEqual(expect.any(String));
+    expect(fingerprint?.split(/[|,:[\]{}"]/)).not.toContain("999");
   });
 
   it("waits for not-ready usage until the deadline, then finalizes with the lines available and reports the gap", async () => {
