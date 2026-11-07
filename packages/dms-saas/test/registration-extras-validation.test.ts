@@ -10,7 +10,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("registration-extras-validation");
+useMongoDatabase();
 useSuiteStripe();
 useRegistrationWorld();
 

@@ -18,7 +18,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { callRoute } from "./helpers/routes";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("refund-eligibility-gate");
+useMongoDatabase();
 useDmsAuth();
 useSuiteStripe();
 

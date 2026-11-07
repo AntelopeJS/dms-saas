@@ -31,7 +31,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { callRoute } from "./helpers/routes";
 
-useMongoDatabase("workspace-access");
+useMongoDatabase();
 useDmsAuth();
 
 const NOW = new Date("2026-10-07T12:00:00.000Z");

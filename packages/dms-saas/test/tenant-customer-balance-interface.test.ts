@@ -12,7 +12,7 @@ import { addTenantMember, useTenantAccessGate } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("tenant-customer-balance-interface");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 const gate = useTenantAccessGate();
 

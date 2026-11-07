@@ -10,7 +10,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("operator-manual-upgrade-retry");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const OPERATION_ID = "upgrade-operation-123";

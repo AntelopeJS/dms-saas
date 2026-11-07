@@ -23,7 +23,7 @@ import {
   isFieldGroupSerialized,
 } from "@antelopejs/interface-dms/base";
 
-useMongoDatabase("billing-rules-route");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const ADMIN = fromPartial<User>({});

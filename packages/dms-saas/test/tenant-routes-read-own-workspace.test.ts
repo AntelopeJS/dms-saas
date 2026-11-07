@@ -24,7 +24,7 @@ import {
   resolvedController,
 } from "./helpers/routes";
 
-useMongoDatabase("tenant-reads-own-workspace");
+useMongoDatabase();
 useDmsAuth();
 
 /** Rows of a workspace, told apart from the default workspace's by every value. */

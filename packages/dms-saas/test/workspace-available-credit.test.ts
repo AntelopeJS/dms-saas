@@ -11,7 +11,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 
-useMongoDatabase("workspace-available-credit");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const OPERATOR = fromPartial<User>({ _id: "op" });

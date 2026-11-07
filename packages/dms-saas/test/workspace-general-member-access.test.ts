@@ -24,7 +24,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { guardRefusals } from "./helpers/guards";
 
-useMongoDatabase("workspace-general-member-access");
+useMongoDatabase();
 useDmsAuth();
 
 const OWNER_REQUIRED = "error.tenant_owner_required";

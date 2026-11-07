@@ -21,7 +21,7 @@ import {
 } from "./helpers/invoice-line-recovery";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("invoice-line-recovery-providers");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 useInvoiceLineRecovery(stripe);
 

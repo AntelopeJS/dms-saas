@@ -11,7 +11,7 @@ import { planRow } from "./helpers/plan-row";
 import { useSuiteStripe } from "./helpers/stripe";
 import { httpRefusal } from "./helpers/refusal";
 
-useMongoDatabase("plan-write-validation");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 type PlanWrite = () => ReturnType<

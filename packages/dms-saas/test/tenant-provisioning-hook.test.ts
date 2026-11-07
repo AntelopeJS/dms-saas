@@ -30,7 +30,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("tenant-provisioning-hook");
+useMongoDatabase();
 useSuiteStripe();
 
 /**

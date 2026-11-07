@@ -23,7 +23,7 @@ import {
 } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("complimentary-plan-recovery");
+useMongoDatabase();
 useDmsAuth();
 const stripe = useSuiteStripe();
 

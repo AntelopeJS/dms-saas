@@ -27,7 +27,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
-useMongoDatabase("registration-oauth");
+useMongoDatabase();
 useSuiteStripe();
 const stripe = useRegistrationWorld();
 useDmsAuth();

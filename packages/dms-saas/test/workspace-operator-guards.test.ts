@@ -43,7 +43,7 @@ import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 import { seatMembers } from "./helpers/workspaces";
 import { httpRefusal } from "./helpers/refusal";
 
-useMongoDatabase("workspace-operator-guards");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 implementNotifications();
 

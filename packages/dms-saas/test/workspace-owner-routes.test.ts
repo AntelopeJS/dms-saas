@@ -34,7 +34,7 @@ import {
   seatMembers,
 } from "./helpers/workspaces";
 
-useMongoDatabase("workspace-owner-routes");
+useMongoDatabase();
 useDmsAuth();
 implementNotifications();
 const listExportJobs = vi.fn<typeof exportJobs.listExportJobs>();

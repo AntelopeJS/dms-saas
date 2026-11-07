@@ -7,7 +7,7 @@ import { createDefaultMemberRole } from "../src/workspaces/default-member-role";
 import { implementWithDms } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("default-member-role");
+useMongoDatabase();
 
 beforeAll(() => {
   implementWithDms(permissions, "implementations/dms/permissions.js");

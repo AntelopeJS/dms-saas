@@ -10,7 +10,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("stripe-webhook-credit-note-idempotence");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 let workspace: CreditedWorkspace;

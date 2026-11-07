@@ -20,7 +20,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { allowCheckoutRedirects } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("subscription-effect-admission");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const createdSessions = new Map<string, object>();

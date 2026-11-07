@@ -30,7 +30,7 @@ import {
 import { addTenantMember } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("past-due-banner");
+useMongoDatabase();
 
 const OWNER = fromPartial<User>({ _id: "owner-a" });
 const MEMBER = fromPartial<User>({ _id: "member-a" });

@@ -19,7 +19,7 @@ import { addTenantMember, createUser } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("stripe-subscription-status-webhooks");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const sendToUser = vi.fn<typeof notifications.internal.SendToUser>();

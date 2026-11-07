@@ -15,7 +15,7 @@ import {
 } from "./helpers/operator-workspaces";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("operator-workspace-access");
+useMongoDatabase();
 useBackOffice();
 
 const DAY_MS = 86_400_000;

@@ -31,7 +31,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
 import { latch } from "./helpers/latch";
 
-useMongoDatabase("retention-deletion-replay");
+useMongoDatabase();
 const logs = captureLogs();
 
 /** What the tenant looked like to the deletion hook when it ran. */

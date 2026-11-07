@@ -34,7 +34,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { allowCheckoutRedirects } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("checkout-admission");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const TRIAL_DAYS = 7;

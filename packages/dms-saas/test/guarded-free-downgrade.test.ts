@@ -46,7 +46,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { insertTenant } from "./helpers/workspaces";
 
-useMongoDatabase("guarded-free-downgrade");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 const core = implementNotificationCore();
 const lifecycle = useLifecycleConsumer("guarded.suite", [
