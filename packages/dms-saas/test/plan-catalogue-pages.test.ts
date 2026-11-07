@@ -12,7 +12,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { httpRefusal } from "./helpers/refusal";
 
-useMongoDatabase("plan-catalogue-pages");
+useMongoDatabase();
 
 /** Replaces the plan catalogue with `plans`, none of them deleted. */
 async function publishCatalogue(plans: Partial<Plan>[]): Promise<void> {

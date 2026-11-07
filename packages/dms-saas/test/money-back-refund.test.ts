@@ -15,7 +15,7 @@ import {
   type OwnedWorkspace,
 } from "./helpers/workspaces";
 
-useMongoDatabase("money-back-refund");
+useMongoDatabase();
 useDmsAuth();
 const stripe = useSuiteStripe();
 

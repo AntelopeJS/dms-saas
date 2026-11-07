@@ -19,7 +19,7 @@ import {
 import { SaasRegisterApiController } from "../src/routes/public/register";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("public-pricing");
+useMongoDatabase();
 
 const FEATURE_MEMBERS = fromPartial<Feature>({
   _id: "members",

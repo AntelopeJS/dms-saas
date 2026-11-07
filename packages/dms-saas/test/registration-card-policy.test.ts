@@ -31,7 +31,7 @@ import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
-useMongoDatabase("registration-card-policy");
+useMongoDatabase();
 const suiteStripe = useSuiteStripe();
 const stripe = useRegistrationWorld();
 useDmsAuth();

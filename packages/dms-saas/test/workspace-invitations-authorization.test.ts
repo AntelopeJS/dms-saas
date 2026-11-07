@@ -4,7 +4,7 @@ import { useDmsAuth } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { ownerOnlyRoutes } from "./helpers/owner-only";
 
-useMongoDatabase("workspace-invitations-authorization");
+useMongoDatabase();
 useDmsAuth();
 
 describe("back-office invitation authorization", () => {

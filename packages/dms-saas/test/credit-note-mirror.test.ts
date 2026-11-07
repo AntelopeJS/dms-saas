@@ -18,7 +18,7 @@ import { addTenantMember, createUser } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("credit-note-mirror");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const CREATED_SECONDS = 1_788_264_000;

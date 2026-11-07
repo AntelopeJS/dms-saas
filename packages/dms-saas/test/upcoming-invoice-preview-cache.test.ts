@@ -27,7 +27,7 @@ import {
 } from "./helpers/upcoming-invoice";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("upcoming-invoice-preview-cache");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 const logs = captureLogs();
 const previews = usePreviewEnvironment(stripe);

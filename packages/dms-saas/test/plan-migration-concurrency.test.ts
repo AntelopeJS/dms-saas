@@ -17,7 +17,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { seatMembers } from "./helpers/workspaces";
 
-useMongoDatabase("plan-migration-concurrency");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const SCHEDULED_AT = new Date("2026-11-01T00:00:00.000Z");

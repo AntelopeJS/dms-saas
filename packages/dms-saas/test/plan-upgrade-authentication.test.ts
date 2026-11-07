@@ -14,7 +14,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("plan-upgrade-authentication");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 let enterprise: Plan;

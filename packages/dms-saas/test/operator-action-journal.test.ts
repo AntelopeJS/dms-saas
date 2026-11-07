@@ -11,7 +11,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("operator-action-journal");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 const logs = captureLogs();
 

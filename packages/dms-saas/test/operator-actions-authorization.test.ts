@@ -4,7 +4,7 @@ import { useDmsAuth } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { ownerOnlyRoutes } from "./helpers/owner-only";
 
-useMongoDatabase("operator-actions-authorization");
+useMongoDatabase();
 useDmsAuth();
 
 describe("platform-owner operation authorization", () => {

@@ -26,7 +26,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { httpRefusal } from "./helpers/refusal";
 
-useMongoDatabase("plan-migration-resolution");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const OPERATOR = "operator";

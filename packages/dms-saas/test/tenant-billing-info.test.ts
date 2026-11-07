@@ -18,7 +18,7 @@ import {
 } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("tenant-billing-info");
+useMongoDatabase();
 useDmsAuth();
 
 interface Workspace {

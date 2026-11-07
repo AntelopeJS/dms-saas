@@ -11,7 +11,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { latch } from "./helpers/latch";
 
-useMongoDatabase("stripe-webhook-admission");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const BEYOND_OLD_CLAIM_TIMEOUT_MS = 16 * 60 * 1000;

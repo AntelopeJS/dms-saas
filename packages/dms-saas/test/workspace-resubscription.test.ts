@@ -40,7 +40,7 @@ import { callRoute } from "./helpers/routes";
 import { useSuiteStripe } from "./helpers/stripe";
 import { ANY_DATE } from "./helpers/asymmetric-matchers";
 
-useMongoDatabase("workspace-resubscription");
+useMongoDatabase();
 useDmsAuth();
 const stripe = useSuiteStripe();
 

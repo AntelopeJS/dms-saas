@@ -26,7 +26,7 @@ import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 
-useMongoDatabase("plan-catalogue-routes");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 
 const OWNER = fromPartial<User>({ _id: "operator" });

@@ -19,7 +19,7 @@ import {
 } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("plan-change-billing-identity");
+useMongoDatabase();
 useDmsAuth();
 const stripe = useSuiteStripe();
 

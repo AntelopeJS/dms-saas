@@ -41,7 +41,7 @@ import {
 } from "./helpers/plan-stripe-sync";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("plan-stripe-sync");
+useMongoDatabase();
 const stripe = useSuiteStripe();
 const logs = captureLogs();
 

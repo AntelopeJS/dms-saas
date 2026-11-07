@@ -41,7 +41,7 @@ import { insertTenant } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
 
-useMongoDatabase("workspace-self-serve-card");
+useMongoDatabase();
 useDmsAuth();
 const stripe = useSuiteStripe();
 

@@ -19,7 +19,7 @@ import {
 import { captureLogs } from "./helpers/logging";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("default-plan");
+useMongoDatabase();
 const logs = captureLogs();
 
 function plan(overrides: Partial<Plan>): Plan {

@@ -26,7 +26,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { httpRefusal } from "./helpers/refusal";
 
-useMongoDatabase("owner-invitations");
+useMongoDatabase();
 const { sendInviteEmail, core } = useBackOffice();
 
 const DAY_MS = 86_400_000;

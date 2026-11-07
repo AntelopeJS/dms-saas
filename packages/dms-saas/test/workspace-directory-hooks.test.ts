@@ -8,7 +8,7 @@ import { type TenantBillingState, TenantBillingStateModel } from "../src/db";
 import { addTenantMember, createUser } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 
-useMongoDatabase("directory-hooks");
+useMongoDatabase();
 registerWorkspaceDirectoryHooks();
 
 const INVITEE_EMAIL = "a@b.c";

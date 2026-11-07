@@ -23,7 +23,7 @@ import { insertPlan } from "./helpers/plans";
 import { createOwnedWorkspace, seatMembers } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 
-useMongoDatabase("billing-owner-actions");
+useMongoDatabase();
 useDmsAuth();
 const stripe = useSuiteStripe();
 
