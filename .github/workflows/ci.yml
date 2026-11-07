@@ -43,9 +43,14 @@ jobs:
   # The Vitest suite is not part of `checks`: in its own job it runs alongside
   # the build and lint instead of after them, and keeps the mongod cache that
   # the reusable workflow has no input for.
+  # The longest job: two runners, each running half of the test files.
   unit:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -59,7 +64,7 @@ jobs:
           key: mongodb-binaries-8.0.8-${{ runner.os }}
 
       # vitest aliases both packages to their sources: no build needed.
-      - run: pnpm --filter @antelopejs/dms-saas test:unit
+      - run: pnpm --filter @antelopejs/dms-saas test:unit --shard=${{ matrix.shard }}/2
 
   frontend:
     runs-on: ubuntu-latest
