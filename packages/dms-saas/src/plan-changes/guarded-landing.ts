@@ -303,7 +303,8 @@ async function validateAndCommitFree(
     await releasePlanInventory(tenantId, effective);
   }
   const latest = await model.findOne();
-  if (latest?.guardedPlanChange?.phase === "blocked")
+  if (latest?.guardedPlanChange?.barrierId !== effective.barrierId) return;
+  if (latest.guardedPlanChange.phase === "blocked")
     await notifyBlocked(tenantId, latest.guardedPlanChange);
-  else if (latest) await completeFreeActivation(tenantId, latest);
+  else await completeFreeActivation(tenantId, latest);
 }

@@ -202,10 +202,10 @@ LandFinallyThrown(r) ==
   /\ Release(r, "done", "done")
   /\ UNCHANGED <<sub, History, World>>
 
-(* landing.ts:305-308. *)
+(* landing.ts:305-309. *)
 LandLatest(r) ==
   /\ pc[r] = "landLatest"
-  /\ IF sub.phase = "activating"
+  /\ IF sub.barrier = own[r].barrier /\ sub.phase = "activating"
        THEN Move(r, "recComplete", Read, NoObs, own[r])
        ELSE Go(r, "done")
   /\ UNCHANGED <<sub, life, faults, History, World>>
