@@ -30,7 +30,7 @@ Java 11 or later comes from `$JAVA`, else `java` on PATH, else the `eclipse-temu
 | Configuration | Schedulers, cancellers, reconcilers, writers, ordinary writes, closes, faults | States (healthy, faults, races) | Wall time |
 | --- | --- | --- | --- |
 | CI (`<config>.ci.cfg`) | Healthy 1, 1, 1, 1, 1, 1, 0; Faults 1, 1, 1, 1, 0, 0, 1; Races 2, 1, 0, 0, 0, 0, 1 | 597,155, 100,872, 80,112 | 13 to 16 s |
-| Full (`<config>.cfg`) | Healthy 2, 1, 1, 1, 1, 1, 0; Faults 1, 1, 2, 1, 1, 1, 2; Races 2, 1, 1, 0, 0, 0, 1 | 45,758,407, 18,709,590, 1,349,802 | 1,151 s |
+| Full (`<config>.cfg`) | Healthy 2, 1, 1, 1, 1, 1, 0; Faults 1, 1, 2, 1, 1, 1, 2; Races 2, 1, 1, 0, 0, 0, 1 | 39,708,133, 15,470,738, 1,115,272 | 1,151 s |
 
 Each configuration also has the last cron tick. The CI times are three runs with byte-identical output, and the full time is one run, each in Java 25 on a shared 32-core machine with a load average between 20 and 50. About 20 minutes of the full run is the one-worker search for F3. The states count the run of the rules that hold.
 
@@ -72,7 +72,7 @@ The plan that proposed this check named five rules. Its `DeadlineBlocks` says pa
 java -cp ~/.cache/antelopejs-formal/tla2tools-1.7.4.jar tlc2.TLC -config Live.cfg -deadlock GuardedPlanChange.tla
 ```
 
-On the current model, TLC reports no error with 50,662 distinct states. On the scratch change `catch-skips-release` from the last section it reports `Temporal properties were violated`. The shared runner cannot run this file, because it writes only `INVARIANT` lines into its config, so CI runs the invariant form.
+On the current model, TLC reports no error with 45,307 distinct states. On the scratch change `catch-skips-release` from the last section it reports `Temporal properties were violated`. The shared runner cannot run this file, because it writes only `INVARIANT` lines into its config, so CI runs the invariant form.
 
 ## Findings on the code
 
