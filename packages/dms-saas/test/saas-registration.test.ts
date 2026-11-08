@@ -1,11 +1,13 @@
 import { localeMessage, readLocale } from "./helpers/locales";
 import { describe, expect, it } from "vitest";
 import {
-  firstMissingRegistrationRequirement,
   isPaymentStepShown,
+  resolveRegistrationPaymentPolicy,
+} from "../frontend-vue/app/composables/registrationCardPolicy";
+import {
+  firstMissingRegistrationRequirement,
   isRegistrationClosedBy,
   type RegistrationRequirements,
-  resolveRegistrationPaymentPolicy,
   snapshotRegistrationExtras,
 } from "../frontend-vue/app/composables/useSaasRegistration";
 
@@ -64,6 +66,30 @@ describe("resolveRegistrationPaymentPolicy", () => {
       resolveRegistrationPaymentPolicy({
         registrationPaymentMethod: "optional",
       }),
+    ).toBe("optional");
+  });
+
+  it("follows the policy the backend applies once the plan summary loaded", () => {
+    expect(
+      resolveRegistrationPaymentPolicy(
+        { registrationPaymentMethod: "required" },
+        { paymentMethod: "none" },
+      ),
+    ).toBe("none");
+    expect(
+      resolveRegistrationPaymentPolicy(
+        { registrationPaymentMethod: "none" },
+        { paymentMethod: "required" },
+      ),
+    ).toBe("required");
+  });
+
+  it("follows the published policy until the plan summary loaded", () => {
+    expect(
+      resolveRegistrationPaymentPolicy(
+        { registrationPaymentMethod: "optional" },
+        null,
+      ),
     ).toBe("optional");
   });
 

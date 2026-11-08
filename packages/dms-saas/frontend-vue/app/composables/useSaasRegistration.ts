@@ -9,6 +9,10 @@ import {
 } from 'vue'
 import { REGISTER_PLAN_PARAM } from '../build/public/routes'
 import {
+	isPaymentStepShown,
+	resolveRegistrationPaymentPolicy,
+} from './registrationCardPolicy'
+import {
 	registrationLandingPath,
 	useSaasRegistrationPlan,
 } from './useSaasRegistrationPlan'
@@ -108,27 +112,15 @@ interface SetupIntentResponse {
 	clientSecret: string | null
 }
 
-type PaymentStepRule = (skipsPaymentMethod: boolean) => boolean
-
 const SETUP_INTENT_ENDPOINT = '/api/saas/register/setup-intent'
 const REGISTER_ENDPOINT = '/api/saas/register'
 const DEFAULT_PAYMENT_ELEMENT_ID = 'dms-saas-register-payment-element'
-const DEFAULT_PAYMENT_POLICY: RegistrationPaymentMethodPolicy = 'required'
 const INVITATION_ONLY = 'invitation-only'
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const DEFAULT_WORKSPACE_NAME_KEY = 'saas.public.register.default_workspace_name'
 const NO_PAYMENT_ERROR_KEY = 'saas.public.register.error.card_required'
 const SUBMIT_ERROR_KEY = 'saas.public.register.error.failed'
 const PASSWORD_POLICY_ERROR_KEY = 'saas.errors.registration.password_policy'
-
-const PAYMENT_STEP_RULES: Record<
-	RegistrationPaymentMethodPolicy,
-	PaymentStepRule
-> = {
-	required: () => true,
-	optional: (skipsPaymentMethod) => !skipsPaymentMethod,
-	none: () => false,
-}
 
 /**
  * Checked in the order the visitor can act on them: the card field comes
@@ -213,36 +205,6 @@ export function registrationFieldOf(
 	errorKey: string | undefined,
 ): RegistrationField | null {
 	return (errorKey && API_ERROR_FIELDS[errorKey]) || null
-}
-
-/**
- * The card policy the deployment published, falling back to the backend's
- * own default when it published none.
- *
- * @param config dms-saas public runtime config
- * @returns The configured policy, or `required`
- */
-export function resolveRegistrationPaymentPolicy(
-	config: DmsSaasPublicRuntimeConfig | undefined,
-): RegistrationPaymentMethodPolicy {
-	const policy = config?.registrationPaymentMethod
-	return policy && policy in PAYMENT_STEP_RULES
-		? policy
-		: DEFAULT_PAYMENT_POLICY
-}
-
-/**
- * Whether the registration still collects a card.
- *
- * @param policy Configured card policy
- * @param skipsPaymentMethod Whether the visitor chose to add a card later
- * @returns True when the card step is shown and must be completed
- */
-export function isPaymentStepShown(
-	policy: RegistrationPaymentMethodPolicy,
-	skipsPaymentMethod: boolean,
-): boolean {
-	return PAYMENT_STEP_RULES[policy](skipsPaymentMethod)
 }
 
 /**
@@ -336,13 +298,18 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 
 	/** Registration by invitation only: render the closed state, not the form. */
 	const isRegistrationClosed = isRegistrationClosedBy(saasConfig)
-	const paymentMethodPolicy = resolveRegistrationPaymentPolicy(saasConfig)
+	/** The policy the backend applies, once the plan summary has loaded. */
+	const paymentMethodPolicy = computed(() =>
+		resolveRegistrationPaymentPolicy(saasConfig, plan.summary.value),
+	)
 	/** Whether the screen should offer to add the card later. */
-	const canSkipPaymentMethod = paymentMethodPolicy === 'optional'
+	const canSkipPaymentMethod = computed(
+		() => paymentMethodPolicy.value === 'optional',
+	)
 
 	/** Bind the card field's visibility to this, with `v-show`, not `v-if`. */
 	const isPaymentStepVisible = computed(() =>
-		isPaymentStepShown(paymentMethodPolicy, form.skipsPaymentMethod),
+		isPaymentStepShown(paymentMethodPolicy.value, form.skipsPaymentMethod),
 	)
 
 	/**
@@ -542,8 +509,8 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 			isLoading.value = false
 			return
 		}
-		void plan.load()
-		if (paymentMethodPolicy === 'none') {
+		await plan.load()
+		if (paymentMethodPolicy.value === 'none') {
 			isLoading.value = false
 			return
 		}

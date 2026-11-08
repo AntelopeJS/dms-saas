@@ -29,9 +29,11 @@ import { resolveEntryProvider } from "../../auth";
 import {
   assertAdmissionOpen,
   assertRegistrationCardAccepted,
+  getRegistrationPaymentMethodPolicy,
   resolveRegistrationPaymentMethodId,
 } from "../../config";
 import { type Plan, PlanModel } from "../../db";
+import type { RegistrationPaymentMethodPolicy } from "../../types";
 import {
   assertStripeConfigured,
   createCardSetupIntent,
@@ -165,6 +167,13 @@ interface RegistrationPlanSummary {
   requestedPlan: PublicPlan | null;
   features: TenantPlanFeature[];
   rules: PublicBillingRules;
+  /**
+   * The card policy registration applies: the configured one, or `none`
+   * without a usable Stripe key. The screens follow it rather than the
+   * policy the frontend server was configured with, which does not know
+   * whether the backend holds a usable key.
+   */
+  paymentMethod: RegistrationPaymentMethodPolicy;
 }
 
 function generateAuthKey(): string {
@@ -411,6 +420,7 @@ export class SaasRegisterApiController extends Controller(
       requestedPlan: isAnotherPlan ? (byId.get(requested._id) ?? null) : null,
       features: catalog.features,
       rules,
+      paymentMethod: getRegistrationPaymentMethodPolicy(),
     };
   }
 

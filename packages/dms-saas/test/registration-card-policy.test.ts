@@ -11,7 +11,11 @@ import {
   getRegistrationPaymentMethodPolicy,
   setRuntimeConfig,
 } from "../src/config";
-import { type TenantSubscription, TenantSubscriptionModel } from "../src/db";
+import {
+  PlanModel,
+  type TenantSubscription,
+  TenantSubscriptionModel,
+} from "../src/db";
 import { getStripeClient } from "../src/stripe/client";
 import type { DmsSaasConfig } from "../src/types";
 import { createUser, useDmsAuth } from "./helpers/dms";
@@ -302,6 +306,30 @@ describe("registration card policy", () => {
       expect(await world.subscriptionOf(result.tenantId)).toMatchObject({
         planId: PLAN._id,
         stripeCustomerId: null,
+      });
+    });
+  });
+
+  function describePlan() {
+    const controller = Object.assign(buildController(), {
+      planModel: GetModel(PlanModel),
+    });
+    return controller.describeRegistrationPlan(undefined, "en");
+  }
+
+  it("tells the sign-up screens the configured policy while Stripe is configured", async () => {
+    applyPolicy("optional");
+
+    await expect(describePlan()).resolves.toMatchObject({
+      paymentMethod: "optional",
+    });
+  });
+
+  it("tells the sign-up screens it takes no card while Stripe is not configured", async () => {
+    applyPolicy("required");
+    await withUnconfiguredStripe(suiteStripe, async () => {
+      await expect(describePlan()).resolves.toMatchObject({
+        paymentMethod: "none",
       });
     });
   });

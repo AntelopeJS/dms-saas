@@ -1,6 +1,7 @@
 import type { PlanInterval } from '../../composables/usePlanIntervalLabel'
 import type { TenantPlanFeature } from '../../composables/useTenantPlan'
 import { PLAN_UNLIMITED } from '../plan-catalog'
+import type { RegistrationPaymentMethodPolicy } from '../../types/runtime-config'
 
 export type PlanBillingMode = 'flat' | 'seat'
 export type RefundMode = 'full' | 'prorated'
@@ -50,6 +51,8 @@ export interface RegistrationPlanSummary {
 	requestedPlan: PublicPlan | null
 	features: TenantPlanFeature[]
 	rules: PublicBillingRules
+	/** The card policy the backend applies to this registration. */
+	paymentMethod: RegistrationPaymentMethodPolicy
 }
 
 export interface SeatExample {

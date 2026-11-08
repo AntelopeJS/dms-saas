@@ -65,12 +65,14 @@ const saasConfig = config.public.dmsSaas as
 	| undefined
 const dmsRuntime = config.public.dms as DmsPublicRuntime
 const isRegistrationClosed = isRegistrationClosedBy(saasConfig)
-const paymentMethodPolicy = resolveRegistrationPaymentPolicy(saasConfig)
 const comparePlansTo = isPublicScreenServed(saasConfig, 'pricing')
 	? PRICING_PATH
 	: null
 
 const plan = useSaasRegistrationPlan(readChosenPlan)
+const paymentMethodPolicy = computed(() =>
+	resolveRegistrationPaymentPolicy(saasConfig, plan.summary.value),
+)
 
 const tenantAssignmentToken = computed(() => {
 	const value = route.query.token
@@ -95,7 +97,7 @@ const stripeHandle = ref<ReturnType<typeof useStripePaymentElement> | null>(
 )
 
 const isPaymentStepVisible = computed(() =>
-	isPaymentStepShown(paymentMethodPolicy, skipsPaymentMethod.value),
+	isPaymentStepShown(paymentMethodPolicy.value, skipsPaymentMethod.value),
 )
 
 const entryProvider = computed<OAuthProviderOption | null>(() => {
@@ -185,7 +187,7 @@ async function createSetupIntent(): Promise<string | undefined> {
 
 async function mountPaymentElement(): Promise<void> {
 	const publishableKey = saasConfig?.stripePublishableKey
-	if (!publishableKey || paymentMethodPolicy === 'none') return
+	if (!publishableKey || paymentMethodPolicy.value === 'none') return
 	try {
 		const clientSecret = await createSetupIntent()
 		if (!clientSecret) return
@@ -280,7 +282,7 @@ onMounted(async () => {
 	// after a card has been entered.
 	await loadPendingRegistration()
 	if (entryFailure.value) return
-	void plan.load()
+	await plan.load()
 	await mountPaymentElement()
 })
 </script>
