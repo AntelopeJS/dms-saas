@@ -29,6 +29,7 @@
 				"downgrade_exceeds_seat_limit": "This plan allows fewer members than the workspace currently has",
 				"inheritance_cycle": "Plan inheritance would create a cycle",
 				"inheritance_parent_missing": "Parent plan not found",
+				"invalid_billing_mode": "Plan billing mode must be Flat rate or Per seat",
 				"invalid_interval": "Plan billing interval must be monthly or yearly",
 				"no_stripe_price": "Plan has no Stripe price",
 				"seat_limit_reached": "The plan's member limit has been reached",

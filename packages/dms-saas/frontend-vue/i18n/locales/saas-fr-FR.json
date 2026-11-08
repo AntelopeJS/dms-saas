@@ -29,6 +29,7 @@
 				"downgrade_exceeds_seat_limit": "Cette offre autorise moins de membres que l'espace de travail n'en compte actuellement",
 				"inheritance_cycle": "L'héritage d'offres créerait un cycle",
 				"inheritance_parent_missing": "Offre parente introuvable",
+				"invalid_billing_mode": "Le mode de facturation de l'offre doit être Forfait ou Par siège",
 				"invalid_interval": "L'intervalle de facturation de l'offre doit être mensuel ou annuel",
 				"no_stripe_price": "L'offre n'a pas de tarif Stripe",
 				"seat_limit_reached": "La limite de membres de l'offre est atteinte",

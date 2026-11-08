@@ -41,8 +41,10 @@ import {
 } from "../../plans/catalogue-summary";
 import { loadCatalogueUsage } from "../../plans/catalogue-usage";
 import {
+  DEFAULT_PLAN_BILLING_MODE,
   type PlanWrite,
   type PlanWriteBody,
+  assertWritableBillingMode,
   invalidFeatureValues,
   isValidMemberCap,
   pickPlanWrite,
@@ -443,6 +445,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
   private async createPlan(body: PlanWriteBody): Promise<PlanWriteResult> {
     const sanitized = pickPlanWrite(readableWrite(body));
     assertPlanInterval(sanitized.interval);
+    assertWritableBillingMode(sanitized.billingMode);
     await this.assertValidAccess(sanitized);
     const fallbackName = sanitized.name?.[PLAN_FALLBACK_LOCALE];
     if (!sanitized.slug && fallbackName) {
@@ -456,6 +459,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     const inserted = await this.planModel.insert([
       toPlanRow({
         ...sanitized,
+        billingMode: sanitized.billingMode ?? DEFAULT_PLAN_BILLING_MODE,
         isActive: sanitized.isActive ?? true,
         isDeleted: false,
         isPublic: sanitized.isPublic ?? true,
@@ -503,6 +507,7 @@ export class SaasPlansApiController extends Controller("/api/saas/plans") {
     const plan = await this.planModel.get(id);
     assert(plan, HTTP_NOT_FOUND, "saas.errors.plan.not_found");
     const sanitized = pickPlanWrite(readableWrite(body));
+    assertWritableBillingMode(sanitized.billingMode);
     await this.assertValidAccess(sanitized);
     if (sanitized.inheritsFromPlanId !== undefined) {
       await ensureInheritanceIsAcyclic(
