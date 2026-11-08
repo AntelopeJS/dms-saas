@@ -29,7 +29,7 @@ Java 11 or later comes from `$JAVA`, else `java` on PATH, else the `eclipse-temu
 
 | Configuration | Schedulers, cancellers, reconcilers, writers, ordinary writes, closes, faults | States (healthy, faults, races) | Wall time |
 | --- | --- | --- | --- |
-| CI (`<config>.ci.cfg`) | Healthy 1, 1, 1, 1, 1, 1, 0; Faults 1, 1, 1, 1, 0, 0, 1; Races 2, 1, 0, 0, 0, 0, 1 | 597,155, 100,872, 80,112 | 13 to 16 s |
+| CI (`<config>.ci.cfg`) | Healthy 1, 1, 1, 1, 1, 1, 0; Faults 1, 1, 1, 1, 0, 0, 1; Races 2, 1, 0, 0, 0, 0, 1 | 597,155, 100,872, 79,176 | 13 to 16 s |
 | Full (`<config>.cfg`) | Healthy 2, 1, 1, 1, 1, 1, 0; Faults 1, 1, 2, 1, 1, 1, 2; Races 2, 1, 1, 0, 0, 0, 1 | 39,708,133, 15,387,242, 1,115,272 | 978 s |
 
 Each configuration also has the last cron tick. The CI times are three runs with byte-identical output, in Java 25 on a shared 32-core machine with a load average between 20 and 50. The full time is one run, in the `eclipse-temurin:21-jre` image on a shared 16-core machine with a load average between 30 and 225. The states count the run of the rules that hold.
@@ -58,7 +58,7 @@ Run `--full` when a change touches a file in the coverage record below, or this 
 | `AbortingKeepsAccess` | While a change is aborting, the gate stays open, past `effectiveAt` too. | A tenant whose downgrade is being undone loses the paid plan it keeps. | holds | holds | holds |
 | `DeadlineStopsProviderEffect` | No Stripe schedule request is admitted after `effectiveAt`. | Stripe is changed after the period ended, and the change is stuck. | holds | holds | holds |
 | `LandsOnlyWhenCancelled` | The plan moves to Free only past `effectiveAt`, with Stripe's cancellation confirmed. | A tenant lands on Free while Stripe still bills them. | holds | holds | holds |
-| `AdmissionResumes` | Once nothing more can happen, no barrier is held, unless a deletion closed the row. | Every inventory write of the tenant is refused with 409 for good. | holds | holds | finding F2 (27, 28) |
+| `AdmissionResumes` | Once nothing more can happen, no barrier is held, unless a deletion closed the row. | Every inventory write of the tenant is refused with 409 for good. | holds | holds | holds |
 
 `TypeOK` holds too. The numbers in brackets are the states of TLC's shortest counterexample, CI then full, which `check.mjs` records per configuration.
 
@@ -79,7 +79,7 @@ On the current model, TLC reports no error with 45,307 distinct states. On the s
 Each finding was replayed on the real code with the Vitest harness. [findings.md](findings.md) has TLC's path and the observed answers of each replay.
 
 - **F1, `DeadlineStopsProviderEffect`, every configuration, fixed.** `admitGuardedProviderEffect` had no deadline check, so a validation that outlasted `effectiveAt` still sent the Stripe schedule request, and the change was stuck in `provider_pending`. AntelopeJS/dms-saas#206. It now throws past `effectiveAt` (guarded-state.ts:120), the scheduler's catch aborts the preparation, and `test/guarded-free-downgrade.test.ts` replays the finding.
-- **F2, `AdmissionResumes`, `Races`.** A stale `cancelGuardedFreeChange` completes another operation's abort (free.ts:191, state.ts:95-109), and that operation's barrier is never released. AntelopeJS/dms-saas#207.
+- **F2, `AdmissionResumes`, `Races`, fixed.** A stale `cancelGuardedFreeChange` completed another operation's abort, and that operation's barrier was never released. The canceller now completes only the abort of the operation it read (free.ts:191-197). AntelopeJS/dms-saas#207.
 - **F3, `AdmissionResumes`, full `Faults` only, fixed.** A stalled landing completed another landing's activation, and that landing's barrier was never released. The landing now completes only the activation it wrote (landing.ts:305-309). AntelopeJS/dms-saas#209.
 
 ## Read every result with /statechart
@@ -114,7 +114,7 @@ All paths are under `packages/dms-saas/src/`.
 | `DrainObserve`, `DrainRead`, `Pause`, `DrainAgain`, `DrainTimesOut` | `drainPlanInventory` (`plan-changes/inventory-barrier.ts:22-56`), with dms `pauseTenantLifecycleAdmission` |
 | `Release` in every caller | `releasePlanInventory` (inventory-barrier.ts:59-64), with dms `resumeTenantLifecycleAdmission` |
 | `ValidatePasses`, `ValidateRefuses`, `AdmitCas`, `Catch*`, `EmitRelease`, `EmitSchedule`, `ScheduleCheck`, `ConfirmSchedule` | `scheduleGuardedFreeChange` (guarded-free.ts:116-179), `admitGuardedProviderEffect`, `abortGuardedPreparation`, `completeGuardedAbort`, `confirmGuardedSchedule` (guarded-state.ts) |
-| `Cancel*`, `ConfirmCancel` | `cancelGuardedFreeChange` (guarded-free.ts:182-214), `admitGuardedCancellation`, `confirmGuardedCancellation` (guarded-state.ts:140-170) |
+| `Cancel*`, `ConfirmCancel` | `cancelGuardedFreeChange` (guarded-free.ts:182-220), `admitGuardedCancellation`, `confirmGuardedCancellation` (guarded-state.ts:140-170) |
 | `ReconcileRead`, `Rec*`, `Land*` | `reconcileGuardedFreeChange`, `recoverInventoryPreparation`, `validateAndCommitFree`, `recordBlocked`, `completeFreeActivation` (`plan-changes/guarded-landing.ts`), called by `crons/reconcile-guarded-downgrades.ts` and by `applyPendingFreePlanOnCancellation` (`plan-changes/deferred.ts:316-336`) from the Stripe `customer.subscription.deleted` webhook (`stripe/webhook-handlers.ts:293-303`) |
 | `IsBlocked` | `isGuardedPlanChangeBlocked` (guarded-state.ts:8-19), read by `auth/subscription-access-gate.ts` and `stripe/webhook-shared.ts:55-77` |
 | `Applies`, `Cas` | `TenantSubscriptionModel.mutateRevision` (`packages/interface-dms-saas/src/db/models/tenantSubscriptions.model.ts:52-67`) and `compareAndSet` (guarded-state.ts:21-33) |

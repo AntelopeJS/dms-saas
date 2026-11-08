@@ -20,10 +20,7 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const CONFIGS = {
   Healthy: { ci: {}, full: {} },
   Faults: { ci: {}, full: {} },
-  Races: {
-    ci: { AdmissionResumes: 27 },
-    full: { AdmissionResumes: 28 },
-  },
+  Races: { ci: {}, full: {} },
 };
 
 const args = process.argv.slice(2);

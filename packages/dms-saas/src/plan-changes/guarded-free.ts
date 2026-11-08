@@ -188,7 +188,13 @@ export async function cancelGuardedFreeChange(tenantId: string): Promise<void> {
     if (change.phase === "preparing")
       await abortGuardedPreparation(model, current);
     await releasePlanInventory(tenantId, change);
-    await completeGuardedAbort(model, await readSubscription(tenantId));
+    const aborted = await readSubscription(tenantId);
+    if (
+      aborted.guardedPlanChange?.operationId === change.operationId &&
+      aborted.guardedPlanChange.phase === "aborting"
+    ) {
+      await completeGuardedAbort(model, aborted);
+    }
     return;
   }
   await admitGuardedCancellation(model, current);

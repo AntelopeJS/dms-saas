@@ -1,7 +1,7 @@
 ---- MODULE GuardedPlanChangeCancel ----
 EXTENDS GuardedPlanChangeState
 
-(* ---- cancelGuardedFreeChange (free.ts:182-214) ---------------------------- *)
+(* ---- cancelGuardedFreeChange (free.ts:182-220) ---------------------------- *)
 
 CancelRead(c) ==
   /\ pc[c] = "idle"
@@ -30,10 +30,10 @@ CancelRelease(c) ==
   /\ Release(c, "cancelFinalRead", "done")
   /\ UNCHANGED <<sub, History, World>>
 
-(* free.ts:191: a fresh read, and requirePhase("aborting") names no operation. *)
+(* free.ts:191-197: a fresh read, then only this operation's abort. *)
 CancelFinalRead(c) ==
   /\ pc[c] = "cancelFinalRead"
-  /\ IF sub.phase = "aborting"
+  /\ IF sub.op = own[c].op /\ sub.phase = "aborting"
        THEN Move(c, "cancelComplete", Read, NoObs, own[c])
        ELSE Go(c, "done")
   /\ UNCHANGED <<sub, life, faults, History, World>>
@@ -50,14 +50,14 @@ CancelAdmit(c) ==
   /\ Cas(c, WithTransition(Patched(c, "cancel_pending"), TRUE), "cancelEmit", "done")
   /\ UNCHANGED <<life, History, World>>
 
-(* free.ts:196-202: cancel_at_period_end false. *)
+(* free.ts:202-208: cancel_at_period_end false. *)
 CancelEmit(c) ==
   /\ pc[c] = "cancelEmit"
   /\ pending' = [pending EXCEPT ![c] = [kind |-> "cancel", op |-> own[c].op]]
   /\ Go(c, "emitWait")
   /\ UNCHANGED <<sub, life, faults, History, stripe, writer, deadline, elapsed, closes, writes>>
 
-(* free.ts:203-212. *)
+(* free.ts:209-218. *)
 CancelCheck(c) ==
   /\ pc[c] = "cancelCheck"
   /\ IF stripe.status = "active" /\ ~stripe.cancelAtEnd
