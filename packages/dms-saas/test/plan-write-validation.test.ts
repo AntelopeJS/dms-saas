@@ -152,31 +152,50 @@ describe("plan billing mode writes", () => {
     });
   });
 
-  it("rejects a billing mode outside the supported values on create", async () => {
-    await expectInvalidBillingMode(async () =>
-      (await controller()).create(
-        OWNER,
-        fromAny<PlanWriteBody>({
-          name: { en: "Tiered" },
-          interval: "month",
-          billingMode: "tiered",
-        }),
-      ),
-    );
-  });
+  it.each(["tiered", null])(
+    "rejects the billing mode %j on create",
+    async (billingMode) => {
+      await expectInvalidBillingMode(async () =>
+        (await controller()).create(
+          OWNER,
+          fromAny<PlanWriteBody>({
+            name: { en: "Tiered" },
+            interval: "month",
+            billingMode,
+          }),
+        ),
+      );
+    },
+  );
 
-  it("rejects a billing mode outside the supported values on update", async () => {
+  it.each(["tiered", null])(
+    "rejects the billing mode %j on update",
+    async (billingMode) => {
+      const plans = await controller(
+        planRow({ _id: PLAN_ID, name: "Free", interval: "month" }),
+      );
+
+      await expectInvalidBillingMode(() =>
+        plans.update(OWNER, PLAN_ID, fromAny<PlanWriteBody>({ billingMode })),
+      );
+    },
+  );
+
+  it("keeps the stored billing mode when an update leaves it out", async () => {
     const plans = await controller(
-      planRow({ _id: PLAN_ID, name: "Free", interval: "month" }),
+      planRow({
+        _id: PLAN_ID,
+        name: "Team",
+        interval: "month",
+        billingMode: "seat",
+      }),
     );
 
-    await expectInvalidBillingMode(() =>
-      plans.update(
-        OWNER,
-        PLAN_ID,
-        fromAny<PlanWriteBody>({ billingMode: "tiered" }),
-      ),
-    );
+    await plans.update(OWNER, PLAN_ID, { isActive: false });
+
+    await expect(GetModel(PlanModel).get(PLAN_ID)).resolves.toMatchObject({
+      billingMode: "seat",
+    });
   });
 });
 
