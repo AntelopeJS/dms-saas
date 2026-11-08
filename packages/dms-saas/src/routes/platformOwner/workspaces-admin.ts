@@ -67,6 +67,7 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
 
 const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
+const CANCELLED_STATUS: TenantSubscriptionStatus = "cancelled";
 
 const COMP_ICON = "i-ph-gift";
 
@@ -222,10 +223,11 @@ async function assertPlanIsAvailableForTenant(
 }
 
 /**
+ * A cancelled workspace offers no free access, as it offers no suspension.
  * Granting complimentary access cancels a paid Stripe subscription for good;
  * the server refuses it unless the operator acknowledged exactly that.
  */
-async function assertCancellationAcknowledged(
+async function assertFreeAccessGrantable(
   tenantId: string,
   body: GrantFreeAccessBody,
 ): Promise<void> {
@@ -233,6 +235,11 @@ async function assertCancellationAcknowledged(
     TenantSubscriptionModel,
     tenantId,
   ).findOne();
+  assert(
+    subscription?.status !== CANCELLED_STATUS,
+    HTTP_BAD_REQUEST,
+    "saas.errors.workspace.is_cancelled",
+  );
   assert(
     !subscription?.stripeSubscriptionId ||
       body.acknowledgeCancellation === true,
@@ -308,12 +315,12 @@ export class SaasWorkspacesAdminController extends Controller(
     @JSONBody() body: GrantFreeAccessBody,
   ) {
     await this.assertTenantExists(tenantId);
+    await assertFreeAccessGrantable(tenantId, body);
     const planId = isString(body.planId) ? body.planId : "";
     const plan = await assertPlanIsAvailableForTenant(
       planId ? await this.planModel.get(planId) : undefined,
       tenantId,
     );
-    await assertCancellationAcknowledged(tenantId, body);
     const freeUntil = parseFutureDate(
       body.freeUntil,
       "saas.errors.workspace_create.free_until_past",

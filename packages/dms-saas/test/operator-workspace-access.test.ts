@@ -132,6 +132,30 @@ describe("complimentary access over a paid subscription", () => {
   });
 });
 
+describe("complimentary access to a cancelled workspace", () => {
+  it("is refused and leaves the workspace cancelled", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const subscription = await subscriptionOf(tenantId);
+    await GetModel(TenantSubscriptionModel, tenantId).update(
+      subscription!._id,
+      { status: "cancelled", isComplimentary: false },
+    );
+
+    await expect(
+      adminController().grantFreeAccess(operator, tenantId, {
+        planId: await insertPlan(),
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      body: "saas.errors.workspace.is_cancelled",
+    });
+    expect(await subscriptionOf(tenantId)).toMatchObject({
+      status: "cancelled",
+      isComplimentary: false,
+    });
+  });
+});
+
 describe("complimentary access to a workspace without a customer type", () => {
   async function insertBusinessPlan(): Promise<string> {
     const planId = randomUUID();
