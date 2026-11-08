@@ -10,6 +10,7 @@ import {
   type SegmentCountPoint,
   segmentsTableName,
 } from "../tables/segments.table";
+import { matchesDeclaredTypes } from "./patch-validation";
 
 /** Days of counts a segment keeps for its trend. */
 export const SEGMENT_COUNT_HISTORY_DAYS = 30;
@@ -80,7 +81,10 @@ export class SegmentModel extends BasicDataModel(Segment, segmentsTableName) {
   ): Promise<number> {
     if (
       options?.validate &&
-      !SegmentModel.validate(patch, { partial: true }).ok
+      !(
+        SegmentModel.validate(patch, { partial: true }).ok &&
+        matchesDeclaredTypes(Segment, patch)
+      )
     )
       throw new Error("Invalid segment patch");
     const current = await this.get(id);

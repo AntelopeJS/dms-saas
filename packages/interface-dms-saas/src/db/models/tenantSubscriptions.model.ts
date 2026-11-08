@@ -7,17 +7,29 @@ import {
   type ValidateOptions,
 } from "@antelopejs/interface-database-decorators";
 import {
+  TENANT_SUBSCRIPTION_STATUSES,
   TenantSubscription,
   type SubscriptionCronNotification,
   type SubscriptionTransition,
   type TenantSubscriptionStatus,
   tenantSubscriptionsTableName,
 } from "../tables/tenantSubscriptions.table";
+import { type FieldGuard, matchesDeclaredTypes } from "./patch-validation";
 
 const STATUS_CANCELLED: TenantSubscriptionStatus = "cancelled";
 const STATUS_PAST_DUE: TenantSubscriptionStatus = "past_due";
 const STATUS_ACTIVE: TenantSubscriptionStatus = "active";
 const STATUS_SUSPENDED: TenantSubscriptionStatus = "suspended";
+
+function isTenantSubscriptionStatus(
+  value: unknown,
+): value is TenantSubscriptionStatus {
+  return TENANT_SUBSCRIPTION_STATUSES.some((status) => status === value);
+}
+
+const SUBSCRIPTION_REFINEMENTS = {
+  status: isTenantSubscriptionStatus,
+} satisfies Record<string, FieldGuard>;
 
 type KeyedTenantSubscriptionUpdate = [
   id: string,
@@ -85,7 +97,14 @@ export class TenantSubscriptionModel extends BasicDataModel(
     if (!id) throw new Error("Subscription identity is required");
     if (
       validation?.validate &&
-      !TenantSubscriptionModel.validate(patch, { partial: true }).ok
+      !(
+        TenantSubscriptionModel.validate(patch, { partial: true }).ok &&
+        matchesDeclaredTypes(
+          TenantSubscription,
+          patch,
+          SUBSCRIPTION_REFINEMENTS,
+        )
+      )
     )
       throw new Error("Invalid subscription patch");
     const current = await this.get(id);
