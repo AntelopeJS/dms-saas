@@ -14,6 +14,7 @@ On a scratch copy of this folder, inside the repository so the runner resolves, 
 | `complete-abort-without-revision`: state.ts:82-93 completeGuardedAbort writes without expectedRevision, from the canceller | `OneEnd` | BROKEN OneEnd, exit=1 (Healthy.ci) x2 | BROKEN OneEnd, exit=1 (Healthy) |
 | `gate-blocks-early`: state.ts:15-18 the effectiveAt test compares the wrong way (>=): the gate closes before the deadline | `NoBlockBeforeDeadline` | BROKEN NoBlockBeforeDeadline, exit=1 (Healthy.ci) x2 | BROKEN NoBlockBeforeDeadline, exit=1 (Healthy) |
 | `gate-ignores-deadline`: state.ts:15-18 isGuardedPlanChangeBlocked drops the effectiveAt test | `DeadlineBlocks` | BROKEN DeadlineBlocks, exit=1 (Healthy.ci) x2 | BROKEN DeadlineBlocks, exit=1 (Healthy) |
+| `gate-blocks-aborting`: state.ts:14 isGuardedPlanChangeBlocked drops the aborting exemption | `AbortingKeepsAccess` | BROKEN AbortingKeepsAccess, exit=1 (Healthy.ci) x2 | BROKEN AbortingKeepsAccess, exit=1 (Healthy) |
 | `cancel-ignores-deadline`: state.ts:140 admitGuardedCancellation drops its deadline check | `DeadlineBlocks` | BROKEN DeadlineBlocks, exit=1 (Healthy.ci) x2 | BROKEN DeadlineBlocks, exit=1 (Healthy) |
 | `landing-skips-stripe-check`: landing.ts:202-206 the landing does not read Stripe | `LandsOnlyWhenCancelled` | BROKEN LandsOnlyWhenCancelled, exit=1 (Healthy.ci) x2 | BROKEN LandsOnlyWhenCancelled, exit=1 (Healthy) |
 | `landing-ignores-deadline`: landing.ts:184 the landing does not wait for effectiveAt | `NoBlockBeforeDeadline` | BROKEN NoBlockBeforeDeadline, exit=1 (Healthy.ci) x2 | BROKEN NoBlockBeforeDeadline, exit=1 (Healthy) |
@@ -24,6 +25,8 @@ On a scratch copy of this folder, inside the repository so the runner resolves, 
 | `fix-cancel-compares-operation`: fix candidate for dms-saas#207: the canceller completes only its own abort | `AdmissionResumes` | HOLDS  AdmissionResumes (93404 states), exit=1 (Races.ci) x2 | HOLDS  AdmissionResumes (1320750 states), exit=1 (Races) |
 | `fix-landing-completes-own`: fix candidate for dms-saas#209: the landing completes only the activation it wrote | `AdmissionResumes` | no change, exit=0 (Races.ci) x2 | HOLDS  AdmissionResumes (18565642 states), exit=1 (Faults) |
 
-Every scratch change exits 1. `cron-aborting-skips-release` reaches the full `Faults` configuration, where F3 already breaks `AdmissionResumes`, so it shows as a changed counterexample length there. Each fix candidate makes its finding `HOLDS`. `fix-landing-completes-own` changes nothing in CI, because the CI bounds do not reach F3.
+Every scratch change in the table exits 1. `cron-aborting-skips-release` reaches the full `Faults` configuration, where F3 already breaks `AdmissionResumes`, so it shows as a changed counterexample length there. Each fix candidate makes its finding `HOLDS`. `fix-landing-completes-own` changes nothing in CI, because the CI bounds do not reach F3.
+
+One scratch change is not caught, which is why SKILL.md lists a barrier the row does not name under what the model leaves out. `drain-takes-other-barrier`: barrier.ts:42-43 drains under another barrier as under its own (DrainRead takes any observed barrier for its own). It exits 0 in both configurations, with the model's own state counts: 658,701, 113,940 and 94,340 in CI, 45,758,407, 18,709,590 and 1,349,802 in full.
 
 With the edits dropped, both configurations exit 0.
