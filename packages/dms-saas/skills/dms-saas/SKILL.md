@@ -23,7 +23,9 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
   `withStripeAvailability()` and, when it cannot work without Stripe, calls `assertStripeConfigured()` first
   (`503 saas.errors.stripe.not_configured`) — see `src/stripe/availability.ts`.
 - Stripe webhook endpoint → `/api/saas/webhooks/stripe`, API version `2026-08-26.dahlia`.
-- Frontend server env: `DMS_AUTH_ESTABLISH_ENDPOINTS=/api/saas/register/finalize`, else sign-ups stay signed out (403).
+- Sign-up completion needs no frontend server env: the module declares `/api/saas/register/finalize` as an
+  `authEstablishEndpoints` entry of its frontend module. A `403` from `/auth/establish` (sign-ups stay signed out)
+  means the frontend server does not serve this module's frontend (`faq`).
 - `allowedRedirectHosts` for Checkout / billing-portal return URLs: defaults to the DMS `clientBaseUrl` host, a value replaces it (loopback auto-allowed in dev only).
 - A free plan must exist (or `defaultPlanSlug`): registration opens it, and every workspace without a subscription gets it.
 - Options: `admissionMode` (`open` | `invitation-only`), `registration.paymentMethod` (`required` default | `optional` | `none`),
