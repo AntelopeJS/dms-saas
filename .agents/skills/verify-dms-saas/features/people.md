@@ -50,7 +50,7 @@ dms-control journey "$RUN" people
 
 - Workspaces reach the segment projections once the workspace state is published; the journey republishes each new workspace through the fixture.
 - Visitors are not e-mail verified, so a verified-e-mail rule matches the platform admin only.
-- Known finding: `the-unverified-tab-lists-the-accounts-whose-address-is-not-verified` fails. `POST /register` (`createInitialUser` in `routes/public/register.ts`) stores the user without `isValidated`, and the users table of `@antelopejs/interface-dms` has no default, so the Unverified tab (`isValidated is "false"`) and the Unverified badge (`equals: false`) skip every account that registered and never verified: the tab reads "Unverified 0".
+- Registered accounts are stored without `isValidated`, so the Unverified tab filters `isValidated is_not true` and the badge reads `notEquals: true`: a missing flag counts as not verified.
 
 ## Coverage
 
@@ -58,5 +58,5 @@ dms-control journey "$RUN" people
 | --- | --- |
 | 5.users-and-segments.md "Users" (promote and demote) | platform-roles journey; Not driven: the user detail tabs; the last-platform-admin rule is unreachable through the API, because the acting admin always counts as another admin |
 | 5.users-and-segments.md "Segments" | validation and counting journeys: fields, operators, list values, And/Or, any/every, owner role, depth, evaluate now, duplicate; Not driven: the 15-minute re-evaluation, trend over 30 days, the live preview editor |
-| 5.users-and-segments.md Users tabs | tab journeys: All and Platform admins; the Unverified journey fails on a product finding (see Gotchas) |
+| 5.users-and-segments.md Users tabs | tab journeys: All, Platform admins and Unverified |
 | 5.users-and-segments.md Export users (CSV) and owned_mrr | CSV journey: header, rows sorted by e-mail, owned_mrr 50.00 and 0.00 |
