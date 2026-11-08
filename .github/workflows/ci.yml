@@ -76,6 +76,18 @@ jobs:
       # Compile the published DMS source together with this frontend module.
       - run: pnpm --filter @antelopejs/dms-saas test:frontend
 
+  # The playground has its own lockfile and tsconfig, so neither `checks` nor
+  # the module build typechecks it. It links the interface through its `dist`.
+  playground:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm --filter @antelopejs/interface-dms-saas build
+      - run: pnpm install --dir packages/dms-saas/playground --ignore-workspace --frozen-lockfile
+      - run: pnpm --dir packages/dms-saas/playground exec tsc --noEmit -p .
+
   # TLC through the runner of @antelopejs/tooling-configs. The CI configuration
   # of each check: `node .agents/skills/<check>/check.mjs`.
   formal:
@@ -102,7 +114,7 @@ jobs:
   # and fails unless every job above succeeded.
   ubuntu:
     if: always()
-    needs: [ci, unit, frontend, formal]
+    needs: [ci, unit, frontend, playground, formal]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
