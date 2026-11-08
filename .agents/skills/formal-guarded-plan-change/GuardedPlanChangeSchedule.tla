@@ -63,11 +63,14 @@ ValidateRefuses(s) ==
   /\ Go(s, "catchRead")
   /\ UNCHANGED <<sub, life, faults, History, World>>
 
-(* admitGuardedProviderEffect (state.ts:112-120), on the revision read under the
-   barrier (free.ts:139). It holds no deadline check, unlike state.ts:140. *)
+(* admitGuardedProviderEffect (state.ts:115-125), on the revision read under the
+   barrier (free.ts:139). Past the deadline it throws before its CAS
+   (state.ts:120), as admitGuardedCancellation does (state.ts:145). *)
 AdmitCas(s) ==
   /\ pc[s] = "admitCas"
-  /\ Cas(s, Patched(s, "provider_pending"), "emitRelease", "catchRead")
+  /\ IF deadline
+       THEN Go(s, "catchRead") /\ UNCHANGED <<sub, faults>>
+       ELSE Cas(s, Patched(s, "provider_pending"), "emitRelease", "catchRead")
   /\ staleEffect' = (staleEffect \/ (sub' # sub /\ ~Applies(s)))
   /\ lateProvider' = (lateProvider \/ (sub' # sub /\ deadline))
   /\ UNCHANGED <<life, started, ends, landed, lateCancel, badLanding, World>>
@@ -138,7 +141,7 @@ ConfirmRead(c) ==
        ELSE Go(c, "done")
   /\ UNCHANGED <<sub, life, faults, History, World>>
 
-(* confirmGuardedSchedule (state.ts:123-132). *)
+(* confirmGuardedSchedule (state.ts:128-137). *)
 ConfirmSchedule(s) ==
   /\ pc[s] = "confirmCas"
   /\ s \in Schedulers

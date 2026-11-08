@@ -108,12 +108,17 @@ function requirePhase(
   return change;
 }
 
-/** Only the caller whose CAS succeeds may emit this operation's Stripe request. */
+/**
+ * Only the caller whose CAS succeeds may emit this operation's Stripe request.
+ * Past effectiveAt the paid period is over, so the preparation aborts instead.
+ */
 export async function admitGuardedProviderEffect(
   model: TenantSubscriptionModel,
   current: TenantSubscription,
 ): Promise<void> {
   const change = requirePhase(current, "preparing");
+  if (isGuardedPlanChangeBlocked(current))
+    throw new Error("The downgrade deadline has passed");
   await compareAndSet(model, current, {
     guardedPlanChange: { ...change, phase: "provider_pending" },
   });
