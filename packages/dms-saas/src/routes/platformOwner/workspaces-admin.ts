@@ -23,6 +23,7 @@ import {
   type Plan,
   PlanModel,
   TenantBillingInfoModel,
+  type TenantSubscription,
   TenantSubscriptionModel,
   type TenantSubscriptionStatus,
   PLAN_UNLIMITED,
@@ -129,6 +130,21 @@ function joinConfirmationDialog(
 }
 
 /**
+ * A cancelled workspace offers no free access, as it offers no suspension.
+ * Checked again on the row the grant's transition is admitted on, so a
+ * cancellation that lands after the early check is not overwritten.
+ */
+function assertNotCancelled(
+  subscription: TenantSubscription | undefined,
+): void {
+  assert(
+    subscription?.status !== CANCELLED_STATUS,
+    HTTP_BAD_REQUEST,
+    "saas.errors.workspace.is_cancelled",
+  );
+}
+
+/**
  * Puts the workspace on the plan with complimentary access. A paid Stripe
  * subscription is cancelled first. The write clears the subscription and
  * checkout refs and the self-refund claim (`refundRequestedAt`), which re-arms
@@ -144,6 +160,7 @@ async function upsertFreeSubscription(
 ): Promise<string | null> {
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const existing = await tenantSubscriptionModel.findOne();
+  assertNotCancelled(existing);
   const previousPlan = existing?.planId
     ? await GetModel(PlanModel).get(existing.planId)
     : undefined;
@@ -223,8 +240,8 @@ async function assertPlanIsAvailableForTenant(
 }
 
 /**
- * A cancelled workspace offers no free access, as it offers no suspension.
- * Granting complimentary access cancels a paid Stripe subscription for good;
+ * A cancelled workspace is refused before any plan check. Granting
+ * complimentary access cancels a paid Stripe subscription for good;
  * the server refuses it unless the operator acknowledged exactly that.
  */
 async function assertFreeAccessGrantable(
@@ -235,11 +252,7 @@ async function assertFreeAccessGrantable(
     TenantSubscriptionModel,
     tenantId,
   ).findOne();
-  assert(
-    subscription?.status !== CANCELLED_STATUS,
-    HTTP_BAD_REQUEST,
-    "saas.errors.workspace.is_cancelled",
-  );
+  assertNotCancelled(subscription);
   assert(
     !subscription?.stripeSubscriptionId ||
       body.acknowledgeCancellation === true,

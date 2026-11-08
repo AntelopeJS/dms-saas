@@ -3,6 +3,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { describe, expect, it } from "vitest";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
+import { requestWorkspaceDeletion } from "../src/workspaces/deletion";
 import {
   WORKSPACE_NAME,
   adminController,
@@ -153,6 +154,22 @@ describe("complimentary access to a cancelled workspace", () => {
       status: "cancelled",
       isComplimentary: false,
     });
+  });
+
+  it("does not undo an owner's deletion that lands during the grant", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const planId = await insertPlan();
+
+    await Promise.allSettled([
+      adminController().grantFreeAccess(operator, tenantId, { planId }),
+      requestWorkspaceDeletion(tenantId, operator._id),
+    ]);
+
+    const subscription = await subscriptionOf(tenantId);
+    expect({
+      deleted: !!subscription?.deletionRequestedAt,
+      status: subscription?.status,
+    }).not.toEqual({ deleted: true, status: "active" });
   });
 });
 
