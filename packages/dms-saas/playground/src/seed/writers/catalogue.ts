@@ -2,11 +2,9 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   DEFAULT_STRIPE_TAX_CODE,
   type Feature,
-  type FeatureLocalizedText,
   FeatureModel,
   PLAN_FALLBACK_LOCALE,
   type Plan,
-  type PlanLocalizedText,
   type PlanProviderRefs,
   PlanModel,
 } from "@antelopejs/interface-dms-saas/db";
@@ -48,9 +46,7 @@ export async function readGrantablePermissions(): Promise<string[]> {
 const NO_TEXT: LocalizedText = { en: "", fr: "" };
 
 /** The feature as stored, every localized field holding a text per language. */
-export function toFeatureRow(
-  feature: SeedFeature,
-): SeedRow<Feature, FeatureLocalizedText> {
+export function toFeatureRow(feature: SeedFeature): SeedRow<Feature> {
   const { id, ...fields } = feature;
   return {
     ...fields,
@@ -92,12 +88,9 @@ function fakeStripeRefs(plan: SeedPlan): PlanProviderRefs {
   };
 }
 
-function toPlanRow(
-  plan: SeedPlan,
-  permissions: string[],
-): SeedRow<Plan, PlanLocalizedText> {
+function toPlanRow(plan: SeedPlan, permissions: string[]): SeedRow<Plan> {
   const { id, stripeKey: _stripeKey, features, borderLabel, ...fields } = plan;
-  const row: SeedRow<Plan, PlanLocalizedText> = {
+  const row: SeedRow<Plan> = {
     ...fields,
     _id: id,
     slug: id,

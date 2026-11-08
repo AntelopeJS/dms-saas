@@ -1,9 +1,10 @@
 import type { Class } from "@antelopejs/interface-core/decorators";
-import type { InstanceId, Table } from "@antelopejs/interface-database";
+import type { InstanceId } from "@antelopejs/interface-database";
 import {
   type DataModel,
-  type DeepPartial,
   GetModel,
+  type PlainData,
+  type StoredRow,
   triggerEvent,
 } from "@antelopejs/interface-database-decorators";
 import type { DayOffset } from "../data/types";
@@ -26,22 +27,27 @@ export function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * MS_PER_MINUTE);
 }
 
-/** A row in the form the table stores it. */
-type StoredRow<T> = Exclude<Parameters<Table<T>["insert"]>[0], unknown[]>;
+interface Runnable {
+  run(): PromiseLike<string[]>;
+}
+
+/** The part of a model's table the seed uses: read a row, write a row. */
+interface SeedTableHandle<T> {
+  get(id: string): PromiseLike<object | null | undefined>;
+  insert(row: StoredRow<T>): Runnable;
+}
 
 /** A table model whose statics convert rows, as every `BasicDataModel` has. */
 export type SeedTable<T> = DataModel<T> &
-  Class<{ readonly table: Table<T> }> & {
-    toDatabase(row: T): StoredRow<T>;
+  Class<{ readonly table: SeedTableHandle<T> }> & {
+    toDatabase(row: PlainData<T> | T): StoredRow<T>;
   };
 
 /**
- * A row to write: its id, and the fields the seed sets. A localized field is
- * written as one text per language, whatever `Text` is.
+ * A row to write: its id, and the fields the seed sets, in the plain form
+ * `fromPlainData` reads. A localized field is written as one text per language.
  */
-export type SeedRow<T, Text = never> = { _id: string } & {
-  [K in keyof DeepPartial<T>]: DeepPartial<T>[K] | Text;
-};
+export type SeedRow<T> = { _id: string } & PlainData<T>;
 
 /** Turns a fresh instance into what gets stored, before it is converted. */
 export type PrepareInstance<T> = (instance: T) => T;
@@ -63,9 +69,9 @@ function keepInstance<T>(instance: T): T {
  * @param instanceId Tenant of a tenant-scoped table
  * @param prepare Last touch on each instance, e.g. writing every locale
  */
-export async function insertMissing<T extends object, Text = never>(
+export async function insertMissing<T extends object>(
   model: SeedTable<T>,
-  rows: SeedRow<T, Text>[],
+  rows: SeedRow<T>[],
   instanceId?: InstanceId,
   prepare: PrepareInstance<T> = keepInstance,
 ): Promise<void> {

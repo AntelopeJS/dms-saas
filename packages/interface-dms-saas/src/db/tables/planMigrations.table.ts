@@ -9,6 +9,7 @@ import {
 import { CORE_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
 import { Tenant } from "@antelopejs/interface-dms/db/tables/tenants.table";
 import { User } from "@antelopejs/interface-dms/auth/db/tables/users.table";
+import type { FeatureValue } from "./features.table";
 import { Plan, type PlanBillingMode } from "./plans.table";
 
 export const planMigrationsTableName = "plan_migrations";
@@ -117,8 +118,8 @@ export interface PlanMigrationPermissionDiff {
 
 export interface PlanMigrationFeatureChange {
   key: string;
-  oldValue: unknown;
-  newValue: unknown;
+  oldValue: FeatureValue;
+  newValue: FeatureValue;
 }
 
 export interface PlanMigrationFeatureDiff {

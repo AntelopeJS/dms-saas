@@ -1,5 +1,6 @@
 import type {
   Feature,
+  FeatureValue,
   FeatureValueType,
   PlanFeatureValue,
   PlanMigrationFeatureDiff,
@@ -13,8 +14,8 @@ export type PlanChangeKind = "lost" | "gained" | "changed" | "same";
 /** One feature compared between two plans. */
 export interface FeatureChange {
   featureId: string;
-  from: unknown;
-  to: unknown;
+  from: FeatureValue;
+  to: FeatureValue;
   kind: PlanChangeKind;
 }
 
