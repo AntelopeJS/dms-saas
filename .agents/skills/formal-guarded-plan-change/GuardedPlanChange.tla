@@ -163,6 +163,10 @@ DeadlineBlocks ==
    tenant keeps the period it paid for. *)
 NoBlockBeforeDeadline == ~deadline => ~IsBlocked
 
+(* The exemption of DeadlineBlocks: a change being undone keeps the gate open,
+   past effectiveAt too, since the abort keeps the paid plan (state.ts:14). *)
+AbortingKeepsAccess == sub.phase = "aborting" => ~IsBlocked
+
 (* The same deadline, for the other provider effect. *)
 DeadlineStopsProviderEffect == ~lateProvider
 
