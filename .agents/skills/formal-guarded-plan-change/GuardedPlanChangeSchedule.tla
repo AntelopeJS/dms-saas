@@ -133,7 +133,7 @@ ScheduleCheck(s) ==
        ELSE Go(s, "done")
   /\ UNCHANGED <<sub, life, faults, History, World>>
 
-(* free.ts:177 or free.ts:213: a fresh read, then requirePhase (state.ts:95-109). *)
+(* free.ts:177 or free.ts:219: a fresh read, then requirePhase (state.ts:95-109). *)
 ConfirmRead(c) ==
   /\ pc[c] = "confirmRead"
   /\ IF sub.phase = (IF c \in Schedulers THEN "provider_pending" ELSE "cancel_pending")
