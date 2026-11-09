@@ -1,5 +1,63 @@
 # Changelog
 
+## v0.10.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.10.0...v0.10.1)
+
+### 🚀 Enhancements
+
+- **skills:** Add the verify-dms-saas verification skill ([#217](https://github.com/AntelopeJS/dms-saas/pull/217))
+
+### 🔥 Performance
+
+- **test:** Build the Mongo schemas once per Vitest worker ([#237](https://github.com/AntelopeJS/dms-saas/pull/237))
+- **verify:** Build the module incrementally in the verification prepare step ([#240](https://github.com/AntelopeJS/dms-saas/pull/240))
+
+### 🩹 Fixes
+
+- **users:** Count accounts stored without a verification flag as unverified ([#252](https://github.com/AntelopeJS/dms-saas/pull/252))
+- **interface:** Check type-named fields when a segment or subscription patch is validated ([#241](https://github.com/AntelopeJS/dms-saas/pull/241))
+- **plans:** Store a plan written without a billing mode as a flat rate ([#249](https://github.com/AntelopeJS/dms-saas/pull/249))
+- **plan-changes:** Refuse the Free downgrade's Stripe schedule past effectiveAt ([#243](https://github.com/AntelopeJS/dms-saas/pull/243))
+- **plan-changes:** Complete only the activation a guarded landing wrote ([#245](https://github.com/AntelopeJS/dms-saas/pull/245))
+- **registration:** Show the card step the server applies, not the configured one ([#248](https://github.com/AntelopeJS/dms-saas/pull/248))
+- **plan-changes:** Complete only the canceller's own abort in cancelGuardedFreeChange ([#244](https://github.com/AntelopeJS/dms-saas/pull/244))
+- **workspaces:** Refuse free access to a cancelled workspace ([#250](https://github.com/AntelopeJS/dms-saas/pull/250))
+- **playground:** Typecheck the seed against the current interface-database-decorators ([#242](https://github.com/AntelopeJS/dms-saas/pull/242))
+
+### 📖 Documentation
+
+- Name the released module version ([#230](https://github.com/AntelopeJS/dms-saas/pull/230))
+- **verify:** Run every feature when a shared file changes ([#236](https://github.com/AntelopeJS/dms-saas/pull/236))
+- **skill:** Drop the DMS_AUTH_ESTABLISH_ENDPOINTS setup step ([#246](https://github.com/AntelopeJS/dms-saas/pull/246))
+- **readme:** Open with the AntelopeJS DMS module kit ([#254](https://github.com/AntelopeJS/dms-saas/pull/254))
+
+### 📦 Build
+
+- **deps:** Bump @antelopejs packages to the 2026-11-06 releases ([#235](https://github.com/AntelopeJS/dms-saas/pull/235))
+- **deps:** Bump @antelopejs/dms to 0.18.2 and drop verify publish ([#253](https://github.com/AntelopeJS/dms-saas/pull/253))
+
+### 🏡 Chore
+
+- Remove the .amp directory ([#231](https://github.com/AntelopeJS/dms-saas/pull/231))
+- **verify:** Remove seeded runs from the verification skill ([#232](https://github.com/AntelopeJS/dms-saas/pull/232))
+- **ci:** Remove the weekly mutation caller ([#233](https://github.com/AntelopeJS/dms-saas/pull/233))
+- **release:** @antelopejs/interface-dms-saas v0.7.1 ([54fdfca](https://github.com/AntelopeJS/dms-saas/commit/54fdfca))
+
+### ✅ Tests
+
+- Make two flaky assertions deterministic ([#239](https://github.com/AntelopeJS/dms-saas/pull/239))
+- **formal:** Cover the aborting gate exemption and leave out foreign barriers ([#247](https://github.com/AntelopeJS/dms-saas/pull/247))
+
+### 🤖 CI
+
+- Call ci-node.yml@v1 ([#234](https://github.com/AntelopeJS/dms-saas/pull/234))
+- Split the unit tests across two runners ([#238](https://github.com/AntelopeJS/dms-saas/pull/238))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.10.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.9.1...v0.10.0)
