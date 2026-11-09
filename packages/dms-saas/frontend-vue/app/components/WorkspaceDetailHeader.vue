@@ -102,7 +102,8 @@ const menu = computed<DropdownMenuItem[][]>(() => {
 				? t(`${D}.grant_free_access`)
 				: t(`${D}.immediate_upgrade`),
 			icon: isBilled.value ? 'i-ph-gift' : 'i-ph-arrow-circle-up',
-			disabled: !isBilled.value && !current?.stripeCustomerId,
+			disabled:
+				isCancelled.value || (!isBilled.value && !current?.stripeCustomerId),
 			onSelect: () => openDialog(isBilled.value ? 'complimentary' : 'upgrade'),
 		},
 		{
@@ -157,6 +158,7 @@ async function runRequestedAction(
 	if (!current || typeof requested !== 'string') return
 	const { [ACTION_QUERY]: _action, ...query } = route.query
 	await router.replace({ query })
+	if (current.status === 'cancelled') return
 	QUERY_ACTIONS[requested]?.()
 }
 

@@ -3,6 +3,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { describe, expect, it } from "vitest";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
+import { requestWorkspaceDeletion } from "../src/workspaces/deletion";
 import {
   WORKSPACE_NAME,
   adminController,
@@ -129,6 +130,46 @@ describe("complimentary access over a paid subscription", () => {
       status: 400,
       body: "saas.errors.workspace.cancellation_not_acknowledged",
     });
+  });
+});
+
+describe("complimentary access to a cancelled workspace", () => {
+  it("is refused and leaves the workspace cancelled", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const subscription = await subscriptionOf(tenantId);
+    await GetModel(TenantSubscriptionModel, tenantId).update(
+      subscription!._id,
+      { status: "cancelled", isComplimentary: false },
+    );
+
+    await expect(
+      adminController().grantFreeAccess(operator, tenantId, {
+        planId: await insertPlan(),
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      body: "saas.errors.workspace.is_cancelled",
+    });
+    expect(await subscriptionOf(tenantId)).toMatchObject({
+      status: "cancelled",
+      isComplimentary: false,
+    });
+  });
+
+  it("does not undo an owner's deletion that lands during the grant", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const planId = await insertPlan();
+
+    await Promise.allSettled([
+      adminController().grantFreeAccess(operator, tenantId, { planId }),
+      requestWorkspaceDeletion(tenantId, operator._id),
+    ]);
+
+    const subscription = await subscriptionOf(tenantId);
+    expect({
+      deleted: !!subscription?.deletionRequestedAt,
+      status: subscription?.status,
+    }).not.toEqual({ deleted: true, status: "active" });
   });
 });
 
