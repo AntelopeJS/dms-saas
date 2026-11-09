@@ -60,7 +60,7 @@ export default defineConfig({
 });
 ```
 
-Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and publish a free plan in **Modules › SaaS › Plans**. Registration opens every workspace on that plan. With placeholder keys, the module still runs, and the blocks that need Stripe say so. For a deployment without Stripe, also set `registration.paymentMethod` to `none`, or the registration screen keeps its card step.
+Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and publish a free plan in **Modules › SaaS › Plans**. Registration opens every workspace on that plan. With placeholder keys, the module still runs, and the blocks that need Stripe say so. Without a usable secret key, registration takes no card, and its screens drop their card step once they have loaded the plan.
 
 ## Compatibility
 

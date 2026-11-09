@@ -22,6 +22,7 @@ covers:
   - packages/dms-saas/frontend-vue/app/components/RegistrationClosed.vue
   - packages/dms-saas/frontend-vue/app/components/BillingIdentityFields.vue
   - packages/dms-saas/frontend-vue/app/composables/useSaasRegistration.ts
+  - packages/dms-saas/frontend-vue/app/composables/registrationCardPolicy.ts
   - packages/dms-saas/frontend-vue/app/composables/useSaasRegistrationPlan.ts
   - packages/dms-saas/frontend-vue/app/composables/useBillingIdentity.ts
   - packages/dms-saas/frontend-vue/app/composables/useBillingAddress.ts
@@ -82,7 +83,7 @@ Public registration and the options that shape it: the account and first workspa
 - `a-visitor-registers-onto-the-default-plan`: a registration opens a workspace on the free plan with a default or trimmed name, and refuses a taken e-mail.
 - `the-password-policy-is-checked-before-anything-is-created`: a password outside the DMS policy is refused with 400 before the e-mail is looked up, and nothing is created.
 - `registration-needs-a-free-plan-open-to-individuals`: without an active free plan open to individuals registration answers 409, with it the lowest order wins.
-- `the-card-step-follows-the-payment-method-option`: required asks for a card, optional and none do not, and a deployment without a usable Stripe key applies none.
+- `the-card-step-follows-the-payment-method-option`: required asks for a card, optional and none do not, and a deployment without a usable Stripe key applies none, on the server and on the register screen.
 - `invitation-only-closes-every-registration-route`: invitation-only answers 403 saas.errors.registration_closed on every register route and leaves pricing open.
 - `extras-reach-the-provisioning-listeners-within-their-limits`: registration extras are forwarded verbatim to TENANT_BEING_PROVISIONED listeners and bounded to 4096 bytes, 64 keys and depth 4.
 - `a-sign-in-without-a-workspace-is-completed`: an account with no workspace is described, then finalized into a workspace and a session, once.

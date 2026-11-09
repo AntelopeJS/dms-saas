@@ -119,6 +119,11 @@ export const journeys = guarded([
             check("the setup intent answers 400 saas.errors.registration.payment_method_disabled", answer.status === 400 && code(answer) === "saas.errors.registration.payment_method_disabled", answer.body),
             check("registration lands on the free plan without a card", visitor.answer.status === 200, visitor.answer.body),
           ]);
+          const tab = await ctx.tab("anon", `register under ${mode}`);
+          await tab.goto("/register");
+          const form = await tab.shows(/Full name/, { timeoutMs: 30_000 });
+          const noCard = await tab.shows(/Saved securely by Stripe/, { not: true });
+          await ctx.verify(`${mode} with a placeholder key draws the register screen without its card step`, [form, noCard]);
         });
       }
       await withConfig(ctx, { VERIFY_SAAS_PAYMENT_METHOD: "required", VERIFY_SAAS_STRIPE_SECRET_KEY: "sk_test_verifysaaslocal" }, async () => {
