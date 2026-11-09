@@ -30,9 +30,9 @@ Java 11 or later comes from `$JAVA`, else `java` on PATH, else the `eclipse-temu
 | Configuration | Schedulers, cancellers, reconcilers, writers, ordinary writes, closes, faults | States (healthy, faults, races) | Wall time |
 | --- | --- | --- | --- |
 | CI (`<config>.ci.cfg`) | Healthy 1, 1, 1, 1, 1, 1, 0; Faults 1, 1, 1, 1, 0, 0, 1; Races 2, 1, 0, 0, 0, 0, 1 | 597,155, 100,872, 80,112 | 13 to 16 s |
-| Full (`<config>.cfg`) | Healthy 2, 1, 1, 1, 1, 1, 0; Faults 1, 1, 2, 1, 1, 1, 2; Races 2, 1, 1, 0, 0, 0, 1 | 39,708,133, 15,470,738, 1,115,272 | 1,151 s |
+| Full (`<config>.cfg`) | Healthy 2, 1, 1, 1, 1, 1, 0; Faults 1, 1, 2, 1, 1, 1, 2; Races 2, 1, 1, 0, 0, 0, 1 | 39,708,133, 15,387,242, 1,115,272 | 978 s |
 
-Each configuration also has the last cron tick. The CI times are three runs with byte-identical output, and the full time is one run, each in Java 25 on a shared 32-core machine with a load average between 20 and 50. About 20 minutes of the full run is the one-worker search for F3. The states count the run of the rules that hold.
+Each configuration also has the last cron tick. The CI times are three runs with byte-identical output, in Java 25 on a shared 32-core machine with a load average between 20 and 50. The full time is one run, in the `eclipse-temurin:21-jre` image on a shared 16-core machine with a load average between 30 and 225. The states count the run of the rules that hold.
 
 - Exit 0 means every rule that held still holds, and each finding still breaks with its recorded counterexample length.
 - Exit 1 means a rule changed. `BROKEN` names a rule that held and now breaks. `CHANGED` names a finding whose shortest counterexample changed length. `HOLDS` names a finding that no longer breaks. The script keeps TLC's output in a temporary folder and prints its path. The run stops at the first configuration that changed.
@@ -58,7 +58,7 @@ Run `--full` when a change touches a file in the coverage record below, or this 
 | `AbortingKeepsAccess` | While a change is aborting, the gate stays open, past `effectiveAt` too. | A tenant whose downgrade is being undone loses the paid plan it keeps. | holds | holds | holds |
 | `DeadlineStopsProviderEffect` | No Stripe schedule request is admitted after `effectiveAt`. | Stripe is changed after the period ended, and the change is stuck. | holds | holds | holds |
 | `LandsOnlyWhenCancelled` | The plan moves to Free only past `effectiveAt`, with Stripe's cancellation confirmed. | A tenant lands on Free while Stripe still bills them. | holds | holds | holds |
-| `AdmissionResumes` | Once nothing more can happen, no barrier is held, unless a deletion closed the row. | Every inventory write of the tenant is refused with 409 for good. | holds | holds in CI, finding F3 in full (50) | finding F2 (27, 27) |
+| `AdmissionResumes` | Once nothing more can happen, no barrier is held, unless a deletion closed the row. | Every inventory write of the tenant is refused with 409 for good. | holds | holds | finding F2 (27, 28) |
 
 `TypeOK` holds too. The numbers in brackets are the states of TLC's shortest counterexample, CI then full, which `check.mjs` records per configuration.
 
@@ -80,7 +80,7 @@ Each finding was replayed on the real code with the Vitest harness. [findings.md
 
 - **F1, `DeadlineStopsProviderEffect`, every configuration, fixed.** `admitGuardedProviderEffect` had no deadline check, so a validation that outlasted `effectiveAt` still sent the Stripe schedule request, and the change was stuck in `provider_pending`. AntelopeJS/dms-saas#206. It now throws past `effectiveAt` (guarded-state.ts:120), the scheduler's catch aborts the preparation, and `test/guarded-free-downgrade.test.ts` replays the finding.
 - **F2, `AdmissionResumes`, `Races`.** A stale `cancelGuardedFreeChange` completes another operation's abort (free.ts:191, state.ts:95-109), and that operation's barrier is never released. AntelopeJS/dms-saas#207.
-- **F3, `AdmissionResumes`, full `Faults` only.** A stalled landing completes another landing's activation (landing.ts:305-308), and that landing's barrier is never released. AntelopeJS/dms-saas#209.
+- **F3, `AdmissionResumes`, full `Faults` only, fixed.** A stalled landing completed another landing's activation, and that landing's barrier was never released. The landing now completes only the activation it wrote (landing.ts:305-309). AntelopeJS/dms-saas#209.
 
 ## Read every result with /statechart
 
@@ -126,7 +126,7 @@ The sync commit is `c6e7c1c8` on AntelopeJS/dms-saas `main`.
 
 ## Bounds and what is left out
 
-The bounds are in the table above. Each scheduler runs one operation with one barrier, each reconciler one reconciliation, and the canceller one cancellation. The deadline and the preparation timer each pass once. Some behaviours start with no deletion to come, so a closure cannot excuse a barrier left held. A pass covers these bounds only. F3 needs two reconcilers, which only the full `Faults` configuration has.
+The bounds are in the table above. Each scheduler runs one operation with one barrier, each reconciler one reconciliation, and the canceller one cancellation. The deadline and the preparation timer each pass once. Some behaviours start with no deletion to come, so a closure cannot excuse a barrier left held. A pass covers these bounds only. Two concurrent landings need two reconcilers, which only the full `Faults` configuration has.
 
 The model leaves out:
 
@@ -136,7 +136,7 @@ The model leaves out:
 - notifications and lifecycle outbox deliveries (`notifyBlocked`, `dispatchWorkspaceLifecycle`). They have durable identities and change no field the rules read.
 - the subscription's `status`. `completeFreeActivation` keeps a payment suspension, and `GetPlanChangeActivation` reads it. Neither moves the phase.
 - Stripe's answer details. A confirmation is right when Stripe holds the asked state for the same period, which the model reduces to `cancelAtEnd` and `renewed`.
-- a barrier the row does not name. Only `drainPlanInventory` calls `pauseTenantLifecycleAdmission` in this repository, so a drain meets another barrier (barrier.ts:42-43) only after F2 or F3 leaves one held, and no drain runs after that within the bounds. A seeded drain that takes that barrier for its own reaches the same states as the model in every configuration, so no rule can catch it. `InventoryFrozen` would, once a drain reaches one.
+- a barrier the row does not name. Only `drainPlanInventory` calls `pauseTenantLifecycleAdmission` in this repository, so a drain meets another barrier (barrier.ts:42-43) only after F2 leaves one held, and no drain runs after that within the bounds. A seeded drain that takes that barrier for its own reaches the same states as the model in every configuration, so no rule can catch it. `InventoryFrozen` would, once a drain reaches one.
 - two concurrent preparations. A second `prepareGuardedPlanChange` fails on the first's row, and `Races` runs a second operation after the first ended.
 - the real clock. `deadline` and `elapsed` are booleans that pass at any step, and the drain's 2 s wait is a free choice to poll again or give up.
 

@@ -19,7 +19,7 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 /** The findings of each configuration, with the states in TLC's shortest counterexample. */
 const CONFIGS = {
   Healthy: { ci: {}, full: {} },
-  Faults: { ci: {}, full: { AdmissionResumes: 50 } },
+  Faults: { ci: {}, full: {} },
   Races: {
     ci: { AdmissionResumes: 27 },
     full: { AdmissionResumes: 28 },
