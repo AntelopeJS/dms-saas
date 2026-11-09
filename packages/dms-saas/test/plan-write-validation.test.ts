@@ -1,10 +1,11 @@
 import { HTTPResult } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { fromPartial } from "@total-typescript/shoehorn";
+import { fromAny, fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it, vi } from "vitest";
 import { formatPlanIntervalLabel } from "../frontend-vue/app/composables/usePlanIntervalLabel";
 import { type Plan, PlanModel } from "../src/db";
+import type { PlanWriteBody } from "../src/plans/plan-write";
 import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
 import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
@@ -21,6 +22,7 @@ type PlanWrite = () => ReturnType<
 const OWNER = fromPartial<User>({});
 const PLAN_ID = "plan-free";
 const INVALID_INTERVAL_ERROR = "saas.errors.plan.invalid_interval";
+const INVALID_BILLING_MODE_ERROR = "saas.errors.plan.invalid_billing_mode";
 
 /** A plans controller writing to the catalogue, holding `current` if given. */
 async function controller(current?: Plan): Promise<SaasPlansApiController> {
@@ -107,6 +109,92 @@ describe("plan interval writes", () => {
     ).resolves.toEqual({ _id: PLAN_ID });
     await expect(GetModel(PlanModel).get(PLAN_ID)).resolves.toMatchObject({
       isActive: false,
+    });
+  });
+});
+
+async function expectInvalidBillingMode(operation: PlanWrite): Promise<void> {
+  await expect(httpRefusal(operation())).resolves.toMatchObject({
+    status: 400,
+    body: INVALID_BILLING_MODE_ERROR,
+  });
+}
+
+describe("plan billing mode writes", () => {
+  it("stores a plan created without a billing mode as a flat rate", async () => {
+    const plans = await controller();
+
+    const { _id: planId } = await plans.create(OWNER, {
+      name: { en: "Free" },
+      slug: "free",
+      price: 0,
+      currency: "EUR",
+      interval: "month",
+      audience: "any",
+    });
+
+    await expect(GetModel(PlanModel).get(planId)).resolves.toMatchObject({
+      billingMode: "flat",
+    });
+  });
+
+  it("keeps the billing mode a create sends", async () => {
+    const plans = await controller();
+
+    const { _id: planId } = await plans.create(OWNER, {
+      name: { en: "Team" },
+      interval: "month",
+      billingMode: "seat",
+    });
+
+    await expect(GetModel(PlanModel).get(planId)).resolves.toMatchObject({
+      billingMode: "seat",
+    });
+  });
+
+  it.each(["tiered", null])(
+    "rejects the billing mode %j on create",
+    async (billingMode) => {
+      await expectInvalidBillingMode(async () =>
+        (await controller()).create(
+          OWNER,
+          fromAny<PlanWriteBody>({
+            name: { en: "Tiered" },
+            interval: "month",
+            billingMode,
+          }),
+        ),
+      );
+    },
+  );
+
+  it.each(["tiered", null])(
+    "rejects the billing mode %j on update",
+    async (billingMode) => {
+      const plans = await controller(
+        planRow({ _id: PLAN_ID, name: "Free", interval: "month" }),
+      );
+
+      await expectInvalidBillingMode(() =>
+        plans.update(OWNER, PLAN_ID, fromAny<PlanWriteBody>({ billingMode })),
+      );
+    },
+  );
+
+  it("keeps the stored billing mode when an update leaves it out", async () => {
+    const plans = await controller(
+      planRow({
+        _id: PLAN_ID,
+        name: "Team",
+        interval: "month",
+        billingMode: "seat",
+      }),
+    );
+
+    await plans.update(OWNER, PLAN_ID, { isActive: false });
+
+    await expect(GetModel(PlanModel).get(PLAN_ID)).resolves.toMatchObject({
+      billingMode: "seat",
     });
   });
 });

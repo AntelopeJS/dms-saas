@@ -1,13 +1,16 @@
+import { assert } from "@antelopejs/interface-api-util";
 import type {
   Feature,
   FeatureValues,
   FeatureValueType,
   Plan,
+  PlanBillingMode,
   PlanFeatureValue,
   PlanLocalizedText,
 } from "../db";
 import { withPermissionAncestors } from "./plan-permission-tree";
 import {
+  PLAN_BILLING_MODES,
   PLAN_FALLBACK_LOCALE,
   PLAN_LOCALIZED_FIELDS,
   PLAN_UNLIMITED,
@@ -23,6 +26,7 @@ import { isBoolean, isNumber, isString } from "../utils/primitive-guards";
 export const FEATURE_OFF_VALUE = 0;
 
 const MIN_LIMIT = 1;
+const HTTP_BAD_REQUEST = 400;
 const SLUG_MAX_LENGTH = 100;
 const COMBINING_MARKS = /[̀-ͯ]/g;
 const NON_SLUG_CHARACTERS = /[^a-z0-9]+/g;
@@ -266,5 +270,20 @@ export function isValidMemberCap(value: JsonValue | undefined): boolean {
     isNumber(value) &&
     Number.isInteger(value) &&
     (value >= MIN_LIMIT || value === PLAN_UNLIMITED)
+  );
+}
+
+/** The billing mode a plan created without one is stored with: Flat rate. */
+export const DEFAULT_PLAN_BILLING_MODE: PlanBillingMode = "flat";
+
+/**
+ * Refuses a billing mode other than `flat` or `seat` with 400
+ * `saas.errors.plan.invalid_billing_mode`. A write without one passes.
+ */
+export function assertWritableBillingMode(value: JsonValue | undefined): void {
+  assert(
+    value === undefined || PLAN_BILLING_MODES.some((mode) => mode === value),
+    HTTP_BAD_REQUEST,
+    "saas.errors.plan.invalid_billing_mode",
   );
 }

@@ -86,16 +86,21 @@ export const configJourneys = [
   },
   {
     id: "a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up",
-    title: "the pricing page renders a public plan that was saved through the API without a billing mode (known finding: it answers 500)",
+    title: "the pricing page renders a public plan that was saved through the API without a billing mode",
     entryPoint: "POST /api/saas/plans, /pricing",
     async run(/** @type {Ctx} */ ctx) {
       const plan = await saas(ctx, "save a plan without billingMode", "POST", "/plans", { body: { name: { en: "Free" }, slug: "free", price: 0, currency: "EUR", interval: "month", audience: "any", isPublic: true, isActive: true, order: 0 } });
       await ctx.verify("the plan is saved", [check("200", plan.status === 200, plan.body)], { critical: true });
       const html = await pageHtml(ctx, "/pricing");
       const api = await saas(ctx, "the catalogue API", "GET", "/pricing", { as: "anon" });
+      const plans = list(api.body, "plans");
       await ctx.verify("the page and the API both serve the plan", [
-        check("GET /api/saas/pricing lists it", list(api.body, "plans").length === 1, api.body),
+        check("GET /api/saas/pricing lists it as a flat rate", plans.length === 1 && text(plans[0], "billingMode") === "flat", api.body),
         check("the pricing page is rendered, not the server error", /<title>Pricing/.test(html), html.slice(0, 120)),
+      ]);
+      const tiered = await saas(ctx, "save a plan with an unknown billingMode", "POST", "/plans", { body: { name: { en: "Tiered" }, slug: "tiered", price: 5, currency: "EUR", interval: "month", audience: "any", billingMode: "tiered" } });
+      await ctx.verify("an unknown billing mode is refused", [
+        check("400 saas.errors.plan.invalid_billing_mode", tiered.status === 400 && tiered.body === "saas.errors.plan.invalid_billing_mode", tiered.body),
       ]);
     },
   },
