@@ -77,7 +77,7 @@ Write `$RUN/evidence/judgement.json` (`doors`, `docs`, `notVerified`, `attention
 - Every dashboard page renders on the server and hydrates after `load`; `guard.mjs` waits for the sign-in form to hydrate.
 - A plan with no permissions leaves its owner without any page (403): the smoke journey publishes a plan holding every permission of the editor's tree.
 - A step whose check fails because the backend or the dashboard stopped answering ends the journey with a `NOT VERIFIED` error and no failing check.
-- Known findings on `main`, each a failing journey whose feature file explains it: `public/a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up` (a plan saved through the API without `billingMode` makes `/pricing` answer 500, AntelopeJS/dms-saas#220), `public/invitation-only-closes-every-registration-route` (after a backend restart into invitation-only, `/register` renders the 500 page) and `people/the-unverified-tab-lists-the-accounts-whose-address-is-not-verified` (a registered account is stored without `isValidated`, so the Unverified tab counts 0).
+- Known findings on `main`, each a failing journey whose feature file explains it: `public/a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up` (a plan saved through the API without `billingMode` makes `/pricing` answer 500, AntelopeJS/dms-saas#220) and `public/invitation-only-closes-every-registration-route` (after a backend restart into invitation-only, `/register` renders the 500 page).
 
 ## Not driven
 

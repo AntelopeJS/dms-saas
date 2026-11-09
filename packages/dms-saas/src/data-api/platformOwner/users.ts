@@ -143,7 +143,7 @@ export class saasUsersDataAPI extends DataController(
       badges: [
         {
           field: "isValidated",
-          equals: false,
+          notEquals: true,
           label: "$saas.users.unverified",
           tone: "warning",
         },

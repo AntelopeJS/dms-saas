@@ -24,7 +24,7 @@ const USER_TABS = [
     id: "unverified",
     label: "$saas.users.tabs.unverified",
     icon: "i-ph-envelope-simple",
-    filter: { accessorKey: "isValidated", value: "false", mode: "is" },
+    filter: { accessorKey: "isValidated", value: "true", mode: "is_not" },
   },
 ];
 
