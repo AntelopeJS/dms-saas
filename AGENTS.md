@@ -30,7 +30,7 @@ The module's typecheck and oxlint's type-aware rules resolve the interface throu
 - Prettier on `frontend-vue`. `pnpm format` applies it; nothing checks it.
 - The documentation check: Markdown links and the code examples in the READMEs and `docs` folders, typechecked through `packages/interface-dms-saas/docs/tsconfig.json`. Only the `checks` CI job runs it, with the file list in `.github/workflows/ci.yml`.
 - The test files' typecheck. `packages/dms-saas/tsconfig.json` covers `src` only, and Vitest strips types without checking them.
-- The playground's typecheck (oxlint still lints it). `pnpm --filter @antelopejs/dms-saas dev` transpiles it with `--noCheck`. Run `.agents/playground`, then `pnpm --dir packages/dms-saas/playground build`.
+- The playground's typecheck (oxlint still lints it). `pnpm --filter @antelopejs/dms-saas dev` transpiles it with `--noCheck`. CI runs it in the `playground` job. Run `.agents/playground`, then `pnpm --dir packages/dms-saas/playground exec tsc --noEmit -p .`.
 - Unused files and exports. `pnpm knip` checks dependencies only. `pnpm --filter <package> knip:all` also reports dead files and exports, and expects findings: confirm each one before you remove it.
 
 The Vitest suite's first run downloads mongod 8.0.8 (about 200 MB) into `~/.cache/mongodb-binaries`.

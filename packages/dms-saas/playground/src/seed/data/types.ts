@@ -1,6 +1,7 @@
 import type {
   CreditNoteStatus,
   CreditNoteType,
+  FeatureValue,
   FeatureValueType,
   InvoiceStatus,
   PlanAudience,
@@ -40,7 +41,7 @@ export interface SeedFeature {
   description: LocalizedText;
   tooltip: LocalizedText | null;
   valueType: FeatureValueType;
-  defaultValue: unknown;
+  defaultValue: FeatureValue;
   /** `singular | plural` where the unit agrees with its number. */
   unit: LocalizedText | null;
   isDetailRow: boolean;
