@@ -281,6 +281,49 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
     expect((await observeTenantLifecycle(tenantId)).barrierId).toBeNull();
   });
 
+  it("aborts and releases instead of scheduling Stripe when validation outlasts effectiveAt", async () => {
+    const { tenantId, targetPlan, deadline, read, retrieve, update } =
+      await fixture(false);
+    const renewedPeriodEnd = deadline.getTime() / 1000 + 30 * 24 * 3600;
+    retrieve.mockImplementation(async () =>
+      fromPartial({
+        status: "active",
+        cancel_at_period_end: update.mock.calls.length > 0,
+        items: {
+          data: [
+            {
+              current_period_end:
+                Date.now() < deadline.getTime()
+                  ? deadline.getTime() / 1000
+                  : renewedPeriodEnd,
+            },
+          ],
+        },
+      }),
+    );
+    validate.mockImplementation(async () => {
+      vi.setSystemTime(deadline.getTime() + 300);
+      return [];
+    });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      await expect(
+        scheduleGuardedFreeChange(tenantId, targetPlan),
+      ).rejects.toThrow("deadline has passed");
+      expect(update).not.toHaveBeenCalled();
+      expect(await read()).toMatchObject({
+        planId: "paid",
+        pendingPlanId: null,
+        domainTransition: null,
+        guardedPlanChange: null,
+      });
+      expect((await observeTenantLifecycle(tenantId)).barrierId).toBeNull();
+      expect((await isTenantSubscriptionBlocked(tenantId)).blocked).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not hold inventory closed while Stripe is in flight or invert an ambiguous effect", async () => {
     const { tenantId, targetPlan, read, update } = await fixture(false);
     update.mockImplementation(async () => {

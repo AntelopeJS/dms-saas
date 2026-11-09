@@ -44,7 +44,7 @@ CancelComplete(c) ==
   /\ EndsOp(c, "aborted")
   /\ UNCHANGED <<life, started, staleEffect, lateCancel, lateProvider, badLanding, World>>
 
-(* admitGuardedCancellation (state.ts:135-151). *)
+(* admitGuardedCancellation (state.ts:140-156). *)
 CancelAdmit(c) ==
   /\ pc[c] = "cancelAdmit"
   /\ Cas(c, WithTransition(Patched(c, "cancel_pending"), TRUE), "cancelEmit", "done")
@@ -65,7 +65,7 @@ CancelCheck(c) ==
        ELSE Go(c, "done")
   /\ UNCHANGED <<sub, life, faults, History, World>>
 
-(* confirmGuardedCancellation (state.ts:154-165). *)
+(* confirmGuardedCancellation (state.ts:159-170). *)
 ConfirmCancel(c) ==
   /\ pc[c] = "confirmCas"
   /\ c \in Cancellers
