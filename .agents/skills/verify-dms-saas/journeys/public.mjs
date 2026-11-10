@@ -187,6 +187,26 @@ export const journeys = guarded([
       await ctx.verify("registration works again once admission is open", [check("200", reopened.answer.status === 200, reopened.answer.body)]);
     },
   },
+  {
+    id: "registration-answers-429-past-its-rate-limit",
+    title: "one client address registers 20 times in a minute, the 21st call answers 429 and creates no account, and a backend restart starts a new count",
+    entryPoint: "POST /api/saas/register",
+    async run(/** @type {Ctx} */ ctx) {
+      await createPlan(ctx, "free");
+      const within = [];
+      for (let call = 1; call <= 20; call += 1) within.push(await register(ctx, `burst-${call}`));
+      await ctx.verify("the first 20 registrations of the minute register", [
+        check("20 answers 200 with a workspace", within.every(({ answer, tenantId }) => answer.status === 200 && tenantId !== ""), within.map(({ answer }) => answer.status).join(",")),
+      ], { critical: true });
+      const email = ctx.email("past-limit");
+      const body = { email, password: STRONG, name: "Past limit" };
+      const refused = await saas(ctx, "the 21st registration of the minute", "POST", "/register", { as: "anon", body });
+      await ctx.verify("the 21st registration is refused with 429", [check("429 Too many requests", refused.status === 429 && code(refused) === "Too many requests", refused.body)]);
+      await ctx.restartBackend();
+      const after = await saas(ctx, "register the refused e-mail after a backend restart", "POST", "/register", { as: "anon", body });
+      await ctx.verify("the refused call created nothing, and the restart starts a new count", [check("200 with a workspace", after.status === 200 && text(after.body, "tenantId") !== "", after.body)]);
+    },
+  },
   ...moreJourneys,
   ...configJourneys,
 ]);

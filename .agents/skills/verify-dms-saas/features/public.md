@@ -93,6 +93,7 @@ Public registration and the options that shape it: the account and first workspa
 - `a-wrong-option-stops-the-module-at-start`: an admission mode, a registration payment method or a preview cache lifetime outside the documented values stops the backend at start, and the boundary values start.
 - `a-default-plan-slug-picks-among-the-free-plans`: defaultPlanSlug picks a usable free plan, and a slug naming none is ignored in favour of the lowest-ordered free plan.
 - `a-screen-switched-off-frees-its-slug`: publicScreens.register false and publicScreens.pricing false stop the module serving those pages, and the public catalogue API stays.
+- `registration-answers-429-past-its-rate-limit`: one client address registers 20 times in a minute, the 21st call answers 429 with Retry-After and creates no account, and a restart of the backend starts a new count.
 - `a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up`: the pricing page renders a public plan that was saved through the API without a billing mode, as a flat rate, and a billing mode outside flat and seat is refused with 400.
 
 ## How to get to it (user POV)
