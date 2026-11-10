@@ -2,7 +2,7 @@ import {
   GetModel,
   toPlainData,
 } from "@antelopejs/interface-database-decorators";
-import { fromPartial } from "@total-typescript/shoehorn";
+import { fromAny, fromPartial } from "@total-typescript/shoehorn";
 import Stripe from "stripe";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -316,7 +316,10 @@ describe("plans that stay off Stripe", () => {
   });
 
   it("skips a plan without a supported interval", async () => {
-    const plan = await store(Object.assign(seededPlan(), { interval: "week" }));
+    const plan = await store({
+      ...seededPlan(),
+      interval: fromAny<Plan["interval"]>("week"),
+    });
 
     await expect(syncPlanStripeRefs(plan, plans)).resolves.toBe(plan);
 
