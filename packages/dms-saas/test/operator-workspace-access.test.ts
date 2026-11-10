@@ -15,6 +15,7 @@ import {
   useBackOffice,
 } from "./helpers/operator-workspaces";
 import { useMongoDatabase } from "./helpers/mongo";
+import { lineUpInserts } from "./helpers/replicas";
 
 useMongoDatabase();
 useBackOffice();
@@ -130,6 +131,31 @@ describe("complimentary access over a paid subscription", () => {
       status: 400,
       body: "saas.errors.workspace.cancellation_not_acknowledged",
     });
+  });
+});
+
+describe("complimentary access to a workspace without a subscription", () => {
+  it("gives it one subscription when two replicas grant it at once", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const subscriptions = GetModel(TenantSubscriptionModel, tenantId);
+    const subscription = await subscriptionOf(tenantId);
+    await subscriptions.delete(subscription!._id);
+    const planId = await insertPlan();
+    lineUpInserts(TenantSubscriptionModel.prototype);
+
+    await Promise.all([
+      adminController().grantFreeAccess(operator, tenantId, { planId }),
+      adminController().grantFreeAccess(operator, tenantId, { planId }),
+    ]);
+
+    expect(await subscriptions.getAll()).toEqual([
+      expect.objectContaining({
+        _id: tenantId,
+        planId,
+        status: "active",
+        isComplimentary: true,
+      }),
+    ]);
   });
 });
 

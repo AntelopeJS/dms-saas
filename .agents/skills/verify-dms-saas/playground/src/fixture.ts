@@ -337,7 +337,9 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
     const existing = await model.findOne();
     if (existing) {
       await model.update(existing._id, { customerType: input.customerType, updatedAt: new Date() });
-    } else {
+      return { ok: true };
+    }
+    try {
       await model.insert({
         _id: input.tenantId,
         customerType: input.customerType,
@@ -348,6 +350,10 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
         address: null,
         updatedAt: new Date(),
       });
+    } catch (error) {
+      const raced = await model.findOne();
+      if (!raced) throw error;
+      await model.update(raced._id, { customerType: input.customerType, updatedAt: new Date() });
     }
     return { ok: true };
   }
