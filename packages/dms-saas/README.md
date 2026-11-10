@@ -69,7 +69,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and pub
 | Package                                     | Supported         | Tested with |
 | ------------------------------------------- | ----------------- | ----------- |
 | `@antelopejs/interface-api`                 | `>=0.3.0 <1.0.0`  | `0.3.0`     |
-| `@antelopejs/interface-api-util`            | `>=0.3.0 <1.0.0`  | `0.3.0`     |
+| `@antelopejs/interface-api-util`            | `>=0.3.2 <1.0.0`  | `0.3.2`     |
 | `@antelopejs/interface-core`                | `>=0.4.0 <1.0.0`  | `0.4.0`     |
 | `@antelopejs/interface-data-api`            | `>=0.6.1 <1.0.0`  | `0.6.1`     |
 | `@antelopejs/interface-database`            | `>=0.3.0 <1.0.0`  | `0.3.0`     |

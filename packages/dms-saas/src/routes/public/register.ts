@@ -6,7 +6,7 @@ import {
   Parameter,
   Post,
 } from "@antelopejs/interface-api";
-import { assert } from "@antelopejs/interface-api-util";
+import { assert, RateLimit } from "@antelopejs/interface-api-util";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel, Model } from "@antelopejs/interface-database-decorators";
@@ -78,6 +78,14 @@ import type { TenantBeingProvisionedPayload } from "@antelopejs/interface-dms-sa
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
+/**
+ * Password registrations one client address may start per window. Each one
+ * hashes the password synchronously, so the cap bounds how long one client
+ * can hold the event loop; a person signing up, retries included, stays far
+ * below it.
+ */
+const REGISTRATIONS_PER_WINDOW = 20;
+const REGISTRATION_WINDOW_MS = 60_000;
 /** A registration starts as an individual; the upgrade flow collects a business. */
 const REGISTRATION_CUSTOMER_TYPE: WorkspaceCustomerType = "individual";
 const AUTH_KEY_BYTES = 32;
@@ -439,6 +447,7 @@ export class SaasRegisterApiController extends Controller(
   }
 
   @Post("/")
+  @RateLimit(REGISTRATIONS_PER_WINDOW, REGISTRATION_WINDOW_MS)
   async register(@JSONBody() body: RegisterBody): Promise<RegisterResult> {
     assertAdmissionOpen();
     assertRegistrationPassword(body.password);
