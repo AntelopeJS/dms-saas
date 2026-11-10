@@ -228,16 +228,19 @@ async function readCatalogueUsage(): Promise<CatalogueUsage> {
   return summariseCatalogueUsage(plans, rows);
 }
 
-let inFlightUsage: Promise<CatalogueUsage> | undefined;
+let sharedUsage: Promise<CatalogueUsage> | undefined;
 
 /**
- * {@link summariseCatalogueUsage} over the stored plans and workspaces. Every
- * plan row of a listing reads it from its getters at once: the reads made
- * while one runs share it.
+ * {@link summariseCatalogueUsage} over the stored plans and workspaces. A
+ * listing reads it from every usage getter of every plan row, one getter after
+ * the other: the reads made while one runs, or before the event loop moves on
+ * from its result, share it.
  */
 export function loadCatalogueUsage(): Promise<CatalogueUsage> {
-  inFlightUsage ??= readCatalogueUsage().finally(() => {
-    inFlightUsage = undefined;
+  sharedUsage ??= readCatalogueUsage().finally(() => {
+    setImmediate(() => {
+      sharedUsage = undefined;
+    });
   });
-  return inFlightUsage;
+  return sharedUsage;
 }
