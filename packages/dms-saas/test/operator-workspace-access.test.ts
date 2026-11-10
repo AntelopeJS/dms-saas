@@ -15,6 +15,7 @@ import {
   useBackOffice,
 } from "./helpers/operator-workspaces";
 import { useMongoDatabase } from "./helpers/mongo";
+import { lineUpInserts } from "./helpers/replicas";
 
 useMongoDatabase();
 useBackOffice();
@@ -130,6 +131,40 @@ describe("complimentary access over a paid subscription", () => {
       status: 400,
       body: "saas.errors.workspace.cancellation_not_acknowledged",
     });
+  });
+});
+
+describe("complimentary access to a workspace without a subscription", () => {
+  it("lands the losing replica's grant over the row the winning one created", async () => {
+    const { tenantId } = await createInvitedWorkspace();
+    const subscriptions = GetModel(TenantSubscriptionModel, tenantId);
+    const subscription = await subscriptionOf(tenantId);
+    await subscriptions.delete(subscription!._id);
+    const second = { ...operator, _id: randomUUID() };
+    const planOf = new Map([
+      [operator._id, await insertPlan()],
+      [second._id, await insertPlan()],
+    ]);
+    lineUpInserts(TenantSubscriptionModel.prototype);
+
+    await Promise.all(
+      [operator, second].map((by) =>
+        adminController().grantFreeAccess(by, tenantId, {
+          planId: planOf.get(by._id),
+        }),
+      ),
+    );
+
+    const rows = await subscriptions.getAll();
+    expect(rows).toEqual([
+      expect.objectContaining({
+        _id: tenantId,
+        status: "active",
+        isComplimentary: true,
+      }),
+    ]);
+    const loser = rows[0]!.createdBy === operator._id ? second : operator;
+    expect(rows[0]!.planId).toBe(planOf.get(loser._id));
   });
 });
 

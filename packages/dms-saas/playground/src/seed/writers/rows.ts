@@ -83,6 +83,11 @@ export async function insertMissing<T extends object>(
     for (const [field, value] of Object.entries<unknown>(row)) {
       if (value instanceof Date) Reflect.set(instance, field, value);
     }
-    await table.insert(model.toDatabase(instance)).run();
+    try {
+      await table.insert(model.toDatabase(instance)).run();
+    } catch (error) {
+      if (await table.get(row._id)) continue;
+      throw error;
+    }
   }
 }

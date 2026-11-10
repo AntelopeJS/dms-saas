@@ -18,6 +18,7 @@ import {
 } from "../src/workspaces/default-plan";
 import { captureLogs } from "./helpers/logging";
 import { useMongoDatabase } from "./helpers/mongo";
+import { lineUpInserts } from "./helpers/replicas";
 
 useMongoDatabase();
 const logs = captureLogs();
@@ -159,6 +160,22 @@ describe("default subscription assignment", () => {
 
     expect(await subscriptionsOf(tenantId)).toEqual(existing);
     expect(await recomputedTenants()).toEqual([]);
+  });
+
+  it("attaches one subscription when two replicas cover the same workspace at once", async () => {
+    const tenantId = randomUUID();
+    lineUpInserts(TenantSubscriptionModel.prototype);
+
+    const attached = await Promise.all([
+      ensureDefaultSubscription(tenantId),
+      ensureDefaultSubscription(tenantId),
+    ]);
+
+    expect(attached.toSorted()).toEqual([false, true]);
+    expect(await subscriptionsOf(tenantId)).toEqual([
+      expect.objectContaining({ _id: tenantId, planId: "free" }),
+    ]);
+    expect(await recomputedTenants()).toEqual([tenantId]);
   });
 
   it("attaches nothing when no default plan exists", async () => {

@@ -84,21 +84,26 @@ async function insertDefaultSubscription(
   const model = GetModel(TenantSubscriptionModel, tenantId);
   if (await model.findOne()) return false;
   const now = new Date();
-  await model.insert([
-    {
-      _id: tenantId,
-      planId: plan._id,
-      status: ACTIVE_STATUS,
-      isComplimentary: false,
-      paidUsagePeriods: [],
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      stripeCheckoutSessionId: null,
-      createdBy: null,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]);
+  try {
+    await model.insert([
+      {
+        _id: tenantId,
+        planId: plan._id,
+        status: ACTIVE_STATUS,
+        isComplimentary: false,
+        paidUsagePeriods: [],
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        stripeCheckoutSessionId: null,
+        createdBy: null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]);
+  } catch (error) {
+    if (await model.findOne()) return false;
+    throw error;
+  }
   return true;
 }
 

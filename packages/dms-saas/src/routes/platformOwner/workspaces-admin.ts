@@ -198,15 +198,20 @@ async function upsertFreeSubscription(
       payload,
     );
   } else {
-    await tenantSubscriptionModel.insert([
-      {
-        ...payload,
-        _id: tenantId,
-        stripeCustomerId: null,
-        createdBy,
-        createdAt: new Date(),
-      },
-    ]);
+    try {
+      await tenantSubscriptionModel.insert([
+        {
+          ...payload,
+          _id: tenantId,
+          stripeCustomerId: null,
+          createdBy,
+          createdAt: new Date(),
+        },
+      ]);
+    } catch (error) {
+      if (!(await tenantSubscriptionModel.findOne())) throw error;
+      return upsertFreeSubscription(tenantId, planId, freeUntil, createdBy);
+    }
   }
   await recomputeTenantBillingState(tenantId);
   return previousPlan?.name ?? null;
