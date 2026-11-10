@@ -4,6 +4,7 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "incremental": false,
     "declaration": false,
     "sourceMap": false,
@@ -25,6 +26,8 @@
     "packages/dms-saas/test/helpers/vue-runtime/index.mjs",
     "packages/interface-dms-saas/scripts/check-exports.mjs",
     "packages/dms-saas/vitest.config.ts",
+    "packages/dms-saas/knip.config.ts",
+    "packages/interface-dms-saas/knip.config.ts",
     "packages/dms-saas/playground/antelope.config.ts"
   ],
   "include": [
