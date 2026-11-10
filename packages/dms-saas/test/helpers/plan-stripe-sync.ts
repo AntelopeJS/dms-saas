@@ -102,9 +102,11 @@ export function installStripeFake(client: Stripe): void {
   );
   vi.spyOn(client.products, "update").mockImplementation(async (id, params) => {
     const product = held(fake.products, id);
-    Object.assign(product, params, {
-      description: params?.description || null,
-    });
+    if (params?.name !== undefined) product.name = params.name;
+    product.description = params?.description || null;
+    if (params?.tax_code !== undefined)
+      product.tax_code = params.tax_code || null;
+    if (params?.active !== undefined) product.active = params.active;
     fake.writes.push(`products.update:${id}`);
     return fromPartial(product);
   });
@@ -136,7 +138,7 @@ export function installStripeFake(client: Stripe): void {
   );
   vi.spyOn(client.prices, "update").mockImplementation(async (id, params) => {
     const price = held(fake.prices, id);
-    Object.assign(price, params);
+    if (params?.active !== undefined) price.active = params.active;
     fake.writes.push(`prices.update:${id}`);
     return fromPartial(price);
   });

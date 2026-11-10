@@ -16,6 +16,7 @@
     "incremental": false,
     "experimentalDecorators": true
   },
+  "files": [],
   "include": ["**/*.mjs", "**/*.ts"],
   "exclude": ["node_modules", "playground/node_modules", "playground/dist"]
 }
