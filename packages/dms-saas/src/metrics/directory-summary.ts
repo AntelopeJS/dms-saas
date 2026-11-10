@@ -163,8 +163,7 @@ export function summariseDirectory(
   };
 }
 
-/** Every live workspace's directory row; tombstones of deleted ones are left out. */
-export async function loadDirectoryRows(): Promise<DirectoryRow[]> {
+async function readDirectoryRows(): Promise<DirectoryRow[]> {
   return GetModel(TenantBillingStateModel)
     .table.filter((row) =>
       row
@@ -173,6 +172,20 @@ export async function loadDirectoryRows(): Promise<DirectoryRow[]> {
         .and(row.key("_id").eq(row.key("tenantId"))),
     )
     .run();
+}
+
+let inFlightRows: Promise<DirectoryRow[]> | undefined;
+
+/**
+ * Every live workspace's directory row; tombstones of deleted ones are left
+ * out. The dashboard's cards ask for it at once: the reads made while one
+ * runs share it.
+ */
+export function loadDirectoryRows(): Promise<DirectoryRow[]> {
+  inFlightRows ??= readDirectoryRows().finally(() => {
+    inFlightRows = undefined;
+  });
+  return inFlightRows;
 }
 
 /** Puts the workspace names on dated entries, dropping deleted workspaces. */
