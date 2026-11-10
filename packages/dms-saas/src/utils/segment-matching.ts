@@ -30,6 +30,7 @@ import { deriveBillingState } from "../billing-state";
 import { type MinorAmount, normalisedMrr } from "../metrics/normalised-mrr";
 import { fromMinorUnits } from "./money";
 import { getRowInstance } from "./row-instance";
+import { loadWorkspaceRecords } from "./workspace-records";
 import { evaluateSegmentGroup } from "./segment-evaluator";
 import { MS_PER_DAY } from "./time";
 
@@ -221,33 +222,38 @@ export async function loadWorkspaceProjection(
   });
 }
 
-const PROJECTION_CONCURRENCY = 8;
-
 export async function loadAllTenantProjections(
   planModel: PlanModel,
   now: Date = new Date(),
 ): Promise<WorkspaceProjection[]> {
   const tenantModel = GetModel(TenantModel, CROSS_INSTANCE);
-  const [tenants, plans, directories] = await Promise.all([
+  const [tenants, plans, directories, records] = await Promise.all([
     tenantModel.getAll(),
     planModel.getAll(),
     GetModel(TenantBillingStateModel).getAll(),
+    loadWorkspaceRecords(),
   ]);
+  const plansById = new Map(plans.map((p) => [p._id, p]));
   const lookups: ProjectionLookups = {
-    plansById: new Map(plans.map((p) => [p._id, p])),
+    plansById,
     directoriesByTenant: new Map(directories.map((row) => [row.tenantId, row])),
   };
-  const projections: WorkspaceProjection[] = [];
-  for (let i = 0; i < tenants.length; i += PROJECTION_CONCURRENCY) {
-    const batch = tenants.slice(i, i + PROJECTION_CONCURRENCY);
-    const results = await Promise.all(
-      batch.map((tenant) =>
-        loadWorkspaceProjection(tenant, planModel, now, lookups),
-      ),
-    );
-    projections.push(...results);
-  }
-  return projections;
+  return Promise.all(
+    tenants.map(async (tenant) => {
+      const subscription = records.subscriptions.get(tenant._id);
+      const planId = subscription?.planId;
+      return buildWorkspaceProjection({
+        tenant,
+        subscription,
+        billingInfo: records.billingInfos.get(tenant._id),
+        plan: (planId ? plansById.get(planId) : undefined) ?? null,
+        directory: await directoryOf(tenant._id, lookups),
+        membersCount: records.membersCounts.get(tenant._id) ?? 0,
+        invoices: records.invoices.get(tenant._id) ?? [],
+        now,
+      });
+    }),
+  );
 }
 
 /** Workspace projection seen from a user: carries the membership role. */
