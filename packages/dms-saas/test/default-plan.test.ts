@@ -175,6 +175,7 @@ describe("default subscription assignment", () => {
     expect(await subscriptionsOf(tenantId)).toEqual([
       expect.objectContaining({ _id: tenantId, planId: "free" }),
     ]);
+    expect(await recomputedTenants()).toEqual([tenantId]);
   });
 
   it("attaches nothing when no default plan exists", async () => {
