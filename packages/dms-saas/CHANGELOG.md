@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.11.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.11.0...v0.11.1)
+
+### ✅ Tests
+
+- **plans:** Store every locale when inserting per-locale plain data ([#263](https://github.com/AntelopeJS/dms-saas/pull/263))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.11.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.10.1...v0.11.0)
