@@ -16,12 +16,19 @@ const CLAIMABLE_STATUSES = new Set(["pending", "failed"]);
  * attempt within a couple of runs.
  */
 const CLAIM_LEASE_MS = 10 * 60 * 1000;
+/** Each lost compare-and-set means another writer committed; a delivery attempt writes twice (claim, outcome). */
+const PROVISIONING_ATTEMPTS = 5;
 
-/** True when no live attempt holds the delivery: unclaimed, or its lease expired. */
+/**
+ * True when no live attempt holds the delivery (unclaimed, or its lease
+ * expired) and it can be delivered: a creation gate still being prepared
+ * belongs to its registration.
+ */
 export function isLifecycleDeliveryClaimable(
   delivery: LifecycleDelivery,
   now: number = Date.now(),
 ): boolean {
+  if (delivery.provisioningState === "preparing") return false;
   if (CLAIMABLE_STATUSES.has(delivery.status)) return true;
   if (delivery.status !== "running") return false;
   return !delivery.claimExpiresAt || delivery.claimExpiresAt.getTime() <= now;
@@ -32,30 +39,38 @@ export class LifecycleDeliveryModel extends BasicDataModel(
   LifecycleDelivery,
   lifecycleDeliveriesTableName,
 ) {
-  /** Advance the creation decision without reopening cancelled workspaces. */
+  /**
+   * Advance the creation decision without reopening cancelled workspaces. A
+   * claim or its outcome moves the revision without deciding provisioning, so
+   * a lost compare-and-set is retried while the state is still `expected`.
+   */
   async transitionProvisioning(
     id: string,
     expected: WorkspaceProvisioningState,
     next: WorkspaceProvisioningState,
     invoiceId?: string | null,
   ): Promise<void> {
-    const current = await this.get(id);
-    if (!current) throw new Error("Workspace provisioning state is missing");
-    if (
-      current.provisioningState === next &&
-      (invoiceId === undefined || invoiceId === current.provisioningInvoiceId)
-    )
-      return;
-    if (current.provisioningState !== expected)
-      throw new Error("Workspace provisioning state changed");
     const patch: Partial<LifecycleDelivery> = { provisioningState: next };
     if (invoiceId !== undefined) patch.provisioningInvoiceId = invoiceId;
     if (next === "cancelled") patch.status = "succeeded";
-    const outcome = await this.mutate(current, patch);
-    if (outcome !== "applied")
-      throw new Error(
-        `Workspace provisioning ${outcome}; reconcile before retry`,
-      );
+    for (let attempt = 0; attempt < PROVISIONING_ATTEMPTS; attempt += 1) {
+      const current = await this.get(id);
+      if (!current) throw new Error("Workspace provisioning state is missing");
+      if (
+        current.provisioningState === next &&
+        (invoiceId === undefined || invoiceId === current.provisioningInvoiceId)
+      )
+        return;
+      if (current.provisioningState !== expected)
+        throw new Error("Workspace provisioning state changed");
+      const outcome = await this.mutate(current, patch);
+      if (outcome === "applied") return;
+      if (outcome === "unknown")
+        throw new Error(
+          "Workspace provisioning unknown; reconcile before retry",
+        );
+    }
+    throw new Error("Workspace provisioning contended; reconcile before retry");
   }
 
   async findByOperation(operationId: string): Promise<LifecycleDelivery[]> {
