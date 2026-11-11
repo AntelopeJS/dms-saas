@@ -4,11 +4,13 @@ import { perLocaleTexts, planTexts } from "../src/plans/plan-write";
 import { planRow } from "./helpers/plan-row";
 
 describe("plan texts of a row written before the fields were localized", () => {
-  const legacy = PlanModel.fromPlainData({
+  const legacy = PlanModel.fromDatabase({
     _id: "plan_free",
-    name: "Free",
-    description: "$saas.plan_descriptions.free",
-  });
+    _internal: {
+      meta: {},
+      data: { name: "Free", description: "$saas.plan_descriptions.free" },
+    },
+  })!;
 
   it("reads a plain stored text as it is stored", () => {
     expect(planTexts(legacy)).toEqual({

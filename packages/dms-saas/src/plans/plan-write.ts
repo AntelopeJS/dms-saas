@@ -203,9 +203,14 @@ export function perLocaleTexts(stored: StoredPlanTexts): PlanTexts {
   return texts;
 }
 
-/** The plan row a write stores, its texts locked one value per locale. */
+/**
+ * The plan row a write stores, its texts locked one value per locale and read
+ * back in the fallback locale, the row type `insert` and `update` take.
+ */
 export function toPlanRow(write: PlanWrite): Plan {
-  return PlanModel.fromPlainData(write).localize("*", PLAN_LOCALIZED_FIELDS);
+  return PlanModel.fromPlainData(write)
+    .localize("*", PLAN_LOCALIZED_FIELDS)
+    .localize(PLAN_FALLBACK_LOCALE, PLAN_LOCALIZED_FIELDS);
 }
 
 /** A URL-safe slug from a plan name: `Growth 2024` → `growth-2024`. */

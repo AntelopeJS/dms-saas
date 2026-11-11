@@ -40,8 +40,8 @@ User docs: `docs/` of this package, published at https://dms.antelopejs.com/docs
   only for a `*` role. Resolvers of your own keyed on the user must read the context the same way.
 - New project page or block → add its permission ids to the plans that should get it, or tenants lose it.
 - Seeding plans from code: write name, price, currency, interval, billing mode; leave `paymentProviderRefs` to dms-saas.
-  `name`, `description` and `borderLabel` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys; Stripe gets the `en` text.
-- Features: `displayName` / `tooltip` are localized (`{ en, fr }` + `.localize("*")`), never i18n keys.
+  `name`, `description` and `borderLabel` are localized (`{ en, fr }` assigned on `.localize("*", PLAN_LOCALIZED_FIELDS)`, typed `PlanInAllLocales`), never i18n keys; Stripe gets the `en` text.
+- Features: `displayName` / `tooltip` are localized (`{ en, fr }` assigned on `.localize("*", FEATURE_LOCALIZED_FIELDS)`, typed `FeatureInAllLocales`), never i18n keys.
 - Plan `description` and `borderLabel` may be `$i18n.key` (translated on every screen); `name` stays plain text.
 
 ## Extension points (`@antelopejs/interface-dms-saas`)

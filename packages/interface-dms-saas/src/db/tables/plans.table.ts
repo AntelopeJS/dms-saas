@@ -4,6 +4,7 @@ import {
   Index,
   LocalizationModifier,
   Localized,
+  type LocalizedRecords,
   RegisterTable,
   Relation,
   Table,
@@ -70,11 +71,32 @@ export interface PlanProviderRefs {
 }
 
 /** Plan fields written once per locale and read in the caller's. */
-export const PLAN_LOCALIZED_FIELDS: Array<keyof Plan> = [
+export const PLAN_LOCALIZED_FIELDS = [
   "name",
   "description",
   "borderLabel",
-];
+] as const satisfies ReadonlyArray<keyof Plan>;
+
+/** A plan field written once per locale. */
+export type PlanLocalizedField = (typeof PLAN_LOCALIZED_FIELDS)[number];
+
+/**
+ * A plan with every locale of its texts unlocked, as
+ * `plan.localize("*", PLAN_LOCALIZED_FIELDS)` returns it. A localized field is
+ * written one value per locale, e.g. `{ en: "For teams", fr: "Pour les équipes" }`.
+ * Read from the database it holds that record, the plain text of a row written
+ * before the field was localized, or nothing when the text was never set.
+ * `localize(locale)` reads one locale again.
+ */
+export type PlanInAllLocales = Omit<
+  LocalizedRecords<Plan, PlanLocalizedField>,
+  PlanLocalizedField
+> & {
+  [P in PlanLocalizedField]:
+    | Record<string, Exclude<Plan[P], undefined>>
+    | Plan[P]
+    | undefined;
+};
 
 /** A member cap or feature limit no workspace reaches. */
 export const PLAN_UNLIMITED = -1;

@@ -40,7 +40,7 @@ export const isProvisioningCommitted = tenantLifecycle.IsTenantProvisioningCommi
 
 The [entry-point reference](./docs/1.index.md#entry-points) lists the supported subpaths. Importing `/db` registers the SaaS tables, so it is not a types-only import. After direct subscription writes, call [`RecomputeTenantBillingState`](./docs/2.billing.md#recomputetenantbillingstate) to refresh the derived billing state and the workspace directory row.
 
-A module may seed plans straight into the `db` plan table. It writes `name`, `description` and `borderLabel` with one value per locale through `localize("*")`. It leaves `Plan.paymentProviderRefs` empty and never rewrites it, because `@antelopejs/dms-saas` links every billed plan to Stripe itself. See [Plans and their Stripe products](https://dms.antelopejs.com/docs/modules/saas/stripe#plans-and-their-stripe-products).
+A module may seed plans straight into the `db` plan table. It writes `name`, `description` and `borderLabel` with one value per locale on the `PlanInAllLocales` view that `localize("*", PLAN_LOCALIZED_FIELDS)` returns. It leaves `Plan.paymentProviderRefs` empty and never rewrites it, because `@antelopejs/dms-saas` links every billed plan to Stripe itself. See [Plans and their Stripe products](https://dms.antelopejs.com/docs/modules/saas/stripe#plans-and-their-stripe-products).
 
 ## Compatibility
 
@@ -53,7 +53,7 @@ A module may seed plans straight into the `db` plan table. It writes `name`, `de
 | `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`  | `0.4.0`     |
 | `@antelopejs/interface-data-api`            | `>=0.6.1 <1.0.0`  | `0.6.1`     |
 | `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0` | `0.3.0`     |
-| `@antelopejs/interface-database-decorators` | `>=0.1.10 <1.0.0` | `0.2.0`     |
+| `@antelopejs/interface-database-decorators` | `>=0.2.2 <1.0.0`  | `0.3.1`     |
 | `@antelopejs/interface-dms`                 | `>=0.12.0 <1.0.0` | `0.12.0`    |
 
 <!-- antelopejs-docs-compat:end -->
