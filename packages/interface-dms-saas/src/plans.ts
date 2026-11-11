@@ -7,7 +7,13 @@ import type {
   PlanInterval,
   PlanModel,
 } from "./db";
-import { FEATURE_DEFAULT_ORDER, PLAN_LOCALIZED_FIELDS } from "./db";
+import {
+  FEATURE_DEFAULT_ORDER,
+  FEATURE_LOCALIZED_FIELDS,
+  PLAN_LOCALIZED_FIELDS,
+} from "./db";
+
+export { FEATURE_LOCALIZED_FIELDS } from "./db";
 
 const MONTHS_PER_INTERVAL: Record<PlanInterval, number> = {
   month: 1,
@@ -76,16 +82,6 @@ export function isDowngrade(
   if (!current) return false;
   return monthlyCost(target, seats) < monthlyCost(current, seats);
 }
-
-/**
- * Feature fields written once per locale and read in the caller's.
- */
-export const FEATURE_LOCALIZED_FIELDS: Array<keyof Feature> = [
-  "displayName",
-  "description",
-  "tooltip",
-  "unit",
-];
 
 /**
  * Unlocks a feature's localized texts in one locale, falling back to

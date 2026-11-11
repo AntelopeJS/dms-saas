@@ -3,6 +3,7 @@ import {
   Field,
   LocalizationModifier,
   Localized,
+  type LocalizedRecords,
   RegisterTable,
   Table,
   UpdateTime,
@@ -30,6 +31,34 @@ export const FEATURE_FALLBACK_LOCALE = "en";
 
 /** Feature text written once per locale, e.g. `{ en: "Members", fr: "Membres" }`. */
 export type FeatureLocalizedText = Record<string, string>;
+
+/** Feature fields written once per locale and read in the caller's. */
+export const FEATURE_LOCALIZED_FIELDS = [
+  "displayName",
+  "description",
+  "tooltip",
+  "unit",
+] as const satisfies ReadonlyArray<keyof Feature>;
+
+/** A feature field written once per locale. */
+export type FeatureLocalizedField = (typeof FEATURE_LOCALIZED_FIELDS)[number];
+
+/**
+ * A feature with every locale of its texts unlocked, as
+ * `feature.localize("*", FEATURE_LOCALIZED_FIELDS)` returns it. A localized
+ * field is written one value per locale, e.g. `{ en: "Members", fr: "Membres" }`.
+ * Read from the database it holds that record, a plain text stored as is, or
+ * nothing when the text was never set. `localize(locale)` reads one locale again.
+ */
+export type FeatureInAllLocales = Omit<
+  LocalizedRecords<Feature, FeatureLocalizedField>,
+  FeatureLocalizedField
+> & {
+  [P in FeatureLocalizedField]:
+    | Record<string, Exclude<Feature[P], undefined>>
+    | Feature[P]
+    | undefined;
+};
 
 /**
  * Feature definition available to SaaS plans.
