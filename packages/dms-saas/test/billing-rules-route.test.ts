@@ -14,7 +14,6 @@ import {
 import { SaasBillingSettingsController } from "../src/routes/platformOwner/billing-settings";
 import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
-import { insertPlan } from "./helpers/localized-plans";
 import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 import { useSuiteStripe } from "./helpers/stripe";
 import { httpRefusal } from "./helpers/refusal";
@@ -85,9 +84,9 @@ beforeEach(async () => {
   for (const { _id } of await GetModel(PlanModel).getAll()) {
     await GetModel(PlanModel).delete(_id);
   }
-  await insertPlan(syncedPlan(TAX_CODE));
-  await insertPlan(syncedPlan("txcd_99999999", "team"));
-  await insertPlan(
+  await GetModel(PlanModel).insert([
+    syncedPlan(TAX_CODE),
+    syncedPlan("txcd_99999999", "team"),
     planRow({
       _id: "free",
       name: "Free",
@@ -97,7 +96,7 @@ beforeEach(async () => {
       isDeleted: false,
       paymentProviderRefs: {},
     }),
-  );
+  ]);
   controller = new SaasBillingSettingsController();
   controller.billingSettingsModel = GetModel(BillingSettingsModel);
   controller.legalDocumentsModel = GetModel(LegalDocumentsModel);

@@ -14,7 +14,6 @@ import {
 } from "../../src/db";
 import { syncPlanStripeRefs } from "../../src/plans/stripe-sync";
 import { readStripeId } from "../../src/stripe/payload-shapes";
-import { insertPlan } from "./localized-plans";
 import { planRow } from "./plan-row";
 import type { SuiteStripe } from "./stripe";
 
@@ -203,7 +202,7 @@ export function seededPlan(overrides: Partial<Plan> = {}): Plan {
 export const known = new Map<string, Plan>();
 
 export async function store(plan: Plan): Promise<Plan> {
-  await insertPlan(plan);
+  await GetModel(PlanModel).insert(plan);
   known.set(plan._id, plan);
   return plan;
 }

@@ -8,12 +8,12 @@ import {
   FeatureModel,
   type PlanMigration,
   PlanMigrationModel,
+  PlanModel,
   TenantSubscriptionModel,
 } from "../src/db";
 import { SaasPlanMigrationsController } from "../src/routes/platformOwner/plan-migrations";
 import { stripeDashboardUrl } from "../src/stripe/client";
 import { createUser } from "./helpers/dms";
-import { insertPlan } from "./helpers/localized-plans";
 import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
 import { useSuiteStripe } from "./helpers/stripe";
@@ -53,7 +53,7 @@ const TENANTS = [
 let billedPriceId = "price_team";
 
 beforeAll(async () => {
-  for (const plan of PLANS) await insertPlan(plan);
+  await GetModel(PlanModel).insert(PLANS);
   const now = new Date();
   await GetModel(TenantModel).insert(
     TENANTS.map((tenant) => ({ ...tenant, createdAt: now, updatedAt: now })),
