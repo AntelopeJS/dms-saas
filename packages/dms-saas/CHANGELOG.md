@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.11.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.10.1...v0.11.0)
+
+### 🔥 Performance
+
+- **plans:** Read the catalogue usage once per plan listing ([#256](https://github.com/AntelopeJS/dms-saas/pull/256))
+- **dashboard:** Share one directory read across the cards of a page load ([#257](https://github.com/AntelopeJS/dms-saas/pull/257))
+- **segments:** Read every workspace's records once per projection pass ([#258](https://github.com/AntelopeJS/dms-saas/pull/258))
+
+### 🩹 Fixes
+
+- **register:** Rate limit POST /api/saas/register ([#259](https://github.com/AntelopeJS/dms-saas/pull/259))
+- **provisioning:** Keep the lifecycle cron off a creation gate its registration holds ([#261](https://github.com/AntelopeJS/dms-saas/pull/261))
+- **plans:** ⚠️  Type the all-locales view of plan and feature texts ([#262](https://github.com/AntelopeJS/dms-saas/pull/262))
+
+### 📦 Build
+
+- **deps:** Bump @antelopejs/tooling-configs to 0.5.0 ([#255](https://github.com/AntelopeJS/dms-saas/pull/255))
+- **deps:** Bump @antelopejs/tooling-configs to 0.5.1 and fix the read-then-insert races it flags ([#260](https://github.com/AntelopeJS/dms-saas/pull/260))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/interface-dms-saas v0.8.0 ([d4b3f9c](https://github.com/AntelopeJS/dms-saas/commit/d4b3f9c))
+
+#### ⚠️ Breaking Changes
+
+- **plans:** ⚠️  Type the all-locales view of plan and feature texts ([#262](https://github.com/AntelopeJS/dms-saas/pull/262))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.10.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.10.0...v0.10.1)
