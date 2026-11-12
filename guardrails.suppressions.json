@@ -1,13 +1,13 @@
 {
   "rules": {
     "anti-slop/no-chained-type-assertions": 0,
-    "anti-slop/no-object-parameters": 1,
-    "anti-slop/no-unknown-parameters": 2,
+    "anti-slop/no-object-parameters": 0,
+    "anti-slop/no-unknown-parameters": 0,
     "import/no-cycle": 2,
-    "typescript/no-misused-spread": 1,
+    "typescript/no-misused-spread": 0,
     "vue/no-v-html": 1
   },
-  "tsExpectError": 4,
+  "tsExpectError": 0,
   "tsIgnore": 0,
   "safety": 0,
   "config": {
@@ -17,8 +17,8 @@
     "eslint/max-lines-per-function for packages/dms-saas/test/**": 1,
     "typescript/no-misused-spread for packages/dms-saas/test/**": 1,
     "typescript/unbound-method for packages/dms-saas/test/**": 1,
-    "vue/multi-word-component-names for packages/dms-saas/frontend-vue/**/*.ts": 1,
-    "vue/multi-word-component-names for packages/dms-saas/frontend-vue/**/*.vue": 1
+    "vue/multi-word-component-names for packages/dms-saas/frontend-vue/**/*.ts": 0,
+    "vue/multi-word-component-names for packages/dms-saas/frontend-vue/**/*.vue": 0
   },
   "agentFiles": true
 }

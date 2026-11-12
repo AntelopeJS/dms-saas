@@ -162,9 +162,7 @@ export class SaasTenantBillingController extends Controller(
    * reads the live tax ID rather than waiting for a webhook to catch up.
    * `verified` and `unverified` are terminal — Stripe never re-evaluates an
    * existing tax ID — so a settled status costs no Stripe call per page view.
-   * The row returned after an update is spread from an AntelopeJS table class:
-   * `Table` declares one field and a static, no instance methods, and the value
-   * is serialised to JSON on the way out, so no prototype is lost.
+   * A changed status is stored and written onto the row it returns.
    */
   private async refreshVatVerification(
     info: TenantBillingInfo,
@@ -181,8 +179,8 @@ export class SaasTenantBillingController extends Controller(
       : null;
     if (status === stored) return info;
     await billingModel.update(info._id, { vatVerificationStatus: status });
-    // oxlint-disable-next-line typescript/no-misused-spread -- the row is an AntelopeJS table class whose `Table` base declares one field and a static and no instance methods, serialised to JSON on the way out, so no prototype is lost
-    return { ...info, vatVerificationStatus: status };
+    info.vatVerificationStatus = status;
+    return info;
   }
 
   @Get("/billing-info")

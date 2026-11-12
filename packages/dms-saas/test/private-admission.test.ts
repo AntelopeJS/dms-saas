@@ -1,4 +1,4 @@
-import { fromPartial } from "@total-typescript/shoehorn";
+import { fromAny, fromPartial } from "@total-typescript/shoehorn";
 import { randomUUID } from "node:crypto";
 import type { AuthConfig } from "@antelopejs/dms";
 import { ImplementInterface } from "@antelopejs/interface-core";
@@ -214,8 +214,10 @@ describe("deployment admission", () => {
     "rejects invalid deployment admission %s",
     (admissionMode) => {
       expect(() =>
-        // @ts-expect-error each admissionMode of the table is off-contract (a misspelling, "", null, false); the runtime config must refuse it
-        setRuntimeConfig({ stripe: STRIPE_CONFIG, admissionMode }),
+        setRuntimeConfig({
+          stripe: STRIPE_CONFIG,
+          admissionMode: fromAny(admissionMode),
+        }),
       ).toThrow("Invalid dms-saas admissionMode");
       expect(() => assertAdmissionOpen()).toThrow();
     },

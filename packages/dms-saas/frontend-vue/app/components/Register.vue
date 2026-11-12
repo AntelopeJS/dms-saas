@@ -19,6 +19,8 @@ import {
 	PRICING_PATH,
 } from '../build/public/routes'
 
+defineOptions({ name: 'DmsSaasRegister' })
+
 const EMAIL_IN_USE_KEY = 'saas.errors.user.email_in_use'
 
 const { t, te } = useI18n()

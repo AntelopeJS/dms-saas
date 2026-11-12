@@ -156,20 +156,26 @@ function isText(value: unknown): value is string {
   return typeof value === "string";
 }
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the item comes from a provider's array returned unparsed, so `key` and `description` can be non-strings at runtime; typing the parameter `string` makes `.trim()` throw on them or trades this row for `no-known-value-widening` on the guard
-function isFilledString(value: unknown): boolean {
-  return isText(value) && value.trim().length > 0;
+/**
+ * Whether a text field holds a non-blank string. The resolver's array is
+ * returned unparsed, so the field can hold a non-string at runtime.
+ */
+function hasFilledText(
+  item: InvoiceLineItem,
+  field: "key" | "description",
+): boolean {
+  return isText(item[field]) && item[field].trim().length > 0;
 }
 
 const REJECTION_RULES: readonly RejectionRule[] = [
-  { reason: "invalid", isViolated: (item) => !isFilledString(item.key) },
+  { reason: "invalid", isViolated: (item) => !hasFilledText(item, "key") },
   {
     reason: "invalid",
     isViolated: (item) => item.key.includes(LINE_KEY_SEPARATOR),
   },
   {
     reason: "invalid",
-    isViolated: (item) => !isFilledString(item.description),
+    isViolated: (item) => !hasFilledText(item, "description"),
   },
   {
     reason: "invalid",
@@ -182,9 +188,9 @@ export function buildInvoiceLineKey(providerId: string, key: string): string {
   return `${providerId}${LINE_KEY_SEPARATOR}${key}`;
 }
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the key comes from a provider's array returned unparsed and can be a non-string at runtime, which `String(key)` must still name; typing the parameter `string` trades this row for `no-known-value-widening` on the guard
-function toLineKeyFragment(key: unknown): string {
-  return isText(key) ? key.trim() : String(key);
+/** The item's key as a line key fragment, naming a non-string key too. */
+function toLineKeyFragment(item: InvoiceLineItem): string {
+  return isText(item.key) ? item.key.trim() : String(item.key);
 }
 
 function findRejectionReason(
@@ -226,10 +232,7 @@ export function selectInvoiceLineItemsToCreate(
   const selectedKeys = new Set<string>();
 
   for (const item of items) {
-    const lineKey = buildInvoiceLineKey(
-      providerId,
-      toLineKeyFragment(item.key),
-    );
+    const lineKey = buildInvoiceLineKey(providerId, toLineKeyFragment(item));
     const rejection =
       findRejectionReason(item) ?? findOversizedKeyRejection(lineKey);
     if (rejection) {

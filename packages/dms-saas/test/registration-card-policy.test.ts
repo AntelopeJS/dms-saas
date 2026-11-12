@@ -1,3 +1,4 @@
+import { fromAny } from "@total-typescript/shoehorn";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   authenticateRequestUser,
@@ -374,8 +375,7 @@ describe("registration card policy", () => {
     expect(() =>
       setRuntimeConfig({
         stripe: SUITE_STRIPE_KEYS,
-        // @ts-expect-error "sometimes" is off-contract for registration.paymentMethod; the runtime config must refuse it at configuration time
-        registration: { paymentMethod: "sometimes" },
+        registration: { paymentMethod: fromAny("sometimes") },
       }),
     ).toThrow("Invalid dms-saas registration.paymentMethod");
   });

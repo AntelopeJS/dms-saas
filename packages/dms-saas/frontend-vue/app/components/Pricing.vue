@@ -22,6 +22,8 @@ import {
 } from '../build/public/routes'
 import type { PlanInterval } from '../composables/usePlanIntervalLabel'
 
+defineOptions({ name: 'DmsSaasPricing' })
+
 const SKELETON_CARDS = 3
 
 const { t } = useI18n()
