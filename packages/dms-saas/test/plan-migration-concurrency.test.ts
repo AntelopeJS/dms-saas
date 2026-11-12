@@ -194,7 +194,9 @@ describe("migration snapshots on the production Mongo provider", () => {
       isActive: true,
     });
   });
+});
 
+describe("migration snapshots on the production Mongo provider, tenants and progress", () => {
   it("excludes tenants arriving after capture and retains the frozen target", async () => {
     const job = await createJob();
     const tenantId = await createSubscription(job.fromPlanId);
@@ -271,7 +273,9 @@ describe("migration snapshots on the production Mongo provider", () => {
       (await subscriptionModel.findOne())?.domainTransition,
     ).not.toBeNull();
   });
+});
 
+describe("migration snapshots on the production Mongo provider, paused and live workers", () => {
   it("does not take over a paused worker beyond the former TTL", async () => {
     const job = await createJob();
     const tenantId = await createSubscription(job.fromPlanId);

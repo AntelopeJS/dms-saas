@@ -183,7 +183,9 @@ describe("upcoming invoice preview pricing", () => {
       ],
     });
   });
+});
 
+describe("upcoming invoice preview usage lines", () => {
   it("quotes the running cycle's usage so Stripe taxes it with the plan", async () => {
     const { tenantId } = await seedPreviewWorkspace();
     const resolve = vi.fn(async () => [
@@ -281,7 +283,9 @@ describe("upcoming invoice preview pricing", () => {
       expect.objectContaining({ periodStart: paidFrom, periodEnd: NOW }),
     );
   });
+});
 
+describe("upcoming invoice preview when the price cannot be trusted", () => {
   it.each([
     ["throws", () => Promise.reject(new Error("rollups behind"))],
     [

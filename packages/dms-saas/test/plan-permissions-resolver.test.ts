@@ -180,79 +180,78 @@ describe("plan permissions policy", () => {
       expect(reads).not.toHaveBeenCalled();
     },
   );
-
-  describe("in a role preview", () => {
-    function preview(rolePermissions: string[]) {
-      return planIntersection().resolver(
-        "preview-user",
-        tenants.a,
-        new Set(rolePermissions),
-        {
-          preview: { rolePermissions: new Set(rolePermissions) },
-        },
-      );
-    }
-
-    it("returns the role unchanged without a plan", async () => {
-      await subscribe(tenants.a, undefined);
-      expect(await preview(["read", "excluded"])).toEqual(
-        new Set(["read", "excluded"]),
-      );
-    });
-
-    it("keeps the role when the plan is wider", async () => {
-      expect(await preview(["read"])).toEqual(new Set(["read"]));
-    });
-
-    it("caps the role to a narrower plan", async () => {
-      expect(await preview(["read", "write", "excluded"])).toEqual(
-        new Set(["read", "write"]),
-      );
-    });
-
-    it("never takes the owner grant, even for an owner's id", async () => {
-      await setMember(tenants.a, "preview-user", {
-        isTenantOwner: true,
-        roleIds: [],
-      });
-      const reads = membershipReads(tenants.a);
-      expect(await preview([])).toEqual(new Set());
-      expect(reads).not.toHaveBeenCalled();
-    });
-
-    it("keeps the wildcard of a wildcard role", async () => {
-      expect(await preview(["*"])).toEqual(new Set(["*"]));
-    });
-
-    it("drops a wildcard the role does not hold", async () => {
-      expect(
-        await planIntersection().resolver(
-          "preview-user",
-          tenants.a,
-          new Set(["*", "read"]),
-          {
-            preview: { rolePermissions: new Set(["read"]) },
-          },
-        ),
-      ).toEqual(new Set(["read"]));
-    });
-
-    it("leaves real calls with an empty context unchanged", async () => {
-      expect(
-        await planIntersection().resolver(
-          "user",
-          tenants.a,
-          new Set(["read"]),
-          {},
-        ),
-      ).toEqual(new Set(["read", "write"]));
-    });
-  });
-
   it("retains the pipeline registration contract before downstream projections", () => {
     expect(registered).toHaveLength(1);
     const { resolver, ...info } = planIntersection();
     expect(info).toEqual({ id: "dms-saas.plan-intersection", order: 100 });
     expect(resolver).toBeTypeOf("function");
+  });
+});
+
+describe("plan permissions policy in a role preview", () => {
+  function preview(rolePermissions: string[]) {
+    return planIntersection().resolver(
+      "preview-user",
+      tenants.a,
+      new Set(rolePermissions),
+      {
+        preview: { rolePermissions: new Set(rolePermissions) },
+      },
+    );
+  }
+
+  it("returns the role unchanged without a plan", async () => {
+    await subscribe(tenants.a, undefined);
+    expect(await preview(["read", "excluded"])).toEqual(
+      new Set(["read", "excluded"]),
+    );
+  });
+
+  it("keeps the role when the plan is wider", async () => {
+    expect(await preview(["read"])).toEqual(new Set(["read"]));
+  });
+
+  it("caps the role to a narrower plan", async () => {
+    expect(await preview(["read", "write", "excluded"])).toEqual(
+      new Set(["read", "write"]),
+    );
+  });
+
+  it("never takes the owner grant, even for an owner's id", async () => {
+    await setMember(tenants.a, "preview-user", {
+      isTenantOwner: true,
+      roleIds: [],
+    });
+    const reads = membershipReads(tenants.a);
+    expect(await preview([])).toEqual(new Set());
+    expect(reads).not.toHaveBeenCalled();
+  });
+
+  it("keeps the wildcard of a wildcard role", async () => {
+    expect(await preview(["*"])).toEqual(new Set(["*"]));
+  });
+
+  it("drops a wildcard the role does not hold", async () => {
+    expect(
+      await planIntersection().resolver(
+        "preview-user",
+        tenants.a,
+        new Set(["*", "read"]),
+        {
+          preview: { rolePermissions: new Set(["read"]) },
+        },
+      ),
+    ).toEqual(new Set(["read"]));
+  });
+
+  it("leaves real calls with an empty context unchanged", async () => {
+    expect(
+      await planIntersection().resolver(
+        "user",
+        tenants.a,
+        new Set(["read"]),
+        {},
+      ),
+    ).toEqual(new Set(["read", "write"]));
   });
 });
