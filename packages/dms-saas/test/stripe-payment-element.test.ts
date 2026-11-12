@@ -5,6 +5,11 @@ import {
   useStripePaymentElement,
 } from "../frontend-vue/app/composables/useStripePaymentElement";
 
+interface PaymentElementOptions {
+  wallets: Record<string, string>;
+  fields: { billingDetails: Record<string, string> };
+}
+
 const stripe = (() => {
   const created: { mount: Mock; destroy: Mock }[] = [];
   const paymentElement = () => {
@@ -13,7 +18,9 @@ const stripe = (() => {
     return element;
   };
   const elements = {
-    create: vi.fn((_type: string, _options: object) => paymentElement()),
+    create: vi.fn((_type: string, _options: PaymentElementOptions) =>
+      paymentElement(),
+    ),
   };
   return {
     confirmSetup: vi.fn(),

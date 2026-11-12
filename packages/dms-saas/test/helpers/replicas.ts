@@ -3,7 +3,7 @@ import { latch } from "./latch";
 
 /** A model whose `insert` a test can hold back. */
 interface InsertingModel {
-  insert(...args: never[]): Promise<string[]>;
+  insert: (...args: never[]) => Promise<string[]>;
 }
 
 /**

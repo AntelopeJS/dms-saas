@@ -111,7 +111,7 @@ describe("manual upgrade eligibility", () => {
   ];
 
   it.each(ineligibleCases)("rejects $name plans", ({ patch }) => {
-    const target = fromPartial<Plan>({ ...plan(TARGET_PLAN_ID, 20), ...patch });
+    const target = Object.assign(plan(TARGET_PLAN_ID, 20), patch);
     expect(
       isEligibleManualUpgradeTarget(target, current, "individual", 5),
     ).toBe(false);
@@ -124,8 +124,7 @@ describe("manual upgrade eligibility", () => {
   });
 
   it("normalizes annual pricing when enforcing upgrade-only behavior", () => {
-    const annual = fromPartial<Plan>({
-      ...plan(TARGET_PLAN_ID, 100),
+    const annual = Object.assign(plan(TARGET_PLAN_ID, 100), {
       interval: "year",
     });
     expect(

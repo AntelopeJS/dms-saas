@@ -78,7 +78,9 @@ describe("a stale guarded-change cancellation", () => {
 
     const cancellerReleased = latch();
     const cancellerHeld = latch();
-    const realResume = TenantLifecycleModel.prototype.resume;
+    const lifecycle: { resume: TenantLifecycleModel["resume"] } =
+      TenantLifecycleModel.prototype;
+    const realResume = lifecycle.resume;
     const resume = vi
       .spyOn(TenantLifecycleModel.prototype, "resume")
       .mockImplementationOnce(async function (

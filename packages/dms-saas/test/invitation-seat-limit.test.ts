@@ -235,11 +235,9 @@ describe("seats held by invitations at the plan cap", () => {
     const { tenantId } = await createFreeWorkspace();
     const [invite] = await pendingInvites(tenantId);
     if (!invite) throw new Error("Expected the invitation");
-    await GetModel(UserInviteModel, tenantId).insert({
-      ...invite,
-      _id: randomUUID(),
-      token: randomUUID(),
-    });
+    await GetModel(UserInviteModel, tenantId).insert(
+      Object.assign({}, invite, { _id: randomUUID(), token: randomUUID() }),
+    );
 
     expect(await getSeatUsage(tenantId)).toMatchObject({
       pendingInvites: 1,

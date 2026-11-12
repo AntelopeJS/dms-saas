@@ -38,17 +38,19 @@ function plan(overrides: Partial<Plan>): Plan {
 }
 
 const BUSINESS = plan({ _id: "business", price: 49 });
-const ENTERPRISE = plan({
+const ENTERPRISE_FIELDS: Partial<Plan> = {
   _id: "enterprise",
   price: 69,
   paymentProviderRefs: { stripePriceId: "price_enterprise" },
-});
-const PRO = plan({
+};
+const ENTERPRISE = plan(ENTERPRISE_FIELDS);
+const PRO_FIELDS: Partial<Plan> = {
   _id: "pro",
   price: 29,
   billingMode: "flat",
   paymentProviderRefs: { stripePriceId: "price_pro" },
-});
+};
+const PRO = plan(PRO_FIELDS);
 const FREE = plan({
   _id: "free",
   price: 0,
@@ -128,7 +130,9 @@ function stripeSubscription(status = "active"): Stripe.Subscription {
 
 let tenantId: string;
 
-const input = (overrides: object) => ({
+const input = (
+  overrides: Partial<Parameters<typeof previewPlanChange>[0]>,
+) => ({
   tenantId,
   subscription: PAID_SUBSCRIPTION,
   currentPlan: BUSINESS,
@@ -213,7 +217,7 @@ describe("plan change preview", () => {
   });
 
   it("restarts the cycle today when the interval changes", async () => {
-    const yearly = plan({ ...ENTERPRISE, interval: "year", price: 690 });
+    const yearly = plan({ ...ENTERPRISE_FIELDS, interval: "year", price: 690 });
     const preview = await previewPlanChange(input({ target: yearly }));
 
     expect(preview.renewal.at).toEqual(new Date("2027-10-01T00:00:00.000Z"));
@@ -259,7 +263,7 @@ describe("plan change preview", () => {
   });
 
   it("prices a first subscription with the tax of the typed country", async () => {
-    const trialPro = plan({ ...PRO, trialDays: 14 });
+    const trialPro = plan({ ...PRO_FIELDS, trialDays: 14 });
 
     const preview = await previewPlanChange(
       input({

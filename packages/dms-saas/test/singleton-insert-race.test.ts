@@ -6,15 +6,20 @@ import {
   ensureLegalDocumentsRow,
 } from "../src/operator-billing";
 
+interface StubbedModel {
+  get: () => Promise<object | undefined>;
+  insert: () => Promise<never>;
+}
+
 const SINGLETONS = [
   {
     name: "billing settings",
-    ensure: (model: object) =>
+    ensure: (model: StubbedModel) =>
       ensureBillingSettingsRow(fromPartial<BillingSettingsModel>(model)),
   },
   {
     name: "legal documents",
-    ensure: (model: object) =>
+    ensure: (model: StubbedModel) =>
       ensureLegalDocumentsRow(fromPartial<LegalDocumentsModel>(model)),
   },
 ];

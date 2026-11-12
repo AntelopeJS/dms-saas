@@ -140,7 +140,7 @@ describe("complimentary access to a workspace without a subscription", () => {
     const subscriptions = GetModel(TenantSubscriptionModel, tenantId);
     const subscription = await subscriptionOf(tenantId);
     await subscriptions.delete(subscription!._id);
-    const second = { ...operator, _id: randomUUID() };
+    const second = Object.assign({}, operator, { _id: randomUUID() });
     const planOf = new Map([
       [operator._id, await insertPlan()],
       [second._id, await insertPlan()],
