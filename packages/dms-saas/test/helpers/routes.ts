@@ -1,5 +1,6 @@
 import {
   type ComputedParameter,
+  type ControllerClass,
   computeParameter,
   getRegisteredRouteHandlers,
   HTTPResult,
@@ -78,7 +79,7 @@ export async function callRoute(
 
 /** The `handler` routes a controller class registered, by method name. */
 export function controllerRoutes(
-  controller: object,
+  controller: ControllerClass,
 ): Map<string, RouteHandler> {
   const routes = new Map<string, RouteHandler>();
   for (const { handler } of getRegisteredRouteHandlers()) {

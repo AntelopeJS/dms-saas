@@ -136,7 +136,7 @@ it.each([true, false])(
 it("keeps partial failures out of replay and retention", async () => {
   const model = GetModel(StripeWebhookEventModel);
   const input = event();
-  stubCreditNoteRead().mockRejectedValueOnce(
+  const retrieve = stubCreditNoteRead().mockRejectedValueOnce(
     new Error("effect outcome unknown"),
   );
   await expect(dispatchStripeWebhookEvent(input)).rejects.toThrow(
@@ -149,5 +149,5 @@ it("keeps partial failures out of replay and retention", async () => {
     new Date(Date.now() + BEYOND_OLD_CLAIM_TIMEOUT_MS),
   );
   expect((await model.get(input.id))?.result).toBe("reconciliation_required");
-  expect(stripe.write.creditNotes.retrieve).toHaveBeenCalledOnce();
+  expect(retrieve).toHaveBeenCalledOnce();
 });

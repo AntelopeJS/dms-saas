@@ -97,14 +97,14 @@ describe("concurrent guarded Free landings", () => {
     const { tenantId, model, targetPlan } = await dueFreeChange();
     const firstReleased = latch();
     const firstHeld = latch();
-    const release = TenantLifecycleModel.prototype.resume;
     const resume = vi.spyOn(TenantLifecycleModel.prototype, "resume");
     validate.mockImplementationOnce(async () => {
       resume.mockImplementationOnce(async function (
         this: TenantLifecycleModel,
         ...args
       ) {
-        const released = await release.apply(this, args);
+        resume.mockRestore();
+        const released = await this.resume(...args);
         firstReleased.resolve();
         await firstHeld.promise;
         return released;
@@ -116,7 +116,9 @@ describe("concurrent guarded Free landings", () => {
     expect((await model.findOne())?.guardedPlanChange?.phase).toBe("blocked");
 
     validate.mockImplementationOnce(async () => {
-      resume.mockRejectedValueOnce(new Error("connection reset on resume"));
+      vi.spyOn(TenantLifecycleModel.prototype, "resume").mockRejectedValueOnce(
+        new Error("connection reset on resume"),
+      );
       return [];
     });
     await expect(reconcileGuardedFreeChange(tenantId)).rejects.toThrow(

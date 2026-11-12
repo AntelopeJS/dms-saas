@@ -13,6 +13,7 @@ import {
 import { clipInvoiceUsageWindow } from "../src/invoice-line-items/billing-window";
 import { GetTenantBillingPeriod } from "../src/implementations/dms-saas/billing";
 import { useMongoDatabase } from "./helpers/mongo";
+import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 
@@ -22,8 +23,10 @@ const ACTIVATED = new Date("2026-02-10T15:17:00Z");
 const REGIFTED = new Date("2026-02-18T09:21:00Z");
 const REACTIVATED = new Date("2026-03-03T10:11:00Z");
 
-function gift(overrides: Partial<TenantSubscription> = {}): TenantSubscription {
-  return fromPartial<TenantSubscription>({
+function gift(
+  overrides: Partial<TenantSubscription> = {},
+): RowFields<TenantSubscription> {
+  return fromPartial<RowFields<TenantSubscription>>({
     createdAt: CREATED,
     status: "active",
     stripeCustomerId: "existing-customer",
@@ -209,7 +212,7 @@ describe("GetTenantBillingPeriod", () => {
 
   /** A workspace holding `subscription`, or none when it is undefined. */
   async function workspaceWith(
-    subscription: TenantSubscription | undefined,
+    subscription: RowFields<TenantSubscription> | undefined,
   ): Promise<string> {
     const tenantId = randomUUID();
     if (subscription)

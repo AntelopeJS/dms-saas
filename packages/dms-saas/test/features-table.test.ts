@@ -1,8 +1,15 @@
 import { GetMetadata } from "@antelopejs/interface-core";
 import { TableViewMeta } from "@antelopejs/interface-dms/base";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
+import { fromPartial } from "@total-typescript/shoehorn";
 import { assert, describe, expect, it } from "vitest";
 import { featuresDataAPI } from "../src/data-api/platformOwner/features";
+
+function iconOf(valueType: "number" | "string"): string | null {
+  const row = new featuresDataAPI();
+  row.table = fromPartial({ valueType });
+  return row.valueTypeIcon;
+}
 
 describe("features table", () => {
   const columns = GetMetadata(featuresDataAPI, TableViewMeta).columns;
@@ -19,19 +26,10 @@ describe("features table", () => {
   });
 
   it("draws each feature's tile with the icon of its value type", () => {
-    const valueTypeIcon = Object.getOwnPropertyDescriptor(
-      featuresDataAPI.prototype,
-      "valueTypeIcon",
-    )?.get;
-
     expect(columns.displayName?.display).toMatchObject({
       options: { iconField: "valueTypeIcon" },
     });
-    expect(valueTypeIcon?.call({ table: { valueType: "number" } })).toBe(
-      "i-ph-hash",
-    );
-    expect(valueTypeIcon?.call({ table: { valueType: "string" } })).toBe(
-      "i-ph-text-t",
-    );
+    expect(iconOf("number")).toBe("i-ph-hash");
+    expect(iconOf("string")).toBe("i-ph-text-t");
   });
 });

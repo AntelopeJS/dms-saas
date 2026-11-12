@@ -155,7 +155,9 @@ describe("lifecycle delivery concurrency with the MongoDB provider", () => {
     expect(effects.size).toBe(1);
     expect((await model.get(delivery._id))?.receiptId).toBe(operationId);
   });
+});
 
+describe("lifecycle delivery concurrency with the MongoDB provider", () => {
   it("delivers each pending delivery once across concurrent reconcile passes", async () => {
     const model = GetModel(LifecycleDeliveryModel);
     let release = () => {};

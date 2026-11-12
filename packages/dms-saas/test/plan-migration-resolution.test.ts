@@ -213,7 +213,9 @@ describe("plan migration resolution on the production Mongo provider", () => {
       ],
     });
   });
+});
 
+describe("plan migration resolution on the production Mongo provider", () => {
   it("settles an uncertain move the operator read as moved in Stripe", async () => {
     const job = await createJob();
     const tenantId = await createSubscription(job.fromPlanId);

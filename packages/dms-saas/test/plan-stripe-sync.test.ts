@@ -316,10 +316,12 @@ describe("plans that stay off Stripe", () => {
   });
 
   it("skips a plan without a supported interval", async () => {
-    const plan = await store({
-      ...seededPlan(),
-      interval: fromAny<Plan["interval"]>("week"),
-    });
+    const plan = await store(
+      planRow({
+        ...toPlainData(seededPlan()),
+        interval: fromAny<Plan["interval"]>("week"),
+      }),
+    );
 
     await expect(syncPlanStripeRefs(plan, plans)).resolves.toBe(plan);
 

@@ -33,6 +33,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { allowCheckoutRedirects } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
+import { connectionLost, invalidRequest } from "./helpers/stripe-errors";
 
 useMongoDatabase();
 const stripe = useSuiteStripe();
@@ -116,25 +117,6 @@ function settleSession(
   });
   createdSessions.set(id, settled);
   return settled;
-}
-
-function invalidRequest(
-  message: string,
-  param?: string,
-): Stripe.errors.StripeInvalidRequestError {
-  return new Stripe.errors.StripeInvalidRequestError({
-    message,
-    param,
-    type: "invalid_request_error",
-    statusCode: 400,
-  });
-}
-
-function connectionLost(): Stripe.errors.StripeConnectionError {
-  return new Stripe.errors.StripeConnectionError({
-    message: "An error occurred with our connection to Stripe.",
-    type: "api_error",
-  });
 }
 
 async function checkoutRequest(): Promise<PlanChangeRequest> {
@@ -271,7 +253,9 @@ describe("paid checkout admission", () => {
       TRIAL_DAYS,
     );
   });
+});
 
+describe("paid checkout admission", () => {
   it("expires a session Stripe opened without a redirect URL before rolling back", async () => {
     const request = await checkoutRequest();
     api.createSession.mockResolvedValueOnce(

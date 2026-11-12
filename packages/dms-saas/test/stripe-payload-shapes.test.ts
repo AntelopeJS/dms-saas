@@ -196,8 +196,6 @@ describe("upcoming invoice lines", () => {
 });
 
 describe("dahlia webhook payloads", () => {
-  const USAGE_THROUGH = new Date("2026-09-15T00:00:00.000Z");
-
   it("reads the period of a classic-mode subscription with a sourced discount", () => {
     const payload = {
       object: "subscription" as const,
@@ -263,6 +261,10 @@ describe("dahlia webhook payloads", () => {
     expect(readCreditNoteRefundId(note)).toBe("re_dahlia");
     expect(readCreditNoteLineTax(note)).toBe(150);
   });
+});
+
+describe("dahlia webhook payloads", () => {
+  const USAGE_THROUGH = new Date("2026-09-15T00:00:00.000Z");
 
   it("previews reverse-charged taxes with their country and usage cutoff", () => {
     const line = {

@@ -1,3 +1,4 @@
+import type { ControllerClass } from "@antelopejs/interface-api";
 import { DEFAULT_TENANT_ID } from "@antelopejs/interface-dms/constants";
 import { createUser, tenantRequest } from "./dms";
 import { controllerRoutes, refusesAsOwnerOnly } from "./routes";
@@ -8,7 +9,9 @@ import { controllerRoutes, refusesAsOwnerOnly } from "./routes";
  * let a platform owner past the same check; one that does not throws. Needs
  * `useMongoDatabase` and `useDmsAuth`.
  */
-export async function ownerOnlyRoutes(controller: object): Promise<string[]> {
+export async function ownerOnlyRoutes(
+  controller: ControllerClass,
+): Promise<string[]> {
   const member = await tenantRequest(await createUser(), DEFAULT_TENANT_ID);
   const owner = await tenantRequest(
     await createUser({ owner: true }),

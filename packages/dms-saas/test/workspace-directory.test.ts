@@ -6,6 +6,7 @@ import {
   shouldLookUpPaidInvoice,
 } from "../src/billing-state/directory";
 import type { Plan, TenantBillingState, TenantSubscription } from "../src/db";
+import type { RowFields } from "./helpers/row-fields";
 
 const DAY_MS = 86_400_000;
 const NOW = new Date("2026-10-07T12:00:00Z");
@@ -13,7 +14,7 @@ const PERIOD_END = new Date("2026-10-31T00:00:00Z");
 const PAST_DUE_SINCE = new Date("2026-09-30T00:00:00Z");
 const UPDATED_AT = new Date("2026-09-20T00:00:00Z");
 
-const BUSINESS = fromPartial<Plan>({
+const BUSINESS = fromPartial<RowFields<Plan>>({
   _id: "plan_business",
   name: "Business",
   price: 49,
@@ -139,7 +140,9 @@ describe("workspace directory row", () => {
     );
     expect(row.mrrMinor).toBe(112_700);
   });
+});
 
+describe("workspace directory row", () => {
   it("dates no suspension when the automatic rule is off", () => {
     const row = buildWorkspaceDirectoryFields(
       inputs({
@@ -314,7 +317,7 @@ describe("workspace directory churn", () => {
   });
 
   it("reads invoices only for a workspace first published suspended or cancelled", () => {
-    const known = fromPartial<TenantBillingState>({
+    const known = fromPartial<RowFields<TenantBillingState>>({
       billingState: "cancelled",
       mrrMinor: 0,
       previousMrrMinor: 4_900,
