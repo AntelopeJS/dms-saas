@@ -1,3 +1,4 @@
+import type { User } from "@antelopejs/interface-dms/auth/db";
 import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
@@ -16,6 +17,7 @@ import {
 } from "./helpers/operator-workspaces";
 import { useMongoDatabase } from "./helpers/mongo";
 import { lineUpInserts } from "./helpers/replicas";
+import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 useBackOffice();
@@ -140,7 +142,8 @@ describe("complimentary access to a workspace without a subscription", () => {
     const subscriptions = GetModel(TenantSubscriptionModel, tenantId);
     const subscription = await subscriptionOf(tenantId);
     await subscriptions.delete(subscription!._id);
-    const second = Object.assign({}, operator, { _id: randomUUID() });
+    const operatorFields: RowFields<User> = operator;
+    const second = { ...operatorFields, _id: randomUUID() };
     const planOf = new Map([
       [operator._id, await insertPlan()],
       [second._id, await insertPlan()],

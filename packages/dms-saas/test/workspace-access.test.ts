@@ -30,6 +30,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { callRoute } from "./helpers/routes";
+import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 useDmsAuth();
@@ -41,8 +42,8 @@ const RULES = { autoSuspendDelayDays: 14, dataRetentionDays: 30 };
 
 function subscription(
   overrides: Partial<TenantSubscription>,
-): TenantSubscription {
-  return fromPartial<TenantSubscription>({
+): RowFields<TenantSubscription> {
+  return fromPartial<RowFields<TenantSubscription>>({
     _id: "sub",
     planId: "plan-business",
     status: "suspended",
@@ -58,7 +59,7 @@ function subscription(
   });
 }
 
-const INVOICE = fromPartial<Invoice>({
+const INVOICE = fromPartial<RowFields<Invoice>>({
   number: "INV-2026-0911",
   amount: 49000,
   total: 49000,
@@ -76,7 +77,7 @@ let acmeTenant = "";
 async function insertWorkspace(
   tenantId: string,
   name: string,
-  subscriptionFields?: TenantSubscription,
+  subscriptionFields?: RowFields<TenantSubscription>,
 ): Promise<void> {
   const now = new Date();
   await GetModel(TenantModel).insert({
@@ -86,9 +87,10 @@ async function insertWorkspace(
     updatedAt: now,
   });
   if (subscriptionFields)
-    await GetModel(TenantSubscriptionModel, tenantId).insert(
-      Object.assign({}, subscriptionFields, { _id: tenantId }),
-    );
+    await GetModel(TenantSubscriptionModel, tenantId).insert({
+      ...subscriptionFields,
+      _id: tenantId,
+    });
 }
 
 beforeAll(async () => {
@@ -96,10 +98,13 @@ beforeAll(async () => {
 });
 
 /** Stores the subscription of the blocked workspace. */
-async function subscribeCurrent(row: TenantSubscription): Promise<void> {
-  await GetModel(TenantSubscriptionModel, currentTenant).insert(
-    Object.assign({}, row, { _id: currentTenant }),
-  );
+async function subscribeCurrent(
+  row: RowFields<TenantSubscription>,
+): Promise<void> {
+  await GetModel(TenantSubscriptionModel, currentTenant).insert({
+    ...row,
+    _id: currentTenant,
+  });
 }
 
 /**
@@ -280,14 +285,13 @@ async function seedAccessWorkspaces(): Promise<void> {
   await addTenantMember(currentTenant, MEMBER);
   await addTenantMember(acmeTenant, OWNER);
   await addTenantMember(goneTenant, OWNER, true);
-  await GetModel(InvoiceModel, currentTenant).insert(
-    Object.assign({}, INVOICE, {
-      _id: randomUUID(),
-      documentType: "invoice",
-      stripeInvoiceId: "in_1",
-      status: "open",
-    }),
-  );
+  await GetModel(InvoiceModel, currentTenant).insert({
+    ...INVOICE,
+    _id: randomUUID(),
+    documentType: "invoice",
+    stripeInvoiceId: "in_1",
+    status: "open",
+  });
 }
 
 describe("GET /api/saas/workspace-access", () => {

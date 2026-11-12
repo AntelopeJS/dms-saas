@@ -41,6 +41,7 @@ import {
 } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
+import type { RowFields } from "./helpers/row-fields";
 
 /**
  * A Free workspace holds a single seat, taken by its pending owner
@@ -235,9 +236,12 @@ describe("seats held by invitations at the plan cap", () => {
     const { tenantId } = await createFreeWorkspace();
     const [invite] = await pendingInvites(tenantId);
     if (!invite) throw new Error("Expected the invitation");
-    await GetModel(UserInviteModel, tenantId).insert(
-      Object.assign({}, invite, { _id: randomUUID(), token: randomUUID() }),
-    );
+    const inviteFields: RowFields<UserInvite> = invite;
+    await GetModel(UserInviteModel, tenantId).insert({
+      ...inviteFields,
+      _id: randomUUID(),
+      token: randomUUID(),
+    });
 
     expect(await getSeatUsage(tenantId)).toMatchObject({
       pendingInvites: 1,

@@ -8,7 +8,6 @@ import {
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
-import { fromPartial } from "@total-typescript/shoehorn";
 import { assert, describe, expect, it, vi } from "vitest";
 import { loadDirectoryOwner } from "../src/billing-state/directory";
 import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
@@ -25,6 +24,7 @@ import {
 } from "./helpers/operator-workspaces";
 import { useMongoDatabase } from "./helpers/mongo";
 import { httpRefusal } from "./helpers/refusal";
+import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 const { sendInviteEmail, core } = useBackOffice();
@@ -66,6 +66,11 @@ function signupLinkOf(invite: Pick<UserInvite, "token" | "email">): string {
     email: invite.email,
   });
   return `${CONSOLE_URL}/auth/signup?${params.toString()}`;
+}
+
+/** The operator's fields as plain data, to derive an operator from. */
+function operatorFields(): RowFields<User> {
+  return operator;
 }
 
 describe("back-office workspace creation for a new owner", () => {
@@ -115,9 +120,7 @@ describe("back-office workspace creation for a new owner", () => {
 
   it("writes the invitation in the stored invitation language", async () => {
     const email = `${randomUUID()}@example.test`;
-    const frenchOperator = fromPartial<User>(
-      Object.assign({}, operator, { language: "fr" }),
-    );
+    const frenchOperator: User = { ...operatorFields(), language: "fr" };
 
     const created = await createWorkspaceFor(email, frenchOperator);
 
@@ -134,9 +137,7 @@ describe("back-office workspace creation for a new owner", () => {
 
   it("leaves the inviter unnamed when the operator has no name", async () => {
     const email = `${randomUUID()}@example.test`;
-    const namelessOperator = fromPartial<User>(
-      Object.assign({}, operator, { name: " " }),
-    );
+    const namelessOperator: User = { ...operatorFields(), name: " " };
 
     await createWorkspaceFor(email, namelessOperator);
 

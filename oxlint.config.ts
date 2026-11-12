@@ -43,17 +43,4 @@ export default defineConfig({
     "packages/dms-saas/frontend-vue/**",
   ],
   options: { typeAware: true, maxWarnings: 0 },
-  overrides: [
-    {
-      files: ["packages/dms-saas/test/**"],
-      rules: {
-        "eslint/max-lines": "off",
-        "eslint/max-lines-per-function": "off",
-        "typescript/unbound-method": "off",
-        "typescript/no-misused-spread": "off",
-        "anti-slop/no-chained-type-assertions": "off",
-        "anti-slop/no-object-parameters": "off",
-      },
-    },
-  ],
 });
