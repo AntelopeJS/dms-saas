@@ -78,28 +78,28 @@ describe("a stale guarded-change cancellation", () => {
 
     const cancellerReleased = latch();
     const cancellerHeld = latch();
-    const lifecycle: { resume: TenantLifecycleModel["resume"] } =
-      TenantLifecycleModel.prototype;
-    const realResume = lifecycle.resume;
     const resume = vi
       .spyOn(TenantLifecycleModel.prototype, "resume")
       .mockImplementationOnce(async function (
         this: TenantLifecycleModel,
         ...args
       ) {
-        const resumed = await realResume.apply(this, args);
+        resume.mockRestore();
+        const resumed = await this.resume(...args);
         cancellerReleased.resolve();
         await cancellerHeld.promise;
         return resumed;
-      })
-      .mockImplementationOnce(realResume)
-      .mockRejectedValueOnce(new Error("connection reset"));
+      });
     onTestFinished(() => resume.mockRestore());
     const canceller = cancelGuardedFreeChange(tenantId);
     await cancellerReleased.promise;
 
     firstValidation.resolve();
     await firstRejected;
+    const failingResume = vi
+      .spyOn(TenantLifecycleModel.prototype, "resume")
+      .mockRejectedValueOnce(new Error("connection reset"));
+    onTestFinished(() => failingResume.mockRestore());
     validate.mockResolvedValueOnce(incompatible);
     await expect(scheduleGuardedFreeChange(tenantId, free)).rejects.toThrow(
       "connection reset",

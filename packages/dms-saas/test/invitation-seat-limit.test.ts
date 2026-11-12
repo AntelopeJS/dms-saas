@@ -3,7 +3,10 @@ import type { AuthConfig } from "@antelopejs/dms";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import * as planChangesInterface from "@antelopejs/interface-dms-saas/plan-changes";
 import * as planChangesImplementation from "../src/implementations/dms-saas/plan-changes";
-import { GetModel } from "@antelopejs/interface-database-decorators";
+import {
+  GetModel,
+  toPlainData,
+} from "@antelopejs/interface-database-decorators";
 import {
   TenantMemberModel,
   TenantModel,
@@ -41,7 +44,6 @@ import {
 } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
-import type { RowFields } from "./helpers/row-fields";
 
 /**
  * A Free workspace holds a single seat, taken by its pending owner
@@ -236,9 +238,8 @@ describe("seats held by invitations at the plan cap", () => {
     const { tenantId } = await createFreeWorkspace();
     const [invite] = await pendingInvites(tenantId);
     if (!invite) throw new Error("Expected the invitation");
-    const inviteFields: RowFields<UserInvite> = invite;
     await GetModel(UserInviteModel, tenantId).insert({
-      ...inviteFields,
+      ...toPlainData(invite),
       _id: randomUUID(),
       token: randomUUID(),
     });

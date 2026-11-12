@@ -3,7 +3,7 @@ import { latch } from "./latch";
 
 /** A model whose `insert` a test can hold back. */
 interface InsertingModel {
-  insert: (...args: never[]) => Promise<string[]>;
+  insert(...args: never[]): Promise<string[]>;
 }
 
 /**
@@ -12,7 +12,6 @@ interface InsertingModel {
  * Inserts after that run at once. The hold ends with the test.
  */
 export function lineUpInserts(prototype: InsertingModel, replicas = 2): void {
-  const { insert } = prototype;
   const lined = latch();
   let waiting = 0;
   const spy = vi.spyOn(prototype, "insert").mockImplementation(async function (
@@ -20,9 +19,12 @@ export function lineUpInserts(prototype: InsertingModel, replicas = 2): void {
     ...args: never[]
   ) {
     waiting += 1;
-    if (waiting === replicas) lined.resolve();
+    if (waiting === replicas) {
+      spy.mockRestore();
+      lined.resolve();
+    }
     await lined.promise;
-    return insert.apply(this, args);
+    return this.insert(...args);
   });
   onTestFinished(() => spy.mockRestore());
 }

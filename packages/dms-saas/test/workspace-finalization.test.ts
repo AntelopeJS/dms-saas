@@ -23,7 +23,10 @@ describe("buildSessionEstablishRequest", () => {
     ).toContain(endpoint);
     const route = registeredRoute("POST", endpoint);
     expect(route.controller).toBe(SaasRegisterApiController);
-    expect(route.callback.name).toBe("finalize");
+    expect(SaasRegisterApiController.prototype).toHaveProperty(
+      "finalize",
+      route.callback,
+    );
   });
 
   it("wraps the payload the finalize endpoint validates", () => {
