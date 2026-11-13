@@ -54,7 +54,7 @@ A module may seed plans straight into the `db` plan table. It writes `name`, `de
 | `@antelopejs/interface-data-api`            | `file:../../.tgz-deps/antelopejs-interface-data-api-d70049c.tgz` | `file:.tgz-deps/antelopejs-interface-data-api-d70049c.tgz` |
 | `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0`                                                | `0.3.0`                                                    |
 | `@antelopejs/interface-database-decorators` | `>=0.2.2 <1.0.0`                                                 | `0.5.2`                                                    |
-| `@antelopejs/interface-dms`                 | `>=0.12.0 <1.0.0`                                                | `0.12.0`                                                   |
+| `@antelopejs/interface-dms`                 | `file:../../.tgz-deps/antelopejs-interface-dms-30f1726.tgz`      | `file:.tgz-deps/antelopejs-interface-dms-30f1726.tgz`      |
 
 <!-- antelopejs-docs-compat:end -->
 
