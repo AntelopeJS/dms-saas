@@ -87,7 +87,9 @@ describe("billing figures", () => {
       detail: { params: { count: count(1) } },
     });
   });
+});
 
+describe("billing figures", () => {
   it("splits this month's credit notes between balance, refunds and voids", () => {
     const { items } = computeCreditNoteStats([
       { ...eur(4_900), type: "credit_to_balance", status: "issued" },

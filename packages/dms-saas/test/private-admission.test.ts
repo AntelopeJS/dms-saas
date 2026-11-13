@@ -224,78 +224,100 @@ describe("deployment admission", () => {
   );
 });
 
+function signUpWithInvitation(email: string, token: string) {
+  return signup(
+    GetModel(UserModel),
+    GetModel(SessionModel),
+    signupBody(email, token),
+    "test",
+    { ip: "127.0.0.1" },
+  );
+}
+
+async function createInvitedOwnerWorkspace() {
+  const plans = GetModel(PlanModel);
+  const planId = randomUUID();
+  await plans.insert({
+    _id: planId,
+    name: "Assigned",
+    price: 49,
+    isActive: true,
+    isDeleted: false,
+  });
+  const admin = fromPartial<User>({
+    _id: randomUUID(),
+    owner: true,
+    language: "en",
+  });
+  const controller = new SaasWorkspacesAdminController();
+  controller.planModel = plans;
+  controller.tenantModel = GetModel(TenantModel);
+  const email = `${randomUUID()}@example.test`;
+  const created = await controller.createWorkspace(admin, {
+    name: "Invited workspace",
+    ownerEmail: email,
+    planId,
+    access: "complimentary",
+  });
+  expect(created.owner.kind).toBe("invited");
+  if (created.owner.kind !== "invited")
+    throw new Error("Expected new account invitation");
+  return { planId, tenantId: created.tenantId, email, owner: created.owner };
+}
+
+async function expectSelfServeClosed(
+  workspaces: SaasWorkspacesController,
+  user: User,
+): Promise<void> {
+  await expect(
+    workspaces.createMine(
+      user,
+      fromPartial<Parameters<SaasWorkspacesController["createMine"]>[1]>({}),
+      fromPartial<Parameters<SaasWorkspacesController["createMine"]>[2]>({}),
+    ),
+  ).rejects.toMatchObject(CLOSED_ERROR);
+  await expect(workspaces.setupIntent(user)).rejects.toMatchObject(
+    CLOSED_ERROR,
+  );
+  await expect(workspaces.createOptions(user)).rejects.toMatchObject(
+    CLOSED_ERROR,
+  );
+}
+
 describe("actual DMS invitation account creation while admission is closed", () => {
   it("creates an owner and colleague from tokens, retains existing-account immediate membership, and blocks self-serve billing", async () => {
     const users = GetModel(UserModel);
-    const plans = GetModel(PlanModel);
-    const planId = randomUUID();
-    await plans.insert({
-      _id: planId,
-      name: "Assigned",
-      price: 49,
-      isActive: true,
-      isDeleted: false,
-    });
-    const admin = fromPartial<User>({
-      _id: randomUUID(),
-      owner: true,
-      language: "en",
-    });
-    const controller = new SaasWorkspacesAdminController();
-    controller.planModel = plans;
-    controller.tenantModel = GetModel(TenantModel);
-    const email = `${randomUUID()}@example.test`;
-    const created = await controller.createWorkspace(admin, {
-      name: "Invited workspace",
-      ownerEmail: email,
+    const {
       planId,
-      access: "complimentary",
-    });
-    expect(created.owner.kind).toBe("invited");
-    if (created.owner.kind !== "invited")
-      throw new Error("Expected new account invitation");
-    const ownerResult = await signup(
-      users,
-      GetModel(SessionModel),
-      signupBody(email, created.owner.token),
-      "test",
-      { ip: "127.0.0.1" },
-    );
+      tenantId,
+      email,
+      owner: invitation,
+    } = await createInvitedOwnerWorkspace();
+    const ownerResult = await signUpWithInvitation(email, invitation.token);
     const owner = await users.get(userIdOf(ownerResult));
     expect(owner).toBeDefined();
-    const members = GetModel(TenantMemberModel, created.tenantId);
+    const members = GetModel(TenantMemberModel, tenantId);
     expect(await members.getByUser(owner!._id)).toMatchObject({
       isTenantOwner: true,
     });
     expect(
-      await GetModel(UserInviteModel, created.tenantId).get(
-        created.owner.inviteId,
-      ),
+      await GetModel(UserInviteModel, tenantId).get(invitation.inviteId),
     ).toBeUndefined();
     await expect(
-      signup(
-        users,
-        GetModel(SessionModel),
-        signupBody(email, created.owner.token),
-        "test",
-        { ip: "127.0.0.1" },
-      ),
+      signUpWithInvitation(email, invitation.token),
     ).rejects.toBeDefined();
 
     const colleagueEmail = `${randomUUID()}@example.test`;
     const invite = await inviteUserToTenant({
-      tenantId: created.tenantId,
+      tenantId,
       email: colleagueEmail,
       roleIds: ["member"],
     });
     if (invite.kind !== "invited")
       throw new Error("Expected colleague invitation");
-    const colleagueResult = await signup(
-      users,
-      GetModel(SessionModel),
-      signupBody(colleagueEmail, invite.token),
-      "test",
-      { ip: "127.0.0.1" },
+    const colleagueResult = await signUpWithInvitation(
+      colleagueEmail,
+      invite.token,
     );
     expect(await members.getByUser(userIdOf(colleagueResult))).toMatchObject({
       isTenantOwner: false,
@@ -309,7 +331,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
       owner: false,
     });
     const immediate = await inviteUserToTenant({
-      tenantId: created.tenantId,
+      tenantId,
       email: existingEmail,
     });
     expect(immediate).toEqual({ kind: "added", userId: existingId });
@@ -319,27 +341,11 @@ describe("actual DMS invitation account creation while admission is closed", () 
       owner!,
       (await users.get(userIdOf(colleagueResult)))!,
     ]) {
-      await expect(
-        workspaces.createMine(
-          user,
-          fromPartial<Parameters<SaasWorkspacesController["createMine"]>[1]>(
-            {},
-          ),
-          fromPartial<Parameters<SaasWorkspacesController["createMine"]>[2]>(
-            {},
-          ),
-        ),
-      ).rejects.toMatchObject(CLOSED_ERROR);
-      await expect(workspaces.setupIntent(user)).rejects.toMatchObject(
-        CLOSED_ERROR,
-      );
-      await expect(workspaces.createOptions(user)).rejects.toMatchObject(
-        CLOSED_ERROR,
-      );
+      await expectSelfServeClosed(workspaces, user);
     }
     const planController = new SaasTenantPlanController();
     planController.tenantModel = GetModel(TenantModel);
-    const subscriptions = GetModel(TenantSubscriptionModel, created.tenantId);
+    const subscriptions = GetModel(TenantSubscriptionModel, tenantId);
     const subscription = await subscriptions.findOne();
     expect(subscription).toMatchObject({
       isComplimentary: true,
@@ -351,14 +357,14 @@ describe("actual DMS invitation account creation while admission is closed", () 
         headers: { authorization: `Bearer ${ownerResult.access_token}` },
       },
     });
-    expect(await resolveRequestTenantId(ctx)).toBe(created.tenantId);
+    expect(await resolveRequestTenantId(ctx)).toBe(tenantId);
     await expect(
       planController.changePlan(owner!, { planId }, ctx),
     ).rejects.toMatchObject({
       status: 409,
       body: "saas.errors.plan.complimentary_locked",
     });
-    await assertOAuthInvitation(created.tenantId);
+    await assertOAuthInvitation(tenantId);
     expect(stripe.requests).toEqual([]);
   });
 });

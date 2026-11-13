@@ -1,5 +1,8 @@
 import { fromPartial } from "@total-typescript/shoehorn";
-import { GetModel } from "@antelopejs/interface-database-decorators";
+import {
+  GetModel,
+  toPlainData,
+} from "@antelopejs/interface-database-decorators";
 import { beforeEach, describe, expect, it } from "vitest";
 import { planRow } from "./helpers/plan-row";
 import {
@@ -18,6 +21,7 @@ import {
 } from "../src/routes/public/public-plan-catalog";
 import { SaasRegisterApiController } from "../src/routes/public/register";
 import { useMongoDatabase } from "./helpers/mongo";
+import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 
@@ -85,7 +89,7 @@ async function publishCatalogue(
   await GetModel(PlanModel).table.delete().run();
   await GetModel(PlanModel).insert([
     ...plans,
-    ...offSale.map((entry) => ({ ...entry, isPublic: false })),
+    ...offSale.map((entry) => ({ ...toPlainData(entry), isPublic: false })),
   ]);
 }
 
@@ -119,7 +123,7 @@ beforeEach(async () => {
 
 describe("toPublicBillingRules", () => {
   it("states the guarantee only when it is enabled", () => {
-    const settings = fromPartial<BillingSettings>({
+    const settings = fromPartial<RowFields<BillingSettings>>({
       moneyBackGuaranteeEnabled: true,
       moneyBackGuaranteeWindowDays: 14,
       moneyBackGuaranteeMode: "prorated",

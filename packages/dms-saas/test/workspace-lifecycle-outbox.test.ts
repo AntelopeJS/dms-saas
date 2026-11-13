@@ -197,7 +197,9 @@ describe("workspace lifecycle outbox", () => {
     expect(effects.size).toBe(1);
     expect(consume.mock.calls[0][0]).toEqual(consume.mock.calls[1][0]);
   });
+});
 
+describe("workspace lifecycle outbox creation and payment", () => {
   it("closes inventory eligibility before tenant insertion and never reopens a rollback tombstone", async () => {
     const { IsTenantProvisioningCommitted } = tenantLifecycleInterface;
     expect(await IsTenantProvisioningCommitted("legacy")).toBe(true);
@@ -285,7 +287,9 @@ describe("workspace lifecycle outbox", () => {
       }),
     ]);
   });
+});
 
+describe("workspace lifecycle outbox consumers and receipts", () => {
   it("does not invoke a downgraded consumer on a previously queued created message", async () => {
     registerConsumer(
       "created.consumer",
@@ -364,7 +368,9 @@ describe("workspace lifecycle outbox", () => {
       ]),
     );
   });
+});
 
+describe("workspace lifecycle outbox required consumers and receipt times", () => {
   it("keeps an undelivered required consumer blocking after unregister", async () => {
     const registration = registerConsumer(
       "required.consumer",

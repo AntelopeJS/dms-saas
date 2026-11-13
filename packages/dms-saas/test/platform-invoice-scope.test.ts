@@ -107,23 +107,6 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
   const controller = new Controller();
   const meta = GetDataControllerMeta(controller);
 
-  function expectGet() {
-    const route = meta.endpoints.get.callback;
-    const ctx = request();
-    const args = [
-      ctx,
-      { id: "invoice" },
-      OWNER,
-      ctx,
-      "session",
-      PRESENCE_ACQUIRE,
-      OWNER,
-    ];
-    assert.equal(args.length, route.args.length);
-    const outcome: unknown = route.func.call(controller, ...args);
-    return expect(outcome);
-  }
-
   it.each(LIST_ROUTES)("merges mandatory and user filters on %s", (route) => {
     const entry = meta.endpoints[route];
     const ctx = Object.assign(
@@ -216,6 +199,28 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
       args: ["invoice"],
     });
   });
+});
+
+describe.each(CONTROLLERS)("%s invoice scope on reads", (Controller) => {
+  const controller = new Controller();
+  const meta = GetDataControllerMeta(controller);
+
+  function expectGet() {
+    const route = meta.endpoints.get.callback;
+    const ctx = request();
+    const args = [
+      ctx,
+      { id: "invoice" },
+      OWNER,
+      ctx,
+      "session",
+      PRESENCE_ACQUIRE,
+      OWNER,
+    ];
+    assert.equal(args.length, route.args.length);
+    const outcome: unknown = route.func.call(controller, ...args);
+    return expect(outcome);
+  }
 
   it.each<Invoice["documentType"] | undefined>(["credit_note", undefined])(
     "rejects document type %s before projection and presence acquisition",

@@ -1,4 +1,5 @@
 import {
+  type ControllerClass,
   computeParameter,
   HTTPResult,
   type RequestContext,
@@ -15,7 +16,7 @@ const HTTP_FORBIDDEN = 403;
  * `useMongoDatabase` and `useDmsAuth`.
  */
 export async function guardRefusals(
-  controller: object,
+  controller: ControllerClass,
   request: RequestContext,
 ): Promise<Record<string, unknown[]>> {
   const refusals: Record<string, unknown[]> = {};

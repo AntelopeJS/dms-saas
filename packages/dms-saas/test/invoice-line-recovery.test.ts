@@ -101,7 +101,9 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     expect((await task(f.invoiceId))?.state).not.toBe("registered");
     expect(world.calls.update).toBe(1);
   });
+});
 
+describe("invoice line recovery — chain with the MongoDB provider and a simulated Stripe", () => {
   it("records a draft Stripe finalized before suspension as finalized with a gap, and closes the receipt", async () => {
     const f = await aCycleInvoice();
     world.faults.set("update:before", 1);
@@ -208,7 +210,9 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       auto_advance: true,
     });
   });
+});
 
+describe("invoice line recovery — chain with the MongoDB provider and a simulated Stripe", () => {
   it("completes a partial injection without duplicating lines", async () => {
     const f = await aCycleInvoice();
     world.faults.set("item:cloud:included-credit", 3);
@@ -285,7 +289,9 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
       usageGaps: ["finalized_with_external_changes:open"],
     });
   });
+});
 
+describe("invoice line recovery — chain with the MongoDB provider and a simulated Stripe", () => {
   it.each([
     [
       "amount",
@@ -394,7 +400,9 @@ describe("invoice line recovery — chain with the MongoDB provider and a simula
     expect(world.calls.finalizeEffects).toBe(0);
     expect(fakeInvoice(f.invoiceId).status).toBe("draft");
   });
+});
 
+describe("invoice line recovery — chain with the MongoDB provider and a simulated Stripe", () => {
   it("keeps foreign items untouched and outside the fingerprint", async () => {
     const f = await aCycleInvoice();
     world.items.push({

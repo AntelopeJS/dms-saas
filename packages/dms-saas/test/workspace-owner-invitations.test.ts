@@ -8,7 +8,6 @@ import {
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
-import { fromPartial } from "@total-typescript/shoehorn";
 import { assert, describe, expect, it, vi } from "vitest";
 import { loadDirectoryOwner } from "../src/billing-state/directory";
 import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
@@ -115,7 +114,7 @@ describe("back-office workspace creation for a new owner", () => {
 
   it("writes the invitation in the stored invitation language", async () => {
     const email = `${randomUUID()}@example.test`;
-    const frenchOperator = fromPartial<User>({ ...operator, language: "fr" });
+    const frenchOperator: User = { ...operator, language: "fr" };
 
     const created = await createWorkspaceFor(email, frenchOperator);
 
@@ -132,7 +131,7 @@ describe("back-office workspace creation for a new owner", () => {
 
   it("leaves the inviter unnamed when the operator has no name", async () => {
     const email = `${randomUUID()}@example.test`;
-    const namelessOperator = fromPartial<User>({ ...operator, name: " " });
+    const namelessOperator: User = { ...operator, name: " " };
 
     await createWorkspaceFor(email, namelessOperator);
 
@@ -148,7 +147,9 @@ describe("back-office workspace creation for a new owner", () => {
       ),
     );
   });
+});
 
+describe("back-office workspace creation for a new owner, what the invitation does next", () => {
   it("tells the operator afterwards that the invitation e-mail did not leave", async () => {
     sendInviteEmail.mockRejectedValue(new Error("render failed: 401"));
     const email = `${randomUUID()}@example.test`;
@@ -265,17 +266,17 @@ describe("workspace owner in the directory", () => {
 
 describe("pending invitations listed on the workspace detail", () => {
   it("reports whether each invitation can still be redeemed", () => {
-    const read = Object.getOwnPropertyDescriptor(
+    const status = Object.getOwnPropertyDescriptor(
       invitationsDataAPI.prototype,
       "status",
-    )?.get;
-    assert(read);
+    );
+    assert(status?.get !== undefined);
 
     expect(
-      read.call({ table: { expiresAt: new Date(Date.now() + DAY_MS) } }),
+      status.get.call({ table: { expiresAt: new Date(Date.now() + DAY_MS) } }),
     ).toBe(true);
     expect(
-      read.call({ table: { expiresAt: new Date(Date.now() - DAY_MS) } }),
+      status.get.call({ table: { expiresAt: new Date(Date.now() - DAY_MS) } }),
     ).toBe(false);
   });
 

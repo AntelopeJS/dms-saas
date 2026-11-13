@@ -229,7 +229,9 @@ describe("subscription effect admission with real Mongo mutations", () => {
       api.createSession.mock.calls[1][0]?.subscription_data?.trial_period_days,
     ).toBeUndefined();
   });
+});
 
+describe("subscription effect admission with real Mongo mutations, provider effects and receipts", () => {
   it("admits one checkout and reserves the trial across tenants before payment", async () => {
     const request = await checkoutRequest();
     const results = await Promise.allSettled(
@@ -325,7 +327,9 @@ describe("subscription effect admission with real Mongo mutations", () => {
       (await request.tenantSubscriptionModel.findOne())?.domainTransition?.kind,
     ).toBe("change_plan");
   });
+});
 
+describe("subscription effect admission with real Mongo mutations, cancellation and free grants", () => {
   it("retains cancellation intent when Stripe acknowledgement is lost", async () => {
     const request = await checkoutRequest();
     await request.tenantSubscriptionModel.update(request.tenantId, {

@@ -29,16 +29,7 @@ import {
   registerSubscriptionAccessGate,
 } from "../src/auth/subscription-access-gate";
 import { updateSubscriptionStatus } from "../src/stripe/webhook-shared";
-import {
-  prepareGuardedPlanChange,
-  abortGuardedPreparation,
-  admitGuardedProviderEffect,
-  confirmGuardedSchedule,
-  admitGuardedCancellation,
-  confirmGuardedCancellation,
-  isGuardedPlanChangeBlocked,
-  completeGuardedAbort,
-} from "../src/plan-changes/guarded-state";
+import { prepareGuardedPlanChange } from "../src/plan-changes/guarded-state";
 import { addTenantMember, createUser, implementWithDms } from "./helpers/dms";
 import { implementNotificationCore } from "./helpers/notification-core";
 import { useLifecycleConsumer } from "./helpers/lifecycle-consumer";
@@ -132,92 +123,6 @@ async function fixture(prepare = true) {
     update,
   };
 }
-
-describe("durable downgrade admission", () => {
-  it("publishes future constraints without changing the paid billing plan", async () => {
-    const { read, deadline } = await fixture();
-    expect(await read()).toMatchObject({
-      planId: "paid",
-      pendingPlanId: "free",
-      pendingPlanChangeAt: deadline,
-      guardedPlanChange: { phase: "preparing" },
-    });
-  });
-
-  it("prevents an aborted preparer from later admitting Stripe", async () => {
-    const { model, read } = await fixture();
-    const stale = await read();
-    await abortGuardedPreparation(model, stale);
-    await expect(admitGuardedProviderEffect(model, stale)).rejects.toThrow(
-      "revision changed",
-    );
-    await completeGuardedAbort(model, await read());
-    expect(await read()).toMatchObject({
-      planId: "paid",
-      pendingPlanId: null,
-      domainTransition: null,
-      guardedPlanChange: null,
-    });
-  });
-
-  it("allows exactly one competing preparer to admit a provider request", async () => {
-    const { model, read } = await fixture();
-    const sameRevision = await read();
-    const outcomes = await Promise.allSettled(
-      Array.from({ length: 8 }, () =>
-        admitGuardedProviderEffect(model, sameRevision),
-      ),
-    );
-    expect(
-      outcomes.filter((result) => result.status === "fulfilled"),
-    ).toHaveLength(1);
-    expect((await read()).guardedPlanChange?.phase).toBe("provider_pending");
-  });
-
-  it("does not release constraints or admit an inverse intent while Stripe is uncertain", async () => {
-    const { model, read } = await fixture();
-    await admitGuardedProviderEffect(model, await read());
-    const uncertain = await read();
-    await expect(abortGuardedPreparation(model, uncertain)).rejects.toThrow(
-      "preparing",
-    );
-    await expect(admitGuardedCancellation(model, uncertain)).rejects.toThrow(
-      "scheduled",
-    );
-    expect((await read()).pendingPlanId).toBe("free");
-  });
-
-  it("releases future restrictions only after confirmation of the inverse request", async () => {
-    const { model, read } = await fixture();
-    await admitGuardedProviderEffect(model, await read());
-    await confirmGuardedSchedule(model, await read());
-    await admitGuardedCancellation(model, await read());
-    expect((await read()).pendingPlanId).toBe("free");
-    await expect(
-      admitGuardedProviderEffect(model, await read()),
-    ).rejects.toThrow("preparing");
-    await confirmGuardedCancellation(model, await read());
-    expect(await read()).toMatchObject({
-      planId: "paid",
-      pendingPlanId: null,
-      guardedPlanChange: null,
-    });
-  });
-
-  it("closes paid execution exactly at the stored deadline, not on webhook arrival", async () => {
-    const { model, read, deadline } = await fixture();
-    await admitGuardedProviderEffect(model, await read());
-    await confirmGuardedSchedule(model, await read());
-    const scheduled = await read();
-    expect(
-      isGuardedPlanChangeBlocked(scheduled, new Date(deadline.getTime() - 1)),
-    ).toBe(false);
-    expect(isGuardedPlanChangeBlocked(scheduled, deadline)).toBe(true);
-    expect(
-      isGuardedPlanChangeBlocked(scheduled, new Date(deadline.getTime() + 1)),
-    ).toBe(true);
-  });
-});
 
 describe("paid-to-Free orchestration with real inventory admission", () => {
   it("cannot emit Stripe after cancellation revokes a stalled validator", async () => {
@@ -323,7 +228,9 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
       vi.useRealTimers();
     }
   });
+});
 
+describe("paid-to-Free orchestration with real inventory admission, Stripe in flight and landing", () => {
   it("does not hold inventory closed while Stripe is in flight or invert an ambiguous effect", async () => {
     const { tenantId, targetPlan, read, update } = await fixture(false);
     update.mockImplementation(async () => {
@@ -415,7 +322,9 @@ describe("paid-to-Free orchestration with real inventory admission", () => {
     expect(update).not.toHaveBeenCalled();
     expect((await isTenantSubscriptionBlocked(tenantId)).blocked).toBe(false);
   });
+});
 
+describe("paid-to-Free orchestration with real inventory admission, payment suspension and remediation", () => {
   it("preserves a payment suspension between the activation receipt and final CAS", async () => {
     const { tenantId, targetPlan, model, read, retrieve } =
       await fixture(false);

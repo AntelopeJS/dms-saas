@@ -38,6 +38,7 @@ import {
 } from "./helpers/workspaces";
 import { callRoute } from "./helpers/routes";
 import { useSuiteStripe } from "./helpers/stripe";
+import type { RowFields } from "./helpers/row-fields";
 import { ANY_DATE } from "./helpers/asymmetric-matchers";
 
 useMongoDatabase();
@@ -231,7 +232,9 @@ async function expectRefundEligibility(workspace: Workspace) {
 
 describe("resubscription eligibility", () => {
   it("is open to a cancelled workspace until its deletion is admitted", () => {
-    const cancelled = fromPartial<TenantSubscription>({ status: "cancelled" });
+    const cancelled = fromPartial<RowFields<TenantSubscription>>({
+      status: "cancelled",
+    });
     expect(canResubscribe(cancelled)).toBe(true);
     expect(
       canResubscribe({ ...cancelled, deletionStartedAt: new Date() }),
@@ -242,7 +245,7 @@ describe("resubscription eligibility", () => {
   });
 
   it("treats the subscription Stripe ended as no subscription", () => {
-    const ended = fromPartial<TenantSubscription>({
+    const ended = fromPartial<RowFields<TenantSubscription>>({
       status: "cancelled",
       stripeSubscriptionId: ENDED_SUBSCRIPTION,
     });

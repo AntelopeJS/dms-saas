@@ -41,25 +41,32 @@ const suiteStripe = useSuiteStripe();
 const stripe = useRegistrationWorld();
 useDmsAuth();
 
-describe("registration card policy", () => {
-  function applyPolicy(
-    paymentMethod: NonNullable<DmsSaasConfig["registration"]>["paymentMethod"],
-  ): void {
-    setRuntimeConfig({
-      stripe: SUITE_STRIPE_KEYS,
-      registration: { paymentMethod },
-    });
-  }
-
-  function cardlessBody() {
-    const { paymentMethodId: _card, ...body } = buildRegisterBody();
-    return body;
-  }
-
-  afterEach(() => {
-    setRuntimeConfig({ stripe: SUITE_STRIPE_KEYS });
+function applyPolicy(
+  paymentMethod: NonNullable<DmsSaasConfig["registration"]>["paymentMethod"],
+): void {
+  setRuntimeConfig({
+    stripe: SUITE_STRIPE_KEYS,
+    registration: { paymentMethod },
   });
+}
 
+function cardlessBody() {
+  const { paymentMethodId: _card, ...body } = buildRegisterBody();
+  return body;
+}
+
+afterEach(() => {
+  setRuntimeConfig({ stripe: SUITE_STRIPE_KEYS });
+});
+
+function describePlan() {
+  const controller = Object.assign(buildController(), {
+    planModel: GetModel(PlanModel),
+  });
+  return controller.describeRegistrationPlan(undefined, "en");
+}
+
+describe("registration card policy", () => {
   it("defaults to requiring a card, as before the option existed", async () => {
     setRuntimeConfig({ stripe: SUITE_STRIPE_KEYS });
 
@@ -133,7 +140,9 @@ describe("registration card policy", () => {
       body: "saas.errors.workspace.free_card_limit_reached",
     });
   });
+});
 
+describe("registration card policy", () => {
   it("never calls Stripe under `none`, even when a card is sent", async () => {
     applyPolicy("none");
     const retrieve = vi.spyOn(getStripeClient().paymentMethods, "retrieve");
@@ -242,7 +251,9 @@ describe("registration card policy", () => {
     await expect(resolveRequestTenantId(request)).resolves.toBe(tenant?._id);
     expect(stripe.customers.size).toBe(0);
   });
+});
 
+describe("registration card policy", () => {
   it("names the workspace by default when the screen sent no name", async () => {
     applyPolicy("none");
     const { workspaceName: _name, ...body } = cardlessBody();
@@ -310,14 +321,9 @@ describe("registration card policy", () => {
       });
     });
   });
+});
 
-  function describePlan() {
-    const controller = Object.assign(buildController(), {
-      planModel: GetModel(PlanModel),
-    });
-    return controller.describeRegistrationPlan(undefined, "en");
-  }
-
+describe("registration card policy", () => {
   it("tells the sign-up screens the configured policy while Stripe is configured", async () => {
     applyPolicy("optional");
 

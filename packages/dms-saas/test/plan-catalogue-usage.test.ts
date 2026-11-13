@@ -77,23 +77,23 @@ describe("normalised MRR", () => {
   );
 });
 
-describe("catalogue usage", () => {
-  const pro = plan({ _id: "pro", price: 29 });
-  const business = plan({ _id: "business", price: 49, billingMode: "seat" });
-  const free = plan({ _id: "free", price: 0 });
-  const usage = summariseCatalogueUsage(
-    [pro, business, free],
-    [
-      row({ tenantId: "a", planId: "pro", pendingPlanId: "free" }),
-      row({ tenantId: "b", planId: "pro", status: "trialing" }),
-      row({ tenantId: "c", planId: "pro", isComplimentary: true }),
-      row({ tenantId: "d", planId: "business", seats: 4, members: 3 }),
-      row({ tenantId: "e", planId: "free", status: "free" }),
-      row({ tenantId: "f", planId: "deleted-plan" }),
-      row({ tenantId: "g", planId: "pro", status: "cancelled" }),
-    ],
-  );
+const pro = plan({ _id: "pro", price: 29 });
+const business = plan({ _id: "business", price: 49, billingMode: "seat" });
+const free = plan({ _id: "free", price: 0 });
+const usage = summariseCatalogueUsage(
+  [pro, business, free],
+  [
+    row({ tenantId: "a", planId: "pro", pendingPlanId: "free" }),
+    row({ tenantId: "b", planId: "pro", status: "trialing" }),
+    row({ tenantId: "c", planId: "pro", isComplimentary: true }),
+    row({ tenantId: "d", planId: "business", seats: 4, members: 3 }),
+    row({ tenantId: "e", planId: "free", status: "free" }),
+    row({ tenantId: "f", planId: "deleted-plan" }),
+    row({ tenantId: "g", planId: "pro", status: "cancelled" }),
+  ],
+);
 
+describe("catalogue usage", () => {
   it("counts paying, trialing and free workspaces per plan", () => {
     expect(usage.byPlan.get("pro")).toMatchObject({
       workspaces: 4,
@@ -139,7 +139,9 @@ describe("catalogue usage", () => {
       other: 2,
     });
   });
+});
 
+describe("catalogue usage", () => {
   it("summarises the catalogue for the figures above it", () => {
     const legacy = plan({
       _id: "legacy",

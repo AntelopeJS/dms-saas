@@ -14,6 +14,7 @@ import { setRuntimeConfig } from "../../src/config";
 import { PlanModel, TenantSubscriptionModel } from "../../src/db";
 import { SaasWorkspacesAdminController } from "../../src/routes/platformOwner/workspaces-admin";
 import { applyDmsConfig, dmsImplementation, implementWithDms } from "./dms";
+import type { RowFields } from "./row-fields";
 import {
   implementNotificationCore,
   type NotificationCore,
@@ -25,7 +26,7 @@ export const CONSOLE_URL = "https://console.example.test";
 export const WORKSPACE_NAME = "Invited workspace";
 
 /** The platform owner who creates workspaces from the back office. */
-export const operator = fromPartial<User>({
+export const operator = fromPartial<RowFields<User>>({
   _id: randomUUID(),
   email: "operator@example.test",
   name: "Olivia Operator",

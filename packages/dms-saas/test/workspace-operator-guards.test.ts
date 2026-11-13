@@ -42,6 +42,7 @@ import { insertPlan } from "./helpers/plans";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
 import { seatMembers } from "./helpers/workspaces";
 import { httpRefusal } from "./helpers/refusal";
+import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 const stripe = useSuiteStripe();
@@ -257,7 +258,7 @@ describe("typed confirmation of a suspension", () => {
 });
 
 describe("first payment of a workspace its owner pays", () => {
-  const pending = fromPartial<TenantSubscription>({
+  const pending = fromPartial<RowFields<TenantSubscription>>({
     status: "pending_payment",
     stripeSubscriptionId: null,
     isComplimentary: false,

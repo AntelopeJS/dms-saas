@@ -21,8 +21,11 @@ describe("buildSessionEstablishRequest", () => {
     expect(
       frontendModule({ stripe: SUITE_STRIPE_KEYS }).authEstablishEndpoints,
     ).toContain(endpoint);
-    expect(registeredRoute("POST", endpoint).callback).toBe(
-      SaasRegisterApiController.prototype.finalize,
+    const route = registeredRoute("POST", endpoint);
+    expect(route.controller).toBe(SaasRegisterApiController);
+    expect(SaasRegisterApiController.prototype).toHaveProperty(
+      "finalize",
+      route.callback,
     );
   });
 

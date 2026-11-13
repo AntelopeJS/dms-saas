@@ -5,6 +5,7 @@ import type {
 } from "@antelopejs/interface-dms/base";
 import { flattenLocale, readLocale } from "./locales";
 import { isRecord } from "./records";
+import type { NextInvoiceRows } from "../../src/routes/tenant/tenant-upcoming-invoice";
 import { isNumber, isString } from "../../src/utils/primitive-guards";
 
 /** The locales the module ships. */
@@ -12,11 +13,14 @@ export const LOCALES = ["en-GB", "fr-FR"];
 
 const KEY_PREFIX = "$";
 
+/** What a route answers with: a text, a list of them or the rows of the next invoice card. */
+export type RoutePayload = BlockText | readonly unknown[] | NextInvoiceRows;
+
 /**
  * Every i18n key a route payload names: the keys of its composed texts, nested
  * ones included, and its `$`-prefixed strings.
  */
-function namedKeys(payload: object | string): string[] {
+function namedKeys(payload: RoutePayload): string[] {
   const keys: string[] = [];
   const pending: unknown[] = [payload];
   while (pending.length > 0) {
@@ -35,7 +39,7 @@ function namedKeys(payload: object | string): string[] {
 }
 
 /** The keys a payload names that a locale lacks. */
-export function missingKeys(payload: object | string, code: string): string[] {
+export function missingKeys(payload: RoutePayload, code: string): string[] {
   const keys = flattenLocale(readLocale(code));
   return [...new Set(namedKeys(payload))].filter((key) => !keys.has(key));
 }

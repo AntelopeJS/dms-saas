@@ -21,6 +21,51 @@ function expectRefusal(parse: () => void, key: string): void {
   );
 }
 
+const leaf = (condition: JsonValue): JsonValue => ({
+  logical: "and",
+  conditions: [condition],
+});
+const workspaceLeaf = (value: JsonValue): JsonValue =>
+  leaf({
+    kind: "workspaceRef",
+    quantifier: "any",
+    conditions: leaf({ field: "status", operator: "in", value }),
+  });
+
+const poisoned: JsonValue = { ["__proto__"]: { x: 1 } };
+const nodesWithAnExtraKey: [string, (extra: JsonValue) => JsonValue][] = [
+  [
+    "a condition",
+    (extra) =>
+      leaf({ field: "email", operator: "contains", value: "a", extra }),
+  ],
+  ["the root group", (extra) => ({ logical: "and", conditions: [], extra })],
+  ["a nested group", (extra) => leaf({ logical: "or", conditions: [], extra })],
+  [
+    "a workspace condition",
+    (extra) =>
+      leaf({
+        kind: "workspaceRef",
+        quantifier: "any",
+        conditions: leaf({ field: "status", operator: "in", value: ["a"] }),
+        extra,
+      }),
+  ],
+  [
+    "the group inside a workspace condition",
+    (extra) =>
+      leaf({
+        kind: "workspaceRef",
+        quantifier: "any",
+        conditions: {
+          logical: "and",
+          conditions: [{ field: "status", operator: "in", value: ["a"] }],
+          extra,
+        },
+      }),
+  ],
+];
+
 describe("segment rules validation", () => {
   it("reads the rules from a JSON string or an object", () => {
     const rules = {
@@ -78,17 +123,6 @@ describe("segment rules validation", () => {
     );
   });
 
-  const leaf = (condition: JsonValue): JsonValue => ({
-    logical: "and",
-    conditions: [condition],
-  });
-  const workspaceLeaf = (value: JsonValue): JsonValue =>
-    leaf({
-      kind: "workspaceRef",
-      quantifier: "any",
-      conditions: leaf({ field: "status", operator: "in", value }),
-    });
-
   it.each<[string, JsonValue]>([
     ["a condition with no value", leaf({ field: "email", operator: "eq" })],
     [
@@ -105,44 +139,9 @@ describe("segment rules validation", () => {
     expect(parseSegmentConditions(rules)).toEqual(rules);
     expect(parseSegmentConditions(JSON.stringify(rules))).toEqual(rules);
   });
+});
 
-  const poisoned: JsonValue = { ["__proto__"]: { x: 1 } };
-  const nodesWithAnExtraKey: [string, (extra: JsonValue) => JsonValue][] = [
-    [
-      "a condition",
-      (extra) =>
-        leaf({ field: "email", operator: "contains", value: "a", extra }),
-    ],
-    ["the root group", (extra) => ({ logical: "and", conditions: [], extra })],
-    [
-      "a nested group",
-      (extra) => leaf({ logical: "or", conditions: [], extra }),
-    ],
-    [
-      "a workspace condition",
-      (extra) =>
-        leaf({
-          kind: "workspaceRef",
-          quantifier: "any",
-          conditions: leaf({ field: "status", operator: "in", value: ["a"] }),
-          extra,
-        }),
-    ],
-    [
-      "the group inside a workspace condition",
-      (extra) =>
-        leaf({
-          kind: "workspaceRef",
-          quantifier: "any",
-          conditions: {
-            logical: "and",
-            conditions: [{ field: "status", operator: "in", value: ["a"] }],
-            extra,
-          },
-        }),
-    ],
-  ];
-
+describe("segment rules validation extra keys", () => {
   it.each(nodesWithAnExtraKey)(
     "refuses a __proto__ key under an extra key of %s, as a string or an object",
     (_name, rulesWith) => {
@@ -194,7 +193,9 @@ describe("segment rules validation", () => {
       );
     }
   });
+});
 
+describe("segment rules validation conditions and nesting", () => {
   it("refuses a field the level does not read", () => {
     expectRefusal(
       () =>

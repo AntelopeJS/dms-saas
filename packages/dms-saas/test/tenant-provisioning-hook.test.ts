@@ -135,7 +135,9 @@ describe("tenant-being-provisioned hook", () => {
     await reconcileWorkspaceLifecycleDeliveries();
     expect(await allDeliveriesSucceeded()).toBe(true);
   });
+});
 
+describe("tenant-being-provisioned hook capture and retained evidence", () => {
   it("hands a listener the workspace and the consumer's own capture", async () => {
     const seen: TenantBeingProvisionedPayload[] = [];
     listen((payload) => {
@@ -221,7 +223,9 @@ describe("tenant-being-provisioned hook", () => {
     expect(stripe.liveSubscriptions.size).toBe(1);
     expect((await world.attempts())[0]?.state).toBe("reconciliation_required");
   });
+});
 
+describe("tenant-being-provisioned hook retention and cancellation", () => {
   it("shares the retention identity only after provider cancellation and preserves the marker on hook failure", async () => {
     listen(() => {
       throw new Error("hook failed");
@@ -288,7 +292,9 @@ describe("tenant-being-provisioned hook", () => {
     expect(await world.tenants()).toHaveLength(1);
     expect(stripe.customers.size).toBe(1);
   });
+});
 
+describe("tenant-being-provisioned hook listener failures", () => {
   it("cancels the whole registration when a listener fails to write", async () => {
     let atFailure = {};
     listen(async () => {

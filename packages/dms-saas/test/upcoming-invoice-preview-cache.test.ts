@@ -190,7 +190,9 @@ describe("upcoming invoice preview cache", () => {
     ).resolves.toMatchObject({ result: "success" });
     expect(previews.createPreview).toHaveBeenCalledTimes(2);
   });
+});
 
+describe("upcoming invoice preview cache", () => {
   it("keeps the cache on an event that does not change the next invoice", async () => {
     const { tenantId, customerId } = await seedPreviewWorkspace();
     const event = refundUpdatedEvent(customerId);

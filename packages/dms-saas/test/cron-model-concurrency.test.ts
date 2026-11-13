@@ -120,7 +120,9 @@ describe("subscription cron revision fencing on Mongo", () => {
       cronNotification: null,
     });
   });
+});
 
+describe("subscription cron revision fencing on Mongo", () => {
   it("retains an intent across lost acknowledgement without blindly retrying the mutation", async () => {
     const { model, id } = await subscriptionFixture();
     const mutate = model.mutateRevision.bind(model);
@@ -300,7 +302,9 @@ describe("complete segment generations on Mongo", () => {
     expect(await links.listByUser("old")).toEqual([]);
     expect(await links.getAll()).toHaveLength(2);
   });
+});
 
+describe("complete segment generations on Mongo", () => {
   it("does not publish a generation based on edited conditions", async () => {
     const segment = await segmentFixture();
     const links = GetModel(UserSegmentModel);

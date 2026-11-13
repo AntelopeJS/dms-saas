@@ -30,6 +30,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { callRoute } from "./helpers/routes";
+import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 useDmsAuth();
@@ -41,8 +42,8 @@ const RULES = { autoSuspendDelayDays: 14, dataRetentionDays: 30 };
 
 function subscription(
   overrides: Partial<TenantSubscription>,
-): TenantSubscription {
-  return fromPartial<TenantSubscription>({
+): RowFields<TenantSubscription> {
+  return fromPartial<RowFields<TenantSubscription>>({
     _id: "sub",
     planId: "plan-business",
     status: "suspended",
@@ -58,7 +59,7 @@ function subscription(
   });
 }
 
-const INVOICE = fromPartial<Invoice>({
+const INVOICE = fromPartial<RowFields<Invoice>>({
   number: "INV-2026-0911",
   amount: 49000,
   total: 49000,
@@ -76,7 +77,7 @@ let acmeTenant = "";
 async function insertWorkspace(
   tenantId: string,
   name: string,
-  subscriptionFields?: TenantSubscription,
+  subscriptionFields?: RowFields<TenantSubscription>,
 ): Promise<void> {
   const now = new Date();
   await GetModel(TenantModel).insert({
@@ -97,7 +98,9 @@ beforeAll(async () => {
 });
 
 /** Stores the subscription of the blocked workspace. */
-async function subscribeCurrent(row: TenantSubscription): Promise<void> {
+async function subscribeCurrent(
+  row: RowFields<TenantSubscription>,
+): Promise<void> {
   await GetModel(TenantSubscriptionModel, currentTenant).insert({
     ...row,
     _id: currentTenant,
@@ -262,39 +265,37 @@ describe("selectOtherWorkspaces", () => {
   });
 });
 
-describe("GET /api/saas/workspace-access", () => {
-  beforeEach(async () => {
-    OWNER = await createUser({
-      email: "peter@initech.test",
-      name: "Peter Gibbons",
-    });
-    MEMBER = await createUser({ email: "milton@initech.test", name: "Milton" });
-    currentTenant = randomUUID();
-    acmeTenant = randomUUID();
-    const goneTenant = randomUUID();
-    await insertWorkspace(currentTenant, "Initech");
-    await insertWorkspace(
-      acmeTenant,
-      "Acme",
-      subscription({ status: "active" }),
-    );
-    await insertWorkspace(
-      goneTenant,
-      "Gone",
-      subscription({ status: "cancelled" }),
-    );
-    await addTenantMember(currentTenant, OWNER, true);
-    await addTenantMember(currentTenant, MEMBER);
-    await addTenantMember(acmeTenant, OWNER);
-    await addTenantMember(goneTenant, OWNER, true);
-    await GetModel(InvoiceModel, currentTenant).insert({
-      ...INVOICE,
-      _id: randomUUID(),
-      documentType: "invoice",
-      stripeInvoiceId: "in_1",
-      status: "open",
-    });
+async function seedAccessWorkspaces(): Promise<void> {
+  OWNER = await createUser({
+    email: "peter@initech.test",
+    name: "Peter Gibbons",
   });
+  MEMBER = await createUser({ email: "milton@initech.test", name: "Milton" });
+  currentTenant = randomUUID();
+  acmeTenant = randomUUID();
+  const goneTenant = randomUUID();
+  await insertWorkspace(currentTenant, "Initech");
+  await insertWorkspace(acmeTenant, "Acme", subscription({ status: "active" }));
+  await insertWorkspace(
+    goneTenant,
+    "Gone",
+    subscription({ status: "cancelled" }),
+  );
+  await addTenantMember(currentTenant, OWNER, true);
+  await addTenantMember(currentTenant, MEMBER);
+  await addTenantMember(acmeTenant, OWNER);
+  await addTenantMember(goneTenant, OWNER, true);
+  await GetModel(InvoiceModel, currentTenant).insert({
+    ...INVOICE,
+    _id: randomUUID(),
+    documentType: "invoice",
+    stripeInvoiceId: "in_1",
+    status: "open",
+  });
+}
+
+describe("GET /api/saas/workspace-access", () => {
+  beforeEach(seedAccessWorkspaces);
 
   it("gives the workspace owner the invoice to pay and the Stripe portal", async () => {
     await subscribeCurrent(subscription({}));
@@ -343,52 +344,6 @@ describe("GET /api/saas/workspace-access", () => {
     );
   });
 
-  describe("a workspace an owner deleted", () => {
-    const deletedAt = new Date(NOW.getTime() - 2 * DAY);
-
-    beforeEach(async () => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      vi.setSystemTime(deletedAt);
-      await subscribeCurrent(
-        subscription({
-          status: "cancelled",
-          deletionRequestedAt: deletedAt,
-          deletionRequestedBy: OWNER._id,
-        }),
-      );
-      vi.useRealTimers();
-    });
-
-    it("tells the owner they deleted it, restorable until its data goes", async () => {
-      const access = await getWorkspaceAccess(OWNER);
-
-      expect(access).toMatchObject({
-        reason: "deleted",
-        deletion: { at: deletedAt, isByCaller: true, byName: null },
-        dataDeletionAt: new Date(deletedAt.getTime() + 30 * DAY),
-      });
-      expect(access.timeline.map((entry) => entry.kind)).toEqual([
-        "deleted",
-        "data_deleted",
-      ]);
-    });
-
-    it("names the owner who deleted it to a member", async () => {
-      const access = await getWorkspaceAccess(MEMBER);
-
-      expect(access.deletion).toMatchObject({
-        isByCaller: false,
-        byName: "Peter Gibbons",
-      });
-    });
-
-    it("still reads a subscription cancelled otherwise as cancelled", () => {
-      expect(
-        resolveAccessBlockReason(subscription({ status: "cancelled" }), NOW),
-      ).toBe("cancelled");
-    });
-  });
-
   it("answers unblocked so the screen can send the caller back in", async () => {
     await subscribeCurrent(subscription({ status: "active" }));
 
@@ -400,6 +355,54 @@ describe("GET /api/saas/workspace-access", () => {
       unpaidInvoice: null,
       timeline: [],
     });
+  });
+});
+
+describe("GET /api/saas/workspace-access for a workspace an owner deleted", () => {
+  beforeEach(seedAccessWorkspaces);
+
+  const deletedAt = new Date(NOW.getTime() - 2 * DAY);
+
+  beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(deletedAt);
+    await subscribeCurrent(
+      subscription({
+        status: "cancelled",
+        deletionRequestedAt: deletedAt,
+        deletionRequestedBy: OWNER._id,
+      }),
+    );
+    vi.useRealTimers();
+  });
+
+  it("tells the owner they deleted it, restorable until its data goes", async () => {
+    const access = await getWorkspaceAccess(OWNER);
+
+    expect(access).toMatchObject({
+      reason: "deleted",
+      deletion: { at: deletedAt, isByCaller: true, byName: null },
+      dataDeletionAt: new Date(deletedAt.getTime() + 30 * DAY),
+    });
+    expect(access.timeline.map((entry) => entry.kind)).toEqual([
+      "deleted",
+      "data_deleted",
+    ]);
+  });
+
+  it("names the owner who deleted it to a member", async () => {
+    const access = await getWorkspaceAccess(MEMBER);
+
+    expect(access.deletion).toMatchObject({
+      isByCaller: false,
+      byName: "Peter Gibbons",
+    });
+  });
+
+  it("still reads a subscription cancelled otherwise as cancelled", () => {
+    expect(
+      resolveAccessBlockReason(subscription({ status: "cancelled" }), NOW),
+    ).toBe("cancelled");
   });
 });
 

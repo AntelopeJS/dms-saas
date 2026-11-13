@@ -9,7 +9,10 @@ import {
   TenantSubscriptionModel,
 } from "../src/db";
 import { SaasTenantBillingController } from "../src/routes/tenant/tenant-billing";
-import { findMissingBillingIdentityFields } from "../src/workspaces/billing-identity";
+import {
+  type BillingIdentityInput,
+  findMissingBillingIdentityFields,
+} from "../src/workspaces/billing-identity";
 import {
   addTenantMember,
   createUser,
@@ -44,7 +47,7 @@ beforeEach(async () => {
   };
 });
 
-function updateBillingInfo(body: object) {
+function updateBillingInfo(body: BillingIdentityInput) {
   return new SaasTenantBillingController().updateBillingInfo(
     workspace.request,
     workspace.owner,

@@ -21,14 +21,14 @@ describe("credit notes table", () => {
     const typeIcon = Object.getOwnPropertyDescriptor(
       creditNotesDataAPI.prototype,
       "typeIcon",
-    )?.get;
+    );
 
     expect(columns.number?.display).toMatchObject({
       options: { iconField: "typeIcon", icon: "i-ph-receipt-x" },
     });
-    expect(typeIcon?.call({ table: { type: "refund" } })).toBe(
+    expect(typeIcon?.get?.call({ table: { type: "refund" } })).toBe(
       "i-ph-arrow-u-down-left",
     );
-    expect(typeIcon?.call({ table: { type: "unknown" } })).toBeNull();
+    expect(typeIcon?.get?.call({ table: { type: "unknown" } })).toBeNull();
   });
 });

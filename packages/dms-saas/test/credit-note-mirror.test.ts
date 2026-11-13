@@ -313,7 +313,9 @@ describe("Stripe credit note mirror", () => {
     expect(row?.amount).toBe(-3_600);
     expect(notifiedUserIds()).toEqual([workspace.ownerId]);
   });
+});
 
+describe("Stripe credit note mirror and its invoice mirror", () => {
   it("recovers and links a missing invoice mirror before inserting", async () => {
     await GetModel(InvoiceModel, workspace.tenantId).delete(
       workspace.invoiceRowId,
@@ -395,7 +397,9 @@ describe("Stripe credit note mirror", () => {
     expect((await mirroredCreditNoteInvoice())?.status).toBe("void");
     expect(notifiedUserIds()).toEqual([]);
   });
+});
 
+describe("Stripe credit note mirror of Stripe's own data", () => {
   it("links an expanded Stripe invoice reference", async () => {
     currentCreditNote = creditNoteFixture({ invoice: stripeInvoiceFixture() });
 

@@ -23,53 +23,53 @@ function invoice(overrides: Partial<Invoice> = {}): Invoice {
   });
 }
 
-describe("next invoice card", () => {
-  const preview = {
-    status: "available" as const,
-    currency: "EUR",
-    lines: [
-      {
-        kind: "subscription" as const,
-        description: "10 × Business",
-        amountMinorUnits: 49000,
-        taxMinorUnits: 9800,
-        quantity: 10,
-        periodStart: "2026-10-31T00:00:00.000Z",
-        periodEnd: "2026-11-30T00:00:00.000Z",
-        isProration: false,
-        usageLineKey: null,
-        productId: "prod_business",
-      },
-    ],
-    hasMoreLines: false,
-    subtotalMinorUnits: 49000,
-    totalExcludingTaxMinorUnits: 49000,
-    taxMinorUnits: 9800,
-    taxes: [
-      {
-        amountMinorUnits: 9800,
-        taxableAmountMinorUnits: 49000,
-        isInclusive: false,
-        ratePercentage: 20,
-        country: "FR",
-        taxType: "vat",
-        displayName: "VAT",
-        jurisdiction: "France",
-        taxabilityReason: "standard_rated",
-        isReverseCharge: false,
-      },
-    ],
-    taxCountry: "FR",
-    isReverseCharge: false,
-    totalMinorUnits: 58800,
-    amountDueMinorUnits: 58800,
-    periodStart: "2026-10-01T00:00:00.000Z",
-    periodEnd: "2026-10-31T00:00:00.000Z",
-    billingDate: "2026-10-31T00:00:00.000Z",
-    usageThrough: null,
-    computedAt: "2026-10-07T00:00:00.000Z",
-  };
+const preview = {
+  status: "available" as const,
+  currency: "EUR",
+  lines: [
+    {
+      kind: "subscription" as const,
+      description: "10 × Business",
+      amountMinorUnits: 49000,
+      taxMinorUnits: 9800,
+      quantity: 10,
+      periodStart: "2026-10-31T00:00:00.000Z",
+      periodEnd: "2026-11-30T00:00:00.000Z",
+      isProration: false,
+      usageLineKey: null,
+      productId: "prod_business",
+    },
+  ],
+  hasMoreLines: false,
+  subtotalMinorUnits: 49000,
+  totalExcludingTaxMinorUnits: 49000,
+  taxMinorUnits: 9800,
+  taxes: [
+    {
+      amountMinorUnits: 9800,
+      taxableAmountMinorUnits: 49000,
+      isInclusive: false,
+      ratePercentage: 20,
+      country: "FR",
+      taxType: "vat",
+      displayName: "VAT",
+      jurisdiction: "France",
+      taxabilityReason: "standard_rated",
+      isReverseCharge: false,
+    },
+  ],
+  taxCountry: "FR",
+  isReverseCharge: false,
+  totalMinorUnits: 58800,
+  amountDueMinorUnits: 58800,
+  periodStart: "2026-10-01T00:00:00.000Z",
+  periodEnd: "2026-10-31T00:00:00.000Z",
+  billingDate: "2026-10-31T00:00:00.000Z",
+  usageThrough: null,
+  computedAt: "2026-10-07T00:00:00.000Z",
+};
 
+describe("next invoice card", () => {
   it("lists the lines, the tax, the total and where the invoice goes", () => {
     const rows = toNextInvoiceRows(preview, {
       paymentMethod: {
@@ -166,7 +166,9 @@ describe("next invoice card", () => {
     );
     for (const code of LOCALES) expect(missingKeys(rows, code)).toEqual([]);
   });
+});
 
+describe("next invoice card when the plan ends or switches", () => {
   it("shows the paid plan's end and the switch to Free when no renewal is coming", () => {
     const rows = withPlanSwitch(
       { items: [], totalMinorUnits: null, currency: null, billingDate: null },

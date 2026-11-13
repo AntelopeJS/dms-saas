@@ -3,7 +3,10 @@ import type { AuthConfig } from "@antelopejs/dms";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import * as planChangesInterface from "@antelopejs/interface-dms-saas/plan-changes";
 import * as planChangesImplementation from "../src/implementations/dms-saas/plan-changes";
-import { GetModel } from "@antelopejs/interface-database-decorators";
+import {
+  GetModel,
+  toPlainData,
+} from "@antelopejs/interface-database-decorators";
 import {
   TenantMemberModel,
   TenantModel,
@@ -236,7 +239,7 @@ describe("seats held by invitations at the plan cap", () => {
     const [invite] = await pendingInvites(tenantId);
     if (!invite) throw new Error("Expected the invitation");
     await GetModel(UserInviteModel, tenantId).insert({
-      ...invite,
+      ...toPlainData(invite),
       _id: randomUUID(),
       token: randomUUID(),
     });
