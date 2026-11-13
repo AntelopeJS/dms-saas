@@ -63,7 +63,9 @@ function prepareRead(): void {
     }),
   );
   vi.spyOn(Query, "Get").mockImplementation(() =>
-    fromPartial<ReturnType<typeof Query.Get>>(Promise.resolve(current)),
+    fromPartial<ReturnType<typeof Query.Get>>({
+      run: async () => current,
+    }),
   );
   vi.spyOn(Query, "Joined").mockImplementation((_db, _meta, query) => query);
   vi.spyOn(Query, "Computed").mockImplementation((_db, _meta, query) => query);
