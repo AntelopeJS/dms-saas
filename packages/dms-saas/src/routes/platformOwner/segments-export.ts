@@ -18,6 +18,7 @@ import {
   getExportJobStatus,
   runExportJob,
 } from "@antelopejs/interface-dms/base";
+import { z } from "zod";
 import { PlanModel, SegmentModel } from "../../db";
 import {
   evaluateSegmentGroup,
@@ -45,16 +46,17 @@ const CSV_HEADER = [
   "owned_mrr",
 ];
 
-interface OwnersExportContext {
-  segmentId: string;
-}
+const ownersExportContext = z.object({ segmentId: z.string() });
+
+type OwnersExportContext = z.infer<typeof ownersExportContext>;
 
 function ownersExportAccessForSegment(
   segmentId: string,
 ): ExportJobAccessOptions<OwnersExportContext> {
   return {
     scope: OWNERS_EXPORT_SCOPE,
-    isOwnedBy: (_record, context) => context?.segmentId === segmentId,
+    contextSchema: ownersExportContext,
+    isOwnedBy: (_record, context) => context.segmentId === segmentId,
   };
 }
 
