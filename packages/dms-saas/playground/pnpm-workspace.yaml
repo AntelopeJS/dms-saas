@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - "@antelopejs/interface-database-decorators@0.5.2"
