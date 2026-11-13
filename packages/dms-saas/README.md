@@ -72,9 +72,9 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and pub
 | `@antelopejs/interface-api-util`            | `>=0.3.2 <1.0.0`                                                 | `0.3.2`                                                    |
 | `@antelopejs/interface-core`                | `>=0.4.0 <1.0.0`                                                 | `0.4.0`                                                    |
 | `@antelopejs/interface-data-api`            | `file:../../.tgz-deps/antelopejs-interface-data-api-d70049c.tgz` | `file:.tgz-deps/antelopejs-interface-data-api-d70049c.tgz` |
-| `@antelopejs/interface-database`            | `>=0.3.0 <1.0.0`                                                 | `0.3.0`                                                    |
+| `@antelopejs/interface-database`            | `>=0.3.0 <1.0.0`                                                 | `0.4.0`                                                    |
 | `@antelopejs/interface-database-decorators` | `>=0.5.2 <1.0.0`                                                 | `0.5.2`                                                    |
-| `@antelopejs/interface-dms`                 | `file:../../.tgz-deps/antelopejs-interface-dms-30f1726.tgz`      | `file:.tgz-deps/antelopejs-interface-dms-30f1726.tgz`      |
+| `@antelopejs/interface-dms`                 | `file:../../.tgz-deps/antelopejs-interface-dms-b04af21.tgz`      | `file:.tgz-deps/antelopejs-interface-dms-b04af21.tgz`      |
 | `@antelopejs/interface-dms-automation`      | `>=0.6.0 <1.0.0`                                                 | `0.6.0`                                                    |
 | `@antelopejs/interface-dms-saas`            | `workspace:^`                                                    | `0.8.0`                                                    |
 
