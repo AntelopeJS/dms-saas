@@ -11,14 +11,14 @@
     "frontend:dev": "ajs dms dev"
   },
   "dependencies": {
-    "@antelopejs/dms": "file:../../../.tgz-deps/antelopejs-dms-0375a09.tgz",
+    "@antelopejs/dms": "file:../../../.tgz-deps/antelopejs-dms-fb9f90b.tgz",
     "@antelopejs/interface-api": ">=0.3.0 <1.0.0",
     "@antelopejs/interface-api-util": ">=0.3.0 <1.0.0",
     "@antelopejs/interface-core": ">=0.4.0 <1.0.0",
-    "@antelopejs/interface-data-api": "file:../../../.tgz-deps/antelopejs-interface-data-api-2def09c.tgz",
+    "@antelopejs/interface-data-api": "file:../../../.tgz-deps/antelopejs-interface-data-api-170f079.tgz",
     "@antelopejs/interface-database": ">=0.3.0 <1.0.0",
     "@antelopejs/interface-database-decorators": ">=0.5.2 <1.0.0",
-    "@antelopejs/interface-dms": "file:../../../.tgz-deps/antelopejs-interface-dms-0375a09.tgz",
+    "@antelopejs/interface-dms": "file:../../../.tgz-deps/antelopejs-interface-dms-fb9f90b.tgz",
     "@antelopejs/interface-dms-saas": "link:../../interface-dms-saas"
   },
   "devDependencies": {
@@ -31,15 +31,15 @@
   },
   "pnpm": {
     "overrides": {
-      "@antelopejs/interface-data-api": "file:../../../.tgz-deps/antelopejs-interface-data-api-2def09c.tgz",
-      "@antelopejs/interface-dms": "file:../../../.tgz-deps/antelopejs-interface-dms-0375a09.tgz",
-      "@antelopejs/dms": "file:../../../.tgz-deps/antelopejs-dms-0375a09.tgz",
+      "@antelopejs/interface-data-api": "file:../../../.tgz-deps/antelopejs-interface-data-api-170f079.tgz",
+      "@antelopejs/interface-dms": "file:../../../.tgz-deps/antelopejs-interface-dms-fb9f90b.tgz",
+      "@antelopejs/dms": "file:../../../.tgz-deps/antelopejs-dms-fb9f90b.tgz",
       "@antelopejs/dms>@antelopejs/interface-api": "0.3.0",
       "@antelopejs/dms>@antelopejs/interface-api-util": "0.3.0",
       "@antelopejs/dms>@antelopejs/interface-core": "0.4.0",
       "@antelopejs/dms>@antelopejs/interface-database": "0.4.0",
       "@antelopejs/dms>@antelopejs/interface-database-decorators": "0.5.2",
-      "@antelopejs/interface-dms-builder": "file:../../../.tgz-deps/antelopejs-interface-dms-builder-0375a09.tgz"
+      "@antelopejs/interface-dms-builder": "file:../../../.tgz-deps/antelopejs-interface-dms-builder-b04af21.tgz"
     }
   },
   "antelopeJs": {
