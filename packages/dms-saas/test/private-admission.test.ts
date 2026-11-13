@@ -30,6 +30,7 @@ import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
 import {
   applyDmsConfig,
+  createUser,
   dmsImplementation,
   implementWithDms,
 } from "./helpers/dms";
@@ -244,11 +245,7 @@ async function createInvitedOwnerWorkspace() {
     isActive: true,
     isDeleted: false,
   });
-  const admin = fromPartial<User>({
-    _id: randomUUID(),
-    owner: true,
-    language: "en",
-  });
+  const admin = await createUser({ owner: true });
   const controller = new SaasWorkspacesAdminController();
   controller.planModel = plans;
   controller.tenantModel = GetModel(TenantModel);
