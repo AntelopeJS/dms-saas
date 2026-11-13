@@ -7,7 +7,6 @@ export default [
 	{
 		files: ['**/*.ts', '**/*.vue'],
 		languageOptions: { parserOptions: { parser: ts.parser } },
-		rules: { 'vue/multi-word-component-names': 'off' },
 	},
 	{ files: ['**/*.ts'], languageOptions: { parser: ts.parser } },
 ]

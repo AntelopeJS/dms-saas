@@ -1,5 +1,8 @@
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
-import { GetModel } from "@antelopejs/interface-database-decorators";
+import {
+  GetModel,
+  type Table,
+} from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import {
   type Invoice,
@@ -23,7 +26,7 @@ export interface WorkspaceRecords {
  * The first row of each workspace, in the order given, as its model reads it:
  * what `findOne` answers for that workspace.
  */
-function firstByWorkspace<Row extends object, T>(
+function firstByWorkspace<Row extends Table, T>(
   rows: Row[],
   read: (row: Row) => T | undefined,
 ): Map<string, T> {
@@ -39,7 +42,7 @@ function firstByWorkspace<Row extends object, T>(
   return first;
 }
 
-function groupByWorkspace<T extends object>(rows: T[]): Map<string, T[]> {
+function groupByWorkspace<T extends Table>(rows: T[]): Map<string, T[]> {
   const groups = new Map<string, T[]>();
   for (const row of rows) {
     const tenantId = getRowInstance(row);
