@@ -6,11 +6,12 @@ import { antelopeKnipConfig } from "../../knip.config.ts";
  * unused. The Stripe CLI, which drives the webhook script, is not an npm
  * package. The suite imports the Vue the frontend layer's composables run on
  * by path (`test/helpers/frontend-vue.ts`): the layer's own `package.json`
- * declares it.
+ * declares it. The DMS declarations the suite's typecheck reads import
+ * `jsonwebtoken`, whose types the DMS does not depend on.
  */
 export default antelopeKnipConfig({
   entry: ["test/**/*.test.ts"],
   project: ["test/**/*.ts"],
   ignoreBinaries: ["stripe"],
-  ignoreDependencies: ["vue"],
+  ignoreDependencies: ["vue", "@types/jsonwebtoken"],
 });
