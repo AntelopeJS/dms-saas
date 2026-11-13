@@ -2,3 +2,5 @@ packages:
   - packages/dms-saas
   - packages/interface-dms-saas
   - packages/dms-saas/frontend-vue
+overrides:
+  "@antelopejs/interface-data-api": "file:.tgz-deps/antelopejs-interface-data-api-d70049c.tgz"

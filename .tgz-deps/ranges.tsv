@@ -1,0 +1,6 @@
+@antelopejs/interface-data-api	packages/dms-saas/package.json	dependencies	>=0.6.1 <1.0.0
+@antelopejs/interface-data-api	packages/dms-saas/playground/package.json	dependencies	>=0.6.1 <1.0.0
+@antelopejs/interface-data-api	packages/interface-dms-saas/package.json	dependencies	>=0.6.1 <1.0.0
+@antelopejs/interface-data-api	package.json	pnpm.overrides	
+@antelopejs/interface-data-api	pnpm-workspace.yaml	overrides	
+@antelopejs/interface-data-api	packages/dms-saas/playground/package.json	pnpm.overrides	
