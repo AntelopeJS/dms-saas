@@ -74,9 +74,8 @@ export default defineConfig({
     },
     dms: {
       source: {
-        type: "package",
-        package: "@antelopejs/dms",
-        version: ">=0.13.1 <1.0.0",
+        type: "local",
+        path: "../../../../packages/dms-saas/node_modules/@antelopejs/dms",
       },
       config: {
         homepage: "/welcome",

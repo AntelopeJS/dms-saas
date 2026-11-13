@@ -467,7 +467,7 @@ export class plansDataAPI extends DataController(
 
   @Select()
   @Filter((_context, field, _key, value) =>
-    field.eq(value === TRUE_FILTER_VALUE),
+    field.eq(value === true || value === TRUE_FILTER_VALUE),
   )
   @Access(AccessMode.ReadOnly)
   declare isDeleted: boolean;

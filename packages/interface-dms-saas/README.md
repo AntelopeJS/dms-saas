@@ -48,13 +48,13 @@ A module may seed plans straight into the `db` plan table. It writes `name`, `de
 
 <!-- antelopejs-docs-compat:start -->
 
-| Package                                     | Supported         | Tested with |
-| ------------------------------------------- | ----------------- | ----------- |
-| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`  | `0.4.0`     |
-| `@antelopejs/interface-data-api`            | `>=0.6.1 <1.0.0`  | `0.6.1`     |
-| `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0` | `0.3.0`     |
-| `@antelopejs/interface-database-decorators` | `>=0.2.2 <1.0.0`  | `0.3.2`     |
-| `@antelopejs/interface-dms`                 | `>=0.12.0 <1.0.0` | `0.12.0`    |
+| Package                                     | Supported                                                        | Tested with                                                |
+| ------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| `@antelopejs/interface-core`                | `>=0.2.4 <1.0.0`                                                 | `0.4.0`                                                    |
+| `@antelopejs/interface-data-api`            | `file:../../.tgz-deps/antelopejs-interface-data-api-170f079.tgz` | `file:.tgz-deps/antelopejs-interface-data-api-170f079.tgz` |
+| `@antelopejs/interface-database`            | `>=0.1.11 <1.0.0`                                                | `0.4.0`                                                    |
+| `@antelopejs/interface-database-decorators` | `>=0.2.2 <1.0.0`                                                 | `0.5.2`                                                    |
+| `@antelopejs/interface-dms`                 | `file:../../.tgz-deps/antelopejs-interface-dms-fb9f90b.tgz`      | `file:.tgz-deps/antelopejs-interface-dms-fb9f90b.tgz`      |
 
 <!-- antelopejs-docs-compat:end -->
 
