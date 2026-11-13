@@ -18,6 +18,7 @@ import {
   getExportJobStatus,
   runExportJob,
 } from "@antelopejs/interface-dms/base";
+import { z } from "zod";
 import { PlanMigrationModel } from "../../db";
 import {
   WORKSPACE_EXPORT_HEADER,
@@ -32,16 +33,17 @@ import {
 const HTTP_NOT_FOUND = 404;
 const EXPORT_SCOPE = "saas-plan-migration-workspaces";
 
-interface MigrationExportContext {
-  migrationId: string;
-}
+const migrationExportContext = z.object({ migrationId: z.string() });
+
+type MigrationExportContext = z.infer<typeof migrationExportContext>;
 
 function exportAccess(
   migrationId: string,
 ): ExportJobAccessOptions<MigrationExportContext> {
   return {
     scope: EXPORT_SCOPE,
-    isOwnedBy: (_record, context) => context?.migrationId === migrationId,
+    contextSchema: migrationExportContext,
+    isOwnedBy: (_record, context) => context.migrationId === migrationId,
   };
 }
 
