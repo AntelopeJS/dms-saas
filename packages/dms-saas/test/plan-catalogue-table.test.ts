@@ -86,23 +86,31 @@ describe("the plans table scope", () => {
     ]);
   });
 
-  it("matches the plans whose deletion flag is the one asked", () => {
-    const row = ValueProxy.constant({ isDeleted: false });
-    const predicate = meta.filters.isDeleted(
-      Object.assign(request("list"), { this: controller }),
-      row.key("isDeleted"),
-      "isDeleted",
-      "false",
-      "eq",
-      row,
-    );
+  it.each([
+    { value: "false", deleted: false },
+    { value: "true", deleted: true },
+    { value: false, deleted: false },
+    { value: true, deleted: true },
+  ])(
+    "matches the plans whose deletion flag is the one asked ($value)",
+    ({ value, deleted }) => {
+      const row = ValueProxy.constant({ isDeleted: false });
+      const predicate = meta.filters.isDeleted(
+        Object.assign(request("list"), { this: controller }),
+        row.key("isDeleted"),
+        "isDeleted",
+        value,
+        "eq",
+        row,
+      );
 
-    assert(predicate instanceof ValueProxy);
-    expect(predicate.build().at(-1)).toMatchObject({
-      stage: "eq",
-      args: [false],
-    });
-  });
+      assert(predicate instanceof ValueProxy);
+      expect(predicate.build().at(-1)).toMatchObject({
+        stage: "eq",
+        args: [deleted],
+      });
+    },
+  );
 });
 
 describe("moving plans by hand", () => {
