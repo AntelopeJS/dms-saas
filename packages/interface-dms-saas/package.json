@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@antelopejs/interface-data-api": ">=0.6.1 <1.0.0",
-    "@antelopejs/interface-dms": ">=0.12.0 <1.0.0"
+    "@antelopejs/interface-dms": "file:../../.tgz-deps/antelopejs-interface-dms-debd8d0.tgz"
   },
   "devDependencies": {
     "@antelopejs/interface-api": ">=0.3.0 <1.0.0",

@@ -33,6 +33,11 @@
     "sharp": "^0.35.5"
   },
   "packageManager": "pnpm@10.2.0",
+  "pnpm": {
+    "overrides": {
+      "@antelopejs/interface-dms": "file:.tgz-deps/antelopejs-interface-dms-debd8d0.tgz"
+    }
+  },
   "antelopeJs": {
     "docs": {
       "standard": true

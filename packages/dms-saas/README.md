@@ -66,17 +66,17 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and pub
 
 <!-- antelopejs-docs-compat:start -->
 
-| Package                                     | Supported         | Tested with |
-| ------------------------------------------- | ----------------- | ----------- |
-| `@antelopejs/interface-api`                 | `>=0.3.0 <1.0.0`  | `0.3.0`     |
-| `@antelopejs/interface-api-util`            | `>=0.3.2 <1.0.0`  | `0.3.2`     |
-| `@antelopejs/interface-core`                | `>=0.4.0 <1.0.0`  | `0.4.0`     |
-| `@antelopejs/interface-data-api`            | `>=0.6.1 <1.0.0`  | `0.6.1`     |
-| `@antelopejs/interface-database`            | `>=0.3.0 <1.0.0`  | `0.3.0`     |
-| `@antelopejs/interface-database-decorators` | `>=0.3.2 <1.0.0`  | `0.3.2`     |
-| `@antelopejs/interface-dms`                 | `>=0.12.0 <1.0.0` | `0.12.0`    |
-| `@antelopejs/interface-dms-automation`      | `>=0.6.0 <1.0.0`  | `0.6.0`     |
-| `@antelopejs/interface-dms-saas`            | `workspace:^`     | `0.9.0`     |
+| Package                                     | Supported                                                   | Tested with                                           |
+| ------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------- |
+| `@antelopejs/interface-api`                 | `>=0.3.0 <1.0.0`                                            | `0.3.0`                                               |
+| `@antelopejs/interface-api-util`            | `>=0.3.2 <1.0.0`                                            | `0.3.2`                                               |
+| `@antelopejs/interface-core`                | `>=0.4.0 <1.0.0`                                            | `0.4.0`                                               |
+| `@antelopejs/interface-data-api`            | `>=0.6.1 <1.0.0`                                            | `0.6.1`                                               |
+| `@antelopejs/interface-database`            | `>=0.3.0 <1.0.0`                                            | `0.3.0`                                               |
+| `@antelopejs/interface-database-decorators` | `>=0.3.2 <1.0.0`                                            | `0.3.2`                                               |
+| `@antelopejs/interface-dms`                 | `file:../../.tgz-deps/antelopejs-interface-dms-debd8d0.tgz` | `file:.tgz-deps/antelopejs-interface-dms-debd8d0.tgz` |
+| `@antelopejs/interface-dms-automation`      | `>=0.6.0 <1.0.0`                                            | `0.6.0`                                               |
+| `@antelopejs/interface-dms-saas`            | `workspace:^`                                               | `0.9.0`                                               |
 
 <!-- antelopejs-docs-compat:end -->
 
