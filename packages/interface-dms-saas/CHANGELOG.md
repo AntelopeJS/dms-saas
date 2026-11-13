@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.9.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.8.0...v0.9.0)
+
+### 🩹 Fixes
+
+- **legal:** Render legal documents through an allowlist instead of v-html ([#267](https://github.com/AntelopeJS/dms-saas/pull/267))
+
+### 💅 Refactors
+
+- Fix the code behind inline suppressions and frontend rule-offs ([#264](https://github.com/AntelopeJS/dms-saas/pull/264))
+- **test:** Remove the test lint override ([#265](https://github.com/AntelopeJS/dms-saas/pull/265))
+- **interface:** ⚠️  Declare CreditNote and Refund in one module ([#266](https://github.com/AntelopeJS/dms-saas/pull/266))
+
+### 🏡 Chore
+
+- **release:** @antelopejs/dms-saas v0.11.0 ([7fa15f2](https://github.com/AntelopeJS/dms-saas/commit/7fa15f2))
+- **release:** @antelopejs/dms-saas v0.11.1 ([5b811ed](https://github.com/AntelopeJS/dms-saas/commit/5b811ed))
+
+### ✅ Tests
+
+- **plans:** Store every locale when inserting per-locale plain data ([#263](https://github.com/AntelopeJS/dms-saas/pull/263))
+
+#### ⚠️ Breaking Changes
+
+- **interface:** ⚠️  Declare CreditNote and Refund in one module ([#266](https://github.com/AntelopeJS/dms-saas/pull/266))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.8.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.7.1...v0.8.0)
