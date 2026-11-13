@@ -30,3 +30,6 @@
 @antelopejs/dms>@antelopejs/interface-core	packages/dms-saas/playground/package.json	pnpm.overrides	
 @antelopejs/dms>@antelopejs/interface-database	packages/dms-saas/playground/package.json	pnpm.overrides	
 @antelopejs/dms>@antelopejs/interface-database-decorators	packages/dms-saas/playground/package.json	pnpm.overrides	
+@antelopejs/interface-dms-builder	package.json	pnpm.overrides	
+@antelopejs/interface-dms-builder	pnpm-workspace.yaml	overrides	
+@antelopejs/interface-dms-builder	packages/dms-saas/playground/package.json	pnpm.overrides	
