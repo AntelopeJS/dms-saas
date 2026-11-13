@@ -63,6 +63,7 @@ covers:
   - packages/dms-saas/frontend-vue/app/build/public/PublicStage.vue
   - packages/dms-saas/frontend-vue/app/build/public/usePublicFetch.ts
   - packages/dms-saas/frontend-vue/app/build/public/legal.ts
+  - packages/dms-saas/frontend-vue/app/build/public/legal-html.ts
   - packages/dms-saas/frontend-vue/app/build/public/routes.ts
   - packages/dms-saas/frontend-vue/app/build/public/pricing.ts
   - packages/dms-saas/frontend-vue/app/build/public/usePublicPlanFormat.ts

@@ -4,7 +4,7 @@
  * headings, the related documents and a way back to where the visitor was.
  * An unpublished document reads "Content unavailable".
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, type FunctionalComponent, onMounted, ref } from 'vue'
 import {
 	headingAnchor,
 	type LegalDocumentsPayload,
@@ -13,6 +13,10 @@ import {
 	readingMinutes,
 	resolveLegalBackTarget,
 } from '../build/public/legal'
+import {
+	parseLegalDocument,
+	renderAllowedHtml,
+} from '../build/public/legal-html'
 import PublicStage from '../build/public/PublicStage.vue'
 import {
 	type LegalDocumentField,
@@ -27,7 +31,7 @@ interface LegalLayoutProps {
 }
 
 interface OutlinedDocument {
-	html: string
+	body: HTMLElement
 	text: string
 	headings: LegalHeading[]
 }
@@ -60,22 +64,20 @@ const stamp = computed(() =>
 
 /** Anchors every heading of the stored HTML so the contents can link to it. */
 function outline(html: string): OutlinedDocument {
-	const parsed = new DOMParser().parseFromString(html, 'text/html')
+	const body = parseLegalDocument(html)
 	const taken = new Set<string>()
-	const headings = [...parsed.querySelectorAll(HEADING_SELECTOR)].map(
-		(node) => {
-			const text = node.textContent?.trim() ?? ''
-			node.id = headingAnchor(text, taken)
-			return {
-				id: node.id,
-				text,
-				level: Number(node.tagName.slice(HEADING_LEVEL_OFFSET)),
-			}
-		},
-	)
+	const headings = [...body.querySelectorAll(HEADING_SELECTOR)].map((node) => {
+		const text = node.textContent?.trim() ?? ''
+		node.id = headingAnchor(text, taken)
+		return {
+			id: node.id,
+			text,
+			level: Number(node.tagName.slice(HEADING_LEVEL_OFFSET)),
+		}
+	})
 	return {
-		html: parsed.body.innerHTML,
-		text: parsed.body.textContent ?? '',
+		body,
+		text: body.textContent ?? '',
 		headings: headings.filter((heading) => heading.text),
 	}
 }
@@ -84,6 +86,9 @@ const legalDocument = computed<OutlinedDocument | null>(() => {
 	const html = payload.value?.[props.documentField]?.trim()
 	return html ? outline(html) : null
 })
+
+const LegalDocumentBody: FunctionalComponent = () =>
+	legalDocument.value ? renderAllowedHtml(legalDocument.value.body) : null
 
 const metaLine = computed(() => {
 	const parts: string[] = []
@@ -245,11 +250,9 @@ onMounted(() => {
 					</p>
 				</header>
 				<DmsCard>
-					<!-- eslint-disable-next-line vue/no-v-html -- Legal documents are platform-admin-authored HTML. -->
-					<div
-						class="prose prose-neutral dark:prose-invert max-w-none"
-						v-html="legalDocument.html"
-					/>
+					<div class="prose prose-neutral dark:prose-invert max-w-none">
+						<LegalDocumentBody />
+					</div>
 				</DmsCard>
 				<p v-if="stamp?.version && stamp.updatedAt" class="text-muted text-xs">
 					{{
