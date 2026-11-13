@@ -18,6 +18,14 @@ runs:
           pnpm-lock.yaml
           packages/dms-saas/frontend-vue/pnpm-lock.yaml
 
+    - name: Run package scripts with Git Bash
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        bash_path=$(cygpath -w /usr/bin/bash)
+        echo "npm_config_script_shell=${bash_path}" >> "$GITHUB_ENV"
+        echo "pnpm_config_script_shell=${bash_path}" >> "$GITHUB_ENV"
+
     # `...` pulls in the workspace interface package the module depends on;
     # `{.}` adds the root, which owns the shared lint, format and tsconfig
     # tooling. The playground is the only project that still needs the
