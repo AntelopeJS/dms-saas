@@ -1,1 +1,5 @@
 * text=auto eol=lf
+.claude/skills/formal-guarded-plan-change symlink=dir
+.claude/skills/technical-writing symlink=dir
+.claude/skills/unslop symlink=dir
+.claude/skills/verify-dms-saas symlink=dir
