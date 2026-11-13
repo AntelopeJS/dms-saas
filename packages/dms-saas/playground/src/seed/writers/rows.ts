@@ -77,7 +77,7 @@ export async function insertMissing<T extends object>(
 ): Promise<void> {
   const { table } = GetModel(model, instanceId);
   for (const row of rows) {
-    if (await table.get(row._id)) continue;
+    if (await table.get(row._id).run()) continue;
     const instance = prepare(model.fromPlainData(row));
     triggerEvent(instance, "insert");
     for (const [field, value] of Object.entries<unknown>(row)) {
@@ -86,7 +86,7 @@ export async function insertMissing<T extends object>(
     try {
       await table.insert(model.toDatabase(instance)).run();
     } catch (error) {
-      if (await table.get(row._id)) continue;
+      if (await table.get(row._id).run()) continue;
       throw error;
     }
   }
