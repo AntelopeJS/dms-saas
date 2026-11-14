@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.10.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.9.0...v0.10.0)
+
+### 🩹 Fixes
+
+- **playground:** Run the seed's existence reads, which interface-database 0.4.0 no longer runs ([#269](https://github.com/AntelopeJS/dms-saas/pull/269))
+- **test:** Wait for the schema build before a suite's first test ([#272](https://github.com/AntelopeJS/dms-saas/pull/272))
+- **test:** Run the four self-hosted Mongo suites on useMongoDatabase ([#274](https://github.com/AntelopeJS/dms-saas/pull/274))
+- **frontend:** Name the DMS 0.20 components the screens draw ([#276](https://github.com/AntelopeJS/dms-saas/pull/276))
+
+### 📦 Build
+
+- **deps:** Move to tooling-configs 0.7 and cap @antelopejs ranges at the installed minor ([#275](https://github.com/AntelopeJS/dms-saas/pull/275))
+- **deps:** ⚠️  Move every @antelopejs range to the newest released minor ([#268](https://github.com/AntelopeJS/dms-saas/pull/268))
+
+### 🤖 CI
+
+- **test:** Typecheck the dms-saas test files ([#273](https://github.com/AntelopeJS/dms-saas/pull/273))
+- Run the CI on Windows in parallel with Linux ([#270](https://github.com/AntelopeJS/dms-saas/pull/270))
+
+#### ⚠️ Breaking Changes
+
+- **deps:** ⚠️  Move every @antelopejs range to the newest released minor ([#268](https://github.com/AntelopeJS/dms-saas/pull/268))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+- Dada-sudo <damir@altab.be>
+
 ## v0.9.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.8.0...v0.9.0)
