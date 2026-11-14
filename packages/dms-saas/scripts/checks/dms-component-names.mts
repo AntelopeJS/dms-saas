@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const MODULE_ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -18,10 +18,15 @@ const COMMENT = /<!--[\s\S]*?-->/g;
 const TAG = /<\/?((?:Dms[A-Z]\w*)|(?:dms-[a-z][\w-]*))(?=[\s/>])/g;
 const RESOLVED = /resolveComponent\(\s*['"](Dms[A-Z]\w*)['"]/g;
 
+/** A path with `/` separators, as the patterns below read it on every platform. */
+function posixPath(path: string): string {
+  return path.split(sep).join("/");
+}
+
 function filesUnder(directory: string, extension: string): string[] {
   return readdirSync(directory, { withFileTypes: true, recursive: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(extension))
-    .map((entry) => join(entry.parentPath, entry.name));
+    .map((entry) => posixPath(join(entry.parentPath, entry.name)));
 }
 
 /** A component name as the DMS registers it: each path part capitalised and joined. */
@@ -69,7 +74,7 @@ function rendererComponents(): string[] {
 /** The names this module registers: its component files and its custom pages. */
 function ownComponents(): string[] {
   return filesUnder(LAYER_APP, ".vue").flatMap((file) => {
-    const path = relative(LAYER_APP, file);
+    const path = posixPath(relative(LAYER_APP, file));
     if (
       OWN_COMPONENT_DIRECTORIES.some((directory) => path.startsWith(directory))
     )
@@ -110,7 +115,7 @@ export function dmsComponentNameFailures(): string[] {
       .filter((tag) => !known.has(namedComponent(tag)))
       .map(
         (tag) =>
-          `${relative(MODULE_ROOT, file)}: <${tag}> is no component @antelopejs/dms, @antelopejs/dms-frontend or this layer registers`,
+          `${posixPath(relative(MODULE_ROOT, file))}: <${tag}> is no component @antelopejs/dms, @antelopejs/dms-frontend or this layer registers`,
       );
   });
 }
