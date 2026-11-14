@@ -1,20 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { HTTPResult } from "@antelopejs/interface-api";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db/models/tenantSubscriptions.model";
 import type {
   SubscriptionTransition,
@@ -32,33 +19,13 @@ import {
   executeOperatorAction,
   type OperatorActionRequest,
 } from "../src/operator-actions/journal";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const SETUP_TIMEOUT_MS = 60_000;
 const CONTENDERS = 12;
-let mongodb: MongoMemoryReplSet;
+
+useMongoDatabase();
 
 afterEach(() => vi.restoreAllMocks());
-
-beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({
-    url: mongodb.getUri(),
-    database: "saas-domain-concurrency",
-  });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
-}, SETUP_TIMEOUT_MS);
-
-afterAll(async () => {
-  try {
-    await destroy();
-  } finally {
-    await mongodb?.stop();
-  }
-});
 
 async function subscription(
   model: TenantSubscriptionModel,
