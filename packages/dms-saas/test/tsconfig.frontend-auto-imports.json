@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [],
+  "files": [
+    "./api-data-readers.test.ts",
+    "./billing-page-frontend.test.ts",
+    "./complimentary-billing-prompt.test.ts",
+    "./frontend-backend-boundary.test.ts",
+    "./layout-strip-reads.test.ts",
+    "./on-demand-reads.test.ts",
+    "./plan-downgrade.test.ts",
+    "./plan-feature-display.test.ts",
+    "./plan-write-validation.test.ts",
+    "./public-access-screens.test.ts",
+    "./public-fetch-locale.test.ts",
+    "./public-pricing-read.test.ts",
+    "./public-screens-frontend.test.ts",
+    "./read-only-presenters.dom.test.ts",
+    "./saas-registration.test.ts",
+    "./status-vocabulary.test.ts",
+    "./workspace-list-auth-boundary.test.ts",
+    "./helpers/api-data.ts"
+  ]
+}

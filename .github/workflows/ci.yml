@@ -88,6 +88,20 @@ jobs:
       - run: pnpm install --dir packages/dms-saas/playground --ignore-workspace --frozen-lockfile
       - run: pnpm --dir packages/dms-saas/playground exec tsc --noEmit -p .
 
+  # Vitest strips the suite's types without checking them, and the module
+  # build covers `src` only. The suite resolves the interface through its
+  # `dist`. `test/tsconfig.json` leaves out, by name, the tests that reach a
+  # frontend composable reading the DMS auto-imports, which only exist in the
+  # workspace `test:frontend` builds.
+  test-types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm --filter @antelopejs/interface-dms-saas build
+      - run: pnpm --dir packages/dms-saas exec tsc --noEmit -p test
+
   # TLC through the runner of @antelopejs/tooling-configs. The CI configuration
   # of each check: `node .agents/skills/<check>/check.mjs`.
   formal:
@@ -114,7 +128,7 @@ jobs:
   # and fails unless every job above succeeded.
   ubuntu:
     if: always()
-    needs: [ci, unit, frontend, playground, formal]
+    needs: [ci, unit, frontend, playground, test-types, formal]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
