@@ -198,7 +198,7 @@ onMounted(load)
 					required
 				>
 					<template #default="{ id }">
-						<DmsTextarea
+						<DmsInputTextarea
 							:id="id"
 							v-model="reason"
 							:maxlength="REASON_MAX_LENGTH"
@@ -209,7 +209,7 @@ onMounted(load)
 					</template>
 				</FormFieldRow>
 			</FormRows>
-			<DmsBanner
+			<DmsNoticeBanner
 				v-if="outcome"
 				size="sm"
 				tone="info"

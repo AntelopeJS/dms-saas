@@ -45,7 +45,7 @@ async function openConfirm(): Promise<void> {
 </script>
 
 <template>
-	<DmsCard :title="$t(`${I18N}.title`)">
+	<DmsCardPanel :title="$t(`${I18N}.title`)">
 		<DmsSaasLoadFailure
 			v-if="detail.status.value === 'error' && !user"
 			@retry="detail.refresh()"
@@ -94,5 +94,5 @@ async function openConfirm(): Promise<void> {
 				</span>
 			</div>
 		</div>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

@@ -142,7 +142,7 @@ const visibleRows = computed(() =>
 			</p>
 		</header>
 
-		<DmsCard :padded="false" class="overflow-x-auto">
+		<DmsCardPanel :padded="false" class="overflow-x-auto">
 			<table class="w-full min-w-[640px] text-left text-[13px]">
 				<thead>
 					<tr class="border-default border-b">
@@ -201,7 +201,7 @@ const visibleRows = computed(() =>
 					</tr>
 				</tbody>
 			</table>
-		</DmsCard>
+		</DmsCardPanel>
 
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<p class="text-muted text-xs">

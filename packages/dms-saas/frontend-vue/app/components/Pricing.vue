@@ -117,7 +117,7 @@ function loadPricing(): void {
 		<header
 			class="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center"
 		>
-			<DmsEyebrow
+			<DmsEyebrowLabel
 				as="span"
 				tone="primary"
 				:label="$t('saas.public.pricing.eyebrow')"
@@ -126,7 +126,7 @@ function loadPricing(): void {
 				{{ $t('saas.public.pricing.title') }}
 			</h1>
 			<p class="text-muted">{{ $t('saas.public.pricing.subtitle') }}</p>
-			<DmsSegmented
+			<DmsSegmentedControl
 				v-if="intervalItems.length > 1"
 				:model-value="interval"
 				:items="intervalItems"
@@ -145,7 +145,7 @@ function loadPricing(): void {
 			/>
 		</div>
 
-		<DmsCard v-else-if="loadError">
+		<DmsCardPanel v-else-if="loadError">
 			<DmsEmptyState
 				variant="error"
 				:title="$t('saas.public.pricing.load_error')"
@@ -158,9 +158,9 @@ function loadPricing(): void {
 					},
 				]"
 			/>
-		</DmsCard>
+		</DmsCardPanel>
 
-		<DmsCard v-else-if="!shownPlans.length">
+		<DmsCardPanel v-else-if="!shownPlans.length">
 			<DmsEmptyState
 				:title="$t('saas.public.pricing.empty_title')"
 				:description="$t('saas.public.pricing.empty_description')"
@@ -169,7 +169,7 @@ function loadPricing(): void {
 					{ label: $t('saas.public.pricing.sign_in'), to: LOGIN_PATH },
 				]"
 			/>
-		</DmsCard>
+		</DmsCardPanel>
 
 		<template v-else-if="pricing">
 			<!-- Wrapped and centred: a catalogue of five does not leave one card
@@ -207,7 +207,7 @@ function loadPricing(): void {
 
 			<PricingFaq :plans="shownPlans" :rules="pricing.rules" />
 
-			<DmsCard
+			<DmsCardPanel
 				v-if="freePlan && canRegister"
 				class="flex flex-wrap items-center justify-between gap-4"
 			>
@@ -227,7 +227,7 @@ function loadPricing(): void {
 					:to="registerPathFor(planReference(freePlan))"
 					:label="$t('saas.public.pricing.card.cta_free')"
 				/>
-			</DmsCard>
+			</DmsCardPanel>
 		</template>
 	</div>
 </template>

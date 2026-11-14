@@ -102,7 +102,7 @@ const overDescription = computed(() => {
 </script>
 
 <template>
-	<DmsSection
+	<DmsSectionPanel
 		:title="$t(`${KEYS}.title`)"
 		:description="$t(`${KEYS}.description`)"
 	>
@@ -122,7 +122,7 @@ const overDescription = computed(() => {
 				@retry="refresh()"
 			/>
 			<template v-else-if="quota">
-				<DmsMeter
+				<DmsMeterBar
 					:label="$t(`${KEYS}.meter_label`)"
 					:hint="meterHint"
 					:max="meterMax"
@@ -143,9 +143,9 @@ const overDescription = computed(() => {
 							{{ $t(`${KEYS}.manage`) }}
 						</UButton>
 					</template>
-				</DmsMeter>
+				</DmsMeterBar>
 
-				<DmsBanner
+				<DmsNoticeBanner
 					v-if="seatState === 'full'"
 					tone="error"
 					size="sm"
@@ -183,9 +183,9 @@ const overDescription = computed(() => {
 							{{ $t(`${KEYS}.full.email_owner`, { owner: ownerToAsk.name }) }}
 						</UButton>
 					</template>
-				</DmsBanner>
+				</DmsNoticeBanner>
 
-				<DmsBanner
+				<DmsNoticeBanner
 					v-else-if="seatState === 'over'"
 					tone="warning"
 					size="sm"
@@ -210,7 +210,7 @@ const overDescription = computed(() => {
 							{{ $t(`${KEYS}.upgrade`) }}
 						</UButton>
 					</template>
-				</DmsBanner>
+				</DmsNoticeBanner>
 
 				<div
 					v-if="quota.platformSupport.length"
@@ -251,5 +251,5 @@ const overDescription = computed(() => {
 				</div>
 			</template>
 		</div>
-	</DmsSection>
+	</DmsSectionPanel>
 </template>

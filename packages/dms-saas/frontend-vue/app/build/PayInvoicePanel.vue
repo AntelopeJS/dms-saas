@@ -100,7 +100,7 @@ function confirm(): void {
 
 		<template v-else-if="status">
 			<div role="radiogroup" class="flex flex-col gap-2">
-				<DmsCard
+				<DmsCardPanel
 					v-if="card"
 					as="button"
 					type="button"
@@ -120,8 +120,8 @@ function confirm(): void {
 							</p>
 						</div>
 					</div>
-				</DmsCard>
-				<DmsCard
+				</DmsCardPanel>
+				<DmsCardPanel
 					v-if="canPayOnStripe"
 					as="button"
 					type="button"
@@ -143,7 +143,7 @@ function confirm(): void {
 							</p>
 						</div>
 					</div>
-				</DmsCard>
+				</DmsCardPanel>
 			</div>
 
 			<p v-if="!card && !canPayOnStripe" class="text-muted text-sm">

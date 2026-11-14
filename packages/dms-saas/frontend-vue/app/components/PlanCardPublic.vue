@@ -66,7 +66,7 @@ const accentStyle = computed(() =>
 </script>
 
 <template>
-	<DmsCard
+	<DmsCardPanel
 		as="article"
 		:selected="!!plan.borderLabel"
 		:padded="false"
@@ -111,7 +111,7 @@ const accentStyle = computed(() =>
 		/>
 
 		<div v-if="highlights.length" class="border-default border-t pt-4">
-			<DmsEyebrow as="h3" :label="includesLabel" class="mb-2.5" />
+			<DmsEyebrowLabel as="h3" :label="includesLabel" class="mb-2.5" />
 			<ul class="flex flex-col gap-1.5 text-[13px]">
 				<li v-for="item in highlights" :key="item.id" class="flex gap-2">
 					<UIcon
@@ -127,5 +127,5 @@ const accentStyle = computed(() =>
 				</li>
 			</ul>
 		</div>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

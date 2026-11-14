@@ -1,4 +1,5 @@
 import { componentRootFailures } from "./component-roots.mts";
+import { dmsComponentNameFailures } from "./dms-component-names.mts";
 import { docsModuleVersionFailures } from "./docs-module-version.mts";
 import { localeCatalogFailures } from "./locale-catalog.mts";
 import { unusedLocaleKeyFailures } from "./locale-usage.mts";
@@ -8,6 +9,7 @@ const CHECKS = {
   "locale catalogs": localeCatalogFailures,
   "locale keys in use": unusedLocaleKeyFailures,
   "component roots": componentRootFailures,
+  "DMS component names": dmsComponentNameFailures,
   "server-rendered reads": serverRenderedReadFailures,
   "docs module version": docsModuleVersionFailures,
 };

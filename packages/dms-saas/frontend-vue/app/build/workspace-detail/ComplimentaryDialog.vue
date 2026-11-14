@@ -151,7 +151,7 @@ onMounted(load)
 			<FormRows has-required>
 				<FormFieldRow :label="$t(`${D}.plan`)" :help="fitNote" required>
 					<template #default="{ id }">
-						<DmsSelect
+						<DmsInputSelect
 							:id="id"
 							v-model="planId"
 							:items="planItems"
@@ -177,14 +177,14 @@ onMounted(load)
 					</template>
 				</FormFieldRow>
 			</FormRows>
-			<DmsBanner
+			<DmsNoticeBanner
 				v-if="cancelsSubscription"
 				tone="error"
 				icon="i-ph-warning"
 				:title="$t(`${D}.cancellation_title`)"
 				:description="cancellation"
 			/>
-			<DmsCheckbox
+			<DmsInputCheckbox
 				v-if="cancelsSubscription"
 				v-model="isAcknowledged"
 				:label="$t(`${D}.acknowledge`)"

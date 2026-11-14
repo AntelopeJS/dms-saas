@@ -139,7 +139,7 @@ function payInvoice(): void {
 		@retry="refresh()"
 	/>
 
-	<DmsBanner
+	<DmsNoticeBanner
 		v-else-if="invoice && isTenantOwner"
 		tone="error"
 		icon="i-ph-warning-circle"
@@ -188,9 +188,9 @@ function payInvoice(): void {
 				{{ $t(`${KEY_PREFIX}.pay`) }}
 			</UButton>
 		</template>
-	</DmsBanner>
+	</DmsNoticeBanner>
 
-	<DmsBanner
+	<DmsNoticeBanner
 		v-else-if="isMemberNotice"
 		tone="warning"
 		icon="i-ph-warning-circle"

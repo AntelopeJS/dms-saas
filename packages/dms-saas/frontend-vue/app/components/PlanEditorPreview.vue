@@ -221,7 +221,7 @@ async function load(): Promise<void> {
 
 <template>
 	<div class="flex flex-col gap-4 lg:sticky lg:top-4">
-		<DmsCard>
+		<DmsCardPanel>
 			<template #header>
 				<div class="flex w-full items-center justify-between gap-2">
 					<span class="text-highlighted text-sm font-semibold">
@@ -302,9 +302,9 @@ async function load(): Promise<void> {
 					</li>
 				</ul>
 			</div>
-		</DmsCard>
+		</DmsCardPanel>
 
-		<DmsCard v-if="context">
+		<DmsCardPanel v-if="context">
 			<template #header>
 				<div class="flex items-center justify-between">
 					<span class="text-highlighted text-sm font-semibold">
@@ -374,6 +374,6 @@ async function load(): Promise<void> {
 					)
 				"
 			/>
-		</DmsCard>
+		</DmsCardPanel>
 	</div>
 </template>

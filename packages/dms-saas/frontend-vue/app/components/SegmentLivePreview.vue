@@ -105,7 +105,7 @@ const savedEvaluatedText = computed(() => {
 </script>
 
 <template>
-	<DmsCard
+	<DmsCardPanel
 		:title="$t('saas.segments.preview.title')"
 		class="lg:sticky lg:top-4"
 	>
@@ -222,7 +222,7 @@ const savedEvaluatedText = computed(() => {
 			/>
 
 			<section v-if="preview.signals.length" class="flex flex-col gap-2">
-				<DmsEyebrow :label="$t('saas.segments.preview.signals')" tone="muted" />
+				<DmsEyebrowLabel :label="$t('saas.segments.preview.signals')" tone="muted" />
 				<ul class="flex flex-col gap-1.5 text-sm">
 					<li
 						v-for="signal in preview.signals"
@@ -242,7 +242,7 @@ const savedEvaluatedText = computed(() => {
 
 			<section class="flex flex-col gap-2">
 				<div class="flex items-center justify-between">
-					<DmsEyebrow
+					<DmsEyebrowLabel
 						:label="$t('saas.segments.preview.sample')"
 						tone="muted"
 					/>
@@ -297,5 +297,5 @@ const savedEvaluatedText = computed(() => {
 				}}
 			</p>
 		</template>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

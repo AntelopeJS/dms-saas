@@ -215,7 +215,7 @@ async function confirm(): Promise<void> {
 				novalidate
 				@submit.prevent="confirm"
 			>
-				<DmsSection
+				<DmsSectionPanel
 					:title="$t('saas.tenant_billing.billing_info.title')"
 					:card="false"
 				>
@@ -223,9 +223,9 @@ async function confirm(): Promise<void> {
 						v-model="draft"
 						:invalid-fields="invalidFields"
 					/>
-				</DmsSection>
+				</DmsSectionPanel>
 
-				<DmsCard>
+				<DmsCardPanel>
 					<div class="flex flex-col gap-2 text-sm">
 						<div class="flex justify-between gap-4">
 							<span class="flex items-center gap-2">
@@ -285,7 +285,7 @@ async function confirm(): Promise<void> {
 							{{ $t(`${KEY_PREFIX}.tax_on_stripe`) }}
 						</p>
 					</div>
-				</DmsCard>
+				</DmsCardPanel>
 
 				<UAlert
 					v-if="previewFailure"

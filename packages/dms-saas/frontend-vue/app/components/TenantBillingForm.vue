@@ -111,7 +111,7 @@ if (info.data.value) apply(info.data.value)
 
 <template>
 	<form id="saas-billing-info-form" novalidate @submit.prevent="save">
-		<DmsSection
+		<DmsSectionPanel
 			:title="$t(`${KEY_PREFIX}.title`)"
 			:description="$t(`${KEY_PREFIX}.description`)"
 		>
@@ -147,7 +147,7 @@ if (info.data.value) apply(info.data.value)
 				:vat-verification-status="vatVerificationStatus"
 				:is-locked="!isTenantOwner"
 			/>
-		</DmsSection>
+		</DmsSectionPanel>
 		<DmsSaveBar
 			v-if="isTenantOwner && !isLoading && !loadFailed"
 			:dirty="changedFields.length > 0"

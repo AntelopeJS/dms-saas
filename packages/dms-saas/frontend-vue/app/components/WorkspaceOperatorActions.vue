@@ -84,7 +84,7 @@ const rows = computed<OperatorRow[]>(() => {
 </script>
 
 <template>
-	<DmsCard :title="$t(`${D}.title`)" :padded="false">
+	<DmsCardPanel :title="$t(`${D}.title`)" :padded="false">
 		<div v-if="isLoading && !overview" class="flex flex-col gap-3 p-[18px]">
 			<USkeleton v-for="index in 3" :key="index" class="h-10 w-full" />
 		</div>
@@ -124,5 +124,5 @@ const rows = computed<OperatorRow[]>(() => {
 			:tenant-id="tenantId"
 			:workspace-name="overview.name"
 		/>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

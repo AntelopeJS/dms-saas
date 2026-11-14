@@ -140,7 +140,7 @@ onMounted(consumeDeliveredLink)
 
 <template>
 	<div class="flex flex-col gap-4">
-		<DmsBanner
+		<DmsNoticeBanner
 			v-if="expiredLinkJobId"
 			tone="warning"
 			icon="i-ph-link-break"
@@ -159,9 +159,9 @@ onMounted(consumeDeliveredLink)
 					{{ $t(`${KEYS}.expired_link.action`) }}
 				</UButton>
 			</template>
-		</DmsBanner>
+		</DmsNoticeBanner>
 
-		<DmsCard>
+		<DmsCardPanel>
 			<div class="flex flex-col gap-3">
 				<DmsStatusPill
 					tone="info"
@@ -187,9 +187,9 @@ onMounted(consumeDeliveredLink)
 					</span>
 				</div>
 			</div>
-		</DmsCard>
+		</DmsCardPanel>
 
-		<DmsCard v-if="running" :title="$t(`${KEYS}.in_progress.title`)">
+		<DmsCardPanel v-if="running" :title="$t(`${KEYS}.in_progress.title`)">
 			<div class="flex flex-col gap-2" aria-live="polite">
 				<div class="flex flex-wrap items-center gap-2">
 					<span class="text-highlighted text-sm font-medium">
@@ -216,9 +216,9 @@ onMounted(consumeDeliveredLink)
 					</span>
 				</div>
 			</div>
-		</DmsCard>
+		</DmsCardPanel>
 
-		<DmsBanner
+		<DmsNoticeBanner
 			v-else-if="finished"
 			:tone="finished.status === EXPORT_STATUS.failed ? 'error' : 'success'"
 			:icon="
@@ -265,6 +265,6 @@ onMounted(consumeDeliveredLink)
 					{{ $t(`${KEYS}.history.download`) }}
 				</UButton>
 			</template>
-		</DmsBanner>
+		</DmsNoticeBanner>
 	</div>
 </template>

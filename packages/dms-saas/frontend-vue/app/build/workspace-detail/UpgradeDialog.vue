@@ -154,7 +154,7 @@ onMounted(load)
 			<FormRows has-required>
 				<FormFieldRow :label="$t(`${D}.target`)" required>
 					<template #default="{ id }">
-						<DmsSelect
+						<DmsInputSelect
 							:id="id"
 							v-model="planId"
 							:items="planItems"

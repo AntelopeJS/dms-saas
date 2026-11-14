@@ -253,7 +253,7 @@ onMounted(() => void loadPreview())
 		</div>
 
 		<div class="grid gap-2 sm:grid-cols-2">
-			<DmsCard :padded="true">
+			<DmsCardPanel :padded="true">
 				<p class="text-muted text-xs">
 					{{
 						isDowngrade
@@ -263,14 +263,14 @@ onMounted(() => void loadPreview())
 				</p>
 				<p class="font-semibold">{{ currentPlanName ?? '—' }}</p>
 				<p class="text-muted text-sm">{{ priceOf(currentPlan) }}</p>
-			</DmsCard>
-			<DmsCard :padded="true" selected>
+			</DmsCardPanel>
+			<DmsCardPanel :padded="true" selected>
 				<p v-if="targetEyebrow" class="text-muted text-xs">
 					{{ targetEyebrow }}
 				</p>
 				<p class="font-semibold">{{ plan.name }}</p>
 				<p class="text-muted text-sm">{{ priceOf(plan) }}</p>
-			</DmsCard>
+			</DmsCardPanel>
 		</div>
 
 		<div

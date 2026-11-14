@@ -95,7 +95,7 @@ function setBoolean(next: string | number | undefined): void {
 			v-if="valueType === 'number'"
 			class="flex flex-wrap items-center gap-2"
 		>
-			<DmsSegmented
+			<DmsSegmentedControl
 				:model-value="mode"
 				:items="numberModes"
 				:disabled="disabled"
@@ -120,7 +120,7 @@ function setBoolean(next: string | number | undefined): void {
 				}}</span>
 			</div>
 		</div>
-		<DmsSegmented
+		<DmsSegmentedControl
 			v-else-if="valueType === 'boolean'"
 			:model-value="modelValue === true ? 'on' : 'off'"
 			:items="booleanModes"
