@@ -9,38 +9,38 @@ importers:
   .:
     dependencies:
       '@antelopejs/dms':
-        specifier: '>=0.16.1 <1.0.0'
+        specifier: '>=0.18.0 <0.19.0'
         version: 0.18.2(@antelopejs/core@1.21.0)(supports-color@8.1.1)
       '@antelopejs/interface-api':
-        specifier: '>=0.3.0 <1.0.0'
+        specifier: '>=0.3.0 <0.4.0'
         version: 0.3.0(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-api-util':
-        specifier: '>=0.3.0 <1.0.0'
+        specifier: '>=0.3.0 <0.4.0'
         version: 0.3.0(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-core':
-        specifier: '>=0.4.0 <1.0.0'
+        specifier: '>=0.4.0 <0.5.0'
         version: 0.4.0
       '@antelopejs/interface-data-api':
-        specifier: '>=0.6.1 <1.0.0'
+        specifier: '>=0.6.1 <0.7.0'
         version: 0.6.1(@antelopejs/interface-api-util@0.3.0(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database-decorators@0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0)))(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0))
       '@antelopejs/interface-database':
-        specifier: '>=0.3.0 <1.0.0'
+        specifier: '>=0.3.0 <0.4.0'
         version: 0.3.0(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-database-decorators':
-        specifier: '>=0.3.2 <1.0.0'
+        specifier: '>=0.3.2 <0.4.0'
         version: 0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0))
       '@antelopejs/interface-dms':
-        specifier: '>=0.12.0 <1.0.0'
+        specifier: '>=0.12.0 <0.13.0'
         version: 0.12.0(e6911bd3e003f7f19a7f19fc4a3a8ea6)
       '@antelopejs/interface-dms-saas':
         specifier: link:../../interface-dms-saas
         version: link:../../interface-dms-saas
     devDependencies:
       '@antelopejs/core':
-        specifier: 1.21.0
+        specifier: ~1.21.0
         version: 1.21.0
       '@antelopejs/dms-frontend':
-        specifier: '>=0.10.0 <1.0.0'
+        specifier: '>=0.10.0 <0.11.0'
         version: 0.10.0(@antelopejs/core@1.21.0)
       '@types/node':
         specifier: ^22.14.1
