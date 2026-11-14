@@ -1,4 +1,9 @@
-import { RegisterSchema } from "@antelopejs/interface-database-decorators";
+import { randomUUID } from "node:crypto";
+import {
+  GetModel,
+  RegisterSchema,
+} from "@antelopejs/interface-database-decorators";
+import { TenantMemberModel, TenantModel } from "@antelopejs/interface-dms/db";
 import { GetClient } from "@antelopejs/interface-mongodb";
 import { construct, destroy } from "@antelopejs/mongodb";
 import { afterAll, beforeAll, inject } from "vitest";
@@ -30,6 +35,17 @@ async function emptyDatabase(database: string): Promise<void> {
 }
 
 /**
+ * Resolves once the adapter has built the collections and indexes of both
+ * schemas. `RegisterSchema` only starts that build, and every query waits for
+ * it, so without this the first query of a suite pays for it under the test
+ * timeout.
+ */
+async function awaitSchemaBuild(): Promise<void> {
+  await GetModel(TenantModel).get(randomUUID());
+  await GetModel(TenantMemberModel, randomUUID()).get(randomUUID());
+}
+
+/**
  * Connects the suite to its worker's database on the replica set the global
  * setup started, empties it, registers the DMS core and tenant schemas the
  * module's models live in, and disconnects once the suite has run. Call it at
@@ -43,6 +59,7 @@ export function useMongoDatabase(): void {
     await emptyDatabase(database);
     await RegisterSchema("dms-core");
     await RegisterSchema("dms-tenant");
+    await awaitSchemaBuild();
   }, CONNECT_TIMEOUT_MS);
   afterAll(async () => {
     await destroy();
