@@ -12,6 +12,11 @@ import { planRow } from "./helpers/plan-row";
 import { useSuiteStripe } from "./helpers/stripe";
 import { httpRefusal } from "./helpers/refusal";
 
+/** A plan write whose billing mode may be one the API refuses. */
+type BillingModeWrite = Omit<PlanWriteBody, "billingMode"> & {
+  billingMode: string | null;
+};
+
 useMongoDatabase();
 const stripe = useSuiteStripe();
 
@@ -156,7 +161,7 @@ describe("plan billing mode writes", () => {
       await expectInvalidBillingMode(async () =>
         (await controller()).create(
           OWNER,
-          fromAny<PlanWriteBody>({
+          fromAny<PlanWriteBody, BillingModeWrite>({
             name: { en: "Tiered" },
             interval: "month",
             billingMode,
@@ -174,7 +179,11 @@ describe("plan billing mode writes", () => {
       );
 
       await expectInvalidBillingMode(() =>
-        plans.update(OWNER, PLAN_ID, fromAny<PlanWriteBody>({ billingMode })),
+        plans.update(
+          OWNER,
+          PLAN_ID,
+          fromAny<PlanWriteBody, BillingModeWrite>({ billingMode }),
+        ),
       );
     },
   );
@@ -227,7 +236,7 @@ describe("plan writes and Stripe", () => {
   it("syncs an updated plan as written, not as it was", async () => {
     const plan = planRow({
       _id: PLAN_ID,
-      name: { en: "Hobby" },
+      name: "Hobby",
       price: 5,
       currency: "eur",
       interval: "month",

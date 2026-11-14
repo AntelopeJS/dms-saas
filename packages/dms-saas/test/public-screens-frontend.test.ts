@@ -246,6 +246,7 @@ describe("registration fields", () => {
         dataRetentionDays: 30,
         maxFreeWorkspacesPerCard: 1,
       },
+      paymentMethod: "optional" as const,
     };
 
     expect(registrationLandingPath(summary)).toBe(
