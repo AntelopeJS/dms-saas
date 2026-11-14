@@ -1,5 +1,12 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "incremental": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "outDir": "../node_modules/.cache/frontend-auto-imports-tests"
+  },
   "include": [],
   "files": [
     "./api-data-readers.test.ts",
