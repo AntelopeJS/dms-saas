@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.12.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.0...v0.12.1)
+
+### 🩹 Fixes
+
+- **deps:** Admit interface-dms-automation 0.7, which dms-automation 0.11 provides ([#277](https://github.com/AntelopeJS/dms-saas/pull/277))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli ([@Upd4ting](http://github.com/Upd4ting))
+
 ## v0.12.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.11.1...v0.12.0)
