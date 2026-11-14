@@ -60,24 +60,24 @@
     "knip:all": "knip"
   },
   "dependencies": {
-    "@antelopejs/interface-api": ">=0.3.0 <1.0.0",
-    "@antelopejs/interface-api-util": ">=0.3.2 <1.0.0",
-    "@antelopejs/interface-core": ">=0.4.0 <1.0.0",
-    "@antelopejs/interface-data-api": ">=0.6.1 <1.0.0",
-    "@antelopejs/interface-database": ">=0.3.0 <1.0.0",
-    "@antelopejs/interface-database-decorators": ">=0.3.2 <1.0.0",
-    "@antelopejs/interface-dms": ">=0.12.0 <1.0.0",
+    "@antelopejs/interface-api": ">=0.3.0 <0.4.0",
+    "@antelopejs/interface-api-util": ">=0.3.2 <0.4.0",
+    "@antelopejs/interface-core": ">=0.4.0 <0.5.0",
+    "@antelopejs/interface-data-api": ">=0.6.1 <0.7.0",
+    "@antelopejs/interface-database": ">=0.3.0 <0.4.0",
+    "@antelopejs/interface-database-decorators": ">=0.3.2 <0.4.0",
+    "@antelopejs/interface-dms": ">=0.12.0 <0.13.0",
     "@antelopejs/interface-dms-saas": "workspace:^",
     "node-cron": "^4.2.1",
     "stripe": "^22.6.2",
-    "zod": "^3.24.4"
+    "zod": "~3.24.4"
   },
   "devDependencies": {
-    "@antelopejs/core": "1.21.0",
-    "@antelopejs/dms": ">=0.17.0 <1.0.0",
-    "@antelopejs/dms-frontend": ">=0.10.0 <1.0.0",
-    "@antelopejs/interface-mongodb": ">=0.0.6 <1.0.0",
-    "@antelopejs/mongodb": "1.6.2",
+    "@antelopejs/core": "~1.21.0",
+    "@antelopejs/dms": ">=0.18.0 <0.19.0",
+    "@antelopejs/dms-frontend": ">=0.10.0 <0.11.0",
+    "@antelopejs/interface-mongodb": ">=0.0.6 <0.1.0",
+    "@antelopejs/mongodb": "~1.6.2",
     "@total-typescript/shoehorn": "^0.1.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.0.0",
@@ -96,7 +96,7 @@
     "vue": "^3.5.18"
   },
   "optionalDependencies": {
-    "@antelopejs/interface-dms-automation": ">=0.6.0 <1.0.0"
+    "@antelopejs/interface-dms-automation": ">=0.6.0 <0.7.0"
   },
   "packageManager": "pnpm@10.2.0",
   "antelopeJs": {

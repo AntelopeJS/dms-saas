@@ -18,6 +18,9 @@
       "@antelopejs/interface-dms/*": [
         "./packages/dms-saas/node_modules/@antelopejs/interface-dms/dist/*"
       ],
+      "@antelopejs/interface-core/*": [
+        "./packages/dms-saas/node_modules/@antelopejs/interface-core/dist/*"
+      ],
       "*": ["./packages/dms-saas/node_modules/*"]
     }
   },

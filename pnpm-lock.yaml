@@ -9,11 +9,14 @@ importers:
   .:
     devDependencies:
       '@antelopejs/tooling-configs':
-        specifier: ^0.5.1
-        version: 0.5.1(knip@6.41.0)(mongodb-memory-server@11.3.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.0)(sharp@0.35.5(@types/node@24.19.2))
+        specifier: '>=0.7.0 <0.8.0'
+        version: 0.7.0(knip@6.41.0)(mongodb-memory-server@11.3.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.0)(sharp@0.35.5(@types/node@24.19.2))
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       knip:
         specifier: ^6.34.0
         version: 6.41.0
@@ -36,34 +39,37 @@ importers:
         specifier: ^8.0.0
         version: 8.0.0
       playwright-core:
-        specifier: ^1.56.1
+        specifier: ^1.65.0
         version: 1.65.0
       sharp:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@24.19.2)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   packages/dms-saas:
     dependencies:
       '@antelopejs/interface-api':
-        specifier: '>=0.3.0 <1.0.0'
+        specifier: '>=0.3.0 <0.4.0'
         version: 0.3.0(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-api-util':
-        specifier: '>=0.3.2 <1.0.0'
+        specifier: '>=0.3.2 <0.4.0'
         version: 0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-core':
-        specifier: '>=0.4.0 <1.0.0'
+        specifier: '>=0.4.0 <0.5.0'
         version: 0.4.0
       '@antelopejs/interface-data-api':
-        specifier: '>=0.6.1 <1.0.0'
+        specifier: '>=0.6.1 <0.7.0'
         version: 0.6.1(@antelopejs/interface-api-util@0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database-decorators@0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0)))(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0))
       '@antelopejs/interface-database':
-        specifier: '>=0.3.0 <1.0.0'
+        specifier: '>=0.3.0 <0.4.0'
         version: 0.3.0(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-database-decorators':
-        specifier: '>=0.3.2 <1.0.0'
+        specifier: '>=0.3.2 <0.4.0'
         version: 0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0))
       '@antelopejs/interface-dms':
-        specifier: '>=0.12.0 <1.0.0'
+        specifier: '>=0.12.0 <0.13.0'
         version: 0.12.0(fe5a2e269ea660274eb46ef7a4bcdb06)
       '@antelopejs/interface-dms-saas':
         specifier: workspace:^
@@ -75,23 +81,23 @@ importers:
         specifier: ^22.6.2
         version: 22.6.2(@types/node@24.19.2)
       zod:
-        specifier: ^3.24.4
+        specifier: ~3.24.4
         version: 3.24.4
     devDependencies:
       '@antelopejs/core':
-        specifier: 1.21.0
+        specifier: ~1.21.0
         version: 1.21.0
       '@antelopejs/dms':
-        specifier: '>=0.17.0 <1.0.0'
+        specifier: '>=0.18.0 <0.19.0'
         version: 0.18.2(@antelopejs/core@1.21.0)(bare-buffer@3.7.1)
       '@antelopejs/dms-frontend':
-        specifier: '>=0.10.0 <1.0.0'
+        specifier: '>=0.10.0 <0.11.0'
         version: 0.10.0(@antelopejs/core@1.21.0)
       '@antelopejs/interface-mongodb':
-        specifier: '>=0.0.6 <1.0.0'
+        specifier: '>=0.0.6 <0.1.0'
         version: 0.0.6(socks@2.8.10)
       '@antelopejs/mongodb':
-        specifier: 1.6.2
+        specifier: ~1.6.2
         version: 1.6.2(socks@2.8.10)
       '@total-typescript/shoehorn':
         specifier: ^0.1.2
@@ -143,7 +149,7 @@ importers:
         version: 3.5.34(typescript@6.0.3)
     optionalDependencies:
       '@antelopejs/interface-dms-automation':
-        specifier: '>=0.6.0 <1.0.0'
+        specifier: '>=0.6.0 <0.7.0'
         version: 0.6.0(@antelopejs/interface-core@0.4.0)
 
   packages/dms-saas/frontend-vue:
@@ -180,26 +186,26 @@ importers:
   packages/interface-dms-saas:
     dependencies:
       '@antelopejs/interface-data-api':
-        specifier: '>=0.6.1 <1.0.0'
+        specifier: '>=0.6.1 <0.7.0'
         version: 0.6.1(@antelopejs/interface-api-util@0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database-decorators@0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0)))(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0))
       '@antelopejs/interface-dms':
-        specifier: '>=0.12.0 <1.0.0'
+        specifier: '>=0.12.0 <0.13.0'
         version: 0.12.0(fe5a2e269ea660274eb46ef7a4bcdb06)
     devDependencies:
       '@antelopejs/interface-api':
-        specifier: '>=0.3.0 <1.0.0'
+        specifier: '>=0.3.0 <0.4.0'
         version: 0.3.0(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-api-util':
-        specifier: '>=0.3.2 <1.0.0'
+        specifier: '>=0.3.2 <0.4.0'
         version: 0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-core':
-        specifier: '>=0.4.0 <1.0.0'
+        specifier: '>=0.4.0 <0.5.0'
         version: 0.4.0
       '@antelopejs/interface-database':
-        specifier: '>=0.3.0 <1.0.0'
+        specifier: '>=0.3.0 <0.4.0'
         version: 0.3.0(@antelopejs/interface-core@0.4.0)
       '@antelopejs/interface-database-decorators':
-        specifier: '>=0.3.2 <1.0.0'
+        specifier: '>=0.3.2 <0.4.0'
         version: 0.3.2(@antelopejs/interface-api@0.3.0(@antelopejs/interface-core@0.4.0))(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-database@0.3.0(@antelopejs/interface-core@0.4.0))
       '@types/node':
         specifier: ^24.0.0
@@ -327,8 +333,8 @@ packages:
   '@antelopejs/mongodb@1.6.2':
     resolution: {integrity: sha512-+iMgHoA5Kj9rujlHKJmVHC82N38y/V7A5hgn4WAQU5vLfrKxBM6wSdrtvZDivY1Qt3OgRLwyBhj1+/YT13yyBw==}
 
-  '@antelopejs/tooling-configs@0.5.1':
-    resolution: {integrity: sha512-Q1JWAsMIDy8f6KaTFPAakT+ChWDhQCzJjdszFFam/pUFqBVMgY+Lp1I7bc8SwcWL3CMdHBzgUUEId2od2cB7hQ==}
+  '@antelopejs/tooling-configs@0.7.0':
+    resolution: {integrity: sha512-FtE+vFwTpQR1hgWWSdiylEtn8SaJ6L7B4F7TTyy97cYaj/qvpX/l5QDebJw/A/RQ/Tt1FVYtgKV+lzFFbjau7w==}
     engines: {node: '>=22.18.0'}
     hasBin: true
     peerDependencies:
@@ -2228,6 +2234,10 @@ packages:
   '@typescript-eslint/visitor-keys@8.72.1':
     resolution: {integrity: sha512-SB8xqipSzZHUePCCLNeYxqnxq83X61/qzNhjQGbTfjxGZIeOEP7tBgWYX05Tcd6CgE02WdTJnh5b8kMZJ/+bnQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@typescript/typescript6@6.0.2':
+    resolution: {integrity: sha512-mbCddXd+jm7hfx7w2YU64/Av4/NqqeG3GoRZgxPcgoTxYjhrcfJRw9ULch71SS4G+Q3bOXFhRvPqjguN0Hyp5w==}
+    hasBin: true
 
   '@unhead/vue@2.1.15':
     resolution: {integrity: sha512-SSByXfEjhzPn8gXdEdgpYqpLMPSkLUH2HVE0GxZfOtNsJ0GgOHQs0g9T67ZZ1z0kTELLKdtOtYrzrbv9+ffF7g==}
@@ -5628,12 +5638,13 @@ snapshots:
       - snappy
       - socks
 
-  '@antelopejs/tooling-configs@0.5.1(knip@6.41.0)(mongodb-memory-server@11.3.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.0)(sharp@0.35.5(@types/node@24.19.2))':
+  '@antelopejs/tooling-configs@0.7.0(knip@6.41.0)(mongodb-memory-server@11.3.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.0)(sharp@0.35.5(@types/node@24.19.2))':
     dependencies:
       '@oxlint/plugins': 1.81.0
+      '@typescript/typescript6': 6.0.2
       dts-bundle-generator: 9.5.1
       minimatch: 10.2.6
-      typescript: 5.9.3
+      semver: 7.8.6
       yaml: 2.9.1
     optionalDependencies:
       knip: 6.41.0
@@ -7398,6 +7409,10 @@ snapshots:
       '@typescript-eslint/types': 8.72.1
       eslint-visitor-keys: 5.0.1
     optional: true
+
+  '@typescript/typescript6@6.0.2':
+    dependencies:
+      '@typescript/old': typescript@6.0.3
 
   '@unhead/vue@2.1.15(vue@3.5.34(typescript@5.9.3))':
     dependencies:

@@ -4,7 +4,7 @@ import type { DmsVitePluginEntry } from '#dms/frontend-build'
 
 type VitePlugin = Extract<DmsVitePluginEntry, { name: string }>
 
-const BACKEND_PACKAGE = '@antelopejs/dms-saas'
+const BACKEND_PACKAGE = "@antelopejs/dms-saas"
 const BACKEND_SOURCE = 'src'
 const QUERY_OR_HASH = /[?#].*$/
 
@@ -74,6 +74,11 @@ function backendSourceFile(id: string): string | undefined {
 		: undefined
 }
 
+/** `path` with `/` separators, the form Vite gives an importer, so a boundary error names both paths alike on every OS. */
+function forwardSlashes(path: string): string {
+	return path.split(sep).join('/')
+}
+
 /**
  * Fails the build and the dev server when a module of the frontend resolves to
  * a file under the `src` of the backend package: the browser reaches the
@@ -113,9 +118,9 @@ function boundaryCheck(): VitePlugin {
 			const from =
 				importer === undefined
 					? 'an entry point'
-					: importer.replace(QUERY_OR_HASH, '')
+					: forwardSlashes(importer.replace(QUERY_OR_HASH, ''))
 			return this.error(
-				`Backend boundary: ${from} imports ${file}, which is under the src of ${BACKEND_PACKAGE}. The frontend reaches the backend only through its HTTP interface.`,
+				`Backend boundary: ${from} imports ${forwardSlashes(file)}, which is under the src of ${BACKEND_PACKAGE}. The frontend reaches the backend only through its HTTP interface.`,
 			)
 		},
 	}
