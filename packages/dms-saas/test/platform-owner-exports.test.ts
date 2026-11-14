@@ -182,7 +182,7 @@ describe.each([
       routes.download(caller, OTHER_ID, jobId),
     );
 
-    expect([status.status, download.status]).toEqual([
+    expect([status.getStatus(), download.getStatus()]).toEqual([
       HTTP_FORBIDDEN,
       HTTP_FORBIDDEN,
     ]);
