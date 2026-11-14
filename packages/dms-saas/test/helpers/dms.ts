@@ -6,7 +6,11 @@ import type { RequestContext } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import * as auth from "@antelopejs/interface-dms/auth";
-import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
+import {
+  SessionModel,
+  type User,
+  UserModel,
+} from "@antelopejs/interface-dms/auth/db";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import * as guards from "@antelopejs/interface-dms/guards";
 import { resolveRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
@@ -119,6 +123,23 @@ export async function addTenantMember(
 }
 
 /**
+ * An access token of the user for the tenant, bound to a session opened for
+ * it the way a sign-in opens one: the DMS refuses a token without a session.
+ */
+export async function sessionAccessToken(
+  tenantId: string,
+  user: User,
+): ReturnType<typeof auth.generateAccessToken> {
+  const sessionId = await auth.createSession(
+    GetModel(SessionModel),
+    user._id,
+    "dms-saas-suite",
+    "127.0.0.1",
+  );
+  return auth.generateAccessToken(tenantId, user, sessionId);
+}
+
+/**
  * A request carrying the user's bearer token for the tenant, as the browser
  * sends it, already resolved to that tenant the way the DMS resolves it before
  * a route runs: `getRequestTenantId` of the request then names `tenantId`.
@@ -127,7 +148,7 @@ export async function tenantRequest(
   user: User,
   tenantId: string,
 ): Promise<RequestContext> {
-  const { token } = await auth.generateAccessToken(tenantId, user);
+  const { token } = await sessionAccessToken(tenantId, user);
   const request = fromPartial<RequestContext>({
     rawRequest: { headers: { authorization: `Bearer ${token}` } },
   });

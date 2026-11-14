@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { fromPartial } from "@total-typescript/shoehorn";
 import type { RequestContext } from "@antelopejs/interface-api";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import * as auth from "@antelopejs/interface-dms/auth";
 import { DEFAULT_TENANT_ID } from "@antelopejs/interface-dms/constants";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -16,7 +15,12 @@ import { tenantInvoicesDataAPI } from "../src/data-api/tenant/tenant-invoices";
 import "../src/routes/tenant/tenant-billing";
 import "../src/routes/tenant/tenant-plan";
 import "../src/routes/tenant/tenant-seats";
-import { addTenantMember, createUser, useDmsAuth } from "./helpers/dms";
+import {
+  addTenantMember,
+  createUser,
+  sessionAccessToken,
+  useDmsAuth,
+} from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import {
@@ -102,7 +106,7 @@ async function ownerRequest(): Promise<RequestContext> {
   const owner = await createUser();
   await addTenantMember(tenantId, owner, true);
   await seedWorkspace(tenantId, "pro", "individual", ["OWN-1"]);
-  const { token } = await auth.generateAccessToken(tenantId, owner);
+  const { token } = await sessionAccessToken(tenantId, owner);
   return fromPartial<RequestContext>({
     rawRequest: { headers: { authorization: `Bearer ${token}` } },
   });

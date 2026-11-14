@@ -1,7 +1,6 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import {
   authenticateRequestUser,
-  generateAccessToken,
   generateTenantAssignmentToken,
   sanitizeUser,
   validateRefreshToken,
@@ -22,7 +21,7 @@ import {
   useRegistrationWorld,
   world,
 } from "./helpers/registration";
-import { createUser, useDmsAuth } from "./helpers/dms";
+import { createUser, sessionAccessToken, useDmsAuth } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
@@ -62,7 +61,7 @@ describe("the OAuth-entry path carries the same capture", () => {
     expect(response).toEqual({
       token_type: "Bearer",
       access_token: ANY_STRING,
-      expires_in: (await generateAccessToken(tenant?._id ?? "", oauthUser))
+      expires_in: (await sessionAccessToken(tenant?._id ?? "", oauthUser))
         .expiresIn,
       refresh_token: ANY_STRING,
       user: await sanitizeUser(oauthUser),
