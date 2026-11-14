@@ -52,8 +52,8 @@ type ExtractedFilter = ReturnType<typeof Parameters.ExtractFilters>[string];
 
 function isSingleFilter(
   filter: ExtractedFilter | undefined,
-): filter is Extract<ExtractedFilter, [string, string]> {
-  return filter !== undefined && typeof filter[0] === "string";
+): filter is Exclude<ExtractedFilter, unknown[][]> {
+  return filter !== undefined && !Array.isArray(filter[0]);
 }
 
 function request(query = ""): RequestContext {
@@ -71,7 +71,9 @@ function prepareRead(): void {
     }),
   );
   vi.spyOn(Query, "Get").mockImplementation(() =>
-    fromPartial<ReturnType<typeof Query.Get>>(Promise.resolve(current)),
+    fromPartial<ReturnType<typeof Query.Get>>({
+      run: async () => current,
+    }),
   );
   vi.spyOn(Query, "Joined").mockImplementation((_db, _meta, query) => query);
   vi.spyOn(Query, "Computed").mockImplementation((_db, _meta, query) => query);

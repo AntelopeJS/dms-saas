@@ -18,6 +18,7 @@ import {
   type PlatformNoteTargetType,
 } from "../../db";
 import { parsePositiveInt } from "../../utils";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
@@ -124,8 +125,8 @@ export class SaasPlatformNotesController extends Controller(
     @AuthOwnerOnly() _user: User,
     @Parameter("targetType") targetType: string,
     @Parameter("targetId") targetId: string,
-    @Parameter("page", "query") page?: string,
-    @Parameter("pageSize", "query") pageSize?: string,
+    @Parameter("page", "query") page: QueryParameterValue,
+    @Parameter("pageSize", "query") pageSize: QueryParameterValue,
   ): Promise<ListNotesResponse> {
     const type = assertTargetType(targetType);
     await ensureTargetExists(type, targetId, this.userModel, this.tenantModel);

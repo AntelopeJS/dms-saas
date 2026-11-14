@@ -105,7 +105,7 @@ describe("tenant billing page layout", () => {
   it("lays the plan, next invoice, payment method and guarantee out in two columns", async () => {
     const own = await ownLayout();
 
-    expect(own.overview.componentName).toBe("dms-grid");
+    expect(own.overview.componentName).toBe("dms-grid-block");
     expect(childIds(own, ["overview"])).toEqual(["plan", "payment"]);
     expect(childIds(own, ["overview", "plan"])).toEqual([
       "current",

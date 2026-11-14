@@ -27,14 +27,14 @@ export function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * MS_PER_MINUTE);
 }
 
-interface Runnable {
-  run(): PromiseLike<string[]>;
+interface Runnable<Result> {
+  run(): PromiseLike<Result>;
 }
 
 /** The part of a model's table the seed uses: read a row, write a row. */
 interface SeedTableHandle<T> {
-  get(id: string): PromiseLike<object | null | undefined>;
-  insert(row: StoredRow<T>): Runnable;
+  get(id: string): Runnable<object | null | undefined>;
+  insert(row: StoredRow<T>): Runnable<string[]>;
 }
 
 /** A table model whose statics convert rows, as every `BasicDataModel` has. */

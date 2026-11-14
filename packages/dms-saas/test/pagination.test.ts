@@ -25,6 +25,10 @@ describe("parsePositiveInt", () => {
     expect(parsePositiveInt(undefined)).toBeUndefined();
   });
 
+  it("reads a parameter named without a value as absent", () => {
+    expect(parsePositiveInt(true)).toBeUndefined();
+  });
+
   it.each(["0", "-3", "abc", "", "NaN"])(
     "rejects %j rather than passing it on",
     (value) => {

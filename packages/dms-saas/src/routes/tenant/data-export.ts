@@ -31,6 +31,7 @@ import {
   resolvePageBounds,
   slicePage,
 } from "../../utils";
+import type { QueryParameterValue } from "../../utils/query-parameter";
 
 const DATA_EXPORT_SCOPE = "saas-tenant-data-export";
 const EXPORT_FILENAME_PREFIX = "workspace-export";
@@ -129,8 +130,8 @@ export class SaasDataExportController extends Controller(
   async history(
     @AuthTenantOwner() user: User,
     @Context() ctx: RequestContext,
-    @Parameter("page", "query") page?: string,
-    @Parameter("pageSize", "query") pageSize?: string,
+    @Parameter("page", "query") page: QueryParameterValue,
+    @Parameter("pageSize", "query") pageSize: QueryParameterValue,
   ): Promise<ExportHistoryPage> {
     const bounds = resolvePageBounds(
       { page: parsePositiveInt(page), pageSize: parsePositiveInt(pageSize) },
