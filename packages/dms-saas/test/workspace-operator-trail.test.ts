@@ -1,38 +1,22 @@
 import { randomUUID } from "node:crypto";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import { UserModel, type User } from "@antelopejs/interface-dms/auth/db";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { setRuntimeConfig } from "../src/config";
 import { PlanModel } from "../src/db";
 import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
 import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
+import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
 
-let mongodb: MongoMemoryReplSet;
+useMongoDatabase();
 
-beforeAll(async () => {
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongodb.getUri(), database: "operator-trail" });
-  await RegisterSchema("dms-core");
-  await RegisterSchema("dms-tenant");
+beforeAll(() => {
   setRuntimeConfig({
     stripe: { secretKey: "unused", webhookSecret: "", publishableKey: "" },
   });
-}, 60_000);
-
-afterAll(async () => {
-  await destroy();
-  await mongodb?.stop();
 });
 
 function adminController(): SaasWorkspacesAdminController {

@@ -1,20 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import { construct, destroy } from "@antelopejs/mongodb";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import * as lifecycleImplementation from "../src/implementations/dms-saas/tenant-lifecycle";
 import * as lifecycleInterface from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import { LifecycleDeliveryModel } from "../src/operator-actions/db/lifecycle-delivery.model";
@@ -22,40 +9,24 @@ import {
   dispatchWorkspaceLifecycle,
   reconcileWorkspaceLifecycleDeliveries,
 } from "../src/operator-actions/lifecycle-outbox";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const DATABASE = "saas-concurrency-test";
-const SCHEMA = "dms-core";
-const MONGO_VERSION = "8.0.8";
-const SETUP_TIMEOUT_MS = 60_000;
 const CONTENDERS = 12;
 
-let mongodb: MongoMemoryReplSet;
 let registration:
   | lifecycleInterface.TenantLifecycleConsumerRegistration
   | undefined;
 
-beforeAll(async () => {
+useMongoDatabase();
+
+beforeAll(() => {
   ImplementInterface(lifecycleInterface, lifecycleImplementation);
-  mongodb = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: MONGO_VERSION },
-  });
-  await construct({ url: mongodb.getUri(), database: DATABASE });
-  await RegisterSchema(SCHEMA);
-}, SETUP_TIMEOUT_MS);
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
   registration?.unregister();
   registration = undefined;
-});
-
-afterAll(async () => {
-  try {
-    await destroy();
-  } finally {
-    await mongodb?.stop();
-  }
 });
 
 function failNextOutcomePersistence(model: LifecycleDeliveryModel): void {

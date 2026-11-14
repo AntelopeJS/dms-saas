@@ -1,14 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { Schema } from "@antelopejs/interface-database";
-import {
-  GetModel,
-  RegisterSchema,
-} from "@antelopejs/interface-database-decorators";
-import {
-  CORE_SCHEMA_NAME,
-  TENANT_SCHEMA_NAME,
-} from "@antelopejs/interface-dms/constants";
+import { GetModel } from "@antelopejs/interface-database-decorators";
+import { TENANT_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
 import { TenantMemberModel, TenantModel } from "@antelopejs/interface-dms/db";
 import * as notifications from "@antelopejs/interface-dms/notifications";
 import {
@@ -17,18 +11,8 @@ import {
   UserExternalIdentityModel,
   UserModel,
 } from "@antelopejs/interface-dms/auth/db";
-import { construct, destroy } from "@antelopejs/mongodb";
 import { fromPartial } from "@total-typescript/shoehorn";
-import { MongoMemoryReplSet } from "mongodb-memory-server-core";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InvoiceModel,
   type InvoiceStatus,
@@ -51,6 +35,7 @@ import {
   loadUserSegmentMatches,
   sumPaidInvoices,
 } from "../src/users";
+import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { useSuiteStripe } from "./helpers/stripe";
 
@@ -94,27 +79,15 @@ const PAST_DUE_OWNERS: SegmentConditionGroup = {
   ],
 };
 
-let mongo: MongoMemoryReplSet;
+useMongoDatabase();
 
 beforeAll(async () => {
-  mongo = await MongoMemoryReplSet.create({
-    replSet: { count: 1 },
-    binary: { version: "8.0.8" },
-  });
-  await construct({ url: mongo.getUri(), database: "operator-users" });
-  await RegisterSchema(CORE_SCHEMA_NAME);
-  await RegisterSchema(TENANT_SCHEMA_NAME);
   await insertPlan({
     _id: "seat-plan",
     billingMode: "seat",
     price: 10,
     paymentProviderRefs: { stripePriceId: "price_seat" },
   });
-}, 120_000);
-
-afterAll(async () => {
-  await destroy();
-  await mongo?.stop();
 });
 
 beforeEach(async () => {
