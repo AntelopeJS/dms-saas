@@ -37,6 +37,7 @@ jobs:
       docs-typescript-project: packages/interface-dms-saas/docs/tsconfig.json
       renovate-sync: false
       test-job: false
+      windows: true
     permissions:
       contents: read
 
@@ -45,11 +46,15 @@ jobs:
   # the reusable workflow has no input for.
   # The longest job: two runners, each running half of the test files.
   unit:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
@@ -67,8 +72,15 @@ jobs:
       - run: pnpm --filter @antelopejs/dms-saas test:unit --shard=${{ matrix.shard }}/2
 
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -79,8 +91,15 @@ jobs:
   # The playground has its own lockfile and tsconfig, so neither `checks` nor
   # the module build typechecks it. It links the interface through its `dist`.
   playground:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -105,11 +124,15 @@ jobs:
   # TLC through the runner of @antelopejs/tooling-configs. The CI configuration
   # of each check: `node .agents/skills/<check>/check.mjs`.
   formal:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         check: [formal-guarded-plan-change]
     steps:
       - uses: actions/checkout@v4
