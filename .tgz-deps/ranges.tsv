@@ -1,0 +1,6 @@
+@antelopejs/dms-frontend	packages/dms-saas/package.json	devDependencies	>=0.10.0 <0.11.0
+@antelopejs/dms-frontend	packages/dms-saas/playground/package.json	devDependencies	>=0.10.0 <0.11.0
+@antelopejs/dms-frontend	package.json	pnpm.overrides	
+@antelopejs/dms-frontend	pnpm-workspace.yaml	overrides	
+@antelopejs/dms-frontend	packages/dms-saas/playground/package.json	pnpm.overrides	
+@antelopejs/dms-frontend	packages/dms-saas/playground/package.json	packageManager	(added)

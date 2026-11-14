@@ -35,6 +35,11 @@
     "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@10.2.0",
+  "pnpm": {
+    "overrides": {
+      "@antelopejs/dms-frontend": "file:.tgz-deps/antelopejs-dms-frontend-8e5ca35.tgz"
+    }
+  },
   "antelopeJs": {
     "docs": {
       "standard": true

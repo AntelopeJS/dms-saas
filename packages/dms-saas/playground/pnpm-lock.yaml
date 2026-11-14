@@ -4,13 +4,16 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@antelopejs/dms-frontend': file:../../../.tgz-deps/antelopejs-dms-frontend-8e5ca35.tgz
+
 importers:
 
   .:
     dependencies:
       '@antelopejs/dms':
         specifier: '>=0.18.0 <0.19.0'
-        version: 0.18.2(@antelopejs/core@1.21.0)(supports-color@8.1.1)
+        version: 0.18.2(@antelopejs/core@1.21.0)
       '@antelopejs/interface-api':
         specifier: '>=0.3.0 <0.4.0'
         version: 0.3.0(@antelopejs/interface-core@0.4.0)
@@ -40,8 +43,8 @@ importers:
         specifier: ~1.21.0
         version: 1.21.0
       '@antelopejs/dms-frontend':
-        specifier: '>=0.10.0 <0.11.0'
-        version: 0.10.0(@antelopejs/core@1.21.0)
+        specifier: file:../../../.tgz-deps/antelopejs-dms-frontend-8e5ca35.tgz
+        version: file:../../../.tgz-deps/antelopejs-dms-frontend-8e5ca35.tgz(@antelopejs/core@1.21.0)
       '@types/node':
         specifier: ^22.14.1
         version: 22.20.5
@@ -65,8 +68,9 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
-  '@antelopejs/dms-frontend@0.10.0':
-    resolution: {integrity: sha512-zNsYW0NUPHoJNj3tNUDxubXQUH0171Ga/avp8ka0VK253eQD7KDgImq8Fc3tmG5GD+oBzhUlO4RMun5BapqfYQ==}
+  '@antelopejs/dms-frontend@file:../../../.tgz-deps/antelopejs-dms-frontend-8e5ca35.tgz':
+    resolution: {integrity: sha512-OudfKjsf9U7oleRtn15eLC5Op5KVfvqp5kF35V1AAkmM6C/lEB+Ai5D6hFDrHKGcttUqPoGdyuwBTWp5vQhfTA==, tarball: file:../../../.tgz-deps/antelopejs-dms-frontend-8e5ca35.tgz}
+    version: 0.10.6
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
@@ -960,6 +964,11 @@ packages:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
 
+  yaml@2.9.1:
+    resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yargs-parser@21.1.1:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}
     engines: {node: '>=12'}
@@ -1005,14 +1014,15 @@ snapshots:
       semver: 7.8.6
       typescript: 5.9.3
 
-  '@antelopejs/dms-frontend@0.10.0(@antelopejs/core@1.21.0)':
+  '@antelopejs/dms-frontend@file:../../../.tgz-deps/antelopejs-dms-frontend-8e5ca35.tgz(@antelopejs/core@1.21.0)':
     dependencies:
       '@antelopejs/core': 1.21.0
       '@intlify/message-compiler': 11.4.16
       chokidar: 4.0.3
       commander: 13.1.0
       ignore: 7.0.12
-      semver: 7.8.5
+      semver: 7.8.6
+      yaml: 2.9.1
     optionalDependencies:
       '@oxc-parser/binding-darwin-arm64': 0.95.0
       '@oxc-parser/binding-darwin-x64': 0.95.0
@@ -1020,7 +1030,7 @@ snapshots:
       '@oxc-parser/binding-linux-x64-gnu': 0.95.0
       '@oxc-parser/binding-win32-x64-msvc': 0.95.0
 
-  '@antelopejs/dms@0.18.2(@antelopejs/core@1.21.0)(supports-color@8.1.1)':
+  '@antelopejs/dms@0.18.2(@antelopejs/core@1.21.0)':
     dependencies:
       2fa: 0.1.2
       '@antelopejs/interface-api': 0.3.0(@antelopejs/interface-core@0.4.0)
@@ -1046,7 +1056,7 @@ snapshots:
     optionalDependencies:
       '@antelopejs/core': 1.21.0
       '@antelopejs/interface-dms-automation': 0.6.0(@antelopejs/interface-core@0.4.0)
-      '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.4.0)(supports-color@8.1.1)
+      '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.4.0)
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -1112,10 +1122,10 @@ snapshots:
     dependencies:
       '@antelopejs/interface-core': 0.4.0
 
-  '@antelopejs/interface-redis@0.0.9(@antelopejs/interface-core@0.4.0)(supports-color@8.1.1)':
+  '@antelopejs/interface-redis@0.0.9(@antelopejs/interface-core@0.4.0)':
     dependencies:
       '@antelopejs/interface-core': 0.4.0
-      ioredis: 5.11.1(supports-color@8.1.1)
+      ioredis: 5.11.1
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -1506,7 +1516,7 @@ snapshots:
       unbzip2-stream: 1.4.3
       yargs-parser: 21.1.1
 
-  ioredis@5.11.1(supports-color@8.1.1):
+  ioredis@5.11.1:
     dependencies:
       '@ioredis/commands': 1.10.0
       cluster-key-slot: 1.1.1
@@ -1959,6 +1969,8 @@ snapshots:
   wrappy@1.0.2: {}
 
   xtend@4.0.2: {}
+
+  yaml@2.9.1: {}
 
   yargs-parser@21.1.1: {}
 
