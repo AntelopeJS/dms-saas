@@ -135,7 +135,7 @@ describe("money-back guarantee over several payments", () => {
       api.createCreditNote.mock.calls.map(([params, options]) => [
         params.invoice,
         params.refund_amount,
-        options.idempotencyKey,
+        options?.idempotencyKey,
       ]),
     ).toEqual([
       ["in_first", 2900, `refund-self:${workspace.tenantId}:in_first`],

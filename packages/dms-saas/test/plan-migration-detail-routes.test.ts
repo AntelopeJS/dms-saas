@@ -373,8 +373,8 @@ describe("the migration detail page", () => {
     const toolbar = await Page.toolbar.serialize();
 
     expect(toolbar.componentName).toBe("dms-page-toolbar-block");
-    expect(toolbar.children.map((child) => child.id)).toEqual(["live"]);
-    expect(toolbar.children[0]?.component.componentName).toBe(
+    expect(toolbar.children?.map((child) => child.id)).toEqual(["live"]);
+    expect(toolbar.children?.[0]?.component.componentName).toBe(
       "dms-live-toggle-block",
     );
   });

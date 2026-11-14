@@ -11,10 +11,7 @@ import {
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  emitTenantBeingProvisioned,
-  type TenantBeingProvisionedPayload,
-} from "../src/hooks/tenant-provisioning";
+import { emitTenantBeingProvisioned } from "../src/hooks/tenant-provisioning";
 import { internal as lifecycle } from "../src/implementations/dms-saas/tenant-lifecycle";
 import { reconcileWorkspaceLifecycleDeliveries } from "../src/operator-actions/lifecycle-outbox";
 import { getStripeClient } from "../src/stripe/client";
@@ -23,6 +20,7 @@ import {
   buildController,
   buildRegisterBody,
   listen,
+  type ProvisioningPayload,
   PLAN,
   useRegistrationWorld,
   world,
@@ -139,7 +137,7 @@ describe("tenant-being-provisioned hook", () => {
 
 describe("tenant-being-provisioned hook capture and retained evidence", () => {
   it("hands a listener the workspace and the consumer's own capture", async () => {
-    const seen: TenantBeingProvisionedPayload[] = [];
+    const seen: ProvisioningPayload[] = [];
     listen((payload) => {
       seen.push(payload);
     });
@@ -177,7 +175,7 @@ describe("tenant-being-provisioned hook capture and retained evidence", () => {
   });
 
   it("hands an empty capture, not a missing one, when the consumer captured nothing", async () => {
-    const seen: TenantBeingProvisionedPayload[] = [];
+    const seen: ProvisioningPayload[] = [];
     listen((payload) => {
       seen.push(payload);
     });

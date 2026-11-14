@@ -13,12 +13,12 @@ import {
 } from "@antelopejs/interface-dms/auth/db";
 import { resolveRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { TenantBeingProvisionedPayload } from "../src/hooks/tenant-provisioning";
 import {
   bearer,
   buildController,
   buildRegisterBody,
   listen,
+  type ProvisioningPayload,
   useRegistrationWorld,
   world,
 } from "./helpers/registration";
@@ -112,7 +112,7 @@ describe("the OAuth-entry path carries the same capture", () => {
   });
 
   it("hands the listener the account that entered through OAuth", async () => {
-    const seen: TenantBeingProvisionedPayload[] = [];
+    const seen: ProvisioningPayload[] = [];
     listen((payload) => {
       seen.push(payload);
     });

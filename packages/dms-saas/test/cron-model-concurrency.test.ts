@@ -23,6 +23,7 @@ import {
 } from "./helpers/subscription-fixture";
 import { implementNotificationCore } from "./helpers/notification-core";
 import { useMongoDatabase } from "./helpers/mongo";
+import { EMPTY_DIRECTORY } from "./helpers/workspace-directory";
 
 useMongoDatabase();
 const core = implementNotificationCore();
@@ -209,7 +210,7 @@ describe("billing publication and tombstones on Mongo", () => {
     const model = GetModel(TenantBillingStateModel);
     const outcomes = await Promise.all(
       Array.from({ length: CONTENDERS }, () =>
-        model.upsertForTenant("tenant-a", "active", undefined),
+        model.upsertForTenant("tenant-a", "active", undefined, EMPTY_DIRECTORY),
       ),
     );
     expect(outcomes.filter(Boolean)).toHaveLength(1);
@@ -224,14 +225,31 @@ describe("billing publication and tombstones on Mongo", () => {
 
   it("rejects stale publication and prevents recreation after deletion", async () => {
     const model = GetModel(TenantBillingStateModel);
-    await model.upsertForTenant("tenant-a", "active", undefined);
-    const stale = await model.findByTenant("tenant-a");
-    await model.upsertForTenant("tenant-a", "suspended", stale);
-    expect(await model.upsertForTenant("tenant-a", "free", stale)).toBe(false);
-    await model.deleteForTenant("tenant-a");
-    expect(await model.upsertForTenant("tenant-a", "active", undefined)).toBe(
-      false,
+    await model.upsertForTenant(
+      "tenant-a",
+      "active",
+      undefined,
+      EMPTY_DIRECTORY,
     );
+    const stale = await model.findByTenant("tenant-a");
+    await model.upsertForTenant(
+      "tenant-a",
+      "suspended",
+      stale,
+      EMPTY_DIRECTORY,
+    );
+    expect(
+      await model.upsertForTenant("tenant-a", "free", stale, EMPTY_DIRECTORY),
+    ).toBe(false);
+    await model.deleteForTenant("tenant-a");
+    expect(
+      await model.upsertForTenant(
+        "tenant-a",
+        "active",
+        undefined,
+        EMPTY_DIRECTORY,
+      ),
+    ).toBe(false);
     expect(await model.countByState("cancelled")).toBe(0);
     expect((await model.findByTenant("tenant-a"))?.deletedAt).toBeInstanceOf(
       Date,
@@ -338,13 +356,11 @@ describe("complete segment generations on Mongo", () => {
     await links.replaceForSegment(segment, ["old"], BEFORE);
     const current = (await GetModel(SegmentModel).get(segment._id))!;
     const getBy = links.getBy.bind(links);
-    vi.spyOn(links, "getBy").mockImplementationOnce(
-      async (index, ...keys: unknown[]) => {
-        const rows = await getBy(index, ...keys);
-        await links.replaceForSegment(current, ["new"], CUTOFF);
-        return rows;
-      },
-    );
+    vi.spyOn(links, "getBy").mockImplementationOnce(async (index, ...keys) => {
+      const rows = await getBy(index, ...keys);
+      await links.replaceForSegment(current, ["new"], CUTOFF);
+      return rows;
+    });
     expect(
       (await links.listBySegment(segment._id)).map((row) => row.userId),
     ).toEqual(["new"]);
@@ -354,14 +370,12 @@ describe("complete segment generations on Mongo", () => {
     const segment = await segmentFixture();
     const links = GetModel(UserSegmentModel);
     const getBy = links.getBy.bind(links);
-    vi.spyOn(links, "getBy").mockImplementationOnce(
-      async (index, ...keys: unknown[]) => {
-        await links.replaceForSegment(segment, ["middle"], BEFORE);
-        const current = (await GetModel(SegmentModel).get(segment._id))!;
-        await links.replaceForSegment(current, ["latest"], CUTOFF);
-        return getBy(index, ...keys);
-      },
-    );
+    vi.spyOn(links, "getBy").mockImplementationOnce(async (index, ...keys) => {
+      await links.replaceForSegment(segment, ["middle"], BEFORE);
+      const current = (await GetModel(SegmentModel).get(segment._id))!;
+      await links.replaceForSegment(current, ["latest"], CUTOFF);
+      return getBy(index, ...keys);
+    });
     await links.cleanupUnpublishable(segment._id);
     expect(
       (await links.listBySegment(segment._id)).map((row) => row.userId),

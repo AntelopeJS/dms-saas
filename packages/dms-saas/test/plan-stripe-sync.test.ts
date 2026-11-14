@@ -85,7 +85,8 @@ describe("syncing a plan written outside dms-saas", () => {
       ...toPlainData(seededPlan()),
       name: { en: "Hobby", fr: "Loisir" },
       description: { en: "For side projects", fr: "Pour les projets perso" },
-    }).localize("*", PLAN_LOCALIZED_FIELDS);
+    });
+    plan.localize("*", PLAN_LOCALIZED_FIELDS);
     await GetModel(PlanModel).insert(plan);
     localizePlan(plan, "fr");
 
@@ -319,7 +320,7 @@ describe("plans that stay off Stripe", () => {
     const plan = await store(
       planRow({
         ...toPlainData(seededPlan()),
-        interval: fromAny<Plan["interval"]>("week"),
+        interval: fromAny<Plan["interval"], string>("week"),
       }),
     );
 

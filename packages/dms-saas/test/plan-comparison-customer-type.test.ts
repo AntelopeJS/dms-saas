@@ -27,7 +27,7 @@ const PUBLIC_PLAN = {
   isDeleted: false,
   price: 29,
   trialDays: 0,
-  billingMode: "flat",
+  billingMode: "flat" as const,
   features: [],
 };
 

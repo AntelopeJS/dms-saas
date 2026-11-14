@@ -151,7 +151,11 @@ describe("createDatasetStream", () => {
       createDatasetStream(fakeSource(["1", "2"]), { batchSize: 10 }),
     );
 
-    expect(content.trimEnd().split("\n").map(JSON.parse)).toEqual([
+    const parsed: unknown[] = [];
+    for (const line of content.trimEnd().split("\n")) {
+      parsed.push(JSON.parse(line));
+    }
+    expect(parsed).toEqual([
       { _id: "1", amount: 1 },
       { _id: "2", amount: 2 },
     ]);

@@ -8,6 +8,7 @@ import {
   Schema,
   ValueProxy,
 } from "@antelopejs/interface-database";
+import { IsQueryStage } from "@antelopejs/interface-database/common";
 import { RegisterSchema } from "@antelopejs/interface-database-decorators";
 import { TenantMemberModel } from "@antelopejs/interface-dms/db";
 import { assert, describe, expect, it } from "vitest";
@@ -15,8 +16,11 @@ import { adminUserInvoicesDataAPI } from "../src/data-api/platformOwner/admin-us
 
 const controller = new adminUserInvoicesDataAPI();
 const meta = GetDataControllerMeta(controller);
-await RegisterSchema(TenantMemberModel.schemaName);
-const schema = Schema.get(TenantMemberModel.schemaName)!;
+const schemaName = TenantMemberModel.schemaName;
+assert(schemaName !== undefined);
+await RegisterSchema(schemaName);
+const schema = Schema.get(schemaName);
+assert(schema !== undefined);
 const database = schema.instance(CROSS_INSTANCE);
 
 function request(query: string): RequestContext {
@@ -70,7 +74,9 @@ describe("admin user invoice filters", () => {
       { stage: "map", args: [{ args: [expect.any(Array), true] }] },
       { stage: "nth", args: [0] },
     ]);
-    const condition: unknown = membership.build()[4].args[0].args[1];
+    const ownerFilter = membership.build()[4];
+    assert(IsQueryStage(ownerFilter, "filter"));
+    const condition: unknown = ownerFilter.args[0].args[1];
     assert(condition instanceof ValueProxy);
     const conditionStages = condition.build();
     const [objIndex] = conditionStages.slice(1, 3);
@@ -79,13 +85,15 @@ describe("admin user invoice filters", () => {
       { stage: "obj_index" },
       { stage: "eq", args: [true] },
     ]);
-    const ownership = conditionStages.at(-1)!;
-    expect(ownership.stage).toBe("and");
+    const ownership = conditionStages.at(-1);
+    assert(IsQueryStage(ownership, "and"));
     const ownershipCheck: unknown = ownership.args[0];
     assert(ownershipCheck instanceof ValueProxy);
     const comparison = ownershipCheck.build().at(-1);
-    expect(comparison?.stage).toBe("eq");
-    expect(comparison?.args[0].build()).toEqual(row.key("_instance").build());
+    assert(IsQueryStage(comparison, "eq"));
+    const compared: unknown = comparison.args[0];
+    assert(compared instanceof ValueProxy);
+    expect(compared.build()).toEqual(row.key("_instance").build());
   });
 
   it("applies the same filters to the result query and its total", () => {

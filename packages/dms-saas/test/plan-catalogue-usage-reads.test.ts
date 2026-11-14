@@ -12,6 +12,7 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
 import { useQueryGate } from "./helpers/query-gate";
+import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 const gate = useQueryGate();
@@ -45,7 +46,7 @@ async function holdWorkspace(tenantId: string, planId: string): Promise<void> {
 }
 
 /** Reads the listed fields of every plan row the way a listing does. */
-function listRows(plans: Plan[]) {
+function listRows(plans: RowFields<Plan>[]) {
   return Promise.all(
     plans.map((plan) =>
       Query.ReadProperties(controller, meta, plan, undefined, true),

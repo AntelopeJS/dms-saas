@@ -1,5 +1,9 @@
 import { HTTPResult } from "@antelopejs/interface-api";
-import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
+import type {
+  JsonObject,
+  JsonValue,
+} from "@antelopejs/interface-dms-saas/json";
+import { fromAny } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import {
   buildController,
@@ -17,7 +21,7 @@ useRegistrationWorld();
 describe("extras validation on the public endpoint", () => {
   async function expectRejection(extras: JsonValue, message: string) {
     const registering = buildController().register(
-      buildRegisterBody({ extras }),
+      buildRegisterBody({ extras: fromAny<JsonObject, JsonValue>(extras) }),
     );
 
     await expect(registering).rejects.toBeInstanceOf(HTTPResult);

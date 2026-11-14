@@ -42,10 +42,17 @@ async function identityForm(): Promise<typeof servedIdentityForm> {
   return servedIdentityForm;
 }
 
+/** The options the identity form serializes to. */
+async function servedOptions(form: typeof servedIdentityForm) {
+  const { options } = await form.serialize();
+  if (!options) throw new Error("The identity form serialized no options");
+  return options;
+}
+
 /** The assertions on what the identity form is served to `user`. */
 async function expectServedTo(user: User) {
   const form = await identityForm();
-  const { options } = await form.serialize();
+  const options = await servedOptions(form);
   const context = fromPartial<ComponentFilterContext>({ tenantId, user });
   return expect<unknown>(
     await form.onFilterCallback?.(new Set(), options, "general", context),
@@ -78,7 +85,7 @@ describe("General page for a workspace member", () => {
 
   it("counts the name's characters out of its limit", async () => {
     const form = await identityForm();
-    const { options } = await form.serialize();
+    const options = await servedOptions(form);
     const name = options.fields.find(
       (field): field is FormFieldSerialized =>
         !isFieldGroupSerialized(field) && field.id === "name",
@@ -92,7 +99,7 @@ describe("General page for a workspace member", () => {
 
   it("reads the page again after a rename: its glance and danger zone show the name", async () => {
     const form = await identityForm();
-    const { options } = await form.serialize();
+    const options = await servedOptions(form);
 
     expect(options.watchActions).toContainEqual(
       expect.objectContaining({
@@ -104,7 +111,7 @@ describe("General page for a workspace member", () => {
 
   it("serves the identity form unchanged to an owner", async () => {
     const form = await identityForm();
-    const { options } = await form.serialize();
+    const options = await servedOptions(form);
 
     (await expectServedTo(owner)).toEqual(options);
   });

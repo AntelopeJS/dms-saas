@@ -145,6 +145,8 @@ describe("settled migration status", () => {
           status,
           error: null,
           seatQuantity: null,
+          attempt: 1,
+          updatedAt: null,
         })),
       ),
     ).toBe(expected);

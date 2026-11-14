@@ -120,8 +120,10 @@ describe("plan inheritance as the editor writes it", () => {
   });
 
   it("leaves the access alone when the write carries none", () => {
-    expect(expandInheritance({ name: "Pro", inheritance: null })).toEqual({
-      name: "Pro",
+    expect(
+      expandInheritance({ name: { en: "Pro" }, inheritance: null }),
+    ).toEqual({
+      name: { en: "Pro" },
     });
   });
 

@@ -53,6 +53,7 @@ import {
 } from "../src/users";
 import { insertPlan } from "./helpers/plans";
 import { useSuiteStripe } from "./helpers/stripe";
+import { EMPTY_DIRECTORY } from "./helpers/workspace-directory";
 
 const stripe = useSuiteStripe();
 const sendToUser = vi.fn<typeof notifications.internal.SendToUser>();
@@ -119,17 +120,13 @@ afterAll(async () => {
 
 beforeEach(async () => {
   sendToUser.mockClear();
-  for (const model of [
-    UserModel,
-    TenantModel,
-    SessionModel,
-    UserExternalIdentityModel,
-    SegmentModel,
-    UserSegmentModel,
-    TenantBillingStateModel,
-  ]) {
-    await GetModel(model).table.delete().run();
-  }
+  await GetModel(UserModel).table.delete().run();
+  await GetModel(TenantModel).table.delete().run();
+  await GetModel(SessionModel).table.delete().run();
+  await GetModel(UserExternalIdentityModel).table.delete().run();
+  await GetModel(SegmentModel).table.delete().run();
+  await GetModel(UserSegmentModel).table.delete().run();
+  await GetModel(TenantBillingStateModel).table.delete().run();
 });
 
 async function insertUser(patch: Partial<User> = {}): Promise<User> {
@@ -180,6 +177,8 @@ async function insertWorkspace(fixture: WorkspaceFixture): Promise<string> {
   await GetModel(TenantBillingStateModel).upsertForTenant(
     tenantId,
     fixture.billingState ?? "active",
+    undefined,
+    EMPTY_DIRECTORY,
   );
   return tenantId;
 }
