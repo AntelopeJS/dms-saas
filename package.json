@@ -35,6 +35,19 @@
     "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@10.2.0",
+  "pnpm": {
+    "overrides": {
+      "@antelopejs/dms": "file:.tgz-deps/antelopejs-dms-5e267c7.tgz",
+      "@antelopejs/dms>@antelopejs/interface-api": "0.3.3",
+      "@antelopejs/dms>@antelopejs/interface-api-util": "0.3.2",
+      "@antelopejs/dms>@antelopejs/interface-core": "0.5.1",
+      "@antelopejs/dms>@antelopejs/interface-data-api": "0.8.0",
+      "@antelopejs/dms>@antelopejs/interface-database": "0.4.0",
+      "@antelopejs/dms>@antelopejs/interface-database-decorators": "0.5.2",
+      "@antelopejs/dms>@antelopejs/interface-dms": "0.14.0",
+      "@antelopejs/dms>@antelopejs/interface-file-storage": "0.1.8"
+    }
+  },
   "antelopeJs": {
     "docs": {
       "standard": true
