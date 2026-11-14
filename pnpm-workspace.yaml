@@ -5,3 +5,5 @@ packages:
 allowBuilds:
   lefthook: false
   mongodb-memory-server: false
+overrides:
+  "@antelopejs/dms-frontend": "file:.tgz-deps/antelopejs-dms-frontend-8e5ca35.tgz"
