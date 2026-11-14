@@ -70,7 +70,7 @@
     "@antelopejs/interface-dms-saas": "workspace:^",
     "node-cron": "^4.2.1",
     "stripe": "^22.6.2",
-    "zod": "~3.24.4"
+    "zod": "^3.24.4"
   },
   "devDependencies": {
     "@antelopejs/core": "~1.23.2",
