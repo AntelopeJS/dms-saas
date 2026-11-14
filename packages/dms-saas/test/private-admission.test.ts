@@ -279,9 +279,12 @@ async function expectSelfServeClosed(
   await expect(workspaces.setupIntent(user)).rejects.toMatchObject(
     CLOSED_ERROR,
   );
-  await expect(workspaces.createOptions(user)).rejects.toMatchObject(
-    CLOSED_ERROR,
-  );
+  await expect(
+    workspaces.createOptions(
+      user,
+      fromPartial<Parameters<SaasWorkspacesController["createOptions"]>[1]>({}),
+    ),
+  ).rejects.toMatchObject(CLOSED_ERROR);
 }
 
 describe("actual DMS invitation account creation while admission is closed", () => {

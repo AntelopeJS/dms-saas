@@ -5,7 +5,7 @@ import {
   CloseCursor,
   ReadCursor,
   RunQuery,
-} from "../../node_modules/@antelopejs/mongodb/dist/implementations/database/query.js";
+} from "@antelopejs/mongodb/dist/implementations/database/query.js";
 import { isRecord } from "./records";
 import { isString } from "../../src/utils/primitive-guards";
 

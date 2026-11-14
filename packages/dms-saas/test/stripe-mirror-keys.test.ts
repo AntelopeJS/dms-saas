@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { fromPartial } from "@total-typescript/shoehorn";
+import { fromAny, fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InvoiceModel, RefundModel, TenantSubscriptionModel } from "../src/db";
@@ -111,7 +111,7 @@ function refundEvent(
         amount: 1200,
         currency: "eur",
         status,
-        failure_reason: null,
+        failure_reason: fromAny<string | undefined, null>(null),
       },
     },
   });

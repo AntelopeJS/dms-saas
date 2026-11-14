@@ -227,7 +227,7 @@ describe("complimentary access to a workspace without a customer type", () => {
 
   async function currentPlanIdOf(tenantId: string): Promise<string> {
     const subscription = await subscriptionOf(tenantId);
-    if (!subscription) throw new Error("Expected a subscription");
+    if (!subscription?.planId) throw new Error("Expected a subscription");
     return subscription.planId;
   }
 
@@ -238,6 +238,7 @@ describe("complimentary access to a workspace without a customer type", () => {
     const impact = await adminController().getComplimentaryImpact(
       operator,
       tenantId,
+      undefined,
     );
 
     const offeredIds = impact.plans.map((plan) => plan.id);
@@ -253,6 +254,7 @@ describe("complimentary access to a workspace without a customer type", () => {
     const impact = await adminController().getComplimentaryImpact(
       operator,
       tenantId,
+      undefined,
     );
 
     expect(impact.plans.map((plan) => plan.id)).toContain(planId);

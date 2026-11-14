@@ -48,6 +48,14 @@ const presence = vi.fn(async (_context: RealtimePresenceContext) => {});
 let current: Partial<Invoice> | undefined;
 let isAllowed = true;
 
+type ExtractedFilter = ReturnType<typeof Parameters.ExtractFilters>[string];
+
+function isSingleFilter(
+  filter: ExtractedFilter | undefined,
+): filter is Extract<ExtractedFilter, [string, string]> {
+  return filter !== undefined && typeof filter[0] === "string";
+}
+
 function request(query = ""): RequestContext {
   return fromPartial<RequestContext>({
     url: new URL(`https://example.test/invoices?${query}`),
@@ -184,13 +192,14 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
     const ctx = Object.assign(request(), {
       dataAPIEntry: meta.endpoints.list,
     });
-    const filters = Parameters.ExtractFilters(ctx, meta);
+    const filter = Parameters.ExtractFilters(ctx, meta).documentType;
+    assert(isSingleFilter(filter));
     const row = ValueProxy.constant({ documentType: "invoice" });
     const predicate = meta.filters.documentType(
       Object.assign(ctx, { this: controller }),
       row.key("documentType"),
       "documentType",
-      ...filters.documentType,
+      ...filter,
       row,
     );
     assert(predicate instanceof ValueProxy);
@@ -216,7 +225,7 @@ describe.each(CONTROLLERS)("%s invoice scope on reads", (Controller) => {
       "session",
       PRESENCE_ACQUIRE,
       OWNER,
-    ];
+    ] as const;
     assert.equal(args.length, route.args.length);
     const outcome: unknown = route.func.call(controller, ...args);
     return expect(outcome);

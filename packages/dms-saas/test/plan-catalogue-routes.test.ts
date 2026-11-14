@@ -7,6 +7,7 @@ import { fromPartial } from "@total-typescript/shoehorn";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_STRIPE_TAX_CODE,
+  type Feature,
   FeatureModel,
   type Plan,
   PLAN_LOCALIZED_FIELDS,
@@ -36,7 +37,7 @@ const FIELD_REFUSAL = 400;
 const CATALOGUE = [
   { _id: "projects", valueType: "number" },
   { _id: "domains", valueType: "boolean" },
-];
+] satisfies Partial<Feature>[];
 
 /** Texts of a stored plan, one value per locale. */
 type PlanTexts = Partial<
@@ -65,30 +66,30 @@ async function storePlan(
     ...overrides,
   } satisfies Partial<Plan>;
   const names = texts.name ?? { en: plan.name };
-  await GetModel(PlanModel).insert(
-    PlanModel.fromPlainData({
-      ...plan,
-      name: names,
-      description: texts.description ?? {},
-      paymentProviderRefs: {
-        stripeProductId: `prod_${plan._id}`,
-        stripePriceId: `price_${plan._id}`,
-        stripeSyncedTerms: {
-          product: {
-            name: names.en ?? plan.name,
-            description: texts.description?.en ?? "",
-            taxCode: DEFAULT_STRIPE_TAX_CODE,
-          },
-          price: {
-            unitAmount: toMinorUnits(plan.price, plan.currency),
-            currency: plan.currency.toLowerCase(),
-            interval: plan.interval,
-            billingMode: plan.billingMode,
-          },
+  const row = PlanModel.fromPlainData({
+    ...plan,
+    name: names,
+    description: texts.description ?? {},
+    paymentProviderRefs: {
+      stripeProductId: `prod_${plan._id}`,
+      stripePriceId: `price_${plan._id}`,
+      stripeSyncedTerms: {
+        product: {
+          name: names.en ?? plan.name,
+          description: texts.description?.en ?? "",
+          taxCode: DEFAULT_STRIPE_TAX_CODE,
+        },
+        price: {
+          unitAmount: toMinorUnits(plan.price, plan.currency),
+          currency: plan.currency.toLowerCase(),
+          interval: plan.interval,
+          billingMode: plan.billingMode,
         },
       },
-    }).localize("*", PLAN_LOCALIZED_FIELDS),
-  );
+    },
+  });
+  row.localize("*", PLAN_LOCALIZED_FIELDS);
+  await GetModel(PlanModel).insert(row);
 }
 
 async function storedPlan(id = PLAN_ID): Promise<Plan | undefined> {

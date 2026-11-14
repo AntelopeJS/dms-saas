@@ -54,7 +54,7 @@ describe("workspace directory cells", () => {
   });
 
   it("shows no MRR before a first payment", () => {
-    const row = { ...SEAT_ROW, billingState: "pending_payment" };
+    const row = { ...SEAT_ROW, billingState: "pending_payment" as const };
     expect(workspaceMrrAmount(row)).toBeNull();
     expect(workspaceMrrNote(row)).toBeNull();
   });

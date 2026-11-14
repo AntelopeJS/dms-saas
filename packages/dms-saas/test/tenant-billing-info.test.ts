@@ -52,8 +52,6 @@ function updateBillingInfo(body: BillingIdentityInput) {
     workspace.request,
     workspace.owner,
     body,
-    workspace.billing,
-    workspace.subscriptions,
   );
 }
 
@@ -75,8 +73,7 @@ describe("tenant billing information", () => {
     await expect(
       new SaasTenantBillingController().getBillingInfo(
         workspace.owner,
-        workspace.billing,
-        workspace.subscriptions,
+        workspace.request,
       ),
     ).resolves.toEqual({
       customerType: null,

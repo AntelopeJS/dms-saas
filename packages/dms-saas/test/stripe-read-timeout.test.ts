@@ -1,4 +1,5 @@
-import { fromPartial } from "@total-typescript/shoehorn";
+import { fromAny, fromPartial } from "@total-typescript/shoehorn";
+import type { ClientRequest, IncomingMessage } from "node:http";
 import https from "node:https";
 import { createServer, type Server, type Socket } from "node:net";
 import Stripe from "stripe";
@@ -12,6 +13,14 @@ import type { TenantSubscription } from "../src/db";
  */
 const stalled = { port: 0, requests: 0, sockets: new Set<Socket>() };
 
+type ResponseCallback = (response: IncomingMessage) => void;
+
+/** How the SDK calls `https.request`: its options, then the response callback. */
+type SdkRequest = (
+  options: https.RequestOptions,
+  callback?: ResponseCallback,
+) => ClientRequest;
+
 const sendHttps = https.request.bind(https);
 
 /**
@@ -20,12 +29,13 @@ const sendHttps = https.request.bind(https);
  * HTTP fake such as nock intercepts it.
  */
 function routeStripeToStalledServer(): void {
+  const sendToStalledServer: SdkRequest = (options, callback) =>
+    sendHttps(
+      { ...options, host: "127.0.0.1", port: stalled.port, agent: false },
+      callback,
+    );
   vi.spyOn(https, "request").mockImplementation(
-    (options: https.RequestOptions, callback) =>
-      sendHttps(
-        { ...options, host: "127.0.0.1", port: stalled.port, agent: false },
-        callback,
-      ),
+    fromAny<typeof https.request, SdkRequest>(sendToStalledServer),
   );
 }
 

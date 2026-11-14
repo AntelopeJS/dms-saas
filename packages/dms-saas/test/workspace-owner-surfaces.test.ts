@@ -10,6 +10,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   BILLING_SETTINGS_SINGLETON_ID,
   BillingSettingsModel,
+  type Invoice,
   InvoiceModel,
   type Plan,
   type TenantSubscription,
@@ -306,7 +307,7 @@ describe("workspace overview", () => {
     });
     const north = await addWorkspace("Northwind", [owner(camille)], {});
     const invoices = GetModel(InvoiceModel, acme);
-    const invoice = (number: string, status: string) => ({
+    const invoice = (number: string, status: Invoice["status"]) => ({
       _id: randomUUID(),
       documentType: "invoice" as const,
       stripeInvoiceId: randomUUID(),

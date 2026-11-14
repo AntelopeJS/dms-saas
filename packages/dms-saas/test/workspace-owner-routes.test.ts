@@ -7,11 +7,7 @@ import * as exportJobs from "@antelopejs/interface-dms/base/export-jobs";
 import * as tenantExportArchive from "@antelopejs/interface-dms/base/tenant-export-archive";
 import type { RequestContext } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
-import {
-  TenantMemberModel,
-  TenantModel,
-  UserInviteModel,
-} from "@antelopejs/interface-dms/db";
+import { TenantModel, UserInviteModel } from "@antelopejs/interface-dms/db";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
@@ -187,12 +183,7 @@ describe("seat quota", () => {
     await GetModel(TenantSubscriptionModel, tenantId).update(tenantId, {
       planId,
     });
-    return seatsController().getSeatQuota(
-      request,
-      camille,
-      GetModel(TenantSubscriptionModel, tenantId),
-      GetModel(TenantMemberModel, tenantId),
-    );
+    return seatsController().getSeatQuota(request, camille);
   }
 
   beforeAll(async () => {

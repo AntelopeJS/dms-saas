@@ -20,6 +20,7 @@ import {
   UnregisterHook,
 } from "@antelopejs/interface-dms/hooks";
 import * as permissions from "@antelopejs/interface-dms/permissions";
+import type { JsonObject } from "@antelopejs/interface-dms-saas/json";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { afterEach, beforeAll, beforeEach, expect, vi } from "vitest";
 import {
@@ -225,9 +226,9 @@ const gatedQueries: Pick<typeof queries, keyof typeof mongoQueries> = {
   },
 };
 
-/** What a test changes in a registration body; extras arrive unparsed. */
+/** What a test changes in a registration body. */
 interface RegisterBodyInput {
-  extras?: unknown;
+  extras?: JsonObject;
   requestedPlanId?: string;
 }
 
@@ -291,6 +292,11 @@ export function bearer(token: string): RequestContext {
 }
 
 const listeners: HookHandler<Hook.TENANT_BEING_PROVISIONED>[] = [];
+
+/** What a `TENANT_BEING_PROVISIONED` listener receives. */
+export type ProvisioningPayload = Parameters<
+  HookHandler<Hook.TENANT_BEING_PROVISIONED>
+>[0];
 
 /** Listens to `TENANT_BEING_PROVISIONED` for the current test. */
 export function listen(

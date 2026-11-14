@@ -44,7 +44,11 @@ function creditNote(fields: PartialDeep<CreditNotePayload>): CreditNotePayload {
 
 describe("Stripe API version", () => {
   it("pins every request to the module's API version", () => {
-    initStripeClient({ secretKey: "sk_test_version", webhookSecret: "whsec" });
+    initStripeClient({
+      secretKey: "sk_test_version",
+      webhookSecret: "whsec",
+      publishableKey: "pk_test_version",
+    });
     expect(getStripeClient().getApiField("version")).toBe(STRIPE_API_VERSION);
   });
 });

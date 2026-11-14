@@ -117,13 +117,17 @@ describe("platform workspace page extension interface", () => {
   it("registers an identifier-based platform workspace extension", () => {
     const registration = RegisterPlatformWorkspaceDetailPageExtension({
       name: "CloudWorkspaceOperations",
-      components: [{ key: "cloudState", component: COMPONENT, side: "end" }],
+      components: [
+        { key: "cloudState", component: COMPONENT, side: "end", order: 0 },
+      ],
     });
 
     expect(pageExtension.register).toHaveBeenCalledWith({
       extensionName: "CloudWorkspaceOperations",
       targetFullId: "modules.saas.customers.workspaces.detail",
-      components: [{ key: "cloudState", component: COMPONENT, side: "end" }],
+      components: [
+        { key: "cloudState", component: COMPONENT, side: "end", order: 0 },
+      ],
     });
 
     const info = pageExtension.register.mock.calls[0][0];

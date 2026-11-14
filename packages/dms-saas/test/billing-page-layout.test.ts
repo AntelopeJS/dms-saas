@@ -13,6 +13,7 @@ import {
 } from "@antelopejs/interface-dms-saas/pages";
 import { describe, expect, it, vi } from "vitest";
 import { SaasTenantBillingController } from "../src/pages/tenant/billing";
+import { isRecord } from "./helpers/records";
 
 type Layout = Record<string, ComponentInfoSerialized>;
 
@@ -94,7 +95,10 @@ describe("tenant billing page layout", () => {
     const meta = GetMetadata(SaasTenantBillingController, PageMetadata);
 
     expect(meta.layout?.componentName).toBe(SettingsLayout().componentName);
-    expect(meta.layout?.options?.fullWidth).toBeUndefined();
+    const layoutOptions = meta.layout?.options;
+    expect(
+      isRecord(layoutOptions) ? layoutOptions.fullWidth : undefined,
+    ).toBeUndefined();
     expect(meta.pageInfo?.bypassTenantAccessGate).toBe(true);
   });
 

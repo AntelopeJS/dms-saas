@@ -8,6 +8,7 @@ import { TenantModel } from "@antelopejs/interface-dms/db";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   InvoiceModel,
+  type TenantBillingInfo,
   TenantBillingInfoModel,
   TenantSubscriptionModel,
 } from "../src/db";
@@ -31,7 +32,7 @@ useDmsAuth();
 async function seedWorkspace(
   tenantId: string,
   planId: string,
-  customerType: string | null,
+  customerType: TenantBillingInfo["customerType"],
   invoiceNumbers: string[],
 ): Promise<void> {
   await GetModel(TenantSubscriptionModel, tenantId).insert({

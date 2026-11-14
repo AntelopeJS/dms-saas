@@ -161,7 +161,15 @@ describe("billing figures", () => {
       },
     ];
     const invoiceStats = computeInvoiceStats({
-      open: [eur(1), { amount: 2, currency: "usd" }],
+      open: [
+        { ...eur(1), amountPaid: 0, nextPaymentAttemptAt: null },
+        {
+          amount: 2,
+          currency: "usd",
+          amountPaid: 0,
+          nextPaymentAttemptAt: null,
+        },
+      ],
       paidThisMonth: [],
       creditNotesThisMonth: notes,
       writtenOffThisYear: [],

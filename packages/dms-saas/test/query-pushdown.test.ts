@@ -7,7 +7,6 @@ import { isNumber, isString } from "../src/utils/primitive-guards";
 import { isRecord } from "./helpers/records";
 
 type Row = Record<string, string | Date | undefined>;
-type StageHandler = (rows: Row[], stage: QueryStage) => Row[];
 interface Expression {
   stages: QueryStage[];
 }
@@ -27,10 +26,10 @@ function isExpression(value: unknown): value is Expression {
   );
 }
 
-function matches(row: Row, stage: QueryStage): boolean {
+function matches(row: Row, stage: QueryStage<"filter">): boolean {
   const expression: unknown = stage.args[0].args[1];
   if (!isExpression(expression)) {
-    throw new Error(`The ${stage.stage} stage carries no expression`);
+    throw new Error("The filter stage carries no expression");
   }
   const [, field, compare] = expression.stages;
   const name: unknown = field.args[0];
@@ -40,45 +39,43 @@ function matches(row: Row, stage: QueryStage): boolean {
   return compare.stage === "ne" && value !== compare.args[0];
 }
 
-const handlers = new Map<string, StageHandler>([
-  ["schema", (rows) => rows],
-  ["instance", (rows) => rows],
-  ["table", (rows) => rows],
-  [
-    "getAll",
-    (rows, stage) =>
-      rows.filter((row) => row[stage.options.index] === stage.args[0]),
-  ],
-  ["filter", (rows, stage) => rows.filter((row) => matches(row, stage))],
-  [
-    "orderBy",
-    (rows, stage) => {
+function requireIndex(index: string | undefined): string {
+  if (index === undefined) throw new Error("The stage names no index");
+  return index;
+}
+
+/** Runs one stage on the rows, as the database would. */
+function runStage(rows: Row[], stage: QueryStage): Row[] {
+  switch (stage.stage) {
+    case "schema":
+    case "instance":
+    case "table":
+      return rows;
+    case "getAll": {
+      const index = requireIndex(stage.options.index);
+      return rows.filter((row) => row[index] === stage.args[0]);
+    }
+    case "filter":
+      return rows.filter((row) => matches(row, stage));
+    case "orderBy": {
       const direction = stage.options.direction === "desc" ? -1 : 1;
       return [...rows].sort((left, right) => {
         const a = Number(left[stage.options.index]);
         const b = Number(right[stage.options.index]);
         return (a < b ? -1 : a > b ? 1 : 0) * direction;
       });
-    },
-  ],
-  [
-    "slice",
-    (rows, stage) => {
+    }
+    case "slice": {
       const start: unknown = stage.args[0];
       const count: unknown = stage.args[1];
       if (!isNumber(start) || !isNumber(count)) {
         throw new Error("The slice stage carries no bounds");
       }
       return rows.slice(start, start + count);
-    },
-  ],
-]);
-
-/** Runs one stage on the rows, as the database would. */
-function runStage(rows: Row[], stage: QueryStage): Row[] {
-  const handler = handlers.get(stage.stage);
-  if (!handler) throw new Error(`No stand-in for the ${stage.stage} stage`);
-  return handler(rows, stage);
+    }
+    default:
+      throw new Error(`No stand-in for the ${stage.stage} stage`);
+  }
 }
 
 function captureQueries(tenants: Record<string, Row[]>) {
