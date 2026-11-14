@@ -1,12 +1,8 @@
 import { fromPartial } from "@total-typescript/shoehorn";
 import type { RequestContext } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import {
-  GetDataControllerMeta,
-  type DataControllerCallback,
-  type DataControllerCallbackWithOptions,
-} from "@antelopejs/interface-data-api";
-import { Parameters } from "@antelopejs/interface-data-api/components";
+import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
+import { Parameters as DataParameters } from "@antelopejs/interface-data-api/components";
 import { AccessMode } from "@antelopejs/interface-data-api/metadata";
 import { ValueProxy } from "@antelopejs/interface-database";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
@@ -18,7 +14,7 @@ import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
 const OWNER = { _id: "owner", name: "Owner" };
 const NOT_DELETED = { isDeleted: ["false", "eq"] };
 const SCOPED_ROUTES = ["list", "select", "count", "exportStart"];
-const filtersSeen: Parameters.ListParameters["filters"][] = [];
+const filtersSeen: DataParameters.ListParameters["filters"][] = [];
 
 const controller = new plansDataAPI();
 const meta = GetDataControllerMeta(controller);
@@ -45,11 +41,9 @@ beforeAll(() => {
     {
       countWithSearch: vi.fn(
         async (
-          _controller:
-            | DataControllerCallback
-            | DataControllerCallbackWithOptions,
+          _controller: Parameters<typeof tableViewBase.countWithSearch>[0],
           _ctx: RequestContext,
-          params: Parameters.ListParameters,
+          params: DataParameters.ListParameters,
         ) => {
           filtersSeen.push(params.filters);
           return { total: 1 };
@@ -61,7 +55,7 @@ beforeAll(() => {
 
 describe("the plans table scope", () => {
   it.each(SCOPED_ROUTES)("leaves deleted plans out of %s", (route) => {
-    const filters = Parameters.ExtractFilters(
+    const filters = DataParameters.ExtractFilters(
       request(route, "filter_isDeleted=eq:true&filter_isActive=is:true"),
       meta,
     );
@@ -86,23 +80,31 @@ describe("the plans table scope", () => {
     ]);
   });
 
-  it("matches the plans whose deletion flag is the one asked", () => {
-    const row = ValueProxy.constant({ isDeleted: false });
-    const predicate = meta.filters.isDeleted(
-      Object.assign(request("list"), { this: controller }),
-      row.key("isDeleted"),
-      "isDeleted",
-      "false",
-      "eq",
-      row,
-    );
+  it.each([
+    { value: "false", deleted: false },
+    { value: "true", deleted: true },
+    { value: false, deleted: false },
+    { value: true, deleted: true },
+  ])(
+    "matches the plans whose deletion flag is the one asked ($value)",
+    ({ value, deleted }) => {
+      const row = ValueProxy.constant({ isDeleted: false });
+      const predicate = meta.filters.isDeleted(
+        Object.assign(request("list"), { this: controller }),
+        row.key("isDeleted"),
+        "isDeleted",
+        value,
+        "eq",
+        row,
+      );
 
-    assert(predicate instanceof ValueProxy);
-    expect(predicate.build().at(-1)).toMatchObject({
-      stage: "eq",
-      args: [false],
-    });
-  });
+      assert(predicate instanceof ValueProxy);
+      expect(predicate.build().at(-1)).toMatchObject({
+        stage: "eq",
+        args: [deleted],
+      });
+    },
+  );
 });
 
 describe("moving plans by hand", () => {
