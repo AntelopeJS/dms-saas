@@ -233,7 +233,7 @@ async function requestRefund(): Promise<void> {
 </script>
 
 <template>
-	<DmsCard
+	<DmsCardPanel
 		v-if="isOwner && (isLoading || loadFailed || state)"
 		class="grow"
 		:title="$t(`${KEY_PREFIX}.title`)"
@@ -255,7 +255,7 @@ async function requestRefund(): Promise<void> {
 		/>
 
 		<div v-else-if="state === 'open'" class="flex flex-col gap-4">
-			<DmsMeter
+			<DmsMeterBar
 				:label="$t(`${KEY_PREFIX}.until`, params)"
 				:value="dayOfWindow"
 				:max="eligibility?.windowDays ?? 0"
@@ -300,5 +300,5 @@ async function requestRefund(): Promise<void> {
 		<p v-else-if="state === 'blocked'" class="text-muted text-sm">
 			{{ $t(`${KEY_PREFIX}.blocked_description`) }}
 		</p>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

@@ -38,7 +38,7 @@ async function open(workspace: OtherWorkspace): Promise<void> {
 </script>
 
 <template>
-	<DmsCard
+	<DmsCardPanel
 		:title="$t('saas.public.suspended.others.title')"
 		:count="workspaces.length"
 		:padded="false"
@@ -77,5 +77,5 @@ async function open(workspace: OtherWorkspace): Promise<void> {
 				</div>
 			</template>
 		</DmsListRow>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

@@ -341,7 +341,7 @@ onMounted(loadImpact)
 					</div>
 				</div>
 
-				<DmsCard :padded="false">
+				<DmsCardPanel :padded="false">
 					<div
 						class="border-default flex items-center justify-between border-b px-4 py-2.5"
 					>
@@ -406,7 +406,7 @@ onMounted(loadImpact)
 							{{ $t('saas.catalog.retire.show_all', { count: hiddenRows }) }}
 						</UButton>
 					</div>
-				</DmsCard>
+				</DmsCardPanel>
 
 				<UAlert
 					v-if="impact.hasOpenMigration"
@@ -473,7 +473,7 @@ onMounted(loadImpact)
 								required
 							>
 								<template #default="{ id }">
-									<DmsSelect
+									<DmsInputSelect
 										:id="id"
 										v-model="targetPlanId"
 										:items="targetItems"
@@ -506,7 +506,7 @@ onMounted(loadImpact)
 					</div>
 
 					<div class="flex flex-col gap-3">
-						<DmsSwitch
+						<DmsInputSwitch
 							v-model="notifyOwners"
 							:label="$t('saas.catalog.retire.notify')"
 							:description="
@@ -519,7 +519,7 @@ onMounted(loadImpact)
 									: undefined
 							"
 						/>
-						<DmsCard v-if="notifyOwners && target" class="text-sm">
+						<DmsCardPanel v-if="notifyOwners && target" class="text-sm">
 							<p class="text-muted text-xs uppercase">
 								{{ $t('saas.catalog.retire.preview') }}
 							</p>
@@ -540,7 +540,7 @@ onMounted(loadImpact)
 									})
 								}}
 							</p>
-						</DmsCard>
+						</DmsCardPanel>
 					</div>
 				</div>
 

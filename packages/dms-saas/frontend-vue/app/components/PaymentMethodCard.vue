@@ -49,7 +49,7 @@ function payWithAnotherCard(): void {
 </script>
 
 <template>
-	<DmsCard class="grow" :title="$t(`${KEY_PREFIX}.title`)">
+	<DmsCardPanel class="grow" :title="$t(`${KEY_PREFIX}.title`)">
 		<template v-if="data && isTenantOwner && card" #actions>
 			<DmsStatusPill
 				:tone="needsUpdate ? 'warning' : 'success'"
@@ -161,5 +161,5 @@ function payWithAnotherCard(): void {
 				/>
 			</div>
 		</template>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

@@ -144,7 +144,7 @@ async function remove(note: PlatformNote): Promise<void> {
 </script>
 
 <template>
-	<DmsCard :title="$t(`${N}.title`)" :count="total || undefined">
+	<DmsCardPanel :title="$t(`${N}.title`)" :count="total || undefined">
 		<div class="flex flex-col gap-3">
 			<p class="text-muted text-xs">{{ $t(`${N}.operators_only`) }}</p>
 			<UTextarea
@@ -236,5 +236,5 @@ async function remove(note: PlatformNote): Promise<void> {
 				</UButton>
 			</template>
 		</div>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

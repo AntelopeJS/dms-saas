@@ -103,7 +103,7 @@ function requestAnother(): Promise<void> {
 </script>
 
 <template>
-	<DmsCard :title="$t(`${KEYS}.title`)" :padded="false">
+	<DmsCardPanel :title="$t(`${KEYS}.title`)" :padded="false">
 		<p class="text-muted border-default px-4.5 border-b py-2.5 text-xs">
 			{{ $t(`${KEYS}.description`) }}
 		</p>
@@ -232,5 +232,5 @@ function requestAnother(): Promise<void> {
 				</UButton>
 			</div>
 		</template>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

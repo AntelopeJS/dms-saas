@@ -362,7 +362,7 @@ onMounted(async () => {
 			novalidate
 			@submit.prevent="submit"
 		>
-			<DmsBanner
+			<DmsNoticeBanner
 				v-if="pending"
 				tone="info"
 				size="sm"
@@ -379,7 +379,7 @@ onMounted(async () => {
 						@click="toLogin"
 					/>
 				</template>
-			</DmsBanner>
+			</DmsNoticeBanner>
 
 			<UFormField
 				:label="$t('saas.public.no_workspace.workspace_name')"
@@ -420,7 +420,7 @@ onMounted(async () => {
 
 			<LegalAcceptance v-model="hasAcceptedLegal" :error="legalError" />
 
-			<DmsBanner
+			<DmsNoticeBanner
 				v-if="errorMessage"
 				tone="error"
 				icon="i-ph-warning-circle"

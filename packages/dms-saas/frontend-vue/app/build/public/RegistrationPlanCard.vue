@@ -52,7 +52,7 @@ const highlights = computed(() => {
 <template>
 	<USkeleton v-if="isLoading && !summary" class="h-14 w-full rounded-lg" />
 
-	<DmsBanner
+	<DmsNoticeBanner
 		v-else-if="loadError"
 		tone="error"
 		size="sm"
@@ -69,15 +69,15 @@ const highlights = computed(() => {
 				@click="emit('retry')"
 			/>
 		</template>
-	</DmsBanner>
+	</DmsNoticeBanner>
 
 	<div v-else-if="summary" class="flex flex-col gap-2">
-		<DmsCard
+		<DmsCardPanel
 			:padded="false"
 			class="flex items-start justify-between gap-3 px-4 py-3"
 		>
 			<div class="min-w-0">
-				<DmsEyebrow as="span" :label="$t('saas.public.plan_card.eyebrow')" />
+				<DmsEyebrowLabel as="span" :label="$t('saas.public.plan_card.eyebrow')" />
 				<p class="text-highlighted text-sm font-semibold">
 					{{ summary.plan.name }}
 					<span class="text-muted font-normal">
@@ -106,7 +106,7 @@ const highlights = computed(() => {
 				color="neutral"
 				variant="ghost"
 			/>
-		</DmsCard>
+		</DmsCardPanel>
 
 		<p v-if="summary.requestedPlan" class="text-muted flex gap-1.5 text-xs">
 			<UIcon name="i-ph-info" class="mt-0.5 size-3.5 shrink-0" />

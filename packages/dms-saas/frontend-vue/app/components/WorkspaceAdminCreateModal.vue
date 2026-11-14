@@ -281,7 +281,7 @@ onMounted(loadPlans)
 			</FormFieldRow>
 			<FormFieldRow :label="$t(`${C}.plan`)" required>
 				<template #default="{ id }">
-					<DmsSelect
+					<DmsInputSelect
 						:id="id"
 						v-model="planId"
 						:items="planItems"
@@ -349,7 +349,7 @@ onMounted(loadPlans)
 				</template>
 			</FormFieldRow>
 		</FormRows>
-		<DmsBanner
+		<DmsNoticeBanner
 			v-if="whatHappens"
 			size="sm"
 			tone="info"

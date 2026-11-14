@@ -266,7 +266,7 @@ function submit(): Promise<void> | undefined {
 
 					<FormFieldRow :label="$t(`${TEXT}.reason`)" required>
 						<template #default="{ id }">
-							<DmsSelect
+							<DmsInputSelect
 								:id="id"
 								v-model="reason"
 								:items="reasonItems"
@@ -289,7 +289,7 @@ function submit(): Promise<void> | undefined {
 						"
 					>
 						<template #default="{ id }">
-							<DmsTextarea
+							<DmsInputTextarea
 								:id="id"
 								v-model="memo"
 								:rows="3"

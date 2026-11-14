@@ -211,7 +211,7 @@ onMounted(() => {
 			<USkeleton class="h-72 w-full rounded-xl" />
 		</div>
 
-		<DmsCard v-else-if="loadError && !access">
+		<DmsCardPanel v-else-if="loadError && !access">
 			<DmsEmptyState
 				variant="error"
 				:title="$t('saas.public.suspended.load_error')"
@@ -230,10 +230,10 @@ onMounted(() => {
 					},
 				]"
 			/>
-		</DmsCard>
+		</DmsCardPanel>
 
 		<template v-else-if="access?.blocked && reasonView">
-			<DmsBanner
+			<DmsNoticeBanner
 				v-if="loadError"
 				tone="error"
 				size="sm"
@@ -241,7 +241,7 @@ onMounted(() => {
 				:title="$t('saas.public.suspended.load_error')"
 				:description="loadError"
 			/>
-			<DmsCard :padded="false" class="flex items-center gap-3 px-4 py-3">
+			<DmsCardPanel :padded="false" class="flex items-center gap-3 px-4 py-3">
 				<DmsIconWell tone="muted" size="lg">
 					<span class="font-mono text-xs font-semibold">
 						{{ workspaceInitials(access.workspace.name) }}
@@ -257,9 +257,9 @@ onMounted(() => {
 					:label="statusView('workspace', reasonView.status).label"
 					:tone="statusView('workspace', reasonView.status).tone"
 				/>
-			</DmsCard>
+			</DmsCardPanel>
 
-			<DmsCard variant="elevated" class="flex flex-col gap-5">
+			<DmsCardPanel variant="elevated" class="flex flex-col gap-5">
 				<div class="flex items-start gap-3">
 					<DmsIconWell :icon="reasonView.icon" tone="error" size="xl" />
 					<div>
@@ -285,7 +285,7 @@ onMounted(() => {
 					v-if="access.isTenantOwner"
 					class="border-default flex flex-col gap-3 border-t pt-4"
 				>
-					<DmsEyebrow
+					<DmsEyebrowLabel
 						as="h2"
 						:label="$t('saas.public.suspended.owner.title')"
 					/>
@@ -321,7 +321,7 @@ onMounted(() => {
 					v-else
 					class="border-default flex flex-col gap-3 border-t pt-4"
 				>
-					<DmsEyebrow
+					<DmsEyebrowLabel
 						as="h2"
 						:label="$t('saas.public.suspended.member.title')"
 					/>
@@ -353,7 +353,7 @@ onMounted(() => {
 						{{ $t('saas.public.suspended.member.no_owner') }}
 					</p>
 				</section>
-			</DmsCard>
+			</DmsCardPanel>
 
 			<OtherWorkspaces
 				v-if="access.otherWorkspaces.length"

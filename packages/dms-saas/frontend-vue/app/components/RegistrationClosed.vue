@@ -18,7 +18,7 @@ import { LOGIN_PATH } from '../build/public/routes'
 			class="mt-5 justify-center"
 			block
 		/>
-		<DmsBanner
+		<DmsNoticeBanner
 			class="mt-5"
 			tone="info"
 			size="sm"

@@ -109,7 +109,7 @@ onMounted(load)
 					</template>
 				</FormFieldRow>
 			</FormRows>
-			<DmsBanner
+			<DmsNoticeBanner
 				size="sm"
 				tone="warning"
 				icon="i-ph-warning"

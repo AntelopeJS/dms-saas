@@ -35,7 +35,7 @@ function load(): Promise<void> {
 </script>
 
 <template>
-	<DmsCard :padded="false">
+	<DmsCardPanel :padded="false">
 		<DmsSaasLoadFailure
 			v-if="hasFailed"
 			class="m-4"
@@ -111,5 +111,5 @@ function load(): Promise<void> {
 				</tr>
 			</tbody>
 		</table>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

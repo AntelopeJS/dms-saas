@@ -172,7 +172,7 @@ function cluster(className: string): ClusterBindings {
 						:aria-label="$t(`${KEY_PREFIX}.customer_type`)"
 						class="@min-[480px]:grid-cols-2 grid gap-2"
 					>
-						<DmsCard
+						<DmsCardPanel
 							v-for="customerType in CUSTOMER_TYPES"
 							:key="customerType"
 							as="button"
@@ -203,7 +203,7 @@ function cluster(className: string): ClusterBindings {
 									</span>
 								</span>
 							</span>
-						</DmsCard>
+						</DmsCardPanel>
 					</div>
 				</div>
 			</FormFieldRow>

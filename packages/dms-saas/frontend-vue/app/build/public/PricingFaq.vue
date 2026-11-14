@@ -69,8 +69,8 @@ const items = computed<AccordionItem[]>(() => [
 				{{ $t('saas.public.pricing.faq.title') }}
 			</h2>
 		</header>
-		<DmsCard :padded="false" class="px-4">
+		<DmsCardPanel :padded="false" class="px-4">
 			<UAccordion :items="items" type="multiple" />
-		</DmsCard>
+		</DmsCardPanel>
 	</section>
 </template>

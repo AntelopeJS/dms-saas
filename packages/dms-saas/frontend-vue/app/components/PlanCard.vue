@@ -201,7 +201,7 @@ function toggleSale(): void {
 </script>
 
 <template>
-	<DmsCard
+	<DmsCardPanel
 		as="article"
 		class="relative h-full"
 		:class="{
@@ -399,5 +399,5 @@ function toggleSale(): void {
 				</UDropdownMenu>
 			</div>
 		</div>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

@@ -92,7 +92,7 @@ function errorText(message: string | undefined): string | undefined {
 		<DmsOAuthButtons :note="$t('saas.public.register.oauth_note')" />
 
 		<form class="mt-5 flex flex-col gap-4" novalidate @submit.prevent="submit">
-			<DmsBanner
+			<DmsNoticeBanner
 				v-if="fieldErrorCount > 0"
 				tone="error"
 				icon="i-ph-warning-circle"
@@ -106,7 +106,7 @@ function errorText(message: string | undefined): string | undefined {
 				"
 				role="alert"
 			/>
-			<DmsBanner
+			<DmsNoticeBanner
 				v-else-if="errorMessage"
 				tone="error"
 				icon="i-ph-warning-circle"

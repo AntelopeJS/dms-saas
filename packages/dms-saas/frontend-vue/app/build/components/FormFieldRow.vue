@@ -17,7 +17,7 @@ interface FormFieldRowProps {
 	/** Already translated; marks the control invalid. */
 	error?: string | null
 	required?: boolean
-	/** The card's side inset: rows of a `DmsSection`. */
+	/** The card's side inset: rows of a `DmsSectionPanel`. */
 	inset?: boolean
 	/**
 	 * Whether the label names the control the default slot binds the id to;

@@ -78,7 +78,7 @@ function memberCap(value: number): string {
 </script>
 
 <template>
-	<DmsCard :padded="false">
+	<DmsCardPanel :padded="false">
 		<div
 			class="border-default flex items-center justify-between border-b px-4 py-2.5"
 		>
@@ -174,5 +174,5 @@ function memberCap(value: number): string {
 				</span>
 			</li>
 		</ul>
-	</DmsCard>
+	</DmsCardPanel>
 </template>

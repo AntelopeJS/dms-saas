@@ -189,7 +189,7 @@ onMounted(() => {
 			<USkeleton class="h-96 w-full rounded-xl" />
 		</div>
 
-		<DmsCard v-else-if="loadError">
+		<DmsCardPanel v-else-if="loadError">
 			<DmsEmptyState
 				variant="error"
 				:title="$t('saas.public.legal.load_error')"
@@ -202,7 +202,7 @@ onMounted(() => {
 					},
 				]"
 			/>
-		</DmsCard>
+		</DmsCardPanel>
 
 		<PublicStage
 			v-else-if="!legalDocument"
@@ -235,7 +235,7 @@ onMounted(() => {
 		<div v-else class="grid gap-6 lg:grid-cols-[1fr_240px]">
 			<article class="flex min-w-0 flex-col gap-5">
 				<header>
-					<DmsEyebrow
+					<DmsEyebrowLabel
 						as="span"
 						tone="primary"
 						:label="$t('saas.public.legal.eyebrow_short')"
@@ -249,11 +249,11 @@ onMounted(() => {
 						{{ metaLine }}
 					</p>
 				</header>
-				<DmsCard>
+				<DmsCardPanel>
 					<div class="prose prose-neutral dark:prose-invert max-w-none">
 						<LegalDocumentBody />
 					</div>
-				</DmsCard>
+				</DmsCardPanel>
 				<p v-if="stamp?.version && stamp.updatedAt" class="text-muted text-xs">
 					{{
 						$t('saas.public.legal.effective', {
@@ -267,7 +267,7 @@ onMounted(() => {
 			<aside
 				class="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start print:hidden"
 			>
-				<DmsCard
+				<DmsCardPanel
 					v-if="legalDocument.headings.length"
 					:title="$t('saas.public.legal.contents')"
 				>
@@ -287,8 +287,8 @@ onMounted(() => {
 							</li>
 						</ol>
 					</nav>
-				</DmsCard>
-				<DmsCard :title="$t('saas.public.legal.related')" :padded="false">
+				</DmsCardPanel>
+				<DmsCardPanel :title="$t('saas.public.legal.related')" :padded="false">
 					<DmsListRow
 						v-for="entry in related"
 						:key="entry.field"
@@ -298,7 +298,7 @@ onMounted(() => {
 						:title="$t(entry.labelKey)"
 						:description="relatedMeta(entry.field) ?? $t(entry.summaryKey)"
 					/>
-				</DmsCard>
+				</DmsCardPanel>
 			</aside>
 		</div>
 	</div>

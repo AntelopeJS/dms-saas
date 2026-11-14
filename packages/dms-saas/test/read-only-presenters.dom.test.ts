@@ -137,7 +137,7 @@ describe("billing refusal", () => {
         global: {
           mocks: { $t: translate },
           stubs: {
-            DmsSection: Slot,
+            DmsSectionPanel: Slot,
             DmsSaasBillingIdentityFields: IdentityFields,
             DmsSaveBar: true,
           },
@@ -193,7 +193,7 @@ describe("billing refusal", () => {
           global: {
             mocks: { $t: translate },
             stubs: {
-              DmsSection: Slot,
+              DmsSectionPanel: Slot,
               DmsSaasBillingIdentityFields: IdentityFields,
               DmsSaveBar: true,
             },
@@ -272,7 +272,7 @@ describe.each([DataExport, DataExportHistory])(
           global: {
             mocks: { $t: translate },
             stubs: {
-              DmsCard: Slot,
+              DmsCardPanel: Slot,
               DmsStatusPill: true,
               UButton: Button,
               DmsEmptyState: Slot,

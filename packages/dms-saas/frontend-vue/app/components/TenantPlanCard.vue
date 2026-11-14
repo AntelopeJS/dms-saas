@@ -426,7 +426,7 @@ watch(
 </script>
 
 <template>
-	<DmsCard class="grow" :title="$t(`${KEY_PREFIX}.title`)">
+	<DmsCardPanel class="grow" :title="$t(`${KEY_PREFIX}.title`)">
 		<template v-if="canChangePlan && current" #actions>
 			<UButton
 				v-if="canResubscribe"
@@ -517,7 +517,7 @@ watch(
 				</span>
 			</p>
 
-			<DmsMeter
+			<DmsMeterBar
 				v-if="current.maxMembers > 0"
 				:label="$t(`${KEY_PREFIX}.seats`)"
 				:hint="seatHint"
@@ -534,12 +534,12 @@ watch(
 						{{ $t(`${KEY_PREFIX}.manage_members`) }}
 					</ULink>
 				</template>
-			</DmsMeter>
+			</DmsMeterBar>
 			<p v-else class="text-muted text-sm">{{ seatHint }}</p>
 
 			<DmsKeyValueList v-if="facts.length" :items="facts" dense />
 
-			<DmsBanner
+			<DmsNoticeBanner
 				v-if="pendingPlan"
 				size="sm"
 				tone="warning"
@@ -562,9 +562,9 @@ watch(
 						{{ $t(`${KEY_PREFIX}.cancel_downgrade`) }}
 					</UButton>
 				</template>
-			</DmsBanner>
+			</DmsNoticeBanner>
 
-			<DmsBanner
+			<DmsNoticeBanner
 				v-if="cancellationAt"
 				size="sm"
 				tone="error"
@@ -596,7 +596,7 @@ watch(
 						{{ $t(`${KEY_PREFIX}.export_data`) }}
 					</UButton>
 				</template>
-			</DmsBanner>
+			</DmsNoticeBanner>
 
 			<p v-if="pastDueNote && !isAccessBlocked" class="text-muted text-sm">
 				<UIcon name="i-ph-info" class="me-1 align-middle" />
@@ -649,5 +649,5 @@ watch(
 			@changed="refresh"
 		/>
 		<DmsSaasPendingCheckoutModal v-if="isTenantOwner" />
-	</DmsCard>
+	</DmsCardPanel>
 </template>

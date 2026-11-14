@@ -32,7 +32,7 @@ const WIDTH_CLASSES: Record<PublicStageWidth, string> = {
 </script>
 
 <template>
-	<DmsCard
+	<DmsCardPanel
 		as="section"
 		variant="elevated"
 		:padded="false"
@@ -44,7 +44,7 @@ const WIDTH_CLASSES: Record<PublicStageWidth, string> = {
 		</DmsIconWell>
 
 		<slot name="eyebrow">
-			<DmsEyebrow
+			<DmsEyebrowLabel
 				v-if="props.eyebrow"
 				as="span"
 				tone="primary"
@@ -68,5 +68,5 @@ const WIDTH_CLASSES: Record<PublicStageWidth, string> = {
 		</p>
 
 		<slot />
-	</DmsCard>
+	</DmsCardPanel>
 </template>
