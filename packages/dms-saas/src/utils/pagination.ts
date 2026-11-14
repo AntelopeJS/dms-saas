@@ -1,3 +1,5 @@
+import type { QueryParameterValue } from "./query-parameter";
+
 const FIRST_PAGE = 1;
 const MIN_PAGE_SIZE = 1;
 /** Probes whether a further page exists without asking for its contents. */
@@ -7,9 +9,13 @@ const LOOKAHEAD = 1;
 const POSITIVE_INT_PATTERN = /^\d+$/;
 
 export function parsePositiveInt(
-  value: string | undefined,
+  value: QueryParameterValue,
 ): number | undefined {
-  if (value === undefined || !POSITIVE_INT_PATTERN.test(value)) {
+  if (
+    value === undefined ||
+    value === true ||
+    !POSITIVE_INT_PATTERN.test(value)
+  ) {
     return undefined;
   }
   const parsed = Number.parseInt(value, 10);
