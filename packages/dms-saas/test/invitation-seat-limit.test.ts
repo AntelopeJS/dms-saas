@@ -10,7 +10,6 @@ import {
 import {
   TenantMemberModel,
   TenantModel,
-  type UserInvite,
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
 import * as auth from "@antelopejs/interface-dms/auth";
@@ -43,6 +42,11 @@ import {
   implementWithDms,
 } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
+import {
+  insertPlatformOwner,
+  insertUser,
+  pendingInvites,
+} from "./helpers/seat-users";
 import { useSuiteStripe } from "./helpers/stripe";
 
 /**
@@ -122,29 +126,6 @@ async function createFreeWorkspace() {
     tenantId: created.tenantId,
     inviteId: created.owner.inviteId,
   };
-}
-
-async function pendingInvites(tenantId: string): Promise<UserInvite[]> {
-  return GetModel(UserInviteModel, tenantId).getAll();
-}
-
-async function insertUser(email: string, isPlatformOwner = false) {
-  const userId = randomUUID();
-  await GetModel(UserModel).insert({
-    _id: userId,
-    email,
-    name: "Invitee",
-    language: "en",
-    owner: isPlatformOwner,
-  });
-  return userId;
-}
-
-async function insertPlatformOwner(): Promise<User> {
-  const email = `${randomUUID()}@platform.test`;
-  const user = await GetModel(UserModel).get(await insertUser(email, true));
-  if (!user) throw new Error("Expected the platform owner");
-  return user;
 }
 
 async function joinAsMember(platformOwner: User, tenantId: string) {
@@ -242,6 +223,7 @@ describe("seats held by invitations at the plan cap", () => {
       ...toPlainData(invite),
       _id: randomUUID(),
       token: randomUUID(),
+      creationResolutionId: randomUUID(),
     });
 
     expect(await getSeatUsage(tenantId)).toMatchObject({
