@@ -1,11 +1,7 @@
 import type { RequestContext } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import {
-  GetDataControllerMeta,
-  type DataControllerCallback,
-  type DataControllerCallbackWithOptions,
-} from "@antelopejs/interface-data-api";
-import type { Parameters } from "@antelopejs/interface-data-api/components";
+import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
+import type { Parameters as DataParameters } from "@antelopejs/interface-data-api/components";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,9 +19,9 @@ const TOTAL_BY_STATE_NAME = new Map(Object.entries(TOTALS_BY_STATE));
 
 const countWithSearch = vi.fn(
   async (
-    _controller: DataControllerCallback | DataControllerCallbackWithOptions,
+    _controller: Parameters<typeof tableViewBase.countWithSearch>[0],
     _ctx: RequestContext,
-    params: Parameters.ListParameters,
+    params: DataParameters.ListParameters,
   ) => {
     const [state] = params.filters?.billingState ?? [];
     return { total: TOTAL_BY_STATE_NAME.get(String(state)) ?? 0 };

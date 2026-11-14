@@ -1,18 +1,14 @@
 import type { RequestContext } from "@antelopejs/interface-api";
 import { ImplementInterface } from "@antelopejs/interface-core";
-import {
-  GetDataControllerMeta,
-  type DataControllerCallback,
-  type DataControllerCallbackWithOptions,
-} from "@antelopejs/interface-data-api";
-import type { Parameters } from "@antelopejs/interface-data-api/components";
+import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
+import type { Parameters as DataParameters } from "@antelopejs/interface-data-api/components";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { invoicesDataAPI } from "../src/data-api/platformOwner/invoices";
 
 const OWNER = { _id: "owner", name: "Owner" };
-const filtersSeen: Parameters.ListParameters["filters"][] = [];
+const filtersSeen: DataParameters.ListParameters["filters"][] = [];
 
 beforeAll(() => {
   ImplementInterface(tenantAccess, {
@@ -27,11 +23,9 @@ beforeAll(() => {
     {
       countWithSearch: vi.fn(
         async (
-          _controller:
-            | DataControllerCallback
-            | DataControllerCallbackWithOptions,
+          _controller: Parameters<typeof tableViewBase.countWithSearch>[0],
           _ctx: RequestContext,
-          params: Parameters.ListParameters,
+          params: DataParameters.ListParameters,
         ) => {
           filtersSeen.push(params.filters);
           return { total: 1 };

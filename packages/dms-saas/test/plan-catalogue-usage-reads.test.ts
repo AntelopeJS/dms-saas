@@ -1,7 +1,7 @@
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import { Query } from "@antelopejs/interface-data-api/components";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import { beforeAll, describe, expect, it } from "vitest";
+import { assert, beforeAll, describe, expect, it } from "vitest";
 import { plansDataAPI } from "../src/data-api/platformOwner/plans";
 import {
   type Plan,
@@ -12,7 +12,6 @@ import {
 import { useMongoDatabase } from "./helpers/mongo";
 import { planRow } from "./helpers/plan-row";
 import { useQueryGate } from "./helpers/query-gate";
-import type { RowFields } from "./helpers/row-fields";
 
 useMongoDatabase();
 const gate = useQueryGate();
@@ -45,16 +44,22 @@ async function holdWorkspace(tenantId: string, planId: string): Promise<void> {
   });
 }
 
-/** Reads the listed fields of every plan row the way a listing does. */
-function listRows(plans: RowFields<Plan>[]) {
+/** Reads the listed fields of every stored plan row the way a listing does. */
+async function listRows(plans: Plan[]) {
+  const { table } = Query.GetModel(controller, meta);
+  const stored = await Promise.all(
+    plans.map((plan) => Query.Get(table, plan._id).run()),
+  );
   return Promise.all(
-    plans.map((plan) =>
-      Query.ReadProperties(controller, meta, plan, undefined, true),
-    ),
+    stored.map((row) => {
+      assert(row);
+      return Query.ReadProperties(controller, meta, row, undefined, true);
+    }),
   );
 }
 
 beforeAll(async () => {
+  controller.model = GetModel(PlanModel);
   await GetModel(PlanModel).insert(PLANS);
   await holdWorkspace("tenant-a", "free");
 });
