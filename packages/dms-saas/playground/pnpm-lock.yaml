@@ -136,10 +136,10 @@ packages:
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/interface-dms-automation@0.6.0':
-    resolution: {integrity: sha512-s/PnKGVBUq7JjY9qHWoOFwk6XlXrbAc40fgmImj3VU79I+8cIryKN61/f1BnJJ4TJDxG2pU1JUN9bBol9Ge2Cw==}
+  '@antelopejs/interface-dms-automation@0.7.0':
+    resolution: {integrity: sha512-huGVCIDoJVkpT939wo4yWNYtyuy887QvcuXI9XjwuvYiWXdwNWiDLgs1lIulvkNGc+cf0ZUHYEpERuhhWPcHcQ==}
     peerDependencies:
-      '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
+      '@antelopejs/interface-core': '>=0.5.1 <0.6.0'
 
   '@antelopejs/interface-dms-builder@0.5.1':
     resolution: {integrity: sha512-qNgJeAaCymkMUG2z0wNKGHAHsQXEnp1hU7zuEg+HPjtxHaHtMr6086nji82OEpQyt79VYSGata1tszm3L0/M9A==}
@@ -625,10 +625,6 @@ packages:
     resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
     deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
-
-  glob@13.0.6:
-    resolution: {integrity: sha512-Wjlyrolmm8uDpm/ogGyXZXb1Z+Ca2B8NbJwqBVg0axK9GbBeoS7yGV6vjXnYdGm6X53iehEuxxbyiKp8QmN4Vw==}
-    engines: {node: 18 || 20 || >=22}
 
   glob@13.0.7:
     resolution: {integrity: sha512-wfsFgXQ8A3SEI9XGf7Nl3Y9l7ffSrGh7SUCT7vU/2CzYPep9kjxAn1S40F9OPKxAMGCVl7HtNlJhrCJUeUq83g==}
@@ -1291,7 +1287,7 @@ snapshots:
     optionalDependencies:
       '@antelopejs/core': 1.23.2
       '@antelopejs/interface-database-catalog': 0.0.4(@antelopejs/interface-core@0.5.1)
-      '@antelopejs/interface-dms-automation': 0.6.0(@antelopejs/interface-core@0.5.1)
+      '@antelopejs/interface-dms-automation': 0.7.0(@antelopejs/interface-core@0.5.1)
       '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.5.1)
       playwright-core: 1.65.1
       typescript: 6.0.3
@@ -1341,7 +1337,7 @@ snapshots:
     dependencies:
       '@antelopejs/interface-core': 0.5.1
 
-  '@antelopejs/interface-dms-automation@0.6.0(@antelopejs/interface-core@0.5.1)':
+  '@antelopejs/interface-dms-automation@0.7.0(@antelopejs/interface-core@0.5.1)':
     dependencies:
       '@antelopejs/interface-core': 0.5.1
     optional: true
@@ -1804,12 +1800,6 @@ snapshots:
       package-json-from-dist: 1.0.1
       path-scurry: 1.11.1
 
-  glob@13.0.6:
-    dependencies:
-      minimatch: 10.2.6
-      minipass: 7.1.3
-      path-scurry: 2.0.2
-
   glob@13.0.7:
     dependencies:
       minimatch: 10.2.6
@@ -2192,7 +2182,7 @@ snapshots:
 
   rimraf@6.1.3:
     dependencies:
-      glob: 13.0.6
+      glob: 13.0.7
       package-json-from-dist: 1.0.1
 
   safe-buffer@5.1.2: {}

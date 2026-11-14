@@ -152,8 +152,8 @@ importers:
         version: 3.5.34(typescript@6.0.3)
     optionalDependencies:
       '@antelopejs/interface-dms-automation':
-        specifier: '>=0.6.2 <0.7.0'
-        version: 0.6.2(@antelopejs/interface-core@0.5.1)
+        specifier: '>=0.7.0 <0.8.0'
+        version: 0.7.0(@antelopejs/interface-core@0.5.1)
 
   packages/dms-saas/frontend-vue:
     dependencies:
@@ -314,10 +314,10 @@ packages:
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/interface-dms-automation@0.6.2':
-    resolution: {integrity: sha512-MdF7aTCMq7NQbrrjWTc3OStxtMp8SKqZvIsvVdnBTo3q06T9C5SOHcEicMPCDT6xYuVRXggLL0dLWuheWLr0IQ==}
+  '@antelopejs/interface-dms-automation@0.7.0':
+    resolution: {integrity: sha512-huGVCIDoJVkpT939wo4yWNYtyuy887QvcuXI9XjwuvYiWXdwNWiDLgs1lIulvkNGc+cf0ZUHYEpERuhhWPcHcQ==}
     peerDependencies:
-      '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
+      '@antelopejs/interface-core': '>=0.5.1 <0.6.0'
 
   '@antelopejs/interface-dms-builder@0.5.1':
     resolution: {integrity: sha512-qNgJeAaCymkMUG2z0wNKGHAHsQXEnp1hU7zuEg+HPjtxHaHtMr6086nji82OEpQyt79VYSGata1tszm3L0/M9A==}
@@ -5757,7 +5757,7 @@ snapshots:
     optionalDependencies:
       '@antelopejs/core': 1.23.2
       '@antelopejs/interface-database-catalog': 0.0.3(@antelopejs/interface-core@0.5.1)
-      '@antelopejs/interface-dms-automation': 0.6.2(@antelopejs/interface-core@0.5.1)
+      '@antelopejs/interface-dms-automation': 0.7.0(@antelopejs/interface-core@0.5.1)
       '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.5.1)
       mongodb: 7.5.0(socks@2.8.10)
       playwright-core: 1.65.0
@@ -5807,7 +5807,7 @@ snapshots:
     dependencies:
       '@antelopejs/interface-core': 0.5.1
 
-  '@antelopejs/interface-dms-automation@0.6.2(@antelopejs/interface-core@0.5.1)':
+  '@antelopejs/interface-dms-automation@0.7.0(@antelopejs/interface-core@0.5.1)':
     dependencies:
       '@antelopejs/interface-core': 0.5.1
     optional: true
