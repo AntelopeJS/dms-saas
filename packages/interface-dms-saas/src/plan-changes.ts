@@ -6,10 +6,23 @@ import type { Plan } from "./db/tables/plans.table";
 
 /** An inventory constraint that prevents a plan change. */
 export interface PlanChangeIncompatibility {
+  /** Absent or `"blocking"`: the entry refuses the change. */
+  severity?: "blocking";
   code: string;
   message: string;
   resource?: string;
 }
+
+/** Shown in the plan-change confirmation; the change stays allowed. */
+export interface PlanChangeNotice {
+  severity: "notice";
+  code: string;
+  message: string;
+  resource?: string;
+}
+
+/** One entry a policy returns. Any entry that is not a notice refuses the change. */
+export type PlanChangeFinding = PlanChangeIncompatibility | PlanChangeNotice;
 
 /** Validation is read-only; effective validation runs before granting Free. */
 export interface PlanChangeValidationRequest {
@@ -28,12 +41,15 @@ export interface PlanChangeValidationRequest {
  * the inventory writers, not to a lock held by this callback.
  * Registration opts deferred changes into the guarded paid-to-Free flow;
  * guarded paid-to-paid changes are deliberately unsupported.
+ * Only a notice leaves the change allowed; every other entry refuses it.
+ * SaaS shows notices in the confirmation from the `preview` phase only and
+ * ignores them at `schedule` and `effective`, so a notice is never stored.
  */
 export interface PlanChangePolicy {
   name: string;
   validatePlanChange(
     request: PlanChangeValidationRequest,
-  ): Promise<PlanChangeIncompatibility[]>;
+  ): Promise<PlanChangeFinding[]>;
 }
 
 /** Current billing plan and additional future inventory restrictions. */

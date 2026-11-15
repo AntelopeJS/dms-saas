@@ -110,11 +110,11 @@ All paths are under `packages/dms-saas/src/`.
 
 | Model action | Code |
 | --- | --- |
-| `PrepRead`, `PrepCheck`, `PrepCas` | `prepareFreeChange` (`plan-changes/guarded-free.ts:64-106`), `prepareGuardedPlanChange` (`plan-changes/guarded-state.ts:36-65`) |
+| `PrepRead`, `PrepCheck`, `PrepCas` | `prepareFreeChange` (`plan-changes/guarded-free.ts:70-112`), `prepareGuardedPlanChange` (`plan-changes/guarded-state.ts:36-65`) |
 | `DrainObserve`, `DrainRead`, `Pause`, `DrainAgain`, `DrainTimesOut` | `drainPlanInventory` (`plan-changes/inventory-barrier.ts:22-56`), with dms `pauseTenantLifecycleAdmission` |
 | `Release` in every caller | `releasePlanInventory` (inventory-barrier.ts:59-64), with dms `resumeTenantLifecycleAdmission` |
-| `ValidatePasses`, `ValidateRefuses`, `AdmitCas`, `Catch*`, `EmitRelease`, `EmitSchedule`, `ScheduleCheck`, `ConfirmSchedule` | `scheduleGuardedFreeChange` (guarded-free.ts:116-179), `admitGuardedProviderEffect`, `abortGuardedPreparation`, `completeGuardedAbort`, `confirmGuardedSchedule` (guarded-state.ts) |
-| `Cancel*`, `ConfirmCancel` | `cancelGuardedFreeChange` (guarded-free.ts:182-220), `admitGuardedCancellation`, `confirmGuardedCancellation` (guarded-state.ts:140-170) |
+| `ValidatePasses`, `ValidateRefuses`, `AdmitCas`, `Catch*`, `EmitRelease`, `EmitSchedule`, `ScheduleCheck`, `ConfirmSchedule` | `scheduleGuardedFreeChange` (guarded-free.ts:122-185), `admitGuardedProviderEffect`, `abortGuardedPreparation`, `completeGuardedAbort`, `confirmGuardedSchedule` (guarded-state.ts) |
+| `Cancel*`, `ConfirmCancel` | `cancelGuardedFreeChange` (guarded-free.ts:188-226), `admitGuardedCancellation`, `confirmGuardedCancellation` (guarded-state.ts:140-170) |
 | `ReconcileRead`, `Rec*`, `Land*` | `reconcileGuardedFreeChange`, `recoverInventoryPreparation`, `validateAndCommitFree`, `recordBlocked`, `completeFreeActivation` (`plan-changes/guarded-landing.ts`), called by `crons/reconcile-guarded-downgrades.ts` and by `applyPendingFreePlanOnCancellation` (`plan-changes/deferred.ts:316-336`) from the Stripe `customer.subscription.deleted` webhook (`stripe/webhook-handlers.ts:293-303`) |
 | `IsBlocked` | `isGuardedPlanChangeBlocked` (guarded-state.ts:8-19), read by `auth/subscription-access-gate.ts` and `stripe/webhook-shared.ts:55-77` |
 | `Applies`, `Cas` | `TenantSubscriptionModel.mutateRevision` (`packages/interface-dms-saas/src/db/models/tenantSubscriptions.model.ts:52-67`) and `compareAndSet` (guarded-state.ts:21-33) |
