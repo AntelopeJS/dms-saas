@@ -1,15 +1,13 @@
 name: ci
 
 on:
-  push:
-    branches:
-      - main
-  # No branch filter: the lint wave stacks pull requests on top of each other,
-  # and filtering on `main` left every intermediate step ungated -- only the
-  # secret scanner ran there.
   pull_request:
-
-  workflow_dispatch: null
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [next]
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
 permissions:
   contents: read
 
@@ -25,7 +23,7 @@ jobs:
   # tsconfig maps the interface onto its sources, so the docs check, which
   # runs before the build, needs no `dist`.
   ci:
-    uses: AntelopeJS/.github/.github/workflows/ci-node.yml@v1
+    uses: AntelopeJS/.github/.github/workflows/ci-node.yml@v2
     with:
       docs-files: |
         README.md
@@ -37,15 +35,75 @@ jobs:
       docs-typescript-project: packages/interface-dms-saas/docs/tsconfig.json
       renovate-sync: false
       test-job: false
-      windows: true
     permissions:
       contents: read
+
+  # `ci-node.yml` exposes no outputs, so this copies its tier `case`: the jobs
+  # below run in the `fast`, `full` and `nightly` tiers, on Windows only in
+  # `nightly`, and not on a draft or the `next` to `main` pull request.
+  select:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tier: ${{ steps.tier.outputs.tier }}
+      tests: ${{ steps.tier.outputs.tests }}
+      os: ${{ steps.tier.outputs.os }}
+    steps:
+      - name: Pick the tier from the event, the target branch and the draft flag
+        id: tier
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REPOSITORY: ${{ github.repository }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          case "$EVENT" in
+            pull_request)
+              if [[ "$BASE_REF" == "$DEFAULT_BRANCH" && "$HEAD_REPOSITORY" == "$REPOSITORY" && "$HEAD_REF" =~ ^(next|develop)$ ]]; then
+                tier=none
+              elif [[ "$DRAFT" == true ]]; then
+                tier=draft
+              elif [[ "$BASE_REF" == "$DEFAULT_BRANCH" ]]; then
+                tier=full
+              else
+                tier=fast
+              fi
+              ;;
+            push)
+              if [[ "$REF_NAME" == "$DEFAULT_BRANCH" ]]; then tier=none; else tier=full; fi
+              ;;
+            schedule) tier=nightly ;;
+            *) tier=full ;;
+          esac
+
+          tests=true
+          if [[ "$tier" == none || "$tier" == draft ]]; then
+            tests=false
+          fi
+
+          os='["ubuntu-latest"]'
+          if [[ "$tier" == nightly ]]; then
+            os='["ubuntu-latest","windows-latest"]'
+          fi
+
+          {
+            echo "tier=${tier}"
+            echo "tests=${tests}"
+            echo "os=${os}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Tier \`${tier}\`: tests ${tests}, runners ${os}" >> "$GITHUB_STEP_SUMMARY"
 
   # The Vitest suite is not part of `checks`: in its own job it runs alongside
   # the build and lint instead of after them, and keeps the mongod cache that
   # the reusable workflow has no input for.
   # The longest job: two runners, each running half of the test files.
   unit:
+    needs: select
+    if: needs.select.outputs.tests == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     defaults:
@@ -54,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ fromJSON(needs.select.outputs.os) }}
         shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +130,8 @@ jobs:
       - run: pnpm --filter @antelopejs/dms-saas test:unit --shard=${{ matrix.shard }}/2
 
   frontend:
+    needs: select
+    if: needs.select.outputs.tests == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     defaults:
@@ -80,7 +140,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ fromJSON(needs.select.outputs.os) }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -91,6 +151,8 @@ jobs:
   # The playground has its own lockfile and tsconfig, so neither `checks` nor
   # the module build typechecks it. It links the interface through its `dist`.
   playground:
+    needs: select
+    if: needs.select.outputs.tests == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     defaults:
@@ -99,7 +161,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ fromJSON(needs.select.outputs.os) }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -113,6 +175,8 @@ jobs:
   # frontend composable reading the DMS auto-imports, which only exist in the
   # workspace `test:frontend` builds.
   test-types:
+    needs: select
+    if: needs.select.outputs.tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -124,6 +188,8 @@ jobs:
   # TLC through the runner of @antelopejs/tooling-configs. The CI configuration
   # of each check: `node .agents/skills/<check>/check.mjs`.
   formal:
+    needs: select
+    if: needs.select.outputs.tests == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     defaults:
@@ -132,7 +198,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ fromJSON(needs.select.outputs.os) }}
         check: [formal-guarded-plan-change]
     steps:
       - uses: actions/checkout@v4
@@ -148,20 +214,25 @@ jobs:
       - run: node .agents/skills/${{ matrix.check }}/check.mjs
 
   # The single check to require on `main`: it keeps the historical job name,
-  # and fails unless every job above succeeded.
+  # and fails when a job above failed or was cancelled, or on a draft. A job
+  # the tier skipped passes it.
   ubuntu:
     if: always()
-    needs: [ci, unit, frontend, playground, test-types, formal]
+    needs: [select, ci, unit, frontend, playground, test-types, formal]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: for result in $RESULTS; do [ "$result" = success ] || exit 1; done
+      - if: >-
+          needs.select.result != 'success' || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || needs.ci.result == 'skipped'
+        run: exit 1
+      - if: needs.select.outputs.tier == 'draft'
+        run: |
+          echo "::error::Draft pull request: only lint and typecheck ran. Mark it ready for review to run the tests."
+          exit 1
   renovate-sync:
     if: >-
       github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/') && github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: write
       actions: write
-    uses: AntelopeJS/.github/.github/workflows/ci-renovate-sync.yml@v1
+    uses: AntelopeJS/.github/.github/workflows/ci-renovate-sync.yml@v2
