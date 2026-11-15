@@ -73,12 +73,12 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@antelopejs/core": "~1.23.2",
-    "@antelopejs/dms": ">=0.20.1 <0.21.0",
-    "@antelopejs/dms-frontend": ">=0.11.1 <0.12.0",
+    "@antelopejs/core": "~1.24.0",
+    "@antelopejs/dms": ">=0.20.2 <0.21.0",
+    "@antelopejs/dms-frontend": ">=0.11.4 <0.12.0",
     "@antelopejs/interface-file-storage": ">=0.1.8 <0.2.0",
     "@antelopejs/interface-mongodb": ">=0.0.8 <0.1.0",
-    "@antelopejs/mongodb": "~1.8.1",
+    "@antelopejs/mongodb": "~1.8.4",
     "@total-typescript/shoehorn": "^0.1.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.0.0",
