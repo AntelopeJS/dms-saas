@@ -30,14 +30,10 @@ The module's typecheck and oxlint's type-aware rules resolve the interface throu
 - Prettier on `frontend-vue`. `pnpm format` applies it; nothing checks it.
 - The documentation check: Markdown links and the code examples in the READMEs and `docs` folders, typechecked through `packages/interface-dms-saas/docs/tsconfig.json`. Only the `checks` CI job runs it, with the file list in `.github/workflows/ci.yml`.
 - The test files' typecheck. `packages/dms-saas/tsconfig.json` covers `src` only, and Vitest strips types without checking them. CI runs it in the `test-types` job: build the interface, then `pnpm --dir packages/dms-saas exec tsc --noEmit -p test`. `test/tsconfig.json` excludes the tests that reach a frontend composable reading the DMS auto-imports, which only exist in the workspace `test:frontend` builds. `test/tsconfig.frontend-auto-imports.json`, which `test/tsconfig.json` references, lists them so type-aware lint still reads them; nothing typechecks them. A new test that reaches such a composable fails the job until it is on both lists.
-- The playground's typecheck (oxlint still lints it). `pnpm --filter @antelopejs/dms-saas dev` transpiles it with `--noCheck`. CI runs it in the `playground` job. Run `.agents/playground`, then `pnpm --dir packages/dms-saas/playground exec tsc --noEmit -p .`.
+- The playground's typecheck (oxlint still lints it). `pnpm --filter @antelopejs/dms-saas dev` transpiles it with `--noCheck`. CI runs it in the `playground` job. Run `pnpm build`, then `pnpm install --dir packages/dms-saas/playground --ignore-workspace --frozen-lockfile`, then `pnpm --dir packages/dms-saas/playground exec tsc --noEmit -p .`.
 - Unused files and exports. `pnpm knip` checks dependencies only. `pnpm --filter <package> knip:all` also reports dead files and exports, and expects findings: confirm each one before you remove it.
 
 The Vitest suite's first run downloads mongod 8.0.8 (about 200 MB) into `~/.cache/mongodb-binaries`.
-
-## Orb
-
-`.agents/setup` belongs to the guardrail pack. `.agents/playground` installs the AntelopeJS CLI and MongoDB, builds the module and installs the playground. The `dms-saas-backend` service runs it before it starts.
 
 <!-- antelopejs-guardrails:start -->
 <!-- Managed by @antelopejs/tooling-configs. `antelopejs-sync` rewrites everything between these markers; write repository-specific guidance outside them. -->
