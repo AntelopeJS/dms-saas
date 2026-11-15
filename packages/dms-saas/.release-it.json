@@ -17,8 +17,7 @@
     "after:bump": [
       "node scripts/checks/write-docs-module-version.mts",
       "git add -u ../..",
-      "git add CHANGELOG.md",
-      "node scripts/publish.mjs"
+      "git add CHANGELOG.md"
     ]
   },
   "plugins": {
@@ -27,7 +26,6 @@
     }
   },
   "npm": {
-    "publish": false,
     "skipChecks": true
   }
 }
