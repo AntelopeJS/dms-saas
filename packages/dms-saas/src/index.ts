@@ -19,7 +19,11 @@ import {
 } from "./automation";
 import { registerBillingLayoutBanners } from "./billing-state";
 import { registerWorkspaceDirectoryHooks } from "./billing-state/directory-hooks";
-import { resolveDevMode, setRuntimeConfig } from "./config";
+import {
+  areScheduledJobsEnabled,
+  resolveDevMode,
+  setRuntimeConfig,
+} from "./config";
 import { registerSaasCrons } from "./crons";
 import { registerSaasHookListeners } from "./hooks";
 import * as billingImplementation from "./implementations/dms-saas/billing";
@@ -73,7 +77,7 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
 }
 
 export async function start(): Promise<void> {
-  registeredCronTasks = registerSaasCrons();
+  registeredCronTasks = areScheduledJobsEnabled() ? registerSaasCrons() : [];
   registerAutomationNodes();
 }
 
