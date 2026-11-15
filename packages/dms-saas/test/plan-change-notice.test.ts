@@ -7,25 +7,31 @@ import type {
   PlanChangeNotice,
   PlanChangePolicy,
 } from "@antelopejs/interface-dms-saas/plan-changes";
-import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import { internal } from "../src/implementations/dms-saas/plan-changes";
+import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import {
   PlanChangeIncompatibleError,
   previewGuardedFreeChange,
   scheduleGuardedFreeChange,
 } from "../src/plan-changes/guarded-free";
 import { registerSubscriptionAccessGate } from "../src/auth/subscription-access-gate";
-import { addTenantMember, createUser, implementWithDms } from "./helpers/dms";
+import {
+  addTenantMember,
+  createUser,
+  tenantRequest,
+  useDmsAuth,
+} from "./helpers/dms";
 import { implementNotificationCore } from "./helpers/notification-core";
 import { useMongoDatabase } from "./helpers/mongo";
+import { insertPlan } from "./helpers/plans";
 import { useSuiteStripe } from "./helpers/stripe";
 import { insertTenant } from "./helpers/workspaces";
 
 useMongoDatabase();
 const stripe = useSuiteStripe();
 implementNotificationCore();
-implementWithDms(tenantAccess, "implementations/dms/tenant-access.js");
+useDmsAuth();
 registerSubscriptionAccessGate();
 
 const validate = vi.fn<PlanChangePolicy["validatePlanChange"]>();
@@ -77,14 +83,13 @@ async function fixture() {
       cancelled = params?.cancel_at_period_end === true;
       return fromPartial({});
     });
-  const [targetId] = await GetModel(PlanModel).insert({
+  const targetPlan = await insertPlan({
+    _id: randomUUID(),
     name: "Free",
     price: 0,
     maxMembers: 10,
   });
-  const targetPlan = await GetModel(PlanModel).get(targetId);
-  if (!targetPlan) throw new Error("Missing plan");
-  return { tenantId, deadline, targetPlan, update };
+  return { tenantId, owner, deadline, targetPlan, update };
 }
 
 describe("a plan-change policy notice", () => {
@@ -104,6 +109,23 @@ describe("a plan-change policy notice", () => {
       { cancel_at_period_end: true },
       expect.anything(),
     );
+  });
+
+  it("reaches the owner through GET /plan/preview", async () => {
+    const { tenantId, owner, targetPlan } = await fixture();
+    validate.mockResolvedValue([RESTART]);
+    const controller = new SaasTenantPlanController();
+    controller.planModel = GetModel(PlanModel);
+
+    const preview = await controller.previewChange(
+      owner,
+      targetPlan._id,
+      undefined,
+      await tenantRequest(owner, tenantId),
+    );
+
+    expect(preview.kind).toBe("downgrade");
+    expect(preview.notices).toEqual([RESTART]);
   });
 
   it("is kept out of the refusal when a blocking entry comes with it", async () => {
