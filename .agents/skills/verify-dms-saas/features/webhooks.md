@@ -35,6 +35,8 @@ The Stripe webhook endpoint and the module's own schedules: signature verificati
 - `a-trial-that-ends-follows-the-status-stripe-reports`: customer.subscription.updated after a trial moves the workspace to past due when the first charge fails (past_due, unpaid, incomplete_expired) and to active when it succeeds, and leaves it alone without the trial marker.
 - `a-failed-payment-moves-only-the-workspaces-that-can-fall-past-due`: invoice.payment_failed moves active and trialing workspaces to past due, mirrors the invoice, and leaves suspended and cancelled workspaces as they are.
 - `invoice-paid-reactivates-a-workspace-only-when-no-invoice-is-left-open`: a past-due workspace with two open invoices stays past due when one is paid and becomes active when the second is paid.
+- `a-deleted-subscription-cancels-the-workspace-billed-on-it`: customer.subscription.deleted for the Stripe subscription a workspace's row holds moves it to cancelled, and its owner's notification feed gains the cancellation notice.
+- `a-deleted-subscription-leaves-a-complimentary-workspace-alone`: the same event for a workspace the operator moved off that subscription (complimentary, no subscription id, put there through the module's own grant) leaves it active and complimentary, sends no cancellation notice and is recorded as success.
 - `a-redelivered-handled-event-is-applied-once`: the same payment_failed event delivered twice is admitted once and leaves the date the workspace fell past due unchanged.
 
 ## How to get to it (user POV)
@@ -61,3 +63,4 @@ dms-control journey "$RUN" webhooks
 | 8.operations.md "Stripe webhooks" | Not driven: reconciliation_required on a failed handler, the 04:00 cleanup of events older than 90 days |
 | 6.faq.md "A trial ended, but the workspace still shows it as trialing" | Not driven: needs a trial the harness cannot end |
 | 7.stripe.md billing-state transitions by webhook: trial end, payment failed per starting status, invoice paid with open invoices, redelivery | webhook-event journeys: signed payloads per starting status |
+| 7.stripe.md a deleted subscription cancels the workspace billed on it, not one already moved off it | webhook-event journeys: a billed workspace reads cancelled with a notice, a complimentary one stays active with none; the sequential case only, since a grant landing between the handler's read and its write cannot be timed from outside; the auto-prorata setting stays off, so no Stripe call is made |

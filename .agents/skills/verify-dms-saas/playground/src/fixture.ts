@@ -366,6 +366,8 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
       status: row?.status ?? null,
       pastDueSince: row?.pastDueSince?.toISOString() ?? null,
       planId: row?.planId ?? null,
+      stripeSubscriptionId: row?.stripeSubscriptionId ?? null,
+      isComplimentary: row?.isComplimentary ?? false,
     };
   }
 }
