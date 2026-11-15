@@ -53,6 +53,7 @@ import { computeUnusedPortionCents, nowInStripeSeconds } from "./proration";
 import {
   ACTIVE_STATUS,
   asCustomerId,
+  cancelSubscriptionBilledOn,
   findTenantByCustomerId,
   formatAmount,
   mirrorInvoiceFromEvent,
@@ -300,7 +301,7 @@ export async function handleSubscriptionDeleted(
   if (!tenant) return;
   if (await isSubscriptionAlreadyLeft(tenant._id, subscription.id)) return;
   if (await applyPendingFreePlanOnCancellation(tenant._id)) return;
-  await updateSubscriptionStatus(tenant._id, CANCELLED_STATUS);
+  if (!(await cancelSubscriptionBilledOn(tenant._id, subscription.id))) return;
   await applyAutoProrataIfEnabled(customerId, tenant._id, subscription);
   emitAutomationEvent("saas.subscription-cancelled", {
     tenantId: tenant._id,

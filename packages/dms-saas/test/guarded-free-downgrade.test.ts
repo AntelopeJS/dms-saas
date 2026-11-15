@@ -28,7 +28,10 @@ import {
   isTenantSubscriptionBlocked,
   registerSubscriptionAccessGate,
 } from "../src/auth/subscription-access-gate";
-import { updateSubscriptionStatus } from "../src/stripe/webhook-shared";
+import {
+  cancelSubscriptionBilledOn,
+  updateSubscriptionStatus,
+} from "../src/stripe/webhook-shared";
 import { prepareGuardedPlanChange } from "../src/plan-changes/guarded-state";
 import { addTenantMember, createUser, implementWithDms } from "./helpers/dms";
 import { implementNotificationCore } from "./helpers/notification-core";
@@ -400,7 +403,7 @@ describe("paid-to-Free orchestration with real inventory admission, payment susp
       guardedPlanChange: { phase: "blocked" },
     });
     await updateSubscriptionStatus(tenantId, "active");
-    await updateSubscriptionStatus(tenantId, "cancelled");
+    await cancelSubscriptionBilledOn(tenantId, "stripe-sub");
     expect((await read()).status).toBe("active");
     expect((await isTenantSubscriptionBlocked(tenantId)).blocked).toBe(true);
     expect(
