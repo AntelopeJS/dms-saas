@@ -2,7 +2,9 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import type {
   PlanChangePolicy,
   PlanChangeValidationRequest,
+  PlanChangeFinding,
   PlanChangeIncompatibility,
+  PlanChangeNotice,
   TenantPlanConstraints,
   PlanChangeActivation,
 } from "@antelopejs/interface-dms-saas/plan-changes";
@@ -85,25 +87,48 @@ export function getPlanChangePolicy(name?: string): PlanChangePolicy {
   return policy;
 }
 
-/** SaaS owns seat semantics; applications validate the rest of their inventory. */
+/** What a policy and the seat limit say about a plan change. */
+export interface PlanChangeReview {
+  incompatibilities: PlanChangeIncompatibility[];
+  notices: PlanChangeNotice[];
+}
+
+function isNotice(finding: PlanChangeFinding): finding is PlanChangeNotice {
+  return finding.severity === "notice";
+}
+
+/**
+ * SaaS owns seat semantics; applications validate the rest of their inventory.
+ * Only an entry marked as a notice leaves the change allowed: any other
+ * severity, including one an untyped policy invents, refuses it.
+ */
+export async function reviewGuardedPlanChange(
+  request: PlanChangeValidationRequest,
+  policyName?: string,
+): Promise<PlanChangeReview> {
+  const policy = getPlanChangePolicy(policyName);
+  const findings = await policy.validatePlanChange(request);
+  const notices = findings.filter(isNotice);
+  const incompatibilities = findings.filter(
+    (finding): finding is PlanChangeIncompatibility => !isNotice(finding),
+  );
+  const occupied = await countOccupiedSeats(request.tenantId);
+  if (!fitsWithinSeatLimit(request.targetPlan.maxMembers, occupied)) {
+    incompatibilities.push({
+      code: "seat_limit",
+      message: `The target plan permits ${request.targetPlan.maxMembers} seats; ${occupied} are occupied including invitations`,
+      resource: "members",
+    });
+  }
+  return { incompatibilities, notices };
+}
+
+/** The entries that refuse a plan change; notices never do. */
 export async function validateGuardedPlanChange(
   request: PlanChangeValidationRequest,
   policyName?: string,
 ): Promise<PlanChangeIncompatibility[]> {
-  const policy = getPlanChangePolicy(policyName);
-  const incompatibilities = await policy.validatePlanChange(request);
-  const occupied = await countOccupiedSeats(request.tenantId);
-  if (!fitsWithinSeatLimit(request.targetPlan.maxMembers, occupied)) {
-    return [
-      ...incompatibilities,
-      {
-        code: "seat_limit",
-        message: `The target plan permits ${request.targetPlan.maxMembers} seats; ${occupied} are occupied including invitations`,
-        resource: "members",
-      },
-    ];
-  }
-  return incompatibilities;
+  return (await reviewGuardedPlanChange(request, policyName)).incompatibilities;
 }
 
 /** No acquisition, drain or mutation: callers enter inventory admission first. */

@@ -1,5 +1,6 @@
 import { Logging } from "@antelopejs/interface-core/logging";
 import type { AvailableUpcomingInvoicePreview } from "@antelopejs/interface-dms-saas/billing";
+import type { PlanChangeNotice } from "@antelopejs/interface-dms-saas/plan-changes";
 import type Stripe from "stripe";
 import {
   type Plan,
@@ -69,6 +70,11 @@ export interface PlanChangePreview {
   renewal: PlanChangeRenewal;
   /** Stripe seconds the upgrade was priced at, sent back on confirm. */
   prorationDate: number | null;
+  /**
+   * What the plan-change policy asks the owner to read before confirming.
+   * Never blocks the change; empty when no policy applies.
+   */
+  notices: PlanChangeNotice[];
 }
 
 /** Everything a preview is computed from. */
@@ -81,6 +87,7 @@ export interface PlanChangePreviewInput {
   ownerEmail: string;
   /** Billing country typed in the upgrade dialog, before it is saved. */
   country: string | null;
+  notices: PlanChangeNotice[];
 }
 
 interface PreviewBase {
@@ -174,6 +181,7 @@ function basePreview(
       interval: target.interval,
     },
     prorationDate: null,
+    notices: base.input.notices,
   };
 }
 

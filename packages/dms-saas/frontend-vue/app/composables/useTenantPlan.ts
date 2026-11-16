@@ -1,3 +1,4 @@
+import type { PlanChangeNotice } from './usePlanChangeReview'
 import type { PlanInterval } from './usePlanIntervalLabel'
 
 const TENANT_PLAN_ENDPOINT = '/api/saas/tenant/plan'
@@ -157,6 +158,8 @@ export interface PlanChangePreview {
 	isChargeAvailable: boolean
 	renewal: PlanChangeRenewal
 	prorationDate: number | null
+	/** What the plan-change policy asks the owner to read before confirming. */
+	notices: PlanChangeNotice[]
 }
 
 export interface CancellationResult {
