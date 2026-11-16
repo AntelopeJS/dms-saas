@@ -47,7 +47,14 @@ import "./db";
 import "./notifications";
 import "./routes";
 
-let registeredCronTasks: ScheduledTask[] = [];
+/**
+ * The jobs of a started module, scheduled once the DMS fires
+ * `DATABASE_INITIALIZED`: every job reads tables of the schemas the DMS binds
+ * at its start. Empty until then; `undefined` while the module is stopped or
+ * runs without scheduled jobs, so a handler the DMS already took schedules
+ * nothing after `stop()`.
+ */
+let registeredCronTasks: ScheduledTask[] | undefined;
 
 /**
  * Starts the module with its configuration. While the SaaS mode registration
@@ -92,12 +99,9 @@ async function destroyCronTasks(tasks: ScheduledTask[]): Promise<void> {
   }
 }
 
-/**
- * Schedules the jobs once the DMS has bound its schemas, and replaces them
- * when it binds them again on its next start: every job reads the tables.
- */
 async function scheduleCronTasks(): Promise<undefined> {
   const previous = registeredCronTasks;
+  if (previous === undefined) return undefined;
   registeredCronTasks = registerSaasCrons();
   await destroyCronTasks(previous);
   return undefined;
@@ -105,6 +109,7 @@ async function scheduleCronTasks(): Promise<undefined> {
 
 export async function start(): Promise<void> {
   if (areScheduledJobsEnabled()) {
+    registeredCronTasks = [];
     RegisterHook(Hook.DATABASE_INITIALIZED, scheduleCronTasks);
   }
   registerAutomationNodes();
@@ -112,8 +117,8 @@ export async function start(): Promise<void> {
 
 export async function stop(): Promise<void> {
   UnregisterHook(Hook.DATABASE_INITIALIZED, scheduleCronTasks);
-  const tasks = registeredCronTasks;
-  registeredCronTasks = [];
+  const tasks = registeredCronTasks ?? [];
+  registeredCronTasks = undefined;
   await destroyCronTasks(tasks);
   unregisterAutomationNodes();
 }

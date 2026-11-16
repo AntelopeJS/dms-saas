@@ -1,6 +1,8 @@
 import {
   Hook,
+  RegisterHook,
   SettleHook,
+  UnregisterHook,
   UnsettleHook,
 } from "@antelopejs/interface-dms/hooks";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -81,6 +83,35 @@ describe("module start", () => {
     await SettleHook(Hook.DATABASE_INITIALIZED);
 
     expect(schedule).not.toHaveBeenCalled();
+  });
+
+  it("schedules no job when it stopped while the DMS was settling the hook", async () => {
+    let release = (): void => undefined;
+    const earlierHandler = async (): Promise<undefined> => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return undefined;
+    };
+    RegisterHook(Hook.DATABASE_INITIALIZED, earlierHandler);
+    setRuntimeConfig(configWith({}));
+    await start();
+    const settling = SettleHook(Hook.DATABASE_INITIALIZED);
+    await stop();
+    release();
+    await settling;
+    UnregisterHook(Hook.DATABASE_INITIALIZED, earlierHandler);
+
+    expect(cron.getTasks().size).toBe(0);
+  });
+
+  it("schedules the ten jobs when it starts after the DMS settled the hook", async () => {
+    setRuntimeConfig(configWith({}));
+    await SettleHook(Hook.DATABASE_INITIALIZED);
+    await start();
+    await vi.waitFor(() => {
+      expect(cron.getTasks().size).toBe(JOB_COUNT);
+    });
   });
 
   it("schedules no job when scheduledJobs is false", async () => {
