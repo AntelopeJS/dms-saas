@@ -1,5 +1,10 @@
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { Logging } from "@antelopejs/interface-core/logging";
+import {
+  Hook,
+  RegisterHook,
+  UnregisterHook,
+} from "@antelopejs/interface-dms/hooks";
 import { AddFrontendModule } from "@antelopejs/interface-dms/page";
 import { RegisterSaasMode } from "@antelopejs/interface-dms/utils/saas-mode";
 import * as billingInterface from "@antelopejs/interface-dms-saas/billing";
@@ -76,20 +81,39 @@ export async function construct(config: DmsSaasConfig): Promise<void> {
   await AddFrontendModule(frontendModule(config));
 }
 
-export async function start(): Promise<void> {
-  registeredCronTasks = areScheduledJobsEnabled() ? registerSaasCrons() : [];
-  registerAutomationNodes();
-}
-
-export async function stop(): Promise<void> {
+async function destroyCronTasks(tasks: ScheduledTask[]): Promise<void> {
   const teardowns = await Promise.allSettled(
-    registeredCronTasks.map(async (task) => task.destroy()),
+    tasks.map(async (task) => task.destroy()),
   );
   for (const teardown of teardowns) {
     if (teardown.status === "rejected") {
       Logging.Error("A cron task failed to stop", teardown.reason);
     }
   }
+}
+
+/**
+ * Schedules the jobs once the DMS has bound its schemas, and replaces them
+ * when it binds them again on its next start: every job reads the tables.
+ */
+async function scheduleCronTasks(): Promise<undefined> {
+  const previous = registeredCronTasks;
+  registeredCronTasks = registerSaasCrons();
+  await destroyCronTasks(previous);
+  return undefined;
+}
+
+export async function start(): Promise<void> {
+  if (areScheduledJobsEnabled()) {
+    RegisterHook(Hook.DATABASE_INITIALIZED, scheduleCronTasks);
+  }
+  registerAutomationNodes();
+}
+
+export async function stop(): Promise<void> {
+  UnregisterHook(Hook.DATABASE_INITIALIZED, scheduleCronTasks);
+  const tasks = registeredCronTasks;
   registeredCronTasks = [];
+  await destroyCronTasks(tasks);
   unregisterAutomationNodes();
 }
