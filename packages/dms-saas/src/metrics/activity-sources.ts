@@ -58,50 +58,86 @@ async function platformSources(limit: number): Promise<ActivitySources> {
   return { documents, actions, workspaces, names };
 }
 
-/** A workspace's invoices the feed shows, newest first, cut at the limit. */
+/**
+ * A workspace's invoices the feed shows, in stored order, from the date of
+ * the newest `limit` of them on: the feed's own sort then cuts them as it cut
+ * every invoice, ties included.
+ */
 async function workspaceDocuments(
   tenantId: string,
   scope: ActivityFeedScope,
   limit: number,
 ): Promise<Invoice[]> {
   if (scope.documentStatuses.length === 0) return [];
-  const rows = await GetModel(InvoiceModel, tenantId)
-    .table.getAll(scope.documentStatuses, "status")
-    .filter((row) => row.key("documentType").eq(INVOICE_DOCUMENT_TYPE))
-    .map((row) =>
-      row.merge({ [FEED_AT]: row.key("paidAt").default(row.key("issuedAt")) }),
-    )
+  const shown = () =>
+    GetModel(InvoiceModel, tenantId).table.filter((row) =>
+      row
+        .key("documentType")
+        .eq(INVOICE_DOCUMENT_TYPE)
+        .and(
+          ValueProxy.constant(scope.documentStatuses).includes(
+            row.key("status"),
+          ),
+        ),
+    );
+  const boundary = await shown()
+    .map((row) => ({
+      [FEED_AT]: row.key("paidAt").default(row.key("issuedAt")),
+    }))
     .orderBy(FEED_AT, "desc")
-    .slice(0, limit)
+    .nth(limit - 1)
+    .default(null)
     .run();
+  const rows = await (
+    boundary
+      ? shown().filter((row) =>
+          row.key("paidAt").default(row.key("issuedAt")).ge(boundary[FEED_AT]),
+        )
+      : shown()
+  ).run();
   return rows
     .map((row) => InvoiceModel.fromDatabase(row))
     .filter((row): row is Invoice => row !== undefined);
 }
 
-/** A workspace's operator actions the feed shows, newest first, cut at the limit. */
+/**
+ * A workspace's operator actions the feed shows, in stored order, from the
+ * date of the newest `limit` of them on: the feed's own sort then cuts them as
+ * it cut every action, ties included.
+ */
 async function workspaceActions(
   tenantId: string,
   scope: ActivityFeedScope,
   limit: number,
 ): Promise<OperatorAction[]> {
   if (scope.actions.length === 0) return [];
-  return GetModel(OperatorActionModel)
-    .table.getAll(tenantId, "tenantId")
-    .filter((row) =>
-      row
-        .key("status")
-        .eq(SUCCEEDED_STATUS)
-        .and(ValueProxy.constant(scope.actions).includes(row.key("action"))),
-    )
-    .map((row) =>
-      row.merge({
-        [FEED_AT]: row.key("effectiveAt").default(row.key("createdAt")),
-      }),
-    )
+  const shown = () =>
+    GetModel(OperatorActionModel)
+      .table.getAll(tenantId, "tenantId")
+      .filter((row) =>
+        row
+          .key("status")
+          .eq(SUCCEEDED_STATUS)
+          .and(ValueProxy.constant(scope.actions).includes(row.key("action"))),
+      );
+  const boundary = await shown()
+    .map((row) => ({
+      [FEED_AT]: row.key("effectiveAt").default(row.key("createdAt")),
+    }))
     .orderBy(FEED_AT, "desc")
-    .slice(0, limit)
+    .nth(limit - 1)
+    .default(null)
     .run();
+  return (
+    boundary
+      ? shown().filter((row) =>
+          row
+            .key("effectiveAt")
+            .default(row.key("createdAt"))
+            .ge(boundary[FEED_AT]),
+        )
+      : shown()
+  ).run();
 }
 
 async function workspaceSources(
