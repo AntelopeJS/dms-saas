@@ -5,7 +5,7 @@ import {
   UnregisterHook,
   UnsettleHook,
 } from "@antelopejs/interface-dms/hooks";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import cron from "node-cron";
 import { start, stop } from "../src";
 import { setRuntimeConfig } from "../src/config";
@@ -97,13 +97,16 @@ describe("module start", () => {
       return undefined;
     };
     RegisterHook(Hook.DATABASE_INITIALIZED, earlierHandler);
+    onTestFinished(() => {
+      UnregisterHook(Hook.DATABASE_INITIALIZED, earlierHandler);
+      release();
+    });
     setRuntimeConfig(configWith({}));
     await start();
     const settling = SettleHook(Hook.DATABASE_INITIALIZED);
     await stop();
     release();
     await settling;
-    UnregisterHook(Hook.DATABASE_INITIALIZED, earlierHandler);
 
     expect(cron.getTasks().size).toBe(0);
   });

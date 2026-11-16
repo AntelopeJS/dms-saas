@@ -109,7 +109,7 @@ async function scheduleCronTasks(): Promise<undefined> {
 
 export async function start(): Promise<void> {
   if (areScheduledJobsEnabled()) {
-    registeredCronTasks = [];
+    registeredCronTasks ??= [];
     RegisterHook(Hook.DATABASE_INITIALIZED, scheduleCronTasks);
   }
   registerAutomationNodes();
