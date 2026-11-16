@@ -41,6 +41,7 @@ async function put(ctx, tenantId, planId, status, stripe = true) {
 export const operatorRuleJourneys = [
   {
     id: "grant-free-access-follows-the-plan-and-date-rules",
+    tag: "@smoke",
     title: "the grant answers each documented case: a free date in the future, a past date, an unknown plan, an unsold plan, another audience, the workspace's own plan once unsold, and a Stripe subscription that needs acknowledging",
     entryPoint: "POST /api/saas/workspaces/:tenantId/grant-free-access",
     async run(/** @type {Ctx} */ ctx) {
@@ -83,6 +84,43 @@ export const operatorRuleJourneys = [
       await ctx.verify("an unknown workspace is refused", [check("404 or 400", unknownTenant.status === 404 || unknownTenant.status === 400, unknownTenant.body)]);
       const noType = await grant("grant a business plan to the default workspace, which has no customer type", { planId: business.id }, "default");
       await ctx.verify("a workspace with no customer type is offered every plan", [check("200", noType.status === 200, noType.body)]);
+    },
+  },
+  {
+    id: "free-access-is-refused-on-a-cancelled-workspace",
+    title: "a workspace its owner deleted and a billed workspace that ended are refused free access through the API with saas.errors.workspace.is_cancelled and stay cancelled, and the header offers no grant",
+    entryPoint: "POST /api/saas/workspaces/:tenantId/grant-free-access, Customers › Workspaces › a workspace",
+    async run(/** @type {Ctx} */ ctx) {
+      const plan = await createPlan(ctx, "gift", { order: 0 });
+      const deleted = await register(ctx, "leaver", { workspaceName: "Deleted Co" });
+      const removal = await saas(ctx, "the owner deletes the workspace", "POST", "/workspaces/current/delete", { as: "leaver", body: { confirmName: "Deleted Co" } });
+      await ctx.verify("the owner's deletion is accepted", [check("200", removal.status === 200, removal.body)]);
+      const ended = await register(ctx, "ended", { workspaceName: "Ended Co" });
+      await put(ctx, ended.tenantId, plan.id, "cancelled", true);
+      for (const [label, tenantId] of [["the deleted workspace", deleted.tenantId], ["the ended billed workspace", ended.tenantId]]) {
+        const before = await saas(ctx, `${label} before the grant`, "GET", `/workspaces/${tenantId}/overview`);
+        const grant = await saas(ctx, `grant free access to ${label}`, "POST", `/workspaces/${tenantId}/grant-free-access`, { body: { planId: plan.id } });
+        const after = await saas(ctx, `${label} after the grant`, "GET", `/workspaces/${tenantId}/overview`);
+        await ctx.verify(`${label} is refused and stays cancelled`, [
+          check(`${label} is cancelled before the grant`, text(before.body, "status") === "cancelled", before.body),
+          check(`${label}: 400 saas.errors.workspace.is_cancelled`, grant.status === 400 && code(grant) === "saas.errors.workspace.is_cancelled", grant.body),
+          check(`${label} is still cancelled and not complimentary`, text(after.body, "status") === "cancelled" && pick(after.body, "isComplimentary") !== true, after.body),
+        ]);
+      }
+      const tab = await ctx.tab("admin");
+      await tab.signIn("admin");
+      await tab.goto(`/modules/saas/customers/workspaces/${deleted.tenantId}`);
+      await ctx.verify("the header of the deleted workspace has no Grant free access button", [
+        await tab.visible({ role: "heading", name: "Deleted Co" }, { timeoutMs: 60_000 }),
+        await tab.visible({ role: "button", name: "Grant free access", exact: true }, { hidden: true, timeoutMs: 5_000 }),
+      ]);
+      await tab.goto(`/modules/saas/customers/workspaces/${ended.tenantId}`);
+      await ctx.verify("the header of the ended billed workspace has no Change plan button", [
+        await tab.visible({ role: "heading", name: "Ended Co" }, { timeoutMs: 60_000 }),
+        await tab.visible({ role: "button", name: "Change plan", exact: true }, { hidden: true, timeoutMs: 5_000 }),
+      ]);
+      await tab.click({ role: "button", name: "More actions" });
+      await ctx.verify("its menu shows Grant free access disabled", [await tab.enabled({ role: "menuitem", name: "Grant free access" }, { disabled: true, timeoutMs: 10_000 })]);
     },
   },
   {

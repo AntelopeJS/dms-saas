@@ -111,7 +111,7 @@ dms-control journey "$RUN" public
 
 - `registration.paymentMethod` is driven with a placeholder key (the server applies `none`) and with a usable-looking key `sk_test_verifysaaslocal`: the checks that need it refuse before any Stripe call, so nothing is sent to Stripe.
 - Options are set through `VERIFY_SAAS_*` variables of `playground/antelope.config.ts` and a backend restart (`withConfig`).
-- Known finding: `invitation-only-closes-every-registration-route` fails at its last step. After the backend restarts with `admission: "invitation-only"` while the frontend server keeps running, `/register` renders the 500 page ("The core error.500.description translation must be loaded") instead of the closed screen. A backend started in invitation-only, or restarted without changing the option, renders the closed screen. Every API check of the journey passes.
+- Known finding, listed in the journey's `knownFailures`: `invitation-only-closes-every-registration-route` fails at its last step. After the backend restarts with `admission: "invitation-only"` while the frontend server keeps running, `/register` renders the 500 page ("The core error.500.description translation must be loaded") instead of the closed screen. A backend started in invitation-only, or restarted without changing the option, renders the closed screen. Every API check of the journey passes.
 - Plans are created with `audience: "any"` and `billingMode: "flat"`, as the editor sends them.
 
 ## Coverage
