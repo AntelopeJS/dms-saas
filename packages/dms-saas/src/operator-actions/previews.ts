@@ -133,28 +133,17 @@ function ownerOf(view: WorkspaceOperatorView): OwnerRef | null {
 async function lastSuspension(
   tenantId: string,
 ): Promise<OperatorAction | undefined> {
-  const suspensions = () =>
-    GetModel(OperatorActionModel)
-      .table.getAll(tenantId, "tenantId")
-      .filter((row) =>
-        row
-          .key("action")
-          .eq(SUSPEND_ACTION)
-          .and(row.key("status").eq(SUCCEEDED_STATUS)),
-      );
-  const latest: OperatorAction | null = await suspensions()
-    .orderBy("createdAt", "desc")
-    .nth(0)
-    .default(null)
+  const actions: OperatorAction[] = await GetModel(OperatorActionModel)
+    .table.getAll(tenantId, "tenantId")
     .run();
-  if (!latest) return undefined;
-  const first: OperatorAction | null = await suspensions()
-    .filter((row) => row.key("createdAt").eq(latest.createdAt))
-    .orderBy("_id", "asc")
-    .nth(0)
-    .default(null)
-    .run();
-  return first ?? latest;
+  return actions
+    .filter(
+      (action) =>
+        action.action === SUSPEND_ACTION && action.status === SUCCEEDED_STATUS,
+    )
+    .sort(
+      (left, right) => +new Date(right.createdAt) - +new Date(left.createdAt),
+    )[0];
 }
 
 /** Who loses access, what Stripe stops and who is told, for one workspace. */

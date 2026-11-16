@@ -145,22 +145,11 @@ export function sumInReportingCurrency(
   amounts: readonly MinorAmount[],
   reportingCurrency: string,
 ): ReportingTotal {
+  const currency = reportingCurrency.toUpperCase();
   const totals = amounts
     .filter((amount) => amount.amountMinor !== 0 && amount.currency)
     .map((amount) => ({ ...amount, currency: amount.currency.toUpperCase() }))
     .reduce(addTo, new Map<string, number>());
-  return reportingTotal(totals, reportingCurrency);
-}
-
-/**
- * The total of the reporting currency out of totals per upper-case currency;
- * every other currency listed apart, a zero total included.
- */
-export function reportingTotal(
-  totals: ReadonlyMap<string, number>,
-  reportingCurrency: string,
-): ReportingTotal {
-  const currency = reportingCurrency.toUpperCase();
   const otherCurrencies = [...totals.entries()]
     .filter(([code]) => code !== currency)
     .map(([code, amountMinor]) => ({ currency: code, amountMinor }))

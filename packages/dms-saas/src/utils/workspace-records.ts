@@ -42,8 +42,6 @@ function firstByWorkspace<Row extends Table, T>(
   return first;
 }
 
-const INSTANCE_FIELD = "_instance";
-
 function groupByWorkspace<T extends Table>(rows: T[]): Map<string, T[]> {
   const groups = new Map<string, T[]>();
   for (const row of rows) {
@@ -61,7 +59,7 @@ function groupByWorkspace<T extends Table>(rows: T[]): Map<string, T[]> {
  * `findOne` picks them, the member count and the invoices.
  */
 export async function loadWorkspaceRecords(): Promise<WorkspaceRecords> {
-  const [subscriptionRows, billingInfoRows, memberCounts, invoices] =
+  const [subscriptionRows, billingInfoRows, members, invoices] =
     await Promise.all([
       GetModel(TenantSubscriptionModel, CROSS_INSTANCE)
         .table.orderBy("updatedAt", "desc")
@@ -69,16 +67,14 @@ export async function loadWorkspaceRecords(): Promise<WorkspaceRecords> {
       GetModel(TenantBillingInfoModel, CROSS_INSTANCE)
         .table.orderBy("updatedAt", "desc")
         .run(),
-      GetModel(TenantMemberModel, CROSS_INSTANCE)
-        .table.group(INSTANCE_FIELD, (members, tenantId) => ({
-          tenantId: tenantId.cast<string>(),
-          count: members.count(),
-        }))
-        .run(),
+      GetModel(TenantMemberModel, CROSS_INSTANCE).listAll(),
       GetModel(InvoiceModel, CROSS_INSTANCE).getAllInvoices(),
     ]);
   const membersCounts = new Map(
-    memberCounts.map(({ tenantId, count }) => [tenantId, count]),
+    [...groupByWorkspace(members)].map(([tenantId, rows]) => [
+      tenantId,
+      rows.length,
+    ]),
   );
   return {
     subscriptions: firstByWorkspace(subscriptionRows, (row) =>
