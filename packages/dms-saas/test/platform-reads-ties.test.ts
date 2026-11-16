@@ -60,19 +60,20 @@ async function insertSuspension(
 }
 
 describe("the dashboard's open invoices", () => {
-  it("lists a currency whose open invoices sum to zero", async () => {
+  it("counts an open invoice of total 0 and lists a currency whose open invoices sum to zero", async () => {
     const tenantId = "tenant-open";
     await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
     await insertOpenInvoice(tenantId, "usd", 500);
     await insertOpenInvoice(tenantId, "usd", -500);
     await insertOpenInvoice(tenantId, "eur", 100);
+    await insertOpenInvoice(tenantId, "gbp", 0);
     await insertOpenInvoice(tenantId, "chf", 300);
     await insertOpenInvoice(tenantId, "chf", 200);
 
     const open = await loadOpenInvoices("EUR");
 
     expect(open).toEqual({
-      count: 5,
+      count: 6,
       awaiting: {
         amountMinor: 100,
         currency: "EUR",

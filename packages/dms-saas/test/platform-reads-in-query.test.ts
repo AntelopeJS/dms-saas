@@ -356,6 +356,34 @@ describe("the dashboard's open invoices counted in the query", () => {
     expect(previous.count).toBe(6);
     expect(current).toEqual(previous);
   });
+
+  it("counts and sums 480 random open invoices, zero totals included, as the full read did", async () => {
+    let seed = 3385;
+    const next = (bound: number): number => {
+      seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648;
+      return seed % bound;
+    };
+    const currencies = ["eur", "EUR", "usd", "gbp", "chf", "jpy"];
+    const tenants = ["random-a", "random-b", "random-c", "random-d"];
+    for (const tenantId of tenants) {
+      await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
+    }
+    for (let index = 0; index < 480; index += 1) {
+      const total = [0, 0, 100, -100, 250, 999][next(6)]! * (1 + next(3));
+      await insertDocument(tenants[next(tenants.length)]!, {
+        status: "open",
+        issued: index,
+        currency: currencies[next(currencies.length)],
+        total,
+      });
+    }
+    const previous = await previousOpenInvoices("EUR");
+
+    const current = await loadOpenInvoices("EUR");
+
+    expect(previous.count).toBeGreaterThan(480);
+    expect(current).toEqual(previous);
+  });
 });
 
 describe("the pending cron notifications filtered in the query", () => {
