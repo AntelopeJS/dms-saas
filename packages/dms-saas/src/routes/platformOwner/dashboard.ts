@@ -71,24 +71,18 @@ async function loadAttentionMigrations(): Promise<MigrationAttention> {
   };
 }
 
-/** The open invoices of the platform: how many, and what they await in total. */
-export async function loadOpenInvoices(
+async function loadOpenInvoices(
   currency: string,
 ): Promise<OpenInvoicesAttention> {
-  const byCurrency = await GetModel(InvoiceModel, CROSS_INSTANCE)
+  const open: Invoice[] = await GetModel(InvoiceModel, CROSS_INSTANCE)
     .table.getAll(OPEN_STATUS, "status")
-    .group("currency", (invoices, invoiceCurrency) => ({
-      currency: invoiceCurrency,
-      count: invoices.count(),
-      total: invoices.sum("total"),
-    }))
     .run();
   return {
-    count: byCurrency.reduce((count, group) => count + group.count, 0),
+    count: open.length,
     awaiting: sumInReportingCurrency(
-      byCurrency.map((group) => ({
-        amountMinor: group.total,
-        currency: group.currency,
+      open.map((invoice) => ({
+        amountMinor: invoice.total,
+        currency: invoice.currency,
       })),
       currency,
     ),

@@ -12,7 +12,6 @@ import {
 } from "../i18n/composed-text";
 import type { OperatorAction } from "../operator-actions/db/operator-action.table";
 import type { WorkspaceOperatorAction } from "../operator-actions/types";
-import { BILLING_DOCUMENT_STATUSES } from "../utils/billing-document-status";
 import { getRowInstance } from "../utils/row-instance";
 import { MS_PER_DAY } from "../utils/time";
 import { isNumber, isString } from "../utils/primitive-guards";
@@ -97,23 +96,21 @@ const DOCUMENT_LOOKS: Partial<Record<BillingDocumentStatus, DocumentLook>> = {
   },
 };
 
-/** An action of one kind whose look depends on the action's details. */
-interface ActionLookOf {
-  kind: EntryKind;
-  of: (action: OperatorAction) => DocumentLook;
-}
+type ActionLookOf = (action: OperatorAction) => ActionLook;
 
-const INVITATION_SENT_LOOK: DocumentLook = {
+const INVITATION_SENT_LOOK: ActionLook = {
+  kind: "lifecycle",
   icon: "i-ph-envelope-simple",
   tone: "neutral",
   title: "invitation_sent",
 };
 
-const INVITATION_SEND_LOOKS = new Map<string, DocumentLook>([
+const INVITATION_SEND_LOOKS = new Map<string, ActionLook>([
   ["sent", INVITATION_SENT_LOOK],
   [
     "failed",
     {
+      kind: "lifecycle",
       icon: "i-ph-warning",
       tone: "warning",
       title: "invitation_email_failed",
@@ -125,12 +122,9 @@ const INVITATION_SEND_LOOKS = new Map<string, DocumentLook>([
  * The first e-mail of an owner invitation reads by its outcome: the operator
  * learns from the feed too whether the owner was told.
  */
-const invitationSendLook: ActionLookOf = {
-  kind: "lifecycle",
-  of: (action) =>
-    INVITATION_SEND_LOOKS.get(detailString(action, "emailDelivery")) ??
-    INVITATION_SENT_LOOK,
-};
+const invitationSendLook: ActionLookOf = (action) =>
+  INVITATION_SEND_LOOKS.get(detailString(action, "emailDelivery")) ??
+  INVITATION_SENT_LOOK;
 
 const ACTION_LOOKS: Partial<
   Record<WorkspaceOperatorAction, ActionLook | ActionLookOf>
@@ -181,36 +175,12 @@ const ACTION_LOOKS: Partial<
 };
 
 function isLookOf(look: ActionLook | ActionLookOf): look is ActionLookOf {
-  return "of" in look;
+  return typeof look === "function";
 }
 
 function lookOf(action: OperatorAction): ActionLook | undefined {
   const look = ACTION_LOOKS[action.action];
-  return look !== undefined && isLookOf(look)
-    ? { kind: look.kind, ...look.of(action) }
-    : look;
-}
-
-/** What a feed of one kind can show, so its sources are read already cut. */
-export interface ActivityFeedScope {
-  /** The statuses of the billing documents the feed shows. */
-  documentStatuses: BillingDocumentStatus[];
-  /** The operator actions the feed shows, once they succeeded. */
-  actions: string[];
-}
-
-/** The billing documents and operator actions a feed of a kind shows. */
-export function activityFeedScope(kind: ActivityKind): ActivityFeedScope {
-  const shows = (entryKind: EntryKind): boolean =>
-    kind === "all" || kind === entryKind;
-  return {
-    documentStatuses: shows("billing")
-      ? BILLING_DOCUMENT_STATUSES.filter((status) => DOCUMENT_LOOKS[status])
-      : [],
-    actions: Object.entries(ACTION_LOOKS)
-      .filter(([, look]) => look !== undefined && shows(look.kind))
-      .map(([action]) => action),
-  };
+  return look !== undefined && isLookOf(look) ? look(action) : look;
 }
 
 function key(name: string): string {
