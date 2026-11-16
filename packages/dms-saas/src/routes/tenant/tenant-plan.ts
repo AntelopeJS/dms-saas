@@ -400,15 +400,15 @@ export class SaasTenantPlanController extends Controller(
     const currentPlan = subscription?.planId
       ? ((await this.planModel.get(subscription.planId)) ?? null)
       : null;
-    if (
+    const isGuardedFreeChange =
       hasPlanChangePolicy() &&
       subscription?.stripeSubscriptionId &&
-      !isPaidPlan(target)
-    ) {
-      await planChangeResponse(() =>
-        previewGuardedFreeChange(tenantId, target),
-      );
-    }
+      !isPaidPlan(target);
+    const notices = isGuardedFreeChange
+      ? await planChangeResponse(() =>
+          previewGuardedFreeChange(tenantId, target),
+        )
+      : [];
     return withStripeAvailability(async () => {
       await syncCustomerPreferredLocale(
         subscription?.stripeCustomerId,
@@ -422,6 +422,7 @@ export class SaasTenantPlanController extends Controller(
         billingInfo,
         ownerEmail: user.email,
         country: asQueryString(country),
+        notices,
       });
     });
   }

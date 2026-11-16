@@ -355,6 +355,7 @@
 					"incompatible_title": "{plan} can't take this workspace yet",
 					"incompatible_description": "The workspace uses more than {plan} allows. Bring it within these limits, then check again: nothing changes until then.",
 					"incompatible_list": "What {plan} doesn't allow",
+					"notices_title": "Before you confirm",
 					"check_again": "Check again",
 					"load_failed": "Couldn't price this change",
 					"scheduled": "Downgrade scheduled for {date}.",
