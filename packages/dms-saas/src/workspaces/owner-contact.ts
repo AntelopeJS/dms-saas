@@ -16,18 +16,15 @@ function toContact(user: User): WorkspaceOwnerContact {
 }
 
 /**
- * Every owner among `members`, as members see them named: by name, else by
- * e-mail.
+ * The workspace owners, as members see them named: by name, else by e-mail.
  *
- * @param members Members of the workspace
+ * @param owners Owner memberships of the workspace
  */
 export async function listWorkspaceOwnerContacts(
-  members: TenantMember[],
+  owners: TenantMember[],
 ): Promise<WorkspaceOwnerContact[]> {
   const users = await Promise.all(
-    members
-      .filter((member) => member.isTenantOwner)
-      .map((owner) => GetModel(UserModel).get(owner.userId)),
+    owners.map((owner) => GetModel(UserModel).get(owner.userId)),
   );
   return users.flatMap((user) => (user ? [toContact(user)] : []));
 }
