@@ -49,6 +49,8 @@ export interface VerifyConfig {
   notUserFacing: string[];
   smoke: string;
   smokeJourney: string;
+  /** The folder of the journeys modules, relative to the repository root. Absent: `journeys/` in the skill folder. */
+  journeys?: string;
   doors: Record<DoorKind, DoorRule | null>;
   formal: FormalCheck[];
 }
@@ -103,6 +105,7 @@ const config: VerifyConfig = {
   smoke: "smoke",
   smokeJourney:
     "register at /register without a card, land in a workspace on the free plan, and see that plan on the Billing page",
+  journeys: "e2e/journeys",
   doors: {
     data: {
       globs: [

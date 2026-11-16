@@ -41,6 +41,7 @@ async function put(ctx, tenantId, planId, status, stripe = true) {
 export const operatorRuleJourneys = [
   {
     id: "grant-free-access-follows-the-plan-and-date-rules",
+    tag: "@smoke",
     title: "the grant answers each documented case: a free date in the future, a past date, an unknown plan, an unsold plan, another audience, the workspace's own plan once unsold, and a Stripe subscription that needs acknowledging",
     entryPoint: "POST /api/saas/workspaces/:tenantId/grant-free-access",
     async run(/** @type {Ctx} */ ctx) {
