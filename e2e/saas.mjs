@@ -3,8 +3,8 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * @typedef {import("../../../packages/dms-saas/node_modules/@antelopejs/dms/bin/control/journey.mjs").JourneyContext} Ctx
- * @typedef {import("../../../packages/dms-saas/node_modules/@antelopejs/dms/bin/control/tab.mjs").Tab} Tab
+ * @typedef {import("@antelopejs/dms/e2e").Ctx} Ctx
+ * @typedef {import("@antelopejs/dms/e2e").Tab} Tab
  * @typedef {{ status: number | null, body: unknown, error: string | null, folder?: string }} Answer
  * @typedef {{ folder: string, status: number | null, headers: Record<string, string>, bytes: Buffer, text: string, json: unknown }} Raw
  * @typedef {Record<string, unknown>} Row
@@ -282,7 +282,7 @@ export async function allPermissionIds(ctx) {
   const tree = await saas(ctx, "the permission tree", "GET", "/plans/permissions-tree");
   /** @type {string[]} */
   const ids = [];
-  /** @param {import("../saas.mjs").Row[]} nodes The nodes */
+  /** @param {Row[]} nodes The nodes */
   const walk = (nodes) => {
     for (const node of nodes) {
       ids.push(text(node, "id"));

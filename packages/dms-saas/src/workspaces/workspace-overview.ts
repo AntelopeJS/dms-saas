@@ -102,10 +102,9 @@ async function resolvePlan(
 }
 
 async function resolveOwners(
-  members: TenantMember[],
+  owners: TenantMember[],
   callerId: string,
 ): Promise<WorkspaceOwnerOverview[]> {
-  const owners = members.filter((member) => member.isTenantOwner);
   const users = await Promise.all(
     owners.map((owner) => GetModel(UserModel).get(owner.userId)),
   );
@@ -152,16 +151,26 @@ export async function buildWorkspaceOverview(
   const tenant = await GetModel(TenantModel).get(tenantId);
   assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
   const invoiceModel = GetModel(InvoiceModel, tenantId);
-  const [subscription, members, usage, invoices, unpaid, retentionDays, next] =
-    await Promise.all([
-      GetModel(TenantSubscriptionModel, tenantId).findOne(),
-      GetModel(TenantMemberModel, tenantId).listAll(),
-      getSeatUsage(tenantId),
-      invoiceModel.getAllInvoices(),
-      invoiceModel.findLatestOpen(),
-      resolveDataRetentionDays(),
-      resolveNextWorkspace(callerId, tenantId),
-    ]);
+  const [
+    subscription,
+    owners,
+    usage,
+    invoicesCount,
+    unpaid,
+    retentionDays,
+    next,
+  ] = await Promise.all([
+    GetModel(TenantSubscriptionModel, tenantId).findOne(),
+    GetModel(TenantMemberModel, tenantId).listOwners(),
+    getSeatUsage(tenantId),
+    invoiceModel.table
+      .filter((invoice) => invoice.key("documentType").eq("invoice"))
+      .count()
+      .run(),
+    invoiceModel.findLatestOpen(),
+    resolveDataRetentionDays(),
+    resolveNextWorkspace(callerId, tenantId),
+  ]);
   const plan = await resolvePlan(subscription);
   return {
     _id: tenant._id,
@@ -169,8 +178,8 @@ export async function buildWorkspaceOverview(
     createdAt: tenant.createdAt,
     seats: toSeats(usage, plan),
     plan: plan && subscription ? toPlanOverview(plan, subscription) : null,
-    owners: await resolveOwners(members, callerId),
-    invoicesCount: invoices.length,
+    owners: await resolveOwners(owners, callerId),
+    invoicesCount,
     unpaidInvoiceNumber: unpaid?.number ?? null,
     retentionDays,
     destroyedAt: new Date(now.getTime() + retentionDays * MS_PER_DAY),

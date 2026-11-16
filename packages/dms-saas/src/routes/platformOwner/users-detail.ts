@@ -33,9 +33,8 @@ async function countBilledDocuments(
   const counts = await Promise.all(
     workspaces
       .filter((workspace) => workspace.isTenantOwner)
-      .map(
-        async (workspace) =>
-          (await GetModel(InvoiceModel, workspace.tenantId).getAll()).length,
+      .map((workspace) =>
+        GetModel(InvoiceModel, workspace.tenantId).table.count().run(),
       ),
   );
   return counts.reduce((total, count) => total + count, 0);

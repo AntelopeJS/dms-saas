@@ -108,6 +108,11 @@ export function resolveRegistrationPaymentMethodId(
   return paymentMethodId || undefined;
 }
 
+/** Whether the module schedules its jobs at start; on unless configured off. */
+export function areScheduledJobsEnabled(): boolean {
+  return runtimeConfig?.scheduledJobs !== false;
+}
+
 export function getDefaultPlanSlug(): string | undefined {
   return runtimeConfig?.defaultPlanSlug;
 }

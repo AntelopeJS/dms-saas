@@ -16,6 +16,7 @@ function code(answer) {
 export const journeys = guarded([
   {
     id: "an-owner-renames-the-workspace-and-sees-it-listed",
+    tag: "@smoke",
     title: "the owner renames the workspace (saved trimmed), the switcher list and the General page read the new name, and an anonymous caller cannot rename",
     entryPoint: "PUT /api/saas/workspaces/current, GET /api/saas/workspaces/mine, GET /api/saas/workspaces/current/glance",
     async run(/** @type {Ctx} */ ctx) {

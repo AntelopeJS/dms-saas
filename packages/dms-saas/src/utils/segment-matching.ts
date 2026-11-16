@@ -195,12 +195,14 @@ export async function loadWorkspaceProjection(
   const memberModel = GetModel(TenantMemberModel, tenantId);
   const invoiceModel = GetModel(InvoiceModel, tenantId);
 
-  const [subscription, billingInfo, members, invoices] = await Promise.all([
-    subscriptionModel.findOne(),
-    billingInfoModel.findOne(),
-    memberModel.listAll(),
-    invoiceModel.getAllInvoices(),
-  ]);
+  const [subscription, billingInfo, membersCount, invoices] = await Promise.all(
+    [
+      subscriptionModel.findOne(),
+      billingInfoModel.findOne(),
+      memberModel.table.count().run(),
+      invoiceModel.getAllInvoices(),
+    ],
+  );
 
   let plan: Plan | null = null;
   if (subscription?.planId) {
@@ -216,7 +218,7 @@ export async function loadWorkspaceProjection(
     billingInfo,
     plan,
     directory: await directoryOf(tenantId, lookups),
-    membersCount: members.length,
+    membersCount,
     invoices,
     now,
   });

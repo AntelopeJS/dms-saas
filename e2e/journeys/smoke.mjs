@@ -7,6 +7,7 @@ import { allPermissionIds, check, createPlan, register, saas, text } from "../sa
 export const journeys = guarded([
   {
     id: "smoke",
+    tag: "@smoke",
     title: "a visitor registers without a card, lands in a workspace on the free plan, and sees that plan on the Billing page",
     entryPoint: "/register, POST /api/saas/register, Settings › Workspace › Billing",
     async run(/** @type {Ctx} */ ctx) {

@@ -34,15 +34,18 @@ export interface MyWorkspaceRow {
 interface WorkspaceFacts {
   tenant: Tenant;
   subscription: TenantSubscription | undefined;
-  members: TenantMember[];
+  owners: TenantMember[];
+  membersCount: number;
 }
 
 async function loadFacts(tenant: Tenant): Promise<WorkspaceFacts> {
-  const [subscription, members] = await Promise.all([
+  const memberModel = GetModel(TenantMemberModel, tenant._id);
+  const [subscription, owners, membersCount] = await Promise.all([
     GetModel(TenantSubscriptionModel, tenant._id).findOne(),
-    GetModel(TenantMemberModel, tenant._id).listAll(),
+    memberModel.listOwners(),
+    memberModel.table.count().run(),
   ]);
-  return { tenant, subscription, members };
+  return { tenant, subscription, owners, membersCount };
 }
 
 async function resolvePlanName(
@@ -54,9 +57,9 @@ async function resolvePlanName(
 }
 
 async function resolveOwnerName(
-  members: TenantMember[],
+  owners: TenantMember[],
 ): Promise<string | null> {
-  const owner = members.find((member) => member.isTenantOwner);
+  const [owner] = owners;
   if (!owner) return null;
   const user = await GetModel(UserModel).get(owner.userId);
   return user?.name || user?.email || null;
@@ -67,10 +70,10 @@ async function toRow(
   userId: string,
   currentTenantId: string,
 ): Promise<MyWorkspaceRow> {
-  const { tenant, subscription, members } = facts;
+  const { tenant, subscription, owners, membersCount } = facts;
   const [planName, ownerName] = await Promise.all([
     resolvePlanName(subscription),
-    resolveOwnerName(members),
+    resolveOwnerName(owners),
   ]);
   return {
     _id: tenant._id,
@@ -78,11 +81,9 @@ async function toRow(
     planName,
     status: deriveBillingState(subscription),
     isComplimentary: !!subscription?.isComplimentary,
-    membersCount: members.length,
+    membersCount,
     ownerName,
-    isOwner: members.some(
-      (member) => member.userId === userId && member.isTenantOwner,
-    ),
+    isOwner: owners.some((owner) => owner.userId === userId),
     isCurrent: tenant._id === currentTenantId,
   };
 }
