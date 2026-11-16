@@ -4,7 +4,7 @@ import { GetModel } from "@antelopejs/interface-database-decorators";
 import * as notifications from "@antelopejs/interface-dms/notifications";
 import { fromPartial } from "@total-typescript/shoehorn";
 import type Stripe from "stripe";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   BILLING_SETTINGS_SINGLETON_ID,
   BillingSettingsModel,
@@ -129,7 +129,46 @@ describe("customer.subscription.deleted", () => {
     expect(await statusOf(workspace.tenantId)).toBe("active");
     expect(notifiedUserIds()).toEqual([]);
   });
+
+  it("leaves a workspace made complimentary between its check and its write as it is", async () => {
+    workspace = await seedWorkspace({
+      stripeSubscriptionId: DELETED_SUBSCRIPTION_ID,
+    });
+    grantComplimentaryBeforeTheNextWrite(workspace.tenantId);
+
+    await handleSubscriptionDeleted(deletion());
+
+    expect(
+      await GetModel(TenantSubscriptionModel, workspace.tenantId).findOne(),
+    ).toMatchObject({
+      status: "active",
+      isComplimentary: true,
+      stripeSubscriptionId: null,
+    });
+    expect(notifiedUserIds()).toEqual([]);
+  });
 });
+
+/**
+ * Moves the workspace to complimentary access, as the operator's grant does,
+ * just before the next subscription write reaches the database.
+ */
+function grantComplimentaryBeforeTheNextWrite(tenantId: string): void {
+  const spy = vi
+    .spyOn(TenantSubscriptionModel.prototype, "mutateRevision")
+    .mockImplementation(
+      async function (this: TenantSubscriptionModel, current, patch) {
+        spy.mockRestore();
+        await GetModel(TenantSubscriptionModel, tenantId).update(tenantId, {
+          isComplimentary: true,
+          stripeSubscriptionId: null,
+          updatedAt: new Date(),
+        });
+        return this.mutateRevision(current, patch);
+      },
+    );
+  onTestFinished(() => spy.mockRestore());
+}
 
 describe("automatic prorated refund on cancellation", () => {
   const SUBSCRIPTION_START = 1_800_000_000;

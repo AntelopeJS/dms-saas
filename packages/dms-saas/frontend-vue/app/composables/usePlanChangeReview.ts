@@ -63,6 +63,13 @@ export interface PlanChangeIncompatibility {
 	resource?: string
 }
 
+/** Something the plan-change policy asks the owner to read; it never blocks. */
+export interface PlanChangeNotice {
+	code: string
+	message: string
+	resource?: string
+}
+
 /**
  * What the workspace must bring within the target plan before it can move,
  * read from the 409 a plan change preview or confirmation answers with; null

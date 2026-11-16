@@ -140,6 +140,7 @@ const input = (
   billingInfo: undefined,
   ownerEmail: "owner@example.test",
   country: null,
+  notices: [],
   ...overrides,
 });
 

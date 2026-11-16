@@ -430,6 +430,25 @@ onMounted(() => void loadPreview())
 		</div>
 
 		<UAlert
+			v-if="preview?.notices.length"
+			color="info"
+			variant="subtle"
+			icon="i-ph-info"
+			:title="$t(`${KEY_PREFIX}.notices_title`)"
+		>
+			<template #description>
+				<ul class="flex list-disc flex-col gap-1 ps-4">
+					<li
+						v-for="(notice, index) in preview.notices"
+						:key="`${notice.code}-${notice.resource ?? index}`"
+					>
+						{{ notice.message }}
+					</li>
+				</ul>
+			</template>
+		</UAlert>
+
+		<UAlert
 			v-if="submitFailure"
 			color="error"
 			variant="subtle"

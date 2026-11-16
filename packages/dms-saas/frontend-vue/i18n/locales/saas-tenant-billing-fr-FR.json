@@ -355,6 +355,7 @@
 					"incompatible_title": "{plan} ne peut pas encore accueillir cet espace de travail",
 					"incompatible_description": "L'espace de travail dépasse ce que {plan} autorise. Ramenez-le dans ces limites puis vérifiez à nouveau : rien ne change d'ici là.",
 					"incompatible_list": "Ce que {plan} n'autorise pas",
+					"notices_title": "Avant de confirmer",
 					"check_again": "Vérifier à nouveau",
 					"load_failed": "Impossible de chiffrer ce changement",
 					"scheduled": "Changement programmé pour le {date}.",

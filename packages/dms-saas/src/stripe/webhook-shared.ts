@@ -23,9 +23,9 @@ import {
 } from "./payload-shapes";
 import { isString } from "../utils/primitive-guards";
 
-export const ACTIVE_STATUS: TenantSubscriptionStatus = "active";
-export const TRIALING_STATUS: TenantSubscriptionStatus = "trialing";
-export const PAST_DUE_STATUS: TenantSubscriptionStatus = "past_due";
+export const ACTIVE_STATUS = "active" satisfies TenantSubscriptionStatus;
+export const TRIALING_STATUS = "trialing" satisfies TenantSubscriptionStatus;
+export const PAST_DUE_STATUS = "past_due" satisfies TenantSubscriptionStatus;
 export const CENTS_PER_UNIT = 100;
 
 export interface TenantRef {
@@ -44,6 +44,8 @@ export async function findTenantByCustomerId(
   return { _id: getRowInstance(sub) };
 }
 
+const STATUS_WRITE_ATTEMPTS = 3;
+
 /**
  * Paying an old invoice cannot grant an unvalidated Free plan or erase its
  * incident: while a guarded plan change is pending, cancellation and an
@@ -51,29 +53,74 @@ export async function findTenantByCustomerId(
  * their own landing. Entering past_due arms the dunning clock unless an episode
  * is already running; leaving it disarms structurally (see DunningClock on the
  * table).
+ *
+ * The write lands on the revision these checks read, and `admits` judges that
+ * same revision: a concurrent writer sends it back to read and decide again.
+ *
+ * @returns Whether the status was written.
  */
-export async function updateSubscriptionStatus(
+async function writeSubscriptionStatus(
   tenantId: string,
   status: TenantSubscriptionStatus,
-): Promise<void> {
+  admits: (subscription: TenantSubscription) => boolean,
+): Promise<boolean> {
   const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
-  const subscription = await tenantSubscriptionModel.findOne();
-  if (!subscription) return;
-  if (
-    subscription.guardedPlanChange &&
-    (status === "cancelled" ||
-      (status === "active" && isGuardedPlanChangeBlocked(subscription)))
-  )
-    return;
-  const patch: Partial<TenantSubscription> = {
-    status,
-    updatedAt: new Date(),
-  };
-  if (status === PAST_DUE_STATUS) {
-    patch.pastDueSince = subscription.pastDueSince ?? new Date();
+  for (let attempt = 0; attempt < STATUS_WRITE_ATTEMPTS; attempt += 1) {
+    const subscription = await tenantSubscriptionModel.findOne();
+    if (!subscription || !admits(subscription)) return false;
+    if (
+      subscription.guardedPlanChange &&
+      (status === "cancelled" ||
+        (status === "active" && isGuardedPlanChangeBlocked(subscription)))
+    )
+      return false;
+    if (subscription.deletionStartedAt || subscription.domainTransition)
+      throw new Error("Subscription transition requires reconciliation");
+    const patch: Partial<TenantSubscription> = {
+      status,
+      updatedAt: new Date(),
+    };
+    if (status === PAST_DUE_STATUS) {
+      patch.pastDueSince = subscription.pastDueSince ?? new Date();
+    }
+    const outcome = await tenantSubscriptionModel.mutateRevision(
+      subscription,
+      patch,
+    );
+    if (outcome === "unknown")
+      throw new Error("Subscription status outcome is unknown");
+    if (outcome === "applied") {
+      await recomputeTenantBillingState(tenantId);
+      return true;
+    }
   }
-  await tenantSubscriptionModel.update(subscription._id, patch);
-  await recomputeTenantBillingState(tenantId);
+  throw new Error("Subscription status kept conflicting; reload before retry");
+}
+
+export async function updateSubscriptionStatus(
+  tenantId: string,
+  status: Exclude<TenantSubscriptionStatus, "cancelled">,
+): Promise<void> {
+  await writeSubscriptionStatus(tenantId, status, () => true);
+}
+
+/**
+ * Cancels the workspace only while it still bills on `stripeSubscriptionId`:
+ * once an operator's grant or a plan migration moved it elsewhere, that
+ * subscription's deletion is not the workspace churning.
+ *
+ * @returns Whether the workspace was cancelled.
+ */
+export async function cancelSubscriptionBilledOn(
+  tenantId: string,
+  stripeSubscriptionId: string,
+): Promise<boolean> {
+  return writeSubscriptionStatus(
+    tenantId,
+    "cancelled",
+    (subscription) =>
+      subscription.stripeSubscriptionId === stripeSubscriptionId,
+  );
 }
 
 export function formatAmount(amountInCents: number, currency: string): string {

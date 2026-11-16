@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
-import type { PlanChangeIncompatibility } from "@antelopejs/interface-dms-saas/plan-changes";
+import type {
+  PlanChangeIncompatibility,
+  PlanChangeNotice,
+} from "@antelopejs/interface-dms-saas/plan-changes";
 import {
   type GuardedPlanChange,
   type Plan,
@@ -10,6 +13,7 @@ import {
 } from "../db";
 import {
   getPlanChangePolicy,
+  reviewGuardedPlanChange,
   validateGuardedPlanChange,
 } from "../implementations/dms-saas/plan-changes";
 import { getStripeClient } from "../stripe/client";
@@ -45,9 +49,9 @@ async function readSubscription(tenantId: string): Promise<TenantSubscription> {
 export async function previewGuardedFreeChange(
   tenantId: string,
   targetPlan: Plan,
-): Promise<void> {
+): Promise<PlanChangeNotice[]> {
   const current = await readSubscription(tenantId);
-  const issues = await validateGuardedPlanChange({
+  const { incompatibilities, notices } = await reviewGuardedPlanChange({
     tenantId,
     currentPlan: current.planId
       ? ((await GetModel(PlanModel).get(current.planId)) ?? null)
@@ -57,7 +61,9 @@ export async function previewGuardedFreeChange(
     phase: "preview",
     effectiveAt: current.currentPeriodEnd ?? null,
   });
-  if (issues.length) throw new PlanChangeIncompatibleError(issues);
+  if (incompatibilities.length)
+    throw new PlanChangeIncompatibleError(incompatibilities);
+  return notices;
 }
 
 /** Publish a target only after reading the exact subscription being cancelled. */
