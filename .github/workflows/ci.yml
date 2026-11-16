@@ -199,7 +199,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ${{ fromJSON(needs.select.outputs.os) }}
-        check: [formal-guarded-plan-change]
+        check: [formal-guarded-plan-change, formal-workspace-creation-gate]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
