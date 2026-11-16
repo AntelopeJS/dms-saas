@@ -33,7 +33,7 @@ import {
   plansByMrrItems,
   workspacesByStatusItems,
 } from "../../metrics/headline-items";
-import { sumInReportingCurrency } from "../../metrics/normalised-mrr";
+import { reportingTotal } from "../../metrics/normalised-mrr";
 import {
   type ChartCardPayload,
   churnKpi,
@@ -80,18 +80,19 @@ export async function loadOpenInvoices(
     .group("currency", (invoices, invoiceCurrency) => ({
       currency: invoiceCurrency,
       count: invoices.count(),
+      owing: invoices.filter((invoice) => invoice.key("total").ne(0)).count(),
       total: invoices.sum("total"),
     }))
     .run();
+  const totals = new Map<string, number>();
+  for (const group of byCurrency) {
+    if (group.owing === 0 || !group.currency) continue;
+    const code = group.currency.toUpperCase();
+    totals.set(code, (totals.get(code) ?? 0) + group.total);
+  }
   return {
     count: byCurrency.reduce((count, group) => count + group.count, 0),
-    awaiting: sumInReportingCurrency(
-      byCurrency.map((group) => ({
-        amountMinor: group.total,
-        currency: group.currency,
-      })),
-      currency,
-    ),
+    awaiting: reportingTotal(totals, currency),
   };
 }
 
