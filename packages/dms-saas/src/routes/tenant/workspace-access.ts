@@ -272,19 +272,22 @@ export function selectOtherWorkspaces(
 
 interface BlockedWorkspaceState {
   subscription: TenantSubscription | undefined;
-  members: TenantMember[];
+  owners: TenantMember[];
+  membersCount: number;
   settings: BillingSettings;
 }
 
 async function loadBlockedWorkspaceState(
   tenantId: string,
 ): Promise<BlockedWorkspaceState> {
-  const [subscription, members, settings] = await Promise.all([
+  const memberModel = GetModel(TenantMemberModel, tenantId);
+  const [subscription, owners, membersCount, settings] = await Promise.all([
     GetModel(TenantSubscriptionModel, tenantId).findOne(),
-    GetModel(TenantMemberModel, tenantId).listAll(),
+    memberModel.listOwners(),
+    memberModel.table.count().run(),
     loadBillingSettings(),
   ]);
-  return { subscription, members, settings };
+  return { subscription, owners, membersCount, settings };
 }
 
 /** The open invoice a blocked owner can pay; only a suspension has one. */
@@ -368,8 +371,8 @@ export class SaasWorkspaceAccessController extends Controller(
     const tenantId = getRequestTenantId(ctx);
     const state = await loadBlockedWorkspaceState(tenantId);
     const reason = resolveAccessBlockReason(state.subscription);
-    const isTenantOwner = state.members.some(
-      (member) => member.userId === user._id && member.isTenantOwner,
+    const isTenantOwner = state.owners.some(
+      (owner) => owner.userId === user._id,
     );
     const invoice = await loadSettleableInvoice(
       tenantId,
@@ -382,7 +385,7 @@ export class SaasWorkspaceAccessController extends Controller(
       reason,
       workspace: await this.summarizeWorkspace(tenantId, state),
       isTenantOwner,
-      owners: await listWorkspaceOwnerContacts(state.members),
+      owners: await listWorkspaceOwnerContacts(state.owners),
       unpaidInvoice: invoice ? toUnpaidInvoiceRef(invoice) : null,
       canManageInStripe:
         isTenantOwner &&
@@ -427,7 +430,7 @@ export class SaasWorkspaceAccessController extends Controller(
       name: tenant?.name ?? "",
       planId: state.subscription?.planId ?? null,
       planName: await this.loadPlanName(state.subscription),
-      memberCount: state.members.length,
+      memberCount: state.membersCount,
     };
   }
 }
