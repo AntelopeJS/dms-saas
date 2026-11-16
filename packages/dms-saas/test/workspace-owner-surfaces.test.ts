@@ -315,7 +315,15 @@ describe("workspace overview", () => {
       status,
       issuedAt: NOW,
     });
-    await invoices.insert([invoice("INV-1", "paid"), invoice("INV-2", "open")]);
+    await invoices.insert([
+      invoice("INV-1", "paid"),
+      invoice("INV-2", "open"),
+      {
+        ...invoice("CN-1", "paid"),
+        documentType: "credit_note" as const,
+        stripeCreditNoteId: randomUUID(),
+      },
+    ]);
     await GetModel(UserInviteModel, acme).insert(
       ["lea", "paul"].map((name) => ({
         _id: randomUUID(),

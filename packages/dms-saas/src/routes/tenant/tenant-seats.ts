@@ -68,10 +68,10 @@ export class SaasTenantSeatsController extends Controller(
     const tenantId = getRequestTenantId(ctx);
     const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
     const tenantMemberModel = GetModel(TenantMemberModel, tenantId);
-    const [usage, subscription, members] = await Promise.all([
+    const [usage, subscription, owners] = await Promise.all([
       getSeatUsage(tenantId),
       tenantSubscriptionModel.findOne(),
-      tenantMemberModel.listAll(),
+      tenantMemberModel.listOwners(),
     ]);
     const plan = subscription?.planId
       ? await this.planModel.get(subscription.planId)
@@ -82,10 +82,8 @@ export class SaasTenantSeatsController extends Controller(
       maxMembers: isLimited ? plan.maxMembers : null,
       planName: plan?.name ?? null,
       upgradePlanName: plan ? await this.resolveUpgradePlanName(plan) : null,
-      isTenantOwner: members.some(
-        (member) => member.userId === user._id && member.isTenantOwner,
-      ),
-      owners: await listWorkspaceOwnerContacts(members),
+      isTenantOwner: owners.some((owner) => owner.userId === user._id),
+      owners: await listWorkspaceOwnerContacts(owners),
     };
   }
 }

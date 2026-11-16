@@ -49,6 +49,8 @@ export interface VerifyConfig {
   notUserFacing: string[];
   smoke: string;
   smokeJourney: string;
+  /** The folder of the journeys modules, relative to the repository root. Absent: `journeys/` in the skill folder. */
+  journeys?: string;
   doors: Record<DoorKind, DoorRule | null>;
   formal: FormalCheck[];
 }
@@ -57,6 +59,8 @@ const SKILL = ".agents/skills/verify-dms-saas";
 const MODULE = "packages/dms-saas";
 const INTERFACE = "packages/interface-dms-saas";
 const GUARDED_PLAN_CHANGE = ".agents/skills/formal-guarded-plan-change";
+const WORKSPACE_CREATION_GATE =
+  ".agents/skills/formal-workspace-creation-gate";
 
 const config: VerifyConfig = {
   playground: `${SKILL}/playground`,
@@ -101,6 +105,7 @@ const config: VerifyConfig = {
   smoke: "smoke",
   smokeJourney:
     "register at /register without a card, land in a workspace on the free plan, and see that plan on the Billing page",
+  journeys: "e2e/journeys",
   doors: {
     data: {
       globs: [
@@ -168,6 +173,23 @@ const config: VerifyConfig = {
       command: ["node", `${GUARDED_PLAN_CHANGE}/check.mjs`, "--full"],
       baseCommand: ["node", `${GUARDED_PLAN_CHANGE}/check.mjs`],
       violation: /^(?:finding|BROKEN|CHANGED|HOLDS) +(\w+)/gm,
+      passing: /(?<=^holds +(?:\w+, )*)(\w+)(?=,| \()/gm,
+      behaviour: { kind: "emit" },
+    },
+    {
+      name: "formal-workspace-creation-gate",
+      covers: [
+        `${MODULE}/src/operator-actions/db/lifecycle-delivery.model.ts`,
+        `${MODULE}/src/operator-actions/db/lifecycle-delivery.table.ts`,
+        `${MODULE}/src/operator-actions/lifecycle-outbox.ts`,
+        `${MODULE}/src/workspaces/provisioning.ts`,
+        `${MODULE}/src/workspaces/provisioning-rollback.ts`,
+        `${MODULE}/src/crons/reconcile-workspace-lifecycle.ts`,
+        `${MODULE}/src/hooks/register.ts`,
+      ],
+      files: [`${WORKSPACE_CREATION_GATE}/**`],
+      command: ["node", `${WORKSPACE_CREATION_GATE}/check.mjs`],
+      violation: /^(?:BROKEN|CHANGED|HOLDS) +(\w+)/gm,
       passing: /(?<=^holds +(?:\w+, )*)(\w+)(?=,| \()/gm,
       behaviour: { kind: "emit" },
     },

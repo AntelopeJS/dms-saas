@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "checkJs": false,
+    "lib": ["esnext", "dom", "dom.iterable"]
+  },
+  "files": [],
+  "include": ["*.ts", "**/*.mjs"],
+  "exclude": [
+    "playwright-report",
+    "test-results",
+    "blob-report",
+    "blob-reports"
+  ]
+}

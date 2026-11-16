@@ -11,10 +11,11 @@ const PAGES_API = "/dms/pages/settings/workspace";
  * @param {string} tenantId The workspace
  * @param {string} userId The user
  * @param {string[]} rolePermissions What the user's role grants
+ * @param {boolean} [platformOwner] Whether the user is the platform owner, the only holder of `*`
  * @returns {Promise<string[]>} The effective permissions, sorted
  */
-async function effective(ctx, tenantId, userId, rolePermissions) {
-  const answer = await fixture(ctx, `the effective permissions of ${userId}`, "POST", "/effective-permissions", { tenantId, userId, rolePermissions });
+async function effective(ctx, tenantId, userId, rolePermissions, platformOwner = false) {
+  const answer = await fixture(ctx, `the effective permissions of ${userId}`, "POST", "/effective-permissions", { tenantId, userId, rolePermissions, platformOwner });
   const permissions = pick(answer.body, "permissions");
   return Array.isArray(permissions) ? permissions.filter(isText) : [];
 }
@@ -74,7 +75,7 @@ export const journeys = guarded([
       ]);
       const star = await saas(ctx, "a plan that lists *", "PUT", `/plans/${child.id}`, { body: { permissions: ["*", c] } });
       const ownerStar = await effective(ctx, owner.tenantId, owner.userId, []);
-      const memberStar = await effective(ctx, owner.tenantId, memberId, ["*"]);
+      const memberStar = await effective(ctx, owner.tenantId, memberId, [], true);
       await ctx.verify("tenant ownership never grants *, even if the plan contains it", [
         check("the plan write is accepted", star.status === 200, star.body),
         check("the owner's set has no *", !ownerStar.includes("*"), ownerStar),
@@ -84,6 +85,7 @@ export const journeys = guarded([
   },
   {
     id: "the-plan-member-cap-bounds-invitations",
+    tag: "@smoke",
     title: "an invitation that would pass the plan's member cap is refused with 409, and a pending invitation takes a seat",
     entryPoint: "POST /dms/pages/settings/workspace/members/invite, GET /api/saas/tenant/plan",
     async run(/** @type {Ctx} */ ctx) {

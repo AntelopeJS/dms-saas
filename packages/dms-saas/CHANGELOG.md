@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.12.2
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.1...v0.12.2)
+
+### 🔥 Performance
+
+- **dms-saas:** Count members, invites and invoices in the database query ([#293](https://github.com/AntelopeJS/dms-saas/pull/293))
+- **dms-saas:** Count, sum and cut the dashboard, activity and suspension reads in the query ([#294](https://github.com/AntelopeJS/dms-saas/pull/294))
+
+### 🩹 Fixes
+
+- **dms-saas:** Let a host load the module without its scheduled jobs ([#286](https://github.com/AntelopeJS/dms-saas/pull/286))
+- **dms-saas:** Schedule the jobs once the DMS has bound its schemas ([#290](https://github.com/AntelopeJS/dms-saas/pull/290))
+- **dms-saas:** List zero-sum open-invoice currencies and break suspension ties on the id ([#295](https://github.com/AntelopeJS/dms-saas/pull/295))
+
+### 💅 Refactors
+
+- **checks:** Adopt assertDmsComponents from @antelopejs/dms ([#280](https://github.com/AntelopeJS/dms-saas/pull/280))
+- **dms-saas:** Restore the dashboard, activity and suspension reads of 0.12.1 ([#296](https://github.com/AntelopeJS/dms-saas/pull/296))
+
+### 📦 Build
+
+- **dms-saas:** Publish stable releases through the shared workflow's publish hook ([#284](https://github.com/AntelopeJS/dms-saas/pull/284))
+
+### 🏡 Chore
+
+- **deps:** Move to the batch-answering mongodb driver and the 15 November releases ([#281](https://github.com/AntelopeJS/dms-saas/pull/281))
+
+### ✅ Tests
+
+- Open a session before minting the suite's access tokens ([#279](https://github.com/AntelopeJS/dms-saas/pull/279))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.12.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.0...v0.12.1)
