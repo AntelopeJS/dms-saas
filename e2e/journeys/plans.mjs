@@ -34,6 +34,7 @@ async function settledPlan(ctx, account, planId) {
 export const journeys = guarded([
   {
     id: "a-plan-write-is-validated-and-defaulted",
+    tag: "@smoke",
     title: "a plan gets its slug from its name, trimmed texts, the documented defaults and the next order, and bad intervals and member caps are refused",
     entryPoint: "POST /api/saas/plans, GET /api/saas/plans/:id",
     async run(/** @type {Ctx} */ ctx) {

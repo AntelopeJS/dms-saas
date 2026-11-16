@@ -36,6 +36,7 @@ interface PermissionsBody {
   tenantId: string;
   userId: string;
   rolePermissions: string[];
+  platformOwner?: boolean;
 }
 
 interface SubscriptionBody {
@@ -155,17 +156,17 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
     return { userId, token };
   }
 
-  /** The effective permissions of a user of a workspace who holds one role granting `rolePermissions`, after every permissions resolver. */
+  /** The effective permissions of a user of a workspace who holds one role granting `rolePermissions`, after every permissions resolver; `platformOwner` flags the user as the platform owner, the only holder of `*`. */
   @Post("/effective-permissions")
   async effectivePermissions(@JSONBody() body: PermissionsBody) {
-    const { tenantId, userId, rolePermissions } = body;
+    const { tenantId, userId, rolePermissions, platformOwner } = body;
     const roles = GetModel(RoleModel, tenantId);
     const [roleId] = await roles.insert({
       name: `verify role ${randomBytes(4).toString("hex")}`,
       permissions: rolePermissions,
     });
     const effective = await GetEffectiveUserPermissions(
-      { _id: userId },
+      { _id: userId, owner: platformOwner === true },
       tenantId,
       roleId === undefined ? [] : [roleId],
       roles,
