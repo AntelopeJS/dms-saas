@@ -69,10 +69,13 @@ describe("module start", () => {
     setRuntimeConfig(configWith({}));
     await start();
     await SettleHook(Hook.DATABASE_INITIALIZED);
+    const first = new Set(cron.getTasks().keys());
     UnsettleHook(Hook.DATABASE_INITIALIZED);
     await SettleHook(Hook.DATABASE_INITIALIZED);
+    const live = [...cron.getTasks().keys()];
 
-    expect(cron.getTasks().size).toBe(JOB_COUNT);
+    expect(live).toHaveLength(JOB_COUNT);
+    expect(live.filter((id) => first.has(id))).toEqual([]);
   });
 
   it("schedules no job after it stopped", async () => {
