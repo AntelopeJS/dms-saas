@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.10.1
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.10.0...interface-v0.10.1)
+
+### 🚀 Enhancements
+
+- **plan-changes:** Let a plan-change policy return a non-blocking notice ([#288](https://github.com/AntelopeJS/dms-saas/pull/288))
+
+### 🔥 Performance
+
+- **dms-saas:** Count, sum and cut the platform reads in the query ([#302](https://github.com/AntelopeJS/dms-saas/pull/302))
+
+### 🏡 Chore
+
+- **deps:** Move to the batch-answering mongodb driver and the 15 November releases ([#281](https://github.com/AntelopeJS/dms-saas/pull/281))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.10.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.9.0...v0.10.0)
