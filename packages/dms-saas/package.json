@@ -78,7 +78,7 @@
     "@antelopejs/dms-frontend": ">=0.11.4 <0.12.0",
     "@antelopejs/interface-file-storage": ">=0.1.8 <0.2.0",
     "@antelopejs/interface-mongodb": ">=0.0.8 <0.1.0",
-    "@antelopejs/mongodb": "~1.8.4",
+    "@antelopejs/mongodb": "1.8.10-next.229.g6c72429",
     "@total-typescript/shoehorn": "^0.1.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.0.0",

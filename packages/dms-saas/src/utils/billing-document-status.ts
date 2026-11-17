@@ -3,7 +3,7 @@ import type { BillingDocumentStatus } from "../db";
 import { INVOICE_STATUSES } from "../db";
 
 /** Credit notes mirrored into the invoices table carry their own `issued` status. */
-const BILLING_DOCUMENT_STATUSES: readonly BillingDocumentStatus[] = [
+export const BILLING_DOCUMENT_STATUSES: readonly BillingDocumentStatus[] = [
   ...INVOICE_STATUSES,
   "issued",
 ];

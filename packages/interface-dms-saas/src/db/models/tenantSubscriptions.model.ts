@@ -392,14 +392,11 @@ export class TenantSubscriptionModel extends BasicDataModel(
     kind: SubscriptionCronNotification["kind"],
   ): Promise<TenantSubscription[]> {
     const rows = await this.table
-      .filter((row) => row.key("cronNotification").ne(null))
+      .filter((row) => row.key("cronNotification").key("kind").eq(kind))
       .run();
     return rows
       .map((row) => TenantSubscriptionModel.fromDatabase(row))
-      .filter(
-        (row): row is TenantSubscription =>
-          row?.cronNotification?.kind === kind,
-      );
+      .filter((row): row is TenantSubscription => row !== undefined);
   }
 
   /** Acknowledges only the exact intent observed by the delivery attempt. */
