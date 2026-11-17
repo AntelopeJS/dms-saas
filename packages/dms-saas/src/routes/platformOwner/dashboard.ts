@@ -75,25 +75,18 @@ async function loadAttentionMigrations(): Promise<MigrationAttention> {
 export async function loadOpenInvoices(
   currency: string,
 ): Promise<OpenInvoicesAttention> {
-  const open = () =>
-    GetModel(InvoiceModel, CROSS_INSTANCE).table.getAll(OPEN_STATUS, "status");
-  const [byCurrency, owingCurrencies] = await Promise.all([
-    open()
-      .group("currency", (invoices, invoiceCurrency) => ({
-        currency: invoiceCurrency,
-        count: invoices.count(),
-        total: invoices.sum("total"),
-      }))
-      .run(),
-    open()
-      .filter((invoice) => invoice.key("total").ne(0))
-      .group("currency", (_invoices, invoiceCurrency) => invoiceCurrency)
-      .run(),
-  ]);
-  const owing = new Set(owingCurrencies);
+  const byCurrency = await GetModel(InvoiceModel, CROSS_INSTANCE)
+    .table.getAll(OPEN_STATUS, "status")
+    .group("currency", (invoices, invoiceCurrency) => ({
+      currency: invoiceCurrency,
+      count: invoices.count(),
+      total: invoices.sum("total"),
+      owing: invoices.filter((invoice) => invoice.key("total").ne(0)).count(),
+    }))
+    .run();
   const totals = new Map<string, number>();
   for (const group of byCurrency) {
-    if (!owing.has(group.currency) || !group.currency) continue;
+    if (group.owing === 0 || !group.currency) continue;
     const code = group.currency.toUpperCase();
     totals.set(code, (totals.get(code) ?? 0) + group.total);
   }

@@ -455,15 +455,20 @@ async function previousWorkspaceRecords() {
   };
 }
 
-describe("the segment records' member counts read in the query", () => {
-  it("counts each workspace's members as the full read did", async () => {
-    const tenants = ["records-a", "records-b", "records-c"];
+/** Two subscriptions share its newest date: neither read defines which one wins. */
+const TIED_RECORDS = "records-c";
+
+describe("the segment records' newest rows and member counts read in the query", () => {
+  it("picks each workspace's newest subscription and billing details and counts its members as the full read did", async () => {
+    const tenants = ["records-a", "records-b", TIED_RECORDS];
     for (const [index, tenantId] of tenants.entries()) {
       await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
-      for (const hours of [50, 5 + index, 30]) {
+      const subscriptionHours =
+        tenantId === TIED_RECORDS ? [50, 7, 30, 7] : [50, 5 + index, 30];
+      for (const hours of subscriptionHours) {
         await GetModel(TenantSubscriptionModel, tenantId)
           .table.insert({
-            _id: `${tenantId}-sub-${hours}`,
+            _id: randomUUID(),
             status: "active",
             planId: `plan-${hours}`,
             stripeSubscriptionId: null,
@@ -500,5 +505,20 @@ describe("the segment records' member counts read in the query", () => {
 
     expect(previous.membersCounts.get("records-c")).toBe(5);
     expect(current.membersCounts).toEqual(previous.membersCounts);
+    expect(previous.subscriptions.get("records-b")?.updatedAt).toEqual(
+      hoursAgo(6),
+    );
+    const untied = (subscriptions: ReadonlyMap<string, TenantSubscription>) =>
+      new Map(
+        [...subscriptions].filter(([tenantId]) => tenantId !== TIED_RECORDS),
+      );
+    expect(untied(current.subscriptions)).toEqual(
+      untied(previous.subscriptions),
+    );
+    expect(current.subscriptions.get(TIED_RECORDS)?.updatedAt).toEqual(
+      hoursAgo(7),
+    );
+    expect(previous.billingInfos.size).toBe(2);
+    expect(current.billingInfos).toEqual(previous.billingInfos);
   });
 });
