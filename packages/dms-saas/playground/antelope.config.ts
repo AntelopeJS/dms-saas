@@ -90,7 +90,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/dms",
-        version: ">=0.20.2 <0.21.0",
+        version: ">=0.21.0 <0.22.0",
       },
       config: {
         auth: {
@@ -114,7 +114,7 @@ export default defineConfig({
       source: {
         type: "package",
         package: "@antelopejs/mongodb",
-        version: "~1.8.4",
+        version: "~1.8.10",
       },
       config: {
         url: process.env.MONGO_URL ?? "mongodb://localhost:27017",
