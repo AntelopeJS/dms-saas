@@ -478,10 +478,10 @@ describe("the segment records' newest rows and member counts read in the query",
           .run();
       }
       if (index !== 2) {
-        for (const hours of [3, 40 + index]) {
+        for (const hours of [40 + index, 3]) {
           await GetModel(TenantBillingInfoModel, tenantId)
             .table.insert({
-              _id: `${tenantId}-info-${hours}`,
+              _id: randomUUID(),
               companyName: `${tenantId} ${hours}`,
               updatedAt: hoursAgo(hours),
             })
