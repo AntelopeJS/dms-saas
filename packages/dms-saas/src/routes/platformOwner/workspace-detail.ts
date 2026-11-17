@@ -197,10 +197,11 @@ export class SaasWorkspaceDetailController extends Controller(
     @Parameter("flat", "query") flat: QueryParameterValue,
   ): Promise<ItemsPayload<ActivityFeedItem>> {
     const cut = limit === "short" ? OVERVIEW_ACTIVITY_LIMIT : ACTIVITY_LIMIT;
-    const sources = await loadActivitySources(tenantId, cut);
+    const feedKind = parseActivityKind(kind);
+    const sources = await loadActivitySources(tenantId, cut, feedKind);
     return {
       items: buildActivityFeed(sources, {
-        kind: parseActivityKind(kind),
+        kind: feedKind,
         limit: cut,
         now: isFlatFeed(flat) ? new Date() : undefined,
       }),

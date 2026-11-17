@@ -110,8 +110,8 @@ importers:
         specifier: '>=0.0.8 <0.1.0'
         version: 0.0.8(socks@2.8.10)
       '@antelopejs/mongodb':
-        specifier: ~1.8.4
-        version: 1.8.5(socks@2.8.10)
+        specifier: 1.8.10-next.229.g6c72429
+        version: 1.8.10-next.229.g6c72429(socks@2.8.10)
       '@total-typescript/shoehorn':
         specifier: ^0.1.2
         version: 0.1.2
@@ -380,8 +380,8 @@ packages:
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/mongodb@1.8.5':
-    resolution: {integrity: sha512-yG8PX6ADi2SuuyYD5nJjCpkpA46DrlWcliShYXVmnHbHhfBSfMKlRXVrVa6GfAmMvLLf3Q3DoAbvKCZ8nepAYw==}
+  '@antelopejs/mongodb@1.8.10-next.229.g6c72429':
+    resolution: {integrity: sha512-xoVKCZSmGZMrSXaHIsr43UCW5PZ6+WOGNkzVLjUwpg8tplWymI7vR9FxqowvevoYur8JApeXJyqAINyYDYiv5g==}
 
   '@antelopejs/tooling-configs@0.8.2':
     resolution: {integrity: sha512-/2kNXIsI977hS/OpMI5bemMfie1ioTVhZy2PWW3OB/1XdjenmVCeGoe2OaNVokQRIgxZShgQuwWgBf43ayqCgQ==}
@@ -6072,7 +6072,7 @@ snapshots:
       - supports-color
     optional: true
 
-  '@antelopejs/mongodb@1.8.5(socks@2.8.10)':
+  '@antelopejs/mongodb@1.8.10-next.229.g6c72429(socks@2.8.10)':
     dependencies:
       '@antelopejs/interface-core': 0.5.1
       '@antelopejs/interface-database': 0.4.1(@antelopejs/interface-core@0.5.1)

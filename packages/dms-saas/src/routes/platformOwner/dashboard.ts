@@ -33,7 +33,7 @@ import {
   plansByMrrItems,
   workspacesByStatusItems,
 } from "../../metrics/headline-items";
-import { sumInReportingCurrency } from "../../metrics/normalised-mrr";
+import { reportingTotal } from "../../metrics/normalised-mrr";
 import {
   type ChartCardPayload,
   churnKpi,
@@ -71,21 +71,35 @@ async function loadAttentionMigrations(): Promise<MigrationAttention> {
   };
 }
 
-async function loadOpenInvoices(
+/** The open invoices of the platform: how many, and what they await in total. */
+export async function loadOpenInvoices(
   currency: string,
 ): Promise<OpenInvoicesAttention> {
-  const open: Invoice[] = await GetModel(InvoiceModel, CROSS_INSTANCE)
-    .table.getAll(OPEN_STATUS, "status")
-    .run();
+  const open = () =>
+    GetModel(InvoiceModel, CROSS_INSTANCE).table.getAll(OPEN_STATUS, "status");
+  const [byCurrency, owingCurrencies] = await Promise.all([
+    open()
+      .group("currency", (invoices, invoiceCurrency) => ({
+        currency: invoiceCurrency,
+        count: invoices.count(),
+        total: invoices.sum("total"),
+      }))
+      .run(),
+    open()
+      .filter((invoice) => invoice.key("total").ne(0))
+      .group("currency", (_invoices, invoiceCurrency) => invoiceCurrency)
+      .run(),
+  ]);
+  const owing = new Set(owingCurrencies);
+  const totals = new Map<string, number>();
+  for (const group of byCurrency) {
+    if (!owing.has(group.currency) || !group.currency) continue;
+    const code = group.currency.toUpperCase();
+    totals.set(code, (totals.get(code) ?? 0) + group.total);
+  }
   return {
-    count: open.length,
-    awaiting: sumInReportingCurrency(
-      open.map((invoice) => ({
-        amountMinor: invoice.total,
-        currency: invoice.currency,
-      })),
-      currency,
-    ),
+    count: byCurrency.reduce((count, group) => count + group.count, 0),
+    awaiting: reportingTotal(totals, currency),
   };
 }
 
