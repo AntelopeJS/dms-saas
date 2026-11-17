@@ -14,10 +14,10 @@ importers:
     devDependencies:
       '@antelopejs/dms':
         specifier: '>=0.20.8 <0.21.0'
-        version: 0.20.8(@antelopejs/core@1.24.0)(@playwright/test@1.65.1)(typescript@6.0.3)
+        version: 0.20.8(@antelopejs/core@1.24.0)(@playwright/test@1.65.1)(bare-buffer@3.7.1)(typescript@6.0.3)
       '@antelopejs/tooling-configs':
         specifier: '>=0.8.1 <0.9.0'
-        version: 0.8.2(knip@6.41.0)(mongodb-memory-server@11.3.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.0)(sharp@0.35.5(@types/node@24.19.2))
+        version: 0.8.2(knip@6.41.0)(mongodb-memory-server@11.3.0(bare-buffer@3.7.1))(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.0)(sharp@0.35.5(@types/node@24.19.2))
       '@playwright/test':
         specifier: ~1.65.0
         version: 1.65.1
@@ -35,7 +35,7 @@ importers:
         version: 2.2.2
       mongodb-memory-server:
         specifier: ^11.3.0
-        version: 11.3.0
+        version: 11.3.0(bare-buffer@3.7.1)
       oxfmt:
         specifier: ^0.66.0
         version: 0.66.0
@@ -110,8 +110,8 @@ importers:
         specifier: '>=0.0.8 <0.1.0'
         version: 0.0.8(socks@2.8.10)
       '@antelopejs/mongodb':
-        specifier: 1.8.10-next.229.g6c72429
-        version: 1.8.10-next.229.g6c72429(socks@2.8.10)
+        specifier: '>=1.8.10 <1.9.0'
+        version: 1.8.10(socks@2.8.10)
       '@total-typescript/shoehorn':
         specifier: ^0.1.2
         version: 0.1.2
@@ -380,8 +380,8 @@ packages:
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/mongodb@1.8.10-next.229.g6c72429':
-    resolution: {integrity: sha512-xoVKCZSmGZMrSXaHIsr43UCW5PZ6+WOGNkzVLjUwpg8tplWymI7vR9FxqowvevoYur8JApeXJyqAINyYDYiv5g==}
+  '@antelopejs/mongodb@1.8.10':
+    resolution: {integrity: sha512-oafRmx+9uOztWOYegN381Qiwsbce8fMudxc69vbhYMABM4OanwlaWnf65UqlJ1sUoJQt9mfocTAtjz9SrHDFyg==}
 
   '@antelopejs/tooling-configs@0.8.2':
     resolution: {integrity: sha512-/2kNXIsI977hS/OpMI5bemMfie1ioTVhZy2PWW3OB/1XdjenmVCeGoe2OaNVokQRIgxZShgQuwWgBf43ayqCgQ==}
@@ -5936,7 +5936,7 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@antelopejs/dms@0.20.8(@antelopejs/core@1.24.0)(@playwright/test@1.65.1)(typescript@6.0.3)':
+  '@antelopejs/dms@0.20.8(@antelopejs/core@1.24.0)(@playwright/test@1.65.1)(bare-buffer@3.7.1)(typescript@6.0.3)':
     dependencies:
       2fa: 0.1.2
       '@antelopejs/interface-api': 0.3.3(@antelopejs/interface-core@0.5.1)
@@ -6072,7 +6072,7 @@ snapshots:
       - supports-color
     optional: true
 
-  '@antelopejs/mongodb@1.8.10-next.229.g6c72429(socks@2.8.10)':
+  '@antelopejs/mongodb@1.8.10(socks@2.8.10)':
     dependencies:
       '@antelopejs/interface-core': 0.5.1
       '@antelopejs/interface-database': 0.4.1(@antelopejs/interface-core@0.5.1)
@@ -6094,7 +6094,7 @@ snapshots:
       - snappy
       - socks
 
-  '@antelopejs/tooling-configs@0.8.2(knip@6.41.0)(mongodb-memory-server@11.3.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.0)(sharp@0.35.5(@types/node@24.19.2))':
+  '@antelopejs/tooling-configs@0.8.2(knip@6.41.0)(mongodb-memory-server@11.3.0(bare-buffer@3.7.1))(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.0)(sharp@0.35.5(@types/node@24.19.2))':
     dependencies:
       '@oxlint/plugins': 1.81.0
       dts-bundle-generator: 9.5.1
@@ -6124,7 +6124,7 @@ snapshots:
       '@typescript/typescript-win32-arm64': 7.0.2
       '@typescript/typescript-win32-x64': 7.0.2
       knip: 6.41.0
-      mongodb-memory-server: 11.3.0
+      mongodb-memory-server: 11.3.0(bare-buffer@3.7.1)
       oxfmt: 0.66.0
       oxlint: 1.81.0(oxlint-tsgolint@7.0.2004)
       pixelmatch: 8.0.0
@@ -9958,7 +9958,7 @@ snapshots:
       - socks
       - supports-color
 
-  mongodb-memory-server@11.3.0:
+  mongodb-memory-server@11.3.0(bare-buffer@3.7.1):
     dependencies:
       mongodb-memory-server-core: 11.3.0(bare-buffer@3.7.1)(socks@2.8.10)
       tslib: 2.8.1

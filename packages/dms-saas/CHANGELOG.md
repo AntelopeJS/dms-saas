@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.12.3
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.2...v0.12.3)
+
+### 🚀 Enhancements
+
+- **plan-changes:** Let a plan-change policy return a non-blocking notice ([#288](https://github.com/AntelopeJS/dms-saas/pull/288))
+
+### 🔥 Performance
+
+- **dms-saas:** Count, sum and cut the platform reads in the query ([#302](https://github.com/AntelopeJS/dms-saas/pull/302))
+
+### 🩹 Fixes
+
+- **stripe:** Cancel only the workspace still billed on the deleted subscription ([#287](https://github.com/AntelopeJS/dms-saas/pull/287))
+- **deps:** Depend on the stable @antelopejs/mongodb
+
+### 📖 Documentation
+
+- Drop the reverted pairs from the v0.12.2 changelog ([#299](https://github.com/AntelopeJS/dms-saas/pull/299))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.12.2
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.1...v0.12.2)
