@@ -38,9 +38,10 @@ jobs:
     permissions:
       contents: read
 
-  # `ci-node.yml` exposes no outputs, so this copies its tier `case`: the jobs
-  # below run in the `fast`, `full` and `nightly` tiers, on Windows only in
-  # `nightly`, and not on a draft or the `next` to `main` pull request.
+  # `ci-node.yml` exposes no outputs, so this takes the tier from the shared
+  # rule of `ci-tier`: the jobs below run in the `fast`, `full` and `nightly`
+  # tiers, on Windows only in `nightly`, and not on a draft or the `next` to
+  # `main` pull request.
   select:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -49,36 +50,15 @@ jobs:
       tests: ${{ steps.tier.outputs.tests }}
       os: ${{ steps.tier.outputs.os }}
     steps:
+      - name: Pick the tier with the shared rule
+        id: pick
+        uses: AntelopeJS/.github/.github/actions/ci-tier@v2
       - name: Pick the tier from the event, the target branch and the draft flag
         id: tier
         env:
-          EVENT: ${{ github.event_name }}
-          REF_NAME: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          REPOSITORY: ${{ github.repository }}
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
-          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          DRAFT: ${{ github.event.pull_request.draft }}
+          TIER: ${{ steps.pick.outputs.tier }}
         run: |
-          case "$EVENT" in
-            pull_request)
-              if [[ "$BASE_REF" == "$DEFAULT_BRANCH" && "$HEAD_REPOSITORY" == "$REPOSITORY" && "$HEAD_REF" =~ ^(next|develop)$ ]]; then
-                tier=none
-              elif [[ "$DRAFT" == true ]]; then
-                tier=draft
-              elif [[ "$BASE_REF" == "$DEFAULT_BRANCH" ]]; then
-                tier=full
-              else
-                tier=fast
-              fi
-              ;;
-            push)
-              if [[ "$REF_NAME" == "$DEFAULT_BRANCH" ]]; then tier=none; else tier=full; fi
-              ;;
-            schedule) tier=nightly ;;
-            *) tier=full ;;
-          esac
+          tier="$TIER"
 
           tests=true
           if [[ "$tier" == none || "$tier" == draft ]]; then
