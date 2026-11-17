@@ -74,13 +74,13 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and pub
 | `@antelopejs/interface-data-api`            | `>=0.8.0 <0.9.0`   | `0.8.0`     |
 | `@antelopejs/interface-database`            | `>=0.4.0 <0.5.0`   | `0.4.1`     |
 | `@antelopejs/interface-database-decorators` | `>=0.5.2 <0.6.0`   | `0.5.2`     |
-| `@antelopejs/interface-dms`                 | `>=0.14.0 <0.15.0` | `0.14.0`    |
+| `@antelopejs/interface-dms`                 | `>=0.14.0 <0.15.0` | `0.14.4`    |
 | `@antelopejs/interface-dms-automation`      | `>=0.7.0 <0.8.0`   | `0.7.0`     |
 | `@antelopejs/interface-dms-saas`            | `workspace:^`      | `0.10.1`    |
 
 <!-- antelopejs-docs-compat:end -->
 
-The module also needs a DMS backend in a release that implements the `@antelopejs/interface-dms` range in the table above, and the `@antelopejs/dms-frontend` renderer in the range its frontend module declares in `engines["@antelopejs/dms-frontend"]` of `frontend-vue/package.json`. The `ajs dms` CLI refuses to build it with a renderer outside that range.
+The module also needs a DMS backend in a release that implements the `@antelopejs/interface-dms` range in the table above, and the `@antelopejs/dms-frontend` renderer in the range its frontend module declares in `engines["@antelopejs/dms-frontend"]` of `frontend-vue/package.json`. The `ajs dms` CLI refuses to build it with a renderer outside that range. The database adapter must be `@antelopejs/mongodb` 1.8.10 or later: earlier releases answer the invoice reads wrong.
 
 The module calls Stripe with the API version `2026-08-26.dahlia`. Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
 
