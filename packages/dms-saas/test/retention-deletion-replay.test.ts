@@ -5,6 +5,7 @@ import {
   observeTenantLifecycle,
   runTenantLifecycleOperation,
 } from "@antelopejs/interface-dms/tenant-lifecycle";
+import { FileExists, WriteFile } from "@antelopejs/interface-file-storage";
 import type { ScheduledTask } from "node-cron";
 import {
   afterEach,
@@ -30,8 +31,11 @@ import { captureLogs } from "./helpers/logging";
 import { useMongoDatabase } from "./helpers/mongo";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
 import { latch } from "./helpers/latch";
+import { useMemoryFileStorage } from "./helpers/file-storage";
+import { WorkspaceBrandingModel } from "../src/workspaces/db/workspace-branding.model";
 
 useMongoDatabase();
+useMemoryFileStorage();
 const logs = captureLogs();
 
 /** What the tenant looked like to the deletion hook when it ran. */
@@ -147,6 +151,31 @@ describe("retention deletion replay", () => {
     expect(hookRuns.map((run) => run.operationId)).toEqual(
       hookRuns.map(() => operationId),
     );
+  });
+
+  it("rejects a deletion that leaves the workspace logo or its public file behind", async () => {
+    const { model, id, tenantId } = await subscriptionFixture({
+      status: "cancelled",
+      deletionStartedAt: BEFORE,
+    });
+    const logo = Buffer.from("logo");
+    const { resourceKey } = await WriteFile(
+      {
+        filename: "logo.png",
+        size: logo.byteLength,
+        mimetype: "image/png",
+        path: "workspace-logos",
+      },
+      logo,
+    );
+    const branding = GetModel(WorkspaceBrandingModel, tenantId);
+    await branding.setLogo(tenantId, { key: resourceKey });
+
+    await task.execute();
+
+    await vi.waitFor(async () => expect(await model.get(id)).toBeUndefined());
+    await expect(branding.get(tenantId)).resolves.toBeUndefined();
+    await expect(FileExists(resourceKey)).resolves.toBe(false);
   });
 
   it("does not admit active or unmarked orphan pending subscriptions", async () => {

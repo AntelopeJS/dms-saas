@@ -7,6 +7,7 @@ import {
   TenantModel,
 } from "@antelopejs/interface-dms/db";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
+import type { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { deriveBillingState } from "../billing-state";
 import {
   type BillingState,
@@ -14,6 +15,8 @@ import {
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../db";
+import { WorkspaceBrandingModel } from "./db/workspace-branding.model";
+import { workspaceLogoUrl } from "./workspace-logo";
 
 const CANCELLED_STATUS = "cancelled";
 
@@ -21,6 +24,8 @@ const CANCELLED_STATUS = "cancelled";
 export interface MyWorkspaceRow {
   _id: string;
   name: string;
+  /** Where the logo reads from; null shows the workspace's initial. */
+  logoUrl: string | null;
   planName: string | null;
   status: BillingState;
   isComplimentary: boolean;
@@ -36,16 +41,18 @@ interface WorkspaceFacts {
   subscription: TenantSubscription | undefined;
   owners: TenantMember[];
   membersCount: number;
+  logo: DefaultDataTypes.ImageValue | null;
 }
 
 async function loadFacts(tenant: Tenant): Promise<WorkspaceFacts> {
   const memberModel = GetModel(TenantMemberModel, tenant._id);
-  const [subscription, owners, membersCount] = await Promise.all([
+  const [subscription, owners, membersCount, logo] = await Promise.all([
     GetModel(TenantSubscriptionModel, tenant._id).findOne(),
     memberModel.listOwners(),
     memberModel.table.count().run(),
+    GetModel(WorkspaceBrandingModel, tenant._id).getLogo(tenant._id),
   ]);
-  return { tenant, subscription, owners, membersCount };
+  return { tenant, subscription, owners, membersCount, logo };
 }
 
 async function resolvePlanName(
@@ -70,14 +77,16 @@ async function toRow(
   userId: string,
   currentTenantId: string,
 ): Promise<MyWorkspaceRow> {
-  const { tenant, subscription, owners, membersCount } = facts;
-  const [planName, ownerName] = await Promise.all([
+  const { tenant, subscription, owners, membersCount, logo } = facts;
+  const [planName, ownerName, logoUrl] = await Promise.all([
     resolvePlanName(subscription),
     resolveOwnerName(owners),
+    workspaceLogoUrl(logo),
   ]);
   return {
     _id: tenant._id,
     name: tenant.name,
+    logoUrl,
     planName,
     status: deriveBillingState(subscription),
     isComplimentary: !!subscription?.isComplimentary,
