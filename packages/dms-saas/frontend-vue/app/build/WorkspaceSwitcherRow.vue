@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { highlightParts } from './highlight'
+import WorkspaceMark from './WorkspaceMark.vue'
 
 const props = defineProps<{
 	workspace: MyWorkspace
@@ -51,10 +52,6 @@ const status = computed(() =>
 		? null
 		: statusView('workspace', props.workspace.status),
 )
-
-function initialOf(name: string): string {
-	return (name.trim()[0] ?? '?').toUpperCase()
-}
 </script>
 
 <template>
@@ -70,12 +67,12 @@ function initialOf(name: string): string {
 		:disabled="isDisabled && !isSwitching"
 		@click="emit('select', workspace)"
 	>
-		<span
-			class="from-primary-500 to-primary-600 bg-linear-to-br inline-flex size-[22px] shrink-0 items-center justify-center rounded-[5px] text-[11px] font-bold text-white"
+		<WorkspaceMark
+			:name="workspace.name"
+			:logo-url="workspace.logoUrl"
+			class="size-[22px] rounded-[5px] text-[11px]"
 			aria-hidden="true"
-		>
-			{{ initialOf(workspace.name) }}
-		</span>
+		/>
 		<span class="flex min-w-0 flex-1 flex-col">
 			<span class="text-highlighted truncate font-medium">
 				<!-- v-text keeps prettier's line breaks out of the highlighted runs -->

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { HOME_PATH, workspaceSwitchLandingPath } from '../build/workspace-paths'
+import WorkspaceMark from '../build/WorkspaceMark.vue'
 import WorkspaceSwitcherRow from '../build/WorkspaceSwitcherRow.vue'
 
 // Drawn as two roots: attributes have no single element to land on.
@@ -77,10 +78,6 @@ const popoverPlacement = computed(() =>
 watch(isOpen, (open) => {
 	if (!open && !switchingId.value) searchQuery.value = ''
 })
-
-function initialOf(name: string): string {
-	return (name.trim()[0] ?? '?').toUpperCase()
-}
 
 function reportSwitchFailure(
 	error: unknown,
@@ -160,11 +157,19 @@ async function onWorkspaceCreated(
 				"
 				:aria-label="$t(`${KEYS}.title`)"
 			>
-				<span
-					class="from-primary-500 to-primary-600 bg-linear-to-br relative inline-flex size-[26px] shrink-0 items-center justify-center rounded-md text-[13px] font-bold text-white"
-				>
-					<template v-if="current">{{ initialOf(current.name) }}</template>
-					<UIcon v-else name="i-ph-buildings" class="size-4" />
+				<span class="relative inline-flex shrink-0">
+					<WorkspaceMark
+						v-if="current"
+						:name="current.name"
+						:logo-url="current.logoUrl"
+						class="size-[26px] rounded-md text-[13px]"
+					/>
+					<span
+						v-else
+						class="from-primary-500 to-primary-600 bg-linear-to-br inline-flex size-[26px] items-center justify-center rounded-md text-white"
+					>
+						<UIcon name="i-ph-buildings" class="size-4" />
+					</span>
 					<span
 						v-if="isPastDue"
 						class="bg-error ring-default absolute -right-1 -top-1 size-2.5 rounded-full ring-2"

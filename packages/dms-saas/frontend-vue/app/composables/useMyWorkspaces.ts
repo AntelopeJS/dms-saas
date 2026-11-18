@@ -4,6 +4,8 @@ import { computed, type ComputedRef } from 'vue'
 export interface MyWorkspace {
 	_id: string
 	name: string
+	/** Where the logo reads from; null shows the workspace's initial. */
+	logoUrl: string | null
 	planName: string | null
 	/** Billing state (`active`, `trialing`, `free`, `past_due`…). */
 	status: string
