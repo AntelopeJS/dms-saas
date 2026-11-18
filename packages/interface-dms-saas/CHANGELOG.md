@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.10.2
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.10.1...interface-v0.10.2)
+
+### 🩹 Fixes
+
+- **deps:** Drop the interface-dms and interface-dms-builder overrides ([#306](https://github.com/AntelopeJS/dms-saas/pull/306))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.10.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.10.0...interface-v0.10.1)
