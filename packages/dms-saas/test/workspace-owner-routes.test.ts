@@ -22,6 +22,7 @@ import {
   useDmsAuth,
 } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
+import { implementPromotedFileSave } from "./helpers/attachments";
 import { implementNotifications } from "./helpers/notifications";
 import { insertPlan } from "./helpers/plans";
 import {
@@ -33,6 +34,7 @@ import {
 useMongoDatabase();
 useDmsAuth();
 implementNotifications();
+implementPromotedFileSave();
 const listExportJobs = vi.fn<typeof exportJobs.listExportJobs>();
 const startTenantExportJob =
   vi.fn<typeof tenantExportArchive.startTenantExportJob>();
@@ -81,11 +83,15 @@ describe("workspace rename and deletion", () => {
   it("renames with the trimmed name", async () => {
     const { tenantId, owner, request } = await createOwnedWorkspace();
 
-    const result = await workspacesController().renameCurrent(owner, request, {
-      name: "  Acme Retail ",
-    });
+    const result = await workspacesController().saveCurrentIdentity(
+      owner,
+      request,
+      {
+        name: "  Acme Retail ",
+      },
+    );
 
-    expect(result).toEqual({ _id: tenantId, name: "Acme Retail" });
+    expect(result).toEqual({ _id: tenantId, name: "Acme Retail", logo: null });
     await expect(GetModel(TenantModel).get(tenantId)).resolves.toMatchObject({
       name: "Acme Retail",
     });
@@ -96,10 +102,10 @@ describe("workspace rename and deletion", () => {
     const controller = workspacesController();
 
     await expect(
-      controller.renameCurrent(owner, request, { name: "  " }),
+      controller.saveCurrentIdentity(owner, request, { name: "  " }),
     ).rejects.toMatchObject({ body: "saas.errors.workspace.name_required" });
     await expect(
-      controller.renameCurrent(owner, request, { name: "x".repeat(61) }),
+      controller.saveCurrentIdentity(owner, request, { name: "x".repeat(61) }),
     ).rejects.toMatchObject({ body: "saas.errors.workspace.name_too_long" });
     await expect(GetModel(TenantModel).get(tenantId)).resolves.toMatchObject({
       name: tenantId,

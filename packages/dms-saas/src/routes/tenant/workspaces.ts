@@ -8,13 +8,16 @@ import {
   Put,
   type RequestContext,
 } from "@antelopejs/interface-api";
-import { assert } from "@antelopejs/interface-api-util";
-import { Model } from "@antelopejs/interface-database-decorators";
+import { assert, assertValidation } from "@antelopejs/interface-api-util";
+import { GetModel, Model } from "@antelopejs/interface-database-decorators";
+import { SaveComponentFiles } from "@antelopejs/interface-dms/attachments";
+import type { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import {
   AuthTenantMember,
   AuthTenantOwner,
 } from "@antelopejs/interface-dms/guards";
+import { GetComponentPermissionIds } from "@antelopejs/interface-dms/page";
 import { getRequestTenantId } from "@antelopejs/interface-dms/request-tenant";
 import { AuthRawUser } from "@antelopejs/interface-dms/auth";
 import { type User } from "@antelopejs/interface-dms/auth/db";
@@ -31,6 +34,8 @@ import {
   type RequestHeaderValue,
   requestLocale,
 } from "../../utils/content-language";
+import { identityForm } from "../../pages/tenant/general";
+import { WorkspaceBrandingModel } from "../../workspaces/db/workspace-branding.model";
 import type {
   CardDetails,
   MyWorkspaceRow,
@@ -58,6 +63,8 @@ import {
   rollbackWorkspaceProvisioning,
   withCardHold,
   workspaceGlanceItems,
+  workspaceLogoAttachmentFields,
+  workspaceLogoInput,
 } from "../../workspaces";
 
 const HTTP_NOT_FOUND = 404;
@@ -82,6 +89,7 @@ interface CreatedWorkspace {
 interface CurrentWorkspace {
   _id: string;
   name: string;
+  logo: DefaultDataTypes.ImageValue | null;
   retentionDays: number;
 }
 
@@ -90,13 +98,15 @@ interface WorkspaceGlance {
   items: StatGroupItem[];
 }
 
-interface WorkspaceRenameBody {
+interface WorkspaceIdentityBody {
   name?: string;
+  logo?: unknown;
 }
 
-interface RenamedWorkspace {
+interface WorkspaceIdentity {
   _id: string;
   name: string;
+  logo: DefaultDataTypes.ImageValue | null;
 }
 
 interface WorkspaceDeleteBody {
@@ -243,11 +253,11 @@ export class SaasWorkspacesController extends Controller(
     const tenantId = getRequestTenantId(ctx);
     const tenant = await this.tenantModel.get(tenantId);
     assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
-    return {
-      _id: tenant._id,
-      name: tenant.name,
-      retentionDays: await resolveDataRetentionDays(),
-    };
+    const [logo, retentionDays] = await Promise.all([
+      GetModel(WorkspaceBrandingModel, tenantId).getLogo(tenantId),
+      resolveDataRetentionDays(),
+    ]);
+    return { _id: tenant._id, name: tenant.name, logo, retentionDays };
   }
 
   /** Feeds the "At a glance" cards of the General page, for every member. */
@@ -272,16 +282,47 @@ export class SaasWorkspacesController extends Controller(
     return buildWorkspaceOverview(getRequestTenantId(ctx), user._id);
   }
 
+  /**
+   * Saves the identity form: the name, and the logo through the DMS file
+   * save, which promotes a new upload and deletes a replaced or removed one.
+   * A field left out of the body keeps its stored value.
+   */
   @Put("/current")
-  async renameCurrent(
+  async saveCurrentIdentity(
     @AuthTenantOwner() _user: User,
     @Context() ctx: RequestContext,
-    @JSONBody() body: WorkspaceRenameBody,
-  ): Promise<RenamedWorkspace> {
+    @JSONBody() body: WorkspaceIdentityBody,
+  ): Promise<WorkspaceIdentity> {
     const tenantId = getRequestTenantId(ctx);
-    const name = normalizeWorkspaceName(body.name);
-    await this.tenantModel.update(tenantId, { name, updatedAt: new Date() });
-    return { _id: tenantId, name };
+    const tenant = await this.tenantModel.get(tenantId);
+    assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
+    const name =
+      "name" in body ? normalizeWorkspaceName(body.name) : tenant.name;
+    const branding = GetModel(WorkspaceBrandingModel, tenantId);
+    const storedLogo = await branding.getLogo(tenantId);
+    const logo =
+      "logo" in body
+        ? await SaveComponentFiles(
+            {
+              context: ctx,
+              componentIds: GetComponentPermissionIds(identityForm),
+              fields: workspaceLogoAttachmentFields,
+              submitted: { logo: body.logo },
+              before: { logo: storedLogo },
+            },
+            async (promoted) => {
+              const saved = assertValidation(promoted.logo, (value) =>
+                workspaceLogoInput.parse(value),
+              );
+              await branding.setLogo(tenantId, saved);
+              return { document: { logo: saved }, result: saved };
+            },
+          )
+        : storedLogo;
+    if (name !== tenant.name) {
+      await this.tenantModel.update(tenantId, { name, updatedAt: new Date() });
+    }
+    return { _id: tenantId, name, logo };
   }
 
   /**

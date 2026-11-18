@@ -15,10 +15,10 @@ import {
 import { CustomComponent } from "@antelopejs/interface-dms/base/custom";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
 import { HttpMethod } from "@antelopejs/interface-dms/base/types/http";
+import { workspaceLogoType } from "../../workspaces/workspace-logo";
 import { WORKSPACE_NAME_MAX_LENGTH } from "../../workspaces/workspace-name";
 import { isWorkspaceOwnerRequest } from "../../workspaces/workspace-owner";
 
-/** Read and renamed here; a rename reads the whole page again (see below). */
 const CURRENT_WORKSPACE_ENDPOINT = "/api/saas/workspaces/current";
 const GLANCE_ENDPOINT = `${CURRENT_WORKSPACE_ENDPOINT}/glance`;
 const GLANCE_ITEMS = 3;
@@ -58,13 +58,19 @@ function readonlyForNonOwners(
 }
 
 /**
- * The workspace name form. The name shows elsewhere on the page: in the "At a
- * glance" cards, the danger zone's typed confirmation and the sidebar
- * switcher. A rename reads the page's blocks and data again, as any form
- * changing what its page shows.
+ * The workspace name and logo form. The name shows elsewhere on the page, in
+ * the "At a glance" cards and the danger zone's typed confirmation, and the
+ * name and logo show in the sidebar switcher. A save reads the page's blocks
+ * and data again, as any form changing what its page shows.
  */
 export const identityForm = Form({
   fields: [
+    {
+      id: "logo",
+      label: `${KEYS}.logo`,
+      description: `${KEYS}.logo_hint`,
+      type: workspaceLogoType,
+    },
     {
       id: "name",
       label: `${KEYS}.name`,
@@ -87,8 +93,8 @@ export const identityForm = Form({
   submitUrl: CURRENT_WORKSPACE_ENDPOINT,
   submitUrlMethod: HttpMethod.put,
   saveMode: "bar",
-  successMessage: `${KEYS}.renamed`,
-  errorMessage: `${KEYS}.error.rename`,
+  successMessage: `${KEYS}.saved`,
+  errorMessage: `${KEYS}.error.save`,
 })
   .watch(FormEvents.SUBMIT_SUCCESS, BlockFunctions.REFRESH_PAGE)
   .meta({
