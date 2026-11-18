@@ -92,6 +92,7 @@ export const journeys = guarded([
   },
   {
     id: "an-owner-sets-replaces-and-removes-the-workspace-logo",
+    tag: "@smoke",
     title: "the owner uploads, replaces and removes the workspace logo on the General page, the switcher follows each save without a reload, and a replaced or removed file is deleted",
     entryPoint: "Settings › Workspace › General, PUT /api/saas/workspaces/current, GET /api/saas/workspaces/mine",
     async run(/** @type {Ctx} */ ctx) {
