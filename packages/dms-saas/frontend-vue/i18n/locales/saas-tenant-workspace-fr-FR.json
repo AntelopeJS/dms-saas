@@ -31,12 +31,14 @@
         "identity_intro": "L'identité de votre espace, visible par tous les membres et sur les factures.",
         "name": "Nom de l'espace",
         "name_hint": "Visible par tous les membres, dans le sélecteur et sur les factures.",
+        "logo": "Logo",
+        "logo_hint": "Affiché dans le sélecteur d'espaces. PNG, JPEG ou WebP, 512 Ko au plus.",
         "workspace_id": "Identifiant de l'espace",
         "workspace_id_hint": "Fixé à la création de l'espace. Communiquez-le au support quand vous le contactez.",
         "owner_only": "Réservé aux propriétaires",
-        "renamed": "Espace renommé.",
+        "saved": "Espace enregistré.",
         "error": {
-          "rename": "Impossible de renommer l'espace. Votre modification est conservée : enregistrez à nouveau pour réessayer.",
+          "save": "Impossible d'enregistrer l'espace. Votre modification est conservée : enregistrez à nouveau pour réessayer.",
           "delete": "Impossible de supprimer l'espace. Rien n'a été supprimé."
         },
         "glance": {

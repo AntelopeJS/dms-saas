@@ -10,6 +10,7 @@ export * from "./provisioning";
 export * from "./registration-extras";
 export * from "./self-serve-creation";
 export * from "./suspension";
+export * from "./workspace-logo";
 export * from "./workspace-name";
 export * from "./workspace-glance";
 export * from "./workspace-overview";

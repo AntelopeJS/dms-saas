@@ -31,12 +31,14 @@
         "identity_intro": "Your workspace identity, visible to every member and on invoices.",
         "name": "Workspace name",
         "name_hint": "Visible to every member, in the switcher and on invoices.",
+        "logo": "Logo",
+        "logo_hint": "Shown in the workspace switcher. PNG, JPEG or WebP, up to 512 KB.",
         "workspace_id": "Workspace ID",
         "workspace_id_hint": "Set when the workspace was created. Give it to support when you contact them.",
         "owner_only": "Owners only",
-        "renamed": "Workspace renamed.",
+        "saved": "Workspace saved.",
         "error": {
-          "rename": "Couldn't rename the workspace. Your change is kept: save again to retry.",
+          "save": "Couldn't save the workspace. Your change is kept: save again to retry.",
           "delete": "Couldn't delete the workspace. Nothing was deleted."
         },
         "glance": {

@@ -80,6 +80,9 @@ importers:
       '@antelopejs/interface-dms-saas':
         specifier: workspace:^
         version: link:../interface-dms-saas
+      '@antelopejs/interface-file-storage':
+        specifier: '>=0.1.8 <0.2.0'
+        version: 0.1.8(@antelopejs/interface-core@0.5.1)
       node-cron:
         specifier: ^4.2.1
         version: 4.6.0
@@ -99,9 +102,6 @@ importers:
       '@antelopejs/dms-frontend':
         specifier: '>=0.11.4 <0.12.0'
         version: 0.11.4(@antelopejs/core@1.24.0)
-      '@antelopejs/interface-file-storage':
-        specifier: '>=0.1.8 <0.2.0'
-        version: 0.1.8(@antelopejs/interface-core@0.5.1)
       '@antelopejs/interface-mongodb':
         specifier: '>=0.0.8 <0.1.0'
         version: 0.0.8(socks@2.8.10)

@@ -21,11 +21,13 @@ import {
   tenantRequest,
   useDmsAuth,
 } from "./helpers/dms";
+import { implementUploadTokens } from "./helpers/attachments";
 import { useMongoDatabase } from "./helpers/mongo";
 import { guardRefusals } from "./helpers/guards";
 
 useMongoDatabase();
 useDmsAuth();
+implementUploadTokens();
 
 const OWNER_REQUIRED = "error.tenant_owner_required";
 const MEMBER_REQUIRED = "error.tenant_member_required";
@@ -78,8 +80,9 @@ describe("General page for a workspace member", () => {
       },
     };
     served.toHaveProperty("fields", [
-      expect.objectContaining(ownerOnly),
-      expect.objectContaining(ownerOnly),
+      expect.objectContaining({ id: "logo", ...ownerOnly }),
+      expect.objectContaining({ id: "name", ...ownerOnly }),
+      expect.objectContaining({ id: "_id", ...ownerOnly }),
     ]);
   });
 
@@ -127,14 +130,14 @@ describe("General page for a workspace member", () => {
     await expect(guardedFor(owner)).resolves.toEqual({});
     await expect(guardedFor(member)).resolves.toEqual({
       getCurrentOverview: [OWNER_REQUIRED],
-      renameCurrent: [OWNER_REQUIRED],
+      saveCurrentIdentity: [OWNER_REQUIRED],
       deleteCurrent: [OWNER_REQUIRED],
     });
     await expect(guardedFor(stranger)).resolves.toEqual({
       getCurrent: [MEMBER_REQUIRED],
       getCurrentGlance: [MEMBER_REQUIRED],
       getCurrentOverview: [OWNER_REQUIRED],
-      renameCurrent: [OWNER_REQUIRED],
+      saveCurrentIdentity: [OWNER_REQUIRED],
       deleteCurrent: [OWNER_REQUIRED],
     });
   });
