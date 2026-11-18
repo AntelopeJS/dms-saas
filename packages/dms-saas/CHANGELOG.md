@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.12.4
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.3...v0.12.4)
+
+### 🚀 Enhancements
+
+- **workspaces:** Upload a workspace logo and show it in the switcher ([#307](https://github.com/AntelopeJS/dms-saas/pull/307))
+
+### 🩹 Fixes
+
+- **deps:** Drop the interface-dms and interface-dms-builder overrides ([#306](https://github.com/AntelopeJS/dms-saas/pull/306))
+
+### 🏡 Chore
+
+- **deps:** Move to @antelopejs/dms 0.21 and @antelopejs/mongodb 1.8.10 ([#304](https://github.com/AntelopeJS/dms-saas/pull/304))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.12.3
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.2...v0.12.3)
