@@ -26,7 +26,6 @@ function workspacesController() {
   });
 }
 
-/** What a save of the identity form sends: only the fields that changed. */
 interface IdentitySubmission {
   name?: string;
   logo?: unknown;

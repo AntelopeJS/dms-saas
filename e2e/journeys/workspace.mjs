@@ -16,7 +16,7 @@ function code(answer) {
 const LOGO_SIZE_PX = 16;
 
 /**
- * A square PNG of one colour, built here so no binary sits in the source.
+ * A square PNG of one colour.
  *
  * @param {[number, number, number]} rgb The colour
  * @returns {Buffer} The PNG bytes

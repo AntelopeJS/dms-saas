@@ -9,10 +9,6 @@ const LOGO_MIMETYPES = ["image/png", "image/jpeg", "image/webp"];
 const LOGO_MAX_UPLOAD_BYTES = 512 * 1024;
 const LOGO_DIMENSION_PX = 128;
 
-/**
- * Public: the switcher shows the logo of every workspace of a member, and
- * the DMS file route only signs reads of the request's own workspace.
- */
 const LOGO_VISIBILITY = "public";
 
 /** The logo field of the workspace identity form. */

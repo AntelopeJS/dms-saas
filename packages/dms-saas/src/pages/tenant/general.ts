@@ -19,7 +19,6 @@ import { workspaceLogoType } from "../../workspaces/workspace-logo";
 import { WORKSPACE_NAME_MAX_LENGTH } from "../../workspaces/workspace-name";
 import { isWorkspaceOwnerRequest } from "../../workspaces/workspace-owner";
 
-/** Read and saved here; a save reads the whole page again (see below). */
 const CURRENT_WORKSPACE_ENDPOINT = "/api/saas/workspaces/current";
 const GLANCE_ENDPOINT = `${CURRENT_WORKSPACE_ENDPOINT}/glance`;
 const GLANCE_ITEMS = 3;
@@ -59,10 +58,10 @@ function readonlyForNonOwners(
 }
 
 /**
- * The workspace name and logo form. The name shows elsewhere on the page: in
- * the "At a glance" cards and the danger zone's typed confirmation; both show
- * in the sidebar switcher. A save reads the page's blocks and data again, as
- * any form changing what its page shows.
+ * The workspace name and logo form. The name shows elsewhere on the page, in
+ * the "At a glance" cards and the danger zone's typed confirmation, and the
+ * name and logo show in the sidebar switcher. A save reads the page's blocks
+ * and data again, as any form changing what its page shows.
  */
 export const identityForm = Form({
   fields: [

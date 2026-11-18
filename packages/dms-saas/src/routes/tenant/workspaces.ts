@@ -98,7 +98,6 @@ interface WorkspaceGlance {
   items: StatGroupItem[];
 }
 
-/** The identity form's save, which sends only the fields that changed. */
 interface WorkspaceIdentityBody {
   name?: string;
   logo?: unknown;
