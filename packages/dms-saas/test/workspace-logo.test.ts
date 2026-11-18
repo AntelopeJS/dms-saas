@@ -57,7 +57,7 @@ beforeEach(() => {
 });
 
 describe("workspace logo", () => {
-  it("rejects a switcher that shows no logo for a workspace that has none", async () => {
+  it("rejects a switcher that shows a logo for a workspace that has none", async () => {
     const workspace = await createOwnedWorkspace();
 
     await expect(storedLogo(workspace)).resolves.toBeNull();
@@ -103,8 +103,11 @@ describe("workspace logo", () => {
     const workspace = await createOwnedWorkspace();
     await save(workspace, { logo: FIRST_LOGO });
 
+    const savesBefore = fileSaves.length;
+
     await save(workspace, { name: "Acme" });
 
+    expect(fileSaves).toHaveLength(savesBefore);
     await expect(storedLogo(workspace)).resolves.toEqual(FIRST_LOGO);
   });
 

@@ -300,22 +300,25 @@ export class SaasWorkspacesController extends Controller(
       "name" in body ? normalizeWorkspaceName(body.name) : tenant.name;
     const branding = GetModel(WorkspaceBrandingModel, tenantId);
     const storedLogo = await branding.getLogo(tenantId);
-    const logo = await SaveComponentFiles(
-      {
-        context: ctx,
-        componentIds: GetComponentPermissionIds(identityForm),
-        fields: workspaceLogoAttachmentFields,
-        submitted: { logo: "logo" in body ? body.logo : storedLogo },
-        before: { logo: storedLogo },
-      },
-      async (promoted) => {
-        const saved = assertValidation(promoted.logo, (value) =>
-          workspaceLogoInput.parse(value),
-        );
-        await branding.setLogo(tenantId, saved);
-        return { document: { logo: saved }, result: saved };
-      },
-    );
+    const logo =
+      "logo" in body
+        ? await SaveComponentFiles(
+            {
+              context: ctx,
+              componentIds: GetComponentPermissionIds(identityForm),
+              fields: workspaceLogoAttachmentFields,
+              submitted: { logo: body.logo },
+              before: { logo: storedLogo },
+            },
+            async (promoted) => {
+              const saved = assertValidation(promoted.logo, (value) =>
+                workspaceLogoInput.parse(value),
+              );
+              await branding.setLogo(tenantId, saved);
+              return { document: { logo: saved }, result: saved };
+            },
+          )
+        : storedLogo;
     if (name !== tenant.name) {
       await this.tenantModel.update(tenantId, { name, updatedAt: new Date() });
     }

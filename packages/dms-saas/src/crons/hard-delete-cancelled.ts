@@ -13,6 +13,7 @@ import {
 import { getRowInstance } from "../utils";
 import { MS_PER_DAY } from "../utils/time";
 import {
+  deleteWorkspaceLogo,
   getWorkspaceDeletionOperationId,
   resolveDataRetentionDays,
 } from "../workspaces";
@@ -38,6 +39,7 @@ async function deleteAdmittedTenant(
   await ExecuteHooks(Hook.TENANT_DELETED, tenantId, { operationId });
   await GetModel(TenantModel).delete(tenantId);
   await GetModel(TenantBillingInfoModel, tenantId).deleteAll();
+  await deleteWorkspaceLogo(tenantId);
   await model.finishDeletion(admitted);
 }
 
