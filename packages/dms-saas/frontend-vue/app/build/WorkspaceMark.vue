@@ -23,7 +23,7 @@ function initialOf(name: string): string {
 <template>
 	<span
 		v-if="logoUrl && !hasFailed"
-		class="bg-default ring-default inline-flex shrink-0 items-center justify-center overflow-hidden ring-1"
+		class="ring-default inline-flex shrink-0 items-center justify-center overflow-hidden bg-white ring-1"
 	>
 		<img
 			:src="logoUrl"
