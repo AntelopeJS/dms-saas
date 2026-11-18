@@ -10,6 +10,8 @@ covers:
   - packages/dms-saas/src/pages/tenant/general.ts
   - packages/dms-saas/src/pages/tenant/data-export.ts
   - packages/dms-saas/src/workspaces/my-workspaces.ts
+  - packages/dms-saas/src/workspaces/workspace-logo.ts
+  - packages/dms-saas/src/workspaces/db/workspace-branding.*.ts
   - packages/dms-saas/src/workspaces/workspace-glance.ts
   - packages/dms-saas/src/workspaces/deletion*.ts
   - packages/dms-saas/src/workspaces/self-serve-creation.ts
@@ -33,6 +35,7 @@ covers:
   - packages/dms-saas/frontend-vue/app/composables/useInvitationLink.ts
   - packages/dms-saas/frontend-vue/app/composables/useDaysLeft.ts
   - packages/dms-saas/frontend-vue/app/composables/useComplimentaryAccess.ts
+  - packages/dms-saas/frontend-vue/app/build/WorkspaceMark.vue
   - packages/dms-saas/frontend-vue/app/build/WorkspaceSwitcherRow.vue
   - packages/dms-saas/frontend-vue/app/build/workspace-paths.ts
   - packages/dms-saas/frontend-vue/app/build/useWorkspaceName.ts
@@ -95,11 +98,12 @@ docs:
 
 # Workspace
 
-Settings › Workspace as the owner lives it: renaming, the workspace list, deleting a workspace, and an operator's suspension as the workspace sees it.
+Settings › Workspace as the owner lives it: renaming, the logo, the workspace list, deleting a workspace, and an operator's suspension as the workspace sees it.
 
 ## Sub-features
 
 - `an-owner-renames-the-workspace-and-sees-it-listed`: the owner renames the workspace (saved trimmed), the switcher list and the General page read the new name, and an anonymous caller cannot rename.
+- `an-owner-sets-replaces-and-removes-the-workspace-logo`: the owner uploads, replaces and removes the logo on the General page; each save shows in the switcher without a reload, and the replaced and the removed file answer 404.
 - `deleting-a-workspace-needs-its-name-and-revokes-access`: deletion needs the typed workspace name, answers the retention it keeps data for, and closes the workspace to its owner.
 - `an-operator-suspension-closes-the-workspace-until-reactivation`: suspending needs the typed workspace name and an operation id, closes changes but keeps billing readable, repeats idempotently, and reactivation reopens it.
 - `a-member-cannot-rename-delete-or-export-the-workspace`: a member who joined through an invitation is refused 403 on rename, deletion, the danger-zone overview and the data export, and the workspace is unchanged.
@@ -125,8 +129,8 @@ dms-control journey "$RUN" workspace
 
 | Documented behaviour | Journey check or reason |
 | --- | --- |
-| 2.workspace-settings.md "General" | rename and deletion journeys; Not driven: members seeing the form read-only, the Danger zone layout |
-| 2.workspace-settings.md "Workspace switcher" | rename journey reads the list; Not driven: search by name or owner, Create workspace with a card (Stripe) |
+| 2.workspace-settings.md "General" | rename, logo and deletion journeys; Not driven: members seeing the form read-only, the Danger zone layout, the 512 KB and type limits of the logo |
+| 2.workspace-settings.md "Workspace switcher" | rename journey reads the list; logo journey: the trigger draws the logo after each save, and no image once it is removed; Not driven: the logo of another workspace in the list, search by name or owner, Create workspace with a card (Stripe) |
 | 2.workspace-settings.md "Billing" | smoke reads the plan; Not driven: Next invoice, payment method, billing information, Pay invoice, Change plan, Manage in Stripe (all call Stripe) |
 | 2.workspace-settings.md "Data export" | Not driven: the export job e-mails a link; no journey drives the background archive |
 | 7.stripe.md "Starting a paid plan" | Not driven: Checkout needs Stripe |
