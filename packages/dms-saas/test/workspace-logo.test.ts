@@ -26,16 +26,17 @@ function workspacesController() {
   });
 }
 
-/** What a save of the identity form sends besides the name. */
-interface LogoSubmission {
+/** What a save of the identity form sends: only the fields that changed. */
+interface IdentitySubmission {
+  name?: string;
   logo?: unknown;
 }
 
-async function save(workspace: OwnedWorkspace, body: LogoSubmission) {
+async function save(workspace: OwnedWorkspace, body: IdentitySubmission) {
   return workspacesController().saveCurrentIdentity(
     workspace.owner,
     workspace.request,
-    { name: "Acme", ...body },
+    body,
   );
 }
 
@@ -103,8 +104,19 @@ describe("workspace logo", () => {
     const workspace = await createOwnedWorkspace();
     await save(workspace, { logo: FIRST_LOGO });
 
-    await save(workspace, {});
+    await save(workspace, { name: "Acme" });
 
+    await expect(storedLogo(workspace)).resolves.toEqual(FIRST_LOGO);
+  });
+
+  it("rejects a logo change that needs the unchanged name sent along", async () => {
+    const workspace = await createOwnedWorkspace();
+
+    await save(workspace, { logo: FIRST_LOGO });
+
+    await expect(
+      GetModel(TenantModel).get(workspace.tenantId),
+    ).resolves.toMatchObject({ name: workspace.tenantId });
     await expect(storedLogo(workspace)).resolves.toEqual(FIRST_LOGO);
   });
 

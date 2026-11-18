@@ -98,7 +98,7 @@ interface WorkspaceGlance {
   items: StatGroupItem[];
 }
 
-/** The identity form's save: a logo left out keeps the stored one. */
+/** The identity form's save, which sends only the fields that changed. */
 interface WorkspaceIdentityBody {
   name?: string;
   logo?: unknown;
@@ -286,6 +286,7 @@ export class SaasWorkspacesController extends Controller(
   /**
    * Saves the identity form: the name, and the logo through the DMS file
    * save, which promotes a new upload and deletes a replaced or removed one.
+   * A field left out of the body keeps its stored value.
    */
   @Put("/current")
   async saveCurrentIdentity(
@@ -294,7 +295,10 @@ export class SaasWorkspacesController extends Controller(
     @JSONBody() body: WorkspaceIdentityBody,
   ): Promise<WorkspaceIdentity> {
     const tenantId = getRequestTenantId(ctx);
-    const name = normalizeWorkspaceName(body.name);
+    const tenant = await this.tenantModel.get(tenantId);
+    assert(tenant, HTTP_NOT_FOUND, "saas.errors.workspace.not_found");
+    const name =
+      "name" in body ? normalizeWorkspaceName(body.name) : tenant.name;
     const branding = GetModel(WorkspaceBrandingModel, tenantId);
     const storedLogo = await branding.getLogo(tenantId);
     const logo = await SaveComponentFiles(
@@ -313,7 +317,9 @@ export class SaasWorkspacesController extends Controller(
         return { document: { logo: saved }, result: saved };
       },
     );
-    await this.tenantModel.update(tenantId, { name, updatedAt: new Date() });
+    if (name !== tenant.name) {
+      await this.tenantModel.update(tenantId, { name, updatedAt: new Date() });
+    }
     return { _id: tenantId, name, logo };
   }
 
