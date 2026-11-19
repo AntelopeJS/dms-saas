@@ -19,41 +19,40 @@ interface SaasConfig {
 }
 
 /**
- * The module's options, each from a `VERIFY_SAAS_*` variable a journey sets in
+ * The module's options, each from a `E2E_SAAS_*` variable a journey sets in
  * the run's environment before it restarts the backend. Unset, the module
  * runs its own defaults, with Stripe keys that are placeholders: the module
- * makes no Stripe call, which is what the verification relies on.
+ * makes no Stripe call, which is what the tests rely on.
  */
 function saasConfig(): SaasConfig {
   const env = process.env;
   const config: SaasConfig = {
     stripe: {
-      secretKey: env.VERIFY_SAAS_STRIPE_SECRET_KEY ?? "sk_test_placeholder",
+      secretKey: env.E2E_SAAS_STRIPE_SECRET_KEY ?? "sk_test_placeholder",
       publishableKey: "pk_test_placeholder",
-      webhookSecret: env.VERIFY_SAAS_WEBHOOK_SECRET ?? "whsec_placeholder",
+      webhookSecret: env.E2E_SAAS_WEBHOOK_SECRET ?? "whsec_placeholder",
     },
   };
-  if (env.VERIFY_SAAS_ADMISSION)
-    config.admissionMode = env.VERIFY_SAAS_ADMISSION;
-  if (env.VERIFY_SAAS_PAYMENT_METHOD)
-    config.registration = { paymentMethod: env.VERIFY_SAAS_PAYMENT_METHOD };
-  if (env.VERIFY_SAAS_SCREENS_OFF) {
-    const off = env.VERIFY_SAAS_SCREENS_OFF.split(",");
+  if (env.E2E_SAAS_ADMISSION) config.admissionMode = env.E2E_SAAS_ADMISSION;
+  if (env.E2E_SAAS_PAYMENT_METHOD)
+    config.registration = { paymentMethod: env.E2E_SAAS_PAYMENT_METHOD };
+  if (env.E2E_SAAS_SCREENS_OFF) {
+    const off = env.E2E_SAAS_SCREENS_OFF.split(",");
     config.publicScreens = {
       register: !off.includes("register"),
       pricing: !off.includes("pricing"),
     };
   }
-  if (env.VERIFY_SAAS_ALLOWED_HOSTS)
-    config.allowedRedirectHosts = env.VERIFY_SAAS_ALLOWED_HOSTS.split(",");
-  if (env.VERIFY_SAAS_DEFAULT_PLAN)
-    config.defaultPlanSlug = env.VERIFY_SAAS_DEFAULT_PLAN;
-  if (env.VERIFY_SAAS_PREVIEW_TTL)
+  if (env.E2E_SAAS_ALLOWED_HOSTS)
+    config.allowedRedirectHosts = env.E2E_SAAS_ALLOWED_HOSTS.split(",");
+  if (env.E2E_SAAS_DEFAULT_PLAN)
+    config.defaultPlanSlug = env.E2E_SAAS_DEFAULT_PLAN;
+  if (env.E2E_SAAS_PREVIEW_TTL)
     config.upcomingInvoicePreviewCacheTtlSeconds = Number(
-      env.VERIFY_SAAS_PREVIEW_TTL,
+      env.E2E_SAAS_PREVIEW_TTL,
     );
-  if (env.VERIFY_SAAS_REPORTING_CURRENCY)
-    config.reportingCurrency = env.VERIFY_SAAS_REPORTING_CURRENCY;
+  if (env.E2E_SAAS_REPORTING_CURRENCY)
+    config.reportingCurrency = env.E2E_SAAS_REPORTING_CURRENCY;
   return config;
 }
 
@@ -63,7 +62,7 @@ function saasConfig(): SaasConfig {
  * the module under test built from the checkout.
  */
 export default defineConfig({
-  name: "verify-dms-saas",
+  name: "dms-saas-e2e",
   modules: {
     app: {
       source: { type: "local", path: "." },
@@ -80,7 +79,10 @@ export default defineConfig({
       },
       config: {
         homepage: "/welcome",
-        meta: { title: "AntelopeJS SaaS", description: "SaaS verification" },
+        meta: {
+          title: "AntelopeJS SaaS",
+          description: "SaaS end-to-end tests",
+        },
         auth: {
           jwtSecret: process.env.DMS_JWT_SECRET ?? "dev",
           signInCountry: { database: false },
@@ -103,7 +105,7 @@ export default defineConfig({
       },
       config: {
         url: process.env.MONGO_URL ?? "mongodb://localhost:27017",
-        database: process.env.MONGO_DATABASE ?? "verify_dms_saas",
+        database: process.env.MONGO_DATABASE ?? "dms_saas_e2e",
       },
       importOverrides: [],
       disabledExports: [],

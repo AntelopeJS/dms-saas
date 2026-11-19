@@ -1,5 +1,5 @@
 {
-  "name": "verify-dms-saas-app",
+  "name": "dms-saas-e2e-app",
   "version": "0.0.0",
   "private": true,
   "main": "dist/index.js",

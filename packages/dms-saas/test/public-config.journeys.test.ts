@@ -13,13 +13,13 @@ const workspaceListing = z.array(z.object({ planName: z.string().nullish() }));
 
 test("a-wrong-option-stops-the-module-at-start", async ({ journey }) => {
   const admission = await refusedAtStart(journey, {
-    VERIFY_SAAS_ADMISSION: "closed",
+    E2E_SAAS_ADMISSION: "closed",
   });
   const method = await refusedAtStart(journey, {
-    VERIFY_SAAS_PAYMENT_METHOD: "sometimes",
+    E2E_SAAS_PAYMENT_METHOD: "sometimes",
   });
   const negative = await refusedAtStart(journey, {
-    VERIFY_SAAS_PREVIEW_TTL: "-1",
+    E2E_SAAS_PREVIEW_TTL: "-1",
   });
   expect
     .soft(admission, "admissionMode other than open and invitation-only")
@@ -34,11 +34,11 @@ test("a-wrong-option-stops-the-module-at-start", async ({ journey }) => {
     .soft(negative, "a negative upcomingInvoicePreviewCacheTtlSeconds")
     .toMatchObject({ started: false });
 
-  const zero = await refusedAtStart(journey, { VERIFY_SAAS_PREVIEW_TTL: "0" });
-  const open = await refusedAtStart(journey, { VERIFY_SAAS_ADMISSION: "open" });
+  const zero = await refusedAtStart(journey, { E2E_SAAS_PREVIEW_TTL: "0" });
+  const open = await refusedAtStart(journey, { E2E_SAAS_ADMISSION: "open" });
   const invitation = await refusedAtStart(journey, {
-    VERIFY_SAAS_ADMISSION: "invitation-only",
-    VERIFY_SAAS_PAYMENT_METHOD: "optional",
+    E2E_SAAS_ADMISSION: "invitation-only",
+    E2E_SAAS_PAYMENT_METHOD: "optional",
   });
   expect
     .soft(zero, "a lifetime of 0 (price every request) starts")
@@ -80,21 +80,17 @@ test("a-default-plan-slug-picks-among-the-free-plans", async ({ journey }) => {
     "the plan without defaultPlanSlug",
   );
   let picked = "";
-  await withConfig(
-    journey,
-    { VERIFY_SAAS_DEFAULT_PLAN: "second" },
-    async () => {
-      picked = await planRegistrationOpensOn(
-        journey,
-        "the plan with defaultPlanSlug second",
-      );
-    },
-  );
+  await withConfig(journey, { E2E_SAAS_DEFAULT_PLAN: "second" }, async () => {
+    picked = await planRegistrationOpensOn(
+      journey,
+      "the plan with defaultPlanSlug second",
+    );
+  });
   expect
     .soft(picked, "a slug naming a free plan picks it, not the lowest order")
     .toBe(second.id);
   let ghost = "";
-  await withConfig(journey, { VERIFY_SAAS_DEFAULT_PLAN: "ghost" }, async () => {
+  await withConfig(journey, { E2E_SAAS_DEFAULT_PLAN: "ghost" }, async () => {
     ghost = await planRegistrationOpensOn(
       journey,
       "the plan with a slug naming nothing",
@@ -104,7 +100,7 @@ test("a-default-plan-slug-picks-among-the-free-plans", async ({ journey }) => {
     .soft(ghost, "a slug naming no plan gives the lowest-ordered free plan")
     .toBe(first.id);
   let paid = "";
-  await withConfig(journey, { VERIFY_SAAS_DEFAULT_PLAN: "paid" }, async () => {
+  await withConfig(journey, { E2E_SAAS_DEFAULT_PLAN: "paid" }, async () => {
     paid = await planRegistrationOpensOn(
       journey,
       "the plan with a slug naming a paid plan",
@@ -136,53 +132,45 @@ test("a-screen-switched-off-frees-its-slug", async ({ journey }) => {
     )
     .toMatch(PRICING);
 
-  await withConfig(
-    journey,
-    { VERIFY_SAAS_SCREENS_OFF: "register" },
-    async () => {
-      expect
-        .soft(
-          (await page(journey, "/register")).html,
-          "register off: /register is not the module's page",
-        )
-        .not.toMatch(REGISTER);
-      expect
-        .soft(
-          (await page(journey, "/pricing")).html,
-          "register off: /pricing is still served",
-        )
-        .toMatch(PRICING);
-    },
-  );
+  await withConfig(journey, { E2E_SAAS_SCREENS_OFF: "register" }, async () => {
+    expect
+      .soft(
+        (await page(journey, "/register")).html,
+        "register off: /register is not the module's page",
+      )
+      .not.toMatch(REGISTER);
+    expect
+      .soft(
+        (await page(journey, "/pricing")).html,
+        "register off: /pricing is still served",
+      )
+      .toMatch(PRICING);
+  });
 
-  await withConfig(
-    journey,
-    { VERIFY_SAAS_SCREENS_OFF: "pricing" },
-    async () => {
-      const catalogue = await saas(
-        journey,
-        "the pricing API while the page is off",
-        "GET",
-        "/pricing",
-        { as: "anon" },
-      );
-      expect
-        .soft(
-          (await page(journey, "/pricing")).html,
-          "pricing off: /pricing is not the module's page",
-        )
-        .not.toMatch(PRICING);
-      expect
-        .soft(
-          (await page(journey, "/register")).html,
-          "pricing off: /register is still served",
-        )
-        .toMatch(REGISTER);
-      expect
-        .soft(catalogue, "GET /api/saas/pricing still lists the plan")
-        .toMatchObject({ status: 200, body: { plans: [{ slug: "free" }] } });
-    },
-  );
+  await withConfig(journey, { E2E_SAAS_SCREENS_OFF: "pricing" }, async () => {
+    const catalogue = await saas(
+      journey,
+      "the pricing API while the page is off",
+      "GET",
+      "/pricing",
+      { as: "anon" },
+    );
+    expect
+      .soft(
+        (await page(journey, "/pricing")).html,
+        "pricing off: /pricing is not the module's page",
+      )
+      .not.toMatch(PRICING);
+    expect
+      .soft(
+        (await page(journey, "/register")).html,
+        "pricing off: /register is still served",
+      )
+      .toMatch(REGISTER);
+    expect
+      .soft(catalogue, "GET /api/saas/pricing still lists the plan")
+      .toMatchObject({ status: 200, body: { plans: [{ slug: "free" }] } });
+  });
 });
 
 test("a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up", async ({

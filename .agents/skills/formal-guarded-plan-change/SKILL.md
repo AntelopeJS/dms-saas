@@ -44,7 +44,7 @@ A rule with a recorded finding is judged by the length of its shortest counterex
 
 ## When to run it
 
-Run `--full` when a change touches a file in the coverage record below, or this folder. A changed rule (exit 1) means the change broke a promise, or the model no longer describes the code. CI runs the CI configuration on every push. dms-saas has no V5 verification skill yet, so no `verify.config.ts` entry gates a diff on this check. Add the `formal` entry when that skill lands.
+Run `--full` when a change touches a file in the coverage record below, or this folder. A changed rule (exit 1) means the change broke a promise, or the model no longer describes the code. CI runs the CI configuration on every push.
 
 ## The rules
 

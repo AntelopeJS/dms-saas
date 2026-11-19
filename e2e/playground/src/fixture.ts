@@ -143,8 +143,8 @@ export function recordProvisioning(): void {
   });
 }
 
-/** The verification playground's trusted backend calls, under `/verify-saas`. */
-export class VerifySaasFixtureController extends Controller("/verify-saas") {
+/** The e2e playground's trusted backend calls, under `/e2e-fixture`. */
+export class E2eFixtureController extends Controller("/e2e-fixture") {
   @Get("/ping")
   ping() {
     return { ok: true };

@@ -252,8 +252,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/dms-control/frontend
-          key: dms-control-frontend-${{ github.sha }}
-          restore-keys: dms-control-frontend-
+          key: e2e-frontend-${{ github.sha }}
+          restore-keys: e2e-frontend-
       - name: Install Chromium and its system packages
         run: |
           if timeout 240 pnpm exec playwright install --with-deps --only-shell chromium; then
@@ -310,8 +310,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/dms-control/frontend
-          key: dms-control-frontend-${{ github.sha }}
-          restore-keys: dms-control-frontend-
+          key: e2e-frontend-${{ github.sha }}
+          restore-keys: e2e-frontend-
       - run: pnpm e2e:build
       - run: pnpm --filter @antelopejs/dms-saas test:journeys
       - if: failure()
