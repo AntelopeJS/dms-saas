@@ -33,8 +33,5 @@
     "packages/interface-dms-saas/knip.config.ts",
     "packages/dms-saas/playground/antelope.config.ts"
   ],
-  "include": [
-    ".agents/skills/**/*.mjs",
-    ".agents/skills/verify-dms-saas/playground/src/**/*.ts"
-  ]
+  "include": [".agents/skills/**/*.mjs", "e2e/playground/src/**/*.ts"]
 }

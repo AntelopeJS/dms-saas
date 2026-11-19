@@ -6,7 +6,10 @@ import {
   Parameter,
   Post,
 } from "@antelopejs/interface-api";
-import { type DeepPartial, GetModel } from "@antelopejs/interface-database-decorators";
+import {
+  type DeepPartial,
+  GetModel,
+} from "@antelopejs/interface-database-decorators";
 import { generateTenantAssignmentToken } from "@antelopejs/interface-dms/auth";
 import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { RoleModel, UserInviteModel } from "@antelopejs/interface-dms/db";
@@ -18,7 +21,15 @@ import {
   GetUpcomingInvoicePreview,
   RecomputeTenantBillingState,
 } from "@antelopejs/interface-dms-saas/billing";
-import { CreditNoteModel, InvoiceModel, StripeWebhookEventModel, TenantBillingInfoModel, TenantBillingStateModel, type TenantSubscription, TenantSubscriptionModel } from "@antelopejs/interface-dms-saas/db";
+import {
+  CreditNoteModel,
+  InvoiceModel,
+  StripeWebhookEventModel,
+  TenantBillingInfoModel,
+  TenantBillingStateModel,
+  type TenantSubscription,
+  TenantSubscriptionModel,
+} from "@antelopejs/interface-dms-saas/db";
 
 const AUTH_KEY_BYTES = 32;
 const HOUR_MS = 3_600_000;
@@ -42,7 +53,13 @@ interface PermissionsBody {
 interface SubscriptionBody {
   tenantId: string;
   planId: string;
-  status: "active" | "trialing" | "past_due" | "pending_payment" | "suspended" | "cancelled";
+  status:
+    | "active"
+    | "trialing"
+    | "past_due"
+    | "pending_payment"
+    | "suspended"
+    | "cancelled";
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   isComplimentary?: boolean;
@@ -99,7 +116,10 @@ async function answered<T>(call: () => Promise<T>) {
   try {
     return { ok: true, result: await call() };
   } catch (error) {
-    return { ok: false, rejection: error instanceof Error ? error.message : JSON.stringify(error) };
+    return {
+      ok: false,
+      rejection: error instanceof Error ? error.message : JSON.stringify(error),
+    };
   }
 }
 
@@ -204,9 +224,13 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
       isComplimentary: input.isComplimentary ?? false,
       updatedAt: new Date(),
     };
-    if (input.currentPeriodEnd) patch.currentPeriodEnd = new Date(input.currentPeriodEnd);
+    if (input.currentPeriodEnd)
+      patch.currentPeriodEnd = new Date(input.currentPeriodEnd);
     if (input.pastDueSince) patch.pastDueSince = new Date(input.pastDueSince);
-    await GetModel(TenantSubscriptionModel, input.tenantId).update(input.tenantId, patch);
+    await GetModel(TenantSubscriptionModel, input.tenantId).update(
+      input.tenantId,
+      patch,
+    );
     await RecomputeTenantBillingState(input.tenantId);
     return { ok: true };
   }
@@ -263,7 +287,8 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
     await GetModel(InvoiceModel, input.tenantId).insert({
       documentType: input.documentType,
       stripeInvoiceId: `in_${input.number}`,
-      stripeCreditNoteId: input.documentType === "credit_note" ? `cn_${input.number}` : null,
+      stripeCreditNoteId:
+        input.documentType === "credit_note" ? `cn_${input.number}` : null,
       number: input.number,
       parentInvoiceNumber: null,
       amount: input.totalMinor,
@@ -337,7 +362,10 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
     const model = GetModel(TenantBillingInfoModel, input.tenantId);
     const existing = await model.findOne();
     if (existing) {
-      await model.update(existing._id, { customerType: input.customerType, updatedAt: new Date() });
+      await model.update(existing._id, {
+        customerType: input.customerType,
+        updatedAt: new Date(),
+      });
       return { ok: true };
     }
     try {
@@ -354,7 +382,10 @@ export class VerifySaasFixtureController extends Controller("/verify-saas") {
     } catch (error) {
       const raced = await model.findOne();
       if (!raced) throw error;
-      await model.update(raced._id, { customerType: input.customerType, updatedAt: new Date() });
+      await model.update(raced._id, {
+        customerType: input.customerType,
+        updatedAt: new Date(),
+      });
     }
     return { ok: true };
   }
