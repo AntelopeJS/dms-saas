@@ -15,7 +15,16 @@ export const TENANT = "default";
 export const WEBHOOK_SECRET = "whsec_placeholder";
 
 const createdRow = z.object({ _id: z.string() });
+const errorBody = z.union([
+  z.string(),
+  z.object({ message: z.string() }).transform(({ message }) => message),
+]);
 const registration = z.object({ tenantId: z.string(), userId: z.string() });
+
+/** The error code an answer carries: its string body, or the `message` of its object body; "" when it has neither. */
+export function errorCode(answer: Answer): string {
+  return errorBody.safeParse(answer.body).data ?? "";
+}
 
 /** The `_id` of the row an answer created, "" when it created none. */
 export function createdId(answer: Answer): string {

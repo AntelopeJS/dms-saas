@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { errorCode } from "./journeys/error-code.ts";
 import { expect, test } from "./journeys/journey.ts";
 import {
   allPermissionIds,
@@ -10,6 +9,7 @@ import {
   joinMember,
   register,
   saas,
+  errorCode,
 } from "./journeys/saas.ts";
 
 const workspaceListing = z.array(

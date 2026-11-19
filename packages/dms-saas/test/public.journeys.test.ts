@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { errorCode } from "./journeys/error-code.ts";
 import { expect, test } from "./journeys/journey.ts";
 import {
   NON_EMPTY_STRING,
@@ -7,7 +6,13 @@ import {
   registrationAttempt,
   STRONG,
 } from "./journeys/public.ts";
-import { createPlan, passwordWith, register, saas } from "./journeys/saas.ts";
+import {
+  createPlan,
+  passwordWith,
+  register,
+  saas,
+  errorCode,
+} from "./journeys/saas.ts";
 
 const seatsOf = z.object({ seats: z.unknown() });
 

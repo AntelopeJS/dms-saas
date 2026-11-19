@@ -19,10 +19,6 @@ const availablePlans = z.object({
 const invitations = z.array(
   z.object({ id: z.string(), email: z.string(), expiresAt: z.string() }),
 );
-const errorMessage = z.union([
-  z.string(),
-  z.object({ message: z.string() }).transform((body) => body.message),
-]);
 
 /** A block item of a dashboard answer: its `id` and whatever it draws. */
 export type DashboardItem = z.infer<typeof dashboardEntry>;
@@ -35,11 +31,6 @@ export function inDays(days: number): string {
 /** The day `daysAgo` days ago, as `YYYY-MM-DD`. */
 export function dayStamp(daysAgo: number): string {
   return new Date(Date.now() - daysAgo * DAY_MS).toISOString().slice(0, 10);
-}
-
-/** The error code an answer carries, as a bare string body or as a `message`; "" when it has none. */
-export function errorCode(answer: Answer): string {
-  return errorMessage.safeParse(answer.body).data ?? "";
 }
 
 /** The dashboard item of an answer with this `id`, undefined when the block did not draw it. */

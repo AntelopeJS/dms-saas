@@ -11,7 +11,6 @@ import {
   storedPermissions,
 } from "./journeys/gating.ts";
 import { expect, test } from "./journeys/journey.ts";
-import { errorCode } from "./journeys/refusals.ts";
 import {
   allPermissionIds,
   createPlan,
@@ -23,6 +22,7 @@ import {
   register,
   saas,
   fixture,
+  errorCode,
 } from "./journeys/saas.ts";
 
 const SEAT_LIMIT = "saas.errors.plan.seat_limit_reached";

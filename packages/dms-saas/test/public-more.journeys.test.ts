@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { errorCode } from "./journeys/error-code.ts";
 import { expect, type Json, test } from "./journeys/journey.ts";
 import {
   NON_EMPTY_STRING,
@@ -12,6 +11,7 @@ import {
   passwordWith,
   register,
   saas,
+  errorCode,
 } from "./journeys/saas.ts";
 
 const provisioned = z.array(

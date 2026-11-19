@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { errorCode } from "./error-code.ts";
 import { expect, type Journey, type Json } from "./journey.ts";
-import { passwordWith, saas } from "./saas.ts";
+import { passwordWith, saas, errorCode } from "./saas.ts";
 
 /** A password the DMS policy accepts, shared by the registrations that only need one. */
 export const STRONG = passwordWith();

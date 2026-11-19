@@ -11,8 +11,13 @@ import {
   saveSegment,
   segmentId,
 } from "./journeys/people.ts";
-import { errorCode } from "./journeys/refusals.ts";
-import { createPlan, fixture, register, saas } from "./journeys/saas.ts";
+import {
+  createPlan,
+  fixture,
+  register,
+  saas,
+  errorCode,
+} from "./journeys/saas.ts";
 
 const GOOD_RULES = { logical: "and", conditions: [EMAIL_ALPHA] };
 const ADMIN_ROLE_REFUSALS = [401, 403];

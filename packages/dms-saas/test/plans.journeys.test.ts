@@ -8,13 +8,13 @@ import {
   settledPlan,
   slugs,
 } from "./journeys/plans.ts";
-import { errorCode } from "./journeys/refusals.ts";
 import {
   createdId,
   createPlan,
   planBody,
   register,
   saas,
+  errorCode,
 } from "./journeys/saas.ts";
 
 const migration = z.object({ migrationId: z.string() });

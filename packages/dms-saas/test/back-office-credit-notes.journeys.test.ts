@@ -1,6 +1,5 @@
 import { expect, type JsonObject, test } from "./journeys/journey.ts";
-import { errorCode } from "./journeys/back-office.ts";
-import { createPlan, register, saas } from "./journeys/saas.ts";
+import { createPlan, register, saas, errorCode } from "./journeys/saas.ts";
 
 test("a-credit-note-request-is-validated-before-stripe-is-asked", async ({
   journey,
