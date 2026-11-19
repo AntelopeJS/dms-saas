@@ -96,6 +96,7 @@ Public registration and the options that shape it: the account and first workspa
 - `a-screen-switched-off-frees-its-slug`: publicScreens.register false and publicScreens.pricing false stop the module serving those pages, and the public catalogue API stays.
 - `registration-answers-429-past-its-rate-limit`: one client address registers 20 times in a minute, the 21st call answers 429 with Retry-After and creates no account, and a restart of the backend starts a new count.
 - `a-plan-saved-without-a-billing-mode-keeps-the-pricing-page-up`: the pricing page renders a public plan that was saved through the API without a billing mode, as a flat rate, and a billing mode outside flat and seat is refused with 400.
+- `a-visitor-registers-through-the-form-and-signs-in-to-the-new-workspace`: a visitor fills in /register without a card, is sent to sign in, signs in with the new account and finds a workspace named after them on the free plan.
 
 ## How to get to it (user POV)
 
@@ -134,3 +135,4 @@ dms-control journey "$RUN" public
 | 6.faq.md "Registration answers 409 saas.errors.plan.no_free_plan" | registration-needs-a-free-plan journey |
 | 6.faq.md "A visitor who just registered stays signed out" | Not driven: the frontend server's establish endpoint allow-list |
 | 1.public-screens.md Pricing order and call to action | pricing journey: catalogue order whatever the price, Start free, Start N-day trial, Choose plan |
+| 1.public-screens.md "Registration" in the browser | form journey: the register form submitted in the browser lands on /auth, the new account owns a workspace named after the visitor on the free plan, and signing in shows that workspace and plan on General; Not driven: the field errors of the form |
