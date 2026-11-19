@@ -128,7 +128,11 @@ export const journeys = guarded([
       await ctx.verify("the page counts the workspaces by status as the block does", [
         tab.shows(new RegExp(`Active\\s*${count("active")}\\s*Trialing\\s*${count("trialing")}\\s*Free\\s*${count("free")}\\s*Past due\\s*${count("past_due")}`), { timeoutMs: 15_000 }),
       ]);
-      await ctx.verify("the page lists the plans that bring revenue", list(byPlan.body, "items").map((row) => tab.shows(new RegExp(text(row, "title")), { timeoutMs: 15_000 })));
+      const plans = list(byPlan.body, "items").map((row) => RegExp.escape(text(row, "title")));
+      await ctx.verify("the page lists the plans that bring revenue", [
+        check("the block answers the two paid plans", plans.length === 2, byPlan.body),
+        tab.shows(new RegExp(`Plans by MRR[\\s\\S]*${plans.join("[\\s\\S]*")}`, "i"), { timeoutMs: 15_000 }),
+      ]);
     },
   },
   {

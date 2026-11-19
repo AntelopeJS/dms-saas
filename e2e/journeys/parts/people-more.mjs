@@ -41,7 +41,7 @@ export const peopleMoreJourneys = [
       await tab.fill({ role: "textbox", name: "Name", exact: true }, "Alpha users");
       await tab.click({ role: "button", name: "Add condition" });
       await tab.fill({ role: "textbox", name: "Type a value" }, "alpha");
-      await ctx.verify("the live preview counts the one account whose e-mail contains alpha", [tab.shows(/1 user matches/, { timeoutMs: 30_000 }), tab.shows(/of 3 users/, { timeoutMs: 5_000 })]);
+      await ctx.verify("the live preview counts the one account whose e-mail contains alpha", [tab.shows(/1 user matches[\s\S]*of 3 users/, { timeoutMs: 30_000 })]);
       await tab.click({ role: "button", name: "Save and re-evaluate" });
       await ctx.verify("saving opens the segment's edit page", [tab.at(/\/modules\/saas\/customers\/segments\/[^/]+\/edit$/, { timeoutMs: 60_000 })], { critical: true });
       const id = new URL(tab.page.url()).pathname.split("/").at(-2) ?? "";

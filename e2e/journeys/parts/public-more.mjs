@@ -36,11 +36,11 @@ export const moreJourneys = [
       const password = ctx.password();
       const tab = await ctx.tab("anon", "register form");
       await tab.goto("/register");
-      await ctx.verify("the register form is drawn without a card step and is interactive", [
+      await ctx.verify("the register form is drawn and is interactive", [
         tab.shows(/Create your account/, { timeoutMs: 60_000 }),
-        tab.shows(/Saved securely by Stripe/, { not: true, timeoutMs: 2_000 }),
         check("the form hydrated", await waitForHydration(tab), "the Show password toggle answers"),
       ], { critical: true });
+      await ctx.verify("the register form has no card step", [tab.shows(/Saved securely by Stripe/, { not: true })], { critical: true });
       await tab.fill({ role: "textbox", name: "Full name" }, "Form Visitor");
       await tab.fill({ role: "textbox", name: "Email", exact: true }, email);
       await tab.fill({ role: "textbox", name: "Password", exact: true }, password);
