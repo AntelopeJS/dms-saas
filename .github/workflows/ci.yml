@@ -2,12 +2,14 @@ name: ci
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  merge_group:
   push:
-    branches: [next]
+    branches: [main]
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
+
 permissions:
   contents: read
 
@@ -37,11 +39,13 @@ jobs:
       test-job: false
     permissions:
       contents: read
+    secrets:
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
 
   # `ci-node.yml` exposes no outputs, so this takes the tier from the shared
   # rule of `ci-tier`: the jobs below run in every tier but a draft and the
   # `next` to `main` pull request, on Windows only in `nightly`. `e2e` picks
-  # the Playwright journeys: the `@smoke` ones on a pull request or a push,
+  # the Playwright journeys: the `@smoke` ones on a pull request,
   # every one in the merge queue, on a manual run or under the `ci:full`
   # label, and every one in `shards` runners nightly.
   select:
