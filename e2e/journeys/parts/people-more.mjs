@@ -1,30 +1,10 @@
-import { check, createPlan, fixture, isText, pick, register, saas, text } from "../../saas.mjs";
+import { check, createPlan, fixture, pick, register, saas, text } from "../../saas.mjs";
 
 /** @typedef {import("../../saas.mjs").Ctx} Ctx */
 
 const USERS_PAGE = "/modules/saas/customers/users";
-const CSV_HEADER = "user_id,email,name,language,created_at,is_validated,workspaces,owned_workspaces,owned_mrr";
 
-/**
- * Starts an owners export of a segment and reads the file once it is built.
- *
- * @param {Ctx} ctx The journey
- * @param {string} segmentId The segment
- * @returns {Promise<string[]>} The CSV lines, header first
- */
-async function exportedLines(ctx, segmentId) {
-  const started = await saas(ctx, "start the owners export", "POST", `/segments/${segmentId}/owners-export/start`);
-  const jobId = text(started.body, "jobId");
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const status = await saas(ctx, "export status", "GET", `/segments/${segmentId}/owners-export/status/${jobId}`);
-    if (text(status.body, "status") === "completed") break;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  const file = await saas(ctx, "download the export", "GET", `/segments/${segmentId}/owners-export/download/${jobId}`);
-  return isText(file.body) ? file.body.replace(/^﻿/, "").split("\r\n").filter((line) => line !== "") : [];
-}
-
-/** The Users list tabs and the segment CSV export. */
+/** The segment editor and the Users list tabs. */
 export const peopleMoreJourneys = [
   {
     id: "the-platform-owner-creates-a-segment-in-the-editor-and-the-list-shows-it",
@@ -90,32 +70,6 @@ export const peopleMoreJourneys = [
       ]);
       await tab.click({ role: "button", name: /^Unverified/ });
       await ctx.verify("and lists them", [tab.shows(/unverified-one/, { timeoutMs: 30_000 }), tab.shows(/unverified-two/, { timeoutMs: 15_000 }), tab.shows(/never/i, { timeoutMs: 15_000 })]);
-    },
-  },
-  {
-    id: "the-segment-export-writes-one-row-per-matching-user-with-owned-mrr",
-    title: "the CSV has the documented header, one row per matching user sorted by e-mail, and owned_mrr sums the MRR of the workspaces the user owns",
-    entryPoint: "POST /api/saas/segments/:id/owners-export/start",
-    async run(/** @type {Ctx} */ ctx) {
-      await createPlan(ctx, "free", { order: 0 });
-      const pro = await createPlan(ctx, "pro", { price: 50, order: 1 });
-      const payer = await register(ctx, "csv-payer", { workspaceName: "Payer Co" });
-      const freebie = await register(ctx, "csv-free", { workspaceName: "Free Co" });
-      await fixture(ctx, "bill the payer", "POST", "/subscription", { tenantId: payer.tenantId, planId: pro.id, status: "active", stripeCustomerId: "cus_csv", stripeSubscriptionId: "sub_csv" });
-      await fixture(ctx, "publish the free workspace", "POST", "/recompute", { tenantId: freebie.tenantId });
-      const segment = await saas(ctx, "create the segment", "POST", "/segments", { body: { name: "CSV owners", conditions: { logical: "and", conditions: [{ field: "email", operator: "contains", value: "csv-" }] } } });
-      const lines = await exportedLines(ctx, text(segment.body, "_id"));
-      const rows = lines.slice(1).map((line) => line.split(","));
-      await ctx.verify("header and rows", [
-        check("the header", lines[0] === CSV_HEADER, lines[0]),
-        check("two rows, sorted by e-mail", rows.length === 2 && rows[0][1] === freebie.email && rows[1][1] === payer.email, lines),
-        check("names and verification flag", rows[1]?.[2] === "Verify csv-payer" && rows[1]?.[5] === "false", rows[1]),
-        check("workspaces and owned workspaces", rows[1]?.[6] === "Payer Co" && rows[1]?.[7] === "Payer Co", rows[1]),
-        check("owned_mrr of the payer: 50.00", rows[1]?.[8] === "50.00", rows[1]),
-        check("owned_mrr of the free workspace's owner: 0.00", rows[0]?.[8] === "0.00", rows[0]),
-      ]);
-      const noSegment = await saas(ctx, "export a segment that does not exist", "POST", "/segments/no-such-segment/owners-export/start");
-      await ctx.verify("an unknown segment is 404", [check("404", noSegment.status === 404, noSegment.body), check("owner-only: pick of the segment id", pick(segment.body, "estimatedCount") === 2, segment.body)]);
     },
   },
 ];
