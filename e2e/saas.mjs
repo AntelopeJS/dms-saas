@@ -1,10 +1,12 @@
 import { createHmac } from "node:crypto";
+import { expect } from "@playwright/test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
  * @typedef {import("@antelopejs/dms/e2e").Ctx} Ctx
  * @typedef {import("@antelopejs/dms/e2e").Tab} Tab
+ * @typedef {Parameters<Tab["locator"]>[0]} Target
  * @typedef {{ status: number | null, body: unknown, error: string | null, folder?: string }} Answer
  * @typedef {{ folder: string, status: number | null, headers: Record<string, string>, bytes: Buffer, text: string, json: unknown }} Raw
  * @typedef {Record<string, unknown>} Row
@@ -293,6 +295,33 @@ export async function allPermissionIds(ctx) {
   return ids;
 }
 
+
+/**
+ * @param {string} literal Text to match literally
+ * @returns {string} The text with its regular expression characters escaped
+ */
+export function escaped(literal) {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Waits for a form field to hold a value, so a read after a reload does not race the field's first fill.
+ *
+ * @param {Tab} tab The tab
+ * @param {Target} target The form field
+ * @param {string} expected The value it must hold
+ * @returns {Promise<Check>} The check
+ */
+export async function holdsValue(tab, target, expected) {
+  const field = tab.locator(target);
+  const label = `${target.role} "${String(target.name)}" holds ${expected}`;
+  try {
+    await expect(field).toHaveValue(expected, { timeout: 15_000 });
+    return check(label, true, expected);
+  } catch {
+    return check(label, false, await field.inputValue().catch(() => "no such field"));
+  }
+}
 
 /**
  * A test password built from parts, so no literal password sits in the source. Each rule of the DMS policy can be left out.
