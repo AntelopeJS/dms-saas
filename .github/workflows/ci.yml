@@ -219,10 +219,10 @@ jobs:
           key: tla2tools-1.7.4
       - run: node .agents/skills/${{ matrix.check }}/check.mjs
 
-  # The journeys of e2e/ as a Playwright suite, as `select` picks them: every
-  # journey takes about 9 minutes on one runner, so the merge queue runs them
-  # on one and the nightly run on two shards. Each runner's global setup
-  # prepares and starts one dms-control run.
+  # The browser journeys of e2e/ as a Playwright suite, as `select` picks
+  # them: the merge queue runs them on one runner and the nightly run on two
+  # shards. `e2e:build` builds what the run serves, and each runner's global
+  # setup starts one run of the kit on it.
   e2e:
     needs: select
     if: needs.select.outputs.e2e != 'none'
@@ -235,6 +235,7 @@ jobs:
     env:
       E2E: ${{ needs.select.outputs.e2e }}
       SHARDS: ${{ needs.select.outputs.shard-total }}
+      DMS_E2E_PREBUILT: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -260,6 +261,7 @@ jobs:
           fi
           echo "::warning::Chromium's system packages did not install: installing the browser alone"
           pnpm exec playwright install --only-shell chromium
+      - run: pnpm e2e:build
       - if: env.E2E == 'smoke'
         run: pnpm e2e --grep @smoke
       - if: env.E2E == 'all'
@@ -279,6 +281,44 @@ jobs:
           path: |
             e2e/playwright-report
             e2e/test-results
+            ${{ runner.temp }}/dms-runs/*/evidence
+            ${{ runner.temp }}/dms-runs/*/logs
+          retention-days: 7
+
+  # The HTTP and command-line journeys, as the Vitest integration tests of
+  # `test:journeys`, wherever `e2e` runs every journey. Its global setup
+  # starts one run of the kit on what `e2e:build` built.
+  journeys:
+    needs: select
+    if: needs.select.outputs.e2e == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DMS_E2E_PREBUILT: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: echo "DMS_CONTROL_RUNS=${RUNNER_TEMP}/dms-runs" >> "$GITHUB_ENV"
+      - uses: ./.github/actions/setup
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/mongodb-binaries
+            .agents/skills/verify-dms-saas/playground/.antelope/cache
+          key: journeys-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', '.agents/skills/verify-dms-saas/playground/antelope.config.ts') }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/dms-control/frontend
+          key: dms-control-frontend-${{ github.sha }}
+          restore-keys: dms-control-frontend-
+      - run: pnpm e2e:build
+      - run: pnpm --filter @antelopejs/dms-saas test:journeys
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journeys-evidence
+          path: |
             ${{ runner.temp }}/dms-runs/*/evidence
             ${{ runner.temp }}/dms-runs/*/logs
           retention-days: 7
@@ -312,16 +352,27 @@ jobs:
 
   # The single check to require on `main`: it keeps the historical job name,
   # and fails when a job above failed or was cancelled, or on a draft, or when
-  # `select` picks journeys and `e2e` was skipped. Another job the tier skipped
+  # `select` picks journeys and `e2e` or `journeys` was skipped. Another job the tier skipped
   # passes it.
   ubuntu:
     if: always()
-    needs: [select, ci, unit, frontend, playground, test-types, formal, e2e]
+    needs:
+      [
+        select,
+        ci,
+        unit,
+        frontend,
+        playground,
+        test-types,
+        formal,
+        e2e,
+        journeys,
+      ]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - if: >-
-          needs.select.result != 'success' || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || needs.ci.result == 'skipped' || (needs.select.outputs.e2e != 'none' && needs.e2e.result == 'skipped')
+          needs.select.result != 'success' || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || needs.ci.result == 'skipped' || (needs.select.outputs.e2e != 'none' && needs.e2e.result == 'skipped') || (needs.select.outputs.e2e == 'all' && needs.journeys.result == 'skipped')
         run: exit 1
       - if: needs.select.outputs.tier == 'draft'
         run: |

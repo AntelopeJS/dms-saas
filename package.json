@@ -8,6 +8,7 @@
     "typecheck": "pnpm run build && tsc --noEmit -p e2e",
     "test": "pnpm --filter @antelopejs/interface-dms-saas check:exports",
     "e2e": "playwright test -c e2e",
+    "e2e:build": "pnpm build && ln -sfn ../../../../packages/dms-saas/node_modules .agents/skills/verify-dms-saas/playground/node_modules && packages/dms-saas/node_modules/.bin/tsc -p .agents/skills/verify-dms-saas/playground/tsconfig.build.json",
     "prepare": "if [ -e .git ] && command -v git >/dev/null 2>&1 && command -v lefthook >/dev/null 2>&1 && GIT_DIR=.git GIT_WORK_TREE=. git rev-parse --git-dir >/dev/null 2>&1; then GIT_DIR=.git GIT_WORK_TREE=. lefthook install; fi",
     "checks": "antelopejs-checks",
     "size": "antelopejs-check-size",
