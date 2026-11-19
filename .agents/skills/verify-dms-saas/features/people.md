@@ -47,6 +47,8 @@ Customers › Users and Segments: promoting and demoting platform admins, and th
 dms-control journey "$RUN" people
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys people`.
+
 ## Gotchas
 
 - Workspaces reach the segment projections once the workspace state is published; the journey republishes each new workspace through the fixture.

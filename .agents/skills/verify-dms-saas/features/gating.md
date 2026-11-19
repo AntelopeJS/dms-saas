@@ -42,6 +42,8 @@ What the plan caps: the `dms-saas.plan-intersection` permissions resolver (membe
 dms-control journey "$RUN" gating
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys gating`.
+
 ## Gotchas
 
 - The invitation refusal answers 409 with the body `saas.errors.plan.seat_limit_reached`.

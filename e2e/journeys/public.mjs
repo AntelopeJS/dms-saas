@@ -1,7 +1,6 @@
 import { guarded } from "../guard.mjs";
-import { passwordWith, check, isText, pick, createPlan, list, register, saas, text, withConfig } from "../saas.mjs";
+import { passwordWith, check, isText, createPlan, list, register, saas, text, withConfig } from "../saas.mjs";
 
-import { configJourneys } from "./parts/public-config.mjs";
 import { moreJourneys } from "./parts/public-more.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
@@ -18,93 +17,6 @@ function code(answer) {
 
 /** Public registration, the options that shape it, the pricing catalogue and the legal pages. */
 export const journeys = guarded([
-  {
-    id: "a-visitor-registers-onto-the-default-plan",
-    tag: "@smoke",
-    title: "a registration opens a workspace on the free plan with a default or trimmed name, and refuses a taken e-mail",
-    entryPoint: "POST /api/saas/register, GET /api/saas/tenant/plan, GET /api/saas/workspaces/current",
-    async run(/** @type {Ctx} */ ctx) {
-      const free = await createPlan(ctx, "free", { name: { en: "Free" } });
-      await ctx.verify("the platform owner publishes a free plan", [check("POST /plans answers 200", free.answer.status === 200 && free.id !== "", free.answer.body)], { critical: true });
-      const named = await register(ctx, "named", { workspaceName: "  Acme Lab  " });
-      const plain = await register(ctx, "plain");
-      await ctx.verify("both registrations answer a user and a workspace", [
-        check("named", named.answer.status === 200 && named.tenantId !== "" && named.userId !== "", named.answer.body),
-        check("plain", plain.answer.status === 200 && plain.tenantId !== "" && plain.userId !== "", plain.answer.body),
-        check("two different workspaces", named.tenantId !== plain.tenantId, `${named.tenantId} ${plain.tenantId}`),
-      ], { critical: true });
-      const namedCurrent = await saas(ctx, "the named workspace", "GET", "/workspaces/current", { as: "named" });
-      const plainCurrent = await saas(ctx, "the default workspace", "GET", "/workspaces/current", { as: "plain" });
-      await ctx.verify("the workspace name is trimmed, or the default", [
-        check("a given name is saved trimmed", text(namedCurrent.body, "name") === "Acme Lab", namedCurrent.body),
-        check("no name gives My workspace", text(plainCurrent.body, "name") === "My workspace", plainCurrent.body),
-      ]);
-      const plan = await saas(ctx, "the visitor's plan", "GET", "/tenant/plan", { as: "named" });
-      await ctx.verify("the workspace is on the free plan, active, with one seat used", [
-        check("the plan is the free plan", text(plan.body, "current", "_id") === free.id && text(plan.body, "current", "slug") === "free", plan.body),
-        check("the status is active", text(plan.body, "status") === "active", plan.body),
-        check("one member, no invitation", JSON.stringify(pick(plan.body, "seats")) === JSON.stringify({ members: 1, pendingInvites: 0, occupied: 1 }), plan.body),
-      ]);
-      const again = await saas(ctx, "register the same e-mail again", "POST", "/register", { as: "anon", body: { email: named.email, password: STRONG, name: "Again" } });
-      await ctx.verify("a taken e-mail is refused", [check("400 saas.errors.user.email_in_use", again.status === 400 && code(again) === "saas.errors.user.email_in_use", again.body)]);
-    },
-  },
-  {
-    id: "the-password-policy-is-checked-before-anything-is-created",
-    title: "a password outside the DMS policy is refused with 400 before the e-mail is looked up, and nothing is created",
-    entryPoint: "POST /api/saas/register",
-    async run(/** @type {Ctx} */ ctx) {
-      await createPlan(ctx, "free");
-      const email = ctx.email("policy");
-      const cases = [
-        ["seven characters", passwordWith({ length: 7 })],
-        ["no uppercase letter", passwordWith({ upper: false })],
-        ["no digit", passwordWith({ digit: false })],
-        ["no special character", passwordWith({ special: "" })],
-        ["a special character outside @$!%*?&", passwordWith({ special: "#" })],
-        ["a space", passwordWith({ special: " " })],
-      ];
-      const results = [];
-      for (const [label, password] of cases) {
-        const answer = await saas(ctx, `register with ${label}`, "POST", "/register", { as: "anon", body: { email, password, name: "Policy" } });
-        results.push(check(`${label}: 400 saas.errors.registration.password_policy`, answer.status === 400 && code(answer) === "saas.errors.registration.password_policy", answer.body));
-      }
-      await ctx.verify("each rule of the policy is enforced", results);
-      const eight = await saas(ctx, "register with exactly eight characters", "POST", "/register", { as: "anon", body: { email, password: passwordWith({ length: 8 }), name: "Policy" } });
-      await ctx.verify("eight characters with every rule is accepted, so the earlier refusals created no account", [check("200", eight.status === 200, eight.body)]);
-    },
-  },
-  {
-    id: "registration-needs-a-free-plan-open-to-individuals",
-    title: "without an active free plan open to individuals registration answers 409, with it the lowest order wins",
-    entryPoint: "POST /api/saas/register",
-    async run(/** @type {Ctx} */ ctx) {
-      const refused = async (/** @type {string} */ label) => {
-        const answer = await saas(ctx, label, "POST", "/register", { as: "anon", body: { email: ctx.email(label.slice(0, 20)), password: STRONG, name: "Plan" } });
-        return check(`${label}: 409 saas.errors.plan.no_free_plan`, answer.status === 409 && code(answer) === "saas.errors.plan.no_free_plan", answer.body);
-      };
-      await ctx.verify("an empty catalogue refuses", [await refused("empty catalogue")]);
-      const paid = await createPlan(ctx, "paid", { price: 9 });
-      await ctx.verify("a paid plan is not a default plan", [paid.id === "" ? check("the paid plan is saved", false, paid.answer.body) : await refused("only a paid plan")]);
-      const business = await createPlan(ctx, "biz-free", { audience: "business" });
-      await ctx.verify("a free plan for businesses only is not a default plan", [business.id === "" ? check("saved", false, business.answer.body) : await refused("only a business free plan")]);
-      const inactive = await createPlan(ctx, "off-free", { isActive: false });
-      await ctx.verify("an inactive free plan is not a default plan", [inactive.id === "" ? check("saved", false, inactive.answer.body) : await refused("only an inactive free plan")]);
-      const second = await createPlan(ctx, "second-free", { order: 5 });
-      const first = await createPlan(ctx, "first-free", { order: 2 });
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        const named = await saas(ctx, "the plan registration opens on", "GET", "/register/plan", { as: "anon" });
-        if (text(named.body, "plan", "_id") === first.id) break;
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-      const visitor = await register(ctx, "ordered");
-      const plan = await saas(ctx, "the visitor's plan", "GET", "/tenant/plan", { as: "ordered" });
-      await ctx.verify("the individual free plan with the lowest order is attached", [
-        check("registration answers 200", visitor.answer.status === 200, visitor.answer.body),
-        check("first-free, not second-free", text(plan.body, "current", "_id") === first.id && first.id !== second.id, plan.body),
-      ]);
-    },
-  },
   {
     id: "the-card-step-follows-the-payment-method-option",
     title: "required asks for a card, optional and none do not, and a deployment without a usable Stripe key applies none",
@@ -192,26 +104,5 @@ export const journeys = guarded([
       await ctx.verify("registration works again once admission is open", [check("200", reopened.answer.status === 200, reopened.answer.body)]);
     },
   },
-  {
-    id: "registration-answers-429-past-its-rate-limit",
-    title: "one client address registers 20 times in a minute, the 21st call answers 429 and creates no account, and a backend restart starts a new count",
-    entryPoint: "POST /api/saas/register",
-    async run(/** @type {Ctx} */ ctx) {
-      await createPlan(ctx, "free");
-      const within = [];
-      for (let call = 1; call <= 20; call += 1) within.push(await register(ctx, `burst-${call}`));
-      await ctx.verify("the first 20 registrations of the minute register", [
-        check("20 answers 200 with a workspace", within.every(({ answer, tenantId }) => answer.status === 200 && tenantId !== ""), within.map(({ answer }) => answer.status).join(",")),
-      ], { critical: true });
-      const email = ctx.email("past-limit");
-      const body = { email, password: STRONG, name: "Past limit" };
-      const refused = await saas(ctx, "the 21st registration of the minute", "POST", "/register", { as: "anon", body });
-      await ctx.verify("the 21st registration is refused with 429", [check("429 Too many requests", refused.status === 429 && code(refused) === "Too many requests", refused.body)]);
-      await ctx.restartBackend();
-      const after = await saas(ctx, "register the refused e-mail after a backend restart", "POST", "/register", { as: "anon", body });
-      await ctx.verify("the refused call created nothing, and the restart starts a new count", [check("200 with a workspace", after.status === 200 && text(after.body, "tenantId") !== "", after.body)]);
-    },
-  },
   ...moreJourneys,
-  ...configJourneys,
 ]);

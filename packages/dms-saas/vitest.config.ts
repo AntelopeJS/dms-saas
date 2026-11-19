@@ -26,8 +26,19 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["test/**/*.test.ts"],
-          exclude: ["test/**/*.dom.test.ts"],
+          exclude: ["test/**/*.dom.test.ts", "test/**/*.journeys.test.ts"],
           globalSetup: ["test/global-setup.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "journeys",
+          include: ["test/**/*.journeys.test.ts"],
+          globalSetup: ["test/journeys/global-setup.ts"],
+          fileParallelism: false,
+          testTimeout: 300_000,
+          hookTimeout: 1_200_000,
         },
       },
       {

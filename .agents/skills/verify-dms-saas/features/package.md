@@ -30,9 +30,11 @@ What a project installs: the module and the interface packages as their manifest
 dms-control journey "$RUN" package
 ```
 
+Its journey runs as the unit test `packages/dms-saas/test/package-manifests.test.ts`: `pnpm --filter @antelopejs/dms-saas test:unit package-manifests`.
+
 ## Gotchas
 
-- The journey reads the manifests of the checkout; it does not pack tarballs.
+- The test reads the manifests of the checkout; it does not pack tarballs.
 
 ## Coverage
 

@@ -10,5 +10,8 @@ import { expect } from "vitest";
 /** Matches any string. */
 export const ANY_STRING: unknown = expect.any(String);
 
+/** Matches any non-empty string. */
+export const NON_EMPTY_STRING: unknown = expect.stringMatching(/./);
+
 /** Matches any date. */
 export const ANY_DATE: unknown = expect.any(Date);

@@ -53,7 +53,8 @@
     "typecheck": "tsc --noEmit",
     "verify:interface": "node scripts/verify-interface-package.mjs",
     "test": "pnpm run build && pnpm --filter @antelopejs/interface-dms-saas run check:exports && pnpm run test:unit",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run --project unit --project frontend",
+    "test:journeys": "vitest run --project journeys",
     "release": "pnpm --filter @antelopejs/interface-dms-saas build && pnpm --dir frontend-vue install --frozen-lockfile && pnpm run verify:interface && release-it",
     "prepack": "pnpm run build",
     "knip": "knip --dependencies",
@@ -75,7 +76,7 @@
   },
   "devDependencies": {
     "@antelopejs/core": "~1.24.0",
-    "@antelopejs/dms": ">=0.21.0 <0.22.0",
+    "@antelopejs/dms": "0.21.4-next.941.gfbafd9a",
     "@antelopejs/dms-frontend": ">=0.11.4 <0.12.0",
     "@antelopejs/interface-mongodb": ">=0.0.8 <0.1.0",
     "@antelopejs/mongodb": ">=1.8.10 <1.9.0",
