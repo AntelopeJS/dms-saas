@@ -101,7 +101,7 @@ importers:
         version: 0.21.0(@antelopejs/core@1.24.0)(@playwright/test@1.65.1)(bare-buffer@3.7.1)(typescript@6.0.3)
       '@antelopejs/dms-frontend':
         specifier: '>=0.11.4 <0.12.0'
-        version: 0.11.4(@antelopejs/core@1.24.0)
+        version: 0.11.8(@antelopejs/core@1.24.0)
       '@antelopejs/interface-mongodb':
         specifier: '>=0.0.8 <0.1.0'
         version: 0.0.8(socks@2.8.10)
@@ -249,8 +249,8 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
-  '@antelopejs/dms-frontend@0.11.4':
-    resolution: {integrity: sha512-/YD6LapIXKonGsyiru+zuI1kFvLlh+KwhPW41SxowYmPPMP9DyYg+n5jSKEx+ht3P3BPixPVr79VTguZCjJAAg==}
+  '@antelopejs/dms-frontend@0.11.8':
+    resolution: {integrity: sha512-owMawDaP66LA0j7OlBTJ4gebBC0TFpn8xveEpsv9kUyy8ltkPn1DPoJHyJ+7QNxq5iO56m1V49+sW0j2M/LpvQ==}
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
@@ -5074,6 +5074,10 @@ packages:
     resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==}
     engines: {node: '>=0.10.0'}
 
+  source-map-js@1.2.3:
+    resolution: {integrity: sha512-xj+WrAkyv5Qp+t7r9N5HvCBu7g1qOe6CKRNpq22X1GGcPEQADFU54v5qsPVs3/vrUFQ7XivFrcAVKA2stI0kWA==}
+    engines: {node: '>=0.10.0'}
+
   source-map-support@0.5.21:
     resolution: {integrity: sha512-uBHU3L3czsIyYXKX88fdrGovxdSCoTGDRZ6SYXtSRxLZUzHg5P/66Ht6uoUlHu9EZod+inXhKo3qQgwXUT/y1w==}
 
@@ -5862,7 +5866,7 @@ snapshots:
       semver: 7.8.6
       typescript: 5.9.3
 
-  '@antelopejs/dms-frontend@0.11.4(@antelopejs/core@1.24.0)':
+  '@antelopejs/dms-frontend@0.11.8(@antelopejs/core@1.24.0)':
     dependencies:
       '@antelopejs/core': 1.24.0
       '@intlify/message-compiler': 11.4.18
@@ -6619,7 +6623,7 @@ snapshots:
   '@intlify/message-compiler@11.4.18':
     dependencies:
       '@intlify/shared': 11.4.18
-      source-map-js: 1.2.2
+      source-map-js: 1.2.3
 
   '@intlify/shared@11.4.18': {}
 
@@ -8055,7 +8059,7 @@ snapshots:
       '@vue/shared': 3.5.45
       entities: 7.0.1
       estree-walker: 2.0.2
-      source-map-js: 1.2.2
+      source-map-js: 1.2.3
 
   '@vue/compiler-dom@3.5.34':
     dependencies:
@@ -8089,7 +8093,7 @@ snapshots:
       estree-walker: 2.0.2
       magic-string: 0.30.21
       postcss: 8.5.33
-      source-map-js: 1.2.2
+      source-map-js: 1.2.3
     optional: true
 
   '@vue/compiler-ssr@3.5.34':
@@ -9785,7 +9789,7 @@ snapshots:
     dependencies:
       '@babel/parser': 7.29.14
       '@babel/types': 7.29.14
-      source-map-js: 1.2.2
+      source-map-js: 1.2.3
     optional: true
 
   make-dir@3.1.0:
@@ -10356,7 +10360,7 @@ snapshots:
     dependencies:
       nanoid: 3.3.20
       picocolors: 1.1.1
-      source-map-js: 1.2.2
+      source-map-js: 1.2.3
     optional: true
 
   prelude-ls@1.2.1: {}
@@ -10757,6 +10761,8 @@ snapshots:
       smart-buffer: 4.2.0
 
   source-map-js@1.2.2: {}
+
+  source-map-js@1.2.3: {}
 
   source-map-support@0.5.21:
     dependencies:
