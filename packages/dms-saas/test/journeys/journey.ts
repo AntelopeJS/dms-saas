@@ -1,4 +1,6 @@
 import { randomBytes } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { test as base, expect, inject } from "vitest";
 import {
   apiRequest,
@@ -42,7 +44,8 @@ function slug(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/^-|-$/g, "")
+    .slice(0, 60);
 }
 
 /**
@@ -52,6 +55,7 @@ function slug(text: string): string {
  */
 export class Journey {
   readonly #startedAt = new Date().toISOString();
+  #steps = 0;
 
   constructor(
     readonly state: RunState,
@@ -64,8 +68,22 @@ export class Journey {
       ...call,
       as: call.as ?? "admin",
       label,
+      folder: () => this.#evidence(label),
     });
     return { status, body, error };
+  }
+
+  /** A new numbered folder for one step's evidence, under `<run>/evidence/journeys/<test>/`. */
+  #evidence(label: string): string {
+    this.#steps += 1;
+    const folder = join(
+      this.state.evidence,
+      "journeys",
+      slug(this.name),
+      `${String(this.#steps).padStart(3, "0")}-${slug(label)}`,
+    );
+    mkdirSync(folder, { recursive: true });
+    return folder;
   }
 
   /** Keeps the credentials of an account the test created, so calls can act as it. */

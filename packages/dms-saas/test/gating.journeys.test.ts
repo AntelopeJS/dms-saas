@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ANY_STRING } from "./helpers/asymmetric-matchers.ts";
 import {
   accountWithoutWorkspace,
   catalogueEntry,
@@ -179,9 +178,7 @@ test("the-plan-member-cap-bounds-invitations", async ({ journey }) => {
   expect
     .soft(errorCode(second), "the second invitation is refused")
     .toBe(SEAT_LIMIT);
-  expect
-    .soft(owner.tenantId, "the workspace still has its owner")
-    .toEqual(ANY_STRING);
+  expect.soft(owner.tenantId, "the workspace still has its owner").not.toBe("");
 });
 
 test("platform-support-and-expired-invitations-take-no-seat", async ({
@@ -311,7 +308,7 @@ test("a-cap-lowered-under-the-member-count-keeps-members-and-stops-invitations",
   expect
     .soft(errorCode(refused), "a new invitation is refused")
     .toBe(SEAT_LIMIT);
-  expect.soft(owner.tenantId, "the owner is unchanged").toEqual(ANY_STRING);
+  expect.soft(owner.tenantId, "the owner is unchanged").not.toBe("");
   expect
     .soft(
       await catalogueEntry(journey, "trio"),

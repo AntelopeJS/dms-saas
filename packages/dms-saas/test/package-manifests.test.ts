@@ -14,6 +14,7 @@ test("the-manifests-declare-what-the-docs-install", () => {
   expect(moduleManifest.files).toEqual(
     expect.arrayContaining(["dist", "frontend-vue", "skills"]),
   );
+  expect(contractManifest.name).toBe("@antelopejs/interface-dms-saas");
   expect(contractManifest.exports["./*"]).toEqual({
     types: "./dist/*.d.ts",
     default: "./dist/*.js",

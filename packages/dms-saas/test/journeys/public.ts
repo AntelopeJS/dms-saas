@@ -1,12 +1,9 @@
 import { z } from "zod";
-import { expect, type Journey, type Json } from "./journey.ts";
+import type { Journey, Json } from "./journey.ts";
 import { passwordWith, saas, errorCode } from "./saas.ts";
 
 /** A password the DMS policy accepts, shared by the registrations that only need one. */
 export const STRONG = passwordWith();
-
-/** Matches any non-empty string. */
-export const NON_EMPTY_STRING: unknown = expect.stringMatching(/./);
 
 const planOpeningRegistration = z.object({
   plan: z.object({ _id: z.string() }).nullish(),

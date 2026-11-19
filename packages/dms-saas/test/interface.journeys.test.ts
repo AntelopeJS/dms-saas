@@ -1,6 +1,6 @@
 import { type Answer, expect, type Journey, test } from "./journeys/journey.ts";
 import { createPlan, fixture, register } from "./journeys/saas.ts";
-import { ANY_STRING } from "./helpers/asymmetric-matchers.ts";
+import { NON_EMPTY_STRING } from "./helpers/asymmetric-matchers.ts";
 
 /** Calls one billing function of @antelopejs/interface-dms-saas through the playground, as a consuming module does. */
 function call(
@@ -53,7 +53,8 @@ test("the-billing-reads-answer-absent-for-a-free-and-a-gifted-workspace", async 
   const freeBalance = await call(journey, "balance", scope(free));
   expect
     .soft(freeBalance.body, "a free workspace has no balance, never a zero")
-    .toMatchObject({
+    .toEqual({
+      ok: true,
       result: {
         status: "absent",
         reason: "customer_not_configured",
@@ -70,7 +71,11 @@ test("the-billing-reads-answer-absent-for-a-free-and-a-gifted-workspace", async 
   expect
     .soft(freePreview.body, "a free workspace has no preview")
     .toMatchObject({
-      result: { status: "absent", reason: "free_plan", computedAt: ANY_STRING },
+      result: {
+        status: "absent",
+        reason: "free_plan",
+        computedAt: NON_EMPTY_STRING,
+      },
     });
   const giftPreview = await call(journey, "preview", scope(gift));
   expect
@@ -83,7 +88,7 @@ test("the-billing-reads-answer-absent-for-a-free-and-a-gifted-workspace", async 
       result: {
         status: "unavailable",
         reason: "stripe_not_configured",
-        computedAt: ANY_STRING,
+        computedAt: NON_EMPTY_STRING,
       },
     });
 

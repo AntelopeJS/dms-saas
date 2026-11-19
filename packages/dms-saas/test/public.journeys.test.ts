@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { NON_EMPTY_STRING } from "./helpers/asymmetric-matchers.ts";
 import { expect, test } from "./journeys/journey.ts";
 import {
-  NON_EMPTY_STRING,
   planRegistrationOpensOn,
   registrationAttempt,
   STRONG,

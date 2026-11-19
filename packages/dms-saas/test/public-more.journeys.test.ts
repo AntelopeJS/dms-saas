@@ -1,10 +1,7 @@
 import { z } from "zod";
+import { NON_EMPTY_STRING } from "./helpers/asymmetric-matchers.ts";
 import { expect, type Json, test } from "./journeys/journey.ts";
-import {
-  NON_EMPTY_STRING,
-  registrationAttempt,
-  STRONG,
-} from "./journeys/public.ts";
+import { registrationAttempt, STRONG } from "./journeys/public.ts";
 import {
   createPlan,
   fixture,
