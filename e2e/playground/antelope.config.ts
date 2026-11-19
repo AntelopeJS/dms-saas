@@ -3,7 +3,6 @@ import { defineConfig } from "@antelopejs/interface-core/config";
 const preferredApiPort = process.env.PORT ?? "5010";
 const dmsClientUrl = process.env.DMS_CLIENT_BASE_URL;
 
-
 interface SaasConfig {
   stripe: {
     secretKey: string;
@@ -34,7 +33,8 @@ function saasConfig(): SaasConfig {
       webhookSecret: env.VERIFY_SAAS_WEBHOOK_SECRET ?? "whsec_placeholder",
     },
   };
-  if (env.VERIFY_SAAS_ADMISSION) config.admissionMode = env.VERIFY_SAAS_ADMISSION;
+  if (env.VERIFY_SAAS_ADMISSION)
+    config.admissionMode = env.VERIFY_SAAS_ADMISSION;
   if (env.VERIFY_SAAS_PAYMENT_METHOD)
     config.registration = { paymentMethod: env.VERIFY_SAAS_PAYMENT_METHOD };
   if (env.VERIFY_SAAS_SCREENS_OFF) {
@@ -59,8 +59,8 @@ function saasConfig(): SaasConfig {
 
 /**
  * The repository's playground with the ports, origins, secrets and mail
- * `dms-control` sets for a run, a fixture module (`app`) and the module under
- * verification built from the checkout.
+ * the `@antelopejs/dms/e2e` kit sets for a run, a fixture module (`app`) and
+ * the module under test built from the checkout.
  */
 export default defineConfig({
   name: "verify-dms-saas",
@@ -69,7 +69,7 @@ export default defineConfig({
       source: { type: "local", path: "." },
     },
     "dms-saas": {
-      source: { type: "local", path: "../../../../packages/dms-saas" },
+      source: { type: "local", path: "../../packages/dms-saas" },
       config: saasConfig(),
     },
     dms: {

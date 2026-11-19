@@ -247,8 +247,8 @@ jobs:
           path: |
             ~/.cache/mongodb-binaries
             ~/.cache/ms-playwright
-            .agents/skills/verify-dms-saas/playground/.antelope/cache
-          key: e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', '.agents/skills/verify-dms-saas/playground/antelope.config.ts') }}
+            e2e/playground/.antelope/cache
+          key: e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'e2e/playground/antelope.config.ts') }}
       - uses: actions/cache@v4
         with:
           path: ~/.cache/dms-control/frontend
@@ -305,8 +305,8 @@ jobs:
         with:
           path: |
             ~/.cache/mongodb-binaries
-            .agents/skills/verify-dms-saas/playground/.antelope/cache
-          key: journeys-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', '.agents/skills/verify-dms-saas/playground/antelope.config.ts') }}
+            e2e/playground/.antelope/cache
+          key: journeys-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'e2e/playground/antelope.config.ts') }}
       - uses: actions/cache@v4
         with:
           path: ~/.cache/dms-control/frontend

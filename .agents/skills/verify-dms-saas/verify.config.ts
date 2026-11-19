@@ -1,3 +1,5 @@
+import { notUserFacing, userFacing } from "../../../e2e/feature-map/index.ts";
+
 /** A kind of one-way door. */
 export type DoorKind =
   | "data"
@@ -55,7 +57,6 @@ export interface VerifyConfig {
   formal: FormalCheck[];
 }
 
-const SKILL = ".agents/skills/verify-dms-saas";
 const MODULE = "packages/dms-saas";
 const INTERFACE = "packages/interface-dms-saas";
 const GUARDED_PLAN_CHANGE = ".agents/skills/formal-guarded-plan-change";
@@ -63,7 +64,7 @@ const WORKSPACE_CREATION_GATE =
   ".agents/skills/formal-workspace-creation-gate";
 
 const config: VerifyConfig = {
-  playground: `${SKILL}/playground`,
+  playground: "e2e/playground",
   prepare: [
     [
       "pnpm",
@@ -74,19 +75,8 @@ const config: VerifyConfig = {
     ],
     ["pnpm", "e2e:build"],
   ],
-  userFacing: [
-    `${MODULE}/src/**`,
-    `${MODULE}/frontend-vue/**`,
-    `${MODULE}/skills/**`,
-    `${MODULE}/package.json`,
-    `${INTERFACE}/src/**`,
-    `${INTERFACE}/package.json`,
-  ],
-  notUserFacing: [
-    `${MODULE}/frontend-vue/.*`,
-    `${MODULE}/frontend-vue/eslint.config.mjs`,
-    `${MODULE}/frontend-vue/pnpm-lock.yaml`,
-  ],
+  userFacing: [...userFacing],
+  notUserFacing: [...notUserFacing],
   smoke: "smoke",
   smokeJourney:
     "register at /register without a card, land in a workspace on the free plan, and see that plan on the Billing page",

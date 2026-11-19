@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "types": ["node"],
+    "lib": ["esnext"],
+    "typeRoots": ["../../packages/dms-saas/node_modules/@types"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "composite": false,
+    "noEmit": true,
+    "incremental": false,
+    "experimentalDecorators": true
+  },
+  "files": [],
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
