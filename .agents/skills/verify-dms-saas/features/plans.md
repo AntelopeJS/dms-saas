@@ -70,6 +70,7 @@ The plan catalogue the platform owner edits: plan writes with their validation a
 - `a-retired-plans-workspaces-move-and-the-plan-can-then-go`: a started retirement closes the plan to sign-ups, moves its workspaces to the target, and the plan is then deletable.
 - `only-the-platform-owner-edits-the-catalogue`: a workspace owner and an anonymous caller cannot write, delete or retire plans.
 - `every-text-field-of-a-plan-is-saved-trimmed`: name, description and badge are saved trimmed on create and on save, and a save of one text keeps the others.
+- `the-platform-owner-creates-a-plan-in-the-editor-and-the-catalogue-lists-it`: the platform owner fills in the plan editor, the Plans page and the catalogue API list the new plan, and the public pricing page offers it.
 
 ## How to get to it (user POV)
 
@@ -99,3 +100,4 @@ dms-control journey "$RUN" plans
 | 8.operations.md "Plan migrations" | Not driven: capture, outcomes, retry, reconcile and resolve need a migration job that starts (blocked by the finding) |
 | 5.extending.md "Plan feature labels and values" | Not driven: localized feature rows are written by modules through `localize("*")` |
 | 6.plans.md Text fields are saved trimmed | plan-text journey: name, description, badge and slug trimmed on create and save |
+| 6.plans.md "Plan editor" and "Plans" in the browser | editor journey: Create plan, Name and Price, the new plan on the Plans page, in `GET /plans` and `GET /pricing`, and on /pricing |
