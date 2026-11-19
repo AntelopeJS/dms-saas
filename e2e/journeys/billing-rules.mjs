@@ -1,5 +1,5 @@
 import { guarded } from "../guard.mjs";
-import { check, pick, createPlan, register, saas, text } from "../saas.mjs";
+import { check, holdsValue, pick, createPlan, register, saas, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
 
@@ -143,6 +143,34 @@ export const journeys = guarded([
       await ctx.verify("a legal text is limited to 500000 characters", [
         check("500001 is refused", tooLong.status === 400 && JSON.stringify(tooLong.body).includes("$saas.errors.billing_rules.legal_text_too_long"), tooLong.body),
         check("500000 is accepted", atLimit.status === 200, atLimit.body),
+      ]);
+    },
+  },
+  {
+    id: "the-platform-owner-saves-a-rule-on-the-billing-rules-page",
+    title: "the platform owner changes the days before suspension and the data retention on the page and saves, and a reload and the settings API keep both, and the public pricing facts carry the retention",
+    entryPoint: "Configuration › Billing rules & legal, GET /api/saas/settings/billing, GET /api/saas/pricing",
+    async run(/** @type {Ctx} */ ctx) {
+      await createPlan(ctx, "free");
+      const delay = { role: "spinbutton", name: "Days before suspension" };
+      const retention = { role: "spinbutton", name: "Keep data after cancellation" };
+      const tab = await ctx.tab("admin");
+      await tab.signIn("admin");
+      await tab.goto("/modules/saas/configuration/settings");
+      await ctx.verify("the page offers the defaults", [tab.shows(/Unpaid invoices/, { timeoutMs: 60_000 }), holdsValue(tab, delay, "14"), holdsValue(tab, retention, "30")], { critical: true });
+      await tab.fill(delay, "7");
+      await tab.fill(retention, "90");
+      await tab.click({ role: "button", name: "Save changes" });
+      await ctx.verify("the save is acknowledged", [tab.shows(/Billing rules saved/, { timeoutMs: 30_000 })], { critical: true });
+      await tab.reload();
+      await ctx.verify("after a reload the page holds the saved values", [tab.shows(/Unpaid invoices/, { timeoutMs: 60_000 }), holdsValue(tab, delay, "7"), holdsValue(tab, retention, "90")]);
+      const stored = await saas(ctx, "the stored rules", "GET", SETTINGS);
+      const pricing = await saas(ctx, "the public pricing facts", "GET", "/pricing", { as: "anon" });
+      await ctx.verify("the settings API carries both values, the public pricing facts the retention, and the other rules are left alone", [
+        check("7 days before suspension and 90 days of retention", pick(stored.body, "autoSuspendDelayDays") === 7 && pick(stored.body, "dataRetentionDaysAfterCancellation") === 90, stored.body),
+        check("suspension is still on", pick(stored.body, "autoSuspendEnabled") === true, stored.body),
+        check("the customer timeline reads 7 and 90", JSON.stringify(pick(stored.body, "customerTimeline")) === JSON.stringify({ autoSuspendEnabled: true, autoSuspendDelayDays: 7, dataRetentionDaysAfterCancellation: 90 }), stored.body),
+        check("the public pricing facts carry the 90 days of retention", pick(pricing.body, "rules", "dataRetentionDays") === 90, pricing.body),
       ]);
     },
   },

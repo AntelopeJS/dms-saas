@@ -22,6 +22,7 @@ Configuration › Billing rules & legal: every rule's range, partial saves, what
 - `a-save-keeps-what-it-leaves-out-and-reaches-the-public`: a partial save keeps the other rules, survives a restart, shows in the customer timeline and in the public pricing facts.
 - `saving-a-legal-text-publishes-a-new-version`: each legal document has its own version, bumped only by a changed text, readable by anyone and shown on its public page.
 - `only-the-platform-owner-edits-the-rules`: a workspace owner and an anonymous caller cannot read or save the billing rules.
+- `the-platform-owner-saves-a-rule-on-the-billing-rules-page`: the platform owner changes the days before suspension and the data retention on the page and saves, and a reload and the settings API keep both, and the public pricing facts carry the retention.
 
 ## How to get to it (user POV)
 
@@ -46,3 +47,4 @@ dms-control journey "$RUN" billing-rules
 | 8.billing-rules.md Tax | range journey (txcd_ plus 8 digits); Not driven: Re-sync plans |
 | 8.billing-rules.md Refund policy | range journey (window 1 to 365, full or prorated) and public facts; Not driven: the refund itself |
 | 8.billing-rules.md Legal documents | legal journey: versions per document, same text not a new version, 500000-character limit, the public page |
+| 8.billing-rules.md "Unpaid invoices" in the browser | rule-page journey: the defaults on the page, Save changes, the saved values after a reload, in `GET /settings/billing` and the retention in the public pricing facts |
