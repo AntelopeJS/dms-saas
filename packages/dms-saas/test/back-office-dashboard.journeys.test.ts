@@ -126,7 +126,7 @@ test("mrr-is-reported-in-the-configured-currency-only", async ({ journey }) => {
   await seed(journey);
   await withConfig(
     journey,
-    { VERIFY_SAAS_REPORTING_CURRENCY: "usd" },
+    { E2E_SAAS_REPORTING_CURRENCY: "usd" },
     async () => {
       const headline = await saas(
         journey,

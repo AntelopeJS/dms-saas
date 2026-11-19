@@ -25,7 +25,7 @@ export const journeys = guarded([
       await createPlan(ctx, "free");
       const intent = async (/** @type {string} */ label) => saas(ctx, label, "GET", "/register/setup-intent", { as: "anon" });
       for (const mode of ["required", "optional", "none"]) {
-        await withConfig(ctx, { VERIFY_SAAS_PAYMENT_METHOD: mode }, async () => {
+        await withConfig(ctx, { E2E_SAAS_PAYMENT_METHOD: mode }, async () => {
           const answer = await intent(`setup intent under ${mode} with a placeholder key`);
           const visitor = await register(ctx, `placeholder-${mode}`);
           await ctx.verify(`${mode} with a placeholder key behaves as none`, [
@@ -39,13 +39,13 @@ export const journeys = guarded([
           await ctx.verify(`${mode} with a placeholder key draws the register screen without its card step`, [form, noCard]);
         });
       }
-      await withConfig(ctx, { VERIFY_SAAS_PAYMENT_METHOD: "required", VERIFY_SAAS_STRIPE_SECRET_KEY: "sk_test_verifysaaslocal" }, async () => {
+      await withConfig(ctx, { E2E_SAAS_PAYMENT_METHOD: "required", E2E_SAAS_STRIPE_SECRET_KEY: "sk_test_verifysaaslocal" }, async () => {
         const answer = await saas(ctx, "register without a card under required", "POST", "/register", { as: "anon", body: { email: ctx.email("needs-card"), password: STRONG, name: "Card" } });
         await ctx.verify("required with a usable key refuses a registration without a card before any Stripe call", [
           check("400 saas.errors.registration.payment_method_required", answer.status === 400 && code(answer) === "saas.errors.registration.payment_method_required", answer.body),
         ]);
       });
-      await withConfig(ctx, { VERIFY_SAAS_PAYMENT_METHOD: "none", VERIFY_SAAS_STRIPE_SECRET_KEY: "sk_test_verifysaaslocal" }, async () => {
+      await withConfig(ctx, { E2E_SAAS_PAYMENT_METHOD: "none", E2E_SAAS_STRIPE_SECRET_KEY: "sk_test_verifysaaslocal" }, async () => {
         const answer = await intent("setup intent under none with a usable key");
         const visitor = await register(ctx, "none-usable");
         await ctx.verify("none with a usable key shows no card step and ignores a card sent anyway", [
@@ -69,7 +69,7 @@ export const journeys = guarded([
       await createPlan(ctx, "free");
       const open = await register(ctx, "while-open");
       await ctx.verify("open admission registers", [check("200", open.answer.status === 200, open.answer.body)]);
-      await withConfig(ctx, { VERIFY_SAAS_ADMISSION: "invitation-only" }, async () => {
+      await withConfig(ctx, { E2E_SAAS_ADMISSION: "invitation-only" }, async () => {
         const body = { email: ctx.email("closed"), password: STRONG, name: "Closed" };
         /** @type {{ method: string, path: string, payload: unknown }[]} */
         const routes = [

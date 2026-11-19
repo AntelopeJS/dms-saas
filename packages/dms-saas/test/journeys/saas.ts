@@ -5,8 +5,8 @@ import type { Answer, Journey, Json, JsonObject } from "./journey.ts";
 /** The module's HTTP API. */
 export const SAAS = "/api/saas";
 
-/** The verification playground's trusted backend calls (`playground/src/fixture.ts`). */
-export const FIXTURE = "/verify-saas";
+/** The e2e playground's trusted backend calls (`e2e/playground/src/fixture.ts`). */
+export const FIXTURE = "/e2e-fixture";
 
 /** The tenant of a single-tenant DMS. */
 export const TENANT = "default";
@@ -47,7 +47,7 @@ export function saas(
   });
 }
 
-/** Calls the verification playground's trusted backend (`/verify-saas<path>`), anonymously. */
+/** Calls the e2e playground's trusted backend (`/e2e-fixture<path>`), anonymously. */
 export function fixture(
   journey: Journey,
   label: string,
@@ -103,7 +103,7 @@ export function stripeSignature(
 }
 
 /**
- * Restarts the backend with module options set from `VERIFY_SAAS_*`
+ * Restarts the backend with module options set from `E2E_SAAS_*`
  * variables (see the playground's `antelope.config.ts`), runs `body`, then
  * restarts it again without them.
  */

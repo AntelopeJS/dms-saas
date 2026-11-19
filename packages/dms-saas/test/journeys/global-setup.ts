@@ -9,7 +9,7 @@ declare module "vitest" {
 }
 
 /**
- * Starts one run of the verification playground for the journey tests: the
+ * Starts one run of the e2e playground for the journey tests: the
  * prepare commands (none with `DMS_E2E_PREBUILT=1`), its own MongoDB, a mail
  * sink, the backend and the built dashboard on free ports. Stops it once
  * every test has run.

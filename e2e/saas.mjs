@@ -12,8 +12,8 @@ import { expect } from "@playwright/test";
 /** The module's HTTP API. */
 const SAAS = "/api/saas";
 
-/** The verification playground's trusted backend calls (`playground/src/fixture.ts`). */
-const FIXTURE = "/verify-saas";
+/** The e2e playground's trusted backend calls (`e2e/playground/src/fixture.ts`). */
+const FIXTURE = "/e2e-fixture";
 
 /**
  * @param {unknown} value Anything a JSON answer holds
@@ -94,7 +94,7 @@ export function saas(ctx, label, method, path, options = {}) {
 }
 
 /**
- * Calls the verification playground's trusted backend.
+ * Calls the e2e playground's trusted backend.
  *
  * @param {Ctx} ctx The journey
  * @param {string} label What the call does
@@ -129,7 +129,7 @@ export async function register(ctx, name, options = {}) {
 }
 
 /**
- * Restarts the backend with module options set from `VERIFY_SAAS_*` variables (see `playground/antelope.config.ts`), runs
+ * Restarts the backend with module options set from `E2E_SAAS_*` variables (see `playground/antelope.config.ts`), runs
  * `body`, then restarts it again without them.
  *
  * @param {Ctx} ctx The journey
