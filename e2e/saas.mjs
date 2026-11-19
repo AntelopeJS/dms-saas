@@ -297,14 +297,6 @@ export async function allPermissionIds(ctx) {
 
 
 /**
- * @param {string} literal Text to match literally
- * @returns {string} The text with its regular expression characters escaped
- */
-export function escaped(literal) {
-  return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
  * Waits for a form field to hold a value, so a read after a reload does not race the field's first fill.
  *
  * @param {Tab} tab The tab

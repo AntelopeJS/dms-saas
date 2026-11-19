@@ -1,4 +1,4 @@
-import { allPermissionIds, check, createPlan, escaped, fixture, inviteMember, createRole, isText, joinMember, list, pick, register, saas, text } from "../../saas.mjs";
+import { allPermissionIds, check, createPlan, fixture, inviteMember, createRole, isText, joinMember, list, pick, register, saas, text } from "../../saas.mjs";
 
 /** @typedef {import("../../saas.mjs").Ctx} Ctx */
 
@@ -75,7 +75,7 @@ export const memberJourneys = [
       ], { critical: true });
       await tab.goto("/settings/workspace/invites");
       await ctx.verify("the Invitations page lists the guest as pending, with the Member role", [
-        tab.visible({ role: "row", name: new RegExp(`${escaped(guest)}.*Member.*Pending`) }, { timeoutMs: 60_000 }),
+        tab.visible({ role: "row", name: new RegExp(`${RegExp.escape(guest)}.*Member.*Pending`) }, { timeoutMs: 60_000 }),
         tab.visible({ role: "button", name: "Invitations 1" }, { timeoutMs: 15_000 }),
         tab.shows(/1 member\s*1 pending invite/, { timeoutMs: 15_000 }),
       ]);

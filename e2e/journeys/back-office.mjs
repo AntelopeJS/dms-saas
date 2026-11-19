@@ -5,7 +5,7 @@ import { operatorRuleJourneys } from "./parts/operator-rules.mjs";
 import { revenueJourneys } from "./parts/revenue.mjs";
 import { invoiceJourneys } from "./parts/invoices.mjs";
 import { dashboardDateJourneys } from "./parts/back-office-more.mjs";
-import { check, createPlan, escaped, fixture, list, pick, register, saas, text, withConfig } from "../saas.mjs";
+import { check, createPlan, fixture, list, pick, register, saas, text, withConfig } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
 
@@ -115,8 +115,8 @@ export const journeys = guarded([
       const euros = (/** @type {unknown} */ minor) => new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }).format(Number(minor) / 100);
       const count = (/** @type {string} */ id) => String(pick(item(statuses, id), "value"));
       const paying = pick(item(headline, "paying"), "value", "params");
-      const mrr = escaped(euros(money(pick(item(headline, "mrr"), "value"))));
-      const arr = escaped(euros(money(pick(item(headline, "mrr"), "detail"))));
+      const mrr = RegExp.escape(euros(money(pick(item(headline, "mrr"), "value"))));
+      const arr = RegExp.escape(euros(money(pick(item(headline, "mrr"), "detail"))));
       const tab = await ctx.tab("admin");
       await tab.signIn("admin");
       await tab.goto("/modules/saas/overview/dashboard");
