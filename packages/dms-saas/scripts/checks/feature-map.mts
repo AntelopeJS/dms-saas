@@ -1,7 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join, matchesGlob } from "node:path";
-import { covers, notUserFacing, userFacing } from "../../../../e2e/coverage.ts";
+import {
+  covers,
+  notUserFacing,
+  userFacing,
+} from "../../../../e2e/feature-map/index.ts";
 
 const WORKSPACE_ROOT = join(import.meta.dirname, "..", "..", "..", "..");
 const JOURNEYS = join(WORKSPACE_ROOT, "e2e", "journeys");
@@ -11,7 +15,7 @@ const matchesAny = (file: string, globs: readonly string[]): boolean =>
   globs.some((glob) => matchesGlob(file, glob));
 
 /**
- * The feature map of `e2e/coverage.ts`: every feature of `e2e/journeys/`
+ * The feature map of `e2e/feature-map/`: every feature of `e2e/journeys/`
  * has an entry and every entry a journeys file, every feature but the smoke
  * one lists globs, each glob matches a tracked file, and every tracked
  * user-facing file is in a feature's globs.

@@ -1,4 +1,4 @@
-import { notUserFacing, userFacing } from "../../../e2e/coverage.ts";
+import { notUserFacing, userFacing } from "../../../e2e/feature-map/index.ts";
 
 /** A kind of one-way door. */
 export type DoorKind =

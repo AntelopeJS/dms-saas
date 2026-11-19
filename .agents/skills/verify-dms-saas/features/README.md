@@ -1,6 +1,6 @@
 # Feature map
 
-One file per feature. `covers:` lists the source globs it owns, `docs:` the pages a verdict judges, and `e2e/journeys/<feature>.mjs` its journeys. `dms-control map` checks that every user-facing file is covered and that every feature has its journeys and existing docs pages. `e2e/coverage.ts` holds the same `covers:` globs, and `pnpm lint` checks those without `dms-control`: give a new source file to a feature in both. Each feature file ends with a Coverage table: every documented behaviour of its docs pages either names the journey check that asserts it or says why it is not driven.
+One file per feature. `covers:` lists the source globs it owns, `docs:` the pages a verdict judges, and `e2e/journeys/<feature>.mjs` its journeys. `dms-control map` checks that every user-facing file is covered and that every feature has its journeys and existing docs pages. `e2e/feature-map/` holds the same `covers:` globs, and `pnpm lint` checks those without `dms-control`: give a new source file to a feature in both. Each feature file ends with a Coverage table: every documented behaviour of its docs pages either names the journey check that asserts it or says why it is not driven.
 
 | Feature | What the user does | Journeys |
 |---|---|---|

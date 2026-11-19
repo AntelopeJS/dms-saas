@@ -5,7 +5,7 @@
     "lib": ["esnext", "dom", "dom.iterable"]
   },
   "files": [],
-  "include": ["*.ts", "**/*.mjs"],
+  "include": ["*.ts", "feature-map/*.ts", "**/*.mjs"],
   "exclude": [
     "playwright-report",
     "test-results",

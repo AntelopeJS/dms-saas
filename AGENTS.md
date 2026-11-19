@@ -10,7 +10,7 @@ A pnpm workspace with two published packages. The root holds the tool configs, t
 | `packages/dms-saas/frontend-vue` | The Vue layer, shipped as source. ESLint and Prettier own it, not oxlint and oxfmt. It keeps a lockfile for standalone consumers |
 | `packages/dms-saas/playground`   | An AntelopeJS project that runs the module against MongoDB. Not a workspace package: it has its own lockfile and a hoisted linker, so install it with `--ignore-workspace` |
 | `packages/interface-dms-saas`    | `@antelopejs/interface-dms-saas`, the extension points other modules import                                                |
-| `e2e`                            | The journeys as a Playwright suite, through the kit of `@antelopejs/dms/e2e`: `journeys.config.ts` declares the run, `playground/` is the project it starts, `coverage.ts` maps each feature to the source it covers |
+| `e2e`                            | The journeys as a Playwright suite, through the kit of `@antelopejs/dms/e2e`: `journeys.config.ts` declares the run, `playground/` is the project it starts, `feature-map/` maps each feature to the source it covers |
 
 The module's typecheck and oxlint's type-aware rules resolve the interface through its built `dist`, so the root `typecheck` script is the build of both packages, and `lint` runs after it. Run `pnpm build` after `pnpm install`: without a `dist`, the pre-commit lint hook reports false type errors and `check:exports` fails.
 
@@ -22,7 +22,7 @@ The module's typecheck and oxlint's type-aware rules resolve the interface throu
 
 ## Invariant checks
 
-`pnpm lint` ends with `node packages/dms-saas/scripts/checks/index.mts`, the rules over many files: the locale catalogs (each key declared in one file, every locale with the reference keys and placeholders, no empty message, the keys screens read, both forms of a seat count), locale keys nothing reads, components drawing several roots without `inheritAttrs: false`, which frontend reads may hold a server render, and the feature map of `e2e/coverage.ts` (every tracked user-facing file in a feature's globs, every feature with its journeys file). It prints only what failed. Add a rule there, not a test that reads sources.
+`pnpm lint` ends with `node packages/dms-saas/scripts/checks/index.mts`, the rules over many files: the locale catalogs (each key declared in one file, every locale with the reference keys and placeholders, no empty message, the keys screens read, both forms of a seat count), locale keys nothing reads, components drawing several roots without `inheritAttrs: false`, which frontend reads may hold a server render, and the feature map of `e2e/feature-map/` (every tracked user-facing file in a feature's globs, every feature with its journeys file). It prints only what failed. Add a rule there, not a test that reads sources.
 
 ## What `pnpm run checks` does not run
 
