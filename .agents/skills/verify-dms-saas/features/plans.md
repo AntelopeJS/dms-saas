@@ -82,6 +82,8 @@ The plan catalogue the platform owner edits: plan writes with their validation a
 dms-control journey "$RUN" plans
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys plans`.
+
 ## Gotchas
 
 - `a-retired-plans-workspaces-move-and-the-plan-can-then-go` failed on the campaign tarballs of `@antelopejs/mongodb` and `@antelopejs/interface-database` (the migration job aborted at start with "Atomic mutation patches must contain constant data", AntelopeJS/dms-saas#219). It passes on the published releases `main` depends on.

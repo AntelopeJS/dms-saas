@@ -108,6 +108,8 @@ Public registration and the options that shape it: the account and first workspa
 dms-control journey "$RUN" public
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys public`.
+
 ## Gotchas
 
 - `registration.paymentMethod` is driven with a placeholder key (the server applies `none`) and with a usable-looking key `sk_test_verifysaaslocal`: the checks that need it refuse before any Stripe call, so nothing is sent to Stripe.

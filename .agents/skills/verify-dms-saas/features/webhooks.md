@@ -49,6 +49,8 @@ The Stripe webhook endpoint and the module's own schedules: signature verificati
 dms-control journey "$RUN" webhooks
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys webhooks`.
+
 ## Gotchas
 
 - The endpoint secret of the run is `whsec_placeholder`, which still verifies signatures.

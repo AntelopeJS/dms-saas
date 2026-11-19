@@ -286,11 +286,11 @@ jobs:
           retention-days: 7
 
   # The HTTP and command-line journeys, as the Vitest integration tests of
-  # `test:journeys`, wherever `e2e` runs every journey. Its global setup
-  # starts one run of the kit on what `e2e:build` built.
+  # `test:journeys`, all of them wherever `e2e` runs. Its global setup starts
+  # one run of the kit on what `e2e:build` built.
   journeys:
     needs: select
-    if: needs.select.outputs.e2e == 'all'
+    if: needs.select.outputs.e2e != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -372,7 +372,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - if: >-
-          needs.select.result != 'success' || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || needs.ci.result == 'skipped' || (needs.select.outputs.e2e != 'none' && needs.e2e.result == 'skipped') || (needs.select.outputs.e2e == 'all' && needs.journeys.result == 'skipped')
+          needs.select.result != 'success' || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || needs.ci.result == 'skipped' || (needs.select.outputs.e2e != 'none' && needs.e2e.result == 'skipped') || (needs.select.outputs.e2e != 'none' && needs.journeys.result == 'skipped')
         run: exit 1
       - if: needs.select.outputs.tier == 'draft'
         run: |

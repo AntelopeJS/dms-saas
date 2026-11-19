@@ -34,6 +34,8 @@ Configuration › Billing rules & legal: every rule's range, partial saves, what
 dms-control journey "$RUN" billing-rules
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys billing-rules`.
+
 ## Gotchas
 
 - Refusals answer 400 with the zod issue list; the message key is in the body.

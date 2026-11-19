@@ -108,6 +108,8 @@ The platform owner's dashboard: the headline figures, the workspaces by status a
 dms-control journey "$RUN" back-office
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys back-office`.
+
 ## Gotchas
 
 - Subscriptions in paid states are written through the fixture (`POST /verify-saas/subscription`) with the module's own model, then the workspace is republished with `RecomputeTenantBillingState`, as the docs tell a seed to do.
@@ -123,7 +125,7 @@ dms-control journey "$RUN" back-office
 | 3.dashboard.md Needs attention, Revenue churn, Paid invoices, Recent activity, period and comparison | Not driven: no journey seeds invoices, cancellations or dated events |
 | 4.workspaces.md list, views, tabs, detail, operator actions | Not driven except suspension and reactivation (workspace feature): the list and detail pages are data tables rendered by the dashboard |
 | 7.invoices.md invoices, credit notes, issuing | Not driven: invoices are mirrored from Stripe; issuing a credit note answers 503 saas.errors.stripe.not_configured without a key but no journey asserts it yet |
-| 4.workspaces.md internal notes, resend, audit trail, idempotency mismatch; 2.workspace-settings.md data export | ops-audit journeys: notes refused for owner, member and anonymous, resend issues a new link and kills the old, the operation record and activity tabs, id reuse is 409, one export at a time |
+| 4.workspaces.md internal notes, resend, audit trail, idempotency mismatch; 2.workspace-settings.md data export | `back-office-members` and `back-office-operator` journey tests: notes refused for owner, member and anonymous, resend issues a new link and kills the old, the operation record and activity tabs, id reuse is 409, one export at a time |
 | 4.workspaces.md Grant complimentary access (plans offered, the workspace's own plan, dates, Stripe acknowledgement) | grant journey: unknown, deleted and unsold plans, other audience, past date, own plan once unsold, open-ended grant, acknowledgement, workspace with no customer type; cancelled-workspace journey: an owner-deleted and an ended billed workspace refused through the API and the header menu; plan-page journey: the workspace's plan page after an operator grant |
 | 4.workspaces.md and 3.dashboard.md complimentary accesses ending (7 days) | complimentary journey: 5 days is flagged and listed, 10 days is not |
 | 3.dashboard.md Revenue churn after a suspension | churn journey: past due, suspended, cancelled in turn |

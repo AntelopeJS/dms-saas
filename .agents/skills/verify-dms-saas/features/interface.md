@@ -32,6 +32,8 @@ The billing reads of `@antelopejs/interface-dms-saas` as a consuming module call
 dms-control journey "$RUN" interface
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys interface`.
+
 ## Gotchas
 
 - The fixture returns `{ ok, result }` or `{ ok: false, rejection }`.

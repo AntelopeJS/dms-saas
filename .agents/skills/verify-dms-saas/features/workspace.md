@@ -122,6 +122,8 @@ Settings › Workspace as the owner lives it: renaming, the logo, the workspace 
 dms-control journey "$RUN" workspace
 ```
 
+Its HTTP journeys run as Vitest integration tests: `pnpm --filter @antelopejs/dms-saas test:journeys workspace`.
+
 ## Gotchas
 
 - A deleted workspace stays listed with status `cancelled` and rejects changes.
