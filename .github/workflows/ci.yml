@@ -240,7 +240,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: echo "DMS_CONTROL_RUNS=${RUNNER_TEMP}/dms-runs" >> "$GITHUB_ENV"
+      # The DMS_CONTROL_* and dms-control names go when the repo is on a dms release with dms #1184.
+      - run: |
+          echo "DMS_CONTROL_RUNS=${RUNNER_TEMP}/dms-runs" >> "$GITHUB_ENV"
+          echo "DMS_E2E_RUNS=${RUNNER_TEMP}/dms-runs" >> "$GITHUB_ENV"
       - uses: ./.github/actions/setup
       - uses: actions/cache@v4
         with:
@@ -251,9 +254,11 @@ jobs:
           key: e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'e2e/playground/antelope.config.ts') }}
       - uses: actions/cache@v4
         with:
-          path: ~/.cache/dms-control/frontend
-          key: e2e-frontend-${{ github.sha }}
-          restore-keys: e2e-frontend-
+          path: |
+            ~/.cache/dms-control/frontend
+            ~/.cache/dms-e2e/frontend
+          key: e2e-frontend-v2-${{ github.sha }}
+          restore-keys: e2e-frontend-v2-
       - name: Install Chromium and its system packages
         run: |
           if timeout 240 pnpm exec playwright install --with-deps --only-shell chromium; then
@@ -299,7 +304,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: echo "DMS_CONTROL_RUNS=${RUNNER_TEMP}/dms-runs" >> "$GITHUB_ENV"
+      # The DMS_CONTROL_* and dms-control names go when the repo is on a dms release with dms #1184.
+      - run: |
+          echo "DMS_CONTROL_RUNS=${RUNNER_TEMP}/dms-runs" >> "$GITHUB_ENV"
+          echo "DMS_E2E_RUNS=${RUNNER_TEMP}/dms-runs" >> "$GITHUB_ENV"
       - uses: ./.github/actions/setup
       - uses: actions/cache@v4
         with:
@@ -309,9 +317,11 @@ jobs:
           key: journeys-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'e2e/playground/antelope.config.ts') }}
       - uses: actions/cache@v4
         with:
-          path: ~/.cache/dms-control/frontend
-          key: e2e-frontend-${{ github.sha }}
-          restore-keys: e2e-frontend-
+          path: |
+            ~/.cache/dms-control/frontend
+            ~/.cache/dms-e2e/frontend
+          key: e2e-frontend-v2-${{ github.sha }}
+          restore-keys: e2e-frontend-v2-
       - run: pnpm e2e:build
       - run: pnpm --filter @antelopejs/dms-saas test:journeys
       - if: failure()
