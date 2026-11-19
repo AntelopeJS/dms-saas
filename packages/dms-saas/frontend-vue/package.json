@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"license": "Apache-2.0",
-	"packageManager": "pnpm@10.6.5",
+	"packageManager": "pnpm@10.34.9",
 	"engines": {
 		"@antelopejs/dms-frontend": ">=0.11.4 <0.12.0"
 	},
