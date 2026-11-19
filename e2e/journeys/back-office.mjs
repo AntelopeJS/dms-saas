@@ -104,6 +104,38 @@ export const journeys = guarded([
     },
   },
   {
+    id: "the-dashboard-page-draws-the-figures-the-dashboard-api-answers",
+    title: "the Dashboard page shows the MRR, ARR, paying workspaces, the workspaces by status and the plans by MRR that the dashboard blocks answer for workspaces in every billing state",
+    entryPoint: "Modules › SaaS › Dashboard, GET /api/saas/dashboard/headline, /workspaces-by-status, /plans-by-mrr",
+    async run(/** @type {Ctx} */ ctx) {
+      await seed(ctx);
+      const headline = await saas(ctx, "the headline", "GET", `${DASHBOARD}/headline`);
+      const statuses = await saas(ctx, "workspaces by status", "GET", `${DASHBOARD}/workspaces-by-status`);
+      const byPlan = await saas(ctx, "plans by MRR", "GET", `${DASHBOARD}/plans-by-mrr`);
+      const euros = (/** @type {unknown} */ minor) => new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }).format(Number(minor) / 100);
+      const count = (/** @type {string} */ id) => String(pick(item(statuses, id), "value"));
+      const paying = pick(item(headline, "paying"), "value", "params");
+      const mrr = RegExp.escape(euros(money(pick(item(headline, "mrr"), "value"))));
+      const arr = RegExp.escape(euros(money(pick(item(headline, "mrr"), "detail"))));
+      const tab = await ctx.tab("admin");
+      await tab.signIn("admin");
+      await tab.goto("/modules/saas/overview/dashboard");
+      await ctx.verify("the page draws the headline figures", [
+        tab.shows(new RegExp(`MRR · normalised\\s*${mrr}`, "i"), { timeoutMs: 60_000 }),
+        tab.shows(new RegExp(`ARR ${arr}`), { timeoutMs: 15_000 }),
+        tab.visible({ role: "link", name: new RegExp(`Paying workspaces ${String(pick(paying, "paying"))} / ${String(pick(paying, "total"))}`) }, { timeoutMs: 15_000 }),
+      ]);
+      await ctx.verify("the page counts the workspaces by status as the block does", [
+        tab.shows(new RegExp(`Active\\s*${count("active")}\\s*Trialing\\s*${count("trialing")}\\s*Free\\s*${count("free")}\\s*Past due\\s*${count("past_due")}`), { timeoutMs: 15_000 }),
+      ]);
+      const plans = list(byPlan.body, "items").map((row) => RegExp.escape(text(row, "title")));
+      await ctx.verify("the page lists the plans that bring revenue", [
+        check("the block answers the two paid plans", plans.length === 2, byPlan.body),
+        tab.shows(new RegExp(`Plans by MRR[\\s\\S]*${plans.join("[\\s\\S]*")}`, "i"), { timeoutMs: 15_000 }),
+      ]);
+    },
+  },
+  {
     id: "mrr-is-reported-in-the-configured-currency-only",
     title: "with a reporting currency other than the plans' currency MRR shows 0 for them (never converted), and the code is read in upper case",
     entryPoint: "GET /api/saas/dashboard/headline, option reportingCurrency",

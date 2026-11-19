@@ -2,12 +2,14 @@ name: ci
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  merge_group:
   push:
-    branches: [next]
+    branches: [main]
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
+
 permissions:
   contents: read
 
@@ -37,11 +39,15 @@ jobs:
       test-job: false
     permissions:
       contents: read
+    secrets:
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
 
   # `ci-node.yml` exposes no outputs, so this takes the tier from the shared
-  # rule of `ci-tier`: the jobs below run in the `fast`, `full` and `nightly`
-  # tiers, on Windows only in `nightly`, and not on a draft or the `next` to
-  # `main` pull request.
+  # rule of `ci-tier`: the jobs below run in every tier but a draft and the
+  # `next` to `main` pull request, on Windows only in `nightly`. `e2e` picks
+  # the Playwright journeys: the `@smoke` ones on a pull request,
+  # every one in the merge queue, on a manual run or under the `ci:full`
+  # label, and every one in `shards` runners nightly.
   select:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -49,6 +55,9 @@ jobs:
       tier: ${{ steps.tier.outputs.tier }}
       tests: ${{ steps.tier.outputs.tests }}
       os: ${{ steps.tier.outputs.os }}
+      e2e: ${{ steps.tier.outputs.e2e }}
+      shards: ${{ steps.tier.outputs.shards }}
+      shard-total: ${{ steps.tier.outputs.shard-total }}
     steps:
       - name: Pick the tier with the shared rule
         id: pick
@@ -57,6 +66,8 @@ jobs:
         id: tier
         env:
           TIER: ${{ steps.pick.outputs.tier }}
+          EVENT: ${{ github.event_name }}
+          FULL_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:full') }}
         run: |
           tier="$TIER"
 
@@ -70,12 +81,27 @@ jobs:
             os='["ubuntu-latest","windows-latest"]'
           fi
 
+          e2e=none
+          shards='[1]'
+          shard_total=1
+          if [[ "$tests" == true ]]; then
+            case "$EVENT" in
+              merge_group | workflow_dispatch) e2e=all ;;
+              schedule) e2e=all shards='[1, 2]' shard_total=2 ;;
+              pull_request) if [[ "$FULL_LABEL" == true ]]; then e2e=all; else e2e=smoke; fi ;;
+              *) e2e=smoke ;;
+            esac
+          fi
+
           {
             echo "tier=${tier}"
             echo "tests=${tests}"
             echo "os=${os}"
+            echo "e2e=${e2e}"
+            echo "shards=${shards}"
+            echo "shard-total=${shard_total}"
           } >> "$GITHUB_OUTPUT"
-          echo "Tier \`${tier}\`: tests ${tests}, runners ${os}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Tier \`${tier}\`: tests ${tests}, runners ${os}, e2e ${e2e} on shards ${shards}" >> "$GITHUB_STEP_SUMMARY"
 
   # The Vitest suite is not part of `checks`: in its own job it runs alongside
   # the build and lint instead of after them, and keeps the mongod cache that
@@ -193,17 +219,22 @@ jobs:
           key: tla2tools-1.7.4
       - run: node .agents/skills/${{ matrix.check }}/check.mjs
 
-  # The journeys of e2e/ as a Playwright suite: the @smoke ones on the full
-  # tier, every journey on the nightly tier (about 5 minutes, so one runner),
-  # nothing on a draft or the fast tier. Its global setup prepares and starts
-  # one dms-control run.
+  # The journeys of e2e/ as a Playwright suite, as `select` picks them: every
+  # journey takes about 9 minutes on one runner, so the merge queue runs them
+  # on one and the nightly run on two shards. Each runner's global setup
+  # prepares and starts one dms-control run.
   e2e:
     needs: select
-    if: needs.select.outputs.tier == 'full' || needs.select.outputs.tier == 'nightly'
+    if: needs.select.outputs.e2e != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.select.outputs.shards) }}
     env:
-      TIER: ${{ needs.select.outputs.tier }}
+      E2E: ${{ needs.select.outputs.e2e }}
+      SHARDS: ${{ needs.select.outputs.shard-total }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -229,22 +260,22 @@ jobs:
           fi
           echo "::warning::Chromium's system packages did not install: installing the browser alone"
           pnpm exec playwright install --only-shell chromium
-      - if: env.TIER == 'full'
+      - if: env.E2E == 'smoke'
         run: pnpm e2e --grep @smoke
-      - if: env.TIER == 'nightly'
-        run: pnpm e2e --reporter=blob
+      - if: env.E2E == 'all'
+        run: pnpm e2e --shard=${{ matrix.shard }}/${{ env.SHARDS }} --reporter=blob,list,github
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: e2e/blob-report
-      - if: always() && env.TIER == 'nightly'
+      - if: always() && env.E2E == 'all'
         uses: actions/upload-artifact@v4
         with:
-          name: blob-report
+          name: blob-report-${{ matrix.shard }}
           path: e2e/blob-report
           retention-days: 3
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-evidence
+          name: e2e-evidence-${{ matrix.shard }}
           path: |
             e2e/playwright-report
             e2e/test-results
@@ -252,10 +283,10 @@ jobs:
             ${{ runner.temp }}/dms-runs/*/logs
           retention-days: 7
 
-  # One HTML and JSON report of the nightly run.
+  # One HTML and JSON report of every journey's run.
   e2e-report:
     needs: [select, e2e]
-    if: always() && needs.select.outputs.tier == 'nightly'
+    if: always() && needs.select.outputs.e2e == 'all' && needs.e2e.result != 'cancelled' && needs.e2e.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -265,8 +296,9 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: actions/download-artifact@v4
         with:
-          name: blob-report
+          pattern: blob-report-*
           path: e2e/blob-reports
+          merge-multiple: true
       - run: pnpm exec playwright merge-reports --reporter html,json e2e/blob-reports
         env:
           PLAYWRIGHT_HTML_OUTPUT_DIR: e2e/playwright-report
@@ -280,7 +312,7 @@ jobs:
 
   # The single check to require on `main`: it keeps the historical job name,
   # and fails when a job above failed or was cancelled, or on a draft, or when
-  # the tier runs `e2e` and it was skipped. Another job the tier skipped
+  # `select` picks journeys and `e2e` was skipped. Another job the tier skipped
   # passes it.
   ubuntu:
     if: always()
@@ -289,7 +321,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - if: >-
-          needs.select.result != 'success' || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || needs.ci.result == 'skipped' || ((needs.select.outputs.tier == 'full' || needs.select.outputs.tier == 'nightly') && needs.e2e.result == 'skipped')
+          needs.select.result != 'success' || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || needs.ci.result == 'skipped' || (needs.select.outputs.e2e != 'none' && needs.e2e.result == 'skipped')
         run: exit 1
       - if: needs.select.outputs.tier == 'draft'
         run: |

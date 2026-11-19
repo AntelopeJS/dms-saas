@@ -1,7 +1,7 @@
 import { deflateSync } from "node:zlib";
 import { guarded } from "../guard.mjs";
 import { memberJourneys } from "./parts/workspace-members.mjs";
-import { allPermissionIds, check, createPlan, isText, list, pick, register, saas, text } from "../saas.mjs";
+import { allPermissionIds, check, createPlan, holdsValue, isText, list, pick, register, saas, text } from "../saas.mjs";
 
 /** @typedef {import("../saas.mjs").Ctx} Ctx */
 
@@ -92,7 +92,6 @@ export const journeys = guarded([
   },
   {
     id: "an-owner-sets-replaces-and-removes-the-workspace-logo",
-    tag: "@smoke",
     title: "the owner uploads, replaces and removes the workspace logo on the General page, the switcher follows each save without a reload, and a replaced or removed file is deleted",
     entryPoint: "Settings › Workspace › General, PUT /api/saas/workspaces/current, GET /api/saas/workspaces/mine",
     async run(/** @type {Ctx} */ ctx) {
@@ -151,6 +150,32 @@ export const journeys = guarded([
         check("the switcher draws no image", (await trigger.count()) === 0, await trigger.count()),
         check("the removed file answers 404", (await fileStatus(secondUrl)) === 404, secondUrl),
         check("every save kept the same document", (await tab.page.evaluate(() => document.documentElement.dataset.journeyDocument)) === "kept", "the marker set on the document before the first save"),
+      ]);
+    },
+  },
+  {
+    id: "an-owner-renames-the-workspace-on-the-general-page-and-the-switcher-follows",
+    title: "the owner types a new name on the General page and saves it, and after a reload the form, the switcher and the workspace list read it",
+    entryPoint: "Settings › Workspace › General, PUT /api/saas/workspaces/current, GET /api/saas/workspaces/mine",
+    async run(/** @type {Ctx} */ ctx) {
+      await createPlan(ctx, "free", { name: { en: "Free" }, permissions: await allPermissionIds(ctx) });
+      const owner = await register(ctx, "form-renamer", { workspaceName: "Before Co" });
+      const tab = await ctx.tab("form-renamer");
+      await tab.signIn("form-renamer");
+      await tab.goto("/settings/workspace/general");
+      await ctx.verify("the General page offers the name field with the current name", [tab.shows(/Shown in the workspace switcher/, { timeoutMs: 60_000 }), holdsValue(tab, { role: "textbox", name: "Workspace name" }, "Before Co")], { critical: true });
+      await tab.fill({ role: "textbox", name: "Workspace name" }, "After Co");
+      await tab.click({ role: "button", name: "Save changes" });
+      await ctx.verify("the save is acknowledged", [tab.shows(/Workspace saved\./, { timeoutMs: 30_000 })], { critical: true });
+      await tab.reload();
+      await ctx.verify("after a reload the page draws the new name", [tab.shows(/Download a full copy of After Co before deleting it/, { timeoutMs: 60_000 }), holdsValue(tab, { role: "textbox", name: "Workspace name" }, "After Co")]);
+      const switcher = await tab.locator({ role: "button", name: "Switch workspace" }).innerText();
+      const mine = await saas(ctx, "the workspaces of the account", "GET", "/workspaces/mine", { as: "form-renamer" });
+      const current = await saas(ctx, "the current workspace", "GET", "/workspaces/current", { as: "form-renamer" });
+      await ctx.verify("the switcher, the workspace list and the API read the new name", [
+        check("the switcher draws After Co and not Before Co", switcher.includes("After Co") && !switcher.includes("Before Co"), switcher),
+        check("the list holds this workspace only, as After Co", list(mine.body).length === 1 && text(list(mine.body)[0], "name") === "After Co", mine.body),
+        check("the current workspace keeps its id under the new name", text(current.body, "_id") === owner.tenantId && text(current.body, "name") === "After Co", current.body),
       ]);
     },
   },

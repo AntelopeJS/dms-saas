@@ -96,6 +96,7 @@ The platform owner's dashboard: the headline figures, the workspaces by status a
 - `resending-an-invitation-issues-a-new-link-and-kills-the-old-one`: Resend mails a new link with a later expiry; the new link signs the invitee up and the previous link is refused.
 - `an-operator-action-leaves-an-audit-trail-and-its-id-cannot-be-reused-elsewhere`: a suspension is recorded as a succeeded operation with its action, listed once under the lifecycle activity and not under billing, and reusing its id for another workspace is a 409 idempotency mismatch.
 - `a-second-data-export-is-refused-while-one-is-running`: a workspace owner starts an export; asking for another before it finishes is refused 409, and a member cannot start one.
+- `the-dashboard-page-draws-the-figures-the-dashboard-api-answers`: the Dashboard page shows the MRR, ARR, paying workspaces, the workspaces by status and the plans by MRR that the dashboard blocks answer for workspaces in every billing state.
 
 ## How to get to it (user POV)
 
@@ -141,3 +142,4 @@ dms-control journey "$RUN" back-office
 | 3.dashboard.md Recent activity tabs, period selector and the refresh button | Not driven: client-side controls and activity rows written by Stripe flows |
 | 4.workspaces.md row actions by status (suspend, reactivate) | operator-suspension journey: cancelled cannot be suspended, suspended cannot be suspended again, only a suspended workspace is reactivated |
 | 4.workspaces.md invitations resend, copy link, revoke | invitation journey: copy link and revoke; Not driven: resend (it sends e-mail through the sink with a fresh token, not asserted) |
+| 3.dashboard.md headline figures, Workspaces by status and Plans by MRR in the browser | dashboard-page journey: the MRR, ARR, paying out of all, the four status counts and the plan names read the same as the block answers |

@@ -31,10 +31,12 @@ const SIGN_IN_TIMEOUT_MS = 60_000;
  * answers `{"message":"Not found"}` and leaves the page on `/auth`. The Show password toggle only works once the
  * form is hydrated, so the button becoming Hide password proves it.
  *
- * @param {Tab} tab The tab on the sign-in page
+ * The register form carries the same toggle, so this waits for it too.
+ *
+ * @param {Tab} tab The tab on the sign-in or register page
  * @returns {Promise<boolean>} Whether the form became interactive
  */
-async function waitForHydration(tab) {
+export async function waitForHydration(tab) {
   for (let attempt = 0; attempt < HYDRATION_ATTEMPTS; attempt += 1) {
     await tab.click(SHOW_PASSWORD);
     const toggled = await tab.visible(HIDE_PASSWORD, { timeoutMs: HYDRATION_POLL_MS });

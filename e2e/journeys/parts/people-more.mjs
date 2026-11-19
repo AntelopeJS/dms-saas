@@ -27,6 +27,35 @@ async function exportedLines(ctx, segmentId) {
 /** The Users list tabs and the segment CSV export. */
 export const peopleMoreJourneys = [
   {
+    id: "the-platform-owner-creates-a-segment-in-the-editor-and-the-list-shows-it",
+    title: "the platform owner builds an e-mail rule in the segment editor, the live preview counts the match, saving lists the segment with that count, and the segments API reads it",
+    entryPoint: "Customers › Segments, GET /api/saas/segments/:id",
+    async run(/** @type {Ctx} */ ctx) {
+      await createPlan(ctx, "free");
+      await register(ctx, "alpha");
+      await register(ctx, "beta");
+      const tab = await ctx.tab("admin");
+      await tab.signIn("admin");
+      await tab.goto("/modules/saas/customers/segments/new");
+      await ctx.verify("the editor opens on an empty rule", [tab.shows(/Group users with rules, previewed live before you save/, { timeoutMs: 60_000 })], { critical: true });
+      await tab.fill({ role: "textbox", name: "Name", exact: true }, "Alpha users");
+      await tab.click({ role: "button", name: "Add condition" });
+      await tab.fill({ role: "textbox", name: "Type a value" }, "alpha");
+      await ctx.verify("the live preview counts the one account whose e-mail contains alpha", [tab.shows(/1 user matches[\s\S]*of 3 users/, { timeoutMs: 30_000 })]);
+      await tab.click({ role: "button", name: "Save and re-evaluate" });
+      await ctx.verify("saving opens the segment's edit page", [tab.at(/\/modules\/saas\/customers\/segments\/[^/]+\/edit$/, { timeoutMs: 60_000 })], { critical: true });
+      const id = new URL(tab.page.url()).pathname.split("/").at(-2) ?? "";
+      const stored = await saas(ctx, "the saved segment", "GET", `/segments/${id}`);
+      await ctx.verify("the API holds the segment with its rule and its count", [
+        check("named Alpha users", text(stored.body, "name") === "Alpha users", stored.body),
+        check("the rule is: e-mail contains alpha", JSON.stringify(pick(stored.body, "conditions", "conditions")) === JSON.stringify([{ field: "email", operator: "contains", value: "alpha" }]), stored.body),
+        check("it matches one user, evaluated on save", pick(stored.body, "estimatedCount") === 1 && text(stored.body, "lastEvaluatedAt") !== "", stored.body),
+      ]);
+      await tab.goto("/modules/saas/customers/segments");
+      await ctx.verify("the Segments list shows the segment with its rule and its one match", [tab.visible({ role: "row", name: /Alpha users Email contains “alpha” 1/ }, { timeoutMs: 60_000 })]);
+    },
+  },
+  {
     id: "the-all-and-platform-admins-tabs-list-exactly-their-accounts",
     title: "All lists every account and Platform admins only the admins, each tab with its count",
     entryPoint: "Customers › Users",

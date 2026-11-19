@@ -2,6 +2,7 @@ import { assertDmsComponents } from "@antelopejs/dms/checks/dms-components";
 import { fileURLToPath } from "node:url";
 import { componentRootFailures } from "./component-roots.mts";
 import { docsModuleVersionFailures } from "./docs-module-version.mts";
+import { featureMapFailures } from "./feature-map.mts";
 import { localeCatalogFailures } from "./locale-catalog.mts";
 import { unusedLocaleKeyFailures } from "./locale-usage.mts";
 import { serverRenderedReadFailures } from "./server-rendered-reads.mts";
@@ -12,6 +13,7 @@ const CHECKS = {
   "component roots": componentRootFailures,
   "server-rendered reads": serverRenderedReadFailures,
   "docs module version": docsModuleVersionFailures,
+  "feature map": featureMapFailures,
 };
 
 const failures = Object.entries(CHECKS).flatMap(([name, check]) =>

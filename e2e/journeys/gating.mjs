@@ -85,7 +85,6 @@ export const journeys = guarded([
   },
   {
     id: "the-plan-member-cap-bounds-invitations",
-    tag: "@smoke",
     title: "an invitation that would pass the plan's member cap is refused with 409, and a pending invitation takes a seat",
     entryPoint: "POST /dms/pages/settings/workspace/members/invite, GET /api/saas/tenant/plan",
     async run(/** @type {Ctx} */ ctx) {

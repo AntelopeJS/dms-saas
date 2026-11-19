@@ -2,7 +2,9 @@ name: Release
 
 on:
   push:
-    branches: [next]
+    branches: [main]
+  pull_request:
+    types: [labeled, synchronize, reopened]
   workflow_dispatch:
     inputs:
       release-version:
@@ -29,7 +31,7 @@ permissions:
 
 jobs:
   release-packages-dms-saas:
-    if: github.event_name == 'push' || inputs.package-directory == 'packages/dms-saas'
+    if: github.event_name != 'workflow_dispatch' || inputs.package-directory == 'packages/dms-saas'
     uses: AntelopeJS/.github/.github/workflows/release-npm-public.yml@v2
     with:
       release-version: ${{ inputs.release-version }}
@@ -40,7 +42,7 @@ jobs:
       RELEASE_GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
 
   release-packages-interface-dms-saas:
-    if: github.event_name == 'push' || inputs.package-directory == 'packages/interface-dms-saas'
+    if: github.event_name != 'workflow_dispatch' || inputs.package-directory == 'packages/interface-dms-saas'
     uses: AntelopeJS/.github/.github/workflows/release-npm-public.yml@v2
     with:
       release-version: ${{ inputs.release-version }}
