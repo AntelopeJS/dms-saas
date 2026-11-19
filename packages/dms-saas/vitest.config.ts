@@ -17,9 +17,6 @@ export default defineConfig({
     alias: {
       "@antelopejs/dms-saas": sourceRoot,
       "@antelopejs/interface-dms-saas": interfaceSourceRoot,
-      "dms-e2e-kit": fileURLToPath(
-        new URL("./node_modules/@antelopejs/dms/e2e", import.meta.url),
-      ),
     },
   },
   test: {
