@@ -109,6 +109,8 @@ Settings › Workspace as the owner lives it: renaming, the logo, the workspace 
 - `a-member-cannot-rename-delete-or-export-the-workspace`: a member who joined through an invitation is refused 403 on rename, deletion, the danger-zone overview and the data export, and the workspace is unchanged.
 - `deleting-a-workspace-cancels-its-pending-invitations`: a pending invitation exists before the deletion and none is left after it.
 - `an-operation-id-is-8-to-64-letters-digits-or-hyphens`: operation ids of 8 and 64 characters are accepted, 7 and 65 characters, spaces and other symbols are refused.
+- `an-owner-renames-the-workspace-on-the-general-page-and-the-switcher-follows`: the owner types a new name on the General page and saves it, and after a reload the form, the switcher and the workspace list read it.
+- `an-owner-invites-a-member-from-the-members-page-and-the-invitation-is-pending`: the owner sends an invitation from the Invite members dialog, the invitation e-mail arrives with a sign-up link, and the Invitations page lists it as pending.
 
 ## How to get to it (user POV)
 
@@ -137,3 +139,5 @@ dms-control journey "$RUN" workspace
 | 8.operations.md "Operator actions" | suspension journey: confirmation, operation id format, idempotent repeat, mismatch 409; Not driven: reconciliation_required after 23 hours, upgrades and balance credits (Stripe) |
 | 2.workspace-settings.md General (only owners rename; members read-only; deletion cancels invitations) | member journey: 403 on rename, delete, overview and export for an accepted member; deletion journey: the pending invitation is gone |
 | 8.operations.md operation id 8 to 64 characters | operation-id journey: 7 and 65 refused, 8 and 64 accepted, symbols refused |
+| 2.workspace-settings.md "General" rename in the browser | rename-form journey: the Workspace name field, Save changes, and after a reload the form, the switcher, `GET /workspaces/mine` and `GET /workspaces/current` |
+| 2.workspace-settings.md "Members" and "Member invitations" | invite-dialog journey: Invite members, the e-mail with its sign-up link, the pending row and the seat meter; Not driven: Resend, Copy link, Revoke and Edit invitation on that page, and accepting the link in the browser |
