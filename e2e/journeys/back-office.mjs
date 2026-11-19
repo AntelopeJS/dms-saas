@@ -70,6 +70,7 @@ async function seed(ctx) {
 export const journeys = guarded([
   {
     id: "the-dashboard-page-draws-the-figures-the-dashboard-api-answers",
+    tag: "@smoke",
     title: "the Dashboard page shows the MRR, ARR, paying workspaces, the workspaces by status and the plans by MRR that the dashboard blocks answer for workspaces in every billing state",
     entryPoint: "Modules › SaaS › Dashboard, GET /api/saas/dashboard/headline, /workspaces-by-status, /plans-by-mrr",
     async run(/** @type {Ctx} */ ctx) {

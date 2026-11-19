@@ -7,6 +7,7 @@ import { allPermissionIds, check, createPlan, list, pick, saas, text } from "../
 export const moreJourneys = [
   {
     id: "a-visitor-registers-through-the-form-and-signs-in-to-the-new-workspace",
+    tag: "@smoke",
     title: "a visitor fills in /register without a card, is sent to sign in, signs in with the new account and finds a workspace named after them on the free plan",
     entryPoint: "/register, POST /api/saas/register, /auth, Settings › Workspace › General",
     async run(/** @type {Ctx} */ ctx) {

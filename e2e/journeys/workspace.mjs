@@ -58,6 +58,7 @@ async function fileStatus(url) {
 export const journeys = guarded([
   {
     id: "an-owner-sets-replaces-and-removes-the-workspace-logo",
+    tag: "@smoke",
     title: "the owner uploads, replaces and removes the workspace logo on the General page, the switcher follows each save without a reload, and a replaced or removed file is deleted",
     entryPoint: "Settings › Workspace › General, PUT /api/saas/workspaces/current, GET /api/saas/workspaces/mine",
     async run(/** @type {Ctx} */ ctx) {
@@ -121,6 +122,7 @@ export const journeys = guarded([
   },
   {
     id: "an-owner-renames-the-workspace-on-the-general-page-and-the-switcher-follows",
+    tag: "@smoke",
     title: "the owner types a new name on the General page and saves it, and after a reload the form, the switcher and the workspace list read it",
     entryPoint: "Settings › Workspace › General, PUT /api/saas/workspaces/current, GET /api/saas/workspaces/mine",
     async run(/** @type {Ctx} */ ctx) {

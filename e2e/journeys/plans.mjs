@@ -7,6 +7,7 @@ import { check, createPlan, list, saas, text } from "../saas.mjs";
 export const journeys = guarded([
   {
     id: "the-platform-owner-creates-a-plan-in-the-editor-and-the-catalogue-lists-it",
+    tag: "@smoke",
     title: "the platform owner fills in the plan editor, the Plans page and the catalogue API list the new plan, and the public pricing page offers it",
     entryPoint: "Modules › SaaS › Catalogue › Plans, POST /api/saas/plans, GET /api/saas/plans, GET /api/saas/pricing, /pricing",
     async run(/** @type {Ctx} */ ctx) {

@@ -6,6 +6,7 @@ import { allPermissionIds, check, createPlan, fixture, list, register, text } fr
 export const memberJourneys = [
   {
     id: "an-owner-invites-a-member-from-the-members-page-and-the-invitation-is-pending",
+    tag: "@smoke",
     title: "the owner sends an invitation from the Invite members dialog, the invitation e-mail arrives with a sign-up link, and the Invitations page lists it as pending",
     entryPoint: "Settings › Workspace › Members, Settings › Workspace › Member invitations, POST /dms/pages/settings/workspace/members/invite",
     async run(/** @type {Ctx} */ ctx) {
