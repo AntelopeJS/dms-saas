@@ -2,10 +2,9 @@ name: ci
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [next]
-  merge_group:
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
