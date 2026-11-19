@@ -35,6 +35,7 @@ Customers › Users and Segments: promoting and demoting platform admins, and th
 - `the-all-and-platform-admins-tabs-list-exactly-their-accounts`: All lists every account and Platform admins only the admins, each tab with its count.
 - `the-unverified-tab-lists-the-accounts-whose-address-is-not-verified`: accounts that registered and never verified their e-mail address are listed under Unverified, which counts them.
 - `the-segment-export-writes-one-row-per-matching-user-with-owned-mrr`: the CSV has the documented header, one row per matching user sorted by e-mail, and owned_mrr sums the MRR of the workspaces the user owns.
+- `the-platform-owner-creates-a-segment-in-the-editor-and-the-list-shows-it`: the platform owner builds an e-mail rule in the segment editor, the live preview counts the match, saving lists the segment with that count, and the segments API reads it.
 
 ## How to get to it (user POV)
 
@@ -60,3 +61,4 @@ dms-control journey "$RUN" people
 | 5.users-and-segments.md "Segments" | validation and counting journeys: fields, operators, list values, And/Or, any/every, owner role, depth, evaluate now, duplicate; Not driven: the 15-minute re-evaluation, trend over 30 days, the live preview editor |
 | 5.users-and-segments.md Users tabs | tab journeys: All, Platform admins and Unverified |
 | 5.users-and-segments.md Export users (CSV) and owned_mrr | CSV journey: header, rows sorted by e-mail, owned_mrr 50.00 and 0.00 |
+| 5.users-and-segments.md "Segments" in the browser | segment-editor journey: a rule on the e-mail, the live preview count, Save and re-evaluate, the row of the Segments list and `GET /segments/:id`; Not driven: groups and workspace conditions in the editor, duplicating from the list |
