@@ -33,8 +33,14 @@ export type TrialEndingEvent = SaasEventBase & {
   trialEndsAt: string | null;
 };
 
+/**
+ * A workspace's data was deleted. Handed to the armed triggers best-effort:
+ * the deletion does not wait for the procedures it starts, and their failures
+ * never fail it. A resumed deletion hands it again with the same
+ * `deliveryId`, so effects deduplicate on it.
+ */
 export type TenantDeletedEvent = SaasEventBase & {
-  /** Consumers must deduplicate non-idempotent effects by this identity on replay. */
+  /** The deletion operation, absent when the hook ran without its context. */
   operationId?: string;
 };
 
@@ -88,12 +94,4 @@ export function emitAutomationEvent<E extends AutomationEventName>(
     } catch {
     }
   }
-}
-
-/** Propagates deletion trigger failures; delivery may repeat and is not exactly-once execution. */
-export async function emitTenantDeletedEvent(
-  payload: TenantDeletedEvent,
-): Promise<void> {
-  for (const listener of listenersFor("saas.tenant-deleted"))
-    await listener(payload);
 }
