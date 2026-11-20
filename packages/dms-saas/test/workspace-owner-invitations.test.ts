@@ -264,6 +264,8 @@ describe("workspace owner in the directory", () => {
       status: "joined",
       name: "Joined",
       email: "joined@example.test",
+      userId: ownerId,
+      language: "en",
     });
   });
 
