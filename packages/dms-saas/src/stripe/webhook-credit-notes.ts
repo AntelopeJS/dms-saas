@@ -6,6 +6,7 @@ import type {
   Invoice,
   InvoiceLine,
 } from "../db";
+import { emitAutomationEvent } from "../automation/events";
 import { CREDIT_NOTE_TYPES, CreditNoteModel, InvoiceModel } from "../db";
 import { creditNoteIssuedSubject, notifyTenantOwners } from "../notifications";
 import { stripeSecondsToDate as optionalStripeDate } from "../utils";
@@ -276,6 +277,7 @@ async function mirrorCreditNoteFromEvent(
   return {
     creditNote,
     tenantId: tenant._id,
+    invoice,
     isCurrent: canonicalUpdated && invoiceUpdated,
   };
 }
@@ -285,8 +287,23 @@ export async function handleCreditNoteCreated(
 ): Promise<void> {
   const mirrored = await mirrorCreditNoteFromEvent(event);
   if (!mirrored) return;
-  const { creditNote, tenantId, isCurrent } = mirrored;
+  const { creditNote, tenantId, invoice, isCurrent } = mirrored;
   if (creditNote.status !== "issued" || !isCurrent) return;
+  emitAutomationEvent("saas.credit-note-issued", {
+    tenantId,
+    deliveryId: event.id,
+    at: new Date().toISOString(),
+    creditNoteId: creditNote.id,
+    number: creditNote.number,
+    invoiceId: invoice.stripeInvoiceId,
+    invoiceNumber: invoice.number,
+    amount: creditNote.amount,
+    currency: creditNote.currency,
+    type: resolveCreditNoteType(creditNote),
+    reason: creditNote.reason ?? null,
+    refundId: readCreditNoteRefundId(creditNote),
+    pdfUrl: creditNote.pdf || null,
+  });
   await notifyTenantOwners(tenantId, creditNoteIssuedSubject, {
     icon: CREDIT_NOTE_ICON,
     title: "$saas.notifications.payload.credit_note_issued.title",

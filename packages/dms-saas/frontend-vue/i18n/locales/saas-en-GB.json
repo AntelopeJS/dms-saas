@@ -443,6 +443,18 @@
 				"plan_changed": {
 					"name": "Plan changed",
 					"description": "Fires when a workspace moves to another plan"
+				},
+				"invoice_paid": {
+					"name": "Invoice paid",
+					"description": "Fires when a workspace invoice is paid in Stripe"
+				},
+				"credit_note_issued": {
+					"name": "Credit note issued",
+					"description": "Fires when a credit note is issued on a workspace invoice in Stripe"
+				},
+				"refund_updated": {
+					"name": "Refund status changed",
+					"description": "Fires when a refund on a workspace payment changes status in Stripe, for example succeeded or failed"
 				}
 			},
 			"action": {

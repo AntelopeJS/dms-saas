@@ -1,4 +1,4 @@
-import type { BillingState } from "../db";
+import type { BillingState, CreditNoteType, RefundStatus } from "../db";
 import { type AutomationOriginFields, currentAutomationOrigin } from "./origin";
 import { admitOriginatedEvent } from "./loop-guard";
 
@@ -77,6 +77,46 @@ export type PlanChangedEvent = SaasEventBase & {
   billingState: BillingState;
 };
 
+/** A workspace invoice was paid in Stripe. Amounts are in minor units. */
+export type InvoicePaidEvent = SaasEventBase & {
+  invoiceId: string;
+  invoiceNumber: string | null;
+  amountPaid: number;
+  currency: string;
+  billingReason: string | null;
+  hostedInvoiceUrl: string | null;
+  /** The payment lifted a past due or suspended workspace. */
+  reactivated: boolean;
+};
+
+/** A credit note was issued on a workspace invoice in Stripe. */
+export type CreditNoteIssuedEvent = SaasEventBase & {
+  creditNoteId: string;
+  number: string;
+  invoiceId: string;
+  invoiceNumber: string | null;
+  amount: number;
+  currency: string;
+  type: CreditNoteType;
+  reason: string | null;
+  refundId: string | null;
+  pdfUrl: string | null;
+};
+
+/**
+ * A refund on a workspace payment changed status in Stripe. Stripe does not
+ * order its events: `at` is when Stripe created this one.
+ */
+export type RefundUpdatedEvent = SaasEventBase & {
+  refundId: string;
+  status: RefundStatus;
+  amount: number;
+  currency: string;
+  failureReason: string | null;
+  creditNoteId: string | null;
+  chargeId: string;
+};
+
 export interface AutomationEventPayloads {
   "saas.subscription-started": SubscriptionStartedEvent;
   "saas.subscription-cancelled": SubscriptionCancelledEvent;
@@ -85,6 +125,9 @@ export interface AutomationEventPayloads {
   "saas.tenant-deleted": TenantDeletedEvent;
   "saas.billing-state-changed": BillingStateChangedEvent;
   "saas.plan-changed": PlanChangedEvent;
+  "saas.invoice-paid": InvoicePaidEvent;
+  "saas.credit-note-issued": CreditNoteIssuedEvent;
+  "saas.refund-updated": RefundUpdatedEvent;
 }
 
 export type AutomationEventName = keyof AutomationEventPayloads;
@@ -105,6 +148,9 @@ const eventListeners: EventListeners = {
   "saas.tenant-deleted": new Set(),
   "saas.billing-state-changed": new Set(),
   "saas.plan-changed": new Set(),
+  "saas.invoice-paid": new Set(),
+  "saas.credit-note-issued": new Set(),
+  "saas.refund-updated": new Set(),
 };
 
 /** The listeners the armed triggers of `event` added. */

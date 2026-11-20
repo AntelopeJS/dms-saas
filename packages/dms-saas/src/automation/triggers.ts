@@ -10,12 +10,13 @@ import {
   type AutomationEventPayloads,
   listenersFor,
 } from "./events";
-import { BILLING_STATES } from "../db";
+import { BILLING_STATES, CREDIT_NOTE_TYPES, REFUND_STATUSES } from "../db";
 import { automationNodeLabels } from "./labels";
 
 const STRING: JsonSchema = { type: "string" };
 const NULLABLE_STRING: JsonSchema = { type: ["string", "null"] };
 const NUMBER: JsonSchema = { type: "number" };
+const BOOLEAN: JsonSchema = { type: "boolean" };
 
 const PLAN_DIRECTIONS = ["upgrade", "downgrade"] as const;
 
@@ -222,6 +223,73 @@ export const TRIGGERS: TriggerType[] = [
       config: z.object({ direction: z.enum(PLAN_DIRECTIONS).optional() }),
       matches: (config, payload) =>
         !config.direction || config.direction === payload.direction,
+    },
+  }),
+  createEventTrigger({
+    event: "saas.invoice-paid",
+    icon: "i-ph-receipt",
+    configProperties: {
+      includeZeroAmount: {
+        type: "boolean",
+        default: false,
+        description:
+          "Also fire for invoices with nothing paid (trial start, 100% coupon)",
+      },
+    },
+    outputProperties: {
+      invoiceId: STRING,
+      invoiceNumber: NULLABLE_STRING,
+      amountPaid: NUMBER,
+      currency: STRING,
+      billingReason: NULLABLE_STRING,
+      hostedInvoiceUrl: NULLABLE_STRING,
+      reactivated: BOOLEAN,
+    },
+    filter: {
+      config: z.object({ includeZeroAmount: z.boolean().optional() }),
+      matches: (config, payload) =>
+        config.includeZeroAmount === true || payload.amountPaid > 0,
+    },
+  }),
+  createEventTrigger({
+    event: "saas.credit-note-issued",
+    icon: "i-ph-receipt-x",
+    outputProperties: {
+      creditNoteId: STRING,
+      number: STRING,
+      invoiceId: STRING,
+      invoiceNumber: NULLABLE_STRING,
+      amount: NUMBER,
+      currency: STRING,
+      type: { type: "string", enum: [...CREDIT_NOTE_TYPES] },
+      reason: NULLABLE_STRING,
+      refundId: NULLABLE_STRING,
+      pdfUrl: NULLABLE_STRING,
+    },
+  }),
+  createEventTrigger({
+    event: "saas.refund-updated",
+    icon: "i-ph-arrow-u-up-left",
+    configProperties: {
+      status: {
+        type: "string",
+        enum: [...REFUND_STATUSES],
+        description: "Fire only for this status",
+      },
+    },
+    outputProperties: {
+      refundId: STRING,
+      status: { type: "string", enum: [...REFUND_STATUSES] },
+      amount: NUMBER,
+      currency: STRING,
+      failureReason: NULLABLE_STRING,
+      creditNoteId: NULLABLE_STRING,
+      chargeId: STRING,
+    },
+    filter: {
+      config: z.object({ status: z.enum(REFUND_STATUSES).optional() }),
+      matches: (config, payload) =>
+        !config.status || config.status === payload.status,
     },
   }),
 ];

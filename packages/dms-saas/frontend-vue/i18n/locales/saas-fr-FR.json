@@ -443,6 +443,18 @@
 				"plan_changed": {
 					"name": "Offre modifiée",
 					"description": "Se déclenche quand un espace de travail passe à une autre offre"
+				},
+				"invoice_paid": {
+					"name": "Facture payée",
+					"description": "Se déclenche quand une facture d'un espace de travail est payée dans Stripe"
+				},
+				"credit_note_issued": {
+					"name": "Avoir émis",
+					"description": "Se déclenche quand un avoir est émis sur une facture d'un espace de travail dans Stripe"
+				},
+				"refund_updated": {
+					"name": "Statut de remboursement modifié",
+					"description": "Se déclenche quand le statut d'un remboursement sur un paiement d'un espace de travail change dans Stripe, par exemple réussi ou échoué"
 				}
 			},
 			"action": {

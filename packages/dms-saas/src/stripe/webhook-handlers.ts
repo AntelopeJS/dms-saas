@@ -129,15 +129,33 @@ export async function handleInvoicePaid(
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
   await upsertInvoice(invoice, tenant._id);
-  const tenantSubscriptionModel = GetModel(TenantSubscriptionModel, tenant._id);
-  const subscription = await tenantSubscriptionModel.findOne();
-  if (subscription && REACTIVATABLE_STATUSES.has(subscription.status)) {
-    const invoiceModel = GetModel(InvoiceModel, tenant._id);
-    const stillOpen = await invoiceModel.findLatestOpen();
-    if (!stillOpen) {
-      await updateSubscriptionStatus(tenant._id, ACTIVE_STATUS);
-    }
-  }
+  const reactivated = await reactivateOnLastOpenInvoicePaid(tenant._id);
+  emitAutomationEvent("saas.invoice-paid", {
+    tenantId: tenant._id,
+    deliveryId: event.id,
+    at: new Date().toISOString(),
+    invoiceId: requireInvoiceId(invoice),
+    invoiceNumber: invoice.number ?? null,
+    amountPaid: invoice.amount_paid,
+    currency: invoice.currency,
+    billingReason: invoice.billing_reason ?? null,
+    hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+    reactivated,
+  });
+}
+
+/** @returns Whether the payment lifted a past due or suspended workspace. */
+async function reactivateOnLastOpenInvoicePaid(
+  tenantId: string,
+): Promise<boolean> {
+  const subscription = await GetModel(
+    TenantSubscriptionModel,
+    tenantId,
+  ).findOne();
+  if (!subscription || !REACTIVATABLE_STATUSES.has(subscription.status))
+    return false;
+  if (await GetModel(InvoiceModel, tenantId).findLatestOpen()) return false;
+  return updateSubscriptionStatus(tenantId, ACTIVE_STATUS);
 }
 
 export async function handleInvoiceVoided(
@@ -494,10 +512,11 @@ function refundStatusOf(status: string | null): RefundStatus {
  * Stripe id keeps concurrent deliveries to one row. Legacy rows keep their
  * random key and the lookup by Stripe id.
  */
+/** @returns The credit note the stored refund settles, if any. */
 async function upsertRefund(
   refund: Stripe.Refund,
   tenantId: string,
-): Promise<void> {
+): Promise<string | null> {
   const refundModel = GetModel(RefundModel, tenantId);
   const existing = await refundModel.findOneByStripeRefund(refund.id);
   const payload = {
@@ -511,7 +530,7 @@ async function upsertRefund(
   };
   if (existing) {
     await refundModel.update(existing._id, payload);
-    return;
+    return payload.creditNoteId || null;
   }
   await insertOrUpdateById(
     refundModel,
@@ -519,6 +538,7 @@ async function upsertRefund(
     { ...payload, _id: refund.id, createdAt: new Date() },
     payload,
   );
+  return payload.creditNoteId || null;
 }
 
 export async function handleChargeRefundUpdated(
@@ -533,7 +553,19 @@ export async function handleChargeRefundUpdated(
   if (!customerId) return;
   const tenant = await findTenantByCustomerId(customerId);
   if (!tenant) return;
-  await upsertRefund(refund, tenant._id);
+  const creditNoteId = await upsertRefund(refund, tenant._id);
+  emitAutomationEvent("saas.refund-updated", {
+    tenantId: tenant._id,
+    deliveryId: event.id,
+    at: (optionalStripeDate(event.created) ?? new Date()).toISOString(),
+    refundId: refund.id,
+    status: refundStatusOf(refund.status),
+    amount: refund.amount,
+    currency: refund.currency,
+    failureReason: refund.failure_reason ?? null,
+    creditNoteId,
+    chargeId,
+  });
   if (refund.status === "succeeded") {
     await notifyTenantOwners(tenant._id, refundProcessedSubject, {
       icon: REFUND_ICON,
