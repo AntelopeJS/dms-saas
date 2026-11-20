@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as billingState from "../src/billing-state";
 import {
   PlanMigrationModel,
   PlanModel,
+  TenantBillingStateModel,
   TenantSubscriptionModel,
 } from "../src/db";
 import { planRow } from "./helpers/plan-row";
@@ -356,5 +358,33 @@ describe("migration snapshots on the production Mongo provider, paused and live 
       }),
     ]);
     expect((await model.findOne())?.planId).toBe(job.toPlanId);
+  });
+});
+
+describe("the workspace directory after a migration", () => {
+  it("publishes the target plan without waiting for the recompute cron", async () => {
+    const job = await createJob();
+    const tenantId = await createSubscription(job.fromPlanId);
+
+    await processPlanMigrationJob(job._id);
+
+    expect(
+      (await GetModel(TenantBillingStateModel).findByTenant(tenantId))?.planId,
+    ).toBe(job.toPlanId);
+  });
+
+  it("still counts the workspace migrated when the publication fails", async () => {
+    const job = await createJob();
+    const tenantId = await createSubscription(job.fromPlanId);
+    const recompute = vi
+      .spyOn(billingState, "recomputeTenantBillingState")
+      .mockRejectedValue(new Error("directory unavailable"));
+
+    await processPlanMigrationJob(job._id);
+
+    expect(recompute).toHaveBeenCalledWith(tenantId);
+    expect(
+      (await GetModel(PlanMigrationModel).get(job._id))?.tenantOutcomes,
+    ).toEqual([expect.objectContaining({ tenantId, status: "succeeded" })]);
   });
 });
