@@ -473,6 +473,10 @@
 				"notify_tenant_owners": {
 					"name": "Notifier les propriétaires de l'espace de travail",
 					"description": "Envoie une notification dans l'application à tous les propriétaires d'un espace de travail"
+				},
+				"add_platform_note": {
+					"name": "Ajouter une note opérateur",
+					"description": "Ajoute une note interne sur un espace de travail ou un utilisateur, visible des seuls opérateurs de la plateforme"
 				}
 			}
 		},
@@ -531,6 +535,9 @@
 			"value": "{value}",
 			"comma_list": "{first}, {rest}",
 			"range": "{from} → {to}"
+		},
+		"notes": {
+			"author_automation": "Automatisation"
 		}
 	}
 }

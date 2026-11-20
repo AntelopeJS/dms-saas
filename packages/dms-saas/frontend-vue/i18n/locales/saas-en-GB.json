@@ -473,6 +473,10 @@
 				"notify_tenant_owners": {
 					"name": "Notify workspace owners",
 					"description": "Send an in-app notification to all owners of a workspace"
+				},
+				"add_platform_note": {
+					"name": "Add operator note",
+					"description": "Add an internal note to a workspace or a user, visible to platform operators only"
 				}
 			}
 		},
@@ -531,6 +535,9 @@
 			"value": "{value}",
 			"comma_list": "{first}, {rest}",
 			"range": "{from} → {to}"
+		},
+		"notes": {
+			"author_automation": "Automation"
 		}
 	}
 }

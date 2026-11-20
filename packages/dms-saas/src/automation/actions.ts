@@ -11,9 +11,17 @@ import {
   resolveTenantOwners,
 } from "../notifications";
 import {
+  PLATFORM_NOTE_TARGET_TYPES,
+  PlatformNoteModel,
   TENANT_SUBSCRIPTION_STATUSES,
   type TenantSubscriptionStatus,
 } from "../db";
+import {
+  AUTOMATION_AUTHOR_PREFIX,
+  addPlatformNote,
+  assertPlatformNoteTarget,
+  PLATFORM_NOTE_MAX_LENGTH,
+} from "../platform-notes/service";
 import {
   type OperatorActor,
   setWorkspaceSuspendedCommand,
@@ -335,7 +343,144 @@ const notifyTenantOwnersAction: ActionType<
     ),
 };
 
+interface AddPlatformNoteInput {
+  targetType?: string;
+  targetId: string;
+  content: string;
+  idempotencyKey?: string;
+}
+
+type AddPlatformNoteOutput = {
+  noteId: string;
+  created: boolean;
+};
+
+const ADD_PLATFORM_NOTE_ACTION_ID = "saas.add-platform-note";
+
+const addPlatformNoteInput = z.object({
+  targetType: z.enum(PLATFORM_NOTE_TARGET_TYPES).default("workspace"),
+  targetId: tenantIdInput,
+  content: z.string().trim().min(1).max(PLATFORM_NOTE_MAX_LENGTH),
+  idempotencyKey: z.string().max(IDEMPOTENCY_KEY_MAX_LENGTH).optional(),
+});
+
+type AutomationNote = z.infer<typeof addPlatformNoteInput>;
+
+/**
+ * The note's id: per node, key and target when the procedure wires a key,
+ * else per run, node, target and content, so a retried step writes no second
+ * note and every for-each iteration writes its own.
+ */
+function automationNoteId(note: AutomationNote, ctx: ExecutionCtx): string {
+  const parts = note.idempotencyKey
+    ? [
+        ADD_PLATFORM_NOTE_ACTION_ID,
+        ctx.procedureId,
+        ctx.nodeId,
+        note.idempotencyKey,
+        note.targetType,
+        note.targetId,
+      ]
+    : [ctx.runId, ctx.nodeId, note.targetType, note.targetId, note.content];
+  return createHash("sha256").update(parts.join("\u0000")).digest("hex");
+}
+
+async function parseAutomationNote(
+  input: AddPlatformNoteInput,
+): Promise<AutomationNote> {
+  const note = parseActionInput(
+    ADD_PLATFORM_NOTE_ACTION_ID,
+    addPlatformNoteInput,
+    input,
+  );
+  await assertPlatformNoteTarget(note.targetType, note.targetId);
+  return note;
+}
+
+async function writeAutomationNote(
+  input: AddPlatformNoteInput,
+  ctx: ExecutionCtx,
+): Promise<AddPlatformNoteOutput> {
+  const note = await parseAutomationNote(input);
+  const { note: stored, created } = await runAsAutomation(ctx, () =>
+    addPlatformNote({
+      targetType: note.targetType,
+      targetId: note.targetId,
+      authorId: `${AUTOMATION_AUTHOR_PREFIX}${ctx.procedureId}`,
+      content: note.content,
+      noteId: automationNoteId(note, ctx),
+    }),
+  );
+  return { noteId: stored._id, created };
+}
+
+async function simulateAutomationNote(
+  input: AddPlatformNoteInput,
+  ctx: ExecutionCtx,
+): Promise<AddPlatformNoteOutput> {
+  const note = await parseAutomationNote(input);
+  const noteId = automationNoteId(note, ctx);
+  const existing = await GetModel(PlatformNoteModel).get(noteId);
+  ctx.log("info", "test run: note not written");
+  return { noteId, created: !existing };
+}
+
+const addPlatformNoteAction: ActionType<
+  AddPlatformNoteInput,
+  AddPlatformNoteOutput
+> = {
+  id: ADD_PLATFORM_NOTE_ACTION_ID,
+  ...automationNodeLabels("action", ADD_PLATFORM_NOTE_ACTION_ID),
+  icon: "i-ph-note-pencil",
+  inputSchema: {
+    type: "object",
+    properties: {
+      targetType: {
+        type: "string",
+        enum: [...PLATFORM_NOTE_TARGET_TYPES],
+        default: "workspace",
+        description: "What the note is about",
+      },
+      targetId: {
+        type: "string",
+        maxLength: ID_MAX_LENGTH,
+        description: "Workspace id (wire tenantId) or user id",
+      },
+      content: {
+        type: "string",
+        minLength: 1,
+        maxLength: PLATFORM_NOTE_MAX_LENGTH,
+        description: "Plain text, visible to platform operators only",
+      },
+      idempotencyKey: {
+        type: "string",
+        maxLength: IDEMPOTENCY_KEY_MAX_LENGTH,
+        description:
+          "Wire a trigger's deliveryId: a step run again with the same key writes no second note",
+      },
+    },
+    required: ["targetId", "content"],
+  },
+  outputSchema: {
+    type: "object",
+    properties: {
+      noteId: { type: "string" },
+      created: {
+        type: "boolean",
+        description: "False when the same step already wrote the note",
+      },
+    },
+  },
+  dryRun: (input, ctx) =>
+    asStep(ADD_PLATFORM_NOTE_ACTION_ID, () =>
+      simulateAutomationNote(input, ctx),
+    ),
+  execute: (input, ctx) =>
+    asStep(ADD_PLATFORM_NOTE_ACTION_ID, () => writeAutomationNote(input, ctx)),
+};
+
 export const ACTIONS: ActionType[] = [
   suspendWorkspaceAction,
   notifyTenantOwnersAction,
+  addPlatformNoteAction,
 ];

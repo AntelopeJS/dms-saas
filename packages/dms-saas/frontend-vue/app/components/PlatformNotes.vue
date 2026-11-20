@@ -11,6 +11,7 @@ type TargetType = 'user' | 'workspace'
 interface PlatformNote {
 	_id: string
 	authorId: string
+	authorKind?: 'user' | 'automation'
 	authorName: string | null
 	authorEmail: string | null
 	content: string
@@ -80,7 +81,12 @@ const canSubmit = computed(
 )
 const olderCount = computed(() => Math.max(0, total.value - notes.value.length))
 
+function isAutomation(note: PlatformNote): boolean {
+	return note.authorKind === 'automation'
+}
+
 function authorOf(note: PlatformNote): string {
+	if (isAutomation(note)) return t(`${N}.author_automation`)
 	return note.authorName || note.authorEmail || note.authorId
 }
 
@@ -197,7 +203,8 @@ async function remove(note: PlatformNote): Promise<void> {
 				<ul class="flex flex-col gap-3">
 					<li v-for="note in notes" :key="note._id" class="flex gap-2.5">
 						<UAvatar
-							:text="initialsOf(note)"
+							:icon="isAutomation(note) ? 'i-ph-robot' : undefined"
+							:text="isAutomation(note) ? undefined : initialsOf(note)"
 							:alt="authorOf(note)"
 							size="xs"
 							class="mt-0.5"
