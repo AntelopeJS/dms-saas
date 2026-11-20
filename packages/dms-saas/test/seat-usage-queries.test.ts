@@ -34,13 +34,17 @@ async function seatUsageInMemory(
 ): Promise<SeatUsage> {
   const normalize = (email: string) => email.trim().toLowerCase();
   const [allMembers, invites, platformOwners] = await Promise.all([
-    GetModel(TenantMemberModel, tenantId).listAll(),
+    GetModel(TenantMemberModel, tenantId)
+      .table.pluck("userId", "isTenantOwner")
+      .run(),
     GetModel(UserInviteModel, tenantId).getAll(),
     GetModel(UserModel).getOwners(),
   ]);
   const byUserId = new Map(platformOwners.map((o) => [o._id, o]));
   const emails = new Set(platformOwners.map((o) => normalize(o.email)));
-  const supportOf = (member: TenantMember): User | undefined =>
+  const supportOf = (
+    member: Pick<TenantMember, "userId" | "isTenantOwner">,
+  ): User | undefined =>
     member.isTenantOwner ? undefined : byUserId.get(member.userId);
   const members = allMembers.filter(
     (member) => !departingUserIds.includes(member.userId),
