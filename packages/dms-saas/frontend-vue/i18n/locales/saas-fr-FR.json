@@ -417,7 +417,7 @@
 			"trigger": {
 				"subscription_started": {
 					"name": "Abonnement démarré",
-					"description": "Se déclenche quand un paiement Stripe aboutit et que l'abonnement d'un espace de travail devient actif ou passe en essai"
+					"description": "Se déclenche quand l'abonnement d'un espace de travail devient actif ou passe en essai : un paiement Stripe aboutit, ou la première facture d'un espace de travail créé avec une carte est payée"
 				},
 				"subscription_cancelled": {
 					"name": "Abonnement annulé",

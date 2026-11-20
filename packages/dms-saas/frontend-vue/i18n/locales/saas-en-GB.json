@@ -417,7 +417,7 @@
 			"trigger": {
 				"subscription_started": {
 					"name": "Subscription started",
-					"description": "Fires when a Stripe checkout completes and a workspace subscription becomes active or trialing"
+					"description": "Fires when a workspace subscription becomes active or trialing: a Stripe checkout completes, or a workspace created with a card has its first invoice paid"
 				},
 				"subscription_cancelled": {
 					"name": "Subscription cancelled",

@@ -177,6 +177,7 @@ async function completeCheckout(context: CheckoutContext): Promise<void> {
   emitAutomationEvent("saas.subscription-started", {
     tenantId: context.tenantId,
     deliveryId: context.eventId,
+    source: "checkout",
     planId,
     status,
     stripeSubscriptionId: context.subscriptionId,

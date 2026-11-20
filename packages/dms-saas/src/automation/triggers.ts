@@ -81,8 +81,9 @@ export const TRIGGERS: TriggerType[] = [
     event: "saas.subscription-started",
     icon: "i-ph-rocket-launch",
     outputProperties: {
+      source: { type: "string", enum: ["checkout", "provisioning"] },
       planId: { type: ["string", "null"] },
-      status: { type: "string" },
+      status: { type: "string", enum: ["active", "trialing"] },
       stripeSubscriptionId: { type: "string" },
       trialConsumptionRecorded: { type: "boolean" },
     },

@@ -7,8 +7,10 @@ export type SaasEventBase = {
 };
 
 export type SubscriptionStartedEvent = SaasEventBase & {
+  /** Stripe Checkout, or a workspace provisioned with a card on a Stripe-priced plan. */
+  source: "checkout" | "provisioning";
   planId: string | null;
-  status: string;
+  status: "active" | "trialing";
   stripeSubscriptionId: string;
   /**
    * False when the checkout was trialing but the internal trial-consumption
