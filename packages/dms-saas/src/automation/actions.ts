@@ -27,6 +27,7 @@ import {
   requireWorkspace,
 } from "./action-support";
 import { automationNodeLabels } from "./labels";
+import { runAsAutomation } from "./origin";
 
 interface SuspendWorkspaceInput {
   tenantId: string;
@@ -125,9 +126,11 @@ async function runSuspension(
     "info",
     `${request.suspended ? "suspending" : "reactivating"} workspace ${request.tenantId}`,
   );
-  const result = await setWorkspaceSuspendedCommand(
-    { tenantId: request.tenantId, operationId, actor: automationActor(ctx) },
-    request.suspended,
+  const result = await runAsAutomation(ctx, () =>
+    setWorkspaceSuspendedCommand(
+      { tenantId: request.tenantId, operationId, actor: automationActor(ctx) },
+      request.suspended,
+    ),
   );
   return {
     tenantId: request.tenantId,

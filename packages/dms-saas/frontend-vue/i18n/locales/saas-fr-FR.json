@@ -435,6 +435,14 @@
 				"tenant_deleted": {
 					"name": "Espace de travail supprimé (obsolète)",
 					"description": "Obsolète : utilisez le déclencheur DMS « Tenant supprimé » (dms.tenant-deleted), qui fournit le nom et le propriétaire de l'espace de travail. Se déclenche quand les données d'un espace de travail sont supprimées à la fin de la rétention ; se rejoue avec le même deliveryId quand une suppression reprend."
+				},
+				"billing_state_changed": {
+					"name": "État de facturation modifié",
+					"description": "Se déclenche quand l'état de facturation d'un espace de travail change, par exemple d'essai à actif ou d'impayé à suspendu"
+				},
+				"plan_changed": {
+					"name": "Offre modifiée",
+					"description": "Se déclenche quand un espace de travail passe à une autre offre"
 				}
 			},
 			"action": {

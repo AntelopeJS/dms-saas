@@ -1,5 +1,9 @@
+import type { BillingState } from "../db";
+import { type AutomationOriginFields, currentAutomationOrigin } from "./origin";
+import { admitOriginatedEvent } from "./loop-guard";
+
 /** Ports every saas trigger carries. */
-export type SaasEventBase = {
+export type SaasEventBase = AutomationOriginFields & {
   tenantId: string;
   /** Equal on every re-emission of the same event: effects deduplicate on it. */
   deliveryId: string;
@@ -49,12 +53,38 @@ export type TenantDeletedEvent = SaasEventBase & {
   operationId?: string;
 };
 
+/**
+ * A workspace's billing state moved from one state to another. A suspension a
+ * procedure made carries its origin ports.
+ */
+export type BillingStateChangedEvent = SaasEventBase & {
+  fromState: BillingState;
+  toState: BillingState;
+  planId: string | null;
+  planName: string | null;
+  mrrMinor: number;
+  previousMrrMinor: number;
+  currency: string | null;
+};
+
+/** A workspace moved to another effective plan. */
+export type PlanChangedEvent = SaasEventBase & {
+  fromPlanId: string | null;
+  toPlanId: string | null;
+  fromPlanName: string | null;
+  toPlanName: string | null;
+  direction: "upgrade" | "downgrade";
+  billingState: BillingState;
+};
+
 export interface AutomationEventPayloads {
   "saas.subscription-started": SubscriptionStartedEvent;
   "saas.subscription-cancelled": SubscriptionCancelledEvent;
   "saas.payment-failed": PaymentFailedEvent;
   "saas.trial-ending": TrialEndingEvent;
   "saas.tenant-deleted": TenantDeletedEvent;
+  "saas.billing-state-changed": BillingStateChangedEvent;
+  "saas.plan-changed": PlanChangedEvent;
 }
 
 export type AutomationEventName = keyof AutomationEventPayloads;
@@ -73,6 +103,8 @@ const eventListeners: EventListeners = {
   "saas.payment-failed": new Set(),
   "saas.trial-ending": new Set(),
   "saas.tenant-deleted": new Set(),
+  "saas.billing-state-changed": new Set(),
+  "saas.plan-changed": new Set(),
 };
 
 /** The listeners the armed triggers of `event` added. */
@@ -99,4 +131,21 @@ export function emitAutomationEvent<E extends AutomationEventName>(
     } catch {
     }
   }
+}
+
+/**
+ * Broadcasts an event a procedure's write may have caused: it then carries
+ * the procedure and its run, and passes the loop guard on its workspace first.
+ */
+export function emitOriginatedAutomationEvent<E extends AutomationEventName>(
+  event: E,
+  payload: AutomationEventPayloads[E],
+): void {
+  const origin = currentAutomationOrigin();
+  if (
+    origin.originProcedureId !== undefined &&
+    !admitOriginatedEvent(event, payload.tenantId)
+  )
+    return;
+  emitAutomationEvent(event, { ...payload, ...origin });
 }

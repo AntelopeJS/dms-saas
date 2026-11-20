@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { onTestFinished } from "vitest";
+import { z } from "zod";
 import {
   type ActionType,
   type DataNodeType,
@@ -96,4 +97,14 @@ export function executionCtx(
     log: () => undefined,
     ...overrides,
   };
+}
+
+const deliveredPayload = z.object({ deliveryId: z.string() });
+
+/** The `deliveryId` of each emitted payload, empty when a payload has none. */
+export function deliveryIds(payloads: readonly JsonValue[]): string[] {
+  return payloads.map((payload) => {
+    const parsed = deliveredPayload.safeParse(payload);
+    return parsed.success ? parsed.data.deliveryId : "";
+  });
 }

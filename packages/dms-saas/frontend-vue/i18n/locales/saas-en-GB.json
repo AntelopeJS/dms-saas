@@ -435,6 +435,14 @@
 				"tenant_deleted": {
 					"name": "Workspace deleted (deprecated)",
 					"description": "Deprecated: use the DMS trigger \"Tenant deleted\" (dms.tenant-deleted), which carries the workspace name and owner. Fires when a workspace's data is deleted at the end of retention; replays with the same deliveryId when a deletion resumes."
+				},
+				"billing_state_changed": {
+					"name": "Billing state changed",
+					"description": "Fires when a workspace's billing state changes, for example from trialing to active or from past due to suspended"
+				},
+				"plan_changed": {
+					"name": "Plan changed",
+					"description": "Fires when a workspace moves to another plan"
 				}
 			},
 			"action": {
