@@ -38,6 +38,7 @@ async function emitDeletedTenant(
   if (!context) {
     emitAutomationEvent("saas.tenant-deleted", {
       tenantId,
+      deliveryId: `tenant-deleted:${tenantId}`,
       at: new Date().toISOString(),
     });
     return;
@@ -49,6 +50,7 @@ async function emitDeletedTenant(
     throw new Error("Tenant deletion tombstone is missing");
   await emitTenantDeletedEvent({
     tenantId,
+    deliveryId: context.operationId,
     at: tombstone.deletedAt.toISOString(),
     operationId: context.operationId,
   });

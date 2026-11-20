@@ -2,41 +2,69 @@ import type {
   JsonSchema,
   TriggerType,
 } from "@antelopejs/interface-dms-automation";
+import { Logging } from "@antelopejs/interface-core/logging";
+import type { z } from "zod";
 import {
   type AutomationEventListener,
   type AutomationEventName,
+  type AutomationEventPayloads,
   listenersFor,
 } from "./events";
 import { automationNodeLabels } from "./labels";
 
-const EMPTY_CONFIG_SCHEMA: JsonSchema = { type: "object", properties: {} };
+const STRING: JsonSchema = { type: "string" };
 
-const TENANT_ID_PROPERTY: JsonSchema = { type: "string" };
-const AT_PROPERTY: JsonSchema = { type: "string" };
-
-interface SaasEventTriggerSpec {
-  event: AutomationEventName;
-  icon: string;
-  outputProperties: Record<string, JsonSchema>;
+/** Settings a trigger reads, and which events they let through. */
+export interface TriggerFilter<E extends AutomationEventName, C> {
+  config: z.ZodType<C>;
+  matches(config: C, payload: AutomationEventPayloads[E]): boolean;
 }
 
-function createEventTrigger(spec: SaasEventTriggerSpec): TriggerType {
+interface SaasEventTriggerSpec<E extends AutomationEventName, C> {
+  event: E;
+  icon: string;
+  configProperties?: Record<string, JsonSchema>;
+  outputProperties: Record<string, JsonSchema>;
+  filter?: TriggerFilter<E, C>;
+  /** Logged once each time a procedure arms the trigger. */
+  deprecationNotice?: string;
+}
+
+function createEventTrigger<E extends AutomationEventName, C = never>(
+  spec: SaasEventTriggerSpec<E, C>,
+): TriggerType {
   return {
     id: spec.event,
     ...automationNodeLabels("trigger", spec.event),
     icon: spec.icon,
     cluster: "replicated",
-    configSchema: EMPTY_CONFIG_SCHEMA,
+    configSchema: {
+      type: "object",
+      properties: { ...spec.configProperties },
+    },
     outputSchema: {
       type: "object",
       properties: {
-        tenantId: TENANT_ID_PROPERTY,
+        tenantId: STRING,
+        deliveryId: STRING,
         ...spec.outputProperties,
-        at: AT_PROPERTY,
+        at: STRING,
       },
     },
-    async activate(_config, emit) {
-      const listener: AutomationEventListener = (payload) => emit(payload);
+    async activate(config, emit) {
+      if (spec.deprecationNotice)
+        Logging.Warn(`[dms-saas:automation] ${spec.deprecationNotice}`);
+      const { filter } = spec;
+      const settings = filter?.config.parse(config ?? {});
+      const listener: AutomationEventListener<E> = (payload) => {
+        if (
+          filter &&
+          settings !== undefined &&
+          !filter.matches(settings, payload)
+        )
+          return undefined;
+        return emit(payload);
+      };
       listenersFor(spec.event).add(listener);
       return listener;
     },
@@ -86,6 +114,8 @@ export const TRIGGERS: TriggerType[] = [
   createEventTrigger({
     event: "saas.tenant-deleted",
     icon: "i-ph-trash",
-    outputProperties: { operationId: { type: "string" } },
+    outputProperties: { operationId: STRING },
+    deprecationNotice:
+      "saas.tenant-deleted is deprecated; use dms.tenant-deleted",
   }),
 ];

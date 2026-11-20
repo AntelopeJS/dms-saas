@@ -43,6 +43,7 @@ async function promoteSubscriptionPaymentMethod(
 }
 
 interface CheckoutContext {
+  eventId: string;
   session: Stripe.Checkout.Session;
   tenantId: string;
   subscriptionId: string;
@@ -99,7 +100,7 @@ function resolveCheckoutContext(
   const targetPlanId = isString(session.metadata?.planId)
     ? session.metadata.planId
     : null;
-  return { session, tenantId, subscriptionId, targetPlanId };
+  return { eventId: event.id, session, tenantId, subscriptionId, targetPlanId };
 }
 
 /**
@@ -175,6 +176,7 @@ async function completeCheckout(context: CheckoutContext): Promise<void> {
   );
   emitAutomationEvent("saas.subscription-started", {
     tenantId: context.tenantId,
+    deliveryId: context.eventId,
     planId,
     status,
     stripeSubscriptionId: context.subscriptionId,

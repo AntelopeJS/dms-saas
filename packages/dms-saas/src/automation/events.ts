@@ -1,5 +1,12 @@
-export type SubscriptionStartedEvent = {
+/** Ports every saas trigger carries. */
+export type SaasEventBase = {
   tenantId: string;
+  /** Equal on every re-emission of the same event: effects deduplicate on it. */
+  deliveryId: string;
+  at: string;
+};
+
+export type SubscriptionStartedEvent = SaasEventBase & {
   planId: string | null;
   status: string;
   stripeSubscriptionId: string;
@@ -9,33 +16,24 @@ export type SubscriptionStartedEvent = {
    * recorded); workflows must not assume a usage row exists.
    */
   trialConsumptionRecorded: boolean;
-  at: string;
 };
 
-export type SubscriptionCancelledEvent = {
-  tenantId: string;
+export type SubscriptionCancelledEvent = SaasEventBase & {
   stripeSubscriptionId: string;
-  at: string;
 };
 
-export type PaymentFailedEvent = {
-  tenantId: string;
+export type PaymentFailedEvent = SaasEventBase & {
   invoiceId: string;
   invoiceNumber: string | null;
   amountDue: number;
   currency: string;
-  at: string;
 };
 
-export type TrialEndingEvent = {
-  tenantId: string;
+export type TrialEndingEvent = SaasEventBase & {
   trialEndsAt: string | null;
-  at: string;
 };
 
-export type TenantDeletedEvent = {
-  tenantId: string;
-  at: string;
+export type TenantDeletedEvent = SaasEventBase & {
   /** Consumers must deduplicate non-idempotent effects by this identity on replay. */
   operationId?: string;
 };
@@ -50,23 +48,27 @@ export interface AutomationEventPayloads {
 
 export type AutomationEventName = keyof AutomationEventPayloads;
 
-export type AutomationEventListener = (
-  payload: AutomationEventPayloads[AutomationEventName],
-) => void | Promise<void>;
+export type AutomationEventListener<
+  E extends AutomationEventName = AutomationEventName,
+> = (payload: AutomationEventPayloads[E]) => void | Promise<void>;
 
-const eventListeners = new Map<
-  AutomationEventName,
-  Set<AutomationEventListener>
->();
+type EventListeners = {
+  [E in AutomationEventName]: Set<AutomationEventListener<E>>;
+};
 
-export function listenersFor(
-  event: AutomationEventName,
-): Set<AutomationEventListener> {
-  const existing = eventListeners.get(event);
-  if (existing) return existing;
-  const created = new Set<AutomationEventListener>();
-  eventListeners.set(event, created);
-  return created;
+const eventListeners: EventListeners = {
+  "saas.subscription-started": new Set(),
+  "saas.subscription-cancelled": new Set(),
+  "saas.payment-failed": new Set(),
+  "saas.trial-ending": new Set(),
+  "saas.tenant-deleted": new Set(),
+};
+
+/** The listeners the armed triggers of `event` added. */
+export function listenersFor<E extends AutomationEventName>(
+  event: E,
+): EventListeners[E] {
+  return eventListeners[event];
 }
 
 /**

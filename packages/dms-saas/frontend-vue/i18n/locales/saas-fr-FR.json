@@ -432,8 +432,8 @@
 					"description": "Se déclenche quand l'essai d'un espace de travail arrive bientôt à son terme"
 				},
 				"tenant_deleted": {
-					"name": "Espace de travail supprimé",
-					"description": "Se déclenche quand un espace de travail est supprimé"
+					"name": "Espace de travail supprimé (obsolète)",
+					"description": "Obsolète : utilisez le déclencheur DMS « Tenant supprimé » (dms.tenant-deleted), qui fournit le nom et le propriétaire de l'espace de travail. Se déclenche quand les données d'un espace de travail sont supprimées à la fin de la rétention ; se rejoue avec le même deliveryId quand une suppression reprend."
 				}
 			},
 			"action": {

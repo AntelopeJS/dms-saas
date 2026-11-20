@@ -1,8 +1,11 @@
 import { ImplementInterface } from "@antelopejs/interface-core";
+import { onTestFinished } from "vitest";
 import {
   type ActionType,
   type DataNodeType,
   internal,
+  type JsonObject,
+  type JsonValue,
   type TriggerType,
 } from "@antelopejs/interface-dms-automation";
 
@@ -50,4 +53,22 @@ export function registeredTrigger(
   const trigger = catalog.triggers.get(id);
   if (!trigger) throw new Error(`No trigger type is registered as ${id}`);
   return trigger;
+}
+
+/**
+ * Arms the trigger registered under `id` with `config`, as a procedure
+ * would, until the test finishes; resolves with the payloads it emits.
+ */
+export async function armTrigger(
+  catalog: AutomationCatalog,
+  id: string,
+  config: JsonObject = {},
+): Promise<JsonValue[]> {
+  const trigger = registeredTrigger(catalog, id);
+  const payloads: JsonValue[] = [];
+  const handle = await trigger.activate(config, (payload) => {
+    payloads.push(payload);
+  });
+  onTestFinished(() => trigger.deactivate(handle));
+  return payloads;
 }

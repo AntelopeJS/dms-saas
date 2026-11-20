@@ -24,11 +24,13 @@ import {
 import "../src/routes/tenant/billing-self-refund";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import { resolvePlanChangeKind } from "../src/routes/tenant/tenant-plan-preview";
+import { registerAutomationNodes } from "../src/automation";
 import { handleCheckoutSessionCompleted } from "../src/stripe/webhook-checkout";
 import {
   canResubscribe,
   liveStripeSubscriptionId,
 } from "../src/workspaces/first-payment";
+import { armTrigger, implementAutomationCatalog } from "./helpers/automation";
 import { useDmsAuth } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
@@ -44,6 +46,8 @@ import { ANY_DATE } from "./helpers/asymmetric-matchers";
 useMongoDatabase();
 useDmsAuth();
 const stripe = useSuiteStripe();
+const automation = implementAutomationCatalog();
+await registerAutomationNodes();
 
 const KEPT_CUSTOMER = "cus_kept";
 const ENDED_SUBSCRIPTION = "sub_ended";
@@ -409,5 +413,26 @@ describe("plans offered to a cancelled workspace", () => {
       canResubscribe: true,
       canRecoverComplimentary: false,
     });
+  });
+});
+
+describe("subscription-started from a checkout", () => {
+  it("hands subscription-started the checkout event id, once", async () => {
+    const workspace = await seedCancelledWorkspace();
+    await choosePlan(paidPlan._id, workspace);
+    const payloads = await armTrigger(automation, "saas.subscription-started");
+    const event = await completionEvent(workspace);
+
+    await handleCheckoutSessionCompleted(event);
+    await handleCheckoutSessionCompleted(event);
+
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        tenantId: workspace.tenantId,
+        deliveryId: event.id,
+        stripeSubscriptionId: NEW_SUBSCRIPTION,
+        status: "active",
+      }),
+    ]);
   });
 });

@@ -182,6 +182,7 @@ export async function handleInvoicePaymentFailed(
   const invoiceId = requireInvoiceId(invoice);
   emitAutomationEvent("saas.payment-failed", {
     tenantId: tenant._id,
+    deliveryId: event.id,
     invoiceId,
     invoiceNumber: invoice.number ?? null,
     amountDue: invoice.amount_due,
@@ -305,6 +306,7 @@ export async function handleSubscriptionDeleted(
   await applyAutoProrataIfEnabled(customerId, tenant._id, subscription);
   emitAutomationEvent("saas.subscription-cancelled", {
     tenantId: tenant._id,
+    deliveryId: event.id,
     stripeSubscriptionId: subscription.id,
     at: new Date().toISOString(),
   });
@@ -331,6 +333,7 @@ export async function handleTrialWillEnd(
   });
   emitAutomationEvent("saas.trial-ending", {
     tenantId: tenant._id,
+    deliveryId: event.id,
     trialEndsAt: subscription.trial_end
       ? (optionalStripeDate(subscription.trial_end)?.toISOString() ?? null)
       : null,

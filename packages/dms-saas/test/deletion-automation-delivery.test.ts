@@ -29,6 +29,7 @@ describe("best-effort automation emission", () => {
     );
     const payload = {
       tenantId: "tenant-a",
+      deliveryId: "delivery-a",
       trialEndsAt: null,
       at: "2026-09-14T00:00:00Z",
     };
@@ -55,6 +56,7 @@ describe("replayable deletion automation emission", () => {
     const handle = await trigger.activate({}, emit);
     const payload = {
       tenantId: "tenant-a",
+      deliveryId: "delivery-a",
       operationId: "delete-operation-a",
       at: "2026-09-14T00:00:00Z",
     };

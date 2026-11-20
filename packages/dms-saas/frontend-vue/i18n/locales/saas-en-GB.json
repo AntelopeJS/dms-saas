@@ -432,8 +432,8 @@
 					"description": "Fires when a workspace trial is about to end"
 				},
 				"tenant_deleted": {
-					"name": "Workspace deleted",
-					"description": "Fires when a workspace is deleted"
+					"name": "Workspace deleted (deprecated)",
+					"description": "Deprecated: use the DMS trigger \"Tenant deleted\" (dms.tenant-deleted), which carries the workspace name and owner. Fires when a workspace's data is deleted at the end of retention; replays with the same deliveryId when a deletion resumes."
 				}
 			},
 			"action": {
