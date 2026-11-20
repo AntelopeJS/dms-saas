@@ -502,6 +502,12 @@
 					"name": "Lister les utilisateurs d'un segment",
 					"description": "Liste les utilisateurs de la dernière évaluation d'un segment, page par page. Ces données personnelles apparaissent dans la trace d'exécution"
 				}
+			},
+			"data": {
+				"format_money": {
+					"name": "Formater un montant",
+					"description": "Écrit un montant en unités mineures (centimes) en texte monétaire dans une devise et une langue, par exemple 6900 EUR en fr-FR donne 69 €"
+				}
 			}
 		},
 		"status": {

@@ -1,5 +1,5 @@
-import type { DataNodeType } from "@antelopejs/interface-dms-automation";
 import { ACTIONS } from "./actions";
+import { DATA_NODES } from "./data-nodes";
 import { TRIGGERS } from "./triggers";
 
 export * from "./events";
@@ -12,8 +12,6 @@ type AutomationInterface =
 interface ModuleLoadError extends Error {
   code?: string;
 }
-
-const DATA_NODES: DataNodeType[] = [];
 
 let automationInterfacePromise:
   | Promise<AutomationInterface | undefined>

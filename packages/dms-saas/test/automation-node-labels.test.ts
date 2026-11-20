@@ -12,14 +12,18 @@ const LABEL_PREFIX = "$saas.automation.";
 
 async function registeredNodes() {
   await registerAutomationNodes();
-  return [...catalog.triggers.values(), ...catalog.actions.values()];
+  return [
+    ...catalog.triggers.values(),
+    ...catalog.actions.values(),
+    ...catalog.dataNodes.values(),
+  ];
 }
 
 const nodes = await registeredNodes();
 const labels = nodes.flatMap((node) => [node.name, node.description]);
 
 describe("automation catalog labels", () => {
-  it("registers every trigger and action label as a locale key", () => {
+  it("registers every trigger, action and data node label as a locale key", () => {
     expect(nodes.length).toBeGreaterThan(0);
     expect(labels.filter((label) => !label.startsWith(LABEL_PREFIX))).toEqual(
       [],

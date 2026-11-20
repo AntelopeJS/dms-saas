@@ -502,6 +502,12 @@
 					"name": "List segment users",
 					"description": "List the users in a segment's latest evaluation, a page at a time. Personal data appears in the run trace"
 				}
+			},
+			"data": {
+				"format_money": {
+					"name": "Format amount",
+					"description": "Write an amount in minor units (cents) as money text in a currency and locale, for example 6900 EUR in fr-FR gives 69 €"
+				}
 			}
 		},
 		"status": {
