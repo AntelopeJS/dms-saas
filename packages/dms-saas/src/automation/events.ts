@@ -21,7 +21,10 @@ export type SubscriptionStartedEvent = SaasEventBase & {
 };
 
 export type SubscriptionCancelledEvent = SaasEventBase & {
-  stripeSubscriptionId: string;
+  /** Stripe ended the subscription, or an owner deleted the workspace. */
+  source: "stripe" | "workspace_deletion";
+  /** Null for a workspace deleted without a Stripe subscription. */
+  stripeSubscriptionId: string | null;
 };
 
 export type PaymentFailedEvent = SaasEventBase & {

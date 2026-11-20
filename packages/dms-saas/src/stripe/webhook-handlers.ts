@@ -286,6 +286,12 @@ async function isSubscriptionAlreadyLeft(
   return !!local && local.stripeSubscriptionId !== stripeSubscriptionId;
 }
 
+/** The deletion path already handed the cancellation to automation. */
+async function wasDeletionRequested(tenantId: string): Promise<boolean> {
+  const local = await GetModel(TenantSubscriptionModel, tenantId).findOne();
+  return !!local?.deletionRequestedAt;
+}
+
 /**
  * A cycle-end cancellation parked behind a free plan is a completed downgrade,
  * not a churn: no cancellation status, no prorata, no notice. The cancellation
@@ -304,12 +310,14 @@ export async function handleSubscriptionDeleted(
   if (await applyPendingFreePlanOnCancellation(tenant._id)) return;
   if (!(await cancelSubscriptionBilledOn(tenant._id, subscription.id))) return;
   await applyAutoProrataIfEnabled(customerId, tenant._id, subscription);
-  emitAutomationEvent("saas.subscription-cancelled", {
-    tenantId: tenant._id,
-    deliveryId: event.id,
-    stripeSubscriptionId: subscription.id,
-    at: new Date().toISOString(),
-  });
+  if (!(await wasDeletionRequested(tenant._id)))
+    emitAutomationEvent("saas.subscription-cancelled", {
+      tenantId: tenant._id,
+      deliveryId: event.id,
+      source: "stripe",
+      stripeSubscriptionId: subscription.id,
+      at: new Date().toISOString(),
+    });
   await notifyTenantOwners(tenant._id, subscriptionCancelledSubject, {
     icon: SUBSCRIPTION_CANCELLED_ICON,
     title: "$saas.notifications.payload.subscription_cancelled.title",

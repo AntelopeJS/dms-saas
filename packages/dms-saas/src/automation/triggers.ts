@@ -92,7 +92,8 @@ export const TRIGGERS: TriggerType[] = [
     event: "saas.subscription-cancelled",
     icon: "i-ph-x-circle",
     outputProperties: {
-      stripeSubscriptionId: { type: "string" },
+      source: { type: "string", enum: ["stripe", "workspace_deletion"] },
+      stripeSubscriptionId: { type: ["string", "null"] },
     },
   }),
   createEventTrigger({

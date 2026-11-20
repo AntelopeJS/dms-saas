@@ -421,7 +421,7 @@
 				},
 				"subscription_cancelled": {
 					"name": "Subscription cancelled",
-					"description": "Fires when a workspace subscription is cancelled in Stripe"
+					"description": "Fires when a workspace subscription is cancelled in Stripe, or when an owner deletes the workspace (paid or free)"
 				},
 				"payment_failed": {
 					"name": "Payment failed",

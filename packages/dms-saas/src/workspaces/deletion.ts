@@ -3,6 +3,7 @@ import { assert } from "@antelopejs/interface-api-util";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { UserInviteModel } from "@antelopejs/interface-dms/db";
+import { emitAutomationEvent } from "../automation/events";
 import { recomputeTenantBillingState } from "../billing-state";
 import { cancelInvitation } from "./invitations";
 import type { TenantSubscription, TenantSubscriptionStatus } from "../db";
@@ -94,10 +95,15 @@ export async function requestWorkspaceDeletion(
     deletionRequestedBy: ownerId,
     updatedAt: now,
   });
-  return {
-    status: CANCELLED_STATUS,
-    retentionDays: await runAfterCancellation(tenantId),
-  };
+  const retentionDays = await runAfterCancellation(tenantId);
+  emitAutomationEvent("saas.subscription-cancelled", {
+    tenantId,
+    deliveryId: `workspace-deletion:${operationId}`,
+    source: "workspace_deletion",
+    stripeSubscriptionId: subscription.stripeSubscriptionId ?? null,
+    at: now.toISOString(),
+  });
+  return { status: CANCELLED_STATUS, retentionDays };
 }
 
 /**

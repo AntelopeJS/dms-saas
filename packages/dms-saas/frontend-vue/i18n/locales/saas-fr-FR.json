@@ -421,7 +421,7 @@
 				},
 				"subscription_cancelled": {
 					"name": "Abonnement annulé",
-					"description": "Se déclenche quand l'abonnement d'un espace de travail est annulé dans Stripe"
+					"description": "Se déclenche quand l'abonnement d'un espace de travail est annulé dans Stripe, ou quand un propriétaire supprime l'espace de travail (payant ou gratuit)"
 				},
 				"payment_failed": {
 					"name": "Échec de paiement",
