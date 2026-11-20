@@ -8,6 +8,7 @@ import { z } from "zod";
 import {
   automationNotificationSubject,
   notifyTenantOwners,
+  resolveTenantOwners,
 } from "../notifications";
 import {
   TENANT_SUBSCRIPTION_STATUSES,
@@ -199,13 +200,92 @@ interface NotifyTenantOwnersInput {
   description: string;
   icon?: string;
   linkTo?: string;
+  idempotencyKey?: string;
 }
 
 type NotifyTenantOwnersOutput = {
   ok: boolean;
+  recipientCount: number;
 };
 
 const DEFAULT_NOTIFICATION_ICON = "i-ph-bell";
+const TITLE_MAX_LENGTH = 200;
+const DESCRIPTION_MAX_LENGTH = 2000;
+const ICON_MAX_LENGTH = 100;
+const LINK_MAX_LENGTH = 2000;
+const IDEMPOTENCY_KEY_MAX_LENGTH = 200;
+
+const notifyTenantOwnersInput = z.object({
+  tenantId: tenantIdInput,
+  title: z.string().min(1).max(TITLE_MAX_LENGTH),
+  description: z.string().min(1).max(DESCRIPTION_MAX_LENGTH),
+  icon: z.string().max(ICON_MAX_LENGTH).default(DEFAULT_NOTIFICATION_ICON),
+  linkTo: z.string().max(LINK_MAX_LENGTH).optional(),
+  idempotencyKey: z.string().max(IDEMPOTENCY_KEY_MAX_LENGTH).optional(),
+});
+
+type OwnerNotification = z.infer<typeof notifyTenantOwnersInput>;
+
+/**
+ * The notification's event id: per node and key when the procedure wires a
+ * key, else per run, node and content, so every for-each iteration has its own.
+ */
+function ownerNotificationEventId(
+  notification: OwnerNotification,
+  ctx: ExecutionCtx,
+): string {
+  if (notification.idempotencyKey)
+    return `${NOTIFY_TENANT_OWNERS_ACTION_ID}:${ctx.procedureId}:${ctx.nodeId}:${notification.idempotencyKey}`;
+  const fingerprint = createHash("sha256")
+    .update(
+      [ctx.runId, ctx.nodeId, notification.tenantId, notification.title].join(
+        "\u0000",
+      ),
+    )
+    .digest("hex");
+  return `${NOTIFY_TENANT_OWNERS_ACTION_ID}:${fingerprint}`;
+}
+
+async function parseOwnerNotification(
+  input: NotifyTenantOwnersInput,
+): Promise<OwnerNotification> {
+  const notification = parseActionInput(
+    NOTIFY_TENANT_OWNERS_ACTION_ID,
+    notifyTenantOwnersInput,
+    input,
+  );
+  await requireWorkspace(notification.tenantId);
+  return notification;
+}
+
+async function sendOwnerNotification(
+  input: NotifyTenantOwnersInput,
+  ctx: ExecutionCtx,
+): Promise<NotifyTenantOwnersOutput> {
+  const notification = await parseOwnerNotification(input);
+  const recipientCount = await notifyTenantOwners(
+    notification.tenantId,
+    automationNotificationSubject,
+    {
+      icon: notification.icon,
+      title: notification.title,
+      description: notification.description,
+      linkTo: notification.linkTo,
+      eventId: ownerNotificationEventId(notification, ctx),
+    },
+  );
+  return { ok: true, recipientCount };
+}
+
+async function countOwnerRecipients(
+  input: NotifyTenantOwnersInput,
+  ctx: ExecutionCtx,
+): Promise<NotifyTenantOwnersOutput> {
+  const notification = await parseOwnerNotification(input);
+  const owners = await resolveTenantOwners(notification.tenantId);
+  ctx.log("info", `test run: ${owners.length} owner(s) not notified`);
+  return { ok: true, recipientCount: owners.length };
+}
 
 const notifyTenantOwnersAction: ActionType<
   NotifyTenantOwnersInput,
@@ -217,27 +297,39 @@ const notifyTenantOwnersAction: ActionType<
   inputSchema: {
     type: "object",
     properties: {
-      tenantId: { type: "string" },
-      title: { type: "string" },
-      description: { type: "string" },
-      icon: { type: "string" },
-      linkTo: { type: "string" },
+      tenantId: { type: "string", maxLength: ID_MAX_LENGTH },
+      title: { type: "string", minLength: 1, maxLength: TITLE_MAX_LENGTH },
+      description: {
+        type: "string",
+        minLength: 1,
+        maxLength: DESCRIPTION_MAX_LENGTH,
+      },
+      icon: { type: "string", maxLength: ICON_MAX_LENGTH },
+      linkTo: { type: "string", maxLength: LINK_MAX_LENGTH },
+      idempotencyKey: {
+        type: "string",
+        maxLength: IDEMPOTENCY_KEY_MAX_LENGTH,
+        description:
+          "Wire a trigger's deliveryId: a step run again with the same key notifies no one twice",
+      },
     },
     required: ["tenantId", "title", "description"],
   },
   outputSchema: {
     type: "object",
-    properties: { ok: { type: "boolean" } },
+    properties: {
+      ok: { type: "boolean" },
+      recipientCount: { type: "number" },
+    },
   },
-  async execute(input) {
-    await notifyTenantOwners(input.tenantId, automationNotificationSubject, {
-      icon: input.icon ?? DEFAULT_NOTIFICATION_ICON,
-      title: input.title,
-      description: input.description,
-      linkTo: input.linkTo,
-    });
-    return { ok: true };
-  },
+  dryRun: (input, ctx) =>
+    asStep(NOTIFY_TENANT_OWNERS_ACTION_ID, () =>
+      countOwnerRecipients(input, ctx),
+    ),
+  execute: (input, ctx) =>
+    asStep(NOTIFY_TENANT_OWNERS_ACTION_ID, () =>
+      sendOwnerNotification(input, ctx),
+    ),
 };
 
 export const ACTIONS: ActionType[] = [

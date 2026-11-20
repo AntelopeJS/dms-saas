@@ -120,13 +120,13 @@ async function runAfterCancellation(tenantId: string): Promise<number> {
   await bestEffort(tenantId, "cancel pending invitations", () =>
     cancelPendingInvitations(tenantId),
   );
-  await bestEffort(tenantId, "notify owners", () =>
-    notifyTenantOwners(tenantId, subscriptionCancelledSubject, {
+  await bestEffort(tenantId, "notify owners", async () => {
+    await notifyTenantOwners(tenantId, subscriptionCancelledSubject, {
       icon: NOTIF_ICON,
       title: NOTIF_TITLE,
       description: NOTIF_DESC,
-    }),
-  );
+    });
+  });
   return resolveDataRetentionDays().catch(() => DEFAULT_DATA_RETENTION_DAYS);
 }
 
