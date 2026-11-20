@@ -117,6 +117,19 @@ export type RefundUpdatedEvent = SaasEventBase & {
   chargeId: string;
 };
 
+/**
+ * An owner deleted a workspace: access closed now, the data is deleted after
+ * the retention period.
+ */
+export type WorkspaceDeletionRequestedEvent = SaasEventBase & {
+  requestedBy: string;
+  planId: string | null;
+  hadStripeSubscription: boolean;
+  retentionDays: number;
+  /** `at` plus the retention; the daily retention cron deletes on its first run after it. */
+  deletesAfter: string;
+};
+
 export interface AutomationEventPayloads {
   "saas.subscription-started": SubscriptionStartedEvent;
   "saas.subscription-cancelled": SubscriptionCancelledEvent;
@@ -128,6 +141,7 @@ export interface AutomationEventPayloads {
   "saas.invoice-paid": InvoicePaidEvent;
   "saas.credit-note-issued": CreditNoteIssuedEvent;
   "saas.refund-updated": RefundUpdatedEvent;
+  "saas.workspace-deletion-requested": WorkspaceDeletionRequestedEvent;
 }
 
 export type AutomationEventName = keyof AutomationEventPayloads;
@@ -151,6 +165,7 @@ const eventListeners: EventListeners = {
   "saas.invoice-paid": new Set(),
   "saas.credit-note-issued": new Set(),
   "saas.refund-updated": new Set(),
+  "saas.workspace-deletion-requested": new Set(),
 };
 
 /** The listeners the armed triggers of `event` added. */

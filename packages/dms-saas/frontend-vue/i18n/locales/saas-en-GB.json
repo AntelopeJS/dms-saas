@@ -455,6 +455,10 @@
 				"refund_updated": {
 					"name": "Refund status changed",
 					"description": "Fires when a refund on a workspace payment changes status in Stripe, for example succeeded or failed"
+				},
+				"workspace_deletion_requested": {
+					"name": "Workspace deletion requested",
+					"description": "Fires when an owner deletes a workspace: access closes now, data is deleted after the retention period"
 				}
 			},
 			"action": {

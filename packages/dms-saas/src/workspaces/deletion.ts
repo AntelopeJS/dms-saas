@@ -14,6 +14,7 @@ import {
 } from "../notifications";
 import { getStripeClient } from "../stripe";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
+import { MS_PER_DAY } from "../utils/time";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
@@ -96,6 +97,18 @@ export async function requestWorkspaceDeletion(
     updatedAt: now,
   });
   const retentionDays = await runAfterCancellation(tenantId);
+  emitAutomationEvent("saas.workspace-deletion-requested", {
+    tenantId,
+    deliveryId: `workspace-deletion-requested:${operationId}`,
+    at: now.toISOString(),
+    requestedBy: ownerId,
+    planId: subscription.planId,
+    hadStripeSubscription: !!subscription.stripeSubscriptionId,
+    retentionDays,
+    deletesAfter: new Date(
+      now.getTime() + retentionDays * MS_PER_DAY,
+    ).toISOString(),
+  });
   emitAutomationEvent("saas.subscription-cancelled", {
     tenantId,
     deliveryId: `workspace-deletion:${operationId}`,

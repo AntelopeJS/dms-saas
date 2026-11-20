@@ -292,4 +292,15 @@ export const TRIGGERS: TriggerType[] = [
         !config.status || config.status === payload.status,
     },
   }),
+  createEventTrigger({
+    event: "saas.workspace-deletion-requested",
+    icon: "i-ph-trash-simple",
+    outputProperties: {
+      requestedBy: STRING,
+      planId: NULLABLE_STRING,
+      hadStripeSubscription: BOOLEAN,
+      retentionDays: NUMBER,
+      deletesAfter: STRING,
+    },
+  }),
 ];
