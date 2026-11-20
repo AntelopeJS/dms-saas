@@ -4,6 +4,7 @@ import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it, vi } from "vitest";
 import { registerAutomationNodes } from "../src/automation";
 import { TenantSubscriptionModel } from "../src/db";
+import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
 import { ANY_STRING } from "./helpers/asymmetric-matchers";
 import {
   executionCtx,
@@ -69,6 +70,7 @@ describe("saas.suspend-workspace outputs", () => {
       tenantId,
       suspended: true,
       subscriptionStatus: "suspended",
+      changed: true,
       operationId: AUTOMATION_OPERATION,
       effectiveAt: ANY_STRING,
     });
@@ -120,5 +122,88 @@ describe("saas.suspend-workspace in a for-each loop", () => {
       "suspended",
     ]);
     expect(new Set(outputs.map((output) => output?.operationId)).size).toBe(2);
+  });
+});
+
+async function journalRows(): Promise<number> {
+  return (await GetModel(OperatorActionModel).getAll()).length;
+}
+
+describe("saas.suspend-workspace test runs", () => {
+  it("writes nothing, calls nothing and answers the output shape", async () => {
+    const tenantId = await workspace();
+    const update = stubStripe();
+    consume.mockClear();
+    const rowsBefore = await journalRows();
+
+    const output = await suspendWorkspace.dryRun?.(
+      { tenantId },
+      executionCtx({ dryRun: true }),
+    );
+
+    expect(output).toEqual({
+      tenantId,
+      suspended: true,
+      subscriptionStatus: "suspended",
+      changed: true,
+      operationId: AUTOMATION_OPERATION,
+      effectiveAt: null,
+    });
+    expect(await statusOf(tenantId)).toBe("active");
+    expect(await journalRows()).toBe(rowsBefore);
+    expect(update).not.toHaveBeenCalled();
+    expect(consume).not.toHaveBeenCalled();
+  });
+
+  it("refuses a cancelled workspace", async () => {
+    const tenantId = await workspace("cancelled");
+
+    await expect(
+      suspendWorkspace.dryRun?.({ tenantId }, executionCtx({ dryRun: true })),
+    ).rejects.toThrow("saas.errors.workspace.is_cancelled");
+  });
+
+  it("refuses an unknown workspace", async () => {
+    await expect(
+      suspendWorkspace.dryRun?.(
+        { tenantId: "no-such-workspace" },
+        executionCtx({ dryRun: true }),
+      ),
+    ).rejects.toThrow('unknown workspace "no-such-workspace"');
+  });
+
+  it("refuses an empty workspace id", async () => {
+    await expect(
+      suspendWorkspace.execute({ tenantId: "  " }, executionCtx()),
+    ).rejects.toThrow("saas.suspend-workspace: tenantId");
+  });
+});
+
+describe("saas.suspend-workspace on a workspace already in the requested state", () => {
+  it("succeeds without a journal row", async () => {
+    const tenantId = await workspace("suspended");
+    const update = stubStripe();
+    const rowsBefore = await journalRows();
+
+    const output = await suspendWorkspace.execute({ tenantId }, executionCtx());
+
+    expect(output).toMatchObject({
+      suspended: true,
+      subscriptionStatus: "suspended",
+      changed: false,
+      effectiveAt: null,
+    });
+    expect(await journalRows()).toBe(rowsBefore);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("leaves another workspace as it is", async () => {
+    const target = await workspace();
+    const other = await workspace();
+    stubStripe();
+
+    await suspendWorkspace.execute({ tenantId: target }, executionCtx());
+
+    expect(await statusOf(other)).toBe("active");
   });
 });

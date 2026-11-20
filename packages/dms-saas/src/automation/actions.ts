@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { GetModel } from "@antelopejs/interface-database-decorators";
 import type {
   ActionType,
   ExecutionCtx,
 } from "@antelopejs/interface-dms-automation";
+import { z } from "zod";
 import {
   automationNotificationSubject,
   notifyTenantOwners,
@@ -11,7 +13,18 @@ import {
   TENANT_SUBSCRIPTION_STATUSES,
   type TenantSubscriptionStatus,
 } from "../db";
-import { setWorkspaceSuspendedCommand } from "../operator-actions";
+import {
+  type OperatorActor,
+  setWorkspaceSuspendedCommand,
+} from "../operator-actions";
+import { OperatorActionModel } from "../operator-actions/db/operator-action.model";
+import { checkSuspensionTransition } from "../workspaces/suspension";
+import {
+  asStep,
+  ID_MAX_LENGTH,
+  parseActionInput,
+  requireWorkspace,
+} from "./action-support";
 import { automationNodeLabels } from "./labels";
 
 interface SuspendWorkspaceInput {
@@ -23,6 +36,7 @@ type SuspendWorkspaceOutput = {
   tenantId: string;
   suspended: boolean;
   subscriptionStatus: TenantSubscriptionStatus;
+  changed: boolean;
   operationId: string;
   effectiveAt: string | null;
 };
@@ -30,23 +44,118 @@ type SuspendWorkspaceOutput = {
 const SUSPEND_WORKSPACE_ACTION_ID = "saas.suspend-workspace";
 const NOTIFY_TENANT_OWNERS_ACTION_ID = "saas.notify-tenant-owners";
 
+const tenantIdInput = z.string().trim().min(1).max(ID_MAX_LENGTH);
+
+const suspendWorkspaceInput = z.object({
+  tenantId: tenantIdInput,
+  suspended: z.boolean().default(true),
+});
+
+type SuspensionRequest = z.infer<typeof suspendWorkspaceInput>;
+
 function automationOperationId(
   ctx: ExecutionCtx,
-  tenantId: string,
-  suspended: boolean,
+  request: SuspensionRequest,
 ): string {
   const fingerprint = createHash("sha256")
     .update(
       [
         ctx.runId,
         ctx.nodeId,
-        tenantId,
-        suspended ? "suspend" : "unsuspend",
+        request.tenantId,
+        request.suspended ? "suspend" : "unsuspend",
       ].join("\u0000"),
     )
     .digest("hex")
     .slice(0, 48);
   return `automation-${fingerprint}`;
+}
+
+function automationActor(ctx: ExecutionCtx): OperatorActor {
+  return {
+    id: `automation:${ctx.procedureId}`,
+    email: "automation@system.invalid",
+  };
+}
+
+async function parseSuspensionRequest(
+  input: SuspendWorkspaceInput,
+): Promise<SuspensionRequest> {
+  const request = parseActionInput(
+    SUSPEND_WORKSPACE_ACTION_ID,
+    suspendWorkspaceInput,
+    input,
+  );
+  await requireWorkspace(request.tenantId);
+  return request;
+}
+
+function unchangedOutput(
+  request: SuspensionRequest,
+  operationId: string,
+  status: TenantSubscriptionStatus,
+): SuspendWorkspaceOutput {
+  return {
+    tenantId: request.tenantId,
+    suspended: status === "suspended",
+    subscriptionStatus: status,
+    changed: false,
+    operationId,
+    effectiveAt: null,
+  };
+}
+
+async function runSuspension(
+  input: SuspendWorkspaceInput,
+  ctx: ExecutionCtx,
+): Promise<SuspendWorkspaceOutput> {
+  const request = await parseSuspensionRequest(input);
+  const operationId = automationOperationId(ctx, request);
+  const recorded = await GetModel(OperatorActionModel).get(operationId);
+  if (!recorded) {
+    const check = await checkSuspensionTransition(
+      request.tenantId,
+      request.suspended,
+    );
+    if (!check.changed)
+      return unchangedOutput(request, operationId, check.status);
+  }
+  ctx.log(
+    "info",
+    `${request.suspended ? "suspending" : "reactivating"} workspace ${request.tenantId}`,
+  );
+  const result = await setWorkspaceSuspendedCommand(
+    { tenantId: request.tenantId, operationId, actor: automationActor(ctx) },
+    request.suspended,
+  );
+  return {
+    tenantId: request.tenantId,
+    suspended: result.subscriptionStatus === "suspended",
+    subscriptionStatus: result.subscriptionStatus,
+    changed: true,
+    operationId: result.operationId,
+    effectiveAt: result.effectiveAt?.toISOString() ?? null,
+  };
+}
+
+async function simulateSuspension(
+  input: SuspendWorkspaceInput,
+  ctx: ExecutionCtx,
+): Promise<SuspendWorkspaceOutput> {
+  const request = await parseSuspensionRequest(input);
+  const check = await checkSuspensionTransition(
+    request.tenantId,
+    request.suspended,
+  );
+  ctx.log("info", "test run: workspace not suspended");
+  return {
+    tenantId: request.tenantId,
+    suspended: request.suspended,
+    subscriptionStatus: request.suspended ? "suspended" : "active",
+    changed: check.changed,
+    operationId: automationOperationId(ctx, request),
+    effectiveAt: null,
+  };
 }
 
 const suspendWorkspaceAction: ActionType<
@@ -59,7 +168,7 @@ const suspendWorkspaceAction: ActionType<
   inputSchema: {
     type: "object",
     properties: {
-      tenantId: { type: "string" },
+      tenantId: { type: "string", maxLength: ID_MAX_LENGTH },
       suspended: { type: "boolean", default: true },
     },
     required: ["tenantId"],
@@ -73,33 +182,15 @@ const suspendWorkspaceAction: ActionType<
         type: "string",
         enum: [...TENANT_SUBSCRIPTION_STATUSES],
       },
+      changed: { type: "boolean" },
       operationId: { type: "string" },
       effectiveAt: { type: ["string", "null"] },
     },
   },
-  async execute(input, ctx) {
-    const suspended = input.suspended ?? true;
-    const transition = suspended ? "suspending" : "reactivating";
-    ctx.log("info", `${transition} workspace ${input.tenantId}`);
-    const result = await setWorkspaceSuspendedCommand(
-      {
-        tenantId: input.tenantId,
-        operationId: automationOperationId(ctx, input.tenantId, suspended),
-        actor: {
-          id: `automation:${ctx.procedureId}`,
-          email: "automation@system.invalid",
-        },
-      },
-      suspended,
-    );
-    return {
-      tenantId: input.tenantId,
-      suspended: result.subscriptionStatus === "suspended",
-      subscriptionStatus: result.subscriptionStatus,
-      operationId: result.operationId,
-      effectiveAt: result.effectiveAt?.toISOString() ?? null,
-    };
-  },
+  dryRun: (input, ctx) =>
+    asStep(SUSPEND_WORKSPACE_ACTION_ID, () => simulateSuspension(input, ctx)),
+  execute: (input, ctx) =>
+    asStep(SUSPEND_WORKSPACE_ACTION_ID, () => runSuspension(input, ctx)),
 };
 
 interface NotifyTenantOwnersInput {
