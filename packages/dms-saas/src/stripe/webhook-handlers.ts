@@ -1,6 +1,6 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type Stripe from "stripe";
-import { emitAutomationEvent } from "../automation";
+import { emitAutomationEvent } from "../automation/events";
 import type {
   RefundStatus,
   TenantBillingAddress,

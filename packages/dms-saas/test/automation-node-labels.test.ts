@@ -8,12 +8,12 @@ const catalog = implementAutomationCatalog();
 const LOCALE_PATHS = ["saas-en-GB.json", "saas-fr-FR.json"];
 const LABEL_PREFIX = "$saas.automation.";
 
-function registeredNodes() {
-  registerAutomationNodes();
+async function registeredNodes() {
+  await registerAutomationNodes();
   return [...catalog.triggers.values(), ...catalog.actions.values()];
 }
 
-const nodes = registeredNodes();
+const nodes = await registeredNodes();
 const labels = nodes.flatMap((node) => [node.name, node.description]);
 
 describe("automation catalog labels", () => {

@@ -1,7 +1,7 @@
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { runTenantLifecycleOperation } from "@antelopejs/interface-dms/tenant-lifecycle";
 import type Stripe from "stripe";
-import { emitAutomationEvent } from "../automation";
+import { emitAutomationEvent } from "../automation/events";
 import { recomputeTenantBillingState } from "../billing-state";
 import type {
   SubscriptionTransition,

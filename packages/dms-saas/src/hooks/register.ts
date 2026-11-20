@@ -6,7 +6,10 @@ import {
   RegisterHook,
   RegisterTenantDataExportContributor,
 } from "@antelopejs/interface-dms/hooks";
-import { emitAutomationEvent, emitTenantDeletedEvent } from "../automation";
+import {
+  emitAutomationEvent,
+  emitTenantDeletedEvent,
+} from "../automation/events";
 import { recomputeAllTenantBillingStates } from "../billing-state";
 import { TenantBillingStateModel } from "../db";
 import { reconcileWorkspaceLifecycleDeliveries } from "../operator-actions";

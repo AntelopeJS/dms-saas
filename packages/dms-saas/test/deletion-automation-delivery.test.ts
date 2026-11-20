@@ -14,7 +14,7 @@ const catalog = implementAutomationCatalog();
 
 describe("best-effort automation emission", () => {
   it("contains synchronous and asynchronous listener failures without skipping later listeners", async () => {
-    registerAutomationNodes();
+    await registerAutomationNodes();
     const trigger = registeredTrigger(catalog, "saas.trial-ending");
     const synchronousFailure = vi.fn(() => {
       throw new Error("synchronous listener failure");
@@ -46,7 +46,7 @@ describe("best-effort automation emission", () => {
 
 describe("replayable deletion automation emission", () => {
   it("propagates asynchronous failure and forwards the same operation identity on retry", async () => {
-    registerAutomationNodes();
+    await registerAutomationNodes();
     const trigger = registeredTrigger(catalog, "saas.tenant-deleted");
     const emit = vi
       .fn()
