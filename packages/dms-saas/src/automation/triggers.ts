@@ -303,4 +303,13 @@ export const TRIGGERS: TriggerType[] = [
       deletesAfter: STRING,
     },
   }),
+  createEventTrigger({
+    event: "saas.free-access-ending",
+    icon: "i-ph-hourglass-medium",
+    outputProperties: {
+      freeUntil: STRING,
+      planId: NULLABLE_STRING,
+      daysLeft: NUMBER,
+    },
+  }),
 ];

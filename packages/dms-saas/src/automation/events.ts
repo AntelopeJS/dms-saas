@@ -130,6 +130,14 @@ export type WorkspaceDeletionRequestedEvent = SaasEventBase & {
   deletesAfter: string;
 };
 
+/** A workspace's complimentary access ends in about three days. */
+export type FreeAccessEndingEvent = SaasEventBase & {
+  freeUntil: string;
+  planId: string | null;
+  /** Whole days from `at` to `freeUntil`, rounded down. */
+  daysLeft: number;
+};
+
 export interface AutomationEventPayloads {
   "saas.subscription-started": SubscriptionStartedEvent;
   "saas.subscription-cancelled": SubscriptionCancelledEvent;
@@ -142,6 +150,7 @@ export interface AutomationEventPayloads {
   "saas.credit-note-issued": CreditNoteIssuedEvent;
   "saas.refund-updated": RefundUpdatedEvent;
   "saas.workspace-deletion-requested": WorkspaceDeletionRequestedEvent;
+  "saas.free-access-ending": FreeAccessEndingEvent;
 }
 
 export type AutomationEventName = keyof AutomationEventPayloads;
@@ -166,6 +175,7 @@ const eventListeners: EventListeners = {
   "saas.credit-note-issued": new Set(),
   "saas.refund-updated": new Set(),
   "saas.workspace-deletion-requested": new Set(),
+  "saas.free-access-ending": new Set(),
 };
 
 /** The listeners the armed triggers of `event` added. */

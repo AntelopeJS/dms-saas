@@ -2,6 +2,8 @@ import { Logging } from "@antelopejs/interface-core/logging";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import cron, { type ScheduledTask } from "node-cron";
+import { AutomationClaimModel } from "../automation/db/automation-claim.model";
+import { emitAutomationEvent } from "../automation/events";
 import { type TenantSubscription, TenantSubscriptionModel } from "../db";
 import {
   freeWorkspaceEndingSoonSubject,
@@ -21,6 +23,29 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * The daily run sees one end date on up to four runs: the claim lets the
+ * trigger fire on the first only.
+ */
+async function emitFreeAccessEnding(
+  tenantId: string,
+  subscription: TenantSubscription,
+  freeUntil: Date,
+  deliveryId: string,
+): Promise<void> {
+  if (!(await GetModel(AutomationClaimModel).claim(tenantId, deliveryId)))
+    return;
+  const now = Date.now();
+  emitAutomationEvent("saas.free-access-ending", {
+    tenantId,
+    deliveryId,
+    at: new Date(now).toISOString(),
+    freeUntil: freeUntil.toISOString(),
+    planId: subscription.planId,
+    daysLeft: Math.floor((freeUntil.getTime() - now) / MS_PER_DAY),
+  });
+}
+
 async function notifyCurrentSubscription(
   sub: TenantSubscription,
 ): Promise<void> {
@@ -37,13 +62,15 @@ async function notifyCurrentSubscription(
     current.freeUntil.getTime() <= Date.now()
   )
     return;
+  const eventId = JSON.stringify([
+    CRON_NAME,
+    tenantId,
+    current._id,
+    current.freeUntil.toISOString(),
+  ]);
+  await emitFreeAccessEnding(tenantId, current, current.freeUntil, eventId);
   await notifyTenantOwners(tenantId, freeWorkspaceEndingSoonSubject, {
-    eventId: JSON.stringify([
-      CRON_NAME,
-      tenantId,
-      current._id,
-      current.freeUntil.toISOString(),
-    ]),
+    eventId,
     icon: ENDING_SOON_ICON,
     title: "$saas.notifications.payload.complimentary_access_ending_soon.title",
     description:

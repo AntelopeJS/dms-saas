@@ -459,6 +459,10 @@
 				"workspace_deletion_requested": {
 					"name": "Workspace deletion requested",
 					"description": "Fires when an owner deletes a workspace: access closes now, data is deleted after the retention period"
+				},
+				"free_access_ending": {
+					"name": "Complimentary access ending",
+					"description": "Fires once, about three days before a workspace's complimentary access ends"
 				}
 			},
 			"action": {

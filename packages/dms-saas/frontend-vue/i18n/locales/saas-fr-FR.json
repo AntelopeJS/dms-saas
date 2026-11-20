@@ -459,6 +459,10 @@
 				"workspace_deletion_requested": {
 					"name": "Suppression d'espace de travail demandée",
 					"description": "Se déclenche quand un propriétaire supprime un espace de travail : l'accès est fermé tout de suite, les données sont supprimées après la durée de conservation"
+				},
+				"free_access_ending": {
+					"name": "Fin de l’accès offert proche",
+					"description": "Se déclenche une fois, environ trois jours avant la fin de l'accès offert d'un espace de travail"
 				}
 			},
 			"action": {
