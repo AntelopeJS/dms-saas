@@ -1,6 +1,10 @@
+import { buffer } from "node:stream/consumers";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { TenantModel } from "@antelopejs/interface-dms/db";
+import type { TenantExportArchive } from "@antelopejs/interface-dms/hooks";
+import { WriteFile } from "@antelopejs/interface-file-storage";
 import { beforeEach, describe, expect, it } from "vitest";
+import { exportSaasTenantData } from "../src/hooks/tenant-export";
 import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import { listMyWorkspaces } from "../src/workspaces/my-workspaces";
 import { implementPromotedFileSave } from "./helpers/attachments";
@@ -143,5 +147,48 @@ describe("workspace logo", () => {
     expect(rows.map((row) => row._id)).toEqual([other.tenantId, acme.tenantId]);
     expect(rows[0]?.logoUrl).toBeNull();
     expect(rows[1]?.logoUrl).toMatch(/first\.png$/);
+  });
+
+  it("rejects a workspace export that leaves out the logo row or its file", async () => {
+    const workspace = await createOwnedWorkspace();
+    const logoBytes = Buffer.from("first logo");
+    await WriteFile(
+      {
+        filename: "first.png",
+        path: "workspace-logos",
+        size: logoBytes.length,
+        mimetype: "image/png",
+      },
+      logoBytes,
+    );
+    await save(workspace, { logo: FIRST_LOGO });
+    const entries = new Map<string, Buffer>();
+    const archive: TenantExportArchive = {
+      async addJson() {},
+      async addFile() {},
+      async addStream(path, stream) {
+        entries.set(path, await buffer(stream));
+      },
+    };
+
+    await exportSaasTenantData(
+      workspace.tenantId,
+      archive,
+      new AbortController().signal,
+    );
+
+    expect([...entries.keys()]).toEqual([
+      "invoices.jsonl",
+      "credit-notes.jsonl",
+      "refunds.jsonl",
+      "workspace-branding.jsonl",
+      `files/${FIRST_LOGO.key}`,
+    ]);
+    const brandingRow = entries.get("workspace-branding.jsonl") ?? "";
+    expect(JSON.parse(brandingRow.toString("utf-8"))).toMatchObject({
+      _id: workspace.tenantId,
+      logo: FIRST_LOGO,
+    });
+    expect(entries.get(`files/${FIRST_LOGO.key}`)).toEqual(logoBytes);
   });
 });

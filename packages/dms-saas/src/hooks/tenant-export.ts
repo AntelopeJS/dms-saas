@@ -3,6 +3,7 @@ import {
   GetModel,
 } from "@antelopejs/interface-database-decorators";
 import type { TenantExportArchive } from "@antelopejs/interface-dms/hooks";
+import { ReadFile } from "@antelopejs/interface-file-storage";
 import {
   type CreditNote,
   CreditNoteModel,
@@ -16,6 +17,8 @@ import {
   type ExportDatasetSource,
   writeDatasetsToArchive,
 } from "../utils/export-dataset-stream";
+import { WorkspaceBrandingModel } from "../workspaces/db/workspace-branding.model";
+import type { WorkspaceBranding } from "../workspaces/db/workspace-branding.table";
 
 interface ExportedRow {
   _id: string;
@@ -79,6 +82,11 @@ const DATASETS: SaasExportDataset[] = [
     createSource: (tenantId) =>
       createDatasetSource<Refund>(RefundModel, tenantId),
   },
+  {
+    entry: "workspace-branding",
+    createSource: (tenantId) =>
+      createDatasetSource<WorkspaceBranding>(WorkspaceBrandingModel, tenantId),
+  },
 ];
 
 function buildDatasets(tenantId: string): ExportDataset<ExportedRow>[] {
@@ -89,8 +97,9 @@ function buildDatasets(tenantId: string): ExportDataset<ExportedRow>[] {
 }
 
 /**
- * Writes the workspace's billing history into the export archive, one NDJSON
- * entry per collection.
+ * Writes the workspace's billing history and branding into the export
+ * archive, one NDJSON entry per collection, then the logo file under
+ * `files/<storage key>`.
  *
  * Nothing is returned: a `TenantDataExportContribution` is serialized whole by
  * the archiver, which is what this contributor used to hand over and what
@@ -114,4 +123,14 @@ export async function exportSaasTenantData(
     );
   }
   await writeDatasetsToArchive(archive, buildDatasets(tenantId), { signal });
+  signal.throwIfAborted();
+  const logo = await GetModel(WorkspaceBrandingModel, tenantId).getLogo(
+    tenantId,
+  );
+  if (logo) {
+    await archive.addStream(
+      `files/${logo.key}`,
+      (await ReadFile(logo.key)).body,
+    );
+  }
 }
