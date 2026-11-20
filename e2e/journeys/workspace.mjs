@@ -1,4 +1,5 @@
 import { deflateSync } from "node:zlib";
+import { expect } from "@playwright/test";
 import { guarded } from "../guard.mjs";
 import { memberJourneys } from "./parts/workspace-members.mjs";
 import { allPermissionIds, check, createPlan, holdsValue, list, pick, register, saas, text } from "../saas.mjs";
@@ -52,6 +53,25 @@ function crc32(bytes) {
 async function fileStatus(url) {
   const answer = await fetch(url);
   return answer.status;
+}
+
+/**
+ * Waits for the sidebar's workspace switcher to draw a workspace name: its skeleton draws none.
+ *
+ * @param {import("../saas.mjs").Tab} tab The tab
+ * @param {string} name The workspace name
+ * @param {number} timeoutMs How long to wait
+ * @returns {Promise<import("../saas.mjs").Check>} The check
+ */
+async function switcherShows(tab, name, timeoutMs) {
+  const trigger = tab.locator({ role: "button", name: "Switch workspace" });
+  const label = `the switcher draws ${name}`;
+  try {
+    await expect(trigger).toContainText(name, { timeout: timeoutMs });
+    return check(label, true, name);
+  } catch {
+    return check(label, false, await trigger.innerText({ timeout: 1_000 }).catch(() => "no switcher, only its skeleton"));
+  }
 }
 
 /** Settings › Workspace: the General page's logo, rename and deletion, the workspace list, and an operator's suspension as the workspace lives it. */
@@ -145,6 +165,29 @@ export const journeys = guarded([
         check("the list holds this workspace only, as After Co", list(mine.body).length === 1 && text(list(mine.body)[0], "name") === "After Co", mine.body),
         check("the current workspace keeps its id under the new name", text(current.body, "_id") === owner.tenantId && text(current.body, "name") === "After Co", current.body),
       ]);
+    },
+  },
+  {
+    id: "an-account-change-in-another-tab-leaves-the-switcher-listing-the-new-accounts-workspaces",
+    title: "a tab shows the first account's dashboard, a second tab of the same browser signs in a second account, and once the first tab navigates its switcher lists the second account's workspace instead of loading forever",
+    entryPoint: "Sidebar › Switch workspace, Switch account › Add an account, GET /api/saas/workspaces/mine",
+    async run(/** @type {Ctx} */ ctx) {
+      await createPlan(ctx, "free", { name: { en: "Free" }, permissions: await allPermissionIds(ctx) });
+      await register(ctx, "first-account", { workspaceName: "First Co" });
+      const second = await register(ctx, "second-account", { workspaceName: "Second Co" });
+      const dashboard = await ctx.tab("first-account", "dashboard tab");
+      await dashboard.signIn("first-account");
+      await ctx.verify("the dashboard tab's switcher shows the first account's workspace", [switcherShows(dashboard, "First Co", 60_000)], { critical: true });
+      const other = await ctx.tab("first-account", "other tab");
+      await other.goto("/auth?from=accounts");
+      await other.fill({ role: "textbox", name: "Email address" }, second.email);
+      await other.fill({ role: "textbox", name: "Password" }, second.password);
+      await other.click({ role: "button", name: "Login" });
+      await ctx.verify("the other tab is signed in as the second account", [switcherShows(other, "Second Co", 60_000)], { critical: true });
+      await dashboard.click({ role: "link", name: /go to homepage/ });
+      await ctx.verify("the dashboard tab's switcher loads the second account's workspace", [switcherShows(dashboard, "Second Co", 30_000)], { critical: true });
+      await dashboard.click({ role: "button", name: "Switch workspace" });
+      await ctx.verify("the switcher lists the second account's workspace", [dashboard.visible({ role: "button", name: /Second Co.*1 member/ }, { timeoutMs: 15_000 })]);
     },
   },
   ...memberJourneys,
