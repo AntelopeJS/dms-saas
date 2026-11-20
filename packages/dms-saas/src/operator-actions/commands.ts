@@ -5,8 +5,10 @@ import {
   type Plan,
   PlanModel,
   TenantBillingInfoModel,
+  TENANT_SUBSCRIPTION_STATUSES,
   type TenantSubscription,
   TenantSubscriptionModel,
+  type TenantSubscriptionStatus,
 } from "../db";
 import { isDowngrade } from "../plans";
 import {
@@ -120,10 +122,26 @@ function mergeDetails(
   return { ...action.details, ...patch };
 }
 
+/** A suspension command's journal result, with the status it left the workspace in. */
+export interface SuspensionCommandResult extends OperatorCommandResult {
+  subscriptionStatus: TenantSubscriptionStatus;
+}
+
+function recordedSubscriptionStatus(
+  action: OperatorAction,
+): TenantSubscriptionStatus {
+  const recorded = action.details.status;
+  const status = TENANT_SUBSCRIPTION_STATUSES.find(
+    (candidate) => candidate === recorded,
+  );
+  if (!status) throw new Error("Suspension result status is not recorded");
+  return status;
+}
+
 async function executeSuspensionCommand(
   input: WorkspaceCommandInput,
   actionName: SuspensionOperatorAction,
-): Promise<OperatorCommandResult> {
+): Promise<SuspensionCommandResult> {
   const action = await executeOperatorAction(
     { ...input, action: actionName, details: {} },
     async (running) => {
@@ -143,19 +161,50 @@ async function executeSuspensionCommand(
       };
     },
   );
-  return toOperatorCommandResult(action);
+  return {
+    ...toOperatorCommandResult(action),
+    subscriptionStatus: recordedSubscriptionStatus(action),
+  };
+}
+
+function journalResultOf(
+  result: SuspensionCommandResult,
+): OperatorCommandResult {
+  return {
+    operationId: result.operationId,
+    status: result.status,
+    effectiveAt: result.effectiveAt,
+  };
 }
 
 export async function suspendWorkspaceCommand(
   input: WorkspaceCommandInput,
 ): Promise<OperatorCommandResult> {
-  return executeSuspensionCommand(input, "workspace.suspend");
+  return journalResultOf(
+    await executeSuspensionCommand(input, "workspace.suspend"),
+  );
 }
 
 export async function reactivateWorkspaceCommand(
   input: WorkspaceCommandInput,
 ): Promise<OperatorCommandResult> {
-  return executeSuspensionCommand(input, "workspace.unsuspend");
+  return journalResultOf(
+    await executeSuspensionCommand(input, "workspace.unsuspend"),
+  );
+}
+
+/**
+ * Suspends the workspace, or reactivates it when `suspended` is false,
+ * resolving with the status the journaled operation recorded.
+ */
+export async function setWorkspaceSuspendedCommand(
+  input: WorkspaceCommandInput,
+  suspended: boolean,
+): Promise<SuspensionCommandResult> {
+  return executeSuspensionCommand(
+    input,
+    suspended ? "workspace.suspend" : "workspace.unsuspend",
+  );
 }
 
 export function isEligibleManualUpgradeTarget(

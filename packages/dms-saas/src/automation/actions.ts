@@ -5,9 +5,10 @@ import {
   notifyTenantOwners,
 } from "../notifications";
 import {
-  reactivateWorkspaceCommand,
-  suspendWorkspaceCommand,
-} from "../operator-actions";
+  TENANT_SUBSCRIPTION_STATUSES,
+  type TenantSubscriptionStatus,
+} from "../db";
+import { setWorkspaceSuspendedCommand } from "../operator-actions";
 import { automationNodeLabels } from "./labels";
 
 interface SuspendWorkspaceInput {
@@ -18,6 +19,9 @@ interface SuspendWorkspaceInput {
 type SuspendWorkspaceOutput = {
   tenantId: string;
   suspended: boolean;
+  subscriptionStatus: TenantSubscriptionStatus;
+  operationId: string;
+  effectiveAt: string | null;
 };
 
 const SUSPEND_WORKSPACE_ACTION_ID = "saas.suspend-workspace";
@@ -51,24 +55,36 @@ const suspendWorkspaceAction: ActionType<
     properties: {
       tenantId: { type: "string" },
       suspended: { type: "boolean" },
+      subscriptionStatus: {
+        type: "string",
+        enum: [...TENANT_SUBSCRIPTION_STATUSES],
+      },
+      operationId: { type: "string" },
+      effectiveAt: { type: ["string", "null"] },
     },
   },
   async execute(input, ctx) {
     const suspended = input.suspended ?? true;
     const transition = suspended ? "suspending" : "reactivating";
     ctx.log("info", `${transition} workspace ${input.tenantId}`);
-    const command = {
-      tenantId: input.tenantId,
-      operationId: automationOperationId(ctx.runId, ctx.nodeId),
-      actor: {
-        id: `automation:${ctx.procedureId}`,
-        email: "automation@system.invalid",
+    const result = await setWorkspaceSuspendedCommand(
+      {
+        tenantId: input.tenantId,
+        operationId: automationOperationId(ctx.runId, ctx.nodeId),
+        actor: {
+          id: `automation:${ctx.procedureId}`,
+          email: "automation@system.invalid",
+        },
       },
+      suspended,
+    );
+    return {
+      tenantId: input.tenantId,
+      suspended: result.subscriptionStatus === "suspended",
+      subscriptionStatus: result.subscriptionStatus,
+      operationId: result.operationId,
+      effectiveAt: result.effectiveAt?.toISOString() ?? null,
     };
-    await (suspended
-      ? suspendWorkspaceCommand(command)
-      : reactivateWorkspaceCommand(command));
-    return { tenantId: input.tenantId, suspended };
   },
 };
 

@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
 import { onTestFinished } from "vitest";
 import {
   type ActionType,
   type DataNodeType,
+  type ExecutionCtx,
   internal,
   type JsonObject,
   type JsonValue,
@@ -71,4 +73,27 @@ export async function armTrigger(
   });
   onTestFinished(() => trigger.deactivate(handle));
   return payloads;
+}
+
+/** The action type registered under `id`; throws when none is. */
+export function registeredAction(
+  catalog: AutomationCatalog,
+  id: string,
+): ActionType {
+  const action = catalog.actions.get(id);
+  if (!action) throw new Error(`No action type is registered as ${id}`);
+  return action;
+}
+
+/** A step's execution context, as the automation runtime hands it. */
+export function executionCtx(
+  overrides: Partial<ExecutionCtx> = {},
+): ExecutionCtx {
+  return {
+    procedureId: "procedure-1",
+    runId: randomUUID(),
+    nodeId: "node-1",
+    log: () => undefined,
+    ...overrides,
+  };
 }
