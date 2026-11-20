@@ -1,8 +1,10 @@
 import { fromPartial } from "@total-typescript/shoehorn";
 import type { UpcomingInvoicePreview } from "@antelopejs/interface-dms-saas/billing";
 import { describe, expect, it } from "vitest";
-import type { Invoice } from "../src/db";
-import { workspaceFacts } from "../src/workspaces/detail-items";
+import {
+  type PaidInvoiceTotal,
+  workspaceFacts,
+} from "../src/workspaces/detail-items";
 import type { WorkspaceOperatorView } from "../src/workspaces/operator-view";
 import { LOCALES, missingKeys, writeText } from "./helpers/composed-text";
 
@@ -30,14 +32,12 @@ const PREVIEW = fromPartial<UpcomingInvoicePreview>({
   currency: "eur",
 });
 
-const PAID = fromPartial<Invoice>({
-  status: "paid",
-  documentType: "invoice",
+const PAID: PaidInvoiceTotal = {
   currency: "eur",
-  total: 14_500,
-  amount: 14_500,
-  issuedAt: new Date("2026-03-01T00:00:00Z"),
-});
+  count: 1,
+  totalMinor: 14_500,
+  firstIssuedAt: new Date("2026-03-01T00:00:00Z"),
+};
 
 const facts = (view = VIEW, preview: UpcomingInvoicePreview | null = PREVIEW) =>
   workspaceFacts({
@@ -49,7 +49,7 @@ const facts = (view = VIEW, preview: UpcomingInvoicePreview | null = PREVIEW) =>
       brand: "visa",
       last4: "4242",
     }),
-    invoices: [PAID],
+    paidInvoices: [PAID],
   });
 
 describe("workspace facts", () => {

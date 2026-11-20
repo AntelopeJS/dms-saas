@@ -3,6 +3,7 @@ import type { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
+import type { TenantExportArchive } from "@antelopejs/interface-dms/hooks";
 import { TenantModel } from "@antelopejs/interface-dms/db";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -14,19 +15,22 @@ import {
   PlanModel,
 } from "../src/db";
 import { exportSaasTenantData } from "../src/hooks/tenant-export";
+import { resolveTenantMemberRecipients } from "../src/notifications/recipients";
 import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
-import { latestPaidInvoice } from "../src/routes/tenant/tenant-upcoming-invoice";
+import { loadLastPayment } from "../src/routes/tenant/tenant-upcoming-invoice";
 import { sumPaidInvoices } from "../src/users/user-detail";
 import {
   loadAllTenantProjections,
   loadWorkspaceProjection,
 } from "../src/utils/segment-matching";
 import { isString } from "../src/utils/primitive-guards";
+import { addTenantMember, createUser, useDmsAuth } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { isRecord } from "./helpers/records";
 import { insertTenant } from "./helpers/workspaces";
 
 useMongoDatabase();
+useDmsAuth();
 
 const NOW = new Date("2026-11-16T12:00:00Z");
 const HOUR = 3_600_000;
@@ -118,14 +122,14 @@ async function exportedInvoiceIds(tenantId: string): Promise<string[]> {
   const written: WrittenEntry[] = [];
   await exportSaasTenantData(
     tenantId,
-    {
+    fromPartial<TenantExportArchive>({
       async addStream(path: string, stream: Readable): Promise<void> {
         written.push({
           path,
           content: (await buffer(stream)).toString("utf-8"),
         });
       },
-    },
+    }),
     new AbortController().signal,
   );
   const entry = written.find(({ path }) => path === "invoices.jsonl");
@@ -309,9 +313,22 @@ describe("the lifetime revenue fact of a workspace", () => {
 describe("the last payment of a workspace", () => {
   it("is the invoice paid most recently", async () => {
     const lastPayment = async (tenantId: string) =>
-      latestPaidInvoice(await previousInvoices(tenantId))?.number ?? null;
+      (await loadLastPayment(tenantId))?.number ?? null;
     expect(await lastPayment(BILLED)).toBe("INV-60");
     expect(await lastPayment(OTHER)).toBe("INV-70");
     expect(await lastPayment(EMPTY)).toBeNull();
+  });
+});
+
+describe("the member recipients of a workspace notification", () => {
+  it("are every member's user", async () => {
+    const users = await Promise.all([createUser(), createUser()]);
+    await Promise.all(
+      users.map((user, index) => addTenantMember(OTHER, user, index === 0)),
+    );
+    expect((await resolveTenantMemberRecipients(OTHER)).sort()).toEqual(
+      users.map(({ _id }) => _id).sort(),
+    );
+    expect(await resolveTenantMemberRecipients(EMPTY)).toEqual([]);
   });
 });

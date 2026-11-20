@@ -13,6 +13,7 @@ import { InvoiceModel, UserSegmentModel } from "../db";
 
 const HTTP_NOT_FOUND = 404;
 const PAID_STATUS = "paid";
+const INVOICE_DOCUMENT_TYPE = "invoice";
 const PASSWORD_METHOD = "password";
 
 /** A workspace of the user, with their place in it. */
@@ -107,18 +108,26 @@ async function loadWorkspaces(userId: string): Promise<UserWorkspace[]> {
 export async function sumPaidInvoices(
   tenantIds: readonly string[],
 ): Promise<MoneyTotal[]> {
-  const invoices = (
+  const groups = (
     await Promise.all(
       tenantIds.map((tenantId) =>
-        GetModel(InvoiceModel, tenantId).getAllInvoices(),
+        GetModel(InvoiceModel, tenantId)
+          .table.getAll(PAID_STATUS, "status")
+          .filter((invoice) =>
+            invoice.key("documentType").eq(INVOICE_DOCUMENT_TYPE),
+          )
+          .group("currency", (invoices, currency) => ({
+            currency,
+            total: invoices.sum("total"),
+          }))
+          .run(),
       ),
     )
   ).flat();
   const totals = new Map<string, number>();
-  for (const invoice of invoices) {
-    if (invoice.status !== PAID_STATUS) continue;
-    const currency = (invoice.currency || "").toUpperCase();
-    totals.set(currency, (totals.get(currency) ?? 0) + invoice.total);
+  for (const group of groups) {
+    const currency = (group.currency || "").toUpperCase();
+    totals.set(currency, (totals.get(currency) ?? 0) + group.total);
   }
   return [...totals].map(([currency, amount]) => ({ currency, amount }));
 }

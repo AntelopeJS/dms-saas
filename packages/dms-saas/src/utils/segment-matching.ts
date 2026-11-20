@@ -12,8 +12,6 @@ import {
 } from "@antelopejs/interface-dms/auth/db";
 import {
   type BillingState,
-  type Invoice,
-  InvoiceModel,
   type Plan,
   PlanModel,
   type Segment,
@@ -30,11 +28,15 @@ import { deriveBillingState } from "../billing-state";
 import { type MinorAmount, normalisedMrr } from "../metrics/normalised-mrr";
 import { fromMinorUnits } from "./money";
 import { getRowInstance } from "./row-instance";
-import { loadWorkspaceRecords } from "./workspace-records";
+import {
+  type InvoiceSummary,
+  loadInvoiceSummary,
+  loadWorkspaceRecords,
+  NO_INVOICE,
+} from "./workspace-records";
 import { evaluateSegmentGroup } from "./segment-evaluator";
 import { MS_PER_DAY } from "./time";
 
-const PAID_STATUS = "paid";
 const TRIALING_STATUS = "trialing";
 
 export type WorkspaceProjection = {
@@ -78,27 +80,12 @@ interface ProjectionInputs {
   /** The workspace's published directory row, when there is one. */
   directory?: WorkspaceDirectoryRow | null;
   membersCount: number;
-  invoices: Invoice[];
+  invoiceSummary: InvoiceSummary;
   now: Date;
 }
 
 function diffInDays(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / MS_PER_DAY);
-}
-
-function projectInvoices(invoices: Invoice[]) {
-  let totalRevenue = 0;
-  let lastInvoiceAt: Date | null = null;
-  for (const invoice of invoices) {
-    if (invoice.status === PAID_STATUS) {
-      totalRevenue += invoice.amount;
-    }
-    const issuedAt = new Date(invoice.issuedAt);
-    if (!lastInvoiceAt || issuedAt > lastInvoiceAt) {
-      lastInvoiceAt = issuedAt;
-    }
-  }
-  return { totalRevenue, lastInvoiceAt };
 }
 
 /**
@@ -135,12 +122,11 @@ export function buildWorkspaceProjection(
     billingInfo,
     plan,
     membersCount,
-    invoices,
+    invoiceSummary,
     now,
   } = inputs;
   const subscriptionStatus = subscription?.status ?? null;
   const mrr = toMajorUnits(workspaceMrr(inputs));
-  const { totalRevenue, lastInvoiceAt } = projectInvoices(invoices);
 
   return {
     _id: tenant._id,
@@ -160,8 +146,10 @@ export function buildWorkspaceProjection(
     isPaying: mrr > 0,
     customerType: billingInfo?.customerType ?? null,
     membersCount,
-    totalRevenue,
-    daysSinceLastInvoice: lastInvoiceAt ? diffInDays(lastInvoiceAt, now) : null,
+    totalRevenue: invoiceSummary.paidAmount,
+    daysSinceLastInvoice: invoiceSummary.lastIssuedAt
+      ? diffInDays(invoiceSummary.lastIssuedAt, now)
+      : null,
   };
 }
 
@@ -193,16 +181,14 @@ export async function loadWorkspaceProjection(
   const subscriptionModel = GetModel(TenantSubscriptionModel, tenantId);
   const billingInfoModel = GetModel(TenantBillingInfoModel, tenantId);
   const memberModel = GetModel(TenantMemberModel, tenantId);
-  const invoiceModel = GetModel(InvoiceModel, tenantId);
 
-  const [subscription, billingInfo, membersCount, invoices] = await Promise.all(
-    [
+  const [subscription, billingInfo, membersCount, invoiceSummary] =
+    await Promise.all([
       subscriptionModel.findOne(),
       billingInfoModel.findOne(),
       memberModel.table.count().run(),
-      invoiceModel.getAllInvoices(),
-    ],
-  );
+      loadInvoiceSummary(tenantId),
+    ]);
 
   let plan: Plan | null = null;
   if (subscription?.planId) {
@@ -219,7 +205,7 @@ export async function loadWorkspaceProjection(
     plan,
     directory: await directoryOf(tenantId, lookups),
     membersCount,
-    invoices,
+    invoiceSummary,
     now,
   });
 }
@@ -251,7 +237,7 @@ export async function loadAllTenantProjections(
         plan: (planId ? plansById.get(planId) : undefined) ?? null,
         directory: await directoryOf(tenant._id, lookups),
         membersCount: records.membersCounts.get(tenant._id) ?? 0,
-        invoices: records.invoices.get(tenant._id) ?? [],
+        invoiceSummary: records.invoiceSummaries.get(tenant._id) ?? NO_INVOICE,
         now,
       });
     }),

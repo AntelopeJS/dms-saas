@@ -56,7 +56,11 @@ function createInvoiceDatasetSource(
   const model = GetModel(InvoiceModel, tenantId);
   return {
     async listIds(): Promise<string[]> {
-      return (await model.getAllInvoices()).map((invoice) => invoice._id);
+      const rows = await model.table
+        .getAll("invoice", "documentType")
+        .pluck("_id")
+        .run();
+      return rows.map((row) => row._id);
     },
     async fetchBatch(ids: string[]): Promise<Invoice[]> {
       const rows = await model.table.getAll(ids).run();

@@ -10,12 +10,7 @@ import type {
 } from "@antelopejs/interface-dms/base";
 import { fetchDefaultPaymentMethod } from "../../billing-state";
 import { getReportingCurrency } from "../../config";
-import {
-  CreditNoteModel,
-  type Invoice,
-  InvoiceModel,
-  PLAN_UNLIMITED,
-} from "../../db";
+import { CreditNoteModel, InvoiceModel, PLAN_UNLIMITED } from "../../db";
 import {
   buildActivityFeed,
   isFlatFeed,
@@ -35,6 +30,7 @@ import { retrieveStripeCustomerBalance } from "../../stripe/customer-balance";
 import { stripeObjectUrl } from "../../stripe/dashboard-links";
 import {
   billingInfoItems,
+  type PaidInvoiceTotal,
   upcomingTimelineItems,
   workspaceFacts,
 } from "../../workspaces/detail-items";
@@ -71,8 +67,31 @@ const ACTIVITY_LIMIT = 30;
 const OVERVIEW_ACTIVITY_LIMIT = 4;
 const TIMELINE_HISTORY_LIMIT = 4;
 
-async function loadDocuments(tenantId: string): Promise<Invoice[]> {
-  return GetModel(InvoiceModel, tenantId).getAllInvoices();
+const PAID_STATUS = "paid";
+const INVOICE_DOCUMENT_TYPE = "invoice";
+
+async function loadPaidInvoiceTotals(
+  tenantId: string,
+): Promise<PaidInvoiceTotal[]> {
+  const groups = await GetModel(InvoiceModel, tenantId)
+    .table.getAll(PAID_STATUS, "status")
+    .filter((invoice) => invoice.key("documentType").eq(INVOICE_DOCUMENT_TYPE))
+    .group("currency", (invoices, currency) => ({
+      currency,
+      count: invoices.count(),
+      total: invoices.sum("total"),
+      untotalledAmount: invoices
+        .filter((invoice) => invoice.key("total").default(0).eq(0))
+        .sum("amount"),
+      firstIssuedAt: invoices.min("issuedAt"),
+    }))
+    .run();
+  return groups.map((group) => ({
+    currency: group.currency,
+    count: group.count,
+    totalMinor: group.total + group.untotalledAmount,
+    firstIssuedAt: new Date(group.firstIssuedAt),
+  }));
 }
 
 /** The detail page of one workspace, and the workspace list's headline. */
@@ -148,13 +167,13 @@ export class SaasWorkspaceDetailController extends Controller(
   ): Promise<ItemsPayload<StatGroupItem>> {
     const view = await loadWorkspaceOperatorView(tenantId);
     const customerId = view.subscription?.stripeCustomerId;
-    const [preview, card, invoices] = await Promise.all([
+    const [preview, card, paidInvoices] = await Promise.all([
       safeUpcomingInvoice(tenantId),
       customerId ? fetchDefaultPaymentMethod(customerId) : null,
-      loadDocuments(tenantId),
+      loadPaidInvoiceTotals(tenantId),
     ]);
     return {
-      items: workspaceFacts({ view, preview, card, invoices }),
+      items: workspaceFacts({ view, preview, card, paidInvoices }),
     };
   }
 
@@ -209,9 +228,8 @@ export class SaasWorkspaceDetailController extends Controller(
   }
 
   /**
-   * The counts on the detail page's tabs, by tab slot. The invoice mirror's
-   * `getAllInvoices` leaves the credit notes out: they are counted from their
-   * own table.
+   * The counts on the detail page's tabs, by tab slot. The invoice count leaves
+   * the credit notes out: they are counted from their own table.
    */
   @Get("/:tenantId/tab-counts")
   async tabCounts(
@@ -220,13 +238,16 @@ export class SaasWorkspaceDetailController extends Controller(
   ): Promise<Record<string, string | number>> {
     const [view, invoices, creditNotes] = await Promise.all([
       loadWorkspaceOperatorView(tenantId),
-      loadDocuments(tenantId),
-      GetModel(CreditNoteModel, tenantId).getAll(),
+      GetModel(InvoiceModel, tenantId)
+        .table.getAll(INVOICE_DOCUMENT_TYPE, "documentType")
+        .count()
+        .run(),
+      GetModel(CreditNoteModel, tenantId).table.count().run(),
     ]);
     const { members, pendingInvites } = view.seats;
     return {
-      invoices: invoices.length,
-      creditNotes: creditNotes.length,
+      invoices,
+      creditNotes,
       members: pendingInvites > 0 ? `${members} + ${pendingInvites}` : members,
     };
   }
