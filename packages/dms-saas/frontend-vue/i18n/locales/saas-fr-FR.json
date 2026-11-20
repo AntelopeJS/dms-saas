@@ -477,6 +477,30 @@
 				"add_platform_note": {
 					"name": "Ajouter une note opérateur",
 					"description": "Ajoute une note interne sur un espace de travail ou un utilisateur, visible des seuls opérateurs de la plateforme"
+				},
+				"get_workspace": {
+					"name": "Lire la facturation de l'espace de travail",
+					"description": "Lit l'état de facturation d'un espace de travail : état, offre, places, revenu mensuel, prochain renouvellement"
+				},
+				"get_workspace_owner": {
+					"name": "Lire le propriétaire de l'espace de travail",
+					"description": "Lit qui possède un espace de travail : nom, e-mail et langue, ou l'invité en attente. Ces données personnelles apparaissent dans la trace d'exécution"
+				},
+				"get_plan_constraints": {
+					"name": "Lire les limites de l'offre",
+					"description": "Lit les limites de l'offre d'un espace de travail : plafond et places occupées, fonctionnalités de l'offre, et tout changement d'offre programmé ou bloqué"
+				},
+				"get_upcoming_invoice": {
+					"name": "Lire la prochaine facture",
+					"description": "Lit ce que facturera la prochaine facture d'un espace de travail, et quand, tel que Stripe la calcule"
+				},
+				"list_workspaces": {
+					"name": "Lister les espaces de travail",
+					"description": "Liste les espaces de travail par état de facturation, offre ou date de renouvellement, page par page, pour une boucle « pour chaque »"
+				},
+				"list_segment_users": {
+					"name": "Lister les utilisateurs d'un segment",
+					"description": "Liste les utilisateurs de la dernière évaluation d'un segment, page par page. Ces données personnelles apparaissent dans la trace d'exécution"
 				}
 			}
 		},

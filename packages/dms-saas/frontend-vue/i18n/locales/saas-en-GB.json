@@ -477,6 +477,30 @@
 				"add_platform_note": {
 					"name": "Add operator note",
 					"description": "Add an internal note to a workspace or a user, visible to platform operators only"
+				},
+				"get_workspace": {
+					"name": "Get workspace billing",
+					"description": "Read a workspace's billing snapshot: state, plan, seats, MRR, next renewal"
+				},
+				"get_workspace_owner": {
+					"name": "Get workspace owner",
+					"description": "Read who owns a workspace: name, e-mail and language, or the pending invitee. Personal data appears in the run trace"
+				},
+				"get_plan_constraints": {
+					"name": "Get plan limits",
+					"description": "Read a workspace's plan limits: seat cap and seats used, plan features, and any scheduled or blocked plan change"
+				},
+				"get_upcoming_invoice": {
+					"name": "Get upcoming invoice",
+					"description": "Read what a workspace's next invoice will charge, and when, as Stripe prices it"
+				},
+				"list_workspaces": {
+					"name": "List workspaces",
+					"description": "List workspaces by billing state, plan or renewal date, a page at a time, for a for-each loop"
+				},
+				"list_segment_users": {
+					"name": "List segment users",
+					"description": "List the users in a segment's latest evaluation, a page at a time. Personal data appears in the run trace"
 				}
 			}
 		},

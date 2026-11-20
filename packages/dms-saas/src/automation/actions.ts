@@ -36,6 +36,7 @@ import {
 } from "./action-support";
 import { automationNodeLabels } from "./labels";
 import { runAsAutomation } from "./origin";
+import { READ_ACTIONS } from "./read-actions";
 
 interface SuspendWorkspaceInput {
   tenantId: string;
@@ -483,4 +484,5 @@ export const ACTIONS: ActionType[] = [
   suspendWorkspaceAction,
   notifyTenantOwnersAction,
   addPlatformNoteAction,
+  ...READ_ACTIONS,
 ];
