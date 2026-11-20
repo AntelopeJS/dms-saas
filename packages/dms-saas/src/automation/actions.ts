@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import type { ActionType } from "@antelopejs/interface-dms-automation";
+import type {
+  ActionType,
+  ExecutionCtx,
+} from "@antelopejs/interface-dms-automation";
 import {
   automationNotificationSubject,
   notifyTenantOwners,
@@ -27,9 +30,20 @@ type SuspendWorkspaceOutput = {
 const SUSPEND_WORKSPACE_ACTION_ID = "saas.suspend-workspace";
 const NOTIFY_TENANT_OWNERS_ACTION_ID = "saas.notify-tenant-owners";
 
-function automationOperationId(runId: string, nodeId: string): string {
+function automationOperationId(
+  ctx: ExecutionCtx,
+  tenantId: string,
+  suspended: boolean,
+): string {
   const fingerprint = createHash("sha256")
-    .update(`${runId}\u0000${nodeId}`)
+    .update(
+      [
+        ctx.runId,
+        ctx.nodeId,
+        tenantId,
+        suspended ? "suspend" : "unsuspend",
+      ].join("\u0000"),
+    )
     .digest("hex")
     .slice(0, 48);
   return `automation-${fingerprint}`;
@@ -70,7 +84,7 @@ const suspendWorkspaceAction: ActionType<
     const result = await setWorkspaceSuspendedCommand(
       {
         tenantId: input.tenantId,
-        operationId: automationOperationId(ctx.runId, ctx.nodeId),
+        operationId: automationOperationId(ctx, input.tenantId, suspended),
         actor: {
           id: `automation:${ctx.procedureId}`,
           email: "automation@system.invalid",

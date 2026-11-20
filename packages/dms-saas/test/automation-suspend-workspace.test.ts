@@ -102,3 +102,23 @@ describe("saas.suspend-workspace outputs", () => {
     expect(update).toHaveBeenCalledOnce();
   });
 });
+
+describe("saas.suspend-workspace in a for-each loop", () => {
+  it("suspends every workspace the loop hands the same step", async () => {
+    const first = await workspace();
+    const second = await workspace();
+    stubStripe();
+    const ctx = executionCtx();
+
+    const outputs = [
+      await suspendWorkspace.execute({ tenantId: first }, ctx),
+      await suspendWorkspace.execute({ tenantId: second }, ctx),
+    ];
+
+    expect([await statusOf(first), await statusOf(second)]).toEqual([
+      "suspended",
+      "suspended",
+    ]);
+    expect(new Set(outputs.map((output) => output?.operationId)).size).toBe(2);
+  });
+});
