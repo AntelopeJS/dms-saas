@@ -5,6 +5,7 @@ export const covers = [
   "packages/dms-saas/src/routes/platformOwner/workspace-operator-actions.ts",
   "packages/dms-saas/src/routes/platformOwner/workspace-invitations.ts",
   "packages/dms-saas/src/routes/platformOwner/platform-notes.ts",
+  "packages/dms-saas/src/platform-notes/**",
   "packages/dms-saas/src/routes/platformOwner/block-payloads.ts",
   "packages/dms-saas/src/routes/platformOwner/index.ts",
   "packages/dms-saas/src/operator-actions/commands.ts",
