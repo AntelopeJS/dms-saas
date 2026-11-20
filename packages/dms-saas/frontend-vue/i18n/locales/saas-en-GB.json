@@ -215,7 +215,8 @@
 				"owner_email": "Enter the owner's e-mail.",
 				"access": "Choose how the workspace is paid for.",
 				"free_until_past": "The end date of complimentary access must be in the future.",
-				"owner_pays_needs_paid_plan": "Only a paid plan synced with Stripe can be paid by its owner."
+				"owner_pays_needs_paid_plan": "Only a paid plan synced with Stripe can be paid by its owner.",
+				"provisioning_failed": "The workspace could not be set up, so it was not created. Try again, or check the server logs."
 			}
 		},
 		"legal": {

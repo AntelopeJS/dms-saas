@@ -215,7 +215,8 @@
 				"owner_email": "Saisissez l'e-mail du propriétaire.",
 				"access": "Choisissez comment l'espace est payé.",
 				"free_until_past": "La fin de l'accès offert doit être dans le futur.",
-				"owner_pays_needs_paid_plan": "Seule une offre payante synchronisée avec Stripe peut être payée par son propriétaire."
+				"owner_pays_needs_paid_plan": "Seule une offre payante synchronisée avec Stripe peut être payée par son propriétaire.",
+				"provisioning_failed": "L'espace de travail n'a pas pu être initialisé, il n'a donc pas été créé. Réessayez, ou consultez les journaux du serveur."
 			}
 		},
 		"legal": {
