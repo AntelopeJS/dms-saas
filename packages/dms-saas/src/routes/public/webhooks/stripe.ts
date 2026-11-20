@@ -10,9 +10,11 @@ import {
   dispatchStripeWebhookEvent,
   getStripeClient,
   getStripeWebhookSecret,
+  isStripeWebhookConfigured,
 } from "../../../stripe";
 
 const HTTP_BAD_REQUEST = 400;
+const HTTP_NOT_FOUND = 404;
 
 export class StripeWebhookController extends Controller(
   "/api/saas/webhooks/stripe",
@@ -22,6 +24,12 @@ export class StripeWebhookController extends Controller(
     @RawBody() rawBody: Buffer,
     @Parameter("stripe-signature", "header") signature: string,
   ) {
+    if (!isStripeWebhookConfigured()) {
+      throw new HTTPResult(
+        HTTP_NOT_FOUND,
+        "saas.errors.webhook.not_configured",
+      );
+    }
     let event: Stripe.Event;
     try {
       event = getStripeClient().webhooks.constructEvent(

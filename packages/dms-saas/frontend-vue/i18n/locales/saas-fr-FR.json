@@ -140,7 +140,8 @@
 				"cannot_demote_last_owner": "La plateforme a besoin d'au moins un admin plateforme"
 			},
 			"webhook": {
-				"invalid_signature": "Signature webhook invalide"
+				"invalid_signature": "Signature webhook invalide",
+				"not_configured": "Les webhooks Stripe ne sont pas configurés"
 			},
 			"platform_notes": {
 				"invalid_target": "Type de cible invalide",

@@ -54,7 +54,7 @@ export default defineConfig({
         stripe: {
           secretKey: "sk_test_placeholder",
           publishableKey: "pk_test_placeholder",
-          webhookSecret: "whsec_placeholder",
+          webhookSecret: "whsec_...",
         },
       },
     },
