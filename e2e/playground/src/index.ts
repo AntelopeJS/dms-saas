@@ -1,3 +1,4 @@
+import "./welcome";
 import { recordProvisioning } from "./fixture";
 
 export function construct(): void {
