@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import { StripeWebhookEventModel } from "../src/db";
 import { StripeWebhookController } from "../src/routes/public/webhooks/stripe";
 import { useMongoDatabase } from "./helpers/mongo";
+import { initStripeClient } from "../src/stripe/client";
 import { SUITE_STRIPE_KEYS, useSuiteStripe } from "./helpers/stripe";
+import { withUnconfiguredStripe } from "./helpers/unconfigured-stripe";
 
 useMongoDatabase();
 const stripe = useSuiteStripe();
@@ -56,5 +58,36 @@ describe("signed Stripe credit note webhooks", () => {
     await expect(
       GetModel(StripeWebhookEventModel).get(fixture.id),
     ).resolves.toBeUndefined();
+  });
+
+  it("answers 404 to a signed event while Stripe is not configured", async () => {
+    const fixture = signedFixture("credit_note.created");
+
+    await withUnconfiguredStripe(stripe, async () => {
+      await expect(
+        new StripeWebhookController().receive(fixture.body, fixture.signature),
+      ).rejects.toMatchObject({ status: 404 });
+    });
+    await expect(
+      GetModel(StripeWebhookEventModel).get(fixture.id),
+    ).resolves.toBeUndefined();
+  });
+
+  it("answers 404 to an event signed with a placeholder webhook secret", async () => {
+    const secret = "whsec_placeholder";
+    initStripeClient({ ...SUITE_STRIPE_KEYS, webhookSecret: secret });
+    try {
+      const fixture = signedFixture("credit_note.created");
+      const signature = stripe.write.webhooks.generateTestHeaderString({
+        payload: fixture.body.toString(),
+        secret,
+      });
+
+      await expect(
+        new StripeWebhookController().receive(fixture.body, signature),
+      ).rejects.toMatchObject({ status: 404 });
+    } finally {
+      initStripeClient(SUITE_STRIPE_KEYS);
+    }
   });
 });

@@ -77,6 +77,20 @@ export function isStripeConfigured(): boolean {
   return stripeConfigured;
 }
 
+/**
+ * Whether the webhook endpoint may verify events: Stripe is configured with a
+ * usable secret key and the signing secret is not a placeholder. Without it,
+ * anyone who knows the placeholder could sign an event the module accepts.
+ */
+export function isStripeWebhookConfigured(): boolean {
+  return (
+    stripeConfigured &&
+    isString(stripeWebhookSecret) &&
+    stripeWebhookSecret !== "" &&
+    !stripeWebhookSecret.includes(PLACEHOLDER_MARKER)
+  );
+}
+
 export function getStripeClient(): Stripe {
   if (!stripeClient) {
     throw new Error(

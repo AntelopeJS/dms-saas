@@ -1,6 +1,10 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { ANY_STRING } from "./helpers/asymmetric-matchers.ts";
-import { expect, test } from "./journeys/journey.ts";
+import {
+  expect,
+  type Journey,
+  test as journeyTest,
+} from "./journeys/journey.ts";
 import {
   createPlan,
   deliverEvent,
@@ -8,6 +12,8 @@ import {
   register,
   saas,
   type StripeEvent,
+  WEBHOOK_SECRET,
+  withConfig,
 } from "./journeys/saas.ts";
 import {
   admitted,
@@ -19,6 +25,23 @@ import {
   stripeInvoice,
   stripeSubscription,
 } from "./journeys/webhooks.ts";
+
+const test = journeyTest.extend({
+  journey: async (
+    { journey }: { journey: Journey },
+    use: (journey: Journey) => Promise<void>,
+  ) => {
+    await withConfig(
+      journey,
+      {
+        E2E_SAAS_STRIPE_SECRET_KEY: "sk_test_e2e_webhooks",
+        E2E_SAAS_WEBHOOK_SECRET: WEBHOOK_SECRET,
+        E2E_SAAS_PAYMENT_METHOD: "none",
+      },
+      () => use(journey),
+    );
+  },
+});
 
 const SIGNATURE_ERROR = "saas.errors.webhook.invalid_signature";
 

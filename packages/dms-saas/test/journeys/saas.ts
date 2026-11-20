@@ -12,7 +12,7 @@ export const FIXTURE = "/e2e-fixture";
 export const TENANT = "default";
 
 /** The signing secret the playground's webhook endpoint checks. */
-export const WEBHOOK_SECRET = "whsec_placeholder";
+export const WEBHOOK_SECRET = "whsec_e2e_journeys";
 
 const createdRow = z.object({ _id: z.string() });
 const errorBody = z.union([

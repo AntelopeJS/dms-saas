@@ -140,7 +140,8 @@
 				"cannot_demote_last_owner": "The platform needs at least one platform admin"
 			},
 			"webhook": {
-				"invalid_signature": "Invalid webhook signature"
+				"invalid_signature": "Invalid webhook signature",
+				"not_configured": "Stripe webhooks are not configured"
 			},
 			"platform_notes": {
 				"invalid_target": "Invalid target type",
