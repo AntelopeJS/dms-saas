@@ -292,7 +292,7 @@ export async function loadLastPayment(
   const [row] = await GetModel(InvoiceModel, tenantId)
     .table.getAll(PAID_STATUS, "status")
     .filter((invoice) => invoice.key("documentType").eq(INVOICE_DOCUMENT_TYPE))
-    .filter((invoice) => invoice.key("paidAt").ne(null))
+    .filter((invoice) => invoice.key("paidAt").default(null).ne(null))
     .orderBy("paidAt", "desc")
     .slice(0, 1)
     .run();

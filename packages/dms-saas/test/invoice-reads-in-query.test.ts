@@ -37,6 +37,7 @@ const HOUR = 3_600_000;
 const BILLED = "tenant-billed";
 const OTHER = "tenant-other";
 const EMPTY = "tenant-empty";
+const UNDATED = "tenant-undated";
 const OPERATOR = fromPartial<User>({ _id: "operator" });
 
 function hoursAgo(hours: number): Date {
@@ -317,6 +318,24 @@ describe("the last payment of a workspace", () => {
     expect(await lastPayment(BILLED)).toBe("INV-60");
     expect(await lastPayment(OTHER)).toBe("INV-70");
     expect(await lastPayment(EMPTY)).toBeNull();
+  });
+
+  it("is none when the paid invoice carries no payment date", async () => {
+    await GetModel(InvoiceModel, UNDATED)
+      .table.insert({
+        _id: randomUUID(),
+        documentType: "invoice",
+        stripeInvoiceId: `in_${randomUUID()}`,
+        number: "INV-UNDATED",
+        status: "paid",
+        currency: "eur",
+        amount: 1_000,
+        total: 1_000,
+        issuedAt: hoursAgo(1),
+        createdAt: hoursAgo(1),
+      })
+      .run();
+    expect(await loadLastPayment(UNDATED)).toBeNull();
   });
 });
 
