@@ -1,4 +1,4 @@
-import { CROSS_INSTANCE } from "@antelopejs/interface-database";
+import { CROSS_INSTANCE, type Stream } from "@antelopejs/interface-database";
 import {
   GetModel,
   type Table,
@@ -19,7 +19,50 @@ export interface WorkspaceRecords {
   subscriptions: ReadonlyMap<string, TenantSubscription>;
   billingInfos: ReadonlyMap<string, TenantBillingInfo>;
   membersCounts: ReadonlyMap<string, number>;
-  invoices: ReadonlyMap<string, Invoice[]>;
+  invoiceSummaries: ReadonlyMap<string, InvoiceSummary>;
+}
+
+/** What a projection reads of a workspace's invoices, credit notes left out. */
+export interface InvoiceSummary {
+  /** The `amount` of the paid invoices, summed whatever their currency. */
+  paidAmount: number;
+  lastIssuedAt: Date | null;
+}
+
+const PAID_STATUS = "paid";
+const INVOICE_DOCUMENT_TYPE = "invoice";
+
+/** The invoice summary of a workspace with no invoice. */
+export const NO_INVOICE: InvoiceSummary = { paidAmount: 0, lastIssuedAt: null };
+
+function summariseInvoices(invoices: Stream<Invoice>) {
+  return {
+    paidAmount: invoices
+      .filter((invoice) => invoice.key("status").eq(PAID_STATUS))
+      .sum("amount"),
+    lastIssuedAt: invoices.max("issuedAt"),
+  };
+}
+
+function toInvoiceSummary(
+  row: { paidAmount: number; lastIssuedAt: number } | undefined,
+): InvoiceSummary {
+  if (!row) return NO_INVOICE;
+  return {
+    paidAmount: row.paidAmount,
+    lastIssuedAt: new Date(row.lastIssuedAt),
+  };
+}
+
+/** The invoice summary of one workspace. */
+export async function loadInvoiceSummary(
+  tenantId: string,
+): Promise<InvoiceSummary> {
+  const [row] = await GetModel(InvoiceModel, tenantId)
+    .table.getAll(INVOICE_DOCUMENT_TYPE, "documentType")
+    .group("documentType", summariseInvoices)
+    .run();
+  return toInvoiceSummary(row);
 }
 
 /** Each workspace's one row, as its model reads it, keyed by workspace. */
@@ -38,24 +81,13 @@ function byWorkspace<Row extends Table, T>(
 
 const INSTANCE_FIELD = "_instance";
 
-function groupByWorkspace<T extends Table>(rows: T[]): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
-  for (const row of rows) {
-    const tenantId = getRowInstance(row);
-    const group = groups.get(tenantId) ?? [];
-    group.push(row);
-    groups.set(tenantId, group);
-  }
-  return groups;
-}
-
 /**
  * Every workspace's records in one read per table rather than one per
  * workspace: the subscription and billing details last updated, as
- * `findOne` picks them, the member count and the invoices.
+ * `findOne` picks them, the member count and the invoice summary.
  */
 export async function loadWorkspaceRecords(): Promise<WorkspaceRecords> {
-  const [subscriptionRows, billingInfoRows, memberCounts, invoices] =
+  const [subscriptionRows, billingInfoRows, memberCounts, invoiceRows] =
     await Promise.all([
       GetModel(TenantSubscriptionModel, CROSS_INSTANCE)
         .table.group(INSTANCE_FIELD, (rows) =>
@@ -73,7 +105,13 @@ export async function loadWorkspaceRecords(): Promise<WorkspaceRecords> {
           count: members.count(),
         }))
         .run(),
-      GetModel(InvoiceModel, CROSS_INSTANCE).getAllInvoices(),
+      GetModel(InvoiceModel, CROSS_INSTANCE)
+        .table.getAll(INVOICE_DOCUMENT_TYPE, "documentType")
+        .group(INSTANCE_FIELD, (invoices, tenantId) => ({
+          tenantId: tenantId.cast<string>(),
+          ...summariseInvoices(invoices),
+        }))
+        .run(),
     ]);
   const membersCounts = new Map(
     memberCounts.map(({ tenantId, count }) => [tenantId, count]),
@@ -86,6 +124,8 @@ export async function loadWorkspaceRecords(): Promise<WorkspaceRecords> {
       TenantBillingInfoModel.fromDatabase(row),
     ),
     membersCounts,
-    invoices: groupByWorkspace(invoices),
+    invoiceSummaries: new Map(
+      invoiceRows.map((row) => [row.tenantId, toInvoiceSummary(row)]),
+    ),
   };
 }

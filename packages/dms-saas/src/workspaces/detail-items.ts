@@ -25,11 +25,19 @@ export interface WorkspaceFactsInputs {
   view: WorkspaceOperatorView;
   preview: UpcomingInvoicePreview | null;
   card: PaymentMethodSummary | null;
-  invoices: Invoice[];
+  paidInvoices: PaidInvoiceTotal[];
+}
+
+/** The paid invoices of a workspace in one currency, credit notes left out. */
+export interface PaidInvoiceTotal {
+  currency: string;
+  count: number;
+  /** Each invoice's `total`, or its `amount` when the total is 0. */
+  totalMinor: number;
+  firstIssuedAt: Date;
 }
 
 const D = "saas.workspace_detail";
-const PAID_STATUS = "paid";
 const INVOICE_DOCUMENT = "invoice";
 const NO_VALUE = "—";
 
@@ -150,18 +158,17 @@ function stripeFact(
   };
 }
 
-function lifetimeFact(invoices: Invoice[]): StatGroupItem {
-  const paid = invoices.filter(
-    (invoice) =>
-      invoice.status === PAID_STATUS && invoice.documentType !== "credit_note",
+function lifetimeFact(paid: PaidInvoiceTotal[]): StatGroupItem {
+  const first = paid.reduce<PaidInvoiceTotal | null>(
+    (earliest, group) =>
+      !earliest || group.firstIssuedAt < earliest.firstIssuedAt
+        ? group
+        : earliest,
+    null,
   );
-  const currency = paid[0]?.currency ?? "";
-  const totalMinor = paid
-    .filter((invoice) => invoice.currency === currency)
-    .reduce((sum, invoice) => sum + (invoice.total || invoice.amount), 0);
-  const first = paid
-    .map((invoice) => new Date(invoice.issuedAt))
-    .sort((left, right) => left.getTime() - right.getTime())[0];
+  const currency = first?.currency ?? "";
+  const totalMinor = first?.totalMinor ?? 0;
+  const count = paid.reduce((sum, group) => sum + group.count, 0);
   return {
     id: "lifetime",
     icon: "i-ph-chart-line-up",
@@ -169,8 +176,8 @@ function lifetimeFact(invoices: Invoice[]): StatGroupItem {
     value: currency ? valueText(moneyParam(totalMinor, currency)) : NO_VALUE,
     detail: first
       ? composed(`${D}.facts.lifetime_detail`, {
-          count: countParam(paid.length),
-          since: dateParam(first),
+          count: countParam(count),
+          since: dateParam(first.firstIssuedAt),
         })
       : `$${D}.facts.no_paid_invoice`,
   };
@@ -183,11 +190,7 @@ export function workspaceFacts(inputs: WorkspaceFactsInputs): StatGroupItem[] {
     seatsFact(inputs.view),
     nextInvoiceFact(inputs.preview),
     stripeFact(inputs.view, inputs.card),
-    lifetimeFact(
-      inputs.invoices.filter(
-        (invoice) => invoice.documentType !== "credit_note",
-      ),
-    ),
+    lifetimeFact(inputs.paidInvoices),
   ];
 }
 

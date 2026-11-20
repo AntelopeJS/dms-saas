@@ -6,6 +6,7 @@ import {
   buildWorkspaceProjection,
   type WorkspaceDirectoryRow,
 } from "../src/utils";
+import { NO_INVOICE } from "../src/utils/workspace-records";
 
 const NOW = new Date("2026-10-19T12:00:00Z");
 
@@ -56,7 +57,7 @@ function project(
     plan,
     directory,
     membersCount,
-    invoices: [],
+    invoiceSummary: NO_INVOICE,
     now: NOW,
   });
 }

@@ -98,7 +98,7 @@ export async function resolveTenantMemberRecipients(
   tenantId: string,
 ): Promise<string[]> {
   const memberModel = GetModel(TenantMemberModel, tenantId);
-  const members = await memberModel.listAll();
+  const members = await memberModel.table.pluck("userId").run();
   return members.map((m) => m.userId);
 }
 

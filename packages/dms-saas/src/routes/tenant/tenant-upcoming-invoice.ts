@@ -44,6 +44,7 @@ import { fromMinorUnits } from "../../utils/money";
 
 const HTTP_SERVICE_UNAVAILABLE = 503;
 const PAID_STATUS = "paid";
+const INVOICE_DOCUMENT_TYPE = "invoice";
 const KEY_PREFIX = "$saas.tenant_billing.next_invoice";
 const PERCENT = 100;
 const MASKED_DIGITS = "••••";
@@ -285,19 +286,17 @@ export function withPlanSwitch(
 }
 
 /** The most recent invoice the customer paid. */
-export function latestPaidInvoice(invoices: Invoice[]): Invoice | null {
-  return invoices
-    .filter(
-      (invoice): invoice is Invoice & { paidAt: Date } =>
-        invoice.status === PAID_STATUS && !!invoice.paidAt,
-    )
-    .reduce<(Invoice & { paidAt: Date }) | null>(
-      (latest, invoice) =>
-        !latest || new Date(invoice.paidAt) > new Date(latest.paidAt)
-          ? invoice
-          : latest,
-      null,
-    );
+export async function loadLastPayment(
+  tenantId: string,
+): Promise<Invoice | null> {
+  const [row] = await GetModel(InvoiceModel, tenantId)
+    .table.getAll(PAID_STATUS, "status")
+    .filter((invoice) => invoice.key("documentType").eq(INVOICE_DOCUMENT_TYPE))
+    .filter((invoice) => invoice.key("paidAt").default(null).ne(null))
+    .orderBy("paidAt", "desc")
+    .slice(0, 1)
+    .run();
+  return (row && InvoiceModel.fromDatabase(row)) ?? null;
 }
 
 /** Plan names by Stripe product, retired plans included: a line may still bill one. */
@@ -333,10 +332,10 @@ function scheduledSwitch(
 }
 
 async function loadContext(tenantId: string): Promise<LoadedContext> {
-  const [subscription, billingInfo, invoices, plans] = await Promise.all([
+  const [subscription, billingInfo, lastPayment, plans] = await Promise.all([
     GetModel(TenantSubscriptionModel, tenantId).findOne(),
     GetModel(TenantBillingInfoModel, tenantId).findOne(),
-    GetModel(InvoiceModel, tenantId).getAllInvoices(),
+    loadLastPayment(tenantId),
     GetModel(PlanModel).findNotDeleted(),
   ]);
   const paymentMethod = subscription?.stripeCustomerId
@@ -346,7 +345,7 @@ async function loadContext(tenantId: string): Promise<LoadedContext> {
     context: {
       paymentMethod,
       billingEmail: billingInfo?.billingEmail ?? null,
-      lastPayment: latestPaidInvoice(invoices),
+      lastPayment,
       planNames: planNamesByProduct(plans),
     },
     planSwitch: scheduledSwitch(subscription, plans),

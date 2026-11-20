@@ -110,7 +110,9 @@ async function previousWorkspaceSources(
   tenantId: string,
 ): Promise<ActivitySources> {
   const [documents, actions, tenant] = await Promise.all([
-    GetModel(InvoiceModel, tenantId).getAllInvoices(),
+    GetModel(InvoiceModel, tenantId)
+      .table.filter((invoice) => invoice.key("documentType").eq("invoice"))
+      .run(),
     GetModel(OperatorActionModel).table.getAll(tenantId, "tenantId").run(),
     GetModel(TenantModel).get(tenantId),
   ]);

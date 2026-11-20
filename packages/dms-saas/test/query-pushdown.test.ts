@@ -2,7 +2,6 @@ import { Query, Schema } from "@antelopejs/interface-database";
 import type { QueryStage } from "@antelopejs/interface-database/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvoiceModel } from "@antelopejs/interface-dms-saas/db/models/invoices.model";
-import { Invoice } from "@antelopejs/interface-dms-saas/db/tables/invoices.table";
 import { isNumber, isString } from "../src/utils/primitive-guards";
 import { isRecord } from "./helpers/records";
 
@@ -101,34 +100,6 @@ function captureQueries(tenants: Record<string, Row[]>) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("invoice query pushdown", () => {
-  it("only transfers invoices, never credit notes", async () => {
-    const rows: Row[] = [
-      { _id: "invoice", documentType: "invoice" },
-      { _id: "other-invoice", documentType: "invoice" },
-      ...Array.from({ length: ROW_COUNT }, (_, id) => ({
-        _id: `credit-${id}`,
-        documentType: "credit_note",
-      })),
-    ];
-    const capture = captureQueries({
-      a: rows,
-      b: [{ _id: "other-tenant", documentType: "invoice" }],
-    });
-    const model = new InvoiceModel(schema.instance("a"));
-    const result = await model.getAllInvoices();
-    expect(result.every((row) => row instanceof Invoice)).toBe(true);
-    expect(result).toEqual(
-      rows.filter((row) => row.documentType === "invoice"),
-    );
-    expect(capture.transferred).toEqual([2]);
-    expect(capture.queries[0].map((stage) => stage.stage)).toEqual([
-      "schema",
-      "instance",
-      "table",
-      "filter",
-    ]);
-  });
-
   it("limits after status selection and descending date ordering", async () => {
     const rows = Array.from({ length: ROW_COUNT }, (_, id) => ({
       _id: String(id),

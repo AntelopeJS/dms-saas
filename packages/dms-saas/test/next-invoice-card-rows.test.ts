@@ -2,7 +2,6 @@ import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import type { Invoice, Plan } from "../src/db";
 import {
-  latestPaidInvoice,
   planNamesByProduct,
   toNextInvoiceRows,
   withPlanSwitch,
@@ -249,21 +248,5 @@ describe("next invoice card when the plan ends or switches", () => {
     ]);
     expect(rows.items.at(-1)?.detail).toBeUndefined();
     expect(rows.totalMinorUnits).toBe(58800);
-  });
-
-  it("picks the most recently paid invoice", () => {
-    const older = invoice({
-      _id: "a",
-      status: "paid",
-      paidAt: new Date("2026-08-07T00:00:00.000Z"),
-    });
-    const newer = invoice({
-      _id: "b",
-      status: "paid",
-      paidAt: new Date("2026-09-07T00:00:00.000Z"),
-    });
-
-    expect(latestPaidInvoice([older, newer, invoice()])?._id).toBe("b");
-    expect(latestPaidInvoice([invoice()])).toBeNull();
   });
 });
