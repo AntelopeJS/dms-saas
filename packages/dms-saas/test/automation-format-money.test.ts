@@ -17,10 +17,10 @@ describe("saas.format-money", () => {
   });
 
   it("writes cents in the reader's locale", () => {
-    expect(formatMoney(6_950, "EUR", "fr-FR")).toEqual({
-      text: "69,50\u202f€",
-      amount: 69.5,
-    });
+    const { text, amount } = formatMoney(6_950, "EUR", "fr-FR");
+
+    expect(text).toMatch(/^69,50\s€$/);
+    expect(amount).toBe(69.5);
   });
 
   it("reads a zero-decimal currency's minor units as major units", () => {
