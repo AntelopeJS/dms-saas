@@ -239,15 +239,16 @@ const notifyTenantOwnersInput = z.object({
 type OwnerNotification = z.infer<typeof notifyTenantOwnersInput>;
 
 /**
- * The notification's event id: per node and key when the procedure wires a
- * key, else per run, node and content, so every for-each iteration has its own.
+ * The notification's event id: per node, workspace and key when the
+ * procedure wires a key, else per run, node, workspace and title, so every
+ * for-each iteration has its own and an owner of several workspaces gets each.
  */
 function ownerNotificationEventId(
   notification: OwnerNotification,
   ctx: ExecutionCtx,
 ): string {
   if (notification.idempotencyKey)
-    return `${NOTIFY_TENANT_OWNERS_ACTION_ID}:${ctx.procedureId}:${ctx.nodeId}:${notification.idempotencyKey}`;
+    return `${NOTIFY_TENANT_OWNERS_ACTION_ID}:${ctx.procedureId}:${ctx.nodeId}:${notification.tenantId}:${notification.idempotencyKey}`;
   const fingerprint = createHash("sha256")
     .update(
       [ctx.runId, ctx.nodeId, notification.tenantId, notification.title].join(

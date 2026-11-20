@@ -74,7 +74,7 @@ describe("saas.notify-tenant-owners", () => {
     expect(retried?.eventId).toBe(first?.eventId);
   });
 
-  it("keys a wired idempotency key per procedure and node", async () => {
+  it("keys a wired idempotency key per procedure, node and workspace", async () => {
     const workspace = await workspaceWithOwners(1);
 
     await notifyOwners.execute(
@@ -83,8 +83,31 @@ describe("saas.notify-tenant-owners", () => {
     );
 
     expect(sends()[0]?.eventId).toBe(
-      "saas.notify-tenant-owners:procedure-a:node-a:evt_1",
+      `saas.notify-tenant-owners:procedure-a:node-a:${workspace.tenantId}:evt_1`,
     );
+  });
+
+  it("notifies an owner of two workspaces once per workspace under one key", async () => {
+    const owner = await createUser();
+    const tenantIds = [randomUUID(), randomUUID()];
+    for (const tenantId of tenantIds) {
+      await insertTenant(tenantId);
+      await addTenantMember(tenantId, owner, true);
+    }
+    const ctx = executionCtx();
+
+    for (const tenantId of tenantIds)
+      await notifyOwners.execute(
+        { ...notification(tenantId), idempotencyKey: "evt_shared" },
+        ctx,
+      );
+
+    const [first, second] = sends();
+    expect([first?.userIds, second?.userIds]).toEqual([
+      [owner._id],
+      [owner._id],
+    ]);
+    expect(second?.eventId).not.toBe(first?.eventId);
   });
 
   it("notifies each workspace a for-each loop hands the same step", async () => {
