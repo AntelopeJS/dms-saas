@@ -424,7 +424,12 @@ async function previousWorkspaceRecords() {
     GetModel(TenantBillingInfoModel, CROSS_INSTANCE)
       .table.orderBy("updatedAt", "desc")
       .run(),
-    GetModel(TenantMemberModel, CROSS_INSTANCE).listAll(),
+    GetModel(TenantMemberModel, CROSS_INSTANCE)
+      .table.group("_instance", (members, tenantId) => ({
+        tenantId: tenantId.cast<string>(),
+        userIds: members.pluck("userId"),
+      }))
+      .run(),
   ]);
   const firstByWorkspace = <Row extends { _id: string }, T>(
     rows: Row[],
@@ -442,9 +447,8 @@ async function previousWorkspaceRecords() {
     return first;
   };
   const membersCounts = new Map<string, number>();
-  for (const member of members) {
-    const tenantId = getRowInstance(member);
-    membersCounts.set(tenantId, (membersCounts.get(tenantId) ?? 0) + 1);
+  for (const { tenantId, userIds } of members) {
+    membersCounts.set(tenantId, userIds.length);
   }
   return {
     subscriptions: firstByWorkspace(subscriptionRows, (row) =>
