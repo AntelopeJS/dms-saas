@@ -8,4 +8,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - "@antelopejs/interface-*"
 overrides:
-  "@antelopejs/interface-dms": 0.14.7-next.936.g9ee0eb3
+  "@antelopejs/interface-dms": 0.14.7-next.1011.g9a5478b

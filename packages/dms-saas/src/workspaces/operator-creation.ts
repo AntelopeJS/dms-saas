@@ -218,7 +218,7 @@ function emailOwnerInvitation(
   input: ValidatedWorkspaceInput,
   operator: User,
 ): OwnerInvitationEmailState {
-  if (owner.kind !== "invited") return null;
+  if (owner.kind !== "invited" || owner.token === undefined) return null;
   sendOwnerInvitationEmailInBackground({
     tenantId,
     workspaceName: input.name,
