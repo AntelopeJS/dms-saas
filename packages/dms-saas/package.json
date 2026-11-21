@@ -75,7 +75,7 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@antelopejs/core": "~1.24.0",
+    "@antelopejs/core": ">=1.24.5 <1.25.0",
     "@antelopejs/dms": ">=0.22.0 <0.23.0",
     "@antelopejs/dms-frontend": ">=0.11.9 <0.12.0",
     "@antelopejs/interface-mongodb": ">=0.0.8 <0.1.0",

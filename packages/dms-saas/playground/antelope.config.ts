@@ -87,11 +87,7 @@ export default defineConfig({
       },
     },
     dms: {
-      source: {
-        type: "package",
-        package: "@antelopejs/dms",
-        version: "0.21.4-next.1011.g9a5478b",
-      },
+      source: { type: "local", path: "node_modules/@antelopejs/dms" },
       config: {
         auth: {
           jwtSecret: "dev",

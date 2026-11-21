@@ -22,7 +22,7 @@
     "suppressions:update": "antelopejs-suppressions --update"
   },
   "devDependencies": {
-    "@antelopejs/dms": "0.21.4-next.944.g3da5606",
+    "@antelopejs/dms": ">=0.22.0 <0.23.0",
     "@antelopejs/tooling-configs": ">=0.8.9 <0.9.0",
     "@playwright/test": "~1.65.0",
     "@types/node": "^24.0.0",
