@@ -1,6 +1,6 @@
 {
   "name": "@antelopejs/dms-saas",
-  "version": "0.12.4",
+  "version": "0.13.0",
   "description": "SaaS module for the AntelopeJS DMS: self-service sign-up and pricing, plans that gate features, Stripe billing, workspace settings and a back office.",
   "keywords": [
     "antelopejs",
@@ -67,7 +67,7 @@
     "@antelopejs/interface-data-api": ">=0.8.0 <0.9.0",
     "@antelopejs/interface-database": ">=0.4.0 <0.5.0",
     "@antelopejs/interface-database-decorators": ">=0.5.2 <0.6.0",
-    "@antelopejs/interface-dms": "0.14.7-next.1011.g9a5478b",
+    "@antelopejs/interface-dms": ">=0.15.0 <0.16.0",
     "@antelopejs/interface-dms-saas": "workspace:^",
     "@antelopejs/interface-file-storage": ">=0.1.8 <0.2.0",
     "node-cron": "^4.2.1",
@@ -76,8 +76,8 @@
   },
   "devDependencies": {
     "@antelopejs/core": "~1.24.0",
-    "@antelopejs/dms": "0.21.4-next.944.g3da5606",
-    "@antelopejs/dms-frontend": "0.11.9-next.318.g5775697",
+    "@antelopejs/dms": ">=0.22.0 <0.23.0",
+    "@antelopejs/dms-frontend": ">=0.11.9 <0.12.0",
     "@antelopejs/interface-mongodb": ">=0.0.8 <0.1.0",
     "@antelopejs/mongodb": ">=1.8.10 <1.9.0",
     "@total-typescript/shoehorn": "^0.1.2",

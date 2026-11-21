@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.13.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.4...v0.13.0)
+
+### 🩹 Fixes
+
+- **frontend:** Fall back to the initial when the workspace trigger logo fails ([#316](https://github.com/AntelopeJS/dms-saas/pull/316))
+- **export:** Include the workspace logo row and file in the tenant data export ([#317](https://github.com/AntelopeJS/dms-saas/pull/317))
+- **frontend:** Load the workspace switcher again after an account change ([#318](https://github.com/AntelopeJS/dms-saas/pull/318))
+- **webhooks:** Answer 404 on the Stripe webhook while Stripe is not configured ([#319](https://github.com/AntelopeJS/dms-saas/pull/319))
+- **deps:** Pin the 0.15 line's interface-dms preview ([#322](https://github.com/AntelopeJS/dms-saas/pull/322))
+- **deps:** Depend on the stable @antelopejs/interface-dms, @antelopejs/dms and @antelopejs/dms-frontend
+
+### 💅 Refactors
+
+- **interface:** Retire the whole-table invoice helper getAllInvoices ([#320](https://github.com/AntelopeJS/dms-saas/pull/320))
+
+### 📦 Build
+
+- Use pnpm 10.34.9 so minimumReleaseAge applies ([#313](https://github.com/AntelopeJS/dms-saas/pull/313))
+
+### 🏡 Chore
+
+- Delete the verify skill and the names it left in the e2e playground ([#312](https://github.com/AntelopeJS/dms-saas/pull/312))
+
+### ✅ Tests
+
+- **e2e:** Cover the main user flows in the browser and run every journey in the merge queue ([#309](https://github.com/AntelopeJS/dms-saas/pull/309))
+- **journeys:** Run the HTTP journeys as Vitest integration tests on the dms e2e kit ([#310](https://github.com/AntelopeJS/dms-saas/pull/310))
+- **e2e:** Run the suites and the feature map check without the verify skill or dms-control ([#311](https://github.com/AntelopeJS/dms-saas/pull/311))
+- Read tenant members through a projected query instead of listAll ([#321](https://github.com/AntelopeJS/dms-saas/pull/321))
+
+#### ⚠️ Breaking Changes
+
+- **interface:** Retire the whole-table invoice helper getAllInvoices ([#320](https://github.com/AntelopeJS/dms-saas/pull/320))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.12.4
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.12.3...v0.12.4)
