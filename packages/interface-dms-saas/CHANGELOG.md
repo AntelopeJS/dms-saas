@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.11.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.10.2...interface-v0.11.0)
+
+### 🩹 Fixes
+
+- **deps:** Pin the 0.15 line's interface-dms preview ([#322](https://github.com/AntelopeJS/dms-saas/pull/322))
+- **deps:** Depend on the stable @antelopejs/interface-dms
+
+### 💅 Refactors
+
+- **interface:** Retire the whole-table invoice helper getAllInvoices ([#320](https://github.com/AntelopeJS/dms-saas/pull/320))
+
+### ✅ Tests
+
+- **journeys:** Run the HTTP journeys as Vitest integration tests on the dms e2e kit ([#310](https://github.com/AntelopeJS/dms-saas/pull/310))
+
+#### ⚠️ Breaking Changes
+
+- **interface:** Retire the whole-table invoice helper getAllInvoices ([#320](https://github.com/AntelopeJS/dms-saas/pull/320))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.10.2
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.10.1...interface-v0.10.2)
