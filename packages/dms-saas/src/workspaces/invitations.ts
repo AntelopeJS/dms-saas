@@ -19,8 +19,8 @@ import {
   loadInviteForAction,
 } from "@antelopejs/interface-dms/invite-resolution";
 import {
-  createUserInviteToken,
   inviteeDisplayName,
+  reissueUserInvite,
 } from "@antelopejs/interface-dms/invites";
 
 const HTTP_NOT_FOUND = 404;
@@ -43,10 +43,14 @@ interface InvitationSender {
   inviterName?: string;
 }
 
+/**
+ * The invitation row stores only a digest of its token, so the token to mail
+ * travels beside it.
+ */
 type DeliverableInvitation = Pick<
   UserInvite,
-  "email" | "token" | "firstname" | "lastname" | "language"
->;
+  "email" | "firstname" | "lastname" | "language"
+> & { token: string };
 
 export interface ReissuedInvitation {
   invite: UserInvite;
@@ -66,10 +70,11 @@ export function invitationStatusOf(
  * handed over by an operator lands on the same screen as the email's.
  */
 export async function buildInvitationLink(
-  invite: Pick<UserInvite, "email" | "token" | "firstname" | "lastname">,
+  invite: Pick<UserInvite, "email" | "firstname" | "lastname">,
+  token: string,
 ): Promise<string> {
   const params = new URLSearchParams({
-    token: invite.token,
+    token,
     email: invite.email,
   });
   const name = inviteeDisplayName(invite.firstname, invite.lastname);
@@ -141,26 +146,21 @@ async function loadActionableInvite(
   return invite;
 }
 
+/** A reissued invitation and the token of its new link, shown only once. */
+interface RenewedInvite {
+  invite: UserInvite;
+  token: string;
+}
+
 /** Same reissue as the DMS "Resend": a fresh token and expiry, same content. */
 async function renewInvite(
   tenantId: string,
   invite: UserInvite,
-): Promise<UserInvite> {
-  const { inviteId } = await createUserInviteToken({
-    tenantId,
-    replacesInvite: invite,
-    email: invite.email,
-    firstname: invite.firstname,
-    lastname: invite.lastname,
-    language: invite.language,
-    roleIds: invite.roles_ids,
-    asTenantOwner: invite.asTenantOwner,
-    extensions: invite.extensions ?? undefined,
-    replacementReason: "resent",
-  });
+): Promise<RenewedInvite> {
+  const { inviteId, token } = await reissueUserInvite(tenantId, invite);
   const renewed = await GetModel(UserInviteModel, tenantId).get(inviteId);
   if (!renewed) throw new Error("Renewed invitation was not persisted");
-  return renewed;
+  return { invite: renewed, token };
 }
 
 async function workspaceNameOf(tenantId: string): Promise<string | undefined> {
@@ -177,33 +177,41 @@ export async function resendInvitation(
   inviteId: string,
   inviterName?: string,
 ): Promise<ReissuedInvitation> {
-  const invite = await renewInvite(
+  const { invite, token } = await renewInvite(
     tenantId,
     await loadActionableInvite(tenantId, inviteId),
   );
-  const emailDelivery = await deliverInvitationEmail(invite, {
-    workspaceName: await workspaceNameOf(tenantId),
-    inviterName,
-  });
+  const emailDelivery = await deliverInvitationEmail(
+    {
+      email: invite.email,
+      firstname: invite.firstname,
+      lastname: invite.lastname,
+      language: invite.language,
+      token,
+    },
+    {
+      workspaceName: await workspaceNameOf(tenantId),
+      inviterName,
+    },
+  );
   return { invite, emailDelivery };
 }
 
 /**
- * The link to hand over to the invitee. The stored token is reused while it
- * can still be redeemed, so a link already sent keeps working; an expired
- * invitation is renewed first, since its token would be refused at signup.
+ * The link to hand over to the invitee. Only the digest of a token is stored,
+ * so every call reissues the invitation: the new link works and the one given
+ * before stops working.
  */
 export async function resolveInvitationLink(
   tenantId: string,
   inviteId: string,
 ): Promise<InvitationLink> {
-  const stored = await loadActionableInvite(tenantId, inviteId);
-  const invite =
-    invitationStatusOf(stored) === "pending"
-      ? stored
-      : await renewInvite(tenantId, stored);
+  const { invite, token } = await renewInvite(
+    tenantId,
+    await loadActionableInvite(tenantId, inviteId),
+  );
   return {
-    link: await buildInvitationLink(invite),
+    link: await buildInvitationLink(invite, token),
     expiresAt: invite.expiresAt,
   };
 }
