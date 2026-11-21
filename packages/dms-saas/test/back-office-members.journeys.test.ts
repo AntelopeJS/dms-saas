@@ -138,6 +138,44 @@ test("resending-an-invitation-issues-a-new-link-and-kills-the-old-one", async ({
   expect.soft(fresh.status, "the new link creates the account").toBe(200);
 });
 
+test("copying-an-invitation-link-twice-retires-the-first-copy", async ({
+  journey,
+}) => {
+  await createPlan(journey, "free", {
+    permissions: await allPermissionIds(journey),
+  });
+  const owner = await register(journey, "copier");
+  const role = await createRole(journey, "copier");
+  const email = journey.email("copied");
+  await inviteMember(journey, "copier", email, role);
+  const [pending] = await pendingInvitations(journey, owner.tenantId);
+  const path = `/workspaces/${owner.tenantId}/invitations/${pending?.id ?? ""}/link`;
+  const first = await saas(journey, "copy the link", "POST", path);
+  const second = await saas(journey, "copy the link again", "POST", path);
+  const tokenOf = (copy: { body?: unknown }) =>
+    SIGNUP_LINK.exec(JSON.stringify(copy.body))?.[1] ?? "";
+
+  expect(tokenOf(first), "the first copy carries a token").not.toBe("");
+  expect
+    .soft(tokenOf(second), "the second copy is a different token")
+    .not.toBe(tokenOf(first));
+
+  const password = journey.password();
+  const signUp = (label: string, token: string) =>
+    journey.api(label, {
+      method: "POST",
+      path: "/api/auth/signup",
+      as: "anon",
+      body: { name: "Invitee", email, password, token },
+    });
+  const older = await signUp("sign up with the first copy", tokenOf(first));
+  const newest = await signUp("sign up with the newest copy", tokenOf(second));
+  expect
+    .soft(older.status ?? 0, "the first copy is refused")
+    .toBeGreaterThanOrEqual(400);
+  expect.soft(newest.status, "the newest copy creates the account").toBe(200);
+});
+
 test("internal-notes-are-the-platform-owners-and-nobody-elses", async ({
   journey,
 }) => {

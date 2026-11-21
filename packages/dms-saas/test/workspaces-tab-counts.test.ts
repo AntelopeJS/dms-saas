@@ -3,11 +3,17 @@ import { ImplementInterface } from "@antelopejs/interface-core";
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import type { Parameters as DataParameters } from "@antelopejs/interface-data-api/components";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
+import * as permissions from "@antelopejs/interface-dms/permissions";
+import * as permissionsResolver from "@antelopejs/interface-dms/permissions-resolver";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { workspacesDataAPI } from "../src/data-api/platformOwner/workspaces";
+import { implementWithDms } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const OWNER = { _id: "owner", name: "Owner" };
+useMongoDatabase();
+
+const OWNER = { _id: "owner", name: "Owner", owner: true };
 const BATCH_ENDPOINT = "/count/batch";
 const TOTALS_BY_STATE = {
   active: 4,
@@ -33,6 +39,11 @@ function tabQuery(state: string) {
 }
 
 beforeAll(() => {
+  implementWithDms(permissions, "implementations/dms/permissions.js");
+  implementWithDms(
+    permissionsResolver,
+    "implementations/dms/permissions-resolver.js",
+  );
   ImplementInterface(tenantAccess, {
     internal: {
       RegisterTenantAccessGate: { register() {}, unregister() {} },

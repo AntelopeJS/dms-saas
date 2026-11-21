@@ -31,6 +31,10 @@ export function implementNotifications(): ImplementedNotifications {
         register: () => undefined,
         unregister: () => undefined,
       },
+      RegisterNotificationEmailChannel: {
+        register: () => undefined,
+        unregister: () => undefined,
+      },
       SendToUser: sendToUser,
       SendToUsers: sendToUsers,
       SendToRoles: vi.fn(),

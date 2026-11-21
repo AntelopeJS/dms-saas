@@ -104,7 +104,7 @@ async function loadWorkspaces(userId: string): Promise<UserWorkspace[]> {
   }));
 }
 
-/** Paid invoices of the given workspaces, summed per currency. */
+/** Paid invoices of the given workspaces, summed per currency, by currency code. */
 export async function sumPaidInvoices(
   tenantIds: readonly string[],
 ): Promise<MoneyTotal[]> {
@@ -129,7 +129,9 @@ export async function sumPaidInvoices(
     const currency = (group.currency || "").toUpperCase();
     totals.set(currency, (totals.get(currency) ?? 0) + group.total);
   }
-  return [...totals].map(([currency, amount]) => ({ currency, amount }));
+  return [...totals]
+    .map(([currency, amount]) => ({ currency, amount }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
 }
 
 function securityOf(

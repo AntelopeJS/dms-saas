@@ -30,6 +30,10 @@ ImplementInterface(notifications, {
       register: () => undefined,
       unregister: () => undefined,
     },
+    RegisterNotificationEmailChannel: {
+      register: () => undefined,
+      unregister: () => undefined,
+    },
     SendToUser: core.sendToUser,
     SendToUsers: core.sendToUsers,
     SendToRoles: vi.fn(),

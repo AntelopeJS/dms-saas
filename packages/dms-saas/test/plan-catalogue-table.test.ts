@@ -8,10 +8,16 @@ import { ValueProxy } from "@antelopejs/interface-database";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { assert, beforeAll, describe, expect, it, vi } from "vitest";
+import * as permissions from "@antelopejs/interface-dms/permissions";
+import * as permissionsResolver from "@antelopejs/interface-dms/permissions-resolver";
 import { plansDataAPI } from "../src/data-api/platformOwner/plans";
 import { SaasPlansApiController } from "../src/routes/platformOwner/plans";
+import { implementWithDms } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const OWNER = { _id: "owner", name: "Owner" };
+useMongoDatabase();
+
+const OWNER = { _id: "owner", name: "Owner", owner: true };
 const NOT_DELETED = { isDeleted: ["false", "eq"] };
 const SCOPED_ROUTES = ["list", "select", "count", "exportStart"];
 const filtersSeen: DataParameters.ListParameters["filters"][] = [];
@@ -29,6 +35,11 @@ function request(route: string, query = ""): RequestContext {
 }
 
 beforeAll(() => {
+  implementWithDms(permissions, "implementations/dms/permissions.js");
+  implementWithDms(
+    permissionsResolver,
+    "implementations/dms/permissions-resolver.js",
+  );
   ImplementInterface(tenantAccess, {
     internal: {
       RegisterTenantAccessGate: { register() {}, unregister() {} },

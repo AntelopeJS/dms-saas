@@ -7,6 +7,7 @@ import {
   type UserInvite,
   UserInviteModel,
 } from "@antelopejs/interface-dms/db";
+import { INVITE_TOKEN_LENGTH } from "@antelopejs/interface-dms/invites";
 import { applyTenantOwnership } from "@antelopejs/interface-dms/tenant-ownership";
 import { assert, describe, expect, it, vi } from "vitest";
 import { loadDirectoryOwner } from "../src/billing-state/directory";
@@ -59,12 +60,26 @@ async function journalAfterCreation(tenantId: string) {
   );
 }
 
-function signupLinkOf(invite: Pick<UserInvite, "token" | "email">): string {
-  const params = new URLSearchParams({
-    token: invite.token,
-    email: invite.email,
-  });
-  return `${CONSOLE_URL}/auth/signup?${params.toString()}`;
+/** The token a signup link carries: only its digest is stored. */
+function linkTokenOf(link: string): string {
+  const token = new URL(link).searchParams.get("token");
+  if (token === null) throw new Error("The link carries no token");
+  return token;
+}
+
+/** The invitation's link is a fresh token, neither the earlier one nor its stored digest. */
+function expectReissuedLink(
+  link: string,
+  email: string,
+  earlier: { token?: string },
+  stored: UserInvite,
+): void {
+  const token = linkTokenOf(link);
+  expect(link.startsWith(`${CONSOLE_URL}/auth/signup?`)).toBe(true);
+  expect(new URL(link).searchParams.get("email")).toBe(email);
+  expect(token).toHaveLength(INVITE_TOKEN_LENGTH);
+  expect(token).not.toBe(earlier.token);
+  expect(token).not.toBe(stored.token);
 }
 
 describe("back-office workspace creation for a new owner", () => {
@@ -312,8 +327,7 @@ describe("pending invitations listed on the workspace detail", () => {
 
 describe("copy invitation link", () => {
   it("hands over the link the email carries and journals the disclosure", async () => {
-    const { tenantId, owner } = await createInvitedWorkspace();
-    const invite = await storedInvite(tenantId);
+    const { email, tenantId, owner } = await createInvitedWorkspace();
 
     const result = await invitationsController().copyLink(
       operator,
@@ -321,7 +335,8 @@ describe("copy invitation link", () => {
       owner.inviteId,
     );
 
-    expect(result.link).toBe(signupLinkOf(invite));
+    const invite = await storedInvite(tenantId);
+    expectReissuedLink(result.link, email, owner, invite);
     const [journaled] = await journalAfterCreation(tenantId);
     expect(journaled).toMatchObject({
       action: "invitation.link_copy",
@@ -330,11 +345,13 @@ describe("copy invitation link", () => {
       status: "succeeded",
       details: { inviteId: owner.inviteId },
     });
-    expect(JSON.stringify(journaled!.details)).not.toContain(invite.token);
+    expect(JSON.stringify(journaled!.details)).not.toContain(
+      linkTokenOf(result.link),
+    );
   });
 
   it("renews an expired invitation so the link can still be redeemed", async () => {
-    const { tenantId, owner } = await createInvitedWorkspace();
+    const { email, tenantId, owner } = await createInvitedWorkspace();
     await GetModel(UserInviteModel, tenantId).update(owner.inviteId, {
       expiresAt: new Date(Date.now() - DAY_MS),
     });
@@ -346,10 +363,9 @@ describe("copy invitation link", () => {
     );
 
     const renewed = await storedInvite(tenantId);
-    expect(renewed.token).not.toBe(owner.token);
     expect(renewed.asTenantOwner).toBe(true);
     expect(renewed.expiresAt.getTime()).toBeGreaterThan(Date.now());
-    expect(result.link).toBe(signupLinkOf(renewed));
+    expectReissuedLink(result.link, email, owner, renewed);
   });
 
   it("rejects an unknown invitation", async () => {
@@ -377,7 +393,7 @@ describe("resend invitation from the back office", () => {
     expect(renewed.token).not.toBe(owner.token);
     expect(sendInviteEmail).toHaveBeenCalledWith(
       email,
-      renewed.token,
+      expect.stringMatching(`^.{${INVITE_TOKEN_LENGTH}}$`),
       undefined,
       {
         workspaceName: WORKSPACE_NAME,
@@ -385,6 +401,9 @@ describe("resend invitation from the back office", () => {
         language: renewed.language,
       },
     );
+    const mailed = sendInviteEmail.mock.calls.at(-1)?.[1];
+    expect(mailed).not.toBe(owner.token);
+    expect(mailed).not.toBe(renewed.token);
   });
 
   it("keeps the renewed invitation but reports an email that did not leave", async () => {
