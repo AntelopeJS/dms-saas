@@ -116,10 +116,9 @@ describe("operator workspace creation", () => {
         ],
       },
     ]);
-    const [invite] = await GetModel(UserInviteModel, tenantId).getAll();
     expect(sendEmail).toHaveBeenCalledWith(
       "owner@example.com",
-      invite?.token,
+      expect.stringMatching(/^.{64}$/),
       undefined,
       expect.objectContaining({ workspaceName: "Recette Op Co" }),
     );

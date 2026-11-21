@@ -5,12 +5,23 @@ import type { Parameters as DataParameters } from "@antelopejs/interface-data-ap
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import * as permissions from "@antelopejs/interface-dms/permissions";
+import * as permissionsResolver from "@antelopejs/interface-dms/permissions-resolver";
 import { invoicesDataAPI } from "../src/data-api/platformOwner/invoices";
+import { implementWithDms } from "./helpers/dms";
+import { useMongoDatabase } from "./helpers/mongo";
 
-const OWNER = { _id: "owner", name: "Owner" };
+useMongoDatabase();
+
+const OWNER = { _id: "owner", name: "Owner", owner: true };
 const filtersSeen: DataParameters.ListParameters["filters"][] = [];
 
 beforeAll(() => {
+  implementWithDms(permissions, "implementations/dms/permissions.js");
+  implementWithDms(
+    permissionsResolver,
+    "implementations/dms/permissions-resolver.js",
+  );
   ImplementInterface(tenantAccess, {
     internal: {
       RegisterTenantAccessGate: { register() {}, unregister() {} },
