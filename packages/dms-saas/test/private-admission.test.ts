@@ -235,6 +235,13 @@ function signUpWithInvitation(email: string, token: string) {
   );
 }
 
+function tokenOf(invitation: { token?: string }): string {
+  if (invitation.token === undefined) {
+    throw new Error("The invitation carries no token");
+  }
+  return invitation.token;
+}
+
 async function createInvitedOwnerWorkspace() {
   const plans = GetModel(PlanModel);
   const planId = randomUUID();
@@ -293,7 +300,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
       email,
       owner: invitation,
     } = await createInvitedOwnerWorkspace();
-    const ownerResult = await signUpWithInvitation(email, invitation.token);
+    const ownerResult = await signUpWithInvitation(email, tokenOf(invitation));
     const owner = await users.get(userIdOf(ownerResult));
     expect(owner).toBeDefined();
     const members = GetModel(TenantMemberModel, tenantId);
@@ -304,7 +311,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
       await GetModel(UserInviteModel, tenantId).get(invitation.inviteId),
     ).toBeUndefined();
     await expect(
-      signUpWithInvitation(email, invitation.token),
+      signUpWithInvitation(email, tokenOf(invitation)),
     ).rejects.toBeDefined();
 
     const colleagueEmail = `${randomUUID()}@example.test`;
@@ -317,7 +324,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
       throw new Error("Expected colleague invitation");
     const colleagueResult = await signUpWithInvitation(
       colleagueEmail,
-      invite.token,
+      tokenOf(invite),
     );
     expect(await members.getByUser(userIdOf(colleagueResult))).toMatchObject({
       isTenantOwner: false,
@@ -398,7 +405,7 @@ describe("invitation sign-up never asks for a plan or a card", () => {
       const result = await signup(
         GetModel(UserModel),
         GetModel(SessionModel),
-        signupBody(email, invite.token),
+        signupBody(email, tokenOf(invite)),
         "test",
         { ip: "127.0.0.1" },
       );
