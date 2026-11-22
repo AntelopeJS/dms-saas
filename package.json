@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@antelopejs/dms": ">=0.22.0 <0.23.0",
-    "@antelopejs/tooling-configs": ">=0.9.3 <0.10.0",
+    "@antelopejs/tooling-configs": ">=0.9.4 <0.10.0",
     "@playwright/test": "~1.65.0",
     "@types/node": "^24.0.0",
     "dotenv": "^17.4.2",
