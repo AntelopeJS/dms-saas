@@ -39,8 +39,6 @@ jobs:
       test-job: false
     permissions:
       contents: read
-    secrets:
-      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
 
   # `ci-node.yml` exposes no outputs, so this takes the tier from the shared
   # rule of `ci-tier`: the jobs below run in every tier but a draft and the
@@ -357,17 +355,15 @@ jobs:
   ubuntu:
     if: always()
     needs:
-      [
-        select,
-        ci,
-        unit,
-        frontend,
-        playground,
-        test-types,
-        formal,
-        e2e,
-        journeys,
-      ]
+      - select
+      - ci
+      - unit
+      - frontend
+      - playground
+      - test-types
+      - formal
+      - e2e
+      - journeys
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
