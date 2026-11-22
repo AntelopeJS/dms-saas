@@ -40,6 +40,8 @@ jobs:
       package-directory: packages/dms-saas
     secrets:
       RELEASE_GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+      RELEASE_APP_ID: ${{ secrets.RELEASE_APP_ID }}
+      RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
   release-packages-interface-dms-saas:
     if: github.event_name != 'workflow_dispatch' || inputs.package-directory == 'packages/interface-dms-saas'
@@ -51,3 +53,5 @@ jobs:
       package-directory: packages/interface-dms-saas
     secrets:
       RELEASE_GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+      RELEASE_APP_ID: ${{ secrets.RELEASE_APP_ID }}
+      RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
