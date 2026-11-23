@@ -279,4 +279,22 @@ describe("saas.plan-changed", () => {
       }),
     ]);
   });
+
+  it("ignores a plan change a procedure published unless includeAutomationWrites", async () => {
+    const tenantId = await publishedWorkspace();
+    const byDefault = await armTrigger(automation, "saas.plan-changed");
+    const withWrites = await armTrigger(automation, "saas.plan-changed", {
+      includeAutomationWrites: true,
+    });
+
+    await updateSubscription(tenantId, { planId: LARGE_PLAN });
+    await runAsAutomation({ procedureId: "upgrader", runId: "run-1" }, () =>
+      recomputeTenantBillingState(tenantId),
+    );
+
+    expect(byDefault).toEqual([]);
+    expect(withWrites).toEqual([
+      expect.objectContaining({ tenantId, originProcedureId: "upgrader" }),
+    ]);
+  });
 });

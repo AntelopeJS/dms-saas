@@ -204,6 +204,7 @@ export const TRIGGERS: TriggerType[] = [
   createEventTrigger({
     event: "saas.plan-changed",
     icon: "i-ph-swap",
+    automationWrites: true,
     configProperties: {
       direction: {
         type: "string",

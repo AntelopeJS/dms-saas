@@ -67,7 +67,10 @@ export type BillingStateChangedEvent = SaasEventBase & {
   currency: string | null;
 };
 
-/** A workspace moved to another effective plan. */
+/**
+ * A workspace moved to another effective plan. A change a procedure's write
+ * published carries its origin ports.
+ */
 export type PlanChangedEvent = SaasEventBase & {
   fromPlanId: string | null;
   toPlanId: string | null;
