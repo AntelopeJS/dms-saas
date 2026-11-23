@@ -511,8 +511,9 @@ function refundStatusOf(status: string | null): RefundStatus {
  * Every status change of a refund is its own event: keying the row by the
  * Stripe id keeps concurrent deliveries to one row. Legacy rows keep their
  * random key and the lookup by Stripe id.
+ *
+ * @returns The credit note the stored refund settles, if any.
  */
-/** @returns The credit note the stored refund settles, if any. */
 async function upsertRefund(
   refund: Stripe.Refund,
   tenantId: string,
