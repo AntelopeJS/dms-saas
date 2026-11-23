@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.12.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.11.0...interface-v0.12.0)
+
+### 📦 Build
+
+- **deps:** Stable dms cleanups after the 0.22 release ([#324](https://github.com/AntelopeJS/dms-saas/pull/324))
+- **deps:** Move to interface-dms 0.16, dms 0.23 and zod 4 ([#327](https://github.com/AntelopeJS/dms-saas/pull/327))
+
+#### ⚠️ Breaking Changes
+
+- **deps:** Move to interface-dms 0.16, dms 0.23 and zod 4 ([#327](https://github.com/AntelopeJS/dms-saas/pull/327))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.11.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.10.2...interface-v0.11.0)
