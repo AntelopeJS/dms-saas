@@ -158,6 +158,52 @@ describe("saas.credit-note-issued", () => {
     ]);
   });
 
+  it("does not fire for a stale issue arriving after the void was mirrored", async () => {
+    const workspace = await creditedWorkspace();
+    const retrieve = vi.spyOn(stripe.write.creditNotes, "retrieve");
+    retrieve.mockResolvedValueOnce(
+      fromPartial({ ...workspace.creditNote, status: "void" }),
+    );
+    retrieve.mockResolvedValueOnce(fromPartial(workspace.creditNote));
+    const payloads = await armTrigger(automation, "saas.credit-note-issued");
+
+    await dispatchStripeWebhookEvent(
+      fromPartial<Stripe.CreditNoteVoidedEvent>({
+        id: `evt_${randomUUID()}`,
+        type: "credit_note.voided",
+        data: {
+          object: {
+            id: workspace.creditNote.id,
+            customer: workspace.creditNote.customer,
+          },
+        },
+      }),
+    );
+    await dispatchStripeWebhookEvent(workspace.event);
+
+    expect(retrieve).toHaveBeenCalledTimes(2);
+    expect(payloads).toEqual([]);
+  });
+
+  it("does not fire for a customer no workspace bills", async () => {
+    const workspace = await creditedWorkspace();
+    const retrieve = vi.spyOn(stripe.write.creditNotes, "retrieve");
+    const payloads = await armTrigger(automation, "saas.credit-note-issued");
+
+    await dispatchStripeWebhookEvent(
+      fromPartial<Stripe.Event>({
+        id: `evt_${randomUUID()}`,
+        type: "credit_note.created",
+        data: {
+          object: { id: workspace.creditNote.id, customer: "cus_unknown" },
+        },
+      }),
+    );
+
+    expect(retrieve).not.toHaveBeenCalled();
+    expect(payloads).toEqual([]);
+  });
+
   it("does not fire for a void credit note", async () => {
     const workspace = await creditedWorkspace();
     vi.spyOn(stripe.write.creditNotes, "retrieve").mockResolvedValue(

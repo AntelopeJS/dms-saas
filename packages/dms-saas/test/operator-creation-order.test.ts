@@ -14,7 +14,11 @@ import {
   UnregisterHook,
 } from "@antelopejs/interface-dms/hooks";
 import * as permissions from "@antelopejs/interface-dms/permissions";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+import { Schema } from "@antelopejs/interface-database";
+import { TENANT_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
+import { registerSaasHookListeners } from "../src/hooks/register";
 import {
   PlanModel,
   TenantBillingStateModel,
@@ -188,7 +192,28 @@ function complimentaryWorkspace(planId: string, ownerEmail: string) {
   };
 }
 
+const coreCleanup = z.object({ registerTenantDeletedCleanup: z.function() });
+
 describe("operator workspace provisioning", () => {
+  beforeAll(() => {
+    coreCleanup
+      .parse(dmsImplementation("hooks/tenant-deleted.js"))
+      .registerTenantDeletedCleanup();
+    registerSaasHookListeners();
+  });
+
+  it("registers the workspace's tenant-schema instance", async () => {
+    const operator = await createUser();
+
+    const { tenantId } = await createWorkspaceForOwner(
+      complimentaryWorkspace(await insertPlanRow(), "instance@example.com"),
+      operator,
+    );
+
+    const tenantSchema = Schema.get(TENANT_SCHEMA_NAME);
+    expect(await tenantSchema?.listInstances().run()).toContain(tenantId);
+  });
+
   it("names an owner who already has an account in the provisioning payload", async () => {
     const operator = await createUser();
     const owner = await createUser();
@@ -237,6 +262,11 @@ describe("operator workspace provisioning", () => {
     ).toBeUndefined();
     expect(deletions).toEqual([expect.stringContaining("retention-delete")]);
     expect(sendEmail).not.toHaveBeenCalled();
+    expect(await GetModel(UserInviteModel, tenantId).getAll()).toEqual([]);
+    expect(await GetModel(RoleModel, tenantId).getAll()).toEqual([]);
+    expect(
+      await GetModel(TenantBillingStateModel).findByTenant(tenantId),
+    ).toMatchObject({ deletedAt: ANY_DATE });
   });
 
   it("leaves a deletion the retention cron resumes when the unwinding fails", async () => {
