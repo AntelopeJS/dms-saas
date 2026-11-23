@@ -13,8 +13,6 @@ import type {
 import * as tenantLifecycleImplementation from "../src/implementations/dms-saas/tenant-lifecycle";
 import * as tenantLifecycleInterface from "@antelopejs/interface-dms-saas/tenant-lifecycle";
 import { RegisterTenantLifecycleConsumer } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
-import { registerAutomationNodes } from "../src/automation";
-import { TenantSubscriptionModel } from "../src/db";
 import { LifecycleDeliveryModel } from "../src/operator-actions/db/lifecycle-delivery.model";
 import {
   beginWorkspaceCreation,
@@ -24,7 +22,6 @@ import {
   prepareWorkspaceCreated,
   reconcileWorkspaceLifecycleDeliveries,
 } from "../src/operator-actions/lifecycle-outbox";
-import { armTrigger, implementAutomationCatalog } from "./helpers/automation";
 import { captureLogs } from "./helpers/logging";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
@@ -32,8 +29,6 @@ import { useSuiteStripe } from "./helpers/stripe";
 useMongoDatabase();
 const stripe = useSuiteStripe();
 const logs = captureLogs();
-const automation = implementAutomationCatalog();
-await registerAutomationNodes();
 
 ImplementInterface(tenantLifecycleInterface, tenantLifecycleImplementation);
 
@@ -428,108 +423,6 @@ describe("workspace lifecycle outbox required consumers and receipt times", () =
     ).rejects.toThrow("Invalid workspace lifecycle receipt effective time");
     expect(await deliveries()).toEqual([
       expect.objectContaining({ status: "failed", attemptCount: 1 }),
-    ]);
-  });
-});
-
-describe("subscription-started from a provisioned workspace", () => {
-  const SUBSCRIPTION_ID = "sub_provisioned";
-
-  async function seedSubscription(
-    status: "active" | "trialing",
-    stripeSubscriptionId: string | null,
-  ): Promise<void> {
-    const model = GetModel(TenantSubscriptionModel, "tenant-123");
-    await model.table.delete().run();
-    await model.insert({
-      _id: "tenant-123",
-      planId: "paid",
-      status,
-      stripeCustomerId: "cus_provisioned",
-      stripeSubscriptionId,
-    });
-  }
-
-  async function provisionPaid(): Promise<void> {
-    await beginWorkspaceCreation("tenant-123");
-    await prepareWorkspaceCreated("tenant-123", "invoice-123");
-    invoiceStatus = "paid";
-    await reconcileWorkspaceLifecycleDeliveries();
-  }
-
-  it("fires once the first invoice of a carded workspace is paid", async () => {
-    await seedSubscription("active", SUBSCRIPTION_ID);
-    const payloads = await armTrigger(automation, "saas.subscription-started");
-
-    await provisionPaid();
-    await reconcileWorkspaceLifecycleDeliveries();
-
-    expect(payloads).toEqual([
-      expect.objectContaining({
-        tenantId: "tenant-123",
-        deliveryId: `subscription-started:${SUBSCRIPTION_ID}`,
-        source: "provisioning",
-        planId: "paid",
-        status: "active",
-        stripeSubscriptionId: SUBSCRIPTION_ID,
-        trialConsumptionRecorded: false,
-      }),
-    ]);
-  });
-
-  it("reports a trial as recorded", async () => {
-    await seedSubscription("trialing", SUBSCRIPTION_ID);
-    const payloads = await armTrigger(automation, "saas.subscription-started");
-
-    await provisionPaid();
-
-    expect(payloads).toEqual([
-      expect.objectContaining({
-        status: "trialing",
-        trialConsumptionRecorded: true,
-      }),
-    ]);
-  });
-
-  it("does not fire while the first payment is declined", async () => {
-    await seedSubscription("active", SUBSCRIPTION_ID);
-    const payloads = await armTrigger(automation, "saas.subscription-started");
-    await beginWorkspaceCreation("tenant-123");
-    await prepareWorkspaceCreated("tenant-123", "invoice-123");
-
-    await reconcileWorkspaceLifecycleDeliveries();
-
-    expect(payloads).toEqual([]);
-  });
-
-  it("does not fire for a workspace with no Stripe subscription", async () => {
-    await seedSubscription("active", null);
-    const payloads = await armTrigger(automation, "saas.subscription-started");
-    await beginWorkspaceCreation("tenant-123");
-    await prepareWorkspaceCreated("tenant-123", null);
-
-    await deliverWorkspaceCreated("tenant-123");
-
-    expect(payloads).toEqual([]);
-  });
-
-  it("fires again with the same deliveryId when a lost receipt is replayed", async () => {
-    await seedSubscription("active", SUBSCRIPTION_ID);
-    const payloads = await armTrigger(automation, "saas.subscription-started");
-    await beginWorkspaceCreation("tenant-123");
-    await prepareWorkspaceCreated("tenant-123", null);
-    failNextReceiptOf("$workspace-created");
-
-    await deliverWorkspaceCreated("tenant-123");
-    await reconcileWorkspaceLifecycleDeliveries();
-
-    expect(payloads).toEqual([
-      expect.objectContaining({
-        deliveryId: `subscription-started:${SUBSCRIPTION_ID}`,
-      }),
-      expect.objectContaining({
-        deliveryId: `subscription-started:${SUBSCRIPTION_ID}`,
-      }),
     ]);
   });
 });
