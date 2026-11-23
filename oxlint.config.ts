@@ -30,17 +30,13 @@ const CLAUDE_SKILL_LINKS = existsSync(CLAUDE_SKILLS)
   : [];
 
 /**
- * The Vue layer keeps its own ESLint setup until the front end migrates.
  * Import sorting stays off until a repository-wide pass reorders every file at
  * once. Type-aware rules resolve `@antelopejs/interface-dms-saas` through its
- * built `dist`, so lint runs after the build.
+ * built `dist`, and the Vue layer through the types `types:prepare` writes, so
+ * lint runs after both.
  */
 export default defineConfig({
   extends: [antelopePreset({ importSorting: false })],
-  ignorePatterns: [
-    ...ANTELOPE_IGNORE_PATTERNS,
-    ...CLAUDE_SKILL_LINKS,
-    "packages/dms-saas/frontend-vue/**",
-  ],
+  ignorePatterns: [...ANTELOPE_IGNORE_PATTERNS, ...CLAUDE_SKILL_LINKS],
   options: { typeAware: true, maxWarnings: 0 },
 });

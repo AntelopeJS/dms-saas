@@ -25,6 +25,7 @@
     "dist",
     "!dist/.tsbuildinfo",
     "frontend-vue",
+    "!frontend-vue/tsconfig.json",
     "skills",
     "package.json",
     "README.md",
@@ -47,6 +48,7 @@
   "scripts": {
     "build": "pnpm --filter @antelopejs/interface-dms-saas build && rimraf dist && tsc",
     "test:frontend": "ajs dms verify-source --layer node_modules/@antelopejs/dms/frontend-vue --module frontend-vue",
+    "types:prepare": "ajs dms prepare-types -q --layer node_modules/@antelopejs/dms/frontend-vue --module frontend-vue --out .dms-types",
     "frontend:dev": "cd playground && pnpm frontend:dev",
     "dev": "ajs project run -w -p playground",
     "stripe:webhooks": "stripe listen --forward-to localhost:5010/api/saas/webhooks/stripe",

@@ -1,0 +1,3 @@
+{
+	"extends": "../.dms-types/tsconfig.json"
+}
