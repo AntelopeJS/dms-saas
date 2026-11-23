@@ -16,7 +16,7 @@ import {
 	registerPathFor,
 } from '../build/public/routes'
 import type { PlanInterval } from '../composables/usePlanIntervalLabel'
-import { isDmsSaasPublicRuntimeConfig } from '../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 defineOptions({ name: 'DmsSaasPricing' })
 
@@ -26,9 +26,7 @@ const { t } = useI18n()
 const errors = useApiErrorPresenter()
 const config = useDmsRuntimeConfig()
 const published = config.public.dmsSaas
-const saasConfig = isDmsSaasPublicRuntimeConfig(published)
-	? published
-	: undefined
+const saasConfig = readDmsSaasPublicConfig(published)
 
 const pricingRead = usePublicPricing()
 /** The plans on sale and the billing answers, once the public read answered. */

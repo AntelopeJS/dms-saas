@@ -11,7 +11,7 @@ import {
 	PLAN_UNLIMITED,
 	type PlanFeatureValue,
 } from '../build/plan-catalog'
-import { isApiFailure } from './useApiErrorMessage'
+import { isApiFailure } from '../build/api-failure'
 
 /** Query parameter naming the plan to review on arrival on the billing page. */
 export const UPGRADE_QUERY_PARAM = 'upgrade'

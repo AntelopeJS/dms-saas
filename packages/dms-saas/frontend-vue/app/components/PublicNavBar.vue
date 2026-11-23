@@ -6,7 +6,7 @@ import {
 	PRICING_PATH,
 	REGISTER_PATH,
 } from '../build/public/routes'
-import { isDmsSaasPublicRuntimeConfig } from '../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 /** The public page the bar sits on: its link reads as the current one. */
 type PublicNavPage = 'pricing' | 'register' | 'legal'
@@ -23,9 +23,7 @@ const props = defineProps<PublicNavBarProps>()
 
 const config = useDmsRuntimeConfig()
 const published = config.public.dmsSaas
-const saasConfig = isDmsSaasPublicRuntimeConfig(published)
-	? published
-	: undefined
+const saasConfig = readDmsSaasPublicConfig(published)
 
 const showsPricing = isPublicScreenServed(saasConfig, 'pricing')
 /** Register already is the way in: the bar does not offer it to itself. */

@@ -1,4 +1,4 @@
-import { isDmsSaasPublicRuntimeConfig } from '../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 import {
 	computed,
 	type MaybeRefOrGetter,
@@ -18,11 +18,13 @@ import {
 	registrationLandingPath,
 	useSaasRegistrationPlan,
 } from './useSaasRegistrationPlan'
-import { REGISTRATION_LOAD_ERROR_KEY } from '../build/public/registration-errors'
+import {
+	REGISTRATION_CARD_REQUIRED_KEY,
+	REGISTRATION_LOAD_ERROR_KEY,
+} from '../build/public/registration-errors'
 import {
 	isRegistrationClosedBy,
 	missingRegistrationFields,
-	REGISTRATION_CARD_REQUIRED_KEY,
 	type RegistrationExtras,
 	type RegistrationField,
 	type RegistrationFieldErrors,
@@ -409,9 +411,7 @@ export function useSaasRegistration(options: UseSaasRegistrationOptions = {}) {
 	const paymentElementId =
 		options.paymentElementId ?? DEFAULT_PAYMENT_ELEMENT_ID
 	const published = config.public.dmsSaas
-	const saasConfig = isDmsSaasPublicRuntimeConfig(published)
-		? published
-		: undefined
+	const saasConfig = readDmsSaasPublicConfig(published)
 
 	const state = createRegistrationState()
 	const { form, isLoading, isSubmitting, errorMessage } = state

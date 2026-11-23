@@ -1,3 +1,4 @@
+import { REGISTRATION_CARD_REQUIRED_KEY } from '../build/public/registration-errors'
 import { isRecord } from '../build/type-guards'
 import type { DmsSaasPublicRuntimeConfig } from '../types/runtime-config'
 
@@ -43,10 +44,6 @@ interface RegistrationRule {
 const INVITATION_ONLY = 'invitation-only'
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.(?:[^\s@.]+|[^\s@.]*\.)$/
 const PASSWORD_POLICY_ERROR_KEY = 'saas.errors.registration.password_policy'
-
-/** Translation key of the error a missing card shows. */
-export const REGISTRATION_CARD_REQUIRED_KEY =
-	'saas.public.register.error.card_required'
 
 /**
  * Checked in the order the visitor can act on them: the card field comes

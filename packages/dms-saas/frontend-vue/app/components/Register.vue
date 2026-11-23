@@ -9,7 +9,7 @@ import {
 	LOGIN_PATH,
 	PRICING_PATH,
 } from '../build/public/routes'
-import { readDmsSaasPublicConfig } from '../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 defineOptions({ name: 'DmsSaasRegister' })
 

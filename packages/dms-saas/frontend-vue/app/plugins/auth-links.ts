@@ -1,4 +1,4 @@
-import { isDmsSaasPublicRuntimeConfig } from '../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 import {
 	isPublicScreenServed,
 	PRICING_PATH,
@@ -17,9 +17,7 @@ const INVITATION_ONLY = 'invitation-only'
 export default defineDmsPlugin(() => {
 	const config = useDmsRuntimeConfig()
 	const published = config.public.dmsSaas
-	const dmsSaas = isDmsSaasPublicRuntimeConfig(published)
-		? published
-		: undefined
+	const dmsSaas = readDmsSaasPublicConfig(published)
 
 	const isRegistrationOpen = dmsSaas?.admissionMode !== INVITATION_ONLY
 	if (isRegistrationOpen && isPublicScreenServed(dmsSaas, 'register')) {

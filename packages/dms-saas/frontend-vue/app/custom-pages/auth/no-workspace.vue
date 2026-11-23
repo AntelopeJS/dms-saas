@@ -18,7 +18,7 @@ import {
 	PRICING_PATH,
 } from '../../build/public/routes'
 import { usePublicFetch } from '../../build/public/usePublicFetch'
-import { readDmsSaasPublicConfig } from '../../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../../build/saas-public-config'
 
 interface OAuthProviderOption {
 	id: string

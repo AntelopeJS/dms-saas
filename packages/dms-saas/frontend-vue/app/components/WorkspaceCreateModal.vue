@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
-import { readDmsSaasPublicConfig } from '../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 /** What choosing a plan asks for, as `GET create-options` words it. */
 type CardRequirement = 'none' | 'payment' | 'verification'

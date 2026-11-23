@@ -1,4 +1,4 @@
-import { isDmsSaasPublicRuntimeConfig } from '../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 const UPGRADE_AUTHENTICATION_ENDPOINT = '/api/saas/tenant/plan/authentication'
 
@@ -14,9 +14,8 @@ export function useUpgradeAuthentication() {
 
 	async function runChallenge(clientSecret: string): Promise<void> {
 		const published = config.public.dmsSaas
-		const publishableKey = isDmsSaasPublicRuntimeConfig(published)
-			? published.stripePublishableKey
-			: undefined
+		const publishableKey =
+			readDmsSaasPublicConfig(published)?.stripePublishableKey
 		if (!publishableKey) return
 		const { loadStripe } = await import('@stripe/stripe-js')
 		const stripe = await loadStripe(publishableKey)

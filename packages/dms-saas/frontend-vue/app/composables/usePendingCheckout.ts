@@ -1,5 +1,5 @@
 import { isText } from '../build/type-guards'
-import { isApiFailure } from './useApiErrorMessage'
+import { isApiFailure } from '../build/api-failure'
 import { CHECKOUT_OPERATION_PARAM, type PendingCheckout } from './useTenantPlan'
 
 const CHECKOUT_IN_PROGRESS_KEY = 'saas.errors.plan.checkout_in_progress'

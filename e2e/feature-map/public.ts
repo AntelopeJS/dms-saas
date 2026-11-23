@@ -24,6 +24,7 @@ export const covers = [
   "packages/dms-saas/frontend-vue/app/composables/useSaasRegistration.ts",
   "packages/dms-saas/frontend-vue/app/composables/registrationCardPolicy.ts",
   "packages/dms-saas/frontend-vue/app/composables/registrationRules.ts",
+  "packages/dms-saas/frontend-vue/app/build/saas-public-config.ts",
   "packages/dms-saas/frontend-vue/app/composables/useSaasRegistrationPlan.ts",
   "packages/dms-saas/frontend-vue/app/composables/useBillingIdentity.ts",
   "packages/dms-saas/frontend-vue/app/composables/useBillingAddress.ts",

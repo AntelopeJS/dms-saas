@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { HOME_PATH, workspaceSwitchLandingPath } from '../build/workspace-paths'
 import WorkspaceMark from '../build/WorkspaceMark.vue'
 import WorkspaceSwitcherRow from '../build/WorkspaceSwitcherRow.vue'
-import { readDmsSaasPublicConfig } from '../types/runtime-config'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 defineOptions({ inheritAttrs: false })
 
