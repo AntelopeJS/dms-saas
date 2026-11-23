@@ -25,7 +25,8 @@ function formatDate(date: Date): string {
 
 /**
  * The daily run sees one end date on up to four runs: the claim lets the
- * trigger fire on the first only.
+ * trigger fire on the first only. A failed claim is logged and never keeps
+ * the owners from their warning.
  */
 async function emitFreeAccessEnding(
   tenantId: string,
@@ -33,8 +34,16 @@ async function emitFreeAccessEnding(
   freeUntil: Date,
   deliveryId: string,
 ): Promise<void> {
-  if (!(await GetModel(AutomationClaimModel).claim(tenantId, deliveryId)))
+  try {
+    if (!(await GetModel(AutomationClaimModel).claim(tenantId, deliveryId)))
+      return;
+  } catch (error) {
+    Logging.Error(
+      `[dms-saas:cron:${CRON_NAME}] automation claim failed for ${tenantId}`,
+      error,
+    );
     return;
+  }
   const now = Date.now();
   emitAutomationEvent("saas.free-access-ending", {
     tenantId,

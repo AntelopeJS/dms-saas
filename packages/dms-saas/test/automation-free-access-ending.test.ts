@@ -9,7 +9,7 @@ import {
   automationClaimId,
 } from "../src/automation/db/automation-claim.model";
 import { scheduleNotifyFreeWorkspacesEndingSoon } from "../src/crons/notify-free-workspaces-ending-soon";
-import { TenantSubscriptionModel } from "../src/db";
+import { type TenantSubscription, TenantSubscriptionModel } from "../src/db";
 import {
   armTrigger,
   deliveryIds,
@@ -32,7 +32,7 @@ let clock = firstRun.getTime();
 let task: ScheduledTask;
 
 async function freeWorkspace(
-  fields: { stripeSubscriptionId?: string | null; until?: Date } = {},
+  fields: Partial<TenantSubscription> & { until?: Date } = {},
 ): Promise<string> {
   const tenantId = randomUUID();
   await addTenantMember(tenantId, await createUser(), true);
@@ -40,10 +40,28 @@ async function freeWorkspace(
     _id: `sub-${tenantId}`,
     planId: "complimentary",
     status: "active",
-    stripeSubscriptionId: fields.stripeSubscriptionId ?? null,
+    stripeSubscriptionId: null,
+    ...fields,
     freeUntil: fields.until ?? freeUntil,
   });
   return tenantId;
+}
+
+/**
+ * Makes the daily job reach `tenantId` after every other candidate, so once
+ * its notification is sent the job has judged them all.
+ */
+function scanLast(tenantId: string): void {
+  const model = GetModel(TenantSubscriptionModel, CROSS_INSTANCE);
+  const scan = model.findFreeEndingBetween.bind(model);
+  vi.spyOn(model, "findFreeEndingBetween").mockImplementation(
+    async (start, end) =>
+      (await scan(start, end)).sort(
+        (left, right) =>
+          Number(left._id === `sub-${tenantId}`) -
+          Number(right._id === `sub-${tenantId}`),
+      ),
+  );
 }
 
 /** Runs the daily job once and waits for its owner notifications. */
@@ -110,10 +128,46 @@ describe("saas.free-access-ending", () => {
 
   it("does not fire for a workspace billed on Stripe", async () => {
     await freeWorkspace({ stripeSubscriptionId: "sub_paid" });
+    const control = await freeWorkspace();
+    scanLast(control);
     const payloads = await armTrigger(automation, "saas.free-access-ending");
 
-    await task.execute();
+    await runDay(1);
 
+    expect(payloads).toEqual([expect.objectContaining({ tenantId: control })]);
+  });
+
+  it.each<[string, Partial<TenantSubscription>]>([
+    ["whose data deletion has started", { deletionStartedAt: firstRun }],
+    [
+      "its owner deleted",
+      {
+        status: "cancelled",
+        deletionRequestedAt: firstRun,
+        deletionRequestedBy: "owner",
+      },
+    ],
+  ])("does not fire for a workspace %s", async (_case, fields) => {
+    await freeWorkspace(fields);
+    const control = await freeWorkspace();
+    scanLast(control);
+    const payloads = await armTrigger(automation, "saas.free-access-ending");
+
+    await runDay(1);
+
+    expect(payloads).toEqual([expect.objectContaining({ tenantId: control })]);
+  });
+
+  it("still warns the owners when the claim cannot be stored", async () => {
+    await freeWorkspace();
+    vi.spyOn(GetModel(AutomationClaimModel), "claim").mockRejectedValue(
+      new Error("claims unavailable"),
+    );
+    const payloads = await armTrigger(automation, "saas.free-access-ending");
+
+    await runDay(1);
+
+    expect(core.sendToUsers).toHaveBeenCalledOnce();
     expect(payloads).toEqual([]);
   });
 
