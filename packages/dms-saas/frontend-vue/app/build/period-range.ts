@@ -16,10 +16,10 @@ const YEAR_FORMAT: Intl.DateTimeFormatOptions = { year: 'numeric' }
 
 /**
  * Thin and narrow no-break spaces. Recent ICU data (Node 24) puts thin spaces
- * around a range's dash ("15 oct. – 15 nov.") where a browser's
+ * around a range's dash ("15 oct. – 15 nov.") where a browser's
  * older data puts plain ones, so a server-rendered period would not hydrate.
  */
-const ICU_SPACES = /[  ]/g
+const ICU_SPACES = /[\u2009\u202F]/g
 
 const intlFormat: DateFormatFactory = (locale, options) =>
 	new Intl.DateTimeFormat(locale, options)
@@ -29,6 +29,9 @@ const intlFormat: DateFormatFactory = (locale, options) =>
  * when the end is unknown. Written the same by every ICU version, so a server
  * render and the browser agree.
  *
+ * @param from Start of the period
+ * @param to End of the period, null when unknown
+ * @param locale Locale the period is written in
  * @param createFormat Builds the formatters; the console passes the one that
  * applies the reader's time zone, so the year test runs in that zone too
  */

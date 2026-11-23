@@ -189,7 +189,7 @@ function notifiedUserIds(): string[] {
  * whose invoice is already mirrored with its number and period. Stripe serves
  * the invoice and the issued credit note against it.
  */
-beforeEach(async () => {
+async function seedMirroredInvoice(): Promise<void> {
   sendToUser.mockReset();
   const tenantId = randomUUID();
   const owner = await createUser();
@@ -221,7 +221,9 @@ beforeEach(async () => {
   currentCreditNote = creditNoteFixture();
   stubCreditNoteRead();
   retrieveInvoice = stubInvoiceRead();
-});
+}
+
+beforeEach(seedMirroredInvoice);
 
 describe("Stripe credit note mirror", () => {
   it("adds a linked negative billing row with Stripe PDF and details", async () => {

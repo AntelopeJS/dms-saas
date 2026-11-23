@@ -30,6 +30,7 @@ import {
   TrialIdentityModel,
   trialIdentityId,
 } from "../src/workspaces/db/trial-identity.model";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 import { allowCheckoutRedirects } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
@@ -548,7 +549,7 @@ describe("trial offered in the plan comparison", () => {
 
   it("offers no trial on a change of a live Stripe subscription", async () => {
     const { newPlan, subscription, user } = await checkoutRequest();
-    const subscribed = Object.assign(subscription!, {
+    const subscribed = Object.assign(defined(subscription), {
       stripeSubscriptionId: "sub_live",
     });
 

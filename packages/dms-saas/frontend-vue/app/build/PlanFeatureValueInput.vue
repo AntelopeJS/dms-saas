@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { PLAN_UNLIMITED } from './plan-catalog'
+import {
+	isFeatureNumber,
+	isFeatureText,
+	isPlanFeatureValue,
+	PLAN_UNLIMITED,
+	type PlanFeatureValue,
+} from './plan-catalog'
 
 type ValueType = 'boolean' | 'number' | 'string'
-type NumberMode = 'off' | 'limit' | 'unlimited'
+
+const NUMBER_MODES = ['off', 'limit', 'unlimited'] as const
+type NumberMode = (typeof NUMBER_MODES)[number]
+const NUMBER_MODE_SET: ReadonlySet<string | number> = new Set(NUMBER_MODES)
 
 const OFF = 0
 const MIN_LIMIT = 1
@@ -19,32 +28,41 @@ const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
 
 const { t, locale } = useI18n()
 
-function modeOf(value: unknown): NumberMode {
+const current = computed<PlanFeatureValue>(() =>
+	isPlanFeatureValue(props.modelValue) ? props.modelValue : null,
+)
+
+function modeOf(value: PlanFeatureValue): NumberMode {
 	if (value === PLAN_UNLIMITED) return 'unlimited'
-	return typeof value === 'number' && value !== OFF ? 'limit' : 'off'
+	return isFeatureNumber(value) && value !== OFF ? 'limit' : 'off'
 }
 
-const mode = computed(() => modeOf(props.modelValue))
-// The last limit typed, kept while Off or Unlimited is picked, so switching
-// back to Limit restores it.
+function isNumberMode(value: string | number): value is NumberMode {
+	return NUMBER_MODE_SET.has(value)
+}
+
+const mode = computed(() => modeOf(current.value))
+const text = computed(() => (isFeatureText(current.value) ? current.value : ''))
+
+/**
+ * The last limit typed, kept while Off or Unlimited is picked, so switching
+ * back to Limit restores it.
+ */
 const limit = ref<number | null>(
-	typeof props.modelValue === 'number' && props.modelValue > OFF
-		? props.modelValue
-		: null,
+	isFeatureNumber(current.value) && current.value > OFF ? current.value : null,
 )
 
-watch(
-	() => props.modelValue,
-	(value) => {
-		if (typeof value === 'number' && value !== OFF && value !== PLAN_UNLIMITED) {
-			limit.value = value
-		}
-	},
-)
+watch(current, (value) => {
+	if (isFeatureNumber(value) && value !== OFF && value !== PLAN_UNLIMITED) {
+		limit.value = value
+	}
+})
 
-// A unit stored `singular | plural` reads in the form the typed limit takes.
+/** A unit stored `singular | plural` reads in the form the typed limit takes. */
 const unitLabel = computed(() =>
-	props.unit ? agreeUnit(props.unit, limit.value ?? MIN_LIMIT, locale.value) : '',
+	props.unit
+		? agreeUnit(props.unit, limit.value ?? MIN_LIMIT, locale.value)
+		: '',
 )
 
 const limitError = computed(() =>
@@ -67,14 +85,15 @@ const booleanModes = computed(() => [
 	{ value: 'on', label: t('saas.catalog.editor.feature.included') },
 ])
 
-const NUMBER_MODE_VALUES: Record<NumberMode, () => unknown> = {
+const NUMBER_MODE_VALUES: Record<NumberMode, () => number> = {
 	off: () => OFF,
 	limit: () => limit.value ?? MIN_LIMIT,
 	unlimited: () => PLAN_UNLIMITED,
 }
 
 function setNumberMode(next: string | number | undefined): void {
-	const picked = (next ?? 'off') as NumberMode
+	const picked = next ?? 'off'
+	if (!isNumberMode(picked)) return
 	if (picked === 'limit' && limit.value === null) limit.value = MIN_LIMIT
 	emit('update:modelValue', NUMBER_MODE_VALUES[picked]())
 }
@@ -115,14 +134,12 @@ function setBoolean(next: string | number | undefined): void {
 					:highlight="!!limitError"
 					@update:model-value="setLimit"
 				/>
-				<span v-if="unitLabel" class="text-muted text-xs">{{
-					unitLabel
-				}}</span>
+				<span v-if="unitLabel" class="text-muted text-xs">{{ unitLabel }}</span>
 			</div>
 		</div>
 		<DmsSegmentedControl
 			v-else-if="valueType === 'boolean'"
-			:model-value="modelValue === true ? 'on' : 'off'"
+			:model-value="current === true ? 'on' : 'off'"
 			:items="booleanModes"
 			:disabled="disabled"
 			size="xs"
@@ -131,7 +148,7 @@ function setBoolean(next: string | number | undefined): void {
 		/>
 		<UInput
 			v-else
-			:model-value="typeof modelValue === 'string' ? modelValue : ''"
+			:model-value="text"
 			size="xs"
 			class="w-full max-w-xs"
 			:disabled="disabled"

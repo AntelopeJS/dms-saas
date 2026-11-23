@@ -1,3 +1,4 @@
+import type { ApiDataResult } from '#dms-core/app/composables/auth/useApiData'
 import { type PlanCatalog, PLANS_ENDPOINT } from '../build/plan-catalog'
 
 /**

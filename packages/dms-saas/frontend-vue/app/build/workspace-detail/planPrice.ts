@@ -8,7 +8,10 @@ export interface PlanPriceTerms {
 	billingMode: string
 }
 
-type Translate = (key: string, params?: Record<string, unknown>) => string
+type Translate = (
+	key: string,
+	params?: Record<string, string | number>,
+) => string
 
 /**
  * "€49 / seat / month" or "€29 / month", worded as `usePlanPriceLabel` words

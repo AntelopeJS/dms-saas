@@ -53,11 +53,7 @@ beforeEach(async () => {
 });
 
 describe("money-back guarantee under the access gate", () => {
-  /**
-   * The refund cancels the subscription, which blocks the workspace: the card
-   * read a 403 and told the owner to pay an unpaid invoice that did not exist.
-   */
-  it("reads the eligibility of a blocked workspace", async () => {
+  it("reads the eligibility of a workspace its own refund blocked, not a 403 asking to pay an unpaid invoice", async () => {
     await expect(
       callRoute("GET", "/api/saas/billing/refund-eligibility", workspace.owner),
     ).resolves.toMatchObject({ eligible: false });

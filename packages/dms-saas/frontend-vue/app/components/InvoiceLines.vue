@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { InvoiceLine } from '../composables/useInvoiceLines'
 import { computed } from "vue";
 
 const LINE_PERIOD_FORMAT: Intl.DateTimeFormatOptions = {

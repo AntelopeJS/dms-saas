@@ -3,6 +3,7 @@ import {
   type WorkspaceOverview,
   workspaceGlanceItems,
 } from "../src/workspaces";
+import { defined } from "./helpers/defined";
 import { LOCALES, missingKeys } from "./helpers/composed-text";
 
 const OVERVIEW: WorkspaceOverview = {
@@ -67,6 +68,7 @@ describe("workspace glance", () => {
   });
 
   it.each(LOCALES)("%s has every key the cards name", (code) => {
+    const plan = defined(OVERVIEW.plan);
     const variants: WorkspaceOverview[] = [
       OVERVIEW,
       {
@@ -77,9 +79,9 @@ describe("workspace glance", () => {
       },
       {
         ...OVERVIEW,
-        plan: { ...OVERVIEW.plan!, isComplimentary: true, renewsAt: null },
+        plan: { ...plan, isComplimentary: true, renewsAt: null },
       },
-      { ...OVERVIEW, plan: { ...OVERVIEW.plan!, price: 0 } },
+      { ...OVERVIEW, plan: { ...plan, price: 0 } },
     ];
     expect(missingKeys(variants.map(workspaceGlanceItems), code)).toEqual([]);
   });

@@ -1,3 +1,5 @@
+import type { ApiDataResult } from '#dms-core/app/composables/auth/useApiData'
+import type { PlanFeatureValue } from '../build/plan-catalog'
 import type { PlanChangeNotice } from './usePlanChangeReview'
 import type { PlanInterval } from './usePlanIntervalLabel'
 
@@ -31,7 +33,7 @@ export interface TenantPlanView {
 	interval: PlanInterval
 	order: number
 	checkoutAvailable: boolean
-	featureValues: Record<string, unknown>
+	featureValues: Record<string, PlanFeatureValue>
 }
 
 /** A plan of the comparison, with what the owner needs to choose it. */
@@ -188,14 +190,16 @@ function currentPageUrl(): string {
 	return typeof window !== 'undefined' ? window.location.href : '/'
 }
 
-/** The payload resolves inheritance for every public plan and carries the
- * features catalogue, so the plan card and the free-access banner share it. */
 /** What a change's preview is asked for: the plan, and the country to tax. */
 type PreviewQuery = {
 	planId: string
 	country?: string
 }
 
+/**
+ * The payload resolves inheritance for every public plan and carries the
+ * features catalogue, so the plan card and the free-access banner share it.
+ */
 export function useTenantPlan(): ApiDataResult<TenantPlanResponse> {
 	return useApiData<TenantPlanResponse>(TENANT_PLAN_ENDPOINT)
 }
@@ -204,6 +208,12 @@ export function useTenantPlan(): ApiDataResult<TenantPlanResponse> {
  * What changes the workspace's plan, and the reads a dialog makes on a click
  * (a change's preview, the checkout left pending). The plan itself is
  * `useTenantPlan`'s: refresh it once a change went through.
+ *
+ * `changePlan` takes the `prorationDate` of the reviewed preview, so the charge
+ * matches it, and challenges a card that asks for 3D Secure before it
+ * resolves. `previewChange` takes a `country` to price a first subscription
+ * before the identity is saved. `cancelCheckout` gives up on whatever checkout
+ * is pending when it has no operation id.
  */
 export function useTenantPlanChanges() {
 	const { $authFetch } = useAuthFetch()
@@ -217,10 +227,6 @@ export function useTenantPlanChanges() {
 		() => TENANT_CHECKOUT_ENDPOINT,
 	)
 
-	/**
-	 * `prorationDate` is the reviewed preview's, so the charge matches it. A
-	 * card that asks for 3D Secure is challenged before this resolves.
-	 */
 	async function changePlan(
 		planId: string,
 		prorationDate?: number | null,
@@ -240,7 +246,6 @@ export function useTenantPlanChanges() {
 			: result
 	}
 
-	/** `country` prices a first subscription before the identity is saved. */
 	function previewChange(
 		planId: string,
 		country?: string | null,
@@ -271,7 +276,6 @@ export function useTenantPlanChanges() {
 		return checkoutRead.read()
 	}
 
-	/** Without an operation id, gives up on whatever checkout is pending. */
 	function cancelCheckout(operationId?: string): Promise<CancelCheckoutResult> {
 		return $authFetch<CancelCheckoutResult>(TENANT_CHECKOUT_ENDPOINT, {
 			method: 'DELETE',

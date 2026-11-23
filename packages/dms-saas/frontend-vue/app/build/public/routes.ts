@@ -3,8 +3,10 @@ import type {
 	DmsSaasPublicScreenId,
 } from '../../types/runtime-config'
 
-// The DMS's sign-in page is its `auth` page; `/auth/login` is only the route
-// its form posts to, and renders that form inside the console shell.
+/**
+ * The DMS's sign-in page is its `auth` page; `/auth/login` is only the route
+ * its form posts to, and renders that form inside the console shell.
+ */
 export const LOGIN_PATH = '/auth'
 export const REGISTER_PATH = '/register'
 export const PRICING_PATH = '/pricing'
@@ -67,6 +69,20 @@ export const LEGAL_DOCUMENTS: LegalDocumentLink[] = [
 		order: 300,
 	},
 ]
+
+/**
+ * The link of a legal document the module serves.
+ *
+ * @param field Which legal document
+ * @throws When no link is declared for the field
+ */
+export function findLegalDocument(
+	field: LegalDocumentField,
+): LegalDocumentLink {
+	const link = LEGAL_DOCUMENTS.find((entry) => entry.field === field)
+	if (!link) throw new Error(`No legal document link for ${field}`)
+	return link
+}
 
 /**
  * Whether the deployment serves one of the bundled public screens. A backend

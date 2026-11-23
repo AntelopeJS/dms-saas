@@ -1,3 +1,10 @@
+/**
+ * Seat usage counts in the database query. Each case compares it with the
+ * answer the former implementation computed in memory from every member and
+ * invitation of the workspace, on one fixture that holds each rule's edge.
+ *
+ * @module
+ */
 import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
@@ -15,12 +22,6 @@ import {
 } from "../src/plans/seat-capacity";
 import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlatformOwner, insertUser } from "./helpers/seat-users";
-
-/**
- * Seat usage counts in the database query. Each case compares it with the
- * answer the former implementation computed in memory from every member and
- * invitation of the workspace, on one fixture that holds each rule's edge.
- */
 
 useMongoDatabase();
 

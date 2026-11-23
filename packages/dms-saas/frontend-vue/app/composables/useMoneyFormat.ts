@@ -5,13 +5,17 @@ export interface MajorUnitsFormatOptions {
 	hideWholeAmountDecimals?: boolean
 }
 
+function isAmount(value: number | null | undefined): value is number {
+	return typeof value === 'number'
+}
+
 export function formatMajorUnits(
 	amount: number | null | undefined,
 	currency: string | null | undefined,
 	locale: string,
 	options: MajorUnitsFormatOptions = {},
 ): string {
-	if (typeof amount !== 'number') return '—'
+	if (!isAmount(amount)) return '—'
 	const hasDecimalsToHide =
 		options.hideWholeAmountDecimals === true && Number.isInteger(amount)
 	return new Intl.NumberFormat(locale, {
@@ -27,7 +31,7 @@ export function formatMinorUnits(
 	currency: string | null | undefined,
 	locale: string,
 ): string {
-	if (typeof amount !== 'number') return '—'
+	if (!isAmount(amount)) return '—'
 	return formatMajorUnits(fromMinorUnits(amount, currency), currency, locale)
 }
 

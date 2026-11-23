@@ -1,12 +1,17 @@
-import type {
-	SegmentCondition,
-	SegmentConditionGroup,
-	SegmentFieldDefinition,
-	SegmentNode,
-	SegmentOperator,
-	SegmentScope,
-	SegmentValueKind,
-	SegmentWorkspaceRef,
+import { isObject, isText } from '../type-guards'
+import {
+	SEGMENT_OPERATORS,
+	type SegmentCondition,
+	type SegmentConditionGroup,
+	type SegmentFieldDefinition,
+	type SegmentNode,
+	type SegmentOperator,
+	type SegmentScalar,
+	type SegmentScope,
+	type SegmentValue,
+	type SegmentValueKind,
+	type SegmentWorkspaceRef,
+	type StoredSegmentRules,
 } from './types'
 
 const ISO_DATE_LENGTH = 10
@@ -16,13 +21,13 @@ const PATH_SEPARATOR = '.'
 export function isSegmentGroup(
 	node: SegmentNode,
 ): node is SegmentConditionGroup {
-	return (node as SegmentConditionGroup).logical !== undefined
+	return 'logical' in node
 }
 
 export function isSegmentWorkspaceRef(
 	node: SegmentNode,
 ): node is SegmentWorkspaceRef {
-	return (node as SegmentWorkspaceRef).kind === 'workspaceRef'
+	return 'kind' in node && node.kind === 'workspaceRef'
 }
 
 export function isListOperator(operator: SegmentOperator): boolean {
@@ -33,20 +38,115 @@ export function emptySegmentGroup(): SegmentConditionGroup {
 	return { logical: 'and', conditions: [] }
 }
 
-/** The rules from the JSON string or object a field holds. */
-export function parseSegmentGroup(raw: unknown): SegmentConditionGroup {
-	let value: unknown = raw
-	if (typeof raw === 'string') {
-		try {
-			value = raw ? JSON.parse(raw) : null
-		} catch {
-			value = null
-		}
+function isScalar(value: unknown): value is SegmentScalar {
+	return (
+		typeof value === 'string' ||
+		typeof value === 'number' ||
+		typeof value === 'boolean'
+	)
+}
+
+function isSegmentValue(value: unknown): value is SegmentValue {
+	return (
+		value === null ||
+		isScalar(value) ||
+		(Array.isArray(value) && value.every(isScalar))
+	)
+}
+
+const OPERATOR_SET: ReadonlySet<string> = new Set(SEGMENT_OPERATORS)
+
+function isOperator(value: unknown): value is SegmentOperator {
+	return isText(value) && OPERATOR_SET.has(value)
+}
+
+function isSegmentCondition(value: unknown): value is SegmentCondition {
+	return (
+		isObject(value) &&
+		'field' in value &&
+		isText(value.field) &&
+		'operator' in value &&
+		isOperator(value.operator) &&
+		'value' in value &&
+		isSegmentValue(value.value)
+	)
+}
+
+function isStoredWorkspaceRef(value: unknown): value is SegmentWorkspaceRef {
+	return (
+		isObject(value) &&
+		'kind' in value &&
+		value.kind === 'workspaceRef' &&
+		'quantifier' in value &&
+		(value.quantifier === 'any' || value.quantifier === 'all') &&
+		(!('role' in value) ||
+			value.role === undefined ||
+			value.role === 'member' ||
+			value.role === 'owner') &&
+		(!('workspaceNames' in value) ||
+			value.workspaceNames === undefined ||
+			(Array.isArray(value.workspaceNames) &&
+				value.workspaceNames.every(isText))) &&
+		'conditions' in value &&
+		isStoredGroup(value.conditions)
+	)
+}
+
+function isStoredNode(value: unknown): value is SegmentNode {
+	return (
+		isSegmentCondition(value) ||
+		isStoredGroup(value) ||
+		isStoredWorkspaceRef(value)
+	)
+}
+
+function isStoredGroup(value: unknown): value is SegmentConditionGroup {
+	return (
+		isObject(value) &&
+		'logical' in value &&
+		(value.logical === 'and' || value.logical === 'or') &&
+		'conditions' in value &&
+		Array.isArray(value.conditions) &&
+		value.conditions.every(isStoredNode)
+	)
+}
+
+function isPartialGroup(
+	value: unknown,
+): value is Partial<SegmentConditionGroup> {
+	return (
+		isObject(value) &&
+		(!('logical' in value) ||
+			value.logical === undefined ||
+			value.logical === 'and' ||
+			value.logical === 'or') &&
+		(!('conditions' in value) ||
+			value.conditions === undefined ||
+			(Array.isArray(value.conditions) && value.conditions.every(isStoredNode)))
+	)
+}
+
+function isStoredJson(raw: StoredSegmentRules): raw is string {
+	return typeof raw === 'string'
+}
+
+function parseJsonGroup(text: string): Partial<SegmentConditionGroup> | null {
+	try {
+		const parsed: unknown = JSON.parse(text)
+		return isPartialGroup(parsed) ? parsed : null
+	} catch {
+		return null
 	}
-	const group = value as Partial<SegmentConditionGroup> | null
+}
+
+/** The rules from the JSON string or object a field holds. */
+export function parseSegmentGroup(
+	raw: StoredSegmentRules,
+): SegmentConditionGroup {
+	const group = isStoredJson(raw) ? parseJsonGroup(raw) : (raw ?? null)
 	return {
 		logical: group?.logical === 'or' ? 'or' : 'and',
-		conditions: Array.isArray(group?.conditions) ? [...group.conditions] : [],
+		conditions: group?.conditions ? [...group.conditions] : [],
 	}
 }
 
@@ -93,7 +193,7 @@ export function hasSegmentConditions(group: SegmentConditionGroup): boolean {
 	})
 }
 
-const DEFAULT_VALUE_BY_KIND: Record<SegmentValueKind, () => unknown> = {
+const DEFAULT_VALUE_BY_KIND: Record<SegmentValueKind, () => SegmentScalar> = {
 	number: () => 0,
 	boolean: () => true,
 	date: () => new Date().toISOString().slice(0, ISO_DATE_LENGTH),
@@ -104,7 +204,7 @@ const DEFAULT_VALUE_BY_KIND: Record<SegmentValueKind, () => unknown> = {
 export function defaultSegmentValue(
 	field: SegmentFieldDefinition | undefined,
 	operator: SegmentOperator,
-): unknown {
+): SegmentValue {
 	if (isListOperator(operator)) return []
 	if (!field) return ''
 	const firstOption = field.enumOptions?.[0]?.value
@@ -126,12 +226,12 @@ export function newSegmentCondition(
 
 /** The value kept when a rule moves between a single and a list operator. */
 export function adaptSegmentValue(
-	value: unknown,
+	value: SegmentValue,
 	operator: SegmentOperator,
-): unknown {
+): SegmentValue {
 	if (isListOperator(operator)) {
 		if (Array.isArray(value)) return value
-		return value === '' || value === null || value === undefined ? [] : [value]
+		return value === '' || value === null ? [] : [value]
 	}
 	return Array.isArray(value) ? (value[0] ?? '') : value
 }

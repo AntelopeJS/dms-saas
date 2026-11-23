@@ -1,3 +1,5 @@
+import type { RowActionRule } from '#dms-core/app/types/row-action'
+import type { HTMLAttributes } from 'vue'
 import { formatMajorUnits } from '../composables/useMoneyFormat'
 
 /** A plan row of the catalogue table, as the cards read it. */
@@ -92,10 +94,37 @@ export function monthlyEquivalent(
 	return plan.interval === 'year' ? plan.price / MONTHS_PER_YEAR : plan.price
 }
 
+/** A value a plan stores for a feature: a switch, a limit or a text. */
+export type PlanFeatureValue = boolean | number | string | null
+
+/** Whether a feature value is a number: a limit, off or unlimited. */
+export function isFeatureNumber(
+	value: PlanFeatureValue | undefined,
+): value is number {
+	return typeof value === 'number'
+}
+
+/** Whether a feature value is a text. */
+export function isFeatureText(
+	value: PlanFeatureValue | undefined,
+): value is string {
+	return typeof value === 'string'
+}
+
+/** Whether a stored feature value is one of the kinds a plan stores. */
+export function isPlanFeatureValue(value: unknown): value is PlanFeatureValue {
+	return (
+		value === null ||
+		typeof value === 'boolean' ||
+		typeof value === 'number' ||
+		typeof value === 'string'
+	)
+}
+
 /** Whether a resolved feature value reads as included (on, a limit, unlimited). */
-export function isFeatureIncluded(value: unknown): boolean {
-	if (typeof value === 'number') return value === PLAN_UNLIMITED || value > OFF
-	if (typeof value === 'string') return value.trim().length > 0
+export function isFeatureIncluded(value: PlanFeatureValue): boolean {
+	if (isFeatureNumber(value)) return value === PLAN_UNLIMITED || value > OFF
+	if (isFeatureText(value)) return value.trim().length > 0
 	return value === true
 }
 
@@ -104,12 +133,17 @@ export function cardFeatures(
 	features: CatalogFeature[],
 	values: CatalogFeatureValue[],
 	limit: number,
-): Array<{ feature: CatalogFeature; value: unknown; isIncluded: boolean }> {
+): Array<{
+	feature: CatalogFeature
+	value: PlanFeatureValue
+	isIncluded: boolean
+}> {
 	const byId = new Map(values.map((entry) => [entry.featureId, entry.value]))
 	return features
 		.filter((feature) => !feature.isDetailRow)
 		.map((feature) => {
-			const value = byId.get(feature._id)
+			const stored = byId.get(feature._id)
+			const value = isPlanFeatureValue(stored) ? stored : null
 			return { feature, value, isIncluded: isFeatureIncluded(value) }
 		})
 		.sort((left, right) => Number(right.isIncluded) - Number(left.isIncluded))
@@ -142,7 +176,7 @@ export interface PlanCardReorder {
 	enabled: boolean
 	dragging: boolean
 	/** Attributes and listeners to bind on the handle button. */
-	handle: Record<string, unknown>
+	handle: HTMLAttributes
 }
 
 /** The plan fields a catalogue card's price reads. */

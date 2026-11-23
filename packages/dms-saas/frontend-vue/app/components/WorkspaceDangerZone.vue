@@ -15,11 +15,14 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
 const { t, locale } = useI18n()
 const { $authFetch } = useAuthFetch()
 const { confirm } = useConfirm()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const toast = useToast()
-// The deletion asks for the name as it is now: a rename on this page reads
-// the page's data again, this overview included.
-const { data: overview, status, refresh } = useWorkspaceOverview()
+/**
+ * The deletion asks for the name as it is now: a rename on this page reads
+ * the page's data again, this overview included.
+ */
+const workspaceOverview = useWorkspaceOverview()
+const { data: overview, status } = workspaceOverview
 
 const destroyedOn = computed(
 	() =>
@@ -91,9 +94,11 @@ function renderConfirmNotes(view: WorkspaceOverview) {
 		])
 }
 
+/**
+ * Staying would land on the access-restricted screen: the gate refuses a
+ * cancelled workspace. The server already named the next one.
+ */
 async function leaveDeletedWorkspace(view: WorkspaceOverview): Promise<void> {
-	// Staying would land on the access-restricted screen: the gate refuses a
-	// cancelled workspace. The server already named the next one.
 	if (view.nextWorkspace) {
 		await useTenantSwitch(view.nextWorkspace._id, HOME_PATH)
 		return
@@ -109,8 +114,8 @@ async function deleteWorkspace(view: WorkspaceOverview): Promise<void> {
 		})
 	} catch (failure) {
 		const message =
-			resolveError(failure, { fallbackKey: `${KEYS}.error.delete` })?.message ??
-			''
+			errors.resolveError(failure, { fallbackKey: `${KEYS}.error.delete` })
+				?.message ?? ''
 		if (readApiErrorKey(failure) === CONFIRMATION_MISMATCH) {
 			throw new ConfirmTextError(message)
 		}
@@ -176,7 +181,7 @@ async function openDeleteConfirm(): Promise<void> {
 					v-else-if="status === 'error' && !overview"
 					class="mt-1"
 					:title="$t(`${KEYS}.glance.load_failed`)"
-					@retry="refresh()"
+					@retry="workspaceOverview.refresh()"
 				/>
 				<div v-else class="text-muted mt-0.5 flex flex-col gap-1 text-[12.5px]">
 					<p>{{ deleteSummary }}</p>

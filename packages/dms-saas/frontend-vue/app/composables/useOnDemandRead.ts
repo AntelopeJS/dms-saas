@@ -1,10 +1,11 @@
-import type { MaybeRefOrGetter, Ref } from 'vue'
+import type { Ref } from 'vue'
+import type { UseApiDataOptions } from '#dms-core/app/composables/auth/useApiData'
 
 /** A backend URL to read, or nothing to read while it is null or undefined. */
 export type OnDemandUrl = () => string | null | undefined
 
 /** Query parameters of an on-demand read, read again for each request. */
-export type OnDemandQuery = MaybeRefOrGetter<Record<string, unknown> | undefined>
+export type OnDemandQuery = UseApiDataOptions<unknown>['query']
 
 export interface OnDemandReadOptions {
 	query?: OnDemandQuery
@@ -42,7 +43,11 @@ export function useOnDemandRead<T>(
 	async function read(): Promise<T> {
 		await request.execute()
 		if (request.status.value === 'error') throw request.error.value
-		return request.data.value as T
+		const answer = request.data.value
+		if (answer === null || answer === undefined) {
+			throw new Error('Empty on-demand read')
+		}
+		return answer
 	}
 
 	return { data: request.data, pending: request.pending, read }

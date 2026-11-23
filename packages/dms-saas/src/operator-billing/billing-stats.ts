@@ -106,7 +106,9 @@ function moneyFigures(figures: readonly MoneyFigure[]): ComposedTextParam {
   const amounts = figures.map((figure) =>
     moneyParam(figure.amount, figure.currency),
   );
-  return amounts.length === 1 ? amounts[0]! : sumList(amounts)!;
+  const [first] = amounts;
+  if (first === undefined) return moneyParam(0, FALLBACK_STAT_CURRENCY);
+  return amounts.length === 1 ? first : (sumList(amounts) ?? first);
 }
 
 function detailOf(figure: BillingFigure): ComposedText {

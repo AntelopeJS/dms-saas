@@ -26,6 +26,7 @@
   },
   "files": [
     "oxlint.config.ts",
+    "packages/dms-saas/frontend-vue/eslint.config.mjs",
     "packages/dms-saas/test/helpers/vue-runtime/index.mjs",
     "packages/interface-dms-saas/scripts/check-exports.mjs",
     "packages/dms-saas/vitest.config.ts",

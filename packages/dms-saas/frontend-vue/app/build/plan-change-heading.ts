@@ -31,7 +31,9 @@ export interface PricedChange {
 	isTrial: boolean
 }
 
-const KINDS_NAMED_BY_THEMSELVES = new Set(['free', 'downgrade'])
+function isKindNamedByItself(kind: string): kind is 'free' | 'downgrade' {
+	return kind === 'free' || kind === 'downgrade'
+}
 
 function costsTheSame(
 	current: ComparablePlanPrice | null,
@@ -60,8 +62,7 @@ export function planChangeHeadingCase(
 	isResubscription = false,
 ): PlanChangeHeadingCase {
 	if (isResubscription) return 'resubscribe'
-	if (change && KINDS_NAMED_BY_THEMSELVES.has(change.kind))
-		return change.kind as PlanChangeHeadingCase
+	if (change && isKindNamedByItself(change.kind)) return change.kind
 	if (change?.isTrial) return 'trial'
 	return costsTheSame(current, target) ? 'same_price' : 'upgrade'
 }

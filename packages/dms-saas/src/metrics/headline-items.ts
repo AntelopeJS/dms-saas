@@ -103,13 +103,14 @@ function mrrItem(
   detail: ComposedText,
 ): StatGroupItem {
   const note = otherCurrenciesNote(summary.mrr);
+  const withNote = note ? dotList([detail, note]) : null;
   return {
     id: "mrr",
     icon: "i-ph-currency-circle-dollar",
     tone: "primary",
     eyebrow: `$${K}.headline.mrr`,
     value: valueText(money(summary.mrr)),
-    detail: note ? dotList([detail, note])! : detail,
+    detail: withNote ?? detail,
   };
 }
 

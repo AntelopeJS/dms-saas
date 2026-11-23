@@ -30,12 +30,14 @@ export interface StreetParts {
 	boxNumber: string
 }
 
-// "Rue de l'Ermitage 41", "Rue de l'Ermitage 41/2", "Rue X, 41 bte 2": the
-// number is the last word starting with a digit, a box after it either
-// slashed or named as the address input itself splits it. A line written the
-// other way round ("10 Downing Street") stays the street name, whole.
+/**
+ * Splits "Rue de l'Ermitage 41", "Rue de l'Ermitage 41/2" and "Rue X, 41 bte
+ * 2": the number is the last word starting with a digit, a box after it either
+ * slashed or named as the address input itself splits it. A line written the
+ * other way round ("10 Downing Street") stays the street name, whole.
+ */
 const NUMBER_AT_END =
-	/^(.+?)[,\s]\s*(\d[^\s/]*)(?:\s*\/\s*(\S+)|\s+(?:bo[iî]te|bus|box|bte)\.?\s*(\S+))?$/i
+	/^(.*?\S)(?:[^\S\n\r\u2028\u2029]*,\s*|\s+)(\d[^\s/]*)(?:\s*\/\s*(\S+)|\s+(?:bo[iî]te|bus|box|bte)\.?\s*(\S+))?$/i
 const BOX_SEPARATOR = '/'
 
 /** Splits a stored street line into the address input's street parts. */

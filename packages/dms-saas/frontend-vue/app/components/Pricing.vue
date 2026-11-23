@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * The public pricing page: the plans on sale, a full comparison and the
- * billing answers a visitor needs before signing up. Every plan leads to
- * Register with the plan chosen.
- */
 import { computed, ref, watch } from 'vue'
 import PricingComparison from '../build/public/PricingComparison.vue'
 import PricingFaq from '../build/public/PricingFaq.vue'
@@ -21,21 +16,22 @@ import {
 	registerPathFor,
 } from '../build/public/routes'
 import type { PlanInterval } from '../composables/usePlanIntervalLabel'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 defineOptions({ name: 'DmsSaasPricing' })
 
 const SKELETON_CARDS = 3
 
 const { t } = useI18n()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const config = useDmsRuntimeConfig()
-const saasConfig = config.public.dmsSaas as
-	| DmsSaasPublicRuntimeConfig
-	| undefined
+const published = config.public.dmsSaas
+const saasConfig = readDmsSaasPublicConfig(published)
 
 const pricingRead = usePublicPricing()
+/** The plans on sale and the billing answers, once the public read answered. */
 const pricing = computed<PublicPricing | null>(() => pricingRead.data.value)
-// A retry shows the skeleton again, not the failure it replaces.
+/** A retry shows the skeleton again, not the failure it replaces. */
 const isLoading = computed(
 	() =>
 		!pricing.value &&
@@ -43,7 +39,7 @@ const isLoading = computed(
 )
 const loadError = computed(() =>
 	pricingRead.error.value
-		? (resolveError(pricingRead.error.value, {
+		? (errors.resolveError(pricingRead.error.value, {
 				fallbackKey: 'saas.public.pricing.load_error',
 			})?.message ?? '')
 		: null,
@@ -102,9 +98,8 @@ function selectInterval(value: string | number | undefined): void {
 }
 
 watch(intervals, (available) => {
-	if (available.length && !available.includes(interval.value)) {
-		interval.value = available[0]!
-	}
+	const [first] = available
+	if (first && !available.includes(interval.value)) interval.value = first
 })
 
 function loadPricing(): void {
@@ -130,10 +125,10 @@ function loadPricing(): void {
 				v-if="intervalItems.length > 1"
 				:model-value="interval"
 				:items="intervalItems"
-				@update:model-value="selectInterval"
 				:aria-label="$t('saas.public.pricing.interval.label')"
 				size="md"
 				class="mt-2"
+				@update:model-value="selectInterval"
 			/>
 		</header>
 
@@ -176,9 +171,9 @@ function loadPricing(): void {
 			alone on the left of a second row. -->
 			<div class="flex flex-wrap items-stretch justify-center gap-4">
 				<DmsSaasPlanCardPublic
-					class="min-w-[15rem] max-w-sm flex-[1_1_15rem]"
 					v-for="plan in shownPlans"
 					:key="plan._id"
+					class="min-w-[15rem] max-w-sm flex-[1_1_15rem]"
 					:plan="plan"
 					:features="pricing.features"
 					:parent="findParentPlan(plan, shownPlans)"

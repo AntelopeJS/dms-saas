@@ -1,19 +1,24 @@
+import type { ApiDataResult } from '#dms-core/app/composables/auth/useApiData'
+import type { BillingAddressDraft } from './useBillingAddress'
 const BILLING_INFO_ENDPOINT = '/api/saas/tenant/billing-info'
 const BUSINESS_CUSTOMER_TYPE = 'business'
 const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.(?:[^\s@.]+|[^\s@.]*\.)$/
 
 export type CustomerType = 'individual' | 'business'
 export type VatVerificationStatus = 'pending' | 'verified' | 'unverified'
 
-export type BillingIdentityField =
-	| 'customerType'
-	| 'companyName'
-	| 'country'
-	| 'line1'
-	| 'postalCode'
-	| 'city'
-	| 'billingEmail'
+const BILLING_IDENTITY_FIELDS = [
+	'customerType',
+	'companyName',
+	'country',
+	'line1',
+	'postalCode',
+	'city',
+	'billingEmail',
+] as const
+
+export type BillingIdentityField = (typeof BILLING_IDENTITY_FIELDS)[number]
 
 /** The editable billing identity, as the form holds it. */
 export interface BillingIdentityDraft extends BillingAddressDraft {
@@ -50,8 +55,10 @@ function isFilled(value: string): boolean {
 	return value.trim().length > 0
 }
 
-// Mirrors the server-side rules (src/workspaces/billing-identity.ts): the
-// form flags a field before the request, the server refuses it regardless.
+/**
+ * Mirrors the server-side rules (src/workspaces/billing-identity.ts): the form
+ * flags a field before the request, the server refuses it regardless.
+ */
 const FIELD_CHECKS: Record<BillingIdentityField, FieldCheck> = {
 	customerType: (draft) => draft.customerType !== null,
 	companyName: (draft) =>
@@ -71,9 +78,7 @@ const FIELD_CHECKS: Record<BillingIdentityField, FieldCheck> = {
 export function findMissingBillingFields(
 	draft: BillingIdentityDraft,
 ): BillingIdentityField[] {
-	return (Object.keys(FIELD_CHECKS) as BillingIdentityField[]).filter(
-		(field) => !FIELD_CHECKS[field](draft),
-	)
+	return BILLING_IDENTITY_FIELDS.filter((field) => !FIELD_CHECKS[field](draft))
 }
 
 export function emptyBillingIdentityDraft(): BillingIdentityDraft {

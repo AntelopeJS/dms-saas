@@ -20,11 +20,13 @@ const STOP_SELLING_ID = 'stop_selling'
 const PUT_ON_SALE_ID = 'put_on_sale'
 const RETIRE_ID = 'retire'
 
-// The card of the plans' `cards` display. Besides the props it reads, the
-// display hands it the table's columns and label key: kept off the root
-// element, which they would land on as attributes.
 defineOptions({ inheritAttrs: false })
 
+/**
+ * The card of the plans' `cards` display. Besides the props it reads, the
+ * display hands it the table's columns and label key: kept off the root
+ * element, which they would land on as attributes.
+ */
 const props = withDefaults(
 	defineProps<{
 		row: CatalogPlanRow
@@ -43,6 +45,7 @@ const props = withDefaults(
 const { t, locale } = useI18n()
 const { processI18n } = useTranslation()
 const { formatFeatureValue } = usePlanFeatureFormat()
+/** Every card asks as it mounts: the cards of a page share the one request. */
 const catalog = usePlanCatalog()
 
 const plan = computed(() => props.row)
@@ -82,8 +85,10 @@ const priceNote = computed(() => {
 	return t('saas.catalog.plans.card.note_yearly', { mode, monthly })
 })
 
-// The position itself is the card's place: a move by hand stores a value
-// between its neighbours', no rank to show.
+/**
+ * The position itself is the card's place: a move by hand stores a value
+ * between its neighbours', no rank to show.
+ */
 const subtitle = computed(() => {
 	if (isLegacy.value) return t('saas.catalog.plans.card.not_on_sale')
 	return plan.value.isPublic
@@ -196,8 +201,6 @@ function run(action: PlanCardAction): void {
 function toggleSale(): void {
 	if (saleAction.value) run(saleAction.value)
 }
-
-// Every card asks as it mounts: the cards of a page share the one request.
 </script>
 
 <template>

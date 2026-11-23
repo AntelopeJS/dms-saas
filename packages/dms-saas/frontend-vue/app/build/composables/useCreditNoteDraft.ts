@@ -92,9 +92,7 @@ export function useCreditNoteDraft(preview: Ref<CreditNotePreview | null>) {
 		fromMinorUnits(creditable.value, currency.value),
 	)
 	const amountMinor = computed(() =>
-		typeof amount.value === 'number'
-			? toMinorUnits(amount.value, currency.value)
-			: 0,
+		amount.value === null ? 0 : toMinorUnits(amount.value, currency.value),
 	)
 	const isAboveCeiling = computed(() => amountMinor.value > creditable.value)
 	const isMemoTooLong = computed(
@@ -108,7 +106,6 @@ export function useCreditNoteDraft(preview: Ref<CreditNotePreview | null>) {
 			!isAboveCeiling.value &&
 			!isMemoTooLong.value,
 	)
-	/** What the invoice will have been credited in all once this note is out. */
 	const creditedAfter = computed(
 		() => (preview.value?.credited ?? 0) + amountMinor.value,
 	)

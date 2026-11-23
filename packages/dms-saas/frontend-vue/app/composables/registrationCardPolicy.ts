@@ -1,3 +1,7 @@
+import type {
+	DmsSaasPublicRuntimeConfig,
+	RegistrationPaymentMethodPolicy,
+} from '../types/runtime-config'
 import type { RegistrationPlanSummary } from '../build/public/pricing'
 
 type PaymentStepRule = (skipsPaymentMethod: boolean) => boolean
@@ -38,7 +42,7 @@ export function resolveRegistrationPaymentPolicy(
 function isPaymentPolicy(
 	policy: string | undefined,
 ): policy is RegistrationPaymentMethodPolicy {
-	return !!policy && policy in PAYMENT_STEP_RULES
+	return !!policy && Object.hasOwn(PAYMENT_STEP_RULES, policy)
 }
 
 /**

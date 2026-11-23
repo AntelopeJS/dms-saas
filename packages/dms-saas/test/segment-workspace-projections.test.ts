@@ -15,6 +15,7 @@ import {
   loadAllTenantProjections,
   loadWorkspaceProjection,
 } from "../src/utils/segment-matching";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { useQueryGate } from "./helpers/query-gate";
@@ -30,7 +31,7 @@ const LATER = new Date("2026-10-01T00:00:00Z");
 async function createWorkspace(): Promise<string> {
   const tenantId = randomUUID();
   await insertTenant(tenantId);
-  await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
+  await defined(Schema.get(TENANT_SCHEMA_NAME)).createInstance(tenantId).run();
   return tenantId;
 }
 

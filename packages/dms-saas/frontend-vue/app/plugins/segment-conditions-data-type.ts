@@ -1,3 +1,4 @@
+import { isRecord } from '../build/type-guards'
 import { defineComponent, h, resolveComponent } from 'vue'
 
 const RULES_COMPONENT = 'DmsSaasSegmentRulesText'
@@ -7,7 +8,7 @@ const SegmentConditionsDisplay = defineComponent({
 	name: 'SegmentConditionsDisplay',
 	props: {
 		modelValue: {
-			type: [Object, String] as unknown as () => unknown,
+			type: [Object, String],
 			default: null,
 		},
 		fieldsCatalogUrl: { type: String, default: undefined },
@@ -27,18 +28,29 @@ interface SegmentConditionsOptions {
 	fieldsCatalogUrl?: string
 }
 
+function isSegmentConditionsOptions(
+	value: unknown,
+): value is SegmentConditionsOptions {
+	return (
+		isRecord(value) &&
+		(value.fieldsCatalogUrl === undefined ||
+			typeof value.fieldsCatalogUrl === 'string')
+	)
+}
+
 export default defineDmsPlugin(() => {
 	const { registerDataType } = useDataTypes()
 	registerDataType({
 		id: 'segment_conditions',
 		displayComponent: SegmentConditionsDisplay,
 		formatter: {
-			default: (value: unknown, _locale: string, options?: unknown) =>
+			default: (value, _locale, options) =>
 				h(resolveComponent(RULES_COMPONENT), {
 					conditions: value,
 					mode: 'compact',
-					fieldsCatalogUrl: (options as SegmentConditionsOptions | undefined)
-						?.fieldsCatalogUrl,
+					fieldsCatalogUrl: isSegmentConditionsOptions(options)
+						? options.fieldsCatalogUrl
+						: undefined,
 				}),
 		},
 	})

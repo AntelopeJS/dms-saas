@@ -145,15 +145,16 @@ function stripeFact(
       detail: `$${D}.facts.no_stripe_customer`,
     };
   const open = composed(`${D}.facts.open_in_stripe`);
+  const withCard = card
+    ? dotList([
+        open,
+        composed(`${D}.facts.card`, { brand: card.brand, last4: card.last4 }),
+      ])
+    : null;
   return {
     ...base,
     value: customerId,
-    detail: card
-      ? dotList([
-          open,
-          composed(`${D}.facts.card`, { brand: card.brand, last4: card.last4 }),
-        ])!
-      : open,
+    detail: withCard ?? open,
     to: stripeObjectUrl("customers", customerId),
   };
 }

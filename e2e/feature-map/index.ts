@@ -25,6 +25,7 @@ export const notUserFacing = [
   "packages/dms-saas/frontend-vue/.*",
   "packages/dms-saas/frontend-vue/eslint.config.mjs",
   "packages/dms-saas/frontend-vue/pnpm-lock.yaml",
+  "packages/dms-saas/frontend-vue/tsconfig.json",
 ];
 
 /** The source globs each feature of `e2e/journeys/` owns, keyed by its journeys file name. */

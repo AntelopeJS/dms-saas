@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { MyWorkspace } from '../composables/useMyWorkspaces'
 import { computed } from 'vue'
 import { highlightParts } from './highlight'
 import WorkspaceMark from './WorkspaceMark.vue'

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
+	isLiveBoolean,
+	isLiveNumber,
 	liveValue,
 	useLiveFormValues,
 } from '../build/composables/useLiveFormValues'
@@ -40,16 +42,19 @@ const settings = computed<CustomerTimelineInput>(() => {
 			live.value,
 			'autoSuspendEnabled',
 			loaded?.autoSuspendEnabled ?? true,
+			isLiveBoolean,
 		),
 		autoSuspendDelayDays: liveValue(
 			live.value,
 			'autoSuspendDelayDays',
 			loaded?.autoSuspendDelayDays ?? DEFAULT_DELAY_DAYS,
+			isLiveNumber,
 		),
 		dataRetentionDaysAfterCancellation: liveValue(
 			live.value,
 			'dataRetentionDaysAfterCancellation',
 			loaded?.dataRetentionDaysAfterCancellation ?? DEFAULT_RETENTION_DAYS,
+			isLiveNumber,
 		),
 	}
 })

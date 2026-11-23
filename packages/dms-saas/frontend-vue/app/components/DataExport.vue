@@ -14,9 +14,9 @@ const TIME_FORMAT: Intl.DateTimeFormatOptions = {
 	minute: '2-digit',
 }
 
-const { t, locale } = useI18n()
+const { locale } = useI18n()
 const { user } = useCurrentUser()
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const route = useDmsRoute()
 const router = useDmsRouter()
 const { state, running, load, start, download } = useExportHistory()
@@ -26,8 +26,10 @@ const finished = ref<ExportHistoryEntry | null>(null)
 /** The e-mailed link this visit came from, once the server said it is gone. */
 const expiredLinkJobId = ref<string | null>(null)
 const isDownloading = ref(false)
-// The export being built is read again every interval, in the browser, until
-// it is done; a tick waits for a slow answer instead of piling up requests.
+/**
+ * The export being built is read again every interval, in the browser, until
+ * it is done; a tick waits for a slow answer instead of piling up requests.
+ */
 const runningStatus = useApiData<ExportJobStatus>(
 	() =>
 		running.value
@@ -67,30 +69,39 @@ interface HttpErrorLike {
 	status?: unknown
 }
 
-function errorStatus(error: unknown): number | undefined {
-	const candidate = error as HttpErrorLike | null
-	const status = candidate?.statusCode ?? candidate?.status
-	return typeof status === 'number' ? status : undefined
+function isHttpErrorLike(error: unknown): error is HttpErrorLike {
+	return typeof error === 'object' && error !== null
+}
+
+function isStatusCode(value: unknown): value is number {
+	return typeof value === 'number'
+}
+
+function errorStatus(error: HttpErrorLike): number | undefined {
+	const status = error.statusCode ?? error.status
+	return isStatusCode(status) ? status : undefined
 }
 
 async function requestExport(): Promise<void> {
 	finished.value = null
 	expiredLinkJobId.value = null
-	await start().catch((error) =>
-		presentError(error, { fallbackKey: `${KEYS}.error.start` }),
-	)
+	try {
+		await start()
+	} catch (error) {
+		errors.presentError(error, { fallbackKey: `${KEYS}.error.start` })
+	}
 }
 
 async function downloadFinished(): Promise<void> {
 	if (!finished.value || isDownloading.value) return
 	isDownloading.value = true
-	await download(finished.value.jobId, finished.value)
-		.catch((error) =>
-			presentError(error, { fallbackKey: `${KEYS}.error.download` }),
-		)
-		.finally(() => {
-			isDownloading.value = false
-		})
+	try {
+		await download(finished.value.jobId, finished.value)
+	} catch (error) {
+		errors.presentError(error, { fallbackKey: `${KEYS}.error.download` })
+	} finally {
+		isDownloading.value = false
+	}
 }
 
 watch(
@@ -115,26 +126,29 @@ async function clearDeliveredLink(): Promise<void> {
  * sits behind an authenticated route, so the page downloads it for the
  * visitor. The parameter is dropped once the download succeeded or the
  * archive is gone for good, and kept on a transient failure so a reload
- * tries again.
+ * tries again. The history is read with the page, on the server too: the
+ * browser polls the export it shows running, and downloads the archive a link
+ * names.
  */
 async function consumeDeliveredLink(): Promise<void> {
 	const jobId = route.query[EXPORT_JOB_QUERY_PARAM]
-	if (typeof jobId !== 'string' || !jobId) return
+	if (!jobId || Array.isArray(jobId)) return
 	const entry = state.value.entries.find((item) => item.jobId === jobId)
 	try {
 		await download(jobId, entry)
 		await clearDeliveredLink()
 	} catch (error) {
-		const isGone = GONE_STATUSES.has(errorStatus(error) ?? 0)
+		const isGone =
+			isHttpErrorLike(error) && GONE_STATUSES.has(errorStatus(error) ?? 0)
 		if (!isGone)
-			return presentError(error, { fallbackKey: `${KEYS}.error.download` })
+			return errors.presentError(error, {
+				fallbackKey: `${KEYS}.error.download`,
+			})
 		expiredLinkJobId.value = jobId
 		await clearDeliveredLink()
 	}
 }
 
-// The history is read with the page, on the server too: the browser polls
-// the export it shows running, and downloads the archive a link names.
 onMounted(consumeDeliveredLink)
 </script>
 

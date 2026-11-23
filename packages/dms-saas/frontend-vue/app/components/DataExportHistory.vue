@@ -28,7 +28,7 @@ const ROW_TONES: Record<ExportRowState, Tone> = {
 }
 
 const { t, locale } = useI18n()
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const { state, running, load, goToPage, start, download } = useExportHistory()
 
 const downloadingJobId = ref<string | null>(null)
@@ -82,23 +82,25 @@ function detail(entry: ExportHistoryEntry): string {
 async function downloadEntry(entry: ExportHistoryEntry): Promise<void> {
 	if (downloadingJobId.value) return
 	downloadingJobId.value = entry.jobId
-	await download(entry.jobId, entry)
-		.catch((error) =>
-			presentError(error, {
-				fallbackKey: 'saas.workspace.data_export.error.download',
-			}),
-		)
-		.finally(() => {
-			downloadingJobId.value = null
+	try {
+		await download(entry.jobId, entry)
+	} catch (error) {
+		errors.presentError(error, {
+			fallbackKey: 'saas.workspace.data_export.error.download',
 		})
+	} finally {
+		downloadingJobId.value = null
+	}
 }
 
-function requestAnother(): Promise<void> {
-	return start().catch((error) =>
-		presentError(error, {
+async function requestAnother(): Promise<void> {
+	try {
+		await start()
+	} catch (error) {
+		errors.presentError(error, {
 			fallbackKey: 'saas.workspace.data_export.error.start',
-		}),
-	)
+		})
+	}
 }
 </script>
 

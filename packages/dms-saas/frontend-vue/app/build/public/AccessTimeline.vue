@@ -1,11 +1,11 @@
 <script setup lang="ts">
-/** How a workspace came to be blocked, oldest first, deadlines included. */
 import {
 	type AccessTimelineEntry,
 	TIMELINE_STEP_VIEWS,
 	type UnpaidInvoiceRef,
 } from './access'
 
+/** How a workspace came to be blocked, oldest first, deadlines included. */
 interface AccessTimelineProps {
 	entries: AccessTimelineEntry[]
 	invoice: UnpaidInvoiceRef | null

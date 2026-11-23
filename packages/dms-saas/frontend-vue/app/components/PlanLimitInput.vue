@@ -18,9 +18,9 @@ const { t, locale } = useI18n()
 const isUnlimited = computed(
 	() => props.modelValue === PLAN_UNLIMITED || props.modelValue == null,
 )
-// The last cap typed, so ticking Unlimited off restores it.
+/** The last cap typed, so ticking Unlimited off restores it. */
 const lastLimit = ref<number>(
-	typeof props.modelValue === 'number' && props.modelValue >= MIN_LIMIT
+	props.modelValue != null && props.modelValue >= MIN_LIMIT
 		? props.modelValue
 		: MIN_LIMIT,
 )
@@ -28,18 +28,18 @@ const lastLimit = ref<number>(
 watch(
 	() => props.modelValue,
 	(value) => {
-		if (typeof value === 'number' && value >= MIN_LIMIT) lastLimit.value = value
+		if (value != null && value >= MIN_LIMIT) lastLimit.value = value
 	},
 )
 
 const limitError = computed(() =>
 	!isUnlimited.value &&
-	(typeof props.modelValue !== 'number' || props.modelValue < MIN_LIMIT)
+	(props.modelValue == null || props.modelValue < MIN_LIMIT)
 		? t('saas.catalog.editor.limit_error')
 		: null,
 )
 
-// Read with the limit typed, or as a plural while the cap is unlimited.
+/** Read with the limit typed, or as a plural while the cap is unlimited. */
 const unitLabel = computed(() =>
 	props.unit
 		? agreeUnit(

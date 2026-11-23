@@ -21,7 +21,7 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 const toast = useToast()
 const { t, locale } = useI18n()
 const { confirm } = useConfirm()
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const tenantPlan = useTenantPlan()
 const { data, error: loadError } = tenantPlan
 const planChanges = useTenantPlanChanges()
@@ -38,7 +38,7 @@ const workspaceName = useWorkspaceName()
 const route = useDmsRoute()
 const router = useDmsRouter()
 
-// The card waits for both reads before it offers an action.
+/** The card waits for both reads before it offers an action. */
 const isLoading = computed(
 	() => tenantPlan.pending.value || billingStatus.pending.value,
 )
@@ -167,7 +167,7 @@ const seatHint = computed(() => {
 function renewalValue(periodEnd: string): string {
 	const date = day(periodEnd)
 	const total = nextInvoice.data.value?.totalMinorUnits
-	if (typeof total !== 'number') return date
+	if (total === null || total === undefined) return date
 	const amount = formatMinorUnits(total, nextInvoice.data.value?.currency)
 	return t(`${KEY_PREFIX}.next_renewal_amount`, { date, amount })
 }
@@ -250,15 +250,17 @@ function openUpgrade(plan: OfferedPlanView): void {
 	isUpgradeOpen.value = true
 }
 
-// The page's refresh reads the plan again, with what shows it elsewhere: the
-// page's stock blocks (the complimentary banner, the next invoice) and the
-// sidebar switcher, which names the plan.
+/**
+ * The page's refresh reads the plan again, with what shows it elsewhere: the
+ * page's stock blocks (the complimentary banner, the next invoice) and the
+ * sidebar switcher, which names the plan.
+ */
 function refresh(): void {
-	refreshPageBlocks()
+	void refreshPageBlocks()
 }
 
-async function runAction(
-	action: () => Promise<unknown>,
+async function runAction<Result>(
+	action: () => Promise<Result>,
 	successKey: string,
 ): Promise<void> {
 	isWorking.value = true
@@ -271,7 +273,9 @@ async function runAction(
 		})
 		refresh()
 	} catch (error) {
-		presentError(error, { fallbackKey: 'saas.workspace.plan.change_error' })
+		errors.presentError(error, {
+			fallbackKey: 'saas.workspace.plan.change_error',
+		})
 	} finally {
 		isWorking.value = false
 	}
@@ -357,7 +361,7 @@ async function releaseCancelledCheckout(): Promise<void> {
 			icon: 'i-ph-info',
 		})
 	} catch (error) {
-		presentError(error, {
+		errors.presentError(error, {
 			fallbackKey: 'saas.workspace.plan.checkout_pending.restart_error',
 		})
 	}
@@ -366,7 +370,9 @@ async function releaseCancelledCheckout(): Promise<void> {
 /**
  * `?upgrade=<planId>` (sent after registering with a paid plan) opens the
  * change on that plan's review, or on Compare when the plan is not offered.
- * The parameter is dropped either way, so a reload does not replay it.
+ * The parameter is dropped either way, so a reload does not replay it. A
+ * workspace waiting for its first payment, or cancelled, pays for its own plan
+ * again through Stripe's payment page.
  */
 async function consumeUpgradeParam(): Promise<void> {
 	const planId = readUpgradeParam(route.query)
@@ -380,8 +386,6 @@ async function consumeUpgradeParam(): Promise<void> {
 		current.value?._id ?? null,
 	)
 	const plan = offered.find((candidate) => candidate._id === planId)
-	// A workspace waiting for its first payment, or cancelled, pays for its
-	// own plan again through Stripe's payment page.
 	const isChoosingAnew =
 		canResubscribe.value || !!data.value.canRecoverComplimentary
 	if (!plan || (plan._id === current.value?._id && !isChoosingAnew)) {
@@ -397,14 +401,15 @@ async function consumeUpgradeParam(): Promise<void> {
 
 /**
  * `?choose-plan` (sent by the access-restricted screen and the complimentary
- * banner) opens Compare.
+ * banner) opens Compare. Owners compare plans even while an administrator
+ * manages the plan (complimentary access): choosing a paid one is how they
+ * keep access. The banner links the same page, which stays mounted, so the
+ * card answers the query as it changes too.
  */
 async function consumeChoosePlanParam(): Promise<void> {
 	if (route.query[BILLING_CHOOSE_PLAN_PARAM] === undefined) return
 	const { [BILLING_CHOOSE_PLAN_PARAM]: _choosePlan, ...query } = route.query
 	await router.replace({ query })
-	// Owners compare plans even while an administrator manages the plan
-	// (complimentary access): choosing a paid one is how they keep access.
 	if (isTenantOwner.value) comparison.open()
 }
 
@@ -415,8 +420,6 @@ onMounted(async () => {
 	await consumeChoosePlanParam()
 })
 
-// The complimentary banner links the same page with `?choose-plan`: the
-// card stays mounted, so it answers the query as it changes too.
 watch(
 	() => route.query[BILLING_CHOOSE_PLAN_PARAM],
 	(value) => {

@@ -1,3 +1,4 @@
+import type { PlanInterval } from './usePlanIntervalLabel'
 import type { PlanBillingMode } from './useTenantPlan'
 
 /** The price fields a plan label is written from. */

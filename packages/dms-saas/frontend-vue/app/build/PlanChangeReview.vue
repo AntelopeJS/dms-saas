@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type {
+	OfferedPlanView,
+	TenantPlanFeature,
+} from '../composables/useTenantPlan'
 import { computed, onMounted, ref } from 'vue'
 import { LABEL_DAY_FORMAT, SENTENCE_DAY_FORMAT } from './day-formats'
 import { planChangeHeadingCase, targetPlanEyebrow } from './plan-change-heading'
@@ -26,7 +30,7 @@ const KEY_PREFIX = 'saas.tenant_billing.plan_change.review'
 
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const { previewChange, changePlan } = useTenantPlanChanges()
 const { offerFor: offerPendingCheckout } = usePendingCheckout()
 const { formatMinorUnits, formatMajorUnits } = useMoneyFormat()
@@ -61,10 +65,6 @@ function sentenceDay(value: string | null | undefined): string {
 
 function money(minorUnits: number | null | undefined): string {
 	return formatMinorUnits(minorUnits, currency.value)
-}
-
-function featureValue(feature: TenantPlanFeature, value: unknown): string {
-	return formatFeatureValue(feature, value, props.plan.currency)
 }
 
 function priceOf(plan: OfferedPlanView | null): string {
@@ -116,8 +116,10 @@ const heading = computed(() => {
 	}
 })
 
-// During a trial the lines are what the first invoice will bill, not what is
-// due today: their eyebrow says when they are charged.
+/**
+ * During a trial the lines are what the first invoice will bill, not what is
+ * due today: their eyebrow says when they are charged.
+ */
 const linesEyebrow = computed(() => {
 	if (isDowngrade.value) return t(`${KEY_PREFIX}.charged_today`)
 	if (preview.value?.isTrial)
@@ -198,14 +200,19 @@ async function loadPreview(): Promise<void> {
 		incompatibilities.value = readPlanChangeIncompatibilities(error)
 		if (!incompatibilities.value) {
 			loadFailure.value =
-				resolveError(error, { fallbackKey: `${KEY_PREFIX}.load_failed` })
-					?.message ?? ''
+				errors.resolveError(error, {
+					fallbackKey: `${KEY_PREFIX}.load_failed`,
+				})?.message ?? ''
 		}
 	} finally {
 		isLoading.value = false
 	}
 }
 
+/**
+ * Applies the change. A refusal naming incompatibilities means the inventory
+ * changed between the review and the confirmation: the review is dropped.
+ */
 async function confirm(): Promise<void> {
 	isSubmitting.value = true
 	submitFailure.value = null
@@ -226,15 +233,15 @@ async function confirm(): Promise<void> {
 		emit('done')
 	} catch (error) {
 		if (await offerPendingCheckout(error, props.plan._id)) return
-		// The inventory changed between the review and the confirmation.
 		incompatibilities.value = readPlanChangeIncompatibilities(error)
 		if (incompatibilities.value) {
 			preview.value = null
 			return
 		}
 		submitFailure.value =
-			resolveError(error, { fallbackKey: 'saas.workspace.plan.change_error' })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: 'saas.workspace.plan.change_error',
+			})?.message ?? ''
 	} finally {
 		isSubmitting.value = false
 	}
@@ -288,11 +295,15 @@ onMounted(() => void loadPreview())
 							class="text-success me-1 align-middle"
 						/>
 						{{ change.feature.displayName }}:
-						{{ featureValue(change.feature, change.to) }}
+						{{ formatFeatureValue(change.feature, change.to, plan.currency) }}
 						<span class="text-muted">
 							{{
 								$t(`${KEY_PREFIX}.was`, {
-									value: featureValue(change.feature, change.from),
+									value: formatFeatureValue(
+										change.feature,
+										change.from,
+										plan.currency,
+									),
 								})
 							}}
 						</span>
@@ -310,11 +321,15 @@ onMounted(() => void loadPreview())
 							class="text-warning me-1 align-middle"
 						/>
 						{{ change.feature.displayName }}:
-						{{ featureValue(change.feature, change.to) }}
+						{{ formatFeatureValue(change.feature, change.to, plan.currency) }}
 						<span class="text-muted">
 							{{
 								$t(`${KEY_PREFIX}.was`, {
-									value: featureValue(change.feature, change.from),
+									value: formatFeatureValue(
+										change.feature,
+										change.from,
+										plan.currency,
+									),
 								})
 							}}
 						</span>

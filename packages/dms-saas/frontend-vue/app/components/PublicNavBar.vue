@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/**
- * The bar heading every public page: the public pages a visitor can browse,
- * then the way in, signing in or opening an account.
- */
 import {
 	isPublicScreenServed,
 	isSelfRegistrationOpen,
@@ -10,10 +6,15 @@ import {
 	PRICING_PATH,
 	REGISTER_PATH,
 } from '../build/public/routes'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 /** The public page the bar sits on: its link reads as the current one. */
 type PublicNavPage = 'pricing' | 'register' | 'legal'
 
+/**
+ * The bar heading every public page: the public pages a visitor can browse,
+ * then the way in, signing in or opening an account.
+ */
 interface PublicNavBarProps {
 	current?: PublicNavPage
 }
@@ -21,12 +22,11 @@ interface PublicNavBarProps {
 const props = defineProps<PublicNavBarProps>()
 
 const config = useDmsRuntimeConfig()
-const saasConfig = config.public.dmsSaas as
-	| DmsSaasPublicRuntimeConfig
-	| undefined
+const published = config.public.dmsSaas
+const saasConfig = readDmsSaasPublicConfig(published)
 
 const showsPricing = isPublicScreenServed(saasConfig, 'pricing')
-// Register already is the way in: the bar does not offer it to itself.
+/** Register already is the way in: the bar does not offer it to itself. */
 const showsCreateAccount =
 	isSelfRegistrationOpen(saasConfig) && props.current !== 'register'
 const isPricingCurrent = props.current === 'pricing'

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-/**
- * A public plan as the pricing page sells it: price, trial, call to action
- * and what it includes. Usable on a consumer's own pricing page too.
- */
+import type { TenantPlanFeature } from '../composables/useTenantPlan'
 import { computed } from 'vue'
 import {
 	featureHighlights,
@@ -11,6 +8,10 @@ import {
 } from '../build/public/pricing'
 import { usePublicPlanFormat } from '../build/public/usePublicPlanFormat'
 
+/**
+ * A public plan as the pricing page sells it: price, trial, call to action
+ * and what it includes. Usable on a consumer's own pricing page too.
+ */
 interface PlanCardPublicProps {
 	plan: PublicPlan
 	features: TenantPlanFeature[]

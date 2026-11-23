@@ -8,7 +8,8 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'short',
 }
 
-const { data, status: readStatus, refresh } = useBillingStatus()
+const billing = useBillingStatus()
+const { data, status: readStatus } = billing
 const { data: plan } = useTenantPlan()
 const { open: openPlanComparison } = usePlanComparison()
 const { open: openPayment } = usePayInvoice()
@@ -69,7 +70,7 @@ function payWithAnotherCard(): void {
 		<DmsSaasLoadFailure
 			v-else-if="readStatus === 'error' && !data"
 			:title="$t(`${KEY_PREFIX}.load_failed`)"
-			@retry="refresh()"
+			@retry="billing.refresh()"
 		/>
 
 		<p v-else-if="!isTenantOwner" class="text-muted text-sm">

@@ -14,7 +14,8 @@ const ERROR_AT_PERCENT = 100
 /** Where the seats stand against the plan's cap. */
 type SeatState = 'unlimited' | 'room' | 'full' | 'over'
 
-const { data: quota, status, refresh } = useSeatQuota()
+const seats = useSeatQuota()
+const { data: quota, status } = seats
 const { t } = useI18n()
 
 const seatState = computed<SeatState>(() => {
@@ -119,7 +120,7 @@ const overDescription = computed(() => {
 			<DmsSaasLoadFailure
 				v-else-if="status === 'error' && !quota"
 				:title="$t(`${KEYS}.load_failed`)"
-				@retry="refresh()"
+				@retry="seats.refresh()"
 			/>
 			<template v-else-if="quota">
 				<DmsMeterBar

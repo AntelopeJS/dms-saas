@@ -18,7 +18,7 @@ const D = 'saas.workspace_detail.upgrade'
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 
 const options = ref<OperatorOptions | null>(null)
 const loadError = ref<string | null>(null)
@@ -74,7 +74,8 @@ async function load(): Promise<void> {
 		planId.value = plans.value[0]?.id
 	} catch (error) {
 		loadError.value =
-			resolveError(error, { fallbackKey: `${D}.load_error` })?.message ?? ''
+			errors.resolveError(error, { fallbackKey: `${D}.load_error` })?.message ??
+			''
 	}
 }
 
@@ -95,7 +96,8 @@ async function loadPreview(): Promise<void> {
 		preview.value = await previewRead.read()
 	} catch (error) {
 		previewError.value =
-			resolveError(error, { fallbackKey: `${D}.preview_error` })?.message ?? ''
+			errors.resolveError(error, { fallbackKey: `${D}.preview_error` })
+				?.message ?? ''
 	} finally {
 		isPreviewing.value = false
 	}
@@ -118,7 +120,7 @@ async function submit(): Promise<void> {
 		emit('done')
 	} catch (error) {
 		submitError.value =
-			resolveError(error, { fallbackKey: `${D}.error` })?.message ?? ''
+			errors.resolveError(error, { fallbackKey: `${D}.error` })?.message ?? ''
 	} finally {
 		isSubmitting.value = false
 	}

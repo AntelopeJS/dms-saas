@@ -28,6 +28,7 @@ import { SaasRegisterApiController } from "../src/routes/public/register";
 import { SaasWorkspacesController } from "../src/routes/tenant/workspaces";
 import { SaasTenantPlanController } from "../src/routes/tenant/tenant-plan";
 import { SaasWorkspacesAdminController } from "../src/routes/platformOwner/workspaces-admin";
+import { defined } from "./helpers/defined";
 import {
   applyDmsConfig,
   createUser,
@@ -301,10 +302,9 @@ describe("actual DMS invitation account creation while admission is closed", () 
       owner: invitation,
     } = await createInvitedOwnerWorkspace();
     const ownerResult = await signUpWithInvitation(email, tokenOf(invitation));
-    const owner = await users.get(userIdOf(ownerResult));
-    expect(owner).toBeDefined();
+    const owner = defined(await users.get(userIdOf(ownerResult)));
     const members = GetModel(TenantMemberModel, tenantId);
-    expect(await members.getByUser(owner!._id)).toMatchObject({
+    expect(await members.getByUser(owner._id)).toMatchObject({
       isTenantOwner: true,
     });
     expect(
@@ -345,8 +345,8 @@ describe("actual DMS invitation account creation while admission is closed", () 
     expect(await members.getByUser(existingId)).toBeDefined();
     const workspaces = new SaasWorkspacesController();
     for (const user of [
-      owner!,
-      (await users.get(userIdOf(colleagueResult)))!,
+      owner,
+      defined(await users.get(userIdOf(colleagueResult))),
     ]) {
       await expectSelfServeClosed(workspaces, user);
     }
@@ -366,7 +366,7 @@ describe("actual DMS invitation account creation while admission is closed", () 
     });
     expect(await resolveRequestTenantId(ctx)).toBe(tenantId);
     await expect(
-      planController.changePlan(owner!, { planId }, ctx),
+      planController.changePlan(owner, { planId }, ctx),
     ).rejects.toMatchObject({
       status: 409,
       body: "saas.errors.plan.complimentary_locked",

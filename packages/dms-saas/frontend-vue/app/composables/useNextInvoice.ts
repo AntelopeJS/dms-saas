@@ -1,3 +1,4 @@
+import type { ApiDataResult } from '#dms-core/app/composables/auth/useApiData'
 import type { ApiReadOptions } from './useMountedData'
 
 const NEXT_INVOICE_ENDPOINT = '/api/saas/tenant/upcoming-invoice'

@@ -300,10 +300,3 @@ export async function handleCreditNoteVoided(
 ): Promise<void> {
   await mirrorCreditNoteFromEvent(event);
 }
-
-/**
- * Checkout attaches the collected card to the subscription only; the customer
- * keeps no `invoice_settings.default_payment_method`, which is what the
- * billing page's payment-method card (and any future off-subscription
- * invoice) reads. Promote the subscription's card to customer default.
- */

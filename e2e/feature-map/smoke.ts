@@ -19,6 +19,8 @@ export const covers = [
   "packages/dms-saas/frontend-vue/app/build/.gitkeep",
   "packages/dms-saas/frontend-vue/app/build/day-formats.ts",
   "packages/dms-saas/frontend-vue/app/build/highlight.ts",
+  "packages/dms-saas/frontend-vue/app/build/type-guards.ts",
+  "packages/dms-saas/frontend-vue/app/build/api-failure.ts",
   "packages/dms-saas/frontend-vue/app/composables/useMountedData.ts",
   "packages/dms-saas/frontend-vue/app/composables/useOnDemandRead.ts",
   "packages/dms-saas/frontend-vue/app/composables/useApiErrorMessage.ts",

@@ -25,7 +25,7 @@ const WORKSPACE_HOME = '/'
 const tenantId = props.routeParams?.id ?? ''
 const { t, locale } = useI18n()
 const toast = useToast()
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const route = useDmsRoute()
 const router = useDmsRouter()
 const { statusView } = useSaasStatus()
@@ -68,7 +68,7 @@ async function openWorkspace(): Promise<void> {
 	try {
 		await useTenantSwitch(tenantId, WORKSPACE_HOME)
 	} catch (error) {
-		presentError(error, { fallbackKey: `${D}.open_error` })
+		errors.presentError(error, { fallbackKey: `${D}.open_error` })
 	}
 }
 
@@ -143,23 +143,29 @@ const menu = computed<DropdownMenuItem[][]>(() => {
 	return [support, danger]
 })
 
-const QUERY_ACTIONS: Record<string, () => void> = {
-	suspend: () => void actions.suspend(),
-	complimentary: () => openDialog('complimentary'),
+const QUERY_ACTIONS = new Map<string, () => void>([
+	['suspend', () => void actions.suspend()],
+	['complimentary', () => openDialog('complimentary')],
+])
+
+function isQueryText(value: unknown): value is string {
+	return typeof value === 'string'
 }
 
-// The list's row menu opens a dialog here: run it once the workspace is
-// loaded (the server may have rendered it already), then drop the query so a
-// reload does not open it again.
+/**
+ * The list's row menu opens a dialog here: run it once the workspace is
+ * loaded (the server may have rendered it already), then drop the query so a
+ * reload does not open it again.
+ */
 async function runRequestedAction(
 	current: WorkspaceOverview | null,
 ): Promise<void> {
 	const requested = route.query[ACTION_QUERY]
-	if (!current || typeof requested !== 'string') return
+	if (!current || !isQueryText(requested)) return
 	const { [ACTION_QUERY]: _action, ...query } = route.query
 	await router.replace({ query })
 	if (current.status === 'cancelled') return
-	QUERY_ACTIONS[requested]?.()
+	QUERY_ACTIONS.get(requested)?.()
 }
 
 onMounted(() => {

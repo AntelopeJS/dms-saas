@@ -1,7 +1,12 @@
+import { isApiFailure } from '../build/api-failure'
+import { isRecord, isText } from '../build/type-guards'
+function readKey(data: unknown): string | undefined {
+	if (isText(data)) return data
+	if (isRecord(data)) return isText(data.message) ? data.message : undefined
+	return undefined
+}
+
 /** The i18n key the server answered a failed `$authFetch` with, if any. */
 export function readApiErrorKey(error: unknown): string | undefined {
-	const data = (error as { data?: unknown } | undefined)?.data
-	if (typeof data === 'string') return data
-	const message = (data as { message?: unknown } | undefined)?.message
-	return typeof message === 'string' ? message : undefined
+	return isApiFailure(error) ? readKey(error.data) : undefined
 }

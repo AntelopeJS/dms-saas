@@ -1,12 +1,12 @@
 <script setup lang="ts">
-/**
- * The plan a sign-up opens the workspace on, with "Change" leading to
- * Pricing, and the paid plan chosen there when there is one.
- */
 import { computed } from 'vue'
 import { featureHighlights, type RegistrationPlanSummary } from './pricing'
 import { usePublicPlanFormat } from './usePublicPlanFormat'
 
+/**
+ * The plan a sign-up opens the workspace on, with "Change" leading to
+ * Pricing, and the paid plan chosen there when there is one.
+ */
 interface RegistrationPlanCardProps {
 	summary: RegistrationPlanSummary | null
 	isLoading: boolean
@@ -77,7 +77,10 @@ const highlights = computed(() => {
 			class="flex items-start justify-between gap-3 px-4 py-3"
 		>
 			<div class="min-w-0">
-				<DmsEyebrowLabel as="span" :label="$t('saas.public.plan_card.eyebrow')" />
+				<DmsEyebrowLabel
+					as="span"
+					:label="$t('saas.public.plan_card.eyebrow')"
+				/>
 				<p class="text-highlighted text-sm font-semibold">
 					{{ summary.plan.name }}
 					<span class="text-muted font-normal">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PayableInvoice } from '../composables/usePayInvoice'
 import { computed, ref } from 'vue'
 
 type PaymentChoice = 'default_card' | 'other_card'
@@ -17,7 +18,7 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const { formatMinorUnits } = useMoneyFormat()
 const { payWithDefaultCard } = usePayInvoice()
 const billingStatus = useBillingStatus()
@@ -53,6 +54,7 @@ function openStripePage(): void {
 		window.open(url, '_blank', 'noopener')
 }
 
+/** Pays with the default card; the invoice shows its new state before the panel reports it paid. */
 async function payWithCard(): Promise<void> {
 	isPaying.value = true
 	failure.value = null
@@ -65,12 +67,12 @@ async function payWithCard(): Promise<void> {
 			color: 'success',
 			icon: 'i-ph-check-circle',
 		})
-		// The invoice shows its new state before the panel reports it paid.
 		await refreshPageBlocks()
 		emit('paid')
 	} catch (error) {
 		failure.value =
-			resolveError(error, { fallbackKey: `${KEY_PREFIX}.error` })?.message ?? ''
+			errors.resolveError(error, { fallbackKey: `${KEY_PREFIX}.error` })
+				?.message ?? ''
 	} finally {
 		isPaying.value = false
 	}

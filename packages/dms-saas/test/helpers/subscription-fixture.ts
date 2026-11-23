@@ -7,6 +7,7 @@ import {
 import { TENANT_SCHEMA_NAME } from "@antelopejs/interface-dms/constants";
 import { type TenantSubscription, TenantSubscriptionModel } from "../../src/db";
 import { addTenantMember, createUser } from "./dms";
+import { defined } from "./defined";
 
 /** The cutoff the cron fixtures decide against. */
 export const CUTOFF = new Date("2026-09-14T00:00:00Z");
@@ -21,7 +22,7 @@ export async function subscriptionFixture(
   patch: DeepPartial<TenantSubscription> = {},
 ) {
   const tenantId = randomUUID();
-  await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
+  await defined(Schema.get(TENANT_SCHEMA_NAME)).createInstance(tenantId).run();
   const owner = await createUser();
   await addTenantMember(tenantId, owner, true);
   const model = GetModel(TenantSubscriptionModel, tenantId);

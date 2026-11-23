@@ -198,7 +198,6 @@ describe("Stripe credit ceiling", () => {
 });
 
 describe("typed confirmation of a suspension", () => {
-  /** Stripe pausing the workspace's subscription collection, as a suspension asks. */
   function stubSuspensionStripe() {
     return vi
       .spyOn(stripe.write.subscriptions, "update")

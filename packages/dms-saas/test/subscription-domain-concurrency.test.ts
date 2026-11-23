@@ -19,6 +19,7 @@ import {
   executeOperatorAction,
   type OperatorActionRequest,
 } from "../src/operator-actions/journal";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 
 const CONTENDERS = 12;
@@ -178,7 +179,7 @@ describe("trial identity admission", () => {
     ).rejects.toThrow("acknowledgement unknown");
     const id = trialIdentityId("email", emailHash);
     expect(
-      (await GetModel(ProvisioningAttemptModel).get(handles.tenantId!))
+      (await GetModel(ProvisioningAttemptModel).get(defined(handles.tenantId)))
         ?.trialIdentityIds,
     ).toEqual([id]);
     expect(await reserve(id, randomUUID())).toBe(false);
@@ -243,7 +244,10 @@ describe("operator execution without timed takeover", () => {
       status: 409,
     });
     await expect(
-      model.beginTransition((await model.get(current._id))!, transition()),
+      model.beginTransition(
+        defined(await model.get(current._id)),
+        transition(),
+      ),
     ).rejects.toThrow("different pending");
     resume();
     await first;

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isRecord } from '../build/type-guards'
 import { computed, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
@@ -41,7 +42,7 @@ const { $authFetch } = useAuthFetch()
 const planCatalog = usePlanCatalog()
 const { t, locale } = useI18n()
 const toast = useToast()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const { statusView } = useSaasStatus()
 
 const planId = computed(() => props.rowData?._id ?? '')
@@ -147,7 +148,8 @@ async function loadImpact(): Promise<void> {
 		features.value = planCatalog.data.value?.features ?? []
 	} catch (error) {
 		loadError.value =
-			resolveError(error, { fallbackKey: RETIRE_FAILED_KEY })?.message ?? null
+			errors.resolveError(error, { fallbackKey: RETIRE_FAILED_KEY })?.message ??
+			null
 	} finally {
 		isLoading.value = false
 	}
@@ -162,20 +164,24 @@ async function prepare(): Promise<void> {
 	} catch (error) {
 		preparation.value = null
 		prepareError.value =
-			resolveError(error, { fallbackKey: RETIRE_FAILED_KEY })?.message ?? null
+			errors.resolveError(error, { fallbackKey: RETIRE_FAILED_KEY })?.message ??
+			null
 	} finally {
 		isPreparing.value = false
 	}
 }
 
-/** A refusal the server sent under a field (`{ message, field }`). */
-interface FieldRefusal {
-	field?: unknown
+/** A refusal the server sent under the confirmation field (`{ message, field }`). */
+interface TypedRefusal {
+	data: { field: typeof CONFIRM_TEXT_FIELD }
 }
 
-function isTypedRefusal(error: unknown): boolean {
-	const data = (error as { data?: FieldRefusal } | undefined)?.data
-	return typeof data === 'object' && data?.field === CONFIRM_TEXT_FIELD
+function isTypedRefusal(error: unknown): error is TypedRefusal {
+	return (
+		isRecord(error) &&
+		isRecord(error.data) &&
+		error.data.field === CONFIRM_TEXT_FIELD
+	)
 }
 
 async function retire(): Promise<void> {
@@ -204,7 +210,8 @@ async function retire(): Promise<void> {
 		await navigateDms(`${MIGRATIONS_PAGE_URL}/${response.migrationId}`)
 	} catch (error) {
 		const message =
-			resolveError(error, { fallbackKey: RETIRE_FAILED_KEY })?.message ?? null
+			errors.resolveError(error, { fallbackKey: RETIRE_FAILED_KEY })?.message ??
+			null
 		if (isTypedRefusal(error)) typedError.value = message
 		else submitError.value = message
 	} finally {

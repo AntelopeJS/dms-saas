@@ -43,7 +43,7 @@ export function useSaasRegistrationPlan(
 	planReference: MaybeRefOrGetter<string | null | undefined>,
 ) {
 	const publicFetch = usePublicFetch()
-	const { resolveError } = useApiErrorPresenter()
+	const errors = useApiErrorPresenter()
 	const summary = ref<RegistrationPlanSummary | null>(null)
 	const isLoading = ref(false)
 	const loadError = ref<string | null>(null)
@@ -60,8 +60,9 @@ export function useSaasRegistrationPlan(
 			rememberChosenPlan(summary.value.requestedPlan?._id ?? null)
 		} catch (error) {
 			loadError.value =
-				resolveError(error, { fallbackKey: REGISTRATION_LOAD_ERROR_KEY })
-					?.message ?? ''
+				errors.resolveError(error, {
+					fallbackKey: REGISTRATION_LOAD_ERROR_KEY,
+				})?.message ?? ''
 		} finally {
 			isLoading.value = false
 		}

@@ -471,7 +471,7 @@ export class SaasPlanDeletionController extends Controller(
       HTTP_BAD_REQUEST,
       "saas.errors.plan.target_must_be_active",
     );
-    return targetPlan!;
+    return targetPlan;
   }
 
   /** The operator types the plan's slug to retire it. */

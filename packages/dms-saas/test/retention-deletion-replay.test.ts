@@ -22,6 +22,7 @@ import {
   BillingSettingsModel,
   TenantSubscriptionModel,
 } from "../src/db";
+import { defined } from "./helpers/defined";
 import {
   BEFORE,
   CUTOFF,
@@ -141,7 +142,7 @@ describe("retention deletion replay", () => {
     await vi.waitFor(() => expect(logs.at("ERROR")).toHaveLength(1));
     expect(hookRuns).toHaveLength(1);
     expect((await model.get(id))?.deletionStartedAt).toEqual(BEFORE);
-    const { operationId } = hookRuns[0]!;
+    const { operationId } = defined(hookRuns[0]);
     expect(operationId).toEqual(expect.any(String));
 
     await Promise.all([task.execute(), task.execute()]);

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { VNode } from 'vue'
+import { computed, useId } from 'vue'
+
 /**
  * One field of a hand-built form, drawn as a DMS form draws its rows
  * (`FormEntries` / `FormFieldControl`): a `DmsFieldRow` holding the label,
@@ -6,8 +9,6 @@
  * holding the control, its help line and its error, which also marks the
  * control invalid.
  */
-import { computed, useId } from 'vue'
-
 interface FormFieldRowProps {
 	label?: string
 	/** Under the label. */
@@ -38,13 +39,13 @@ interface FormFieldRowControl {
 
 interface FormFieldRowSlots {
 	/** The control; bind `id` onto it. */
-	default?: (control: FormFieldRowControl) => unknown
+	default?: (control: FormFieldRowControl) => VNode[]
 	/** Replaces the help line (rich text, an icon). */
-	help?: () => unknown
+	help?: () => VNode[]
 	/** Inline after the label (a badge). */
-	'label-extra'?: () => unknown
+	'label-extra'?: () => VNode[]
 	/** Under the help line, in the control column (a summary of the value). */
-	after?: () => unknown
+	after?: () => VNode[]
 }
 
 const props = withDefaults(defineProps<FormFieldRowProps>(), {
@@ -61,8 +62,10 @@ const slots = defineSlots<FormFieldRowSlots>()
 
 const controlId = useId()
 
-// A form row without a label stacks: in the form layout its control would
-// sit in the 240px label column.
+/**
+ * A form row without a label stacks: in the form layout its control would
+ * sit in the 240px label column.
+ */
 const layout = computed(() =>
 	props.label && !props.stacked ? 'form' : 'stack',
 )

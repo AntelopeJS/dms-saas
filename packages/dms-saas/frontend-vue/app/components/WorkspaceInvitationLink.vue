@@ -21,7 +21,7 @@ const props = defineProps<{
 const L = 'saas.workspace_detail.invitations.link'
 
 const { locale } = useI18n()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const { fetchInvitationLink, copyLink } = useInvitationLink()
 
 const link = ref<string | null>(null)
@@ -46,7 +46,7 @@ async function load(): Promise<void> {
 		expiresAt.value = invitation.expiresAt
 	} catch (error) {
 		errorMessage.value =
-			resolveError(error, { fallbackKey: `${L}.error` })?.message ?? ''
+			errors.resolveError(error, { fallbackKey: `${L}.error` })?.message ?? ''
 	} finally {
 		isLoading.value = false
 	}

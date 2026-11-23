@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** Shown instead of Register and "Set up your first workspace" when admission is by invitation only. */
 import PublicStage from '../build/public/PublicStage.vue'
 import { LOGIN_PATH } from '../build/public/routes'
 </script>

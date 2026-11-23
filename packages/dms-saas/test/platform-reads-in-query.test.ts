@@ -30,6 +30,7 @@ import type {
 import { loadOpenInvoices } from "../src/routes/platformOwner/dashboard";
 import { loadWorkspaceRecords } from "../src/utils/workspace-records";
 import { getRowInstance } from "../src/utils/row-instance";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 import { subscriptionFixture } from "./helpers/subscription-fixture";
 import { insertTenant } from "./helpers/workspaces";
@@ -176,7 +177,9 @@ async function previousCronNotifications(
 
 beforeAll(async () => {
   for (const tenantId of [FEED_TENANT, OTHER_TENANT, TIED_TENANT]) {
-    await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
+    await defined(Schema.get(TENANT_SCHEMA_NAME))
+      .createInstance(tenantId)
+      .run();
     await insertTenant(tenantId);
   }
   const documents: DocumentSeed[] = [
@@ -368,11 +371,14 @@ describe("the dashboard's open invoices counted in the query", () => {
     const currencies = ["eur", "EUR", "usd", "gbp", "chf", "jpy"];
     const tenants = ["random-a", "random-b", "random-c", "random-d"];
     for (const tenantId of tenants) {
-      await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
+      await defined(Schema.get(TENANT_SCHEMA_NAME))
+        .createInstance(tenantId)
+        .run();
     }
     for (let index = 0; index < 480; index += 1) {
-      const total = [0, 0, 100, -100, 250, 999][next(6)]! * (1 + next(3));
-      await insertDocument(tenants[next(tenants.length)]!, {
+      const total =
+        defined([0, 0, 100, -100, 250, 999][next(6)]) * (1 + next(3));
+      await insertDocument(defined(tenants[next(tenants.length)]), {
         status: "open",
         issued: index,
         currency: currencies[next(currencies.length)],
@@ -468,7 +474,9 @@ describe("the segment records' newest rows and member counts read in the query",
   it("picks each workspace's newest subscription and billing details and counts its members as the full read did", async () => {
     const tenants = ["records-a", "records-b", TIED_RECORDS];
     for (const [index, tenantId] of tenants.entries()) {
-      await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
+      await defined(Schema.get(TENANT_SCHEMA_NAME))
+        .createInstance(tenantId)
+        .run();
       const subscriptionHours =
         tenantId === TIED_RECORDS ? [50, 7, 30, 7] : [50, 5 + index, 30];
       for (const hours of subscriptionHours) {

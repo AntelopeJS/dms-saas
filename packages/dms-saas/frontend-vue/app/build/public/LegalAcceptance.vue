@@ -1,7 +1,7 @@
 <script setup lang="ts">
-/** The terms checkbox of Register and "Set up your first workspace". */
-import { LEGAL_DOCUMENTS } from './routes'
+import { findLegalDocument } from './routes'
 
+/** The terms checkbox of Register and "Set up your first workspace". */
 interface LegalAcceptanceProps {
 	error?: string | null
 }
@@ -9,12 +9,8 @@ interface LegalAcceptanceProps {
 withDefaults(defineProps<LegalAcceptanceProps>(), { error: null })
 const accepted = defineModel<boolean>({ required: true })
 
-const TERMS = LEGAL_DOCUMENTS.find(
-	(document) => document.field === 'termsAndConditions',
-)!
-const PRIVACY = LEGAL_DOCUMENTS.find(
-	(document) => document.field === 'privacyPolicy',
-)!
+const TERMS = findLegalDocument('termsAndConditions')
+const PRIVACY = findLegalDocument('privacyPolicy')
 </script>
 
 <template>

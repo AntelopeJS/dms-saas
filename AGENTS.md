@@ -7,12 +7,12 @@ A pnpm workspace with two published packages. The root holds the tool configs, t
 | Path                             | What it is                                                                                                                  |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `packages/dms-saas`              | `@antelopejs/dms-saas`, the module: sources, Vitest suite (`test/`), skills, docs                                         |
-| `packages/dms-saas/frontend-vue` | The Vue layer, shipped as source. ESLint and Prettier own it, not oxlint and oxfmt. It keeps a lockfile for standalone consumers |
+| `packages/dms-saas/frontend-vue` | The Vue layer, shipped as source. oxlint lints it like the rest, ESLint (`antelopeNuxtConfig`) adds the Vue rules and the type-aware rules on `.vue` script blocks, and Prettier formats it. Its `tsconfig.json` extends the types `pnpm --filter @antelopejs/dms-saas types:prepare` writes to `packages/dms-saas/.dms-types`. It keeps a lockfile for standalone consumers |
 | `packages/dms-saas/playground`   | An AntelopeJS project that runs the module against MongoDB. Not a workspace package: it has its own lockfile and a hoisted linker, so install it with `--ignore-workspace` |
 | `packages/interface-dms-saas`    | `@antelopejs/interface-dms-saas`, the extension points other modules import                                                |
 | `e2e`                            | The journeys as a Playwright suite, through the kit of `@antelopejs/dms/e2e`: `journeys.config.ts` declares the run, `playground/` is the project it starts, `feature-map/` maps each feature to the source it covers |
 
-The module's typecheck and oxlint's type-aware rules resolve the interface through its built `dist`, so the root `typecheck` script is the build of both packages, and `lint` runs after it. Run `pnpm build` after `pnpm install`: without a `dist`, the pre-commit lint hook reports false type errors and `check:exports` fails.
+The module's typecheck and oxlint's type-aware rules resolve the interface through its built `dist`, so the root `typecheck` script is the build of both packages, and `lint` runs after it. Type-aware lint reads the Vue layer through `.dms-types`, which `lint` writes first. Run `pnpm build` and `pnpm --filter @antelopejs/dms-saas types:prepare` after `pnpm install`: without a `dist` or `.dms-types`, the pre-commit lint hook reports false type errors, `check:exports` fails, and the Vitest suites that import the Vue layer cannot load its tsconfig. `test:unit` writes `.dms-types` first.
 
 ## Versioning
 

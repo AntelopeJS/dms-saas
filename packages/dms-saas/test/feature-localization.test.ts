@@ -13,6 +13,7 @@ import {
   localizeFeature,
   localizePlan,
 } from "@antelopejs/interface-dms-saas/plans";
+import { defined } from "./helpers/defined";
 
 const TEXTS = {
   displayName: { en: "Members", fr: "Membres" },
@@ -26,7 +27,7 @@ function storedFeature() {
     _id: "cloud.plan.members",
     ...TEXTS,
   }).localize("*");
-  return FeatureModel.fromDatabase(FeatureModel.toDatabase(written))!;
+  return defined(FeatureModel.fromDatabase(FeatureModel.toDatabase(written)));
 }
 
 describe("feature localization", () => {
@@ -58,9 +59,11 @@ describe("writing every locale through the all-locales view", () => {
     texts.description = TEXTS.description;
     texts.tooltip = TEXTS.tooltip;
     texts.unit = TEXTS.unit;
-    const stored = FeatureModel.fromDatabase(
-      FeatureModel.toDatabase(texts.localize(FEATURE_FALLBACK_LOCALE)),
-    )!;
+    const stored = defined(
+      FeatureModel.fromDatabase(
+        FeatureModel.toDatabase(texts.localize(FEATURE_FALLBACK_LOCALE)),
+      ),
+    );
     expect(stored.localize("*", FEATURE_LOCALIZED_FIELDS)).toMatchObject(TEXTS);
     expect(localizeFeature(stored, "fr").displayName).toBe("Membres");
   });
@@ -77,9 +80,11 @@ describe("writing every locale through the all-locales view", () => {
     texts.name = wording.name;
     texts.description = wording.description;
     texts.borderLabel = wording.borderLabel;
-    const stored = PlanModel.fromDatabase(
-      PlanModel.toDatabase(texts.localize(PLAN_FALLBACK_LOCALE)),
-    )!;
+    const stored = defined(
+      PlanModel.fromDatabase(
+        PlanModel.toDatabase(texts.localize(PLAN_FALLBACK_LOCALE)),
+      ),
+    );
     expect(stored.localize("*", PLAN_LOCALIZED_FIELDS)).toMatchObject(wording);
     expect(localizePlan(stored, "fr").description).toBe("Pour les équipes");
   });

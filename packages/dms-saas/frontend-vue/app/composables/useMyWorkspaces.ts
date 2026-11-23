@@ -38,19 +38,19 @@ interface MyWorkspacesHandle {
  */
 export function useMyWorkspaces(): MyWorkspacesHandle {
 	const { loggedIn } = useDmsUserSession()
-	const { data, status, refresh } = useApiData<MyWorkspace[]>(() =>
+	const request = useApiData<MyWorkspace[]>(() =>
 		loggedIn.value ? WORKSPACES_ENDPOINT : null,
 	)
-	const workspaces = computed(() => data.value ?? [])
+	const workspaces = computed(() => request.data.value ?? [])
 	return {
 		workspaces,
 		isLoaded: computed(
 			() =>
 				!loggedIn.value ||
-				status.value === 'success' ||
+				request.status.value === 'success' ||
 				workspaces.value.length > 0,
 		),
-		hasFailed: computed(() => status.value === 'error'),
-		refresh: () => refresh(),
+		hasFailed: computed(() => request.status.value === 'error'),
+		refresh: () => request.refresh(),
 	}
 }

@@ -70,20 +70,24 @@ function textsOf(
 ): BannerTexts {
   const freeUntil = inputs.subscription?.freeUntil ?? null;
   const date = freeUntil ? dateParam(freeUntil, "day") : null;
+  const indefinite = (): BannerTexts => ({
+    title: `$${K}.indefinite_title`,
+    description: composed(`${K}.indefinite_description`, {
+      workspace: inputs.workspaceName,
+      plan: inputs.planName,
+    }),
+  });
   const texts: Record<ComplimentaryState, () => BannerTexts> = {
-    indefinite: () => ({
-      title: `$${K}.indefinite_title`,
-      description: composed(`${K}.indefinite_description`, {
-        workspace: inputs.workspaceName,
-        plan: inputs.planName,
-      }),
-    }),
-    ending: () => ({
-      title: composed(`${K}.ending_title`, { date: date! }),
-      description: composed(`${K}.ending_description`, {
-        days: countParam(daysUntil(new Date(freeUntil!), inputs.now)),
-      }),
-    }),
+    indefinite,
+    ending: () =>
+      date && freeUntil
+        ? {
+            title: composed(`${K}.ending_title`, { date }),
+            description: composed(`${K}.ending_description`, {
+              days: countParam(daysUntil(new Date(freeUntil), inputs.now)),
+            }),
+          }
+        : indefinite(),
     expired: () => ({
       title: date
         ? composed(`${K}.expired_title_on`, { date })

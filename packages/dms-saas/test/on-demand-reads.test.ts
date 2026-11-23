@@ -3,6 +3,7 @@ import { useBillingStatus } from "../frontend-vue/app/composables/useBillingStat
 import { useOnDemandRead } from "../frontend-vue/app/composables/useOnDemandRead";
 import { useSeatQuota } from "../frontend-vue/app/composables/useSeatQuota";
 import { useTenantPlan } from "../frontend-vue/app/composables/useTenantPlan";
+import { defined } from "./helpers/defined";
 import type { UseApiDataOptions } from "./helpers/api-data";
 import type { ApiDataRequest } from "./helpers/api-data-request";
 import { toValue } from "./helpers/vue-runtime/index.mjs";
@@ -56,21 +57,21 @@ describe("useOnDemandRead", () => {
       query: () => ({ email: email.value }),
     });
 
-    const [call] = calls;
-    expect(call!.options).toMatchObject({
+    const call = defined(calls[0]);
+    expect(call.options).toMatchObject({
       immediate: false,
       server: false,
       watch: false,
       refreshOnPageRefresh: false,
     });
-    expect(call!.execute).not.toHaveBeenCalled();
-    expect(toValue(call!.options!.query)).toEqual({
+    expect(call.execute).not.toHaveBeenCalled();
+    expect(toValue(defined(call.options).query)).toEqual({
       email: "a@example.com",
     });
 
     await expect(lookup.read()).resolves.toEqual({ url: "/api/lookup" });
     await lookup.read();
-    expect(call!.execute).toHaveBeenCalledTimes(2);
+    expect(call.execute).toHaveBeenCalledTimes(2);
   });
 
   it("rejects with the failure of the read", async () => {
@@ -100,6 +101,6 @@ describe("keys left to the DMS", () => {
   it("reads the seats again with the page and on each mount: no option holds them back", () => {
     const calls = stubApiData(() => undefined);
     useSeatQuota();
-    expect(calls[0]!.options).toBeUndefined();
+    expect(defined(calls[0]).options).toBeUndefined();
   });
 });

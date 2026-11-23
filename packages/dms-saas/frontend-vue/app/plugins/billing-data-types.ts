@@ -1,4 +1,6 @@
+import { isNumber, isRecord, isText } from '../build/type-guards'
 import { defineComponent, h, resolveComponent } from 'vue'
+import type { DataTypeFormatter } from '#dms-core/app/composables/data-types/useDataType'
 import { formatPeriodRange } from '../build/period-range'
 import { billingDocumentTypeKey } from '../composables/useBillingDocumentType'
 import { parseInvoiceLines } from '../composables/useInvoiceLines'
@@ -8,7 +10,7 @@ const InvoiceLinesDisplay = defineComponent({
 	name: 'InvoiceLinesDisplay',
 	props: {
 		modelValue: {
-			type: [Array, String] as unknown as () => unknown,
+			type: [Array, String],
 			default: null,
 		},
 	},
@@ -24,17 +26,36 @@ const PERIOD_FORMAT: Intl.DateTimeFormatOptions = {
 }
 const NO_VALUE = '—'
 
-type CellRow = Record<string, unknown> | undefined
+type CellRow = Parameters<DataTypeFormatter>[3]
 
 /** Where a period cell reads the end of the period. */
 interface PeriodOptions {
 	endField?: string
 }
 
-function toDate(value: unknown): Date | null {
-	if (!(value instanceof Date) && typeof value !== 'string') return null
+function isDateInput(value: unknown): value is Date | string {
+	return value instanceof Date || isText(value)
+}
+
+function isPeriodOptions(value: unknown): value is PeriodOptions {
+	return (
+		isRecord(value) && (value.endField === undefined || isText(value.endField))
+	)
+}
+
+function parseDate(value: Date | string): Date | null {
 	const date = new Date(value)
 	return Number.isNaN(date.getTime()) ? null : date
+}
+
+function toDate(value: unknown): Date | null {
+	return isDateInput(value) ? parseDate(value) : null
+}
+
+function readRowDate(row: CellRow, field: string): Date | null {
+	return row !== undefined && Object.hasOwn(row, field)
+		? toDate(row[field])
+		: null
 }
 
 /**
@@ -42,23 +63,20 @@ function toDate(value: unknown): Date | null {
  * reader's time zone like every other date of the console.
  */
 function formatPeriod(
-	start: unknown,
+	from: Date | null,
 	locale: string,
-	options: unknown,
+	endField: string | undefined,
 	row: CellRow,
 ): string {
-	const from = toDate(start)
 	if (!from) return NO_VALUE
-	const endField = (options as PeriodOptions | undefined)?.endField
-	const to = endField ? toDate(row?.[endField]) : null
+	const to = endField ? readRowDate(row, endField) : null
 	return formatPeriodRange(from, to, locale, regionalDateTimeFormat)
 }
 
-/** An amount in minor units, in the row's own currency. */
-function formatRowMoney(value: unknown, locale: string, row: CellRow) {
-	if (typeof value !== 'number') return value
-	const currency = typeof row?.currency === 'string' ? row.currency : null
-	return formatMinorUnits(value, currency, locale)
+/** The currency a row states for its own amounts, if any. */
+function rowCurrency(row: CellRow): string | null {
+	const currency = row?.currency
+	return isText(currency) ? currency : null
 }
 
 function registerPeriodCell(
@@ -66,7 +84,15 @@ function registerPeriodCell(
 ): void {
 	registerDataType({
 		id: 'saas:period',
-		formatter: { default: formatPeriod },
+		formatter: {
+			default: (start, locale, options, row) =>
+				formatPeriod(
+					toDate(start),
+					locale,
+					isPeriodOptions(options) ? options.endField : undefined,
+					row,
+				),
+		},
 	})
 }
 
@@ -76,7 +102,7 @@ export default defineDmsPlugin(() => {
 	registerDataType({
 		id: 'billing_document_type',
 		formatter: {
-			default: (value: unknown) => {
+			default: (value) => {
 				const key = billingDocumentTypeKey(value)
 				return key ? nuxtApp.$i18n.t(key) : NO_VALUE
 			},
@@ -85,7 +111,7 @@ export default defineDmsPlugin(() => {
 	registerDataType({
 		id: 'billing_period',
 		formatter: {
-			default: (value: unknown, locale: string) =>
+			default: (value, locale) =>
 				formatDate(value, locale, PERIOD_FORMAT) ?? NO_VALUE,
 		},
 	})
@@ -93,14 +119,16 @@ export default defineDmsPlugin(() => {
 		id: 'money_cents',
 		formatter: {
 			default: (value, locale, _options, row) =>
-				formatRowMoney(value, locale, row),
+				isNumber(value)
+					? formatMinorUnits(value, rowCurrency(row), locale)
+					: value,
 		},
 	})
 	registerDataType({
 		id: 'invoice_lines',
 		displayComponent: InvoiceLinesDisplay,
 		formatter: {
-			default: (value: unknown) => {
+			default: (value) => {
 				const count = parseInvoiceLines(value).length
 				return count ? String(count) : NO_VALUE
 			},

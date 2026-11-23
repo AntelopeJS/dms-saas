@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * "Workspace access restricted": why the workspace is closed and since when,
- * how the workspace owner reopens it, whom a member should ask, and the
- * caller's other workspaces. Reachable while the access gate blocks.
- */
 import { computed, onMounted, ref, watch } from 'vue'
 import {
 	ACCESS_REASON_VIEWS,
@@ -38,8 +33,9 @@ interface PortalSession {
 
 const { t, locale } = useI18n()
 const { $authFetch } = useAuthFetch()
-const { user, clear: clearSession } = useDmsUserSession()
-const { presentError, resolveError } = useApiErrorPresenter()
+const session = useDmsUserSession()
+const { user } = session
+const errors = useApiErrorPresenter()
 const { formatMinorUnits } = useMoneyFormat()
 const { statusView } = useSaasStatus()
 
@@ -48,7 +44,7 @@ const access = accessRead.data
 const isLoading = computed(() => accessRead.pending.value)
 const loadError = computed(() =>
 	accessRead.error.value
-		? (resolveError(accessRead.error.value, {
+		? (errors.resolveError(accessRead.error.value, {
 				fallbackKey: 'saas.public.suspended.load_error',
 			})?.message ?? '')
 		: null,
@@ -91,8 +87,10 @@ function mediumDate(value: string | null | undefined): string {
 		: ''
 }
 
-// Deleted by an owner, not cancelled: who did it, and until when it can
-// still be restored by choosing a plan again.
+/**
+ * Deleted by an owner, not cancelled: who did it, and until when it can
+ * still be restored by choosing a plan again.
+ */
 const deletionExplanation = computed(() => {
 	const deletion = access.value?.deletion
 	const params = {
@@ -134,8 +132,10 @@ const ownerActionLabel = computed(() =>
 		: t(`saas.public.suspended.owner.action.${reason.value}`),
 )
 
-// Waiting for its first payment, the workspace already has its plan: the
-// owner lands on that plan's payment, not on a page with nothing open.
+/**
+ * Waiting for its first payment, the workspace already has its plan: the
+ * owner lands on that plan's payment, not on a page with nothing open.
+ */
 const ownerActionPath = computed(() => {
 	const planId = access.value?.workspace.planId
 	if (reason.value === PENDING_PAYMENT_REASON && planId)
@@ -173,7 +173,7 @@ async function openPortal(): Promise<void> {
 		})
 		window.location.href = session.url
 	} catch (error) {
-		presentError(error, {
+		errors.presentError(error, {
 			fallbackKey: 'saas.public.suspended.owner.portal_failed',
 		})
 	} finally {
@@ -182,14 +182,16 @@ async function openPortal(): Promise<void> {
 }
 
 async function signOut(): Promise<void> {
-	await clearSession()
+	await session.clear()
 	await navigateDms(LOGIN_PATH)
 }
 
-// A workspace no longer blocked is entered again, from the browser. The
-// billing data read before the suspension is not shown here, so the pages
-// past this one read it afresh.
-onMounted(() => {
+/**
+ * A workspace no longer blocked is entered again, from the browser. The
+ * billing data read before the suspension is not shown here, so the pages
+ * past this one read it afresh.
+ */
+function enterWhenUnblocked(): void {
 	watch(
 		() => access.value?.blocked,
 		(blocked) => {
@@ -197,7 +199,9 @@ onMounted(() => {
 		},
 		{ immediate: true },
 	)
-})
+}
+
+onMounted(enterWhenUnblocked)
 </script>
 
 <template>

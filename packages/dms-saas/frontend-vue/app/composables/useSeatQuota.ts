@@ -1,3 +1,4 @@
+import type { ApiDataResult } from '#dms-core/app/composables/auth/useApiData'
 const SEAT_QUOTA_ENDPOINT = '/api/saas/tenant/seats'
 
 export interface PlatformSupportMember {

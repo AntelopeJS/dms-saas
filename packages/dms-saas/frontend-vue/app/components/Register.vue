@@ -1,13 +1,4 @@
 <script setup lang="ts">
-/**
- * Reference implementation of the public registration flow.
- *
- * Replace it by turning the bundled page off (`publicScreens.register: false`
- * in the dms-saas config) and registering your own page on the `register`
- * slug, then build the markup you want on `useSaasRegistration()`, which owns
- * the card policy, the Stripe orchestration, the validation order and the
- * provisioning call.
- */
 import { computed, ref } from 'vue'
 import LegalAcceptance from '../build/public/LegalAcceptance.vue'
 import PublicStage from '../build/public/PublicStage.vue'
@@ -18,16 +9,16 @@ import {
 	LOGIN_PATH,
 	PRICING_PATH,
 } from '../build/public/routes'
+import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 defineOptions({ name: 'DmsSaasRegister' })
 
 const EMAIL_IN_USE_KEY = 'saas.errors.user.email_in_use'
 
-const { t, te } = useI18n()
+const i18n = useI18n()
+const { t } = i18n
 const config = useDmsRuntimeConfig()
-const saasConfig = config.public.dmsSaas as
-	| DmsSaasPublicRuntimeConfig
-	| undefined
+const saasConfig = readDmsSaasPublicConfig(config.public.dmsSaas)
 
 const {
 	form,
@@ -66,7 +57,7 @@ const subtitle = computed(() => {
 /** A field error is a translation key, or Stripe's own words for the card. */
 function errorText(message: string | undefined): string | undefined {
 	if (!message) return undefined
-	return te(message) ? t(message) : message
+	return i18n.te(message) ? t(message) : message
 }
 </script>
 
