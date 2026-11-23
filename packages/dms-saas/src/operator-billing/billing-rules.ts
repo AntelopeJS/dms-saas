@@ -45,11 +45,11 @@ export function pickBillingRules(
   );
 }
 
-const wholeNumber = (min: number, max: number, message: string) =>
-  z.number().int({ message }).min(min, { message }).max(max, { message });
+const wholeNumber = (min: number, max: number, error: string) =>
+  z.number().int({ error }).min(min, { error }).max(max, { error });
 
 const legalText = z.string().max(MAX_LEGAL_TEXT_LENGTH, {
-  message: "$saas.errors.billing_rules.legal_text_too_long",
+  error: "$saas.errors.billing_rules.legal_text_too_long",
 });
 
 /**
@@ -86,7 +86,7 @@ export const billingRulesBodySchema = z.object({
     .string()
     .trim()
     .regex(STRIPE_TAX_CODE_PATTERN, {
-      message: "$saas.errors.billing_rules.tax_code",
+      error: "$saas.errors.billing_rules.tax_code",
     })
     .optional(),
   termsOfUse: legalText.optional(),
