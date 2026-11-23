@@ -55,7 +55,7 @@
     "typecheck": "tsc --noEmit",
     "verify:interface": "node scripts/verify-interface-package.mjs",
     "test": "pnpm run build && pnpm --filter @antelopejs/interface-dms-saas run check:exports && pnpm run test:unit",
-    "test:unit": "vitest run --project unit --project frontend",
+    "test:unit": "pnpm run -s types:prepare && vitest run --project unit --project frontend",
     "test:journeys": "vitest run --project journeys",
     "release": "pnpm --filter @antelopejs/interface-dms-saas build && pnpm --dir frontend-vue install --frozen-lockfile && pnpm run verify:interface && release-it",
     "prepack": "pnpm run build",
