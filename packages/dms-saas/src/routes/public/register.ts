@@ -423,8 +423,11 @@ export class SaasRegisterApiController extends Controller(
     const shown = isAnotherPlan && requested ? [plan, requested] : [plan];
     const catalog = await loadPublicPlanCatalog(shown, requestLocale(language));
     const byId = new Map(catalog.plans.map((entry) => [entry._id, entry]));
+    const shownPlan = byId.get(plan._id) ?? catalog.plans[0];
+    if (!shownPlan)
+      throw new Error("The registration plan is not in its catalog");
     return {
-      plan: byId.get(plan._id) ?? catalog.plans[0]!,
+      plan: shownPlan,
       requestedPlan: isAnotherPlan ? (byId.get(requested._id) ?? null) : null,
       features: catalog.features,
       rules,

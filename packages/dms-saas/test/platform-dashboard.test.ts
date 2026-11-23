@@ -18,6 +18,7 @@ import {
   readPeriodQuery,
 } from "../src/metrics/revenue";
 import { SaasDashboardController } from "../src/pages/platform/dashboard";
+import { defined } from "./helpers/defined";
 import { missingKeys, writeText } from "./helpers/composed-text";
 import { findChild, isOptionRecord } from "./helpers/serialized";
 
@@ -131,7 +132,7 @@ describe("dashboard headline and attention queue", () => {
       key: "saas.text.value",
       params: { value: { type: "money", value: 164_600, currency: "EUR" } },
     });
-    expect(writeText(mrr!.detail!)).toContain("$100.00");
+    expect(writeText(defined(defined(mrr).detail))).toContain("$100.00");
   });
 
   it("shows one card per queue that holds something, in the order of urgency", () => {
@@ -204,7 +205,7 @@ describe("dashboard headline and attention queue", () => {
         params: { name: "Globex", date: { type: "date", format: "day" } },
       },
     });
-    expect(writeText(items[2]!.detail!)).toBe("Globex 10 Oct");
+    expect(writeText(defined(defined(items[2]).detail))).toBe("Globex 10 Oct");
   });
 
   it("lists every status in its own tone, linking to its tab", () => {

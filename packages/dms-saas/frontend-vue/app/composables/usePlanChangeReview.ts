@@ -3,7 +3,14 @@ import type {
 	SeatsInUse,
 	TenantPlanFeature,
 } from './useTenantPlan'
-import { PLAN_UNLIMITED } from '../build/plan-catalog'
+import {
+	isFeatureNumber,
+	isFeatureText,
+	isPlanFeatureValue,
+	PLAN_UNLIMITED,
+	type PlanFeatureValue,
+} from '../build/plan-catalog'
+import { isApiFailure } from './useApiErrorMessage'
 
 /** Query parameter naming the plan to review on arrival on the billing page. */
 export const UPGRADE_QUERY_PARAM = 'upgrade'
@@ -70,6 +77,37 @@ export interface PlanChangeNotice {
 	resource?: string
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null
+}
+
+function isText(value: unknown): value is string {
+	return typeof value === 'string'
+}
+
+function isIncompatibility(value: unknown): value is PlanChangeIncompatibility {
+	return (
+		isRecord(value) &&
+		isText(value.code) &&
+		isText(value.message) &&
+		(value.resource === undefined || isText(value.resource))
+	)
+}
+
+function readIncompatibilities(
+	data: unknown,
+): PlanChangeIncompatibility[] | null {
+	if (isRecord(data)) {
+		const list = data.incompatibilities
+		return data.code === INCOMPATIBLE_CODE &&
+			Array.isArray(list) &&
+			list.every(isIncompatibility)
+			? list
+			: null
+	}
+	return null
+}
+
 /**
  * What the workspace must bring within the target plan before it can move,
  * read from the 409 a plan change preview or confirmation answers with; null
@@ -78,23 +116,24 @@ export interface PlanChangeNotice {
 export function readPlanChangeIncompatibilities(
 	error: unknown,
 ): PlanChangeIncompatibility[] | null {
-	const data = (error as { data?: unknown } | undefined)?.data as
-		| { code?: unknown; incompatibilities?: unknown }
-		| undefined
-	if (data?.code !== INCOMPATIBLE_CODE) return null
-	const list = data.incompatibilities
-	return Array.isArray(list) ? (list as PlanChangeIncompatibility[]) : null
+	return isApiFailure(error) ? readIncompatibilities(error.data) : null
 }
+
+/** The query of the page, as the router hands it over. */
+type UpgradeQuery = Record<
+	string,
+	string | null | undefined | (string | null)[]
+>
 
 /**
  * The plan id an arrival link asks to review (`?upgrade=<planId>`), or null.
  * A repeated parameter takes its first non-empty value.
  */
 export function readUpgradeParam(
-	query: Record<string, unknown> | null | undefined,
+	query: UpgradeQuery | null | undefined,
 ): string | null {
 	const raw = query?.[UPGRADE_QUERY_PARAM]
-	const values = Array.isArray(raw) ? raw : [raw]
+	const values: (string | null | undefined)[] = Array.isArray(raw) ? raw : [raw]
 	const planId = values.find(
 		(value): value is string =>
 			typeof value === 'string' && value.trim().length > 0,
@@ -132,21 +171,29 @@ export function splitOfferedPlans(
 	}
 }
 
+function rankOfValue(value: PlanFeatureValue): number {
+	if (value === null || value === false) return 0
+	if (value === true) return 1
+	if (isFeatureNumber(value)) {
+		return value === PLAN_UNLIMITED ? UNLIMITED_RANK : Math.max(value, 0)
+	}
+	return isFeatureText(value) && value.trim() ? 1 : 0
+}
+
 /**
  * How much of a feature a value grants: not included (absent, `false`, 0),
  * a limit (its number), unlimited (−1), included (`true`). Text values have
  * no order and rank as included.
  */
 export function featureRank(value: unknown): number {
-	if (value === undefined || value === null || value === false) return 0
-	if (value === true) return 1
-	if (typeof value === 'number') {
-		return value === PLAN_UNLIMITED ? UNLIMITED_RANK : Math.max(value, 0)
-	}
-	return typeof value === 'string' && value.trim() ? 1 : 0
+	return isPlanFeatureValue(value) ? rankOfValue(value) : 0
 }
 
-/** The features gained and lost when moving from one plan to another. */
+/**
+ * The features gained and lost when moving from one plan to another. Ranks
+ * are compared, not subtracted: two unlimited values are both Infinity, and
+ * Infinity - Infinity is NaN, which read as a loss.
+ */
 export function diffPlanFeatures(
 	features: TenantPlanFeature[],
 	from: OfferedPlanView | null,
@@ -156,8 +203,6 @@ export function diffPlanFeatures(
 	for (const feature of features) {
 		const before = from?.featureValues[feature.featureId]
 		const after = to.featureValues[feature.featureId]
-		// Ranks are compared, not subtracted: two unlimited values are both
-		// Infinity, and Infinity - Infinity is NaN, which read as a loss.
 		const rankBefore = featureRank(before)
 		const rankAfter = featureRank(after)
 		if (rankAfter === rankBefore) continue

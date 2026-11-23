@@ -1,11 +1,4 @@
 <script setup lang="ts">
-/**
- * "Set up your first workspace": where an account that belongs to no
- * workspace lands after signing in (OAuth or password), holding a tenant
- * assignment token. It names the identity, opens the workspace on the free
- * plan with the card policy of registration, and sends a paid choice made on
- * Pricing to the upgrade review on Billing.
- */
 import { computed, onMounted, ref } from 'vue'
 import {
 	readChosenPlan,
@@ -24,6 +17,7 @@ import {
 	PRICING_PATH,
 } from '../../build/public/routes'
 import { usePublicFetch } from '../../build/public/usePublicFetch'
+import { readDmsSaasPublicConfig } from '../../types/runtime-config'
 
 interface OAuthProviderOption {
 	id: string
@@ -32,7 +26,7 @@ interface OAuthProviderOption {
 }
 
 interface DmsPublicRuntime {
-	oauthProviders?: OAuthProviderOption[]
+	oauthProviders: OAuthProviderOption[]
 }
 
 interface PendingRegistration {
@@ -57,13 +51,15 @@ const NEW_TAB = '_blank'
 
 const route = useDmsRoute()
 const config = useDmsRuntimeConfig()
-const { t, te } = useI18n()
+const i18n = useI18n()
+const { t } = i18n
 const publicFetch = usePublicFetch()
-const { resolveError } = useApiErrorPresenter()
-const saasConfig = config.public.dmsSaas as
-	| DmsSaasPublicRuntimeConfig
-	| undefined
-const dmsRuntime = config.public.dms as DmsPublicRuntime
+const errors = useApiErrorPresenter()
+const saasConfig = readDmsSaasPublicConfig(config.public.dmsSaas)
+const dmsRuntime = config.public.dms
+const oauthProviders = isDmsPublicRuntime(dmsRuntime)
+	? dmsRuntime.oauthProviders
+	: []
 const isRegistrationClosed = isRegistrationClosedBy(saasConfig)
 const comparePlansTo = isPublicScreenServed(saasConfig, 'pricing')
 	? PRICING_PATH
@@ -76,7 +72,7 @@ const paymentMethodPolicy = computed(() =>
 
 const tenantAssignmentToken = computed(() => {
 	const value = route.query.token
-	return typeof value === 'string' ? value : ''
+	return isText(value) ? value : ''
 })
 
 const pending = ref<PendingRegistration | null>(null)
@@ -103,9 +99,8 @@ const isPaymentStepVisible = computed(() =>
 const entryProvider = computed<OAuthProviderOption | null>(() => {
 	const providerId = pending.value?.provider
 	if (!providerId) return null
-	const declared = dmsRuntime.oauthProviders ?? []
 	return (
-		declared.find((provider) => provider.id === providerId) ?? {
+		oauthProviders.find((provider) => provider.id === providerId) ?? {
 			id: providerId,
 			label: providerId,
 			icon: FALLBACK_PROVIDER_ICON,
@@ -143,6 +138,33 @@ const legalError = computed(() =>
 		: null,
 )
 
+function isText(value: unknown): value is string {
+	return typeof value === 'string'
+}
+
+function isOAuthProviderOption(value: unknown): value is OAuthProviderOption {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'id' in value &&
+		typeof value.id === 'string' &&
+		'label' in value &&
+		typeof value.label === 'string' &&
+		'icon' in value &&
+		typeof value.icon === 'string'
+	)
+}
+
+function isDmsPublicRuntime(value: unknown): value is DmsPublicRuntime {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'oauthProviders' in value &&
+		Array.isArray(value.oauthProviders) &&
+		value.oauthProviders.every(isOAuthProviderOption)
+	)
+}
+
 function toLogin(): void {
 	if (typeof window !== 'undefined') window.location.href = LOGIN_PATH
 }
@@ -152,12 +174,6 @@ function landingPath(): string {
 	return requested && isPaidPlan(requested)
 		? billingUpgradePath(requested._id)
 		: HOME_PATH
-}
-
-function classifyEntryFailure(error: unknown): EntryFailure {
-	return readApiErrorKey(error) === ALREADY_HAS_WORKSPACE_KEY
-		? 'already_has_workspace'
-		: 'entry'
 }
 
 async function loadPendingRegistration(): Promise<void> {
@@ -170,9 +186,12 @@ async function loadPendingRegistration(): Promise<void> {
 			name: pending.value.name,
 		})
 	} catch (error) {
-		entryFailure.value = classifyEntryFailure(error)
+		entryFailure.value =
+			readApiErrorKey(error) === ALREADY_HAS_WORKSPACE_KEY
+				? 'already_has_workspace'
+				: 'entry'
 		entryErrorMessage.value =
-			resolveError(error, {
+			errors.resolveError(error, {
 				fallbackKey: 'saas.public.no_workspace.entry_failed.title',
 			})?.message ?? ''
 	} finally {
@@ -199,22 +218,26 @@ async function mountPaymentElement(): Promise<void> {
 		})
 	} catch (error) {
 		cardError.value =
-			resolveError(error, { fallbackKey: 'saas.public.register.error.load' })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: 'saas.public.register.error.load',
+			})?.message ?? ''
 	}
 }
 
-// A refusal after the card was confirmed leaves its SetupIntent spent: the
-// next card must go through a fresh one, or Stripe refuses it with a bare
-// processing error.
+/**
+ * A refusal after the card was confirmed leaves its SetupIntent spent: the
+ * next card must go through a fresh one, or Stripe refuses it with a bare
+ * processing error.
+ */
 async function renewCard(): Promise<void> {
 	try {
 		const clientSecret = await createSetupIntent()
 		if (clientSecret) await stripeHandle.value?.renew(clientSecret)
 	} catch (error) {
 		cardError.value =
-			resolveError(error, { fallbackKey: 'saas.public.register.error.load' })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: 'saas.public.register.error.load',
+			})?.message ?? ''
 	}
 }
 
@@ -239,6 +262,11 @@ function validate(): boolean {
 	return !nameError.value && !missingRequirement.value
 }
 
+/**
+ * Creates the workspace and leaves the page. The token is spent: the
+ * destination takes this page's place in the history, so Back does not
+ * return to a form that can only fail.
+ */
 async function submit(): Promise<void> {
 	if (isSubmitting.value || !validate()) return
 	isSubmitting.value = true
@@ -257,13 +285,12 @@ async function submit(): Promise<void> {
 		})
 		const destination = landingPath()
 		rememberChosenPlan(null)
-		// The token is spent: the destination takes this page's place in the
-		// history, so Back does not return to a form that can only fail.
 		if (typeof window !== 'undefined') window.location.replace(destination)
 	} catch (error) {
 		errorMessage.value =
-			resolveError(error, { fallbackKey: 'saas.public.register.error.failed' })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: 'saas.public.register.error.failed',
+			})?.message ?? ''
 		if (paymentMethodId) await renewCard()
 	} finally {
 		isSubmitting.value = false
@@ -272,19 +299,23 @@ async function submit(): Promise<void> {
 
 function errorText(message: string | null): string | undefined {
 	if (!message) return undefined
-	return te(message) ? t(message) : message
+	return i18n.te(message) ? t(message) : message
 }
 
-onMounted(async () => {
+/**
+ * The identity is resolved before anything is asked of the user: an expired
+ * token or an account that already owns a workspace must fail here, not
+ * after a card has been entered.
+ */
+async function enter(): Promise<void> {
 	if (entryFailure.value || isRegistrationClosed) return
-	// The identity is resolved before anything is asked of the user: an expired
-	// token or an account that already owns a workspace must fail here, not
-	// after a card has been entered.
 	await loadPendingRegistration()
 	if (entryFailure.value) return
 	await plan.load()
 	await mountPaymentElement()
-})
+}
+
+onMounted(enter)
 </script>
 
 <template>

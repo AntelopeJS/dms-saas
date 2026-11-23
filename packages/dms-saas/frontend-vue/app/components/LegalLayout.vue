@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * A public legal document: title, version and date, contents from its
- * headings, the related documents and a way back to where the visitor was.
- * An unpublished document reads "Content unavailable".
- */
 import { computed, type FunctionalComponent, onMounted, ref } from 'vue'
 import {
 	headingAnchor,
@@ -19,6 +14,7 @@ import {
 } from '../build/public/legal-html'
 import PublicStage from '../build/public/PublicStage.vue'
 import {
+	findLegalDocument,
 	type LegalDocumentField,
 	LEGAL_DOCUMENTS,
 	LEGAL_FROM_PARAM,
@@ -26,6 +22,11 @@ import {
 } from '../build/public/routes'
 import { usePublicFetch } from '../build/public/usePublicFetch'
 
+/**
+ * The props of a public legal document: title, version and date, contents from
+ * its headings, the related documents and a way back to where the visitor was.
+ * An unpublished document reads "Content unavailable".
+ */
 interface LegalLayoutProps {
 	documentField: LegalDocumentField
 }
@@ -45,16 +46,14 @@ const HEADING_LEVEL_OFFSET = 1
 const { t, locale } = useI18n()
 const route = useDmsRoute()
 const publicFetch = usePublicFetch()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 
 const payload = ref<LegalDocumentsPayload | null>(null)
 const isLoading = ref(true)
 const loadError = ref<string | null>(null)
 const backTo = ref(LOGIN_PATH)
 
-const current = computed(
-	() => LEGAL_DOCUMENTS.find((entry) => entry.field === props.documentField)!,
-)
+const current = computed(() => findLegalDocument(props.documentField))
 const related = computed(() =>
 	LEGAL_DOCUMENTS.filter((entry) => entry.field !== props.documentField),
 )
@@ -143,8 +142,9 @@ async function loadDocument(): Promise<void> {
 		payload.value = await publicFetch<LegalDocumentsPayload>(LEGAL_ENDPOINT)
 	} catch (error) {
 		loadError.value =
-			resolveError(error, { fallbackKey: 'saas.public.legal.load_error' })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: 'saas.public.legal.load_error',
+			})?.message ?? ''
 	} finally {
 		isLoading.value = false
 	}

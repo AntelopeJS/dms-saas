@@ -9,7 +9,7 @@ import {
   isRegistrationClosedBy,
   type RegistrationRequirements,
   snapshotRegistrationExtras,
-} from "../frontend-vue/app/composables/useSaasRegistration";
+} from "../frontend-vue/app/composables/registrationRules";
 
 const MET_REQUIREMENTS: RegistrationRequirements = {
   isPaymentRequired: true,

@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import type {
+	BillingIdentityDraft,
+	BillingIdentityField,
+	VatVerificationStatus,
+} from '../composables/useBillingIdentity'
 import {
 	type FunctionalComponent,
 	computed,
@@ -58,24 +63,31 @@ const ADDRESS_FIELDS: BillingIdentityField[] = [
 ]
 /** The DMS address input's street search (its default geocoder). */
 const ADDRESS_AUTOCOMPLETE = { enabled: true }
-// Compact, the groups follow each other as one list of rows: a hairline
-// above each group but the first, as between its rows.
+/**
+ * Compact, the groups follow each other as one list of rows: a hairline
+ * above each group but the first, as between its rows.
+ */
 const COMPACT_GROUP_CLASS = 'border-muted border-t first:border-t-0'
 
-// Side by side once the row has room, as the settings design pairs fields
-// (company name and VAT number).
+/** The container the pair grid measures its room against. */
 const CLUSTER_CLASS = '@container'
+/**
+ * Side by side once the row has room, as the settings design pairs fields
+ * (company name and VAT number).
+ */
 const PAIR_GRID_CLASS = 'grid gap-3 @min-[420px]:grid-cols-2'
 
-// Literal, so the build resolves the DMS field row at compile time.
+/** Resolved by a literal name, so the build finds the DMS field row at compile time. */
 const DmsFieldRowComponent = resolveComponent('DmsFieldRow')
 const groupWrapper = computed(() =>
 	props.sectioned ? DmsFieldRowComponent : 'div',
 )
-// Compact, the fields of a group are rows of their own: no box around them,
-// which would also take the hairline off the first row it holds. Not
-// `Fragment`: drawn as a component it drops the slot it is handed, and with it
-// every field of the cluster.
+/**
+ * Compact, the fields of a group are rows of their own: no box around them,
+ * which would also take the hairline off the first row it holds. Not
+ * `Fragment`: drawn as a component it drops the slot it is handed, and with it
+ * every field of the cluster.
+ */
 const SlotPassthrough: FunctionalComponent = (_props, { slots }) =>
 	slots.default?.()
 const clusterWrapper = computed(() =>
@@ -91,15 +103,26 @@ const countryLabel = computed(() =>
 		: '',
 )
 
-// The address input edits its own value, the street split in parts; the
-// draft keeps the stored street line. Its value is read back from the draft
-// only when the draft changed from elsewhere (loaded, discarded): re-split
-// as the user types, a number typed in the street box would jump to the
-// number box under the cursor.
+/**
+ * The address input edits its own value, the street split in parts; the
+ * draft keeps the stored street line. Its value is read back from the draft
+ * only when the draft changed from elsewhere (loaded, discarded): re-split
+ * as the user types, a number typed in the street box would jump to the
+ * number box under the cursor.
+ */
 const address = ref<AddressInputValue>(toAddressInputValue(draft.value))
 
+const DRAFT_ADDRESS_FIELDS = [
+	'line1',
+	'line2',
+	'postalCode',
+	'city',
+	'state',
+	'country',
+] as const satisfies readonly (keyof BillingAddressDraft)[]
+
 function hasDraftAddress(next: BillingAddressDraft): boolean {
-	return (Object.keys(next) as (keyof BillingAddressDraft)[]).every(
+	return DRAFT_ADDRESS_FIELDS.every(
 		(field) => next[field] === draft.value[field],
 	)
 }
@@ -114,8 +137,7 @@ function updateAddress(value: AddressInputValue | null | undefined): void {
 }
 
 watch(draft, () => {
-	if (hasDraftAddress(fromAddressInputValue(address.value, draft.value)))
-		return
+	if (hasDraftAddress(fromAddressInputValue(address.value, draft.value))) return
 	address.value = toAddressInputValue(draft.value)
 })
 
@@ -253,9 +275,13 @@ function cluster(className: string): ClusterBindings {
 
 		<component :is="groupWrapper" v-bind="group('address')">
 			<FormFieldRow
-				:label="sectioned ? undefined : $t(`${KEY_PREFIX}.sections.address.title`)"
+				:label="
+					sectioned ? undefined : $t(`${KEY_PREFIX}.sections.address.title`)
+				"
 				:description="
-					sectioned ? undefined : $t(`${KEY_PREFIX}.sections.address.description`)
+					sectioned
+						? undefined
+						: $t(`${KEY_PREFIX}.sections.address.description`)
 				"
 				:error="addressError"
 				:stacked="sectioned"

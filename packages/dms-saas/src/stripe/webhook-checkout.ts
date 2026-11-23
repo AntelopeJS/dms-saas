@@ -19,6 +19,11 @@ import { releaseCheckoutTrialReservation } from "./workspace-checkout";
 import { isString } from "../utils/primitive-guards";
 
 /**
+ * Checkout attaches the collected card to the subscription only; the customer
+ * keeps no `invoice_settings.default_payment_method`, which is what the
+ * billing page's payment-method card (and any future off-subscription
+ * invoice) reads. Promote the subscription's card to customer default.
+ *
  * A failure propagates on purpose: the whole handler is idempotent, so
  * Stripe's redelivery retries the promotion. Swallowing it would leave the
  * card invisible for good on a transient error.
@@ -44,11 +49,12 @@ interface CheckoutContext {
   targetPlanId: string | null;
 }
 
+/** The operation id the completion runs under; null when it already completed. */
 async function admitCheckoutCompletion(
   context: CheckoutContext,
   existing: TenantSubscription,
-): Promise<boolean> {
-  if (existing.completedCheckoutSessionId === context.session.id) return false;
+): Promise<string | null> {
+  if (existing.completedCheckoutSessionId === context.session.id) return null;
   if (existing.stripeCheckoutSessionId !== context.session.id)
     throw new Error("Checkout session is not current");
   if (existing.deletionStartedAt)
@@ -75,7 +81,7 @@ async function admitCheckoutCompletion(
   if (outcome !== "applied")
     throw new Error(`Checkout completion ${outcome}; reconciliation required`);
   existing.domainTransition = intent;
-  return true;
+  return intent.operationId;
 }
 
 function resolveCheckoutContext(
@@ -105,6 +111,7 @@ async function mirrorCheckoutSubscription(
   context: CheckoutContext,
   subscription: Stripe.Subscription,
   existing: TenantSubscription,
+  operationId: string,
   status: TenantSubscriptionStatus,
 ): Promise<void> {
   const patch: Partial<TenantSubscription> = {
@@ -121,11 +128,7 @@ async function mirrorCheckoutSubscription(
   };
   if (context.targetPlanId) patch.planId = context.targetPlanId;
   const model = GetModel(TenantSubscriptionModel, context.tenantId);
-  await model.updateDuringTransition(
-    existing._id,
-    existing.domainTransition!.operationId,
-    patch,
-  );
+  await model.updateDuringTransition(existing._id, operationId, patch);
   await recomputeTenantBillingState(context.tenantId);
 }
 
@@ -135,16 +138,25 @@ async function completeCheckout(context: CheckoutContext): Promise<void> {
     context.tenantId,
   ).findOne();
   const previousTransition = existing?.domainTransition;
-  if (!existing || !(await admitCheckoutCompletion(context, existing))) return;
+  if (!existing) return;
+  const operationId = await admitCheckoutCompletion(context, existing);
+  if (operationId === null) return;
   const subscription = await retrieveActivatedCheckout(
     context,
     existing,
+    operationId,
     previousTransition,
   );
   const status: TenantSubscriptionStatus =
     subscription.status === "trialing" ? TRIALING_STATUS : ACTIVE_STATUS;
 
-  await mirrorCheckoutSubscription(context, subscription, existing, status);
+  await mirrorCheckoutSubscription(
+    context,
+    subscription,
+    existing,
+    operationId,
+    status,
+  );
   await promoteSubscriptionPaymentMethod(subscription);
 
   const planId = context.targetPlanId ?? existing.planId;
@@ -158,7 +170,7 @@ async function completeCheckout(context: CheckoutContext): Promise<void> {
 
   await GetModel(TenantSubscriptionModel, context.tenantId).completeTransition(
     existing._id,
-    existing.domainTransition!.operationId,
+    operationId,
     { completedCheckoutSessionId: context.session.id },
   );
   emitAutomationEvent("saas.subscription-started", {
@@ -178,6 +190,7 @@ async function completeCheckout(context: CheckoutContext): Promise<void> {
 async function retrieveActivatedCheckout(
   context: CheckoutContext,
   existing: TenantSubscription,
+  operationId: string,
   previousTransition: SubscriptionTransition | null | undefined,
 ): Promise<Stripe.Subscription> {
   const subscription = await getStripeClient().subscriptions.retrieve(
@@ -191,11 +204,9 @@ async function retrieveActivatedCheckout(
   await GetModel(
     TenantSubscriptionModel,
     context.tenantId,
-  ).updateDuringTransition(
-    existing._id,
-    existing.domainTransition!.operationId,
-    { domainTransition: previousTransition ?? null },
-  );
+  ).updateDuringTransition(existing._id, operationId, {
+    domainTransition: previousTransition ?? null,
+  });
   throw new Error("Checkout subscription has not activated");
 }
 

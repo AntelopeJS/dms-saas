@@ -41,10 +41,10 @@ function billedText(
   totals: readonly MoneyTotal[],
   fallbackCurrency: string,
 ): ComposedText {
-  if (totals.length === 0) return valueText(moneyParam(0, fallbackCurrency));
-  return sumList(
-    totals.map((total) => moneyParam(total.amount, total.currency)),
-  )!;
+  return (
+    sumList(totals.map((total) => moneyParam(total.amount, total.currency))) ??
+    valueText(moneyParam(0, fallbackCurrency))
+  );
 }
 
 function lastActiveDetail(user: UserDetail): string | undefined {

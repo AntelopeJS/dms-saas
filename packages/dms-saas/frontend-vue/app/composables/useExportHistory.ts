@@ -56,7 +56,10 @@ export interface ExportDownloadNaming {
 	extension?: string
 }
 
-export type ExportJobStatus = Omit<ExportHistoryEntry, 'jobId' | 'scope' | 'createdAt'>
+export type ExportJobStatus = Omit<
+	ExportHistoryEntry,
+	'jobId' | 'scope' | 'createdAt'
+>
 
 interface ExportHistoryState {
 	entries: ExportHistoryEntry[]
@@ -88,6 +91,28 @@ export function isExportExpired(
 	return !!entry.expiresAt && new Date(entry.expiresAt).getTime() <= nowMs
 }
 
+/**
+ * A page past the first that comes back empty falls back to the first rather
+ * than showing the "no export yet" state, which would be a lie: exports
+ * expiring under the reader is enough to empty the page they were on.
+ */
+function readPage(target: () => number) {
+	return useApiData<ExportHistoryPage>(
+		() => `${HISTORY_KEY}:${target()}`,
+		async ({ $authFetch: fetch, signal }) => {
+			const read = (pageNumber: number) =>
+				fetch<ExportHistoryPage>(HISTORY_ENDPOINT, {
+					query: { page: pageNumber, pageSize: HISTORY_PAGE_SIZE },
+					signal,
+				})
+			const result = await read(target())
+			return !result.items.length && result.page > FIRST_PAGE
+				? read(FIRST_PAGE)
+				: result
+		},
+	)
+}
+
 interface ExportHistoryHandle {
 	/** The page of the history this block shows, read with the page. */
 	state: ComputedRef<ExportHistoryState>
@@ -96,7 +121,14 @@ interface ExportHistoryHandle {
 	/** Reads the newest page again, and the page shown. */
 	load: () => Promise<void>
 	goToPage: (targetPage: number) => void
+	/** Rejects with the server's refusal, for the caller to word. */
 	start: () => Promise<void>
+	/**
+	 * Takes a job id rather than a history row: a link delivered by e-mail may
+	 * point at an export older than the window the history lists. The id is
+	 * encoded because a delivered link hands it straight over. The file is
+	 * fetched as it is to be saved, and never kept.
+	 */
 	download: (jobId: string, naming?: ExportDownloadNaming) => Promise<void>
 }
 
@@ -110,28 +142,6 @@ export function useExportHistory(): ExportHistoryHandle {
 	const { $authFetch } = useAuthFetch()
 	const isStarting = useDmsState<boolean>(STARTING_STATE_KEY, () => false)
 	const page = ref(FIRST_PAGE)
-
-	/**
-	 * A page past the first that comes back empty falls back to the first
-	 * rather than showing the "no export yet" state, which would be a lie —
-	 * exports expiring under the reader is enough to empty the page they were on.
-	 */
-	function readPage(target: () => number) {
-		return useApiData<ExportHistoryPage>(
-			() => `${HISTORY_KEY}:${target()}`,
-			async ({ $authFetch: fetch, signal }) => {
-				const read = (pageNumber: number) =>
-					fetch<ExportHistoryPage>(HISTORY_ENDPOINT, {
-						query: { page: pageNumber, pageSize: HISTORY_PAGE_SIZE },
-						signal,
-					})
-				const result = await read(target())
-				return !result.items.length && result.page > FIRST_PAGE
-					? read(FIRST_PAGE)
-					: result
-			},
-		)
-	}
 
 	const newest = readPage(() => FIRST_PAGE)
 	const shown = readPage(() => page.value)
@@ -169,7 +179,6 @@ export function useExportHistory(): ExportHistoryHandle {
 		page.value = targetPage
 	}
 
-	/** Rejects with the server's refusal, for the caller to word. */
 	async function start(): Promise<void> {
 		if (isStarting.value) return
 		isStarting.value = true
@@ -177,28 +186,21 @@ export function useExportHistory(): ExportHistoryHandle {
 			await $authFetch(START_ENDPOINT, { method: 'POST' })
 		} finally {
 			page.value = FIRST_PAGE
-			// The new export is listed before the button comes back.
 			await refreshPageBlocks()
 			isStarting.value = false
 		}
 	}
 
-	/**
-	 * Takes a job id rather than a history row: a link delivered by e-mail may
-	 * point at an export older than the window the history lists. The id is
-	 * encoded because a delivered link hands it straight over.
-	 */
 	async function download(
 		jobId: string,
 		naming?: ExportDownloadNaming,
 	): Promise<void> {
-		// A file to save, not data to show: fetched as it is, never kept.
 		const response = await $authFetch.raw(
 			`${DOWNLOAD_ENDPOINT}/${encodeURIComponent(jobId)}`,
 			{ responseType: 'blob' },
 		)
-		const blob = response._data as Blob | null
-		if (!blob) throw new Error('Empty export download')
+		const blob = response._data
+		if (!(blob instanceof Blob)) throw new Error('Empty export download')
 		const objectUrl = URL.createObjectURL(blob)
 		try {
 			const filename =

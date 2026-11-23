@@ -44,14 +44,14 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'short',
 	year: 'numeric',
 }
-// No guarantee to show: switched off by the platform, or nothing paid on Stripe.
+/** No guarantee to show: switched off by the platform, or nothing paid on Stripe. */
 const HIDDEN_REASONS = new Set(['not_enabled', 'no_subscription'])
 const REFUNDED_REASON = 'already_processed'
-const STATE_BY_REASON: Record<string, GuaranteeState> = {
-	window_expired: 'ended',
-	[REFUNDED_REASON]: 'refunded',
-	no_invoice: 'not_started',
-}
+const STATE_BY_REASON = new Map<string, GuaranteeState>([
+	['window_expired', 'ended'],
+	[REFUNDED_REASON, 'refunded'],
+	['no_invoice', 'not_started'],
+])
 
 const { $authFetch } = useAuthFetch()
 const toast = useToast()
@@ -98,8 +98,10 @@ const isBlocked = computed(() => !!guarantee.data.value?.isBlocked)
 const isLoading = computed(() => guarantee.pending.value)
 const loadFailed = computed(() => !!guarantee.data.value?.hasFailed)
 
-// A refund blocks the workspace (it cancels the subscription): a refunded
-// guarantee says so before the access gate is mentioned.
+/**
+ * A refund blocks the workspace (it cancels the subscription): a refunded
+ * guarantee says so before the access gate is mentioned.
+ */
 const state = computed<GuaranteeState | null>(() => {
 	const current = eligibility.value
 	if (current?.reason === REFUNDED_REASON) return 'refunded'
@@ -107,7 +109,7 @@ const state = computed<GuaranteeState | null>(() => {
 	if (!current) return null
 	if (current.eligible) return 'open'
 	if (HIDDEN_REASONS.has(current.reason ?? '')) return null
-	return STATE_BY_REASON[current.reason ?? ''] ?? null
+	return STATE_BY_REASON.get(current.reason ?? '') ?? null
 })
 
 function day(value: string | null | undefined): string {
@@ -134,7 +136,7 @@ const dayOfWindow = computed(() => {
 })
 
 const paidOn = computed(() => day(eligibility.value?.firstPaymentAt))
-// Every payment made within the window is refunded, not only the first.
+/** Every payment made within the window is refunded, not only the first. */
 const paymentsLabel = computed(() => {
 	const count = eligibility.value?.paymentsCount ?? 1
 	return t(`${KEY_PREFIX}.payments`, { count, paidOn: paidOn.value }, count)
@@ -169,6 +171,7 @@ const pill = computed(() => {
 	return null
 })
 
+/** The dialog closes once the page shows the refund. */
 async function submitRefund(): Promise<void> {
 	await $authFetch(REFUND_ENDPOINT, { method: 'POST' })
 	toast.add({
@@ -176,7 +179,6 @@ async function submitRefund(): Promise<void> {
 		color: 'success',
 		icon: 'i-ph-check-circle',
 	})
-	// The dialog closes once the page shows the refund.
 	await refreshPageBlocks()
 }
 

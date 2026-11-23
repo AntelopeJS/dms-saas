@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
+import { readDmsSaasPublicConfig } from '../types/runtime-config'
 
 /** What choosing a plan asks for, as `GET create-options` words it. */
 type CardRequirement = 'none' | 'payment' | 'verification'
@@ -65,7 +66,7 @@ const CARD_ERROR_KEYS = new Set([
 
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const { formatMajorUnits } = useMoneyFormat()
 const planPriceLabel = usePlanPriceLabel()
 const planIntervalLabel = usePlanIntervalLabel(`${KEYS}.interval`)
@@ -88,8 +89,7 @@ let cardSetup: Promise<void> | null = null
 
 const publishableKey = computed<string>(
 	() =>
-		(config.public.dmsSaas as DmsSaasPublicRuntimeConfig | undefined)
-			?.stripePublishableKey ?? '',
+		readDmsSaasPublicConfig(config.public.dmsSaas)?.stripePublishableKey ?? '',
 )
 const plans = computed(() => options.value?.plans ?? [])
 const selectedPlan = computed(
@@ -153,17 +153,21 @@ function selectPlan(plan: CreatePlanOption): void {
 	submitError.value = null
 }
 
-// Not a `useApiData` read: each call creates a SetupIntent, whose client
-// secret is the card form's alone, never cached nor shared.
+/**
+ * Not a `useApiData` read: each call creates a SetupIntent, whose client
+ * secret is the card form's alone, never cached nor shared.
+ */
 async function createSetupIntent(): Promise<string> {
 	const setup = await $authFetch<SetupIntent>(SETUP_INTENT_ENDPOINT)
 	return setup.clientSecret
 }
 
+/**
+ * A missing key would render an empty card box and fail every submit with a
+ * generic payment error, reading as the visitor's fault, so it reports itself.
+ */
 async function initStripeElement(): Promise<void> {
 	if (!publishableKey.value) {
-		// A missing key would render an empty card box and fail every submit
-		// with a generic payment error, reading as the visitor's fault.
 		cardError.value = t(`${KEYS}.error.card_setup`)
 		return
 	}
@@ -176,8 +180,10 @@ async function initStripeElement(): Promise<void> {
 	})
 }
 
-// Set up once, on the first plan that asks for a card, then only hidden:
-// switching plans keeps the card already typed in.
+/**
+ * Set up once, on the first plan that asks for a card, then only hidden:
+ * switching plans keeps the card already typed in.
+ */
 async function setUpCard(): Promise<void> {
 	await nextTick()
 	try {
@@ -185,8 +191,9 @@ async function setUpCard(): Promise<void> {
 	} catch (error) {
 		cardSetup = null
 		cardError.value =
-			resolveError(error, { fallbackKey: `${KEYS}.error.card_setup` })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: `${KEYS}.error.card_setup`,
+			})?.message ?? ''
 	}
 }
 
@@ -200,6 +207,10 @@ watch(asksForCard, ensureCardStep)
 
 const optionsRead = useOnDemandRead<CreateOptions>(() => OPTIONS_ENDPOINT)
 
+/**
+ * The card step is set up apart from the plans read, so a card-setup outage
+ * reports itself as such instead of hiding behind "could not load the plans".
+ */
 async function load(): Promise<void> {
 	isLoading.value = true
 	loadError.value = null
@@ -208,13 +219,12 @@ async function load(): Promise<void> {
 		selectedPlanId.value ??= options.value.plans[0]?._id ?? null
 	} catch (error) {
 		loadError.value =
-			resolveError(error, { fallbackKey: `${KEYS}.error.load_description` })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: `${KEYS}.error.load_description`,
+			})?.message ?? ''
 	} finally {
 		isLoading.value = false
 	}
-	// Kept apart so a card-setup outage reports itself as such instead of
-	// hiding behind "could not load the plans".
 	await ensureCardStep()
 }
 
@@ -239,26 +249,19 @@ async function confirmCard(): Promise<ConfirmedPayment> {
 	return { isConfirmed: false }
 }
 
-function reportSubmitError(error: unknown): void {
-	const message =
-		resolveError(error, { fallbackKey: `${KEYS}.error.failed` })?.message ?? ''
-	if (CARD_ERROR_KEYS.has(readApiErrorKey(error) ?? '')) {
-		cardError.value = message
-		return
-	}
-	submitError.value = message
-}
-
-// The card was confirmed, then the creation refused (another card is needed,
-// a creation already running): its SetupIntent is spent, and confirming it
-// again with the next card fails with a bare Stripe processing error.
+/**
+ * The card was confirmed, then the creation refused (another card is needed,
+ * a creation already running): its SetupIntent is spent, and confirming it
+ * again with the next card fails with a bare Stripe processing error.
+ */
 async function renewCard(): Promise<void> {
 	try {
 		await stripeHandle.value?.renew(await createSetupIntent())
 	} catch (error) {
 		cardError.value =
-			resolveError(error, { fallbackKey: `${KEYS}.error.card_setup` })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: `${KEYS}.error.card_setup`,
+			})?.message ?? ''
 	}
 }
 
@@ -282,7 +285,14 @@ async function submit(): Promise<void> {
 		})
 		props.onSuccessCallback?.(created.tenantId, name)
 	} catch (error) {
-		reportSubmitError(error)
+		const message =
+			errors.resolveError(error, { fallbackKey: `${KEYS}.error.failed` })
+				?.message ?? ''
+		if (CARD_ERROR_KEYS.has(readApiErrorKey(error) ?? '')) {
+			cardError.value = message
+		} else {
+			submitError.value = message
+		}
 		if (payment?.paymentMethodId) await renewCard()
 	} finally {
 		isSubmitting.value = false

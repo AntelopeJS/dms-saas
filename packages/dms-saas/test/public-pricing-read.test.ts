@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePublicPricing } from "../frontend-vue/app/composables/usePublicPricing";
+import { defined } from "./helpers/defined";
 import type { ApiDataHandler, UseApiDataOptions } from "./helpers/api-data";
 import type { ApiDataRequest } from "./helpers/api-data-request";
 import { toValue } from "./helpers/vue-runtime/index.mjs";
@@ -42,10 +43,11 @@ describe("public pricing read", () => {
     usePublicPricing();
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.options).toBeUndefined();
+    const read = defined(calls[0]);
+    expect(read.options).toBeUndefined();
     const fetched: string[] = [];
     const signal = new AbortController().signal;
-    await calls[0]!.handler({
+    await read.handler({
       $authFetch: (url: string) => fetched.push(url),
       signal,
     });
@@ -57,14 +59,15 @@ describe("public pricing read", () => {
     const calls = stubReads(locale);
     usePublicPricing();
 
-    const english = toValue(calls[0]!.key);
+    const read = defined(calls[0]);
+    const english = toValue(read.key);
     locale.value = "fr";
-    expect(toValue(calls[0]!.key)).not.toBe(english);
+    expect(toValue(read.key)).not.toBe(english);
     const sent: FetchOptions[] = [];
-    await calls[0]!.handler({
+    await read.handler({
       $authFetch: (_url: string, options: FetchOptions) => sent.push(options),
       signal: new AbortController().signal,
     });
-    expect(sent[0]!.headers).toEqual({ "x-content-language": "fr" });
+    expect(defined(sent[0]).headers).toEqual({ "x-content-language": "fr" });
   });
 });

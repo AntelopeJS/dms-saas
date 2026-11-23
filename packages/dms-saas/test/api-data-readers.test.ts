@@ -9,6 +9,7 @@ import { useUserDetail } from "../frontend-vue/app/build/users/useUserDetail";
 import { useWorkspaceOverview } from "../frontend-vue/app/build/workspace-detail/useWorkspaceOverview";
 import { useExportHistory } from "../frontend-vue/app/composables/useExportHistory";
 import { useOnDemandRead } from "../frontend-vue/app/composables/useOnDemandRead";
+import { defined } from "./helpers/defined";
 import { ref, toValue } from "./helpers/frontend-vue";
 
 interface Holder<T> {
@@ -74,13 +75,14 @@ describe("readers on useApiData", () => {
     const params = ref<Record<string, string>>({ id: "u1" });
 
     const detail = useUserDetail(() => params.value);
+    const read = defined(calls[0]);
 
-    expect(toValue(calls[0]!.source)).toBe("/api/saas/users/u1");
+    expect(toValue(read.source)).toBe("/api/saas/users/u1");
     params.value = { id: "u2" };
-    expect(toValue(calls[0]!.source)).toBe("/api/saas/users/u2");
+    expect(toValue(read.source)).toBe("/api/saas/users/u2");
     expect(detail.userId.value).toBe("u2");
     params.value = {};
-    expect(toValue(calls[0]!.source)).toBeNull();
+    expect(toValue(read.source)).toBeNull();
   });
 
   it("shares one operator overview read, which the page's refreshes read again", () => {
@@ -89,13 +91,15 @@ describe("readers on useApiData", () => {
     vi.stubGlobal("usePageLiveRefresh", subscribe);
 
     const state = useWorkspaceOverview("t1");
-    expect(toValue(calls[0]!.source)).toBe("/api/saas/workspaces/t1/overview");
+    expect(toValue(defined(calls[0]).source)).toBe(
+      "/api/saas/workspaces/t1/overview",
+    );
     expect(state.isLoading.value).toBe(true);
-    expect(calls[0]!.options).toBeUndefined();
+    expect(defined(calls[0]).options).toBeUndefined();
     expect(subscribe).not.toHaveBeenCalled();
 
     useWorkspaceOverview("");
-    expect(toValue(calls[1]!.source)).toBeNull();
+    expect(toValue(defined(calls[1]).source)).toBeNull();
   });
 
   it("keeps the export card on the newest page and falls back from an emptied one", async () => {
@@ -106,13 +110,14 @@ describe("readers on useApiData", () => {
     );
 
     const history = useExportHistory();
-    const [newest, shown] = calls;
-    expect(toValue(newest!.source)).toBe("saas-export-history:1");
-    expect(toValue(shown!.source)).toBe("saas-export-history:1");
+    const newest = defined(calls[0]);
+    const shown = defined(calls[1]);
+    expect(toValue(newest.source)).toBe("saas-export-history:1");
+    expect(toValue(shown.source)).toBe("saas-export-history:1");
 
     history.goToPage(3);
-    expect(toValue(newest!.source)).toBe("saas-export-history:1");
-    expect(toValue(shown!.source)).toBe("saas-export-history:3");
+    expect(toValue(newest.source)).toBe("saas-export-history:1");
+    expect(toValue(shown.source)).toBe("saas-export-history:3");
 
     const pages: unknown[] = [];
     const $authFetch = vi.fn(
@@ -124,7 +129,7 @@ describe("readers on useApiData", () => {
       },
     );
     const signal = new AbortController().signal;
-    const result = await shown!.handler!({ $authFetch, signal });
+    const result = await defined(shown.handler)({ $authFetch, signal });
 
     expect(pages).toEqual([3, 1]);
     expect(result).toMatchObject({ page: 1, items: [{ jobId: "j1" }] });

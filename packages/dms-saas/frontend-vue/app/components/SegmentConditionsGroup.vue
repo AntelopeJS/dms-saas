@@ -10,7 +10,6 @@ import {
 import type {
 	SegmentCondition,
 	SegmentConditionGroup,
-	SegmentLogical,
 	SegmentMemberRole,
 	SegmentNode,
 	SegmentQuantifier,
@@ -80,16 +79,14 @@ function removeAt(index: number): void {
 }
 
 function duplicateAt(index: number): void {
-	const copy = structuredClone(props.group.conditions[index]!)
+	const node = props.group.conditions[index]
+	if (!node) return
+	const copy = structuredClone(node)
 	update([
 		...props.group.conditions.slice(0, index + 1),
 		copy,
 		...props.group.conditions.slice(index + 1),
 	])
-}
-
-function setLogical(logical: SegmentLogical): void {
-	emit('update', { ...props.group, logical })
 }
 
 function addCondition(): void {
@@ -114,7 +111,8 @@ function addWorkspaceRef(): void {
 }
 
 function updateRef(index: number, patch: Partial<SegmentWorkspaceRef>): void {
-	const ref = props.group.conditions[index] as SegmentWorkspaceRef
+	const ref = props.group.conditions[index]
+	if (!ref || !isSegmentWorkspaceRef(ref)) return
 	replaceAt(index, { ...ref, ...patch })
 }
 

@@ -7,6 +7,7 @@ import {
   PlanModel,
 } from "../src/db";
 import { localizeFeature, localizePlan } from "../src/plans";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 
 useMongoDatabase();
@@ -29,7 +30,7 @@ describe("inserting per-locale plain data", () => {
     expect(stored?.localize("*", FEATURE_LOCALIZED_FIELDS)).toMatchObject(
       texts,
     );
-    expect(localizeFeature(stored!, "fr").displayName).toBe("Membres");
+    expect(localizeFeature(defined(stored), "fr").displayName).toBe("Membres");
   });
 
   it("stores every locale of a plan's texts", async () => {
@@ -44,6 +45,6 @@ describe("inserting per-locale plain data", () => {
 
     const stored = await model.get("team");
     expect(stored?.localize("*", PLAN_LOCALIZED_FIELDS)).toMatchObject(texts);
-    expect(localizePlan(stored!, "fr").name).toBe("Équipe");
+    expect(localizePlan(defined(stored), "fr").name).toBe("Équipe");
   });
 });

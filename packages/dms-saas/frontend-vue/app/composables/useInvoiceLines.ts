@@ -1,22 +1,60 @@
 export interface InvoiceLine {
-  description: string;
-  quantity: number | null;
-  amount: number;
-  currency?: string | null;
-  periodStart: string | Date | null;
-  periodEnd: string | Date | null;
+	description: string
+	quantity: number | null
+	amount: number
+	currency?: string | null
+	periodStart: string | Date | null
+	periodEnd: string | Date | null
 }
 
-/** The mirror stores lines as an array, but the table view hands the raw column
- * value over, which may still be its JSON form. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null
+}
+
+function isText(value: unknown): value is string {
+	return typeof value === 'string'
+}
+
+function isNumber(value: unknown): value is number {
+	return typeof value === 'number'
+}
+
+function isMoment(value: unknown): value is string | Date | null {
+	return value === null || isText(value) || value instanceof Date
+}
+
+function isInvoiceLine(value: unknown): value is InvoiceLine {
+	return (
+		isRecord(value) &&
+		isText(value.description) &&
+		(value.quantity === null || isNumber(value.quantity)) &&
+		isNumber(value.amount) &&
+		(value.currency === undefined ||
+			value.currency === null ||
+			isText(value.currency)) &&
+		isMoment(value.periodStart) &&
+		isMoment(value.periodEnd)
+	)
+}
+
+function isInvoiceLineList(value: unknown): value is InvoiceLine[] {
+	return Array.isArray(value) && value.every(isInvoiceLine)
+}
+
+function parseJsonLines(json: string): InvoiceLine[] {
+	try {
+		const parsed: unknown = JSON.parse(json)
+		return isInvoiceLineList(parsed) ? parsed : []
+	} catch {
+		return []
+	}
+}
+
+/**
+ * The mirror stores lines as an array, but the table view hands the raw column
+ * value over, which may still be its JSON form.
+ */
 export function parseInvoiceLines(raw: unknown): InvoiceLine[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw as InvoiceLine[];
-  if (typeof raw !== "string") return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+	if (isInvoiceLineList(raw)) return raw
+	return isText(raw) ? parseJsonLines(raw) : []
 }

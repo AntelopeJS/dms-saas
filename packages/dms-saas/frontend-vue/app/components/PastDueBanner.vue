@@ -3,9 +3,11 @@ import { computed } from 'vue'
 import PayInvoiceDialog from '../build/PayInvoiceDialog.vue'
 import { useWorkspaceName } from '../build/useWorkspaceName'
 
-// Rendered as the content of the DMS layout strip registered server-side
-// (see registerPastDueBanners), which already decided it shows to this
-// audience and draws the chrome, icon and role around it.
+/**
+ * Rendered as the content of the DMS layout strip registered server-side
+ * (see registerPastDueBanners), which already decided it shows to this
+ * audience and draws the chrome, icon and role around it.
+ */
 const props = withDefaults(defineProps<{ audience?: 'owner' | 'member' }>(), {
 	audience: 'owner',
 })

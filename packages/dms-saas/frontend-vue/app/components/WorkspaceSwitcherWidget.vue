@@ -3,8 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { HOME_PATH, workspaceSwitchLandingPath } from '../build/workspace-paths'
 import WorkspaceMark from '../build/WorkspaceMark.vue'
 import WorkspaceSwitcherRow from '../build/WorkspaceSwitcherRow.vue'
+import { readDmsSaasPublicConfig } from '../types/runtime-config'
 
-// Drawn as two roots: attributes have no single element to land on.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps<{
@@ -14,21 +14,23 @@ const props = defineProps<{
 const KEYS = 'saas.workspace.switcher'
 const SEARCH_THRESHOLD = 6
 const PAST_DUE_STATUS = 'past_due'
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const { t } = useI18n()
-const { statusView } = useSaasStatus()
 const route = useDmsRoute()
 const siteLayout = useSiteLayout()
 
-// Platform owners are not tenant members by default, so an owner can legitimately
-// have no workspace at all — the switcher must still offer them a way in.
+/**
+ * Platform owners are not tenant members by default, so an owner can
+ * legitimately have no workspace at all — the switcher must still offer them a
+ * way in.
+ */
 const isOwner = useIsOwner()
 const config = useDmsRuntimeConfig()
 const canCreateWorkspace = computed(
 	() =>
 		isOwner.value ||
-		(config.public.dmsSaas as DmsSaasPublicRuntimeConfig | undefined)
-			?.admissionMode !== 'invitation-only',
+		readDmsSaasPublicConfig(config.public.dmsSaas)?.admissionMode !==
+			'invitation-only',
 )
 
 const { workspaces, isLoaded, hasFailed, refresh: load } = useMyWorkspaces()
@@ -79,17 +81,6 @@ watch(isOpen, (open) => {
 	if (!open && !switchingId.value) searchQuery.value = ''
 })
 
-function reportSwitchFailure(
-	error: unknown,
-	target: MyWorkspace | string,
-): void {
-	const name = typeof target === 'string' ? target : target.name
-	presentError(error, {
-		fallbackKey: `${KEYS}.switch_failed`,
-		params: { name },
-	})
-}
-
 /** The popover stays open until the page reloads into the new workspace. */
 async function selectWorkspace(workspace: MyWorkspace): Promise<void> {
 	if (workspace.isCurrent || switchingId.value) return
@@ -103,7 +94,10 @@ async function selectWorkspace(workspace: MyWorkspace): Promise<void> {
 		)
 	} catch (error) {
 		switchingId.value = null
-		reportSwitchFailure(error, workspace)
+		errors.presentError(error, {
+			fallbackKey: `${KEYS}.switch_failed`,
+			params: { name: workspace.name },
+		})
 	}
 }
 
@@ -116,17 +110,22 @@ function closeCreateModal(): void {
 	isCreateOpen.value = false
 }
 
+/**
+ * Lands on the homepage rather than reloading the screen the creation was
+ * started from — that screen belongs to the previous workspace.
+ */
 async function onWorkspaceCreated(
 	tenantId: string,
 	name: string,
 ): Promise<void> {
 	isCreateOpen.value = false
 	try {
-		// Lands on the homepage rather than reloading the screen the creation
-		// was started from — that screen belongs to the previous workspace.
 		await useTenantSwitch(tenantId, HOME_PATH)
 	} catch (error) {
-		reportSwitchFailure(error, name)
+		errors.presentError(error, {
+			fallbackKey: `${KEYS}.switch_failed`,
+			params: { name },
+		})
 		await load()
 	}
 }

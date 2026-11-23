@@ -12,6 +12,7 @@ import {
 } from "../src/workspaces/complimentary";
 import { clipInvoiceUsageWindow } from "../src/invoice-line-items/billing-window";
 import { GetTenantBillingPeriod } from "../src/implementations/dms-saas/billing";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 import type { RowFields } from "./helpers/row-fields";
 
@@ -115,7 +116,10 @@ describe("paid usage coverage", () => {
         "paid",
       ),
     ).toBeNull();
-    subscription.guardedPlanChange!.phase = "preparing";
+    subscription.guardedPlanChange = {
+      ...defined(subscription.guardedPlanChange),
+      phase: "preparing",
+    };
     expect(clipInvoiceUsageWindow(FEBRUARY, subscription, "paid")).toEqual({
       ...FEBRUARY,
       periodStart: ACTIVATED,
@@ -210,7 +214,6 @@ describe("GetTenantBillingPeriod", () => {
       ...overrides,
     });
 
-  /** A workspace holding `subscription`, or none when it is undefined. */
   async function workspaceWith(
     subscription: RowFields<TenantSubscription> | undefined,
   ): Promise<string> {

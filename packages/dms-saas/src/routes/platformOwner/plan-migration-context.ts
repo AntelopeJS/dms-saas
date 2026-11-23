@@ -162,7 +162,7 @@ export function uncertainView(
     HTTP_CONFLICT,
     "saas.errors.migration.workspace_not_uncertain",
   );
-  return view!;
+  return view;
 }
 
 async function planByStripePrice(

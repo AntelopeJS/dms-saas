@@ -1,13 +1,16 @@
-export type SegmentOperator =
-	| 'eq'
-	| 'neq'
-	| 'gt'
-	| 'gte'
-	| 'lt'
-	| 'lte'
-	| 'in'
-	| 'nin'
-	| 'contains'
+export const SEGMENT_OPERATORS = [
+	'eq',
+	'neq',
+	'gt',
+	'gte',
+	'lt',
+	'lte',
+	'in',
+	'nin',
+	'contains',
+] as const
+
+export type SegmentOperator = (typeof SEGMENT_OPERATORS)[number]
 
 export type SegmentLogical = 'and' | 'or'
 export type SegmentQuantifier = 'any' | 'all'
@@ -59,10 +62,16 @@ export interface SegmentFieldsCatalog {
 /** Which fields a level of the rules reads: a user's, or a workspace's. */
 export type SegmentScope = 'user' | 'workspace'
 
+/** One value a rule compares a field to. */
+export type SegmentScalar = string | number | boolean
+
+/** What a rule compares a field to: one value, or the list of `in` / `nin`. */
+export type SegmentValue = SegmentScalar | SegmentScalar[] | null
+
 export interface SegmentCondition {
 	field: string
 	operator: SegmentOperator
-	value: unknown
+	value: SegmentValue
 }
 
 export interface SegmentWorkspaceRef {
@@ -83,6 +92,13 @@ export type SegmentNode =
 	| SegmentCondition
 	| SegmentConditionGroup
 	| SegmentWorkspaceRef
+
+/** Rules as a field stores them: the JSON string, or the group itself. */
+export type StoredSegmentRules =
+	| string
+	| SegmentConditionGroup
+	| null
+	| undefined
 
 /** A user a preview names among its matches. */
 export interface SegmentPreviewUser {

@@ -7,6 +7,7 @@ import { InvoiceModel } from "../src/db";
 import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
 import { loadSuspensionImpact } from "../src/operator-actions/previews";
 import { loadOpenInvoices } from "../src/routes/platformOwner/dashboard";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 import { subscriptionFixture } from "./helpers/subscription-fixture";
 import { insertTenant } from "./helpers/workspaces";
@@ -62,7 +63,9 @@ async function insertSuspension(
 describe("the dashboard's open invoices", () => {
   it("counts an open invoice of total 0 and lists a currency whose open invoices sum to zero", async () => {
     const tenantId = "tenant-open";
-    await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
+    await defined(Schema.get(TENANT_SCHEMA_NAME))
+      .createInstance(tenantId)
+      .run();
     await insertOpenInvoice(tenantId, "usd", 500);
     await insertOpenInvoice(tenantId, "usd", -500);
     await insertOpenInvoice(tenantId, "eur", 100);

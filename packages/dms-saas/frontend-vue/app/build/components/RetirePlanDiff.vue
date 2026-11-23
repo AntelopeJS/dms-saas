@@ -1,13 +1,9 @@
 <script setup lang="ts">
-/**
- * What moving a retired plan's workspaces onto the target changes: each
- * feature that differs, the member cap, the permissions, and the features
- * left as they were.
- */
 import { computed } from 'vue'
 import {
 	type CatalogFeature,
 	isFeatureIncluded,
+	isPlanFeatureValue,
 	PLAN_UNLIMITED,
 } from '../plan-catalog'
 import {
@@ -32,6 +28,11 @@ const KIND_CLASSES: Record<PlanChangeKind, string> = {
 	same: 'text-muted',
 }
 
+/**
+ * What moving a retired plan's workspaces onto the target changes: each
+ * feature that differs, the member cap, the permissions, and the features
+ * left as they were.
+ */
 const props = defineProps<{
 	preparation: RetirePreparation
 	features: CatalogFeature[]
@@ -52,14 +53,16 @@ const unchanged = computed(() =>
 		.filter((name): name is string => !!name),
 )
 
-function readValue(change: RetireFeatureChange, value: unknown): string {
+function readValue(change: RetireFeatureChange, side: 'from' | 'to'): string {
 	const feature = featuresById.value.get(change.featureId)
+	const value = change[side]
+	const stored = isPlanFeatureValue(value) ? value : null
 	if (
 		!feature ||
 		feature.valueType === 'boolean' ||
-		!isFeatureIncluded(value)
+		!isFeatureIncluded(stored)
 	) {
-		return isFeatureIncluded(value)
+		return isFeatureIncluded(stored)
 			? t('saas.catalog.retire.included')
 			: t('saas.catalog.retire.not_included')
 	}
@@ -102,9 +105,9 @@ function memberCap(value: number): string {
 					{{ featureName(change.featureId) }}
 				</span>
 				<span class="text-muted text-xs">
-					{{ readValue(change, change.from) }} →
+					{{ readValue(change, 'from') }} →
 					<b class="text-default">
-						{{ readValue(change, change.to) }}
+						{{ readValue(change, 'to') }}
 					</b>
 				</span>
 			</li>

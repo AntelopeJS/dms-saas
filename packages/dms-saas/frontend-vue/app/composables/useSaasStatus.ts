@@ -1,3 +1,4 @@
+import type { Tone } from '#dms-core/app/types/tone'
 /**
  * One colour per status across the module, mirrored from the backend's
  * `STATUS_TONES` (src/utils/status-vocabulary.ts); a test keeps them equal.
@@ -46,7 +47,7 @@ export const SAAS_STATUS_TONES = {
 		expired: 'error',
 		none: 'neutral',
 	},
-} as const satisfies Record<string, Record<string, Tone>>
+} as const
 
 export type SaasStatusFamily = keyof typeof SAAS_STATUS_TONES
 
@@ -63,7 +64,9 @@ function saasStatusTone(
 	status: string | null | undefined,
 ): Tone {
 	const tones: Record<string, Tone> = SAAS_STATUS_TONES[family]
-	return (status && tones[status]) || FALLBACK_TONE
+	return (
+		(status && Object.hasOwn(tones, status) && tones[status]) || FALLBACK_TONE
+	)
 }
 
 /** Label and tone of any status, for `DmsStatusPill` and friends. */

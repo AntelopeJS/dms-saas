@@ -1,3 +1,6 @@
+import type { ApiDataResult } from '#dms-core/app/composables/auth/useApiData'
+import type { PlanInterval } from './usePlanIntervalLabel'
+import type { PlanBillingMode } from './useTenantPlan'
 const OVERVIEW_ENDPOINT = '/api/saas/workspaces/current/overview'
 
 /** Seats as the members page counts them; `maxMembers` null when unlimited. */

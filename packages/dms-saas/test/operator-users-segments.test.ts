@@ -35,6 +35,7 @@ import {
   loadUserSegmentMatches,
   sumPaidInvoices,
 } from "../src/users";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 import { insertPlan } from "./helpers/plans";
 import { useSuiteStripe } from "./helpers/stripe";
@@ -117,7 +118,7 @@ async function insertUser(patch: Partial<User> = {}): Promise<User> {
     isValidated: true,
     ...patch,
   });
-  return (await GetModel(UserModel).get(_id))!;
+  return defined(await GetModel(UserModel).get(_id));
 }
 
 interface WorkspaceFixture {
@@ -129,7 +130,7 @@ interface WorkspaceFixture {
 
 async function insertWorkspace(fixture: WorkspaceFixture): Promise<string> {
   const tenantId = randomUUID();
-  await Schema.get(TENANT_SCHEMA_NAME)!.createInstance(tenantId).run();
+  await defined(Schema.get(TENANT_SCHEMA_NAME)).createInstance(tenantId).run();
   await GetModel(TenantModel).insert({
     _id: tenantId,
     name: fixture.name,

@@ -9,23 +9,9 @@ interface ImpactEntry {
 	label: string
 }
 
-/**
- * The operator actions confirmed in the DMS's own dialog: join as platform
- * support, suspend (impact listed, workspace name typed) and reactivate.
- * Each refreshes the page's blocks once it succeeded; a dialog that cannot be
- * prepared says so instead of opening empty.
- */
-export function useWorkspaceActions(tenantId: string) {
-	const { $authFetch } = useAuthFetch()
+/** Words for what a confirmed action changes, in the UI locale. */
+function useImpactEntries() {
 	const { t, locale } = useI18n()
-	const { confirm } = useConfirm()
-	const { confirmFrom } = useConfirmFrom()
-	const toast = useToast()
-	const { presentError } = useApiErrorPresenter()
-	const base = `/api/saas/workspaces/${tenantId}`
-	const impactRead = useOnDemandRead<SuspensionImpact>(
-		() => `${base}/suspension-impact`,
-	)
 
 	function day(value: string): string {
 		return formatDate(value, locale.value, { dateStyle: 'medium' }) ?? value
@@ -33,29 +19,6 @@ export function useWorkspaceActions(tenantId: string) {
 
 	function money(amountMinor: number, currency: string): string {
 		return formatMinorUnits(amountMinor, currency, locale.value)
-	}
-
-	/** Runs an action, reporting a dialog that could not be prepared. */
-	async function guarded(action: () => Promise<boolean>, successKey: string) {
-		try {
-			if (!(await action())) return
-			toast.add({
-				title: t(successKey),
-				color: 'success',
-				icon: 'i-ph-check-circle',
-			})
-			refreshPageBlocks()
-		} catch (error) {
-			presentError(error, { fallbackKey: `${D}.error.prepare` })
-		}
-	}
-
-	function confirmJoin(): Promise<boolean> {
-		return confirmFrom(`${base}/join-confirmation`, {
-			onConfirm: async () => {
-				await $authFetch(`${base}/join`, { method: 'POST' })
-			},
-		})
 	}
 
 	function suspensionImpact(impact: SuspensionImpact): ImpactEntry[] {
@@ -97,27 +60,6 @@ export function useWorkspaceActions(tenantId: string) {
 		return entries.filter((entry): entry is ImpactEntry => entry !== null)
 	}
 
-	async function confirmSuspend(): Promise<boolean> {
-		const impact = await impactRead.read()
-		const operationId = crypto.randomUUID()
-		return confirm({
-			title: t(`${D}.suspend.title`, { name: impact.workspaceName }),
-			description: t(`${D}.suspend.description`),
-			icon: 'i-ph-prohibit',
-			color: 'error',
-			confirmLabel: t(`${D}.suspend.confirm`),
-			impact: suspensionImpact(impact),
-			confirmText: impact.workspaceName,
-			initialFocus: 'cancel',
-			onConfirm: async () => {
-				await $authFetch(`${base}/suspend`, {
-					method: 'POST',
-					body: { operationId, confirmName: impact.workspaceName },
-				})
-			},
-		})
-	}
-
 	function reactivationImpact(impact: SuspensionImpact): ImpactEntry[] {
 		const invoice = impact.nextInvoice
 		return [
@@ -139,6 +81,72 @@ export function useWorkspaceActions(tenantId: string) {
 					: t(`${D}.reactivate.impact_billing_plain`),
 			},
 		]
+	}
+
+	return { day, suspensionImpact, reactivationImpact }
+}
+
+/**
+ * The operator actions confirmed in the DMS's own dialog: join as platform
+ * support, suspend (impact listed, workspace name typed) and reactivate.
+ * Each refreshes the page's blocks once it succeeded; a dialog that cannot be
+ * prepared says so instead of opening empty (`guarded` runs an action and
+ * reports it).
+ */
+export function useWorkspaceActions(tenantId: string) {
+	const { $authFetch } = useAuthFetch()
+	const { t } = useI18n()
+	const { day, suspensionImpact, reactivationImpact } = useImpactEntries()
+	const { confirm } = useConfirm()
+	const { confirmFrom } = useConfirmFrom()
+	const toast = useToast()
+	const errors = useApiErrorPresenter()
+	const base = `/api/saas/workspaces/${tenantId}`
+	const impactRead = useOnDemandRead<SuspensionImpact>(
+		() => `${base}/suspension-impact`,
+	)
+
+	async function guarded(action: () => Promise<boolean>, successKey: string) {
+		try {
+			if (!(await action())) return
+			toast.add({
+				title: t(successKey),
+				color: 'success',
+				icon: 'i-ph-check-circle',
+			})
+			void refreshPageBlocks()
+		} catch (error) {
+			errors.presentError(error, { fallbackKey: `${D}.error.prepare` })
+		}
+	}
+
+	function confirmJoin(): Promise<boolean> {
+		return confirmFrom(`${base}/join-confirmation`, {
+			onConfirm: async () => {
+				await $authFetch(`${base}/join`, { method: 'POST' })
+			},
+		})
+	}
+
+	async function confirmSuspend(): Promise<boolean> {
+		const impact = await impactRead.read()
+		const operationId = crypto.randomUUID()
+		return confirm({
+			title: t(`${D}.suspend.title`, { name: impact.workspaceName }),
+			description: t(`${D}.suspend.description`),
+			icon: 'i-ph-prohibit',
+			color: 'error',
+			confirmLabel: t(`${D}.suspend.confirm`),
+			impact: suspensionImpact(impact),
+			confirmText: impact.workspaceName,
+			initialFocus: 'cancel',
+			onConfirm: async () => {
+				await $authFetch(`${base}/suspend`, {
+					method: 'POST',
+					body: { operationId, confirmName: impact.workspaceName },
+				})
+			},
+		})
 	}
 
 	async function confirmReactivate(): Promise<boolean> {

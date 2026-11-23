@@ -3,6 +3,7 @@ import { fromPartial } from "@total-typescript/shoehorn";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { StripeWebhookEventModel } from "@antelopejs/interface-dms-saas/db/models/stripeWebhookEvents.model";
 import { dispatchStripeWebhookEvent } from "../src/stripe/webhook-dispatch";
+import { defined } from "./helpers/defined";
 import {
   type CreditedWorkspace,
   creditedWorkspace,
@@ -68,13 +69,13 @@ it("does not take over a paused handler beyond the old timeout", async () => {
 it("rejects stale completion even after the same attempt has already completed", async () => {
   const model = GetModel(StripeWebhookEventModel);
   const input = event();
-  const revision = await model.tryClaim(input.id, input.type);
+  const revision = defined(await model.tryClaim(input.id, input.type));
   expect(revision).toBeTypeOf("string");
-  await model.markResult(input.id, revision!, "success", null);
+  await model.markResult(input.id, revision, "success", null);
   await expect(
     model.markResult(
       input.id,
-      revision!,
+      revision,
       "reconciliation_required",
       "late error",
     ),

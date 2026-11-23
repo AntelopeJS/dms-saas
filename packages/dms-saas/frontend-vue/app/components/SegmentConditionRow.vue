@@ -87,7 +87,7 @@ function changeOperator(operator: SegmentOperator): void {
 	})
 }
 
-function changeValue(value: unknown): void {
+function changeValue(value: SegmentCondition['value']): void {
 	emit('update', { ...props.condition, value })
 }
 

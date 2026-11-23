@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, type Ref } from 'vue'
-import { useLiveFormValues } from '../build/composables/useLiveFormValues'
+import { computed } from 'vue'
+import { useLiveFormSnapshot } from '../build/composables/useLiveFormValues'
 import {
 	cardFeatures,
 	cardPriceSuffixKey,
 	formatPlanAmount,
+	isPlanFeatureValue,
 	type PlanCatalog,
+	type PlanFeatureValue,
 	PLANS_ENDPOINT,
 	PLAN_UNLIMITED,
 } from '../build/plan-catalog'
@@ -13,7 +15,7 @@ import { fromMinorUnits } from '../composables/useMoneyFormat'
 
 interface PlanAccess {
 	parentPlanId: string | null
-	extraFeatures: Record<string, unknown>
+	extraFeatures: Record<string, PlanFeatureValue>
 }
 
 /** A plan text as the editor holds it: one value per locale. */
@@ -23,12 +25,12 @@ type PlanText = Record<string, string>
 interface PlanDraft {
 	name?: PlanText | null
 	description?: PlanText | null
-	price?: number
+	price?: number | string
 	currency?: string
 	interval?: 'month' | 'year'
 	billingMode?: 'flat' | 'seat'
-	trialDays?: number
-	maxMembers?: number
+	trialDays?: number | string
+	maxMembers?: number | string
 	borderLabel?: PlanText | null
 	borderColor?: string | null
 	inheritance?: PlanAccess | null
@@ -49,6 +51,8 @@ interface EditorContext {
 }
 
 const FEATURE_PREVIEW_LIMIT = 6
+/** Locale the server reads a plan text in when the reader's has none. */
+const PLAN_FALLBACK_LOCALE = 'en'
 
 const SYNC_TONES: Record<SyncState, 'success' | 'warning' | 'neutral'> = {
 	synced: 'success',
@@ -69,14 +73,78 @@ const EMPTY_CATALOG: PlanCatalog = {
 	newPlanPermissions: [],
 }
 
-// Locale the server reads a plan text in when the reader's has none.
-const PLAN_FALLBACK_LOCALE = 'en'
+function isObject(value: unknown): value is object {
+	return typeof value === 'object' && value !== null
+}
+
+function isText(value: unknown): value is string {
+	return typeof value === 'string'
+}
+
+function isAmount(value: unknown): value is number | string {
+	return typeof value === 'number' || typeof value === 'string'
+}
+
+function isPlanText(value: unknown): value is PlanText {
+	return isObject(value) && Object.values(value).every(isText)
+}
+
+function isPlanAccess(value: unknown): value is PlanAccess {
+	return (
+		isObject(value) &&
+		'parentPlanId' in value &&
+		(value.parentPlanId === null || isText(value.parentPlanId)) &&
+		'extraFeatures' in value &&
+		isObject(value.extraFeatures) &&
+		Object.values(value.extraFeatures).every(isPlanFeatureValue)
+	)
+}
+
+function isInterval(
+	value: unknown,
+): value is NonNullable<PlanDraft['interval']> {
+	return value === 'month' || value === 'year'
+}
+
+function isBillingMode(
+	value: unknown,
+): value is NonNullable<PlanDraft['billingMode']> {
+	return value === 'flat' || value === 'seat'
+}
+
+/** The plan fields the form reports, those of a kind the preview can read. */
+function parsePlanDraft(fields: ReadonlyMap<string, unknown>): PlanDraft {
+	const name = fields.get('name')
+	const description = fields.get('description')
+	const price = fields.get('price')
+	const currency = fields.get('currency')
+	const interval = fields.get('interval')
+	const billingMode = fields.get('billingMode')
+	const trialDays = fields.get('trialDays')
+	const maxMembers = fields.get('maxMembers')
+	const borderLabel = fields.get('borderLabel')
+	const borderColor = fields.get('borderColor')
+	const inheritance = fields.get('inheritance')
+	return {
+		...(isPlanText(name) && { name }),
+		...(isPlanText(description) && { description }),
+		...(isAmount(price) && { price }),
+		...(isText(currency) && { currency }),
+		...(isInterval(interval) && { interval }),
+		...(isBillingMode(billingMode) && { billingMode }),
+		...(isAmount(trialDays) && { trialDays }),
+		...(isAmount(maxMembers) && { maxMembers }),
+		...(isPlanText(borderLabel) && { borderLabel }),
+		...(isText(borderColor) && { borderColor }),
+		...(isPlanAccess(inheritance) && { inheritance }),
+	}
+}
 
 const { t, locale } = useI18n()
 const { formatFeatureValue } = usePlanFeatureFormat()
 
 const planId = computed(() => props.routeParams?.id)
-// A new plan has nothing saved and no Stripe context yet.
+/** A new plan has nothing saved and no Stripe context yet. */
 const savedPlan = useApiData<PlanDraft>(() =>
 	planId.value ? `${PLANS_ENDPOINT}/${planId.value}` : null,
 )
@@ -85,13 +153,16 @@ const editorContext = useApiData<EditorContext>(() =>
 )
 const saved = savedPlan.data
 const context = editorContext.data
-// The form declared beside the preview, in the same grid row.
+/** The form declared beside the preview, in the same grid row. */
 const formComponentId = computed(() =>
 	props.componentId
 		? siblingComponentId(props.componentId, props.formKey ?? 'form')
 		: undefined,
 )
-const live = useLiveFormValues(() => formComponentId.value) as Ref<PlanDraft | null>
+const live = useLiveFormSnapshot(
+	() => formComponentId.value,
+	(formValues) => parsePlanDraft(new Map(Object.entries(formValues))),
+)
 const planCatalog = usePlanCatalog()
 const catalog = computed(() => planCatalog.data.value ?? EMPTY_CATALOG)
 const reads = [planCatalog, savedPlan, editorContext]
@@ -105,9 +176,13 @@ const isLoading = computed(
 )
 const draft = computed<PlanDraft>(() => live.value ?? saved.value ?? {})
 
+function textIn(value: PlanText | null | undefined, key: string): string {
+	return value && Object.hasOwn(value, key) ? (value[key] ?? '') : ''
+}
+
 /** A plan text as the cards show it: the reader's locale, else the fallback one. */
 function textOf(value: PlanText | null | undefined): string {
-	return value?.[locale.value] || value?.[PLAN_FALLBACK_LOCALE] || ''
+	return textIn(value, locale.value) || textIn(value, PLAN_FALLBACK_LOCALE)
 }
 
 const name = computed(() => textOf(draft.value.name))
@@ -116,7 +191,6 @@ const badge = computed(() => textOf(draft.value.borderLabel))
 const currency = computed(() => draft.value.currency ?? 'EUR')
 const price = computed(() => Number(draft.value.price ?? 0))
 const interval = computed(() => draft.value.interval ?? 'month')
-const isSeat = computed(() => draft.value.billingMode === 'seat')
 const trialDays = computed(() => Number(draft.value.trialDays ?? 0))
 
 function money(amount: number, code = currency.value): string {
@@ -246,9 +320,7 @@ async function load(): Promise<void> {
 				v-else
 				class="border-default relative flex flex-col gap-3 rounded-xl border p-4"
 				:style="
-					badge
-						? { borderColor: draft.borderColor || undefined }
-						: undefined
+					badge ? { borderColor: draft.borderColor || undefined } : undefined
 				"
 			>
 				<UBadge

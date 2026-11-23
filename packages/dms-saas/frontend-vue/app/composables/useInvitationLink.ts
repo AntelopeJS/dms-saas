@@ -13,6 +13,7 @@ const INVITATIONS_ENDPOINT = '/api/saas/workspaces'
 /**
  * Retrieves an invitation's signup link (each retrieval is journaled server
  * side) and puts it on the clipboard, reporting the outcome with a toast.
+ * `copyLink` returns whether the link reached the clipboard.
  */
 export function useInvitationLink() {
 	const { $authFetch } = useAuthFetch()
@@ -26,7 +27,6 @@ export function useInvitationLink() {
 		)
 	}
 
-	/** Returns whether the link reached the clipboard. */
 	async function copyLink(link: string): Promise<boolean> {
 		const t = nuxtApp.$i18n.t
 		let copied: boolean

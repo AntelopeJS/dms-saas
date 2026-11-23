@@ -13,7 +13,8 @@ const I18N = 'saas.segments.sentence'
 /**
  * The rules as one sentence ("Users where Email verified is Yes, they own
  * at least one workspace where Paying is Yes and …"), tokens in bold for
- * the fields read.
+ * the fields read. `sentence` returns the rules of a segment as the tokens
+ * of that sentence.
  */
 export function useSegmentSentence(catalog: SegmentCatalog) {
 	const { t } = useI18n()
@@ -46,7 +47,6 @@ export function useSegmentSentence(catalog: SegmentCatalog) {
 		})
 	}
 
-	/** The rules of a segment as tokens of one sentence. */
 	function sentence(group: SegmentConditionGroup): SegmentWordToken[] {
 		if (group.conditions.length === 0) return [{ text: t(`${I18N}.empty`) }]
 		return [

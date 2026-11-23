@@ -33,6 +33,7 @@ import {
   updateSubscriptionStatus,
 } from "../src/stripe/webhook-shared";
 import { prepareGuardedPlanChange } from "../src/plan-changes/guarded-state";
+import { defined } from "./helpers/defined";
 import { addTenantMember, createUser, implementWithDms } from "./helpers/dms";
 import { implementNotificationCore } from "./helpers/notification-core";
 import { useLifecycleConsumer } from "./helpers/lifecycle-consumer";
@@ -270,7 +271,7 @@ describe("paid-to-Free orchestration with real inventory admission, Stripe in fl
     const scheduled = await read();
     await model.update(scheduled._id, {
       guardedPlanChange: {
-        ...scheduled.guardedPlanChange!,
+        ...defined(scheduled.guardedPlanChange),
         effectiveAt: new Date(0),
       },
     });
@@ -335,7 +336,7 @@ describe("paid-to-Free orchestration with real inventory admission, payment susp
     const scheduled = await read();
     await model.update(scheduled._id, {
       guardedPlanChange: {
-        ...scheduled.guardedPlanChange!,
+        ...defined(scheduled.guardedPlanChange),
         effectiveAt: new Date(0),
       },
     });
@@ -388,7 +389,7 @@ describe("paid-to-Free orchestration with real inventory admission, payment susp
     const scheduled = await read();
     await model.update(scheduled._id, {
       guardedPlanChange: {
-        ...scheduled.guardedPlanChange!,
+        ...defined(scheduled.guardedPlanChange),
         effectiveAt: new Date(0),
       },
     });

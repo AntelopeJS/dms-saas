@@ -80,7 +80,7 @@ function stubCreditNoteCreate() {
  * a credit note of 49.00, a subscription renewing on 2026-10-29, and a default
  * Visa on the Stripe customer.
  */
-beforeEach(async () => {
+async function seedPaidInvoice(): Promise<void> {
   tenantId = randomUUID();
   priorNoteId = randomUUID();
   invoiceRowId = randomUUID();
@@ -139,7 +139,9 @@ beforeEach(async () => {
       },
     }),
   );
-});
+}
+
+beforeEach(seedPaidInvoice);
 
 describe("credit note preview", () => {
   it("shows what was credited, what is left and where it goes", async () => {

@@ -13,7 +13,7 @@ const { t } = useI18n()
 const { $authFetch } = useAuthFetch()
 const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const detail = useUserDetail(() => props.routeParams)
 const user = computed(() => detail.data.value)
 const isOpening = ref(false)
@@ -22,10 +22,10 @@ const change = computed<RoleChange>(() =>
 	user.value?.isPlatformAdmin ? 'demote' : 'promote',
 )
 
+/** The dialog closes once the card shows the new role. */
 async function runChange(kind: RoleChange): Promise<void> {
 	await $authFetch(`${API}/${detail.userId.value}/${kind}`, { method: 'POST' })
 	toast.add({ color: 'success', title: t(`${I18N}.${kind}d`) })
-	// The dialog closes once the card shows the new role.
 	await refreshPageBlocks()
 }
 
@@ -37,7 +37,7 @@ async function openConfirm(): Promise<void> {
 			onConfirm: () => runChange(kind),
 		})
 	} catch (error) {
-		presentError(error, { fallbackKey: `${I18N}.confirm_failed` })
+		errors.presentError(error, { fallbackKey: `${I18N}.confirm_failed` })
 	} finally {
 		isOpening.value = false
 	}

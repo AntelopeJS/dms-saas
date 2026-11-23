@@ -21,7 +21,7 @@ import {
   missingRegistrationFields,
   type RegistrationFieldState,
   registrationFieldOf,
-} from "../frontend-vue/app/composables/useSaasRegistration";
+} from "../frontend-vue/app/composables/registrationRules";
 import { registrationLandingPath } from "../frontend-vue/app/composables/useSaasRegistrationPlan";
 import type { TenantPlanFeature } from "../frontend-vue/app/composables/useTenantPlan";
 

@@ -15,9 +15,6 @@ const props = withDefaults(
 	}>(),
 	{
 		labelKey: 'saas.tenant_billing.portal.open',
-		color: 'neutral',
-		variant: 'subtle',
-		size: 'md',
 		icon: 'i-ph-arrow-square-out',
 		isDeferred: false,
 	},
@@ -30,7 +27,7 @@ interface PortalSession {
 }
 
 const { $authFetch } = useAuthFetch()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const billingStatus = useBillingStatus({ server: !props.isDeferred }).data
 const data = props.isDeferred ? useMountedData(billingStatus) : billingStatus
 const isLoading = ref(false)
@@ -53,8 +50,9 @@ async function openCustomerPortal(): Promise<void> {
 		if (typeof window !== 'undefined') window.location.href = result.url
 	} catch (error) {
 		failure.value =
-			resolveError(error, { fallbackKey: 'saas.tenant_billing.portal.error' })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: 'saas.tenant_billing.portal.error',
+			})?.message ?? ''
 		isLoading.value = false
 	}
 }
@@ -63,9 +61,9 @@ async function openCustomerPortal(): Promise<void> {
 <template>
 	<div v-if="isAvailable" class="flex flex-col gap-2">
 		<UButton
-			:color="props.color"
-			:variant="props.variant"
-			:size="props.size"
+			:color="props.color ?? 'neutral'"
+			:variant="props.variant ?? 'subtle'"
+			:size="props.size ?? 'md'"
 			:icon="props.icon"
 			:loading="isLoading"
 			class="self-start"

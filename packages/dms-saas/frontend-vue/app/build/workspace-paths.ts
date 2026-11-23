@@ -7,13 +7,23 @@ export const GENERAL_PATH = '/settings/workspace/general'
 /** Where a workspace switch lands: the previous page belonged to the old tenant. */
 export const HOME_PATH = '/'
 
+/** What a page declares about itself that a workspace switch reads. */
+export interface PageMetadata {
+	readonly displayName?: string
+	readonly workspaceScoped?: boolean
+}
+
+/**
+ * Where a workspace switch lands from a page: home when the page belongs to
+ * one workspace (it declares `workspaceScoped`), else the current URL.
+ *
+ * @param metadata What the page declares about itself, if a route matches
+ */
 export function workspaceSwitchLandingPath(
-	metadata: unknown,
+	metadata: PageMetadata | undefined,
 ): string | undefined {
-	return typeof metadata === 'object' &&
-		metadata !== null &&
+	return metadata &&
 		Object.hasOwn(metadata, 'workspaceScoped') &&
-		'workspaceScoped' in metadata &&
 		metadata.workspaceScoped === true
 		? HOME_PATH
 		: undefined

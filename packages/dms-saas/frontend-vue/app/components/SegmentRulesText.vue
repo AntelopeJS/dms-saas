@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { hasSegmentConditions, parseSegmentGroup } from '../build/segments/tree'
+import type { StoredSegmentRules } from '../build/segments/types'
 import { useSegmentCatalog } from '../build/segments/useSegmentCatalog'
-import {
-	type SegmentRulesMode,
-	useSegmentWords,
-} from '../build/segments/useSegmentWords'
+import { useSegmentWords } from '../build/segments/useSegmentWords'
 
 const props = withDefaults(
 	defineProps<{
 		/** The rules, as the JSON string or the object a row holds. */
-		conditions: unknown
-		mode?: SegmentRulesMode
+		conditions?: StoredSegmentRules
+		mode?: 'compact' | 'full'
 		fieldsCatalogUrl?: string
 	}>(),
 	{ mode: 'compact', fieldsCatalogUrl: undefined },

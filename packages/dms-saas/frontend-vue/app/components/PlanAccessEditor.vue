@@ -2,7 +2,12 @@
 import { computed, onMounted, ref } from 'vue'
 import PlanFeatureValueInput from '../build/PlanFeatureValueInput.vue'
 import PlanPermissionPicker from '../build/PlanPermissionPicker.vue'
-import type { CatalogFeature, PlanCatalog } from '../build/plan-catalog'
+import {
+	type CatalogFeature,
+	isPlanFeatureValue,
+	type PlanCatalog,
+	type PlanFeatureValue,
+} from '../build/plan-catalog'
 import {
 	flattenPermissionTree,
 	type PermissionNode,
@@ -11,7 +16,7 @@ import {
 interface PlanAccess {
 	parentPlanId: string | null
 	extraPermissions: string[]
-	extraFeatures: Record<string, unknown>
+	extraFeatures: Record<string, PlanFeatureValue>
 }
 
 type FeatureSource = 'inherited' | 'overridden' | 'own' | 'unset'
@@ -50,12 +55,12 @@ const hasError = computed(() =>
 )
 const isPickerOpen = ref(false)
 
-// A new plan starts with no value: no parent, nothing of its own.
+/** A new plan starts with no value: no parent, nothing of its own. */
 function copyAccess(value: PlanAccess | null | undefined): PlanAccess {
 	return {
 		parentPlanId: value?.parentPlanId ?? null,
 		extraPermissions: [...(value?.extraPermissions ?? [])],
-		extraFeatures: { ...(value?.extraFeatures ?? {}) },
+		extraFeatures: { ...value?.extraFeatures },
 	}
 }
 
@@ -102,22 +107,22 @@ function sourceOf(feature: CatalogFeature): FeatureSource {
 	return isOwn ? 'own' : 'unset'
 }
 
-function valueOf(feature: CatalogFeature): unknown {
+function valueOf(feature: CatalogFeature): PlanFeatureValue {
 	if (feature._id in access.value.extraFeatures) {
-		return access.value.extraFeatures[feature._id]
+		return access.value.extraFeatures[feature._id] ?? null
 	}
-	return parentValues.value.get(feature._id) ?? null
+	const inherited = parentValues.value.get(feature._id)
+	return isPlanFeatureValue(inherited) ? inherited : null
 }
 
-function setFeature(feature: CatalogFeature, value: unknown): void {
+function setFeature(feature: CatalogFeature, value: PlanFeatureValue): void {
 	update({
 		extraFeatures: { ...access.value.extraFeatures, [feature._id]: value },
 	})
 }
 
 function resetFeature(feature: CatalogFeature): void {
-	const next = { ...access.value.extraFeatures }
-	delete next[feature._id]
+	const { [feature._id]: _removed, ...next } = access.value.extraFeatures
 	update({ extraFeatures: next })
 }
 
@@ -187,11 +192,15 @@ function isBlank(value: PlanAccess): boolean {
 	)
 }
 
-// A new plan starts with every permission checked, as the seeded plans hold
-// them, for the operator to uncheck; a duplicate keeps the plan it copies.
-// The form's value changes from the browser: until then a new plan shows the
-// placeholder, on the server as in the browser's first render.
+/**
+ * A new plan starts with every permission checked, as the seeded plans hold
+ * them, for the operator to uncheck; a duplicate keeps the plan it copies.
+ */
 const isNewBlankPlan = !currentPlanId.value && !route.query.duplicate
+/**
+ * The form's value changes from the browser: until then a new plan shows the
+ * placeholder, on the server as in the browser's first render.
+ */
 const isSeeding = ref(isNewBlankPlan)
 const isLoading = computed(
 	() =>
@@ -283,7 +292,10 @@ onMounted(async () => {
 						:model-value="valueOf(feature)"
 						:unit="feature.unit"
 						:disabled="disabled"
-						@update:model-value="(value: unknown) => setFeature(feature, value)"
+						@update:model-value="
+							(value: unknown) =>
+								isPlanFeatureValue(value) && setFeature(feature, value)
+						"
 					/>
 					<div class="flex items-center gap-1.5 text-xs">
 						<UBadge

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { OfferedPlanView } from '../composables/useTenantPlan'
 import { computed, ref, watch } from 'vue'
 import { SENTENCE_DAY_FORMAT } from '../build/day-formats'
 import { checkoutHeadingCase } from '../build/plan-change-heading'
@@ -20,7 +21,7 @@ const PREVIEW_DEBOUNCE_MS = 400
 
 const toast = useToast()
 const { t, locale } = useI18n()
-const { presentError, resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const identity = useBillingIdentity()
 const { changePlan, previewChange } = useTenantPlanChanges()
 const { offerFor: offerPendingCheckout } = usePendingCheckout()
@@ -29,8 +30,10 @@ const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
 
 const draft = ref<BillingIdentityDraft>(emptyBillingIdentityDraft())
 const hasTriedSubmit = ref(false)
-// Flagged once a submit was attempted, then re-checked as the user types so
-// a corrected field clears its error right away.
+/**
+ * Flagged once a submit was attempted, then re-checked as the user types so
+ * a corrected field clears its error right away.
+ */
 const invalidFields = computed<BillingIdentityField[]>(() =>
 	hasTriedSubmit.value ? findMissingBillingFields(draft.value) : [],
 )
@@ -39,8 +42,10 @@ const loadFailed = ref(false)
 const isSubmitting = ref(false)
 const preview = ref<PlanChangePreview | null>(null)
 const isPricing = ref(false)
-// A refused preview (a plan Stripe does not bill yet, Stripe unreachable)
-// would be refused again at checkout: say why, and offer no payment.
+/**
+ * A refused preview (a plan Stripe does not bill yet, Stripe unreachable)
+ * would be refused again at checkout: say why, and offer no payment.
+ */
 const previewFailure = ref<string | null>(null)
 let pricingTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -114,8 +119,9 @@ async function price(): Promise<void> {
 	} catch (error) {
 		preview.value = null
 		previewFailure.value =
-			resolveError(error, { fallbackKey: `${KEY_PREFIX}.preview_failed` })
-				?.message ?? ''
+			errors.resolveError(error, {
+				fallbackKey: `${KEY_PREFIX}.preview_failed`,
+			})?.message ?? ''
 	} finally {
 		isPricing.value = false
 	}
@@ -126,20 +132,20 @@ function schedulePricing(): void {
 	pricingTimer = setTimeout(() => void price(), PREVIEW_DEBOUNCE_MS)
 }
 
-// Immediate: `?upgrade=<planId>` can open the dialog before it is mounted
-// (the owner check that mounts it resolves last), and the identity must still
-// be read then.
-watch(
-	open,
-	async (isOpen) => {
-		if (!isOpen) return
-		preview.value = null
-		previewFailure.value = null
-		await loadIdentity()
-		void price()
-	},
-	{ immediate: true },
-)
+/**
+ * Runs immediately: `?upgrade=<planId>` can open the dialog before it is
+ * mounted (the owner check that mounts it resolves last), and the identity
+ * must still be read then.
+ */
+async function startPricing(isOpen: boolean): Promise<void> {
+	if (!isOpen) return
+	preview.value = null
+	previewFailure.value = null
+	await loadIdentity()
+	void price()
+}
+
+watch(open, startPricing, { immediate: true })
 
 watch(
 	() => draft.value.country,
@@ -185,7 +191,9 @@ async function confirm(): Promise<void> {
 			open.value = false
 			return
 		}
-		presentError(error, { fallbackKey: 'saas.workspace.plan.change_error' })
+		errors.presentError(error, {
+			fallbackKey: 'saas.workspace.plan.change_error',
+		})
 	} finally {
 		isSubmitting.value = false
 	}

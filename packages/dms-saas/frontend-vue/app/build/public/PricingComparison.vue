@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { TenantPlanFeature } from '../../composables/useTenantPlan'
 import { computed, ref } from 'vue'
 import {
 	isPaidPlan,

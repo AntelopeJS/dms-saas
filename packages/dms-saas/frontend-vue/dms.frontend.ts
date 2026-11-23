@@ -6,15 +6,19 @@ import footerLinks from './app/plugins/footer-links'
 import segmentConditions from './app/plugins/segment-conditions-data-type'
 import sidebarWidgets from './app/plugins/sidebar-widgets'
 
-// The tenant access gate's refusal code: the server answers a refused page
-// visit, a reload as much as an Inertia one, with a redirect to the suspended
-// screen instead of its generic 403 page.
+/**
+ * The tenant access gate's refusal code: the server answers a refused page
+ * visit, a reload as much as an Inertia one, with a redirect to the suspended
+ * screen instead of its generic 403 page.
+ */
 const WORKSPACE_ACCESS_BLOCKED_CODE = 'saas.errors.workspace.access_blocked'
 const WORKSPACE_SUSPENDED_PATH = '/workspace-suspended'
 
 interface VueModule {
 	default: Component
 }
+
+type GlobEntry = [path: string, loader: () => Promise<VueModule>]
 
 const components = import.meta.glob<VueModule>(
 	'./app/{components,build}/**/*.vue',
@@ -23,23 +27,25 @@ const pages = import.meta.glob<VueModule>('./app/custom-pages/**/*.vue')
 
 function pascalCase(value: string): string {
 	return value
-		.split(/[\/_-]/)
+		.split(/[/_-]/)
 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 		.join('')
 }
 
+function byPath(left: GlobEntry, right: GlobEntry): number {
+	if (left[0] === right[0]) return 0
+	return left[0] < right[0] ? -1 : 1
+}
+
 function registerComponents(sdk: DmsFrontendSdk): void {
 	Object.entries(components)
-		.sort()
+		.sort(byPath)
 		.forEach(([path, loader]) => {
-			const name = path
-				.split('/')
-				.at(-1)!
-				.replace(/\.vue$/, '')
+			const name = path.slice(path.lastIndexOf('/') + 1).replace(/\.vue$/, '')
 			sdk.registerComponent(pascalCase(name), defineAsyncComponent(loader))
 		})
 	Object.entries(pages)
-		.sort()
+		.sort(byPath)
 		.forEach(([path, loader]) => {
 			const name = path.replace('./app/custom-pages/', '').replace(/\.vue$/, '')
 			const component = defineAsyncComponent(loader)

@@ -1,6 +1,6 @@
 import type { PlanInterval } from '../../composables/usePlanIntervalLabel'
 import type { TenantPlanFeature } from '../../composables/useTenantPlan'
-import { PLAN_UNLIMITED } from '../plan-catalog'
+import { PLAN_UNLIMITED, type PlanFeatureValue } from '../plan-catalog'
 import type { RegistrationPaymentMethodPolicy } from '../../types/runtime-config'
 
 export type PlanBillingMode = 'flat' | 'seat'
@@ -24,7 +24,7 @@ export interface PublicPlan {
 	borderLabel: string | null
 	order: number
 	inheritsFromPlanId: string | null
-	featureValues: Record<string, unknown>
+	featureValues: Record<string, PlanFeatureValue>
 }
 
 export interface PublicMoneyBackGuarantee {
@@ -73,7 +73,7 @@ export interface ComparisonRows {
 /** Team size the per-seat price is worked out for, under the plan's cap. */
 const EXAMPLE_SEATS = 10
 const INTERVAL_ORDER: PlanInterval[] = ['month', 'year']
-const NOT_INCLUDED_VALUES = new Set<unknown>([
+const NOT_INCLUDED_VALUES = new Set<PlanFeatureValue | undefined>([
 	0,
 	false,
 	'',
@@ -92,7 +92,7 @@ export function planReference(plan: PublicPlan): string {
 }
 
 /** 0 / false / empty mean "not included"; −1 and every other value do not. */
-export function isIncludedValue(value: unknown): boolean {
+export function isIncludedValue(value: PlanFeatureValue | undefined): boolean {
 	return !NOT_INCLUDED_VALUES.has(value)
 }
 
@@ -174,5 +174,6 @@ export function splitComparisonRows(
 /** One currency for every plan shown, or null when they differ. */
 export function sharedCurrency(plans: PublicPlan[]): string | null {
 	const currencies = new Set(plans.map((plan) => plan.currency.toUpperCase()))
-	return currencies.size === 1 ? [...currencies][0]! : null
+	const [currency] = currencies
+	return currencies.size === 1 && currency !== undefined ? currency : null
 }

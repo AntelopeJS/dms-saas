@@ -7,6 +7,10 @@ import {
 
 type RefundMode = 'full' | 'prorated'
 
+function isRefundMode(value: unknown): value is RefundMode {
+	return value === 'full' || value === 'prorated'
+}
+
 /** The refund setting the example follows, as the page loaded it. */
 interface RefundExampleInput {
 	moneyBackGuaranteeMode: RefundMode
@@ -18,7 +22,7 @@ const props = defineProps<{
 }>()
 
 const TEXT = 'saas.operator_billing.billing_rules.refunds.worked_example'
-// A monthly plan refunded on day 10 of 30: what each mode gives back.
+/** The worked example: a monthly plan refunded on day 10 of 30. */
 const EXAMPLE_PRICE = 2900
 const EXAMPLE_CURRENCY = 'eur'
 const EXAMPLE_PERIOD_DAYS = 30
@@ -32,6 +36,7 @@ const mode = computed<RefundMode>(() =>
 		live.value,
 		'moneyBackGuaranteeMode',
 		props.modelValue?.moneyBackGuaranteeMode ?? 'full',
+		isRefundMode,
 	),
 )
 

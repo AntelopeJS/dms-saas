@@ -113,6 +113,6 @@ export function workspaceInitials(name: string): string {
 	const letters =
 		words.length >= INITIALS_LENGTH
 			? words.slice(0, INITIALS_LENGTH).map((word) => word[0])
-			: [...(words[0] ?? '')].slice(0, INITIALS_LENGTH)
+			: Array.from(words[0] ?? '').slice(0, INITIALS_LENGTH)
 	return letters.join('').toUpperCase()
 }

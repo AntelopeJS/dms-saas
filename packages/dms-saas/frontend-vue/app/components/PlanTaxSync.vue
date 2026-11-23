@@ -19,6 +19,10 @@ const props = defineProps<{
 	componentId?: string
 }>()
 
+function isText(value: unknown): value is string {
+	return typeof value === 'string'
+}
+
 const TEXT = 'saas.operator_billing.billing_rules.tax'
 const RESYNC_ENDPOINT = '/api/saas/settings/billing/resync-plans'
 const DATE_TIME_FORMAT: Intl.DateTimeFormatOptions = {
@@ -31,7 +35,7 @@ const DATE_TIME_FORMAT: Intl.DateTimeFormatOptions = {
 const { t, locale } = useI18n()
 const toast = useToast()
 const { $authFetch } = useAuthFetch()
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const live = useLiveFormValues(() => props.componentId)
 
 const status = ref<PlanTaxSyncStatus | null>(props.modelValue ?? null)
@@ -46,7 +50,9 @@ watch(
 
 const isTaxCodeUnsaved = computed(() => {
 	const saved = status.value?.taxCode
-	return !!saved && liveValue(live.value, 'stripeTaxCode', saved) !== saved
+	return (
+		!!saved && liveValue(live.value, 'stripeTaxCode', saved, isText) !== saved
+	)
 })
 
 const summary = computed(() => {
@@ -77,7 +83,7 @@ async function resync(): Promise<void> {
 			icon: 'i-ph-check-circle',
 		})
 	} catch (error) {
-		presentError(error, { fallbackKey: `${TEXT}.resync_failed` })
+		errors.presentError(error, { fallbackKey: `${TEXT}.resync_failed` })
 	} finally {
 		isSyncing.value = false
 	}

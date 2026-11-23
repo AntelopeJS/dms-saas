@@ -24,6 +24,7 @@ export function isInvoiceSettled(result: PayInvoiceResult): boolean {
 /**
  * The pay-invoice dialog, opened from the past-due alert, the layout strip or
  * an invoice row: its target is shared so one dialog serves them all.
+ * `payWithDefaultCard` charges the default card on file for the invoice.
  */
 export function usePayInvoice() {
 	const { $authFetch } = useAuthFetch()
@@ -40,7 +41,6 @@ export function usePayInvoice() {
 		target.value = null
 	}
 
-	/** Charges the default card on file for the invoice. */
 	function payWithDefaultCard(invoiceId: string): Promise<PayInvoiceResult> {
 		return $authFetch<PayInvoiceResult>(
 			`/api/saas/billing/invoices/${encodeURIComponent(invoiceId)}/pay`,

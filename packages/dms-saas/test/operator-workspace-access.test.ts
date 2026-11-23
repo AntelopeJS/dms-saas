@@ -4,6 +4,7 @@ import { UserModel } from "@antelopejs/interface-dms/auth/db";
 import { describe, expect, it } from "vitest";
 import { PlanModel, TenantSubscriptionModel } from "../src/db";
 import { requestWorkspaceDeletion } from "../src/workspaces/deletion";
+import { defined } from "./helpers/defined";
 import {
   WORKSPACE_NAME,
   adminController,
@@ -119,7 +120,7 @@ describe("complimentary access over a paid subscription", () => {
     const { tenantId } = await createInvitedWorkspace();
     const subscription = await subscriptionOf(tenantId);
     await GetModel(TenantSubscriptionModel, tenantId).update(
-      subscription!._id,
+      defined(subscription)._id,
       { stripeSubscriptionId: "sub_paid", isComplimentary: false },
     );
 
@@ -139,7 +140,7 @@ describe("complimentary access to a workspace without a subscription", () => {
     const { tenantId } = await createInvitedWorkspace();
     const subscriptions = GetModel(TenantSubscriptionModel, tenantId);
     const subscription = await subscriptionOf(tenantId);
-    await subscriptions.delete(subscription!._id);
+    await subscriptions.delete(defined(subscription)._id);
     const second = { ...operator, _id: randomUUID() };
     const planOf = new Map([
       [operator._id, await insertPlan()],
@@ -163,8 +164,9 @@ describe("complimentary access to a workspace without a subscription", () => {
         isComplimentary: true,
       }),
     ]);
-    const loser = rows[0]!.createdBy === operator._id ? second : operator;
-    expect(rows[0]!.planId).toBe(planOf.get(loser._id));
+    const row = defined(rows[0]);
+    const loser = row.createdBy === operator._id ? second : operator;
+    expect(row.planId).toBe(planOf.get(loser._id));
   });
 });
 
@@ -173,7 +175,7 @@ describe("complimentary access to a cancelled workspace", () => {
     const { tenantId } = await createInvitedWorkspace();
     const subscription = await subscriptionOf(tenantId);
     await GetModel(TenantSubscriptionModel, tenantId).update(
-      subscription!._id,
+      defined(subscription)._id,
       { status: "cancelled", isComplimentary: false },
     );
 

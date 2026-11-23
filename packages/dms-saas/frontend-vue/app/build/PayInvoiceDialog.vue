@@ -2,11 +2,13 @@
 import { computed } from 'vue'
 import PayInvoicePanel from './PayInvoicePanel.vue'
 
-// Hosted by the past-due alert and the past-due strip; whichever opens it
-// sets the shared target, so a single dialog shows at a time.
 const { target, close } = usePayInvoice()
 const { formatMinorUnits } = useMoneyFormat()
 
+/**
+ * Hosted by the past-due alert and the past-due strip; whichever opens it
+ * sets the shared target, so a single dialog shows at a time.
+ */
 const open = computed({
 	get: () => target.value !== null,
 	set: (isOpen: boolean) => {

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useMyWorkspaces } from "../frontend-vue/app/composables/useMyWorkspaces";
+import { defined } from "./helpers/defined";
 import {
   type MaybeRefOrGetter,
   type Ref,
@@ -55,14 +56,14 @@ describe("workspace list authentication boundary", () => {
     const { list, calls } = setupWorkspaceList(false);
 
     expect(calls).toHaveLength(1);
-    expect(toValue(calls[0]!.url)).toBeNull();
+    expect(toValue(defined(calls[0]).url)).toBeNull();
     expect(list.workspaces.value).toEqual([]);
     expect(list.isLoaded.value).toBe(true);
   });
 
   it("reads user workspaces on an authenticated page, through useApiData", () => {
     const { list, calls, loggedIn } = setupWorkspaceList(true);
-    const call = calls[0]!;
+    const call = defined(calls[0]);
 
     expect(toValue(call.url)).toBe("/api/saas/workspaces/mine");
     expect(list.isLoaded.value).toBe(false);
@@ -78,7 +79,7 @@ describe("workspace list authentication boundary", () => {
 
   it("keeps the entries on screen when a later read fails", () => {
     const { list, calls } = setupWorkspaceList(true);
-    const call = calls[0]!;
+    const call = defined(calls[0]);
     call.data.value = [WORKSPACE_FIXTURE];
     call.status.value = "error";
     call.error.value = new Error("Session expired");
@@ -90,7 +91,7 @@ describe("workspace list authentication boundary", () => {
 
   it("does not show a retry as failed while it runs", () => {
     const { list, calls } = setupWorkspaceList(true);
-    const call = calls[0]!;
+    const call = defined(calls[0]);
     call.status.value = "error";
     call.error.value = new Error("Bad gateway");
     expect(list.hasFailed.value).toBe(true);

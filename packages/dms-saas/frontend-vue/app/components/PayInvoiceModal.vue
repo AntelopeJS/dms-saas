@@ -11,8 +11,10 @@ interface InvoiceRow {
 	hostedInvoiceUrl: string | null
 }
 
-// Opened by the "Pay invoice" row action of the billing page's table, which
-// hands the row and closes the modal through `onSuccessCallback`.
+/**
+ * Opened by the "Pay invoice" row action of the billing page's table, which
+ * hands the row and closes the modal through `onSuccessCallback`.
+ */
 const props = defineProps<{
 	rowData?: InvoiceRow
 	onSuccessCallback?: () => void

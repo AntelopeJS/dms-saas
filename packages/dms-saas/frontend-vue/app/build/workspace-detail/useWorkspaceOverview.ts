@@ -16,15 +16,16 @@ export interface WorkspaceOverviewState {
  * share one read.
  */
 export function useWorkspaceOverview(tenantId: string): WorkspaceOverviewState {
-	const { data, status, refresh } = useApiData<WorkspaceOverview>(
+	const request = useApiData<WorkspaceOverview>(
 		tenantId ? `/api/saas/workspaces/${tenantId}/overview` : null,
 	)
 	return {
-		overview: data,
+		overview: request.data,
 		isLoading: computed(
-			() => status.value === 'pending' || status.value === 'idle',
+			() =>
+				request.status.value === 'pending' || request.status.value === 'idle',
 		),
-		hasError: computed(() => status.value === 'error'),
-		load: () => refresh(),
+		hasError: computed(() => request.status.value === 'error'),
+		load: () => request.refresh(),
 	}
 }

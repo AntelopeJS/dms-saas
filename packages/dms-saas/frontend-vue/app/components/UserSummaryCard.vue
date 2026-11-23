@@ -2,8 +2,6 @@
 import { computed, watch } from 'vue'
 import { userDisplayName, useUserDetail } from '../build/users/useUserDetail'
 
-// The identity header of the user page: who the user is and how their
-// account stands. The figures under it are a StatGroup the page mounts.
 const props = defineProps<{ routeParams?: Record<string, string> }>()
 
 const detail = useUserDetail(() => props.routeParams)

@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import type { RegistrationPaymentMethodPolicy } from '../../types/runtime-config'
+import { computed } from 'vue'
+
 /**
  * The card step of Register and "Set up your first workspace": the Stripe
  * element, why a card is asked for, and "Add a card later" when the
  * deployment allows it.
  */
-import { computed } from 'vue'
-
 interface RegistrationCardFieldProps {
 	elementId: string
 	policy: RegistrationPaymentMethodPolicy
@@ -32,7 +33,7 @@ const badge = computed(() =>
 		: t('saas.public.card.required'),
 )
 
-// Zero turns the per-card rule off: the card then backs no count to explain.
+/** Zero turns the per-card rule off: the card then backs no count to explain. */
 const reason = computed(() =>
 	props.maxFreeWorkspacesPerCard
 		? t('saas.public.card.reason', {

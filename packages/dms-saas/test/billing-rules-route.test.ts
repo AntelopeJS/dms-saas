@@ -77,7 +77,7 @@ function settingsRow() {
  * whose catalogue holds a plan synced under the default tax category, one
  * synced under another, and a free plan.
  */
-beforeEach(async () => {
+async function resetBillingFixtures(): Promise<void> {
   updateProduct = stubProductUpdate();
   await GetModel(BillingSettingsModel).delete(BILLING_SETTINGS_SINGLETON_ID);
   await GetModel(LegalDocumentsModel).delete(LEGAL_DOCUMENTS_SINGLETON_ID);
@@ -101,7 +101,8 @@ beforeEach(async () => {
   controller.billingSettingsModel = GetModel(BillingSettingsModel);
   controller.legalDocumentsModel = GetModel(LegalDocumentsModel);
   controller.planModel = GetModel(PlanModel);
-});
+}
+beforeEach(resetBillingFixtures);
 
 describe("billing rules & legal page", () => {
   it("loads the settings, the texts and the panels beside them", async () => {

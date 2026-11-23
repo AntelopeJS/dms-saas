@@ -6,6 +6,7 @@ import {
   toNextInvoiceRows,
   withPlanSwitch,
 } from "../src/routes/tenant/tenant-upcoming-invoice";
+import { defined } from "./helpers/defined";
 import { LOCALES, missingKeys } from "./helpers/composed-text";
 
 function invoice(overrides: Partial<Invoice> = {}): Invoice {
@@ -133,7 +134,7 @@ describe("next invoice card", () => {
 
   it("words the plan's own line in the reader's language, not Stripe's", () => {
     const proration = {
-      ...preview.lines[0]!,
+      ...defined(preview.lines[0]),
       description: "Remaining time on Business after 1 Oct 2026",
       isProration: true,
     };

@@ -6,6 +6,15 @@ interface DmsPublicRuntime {
 	baseURL: string
 }
 
+function isDmsPublicRuntime(value: unknown): value is DmsPublicRuntime {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'baseURL' in value &&
+		typeof value.baseURL === 'string'
+	)
+}
+
 /**
  * Fetch for the anonymous screens, on the DMS API in the reader's locale.
  *
@@ -19,9 +28,9 @@ interface DmsPublicRuntime {
 export function usePublicFetch() {
 	const config = useDmsRuntimeConfig()
 	const { locale } = useI18n()
-	const dmsRuntime = config.public.dms as DmsPublicRuntime
+	const dmsRuntime = config.public.dms
 	return $fetch.create({
-		baseURL: dmsRuntime.baseURL,
+		baseURL: isDmsPublicRuntime(dmsRuntime) ? dmsRuntime.baseURL : undefined,
 		onRequest({ options }) {
 			const headers = new Headers(options.headers)
 			headers.set(CONTENT_LANGUAGE_HEADER, locale.value)
@@ -36,9 +45,9 @@ export function usePublicFetch() {
  *
  * @param reload Loads the screen's data again
  */
-export function onPublicLocaleChange(reload: () => unknown): void {
+export function onPublicLocaleChange(reload: () => void): void {
 	const { locale } = useI18n()
 	watch(locale, () => {
-		void reload()
+		reload()
 	})
 }

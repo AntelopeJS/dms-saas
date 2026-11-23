@@ -1,9 +1,9 @@
 <script setup lang="ts">
-/** The caller's other workspaces, each one switch away. */
 import { ref } from 'vue'
 import { type OtherWorkspace, workspaceInitials } from './access'
 import { HOME_PATH } from './routes'
 
+/** The caller's other workspaces, each one switch away. */
 interface OtherWorkspacesProps {
 	workspaces: OtherWorkspace[]
 }

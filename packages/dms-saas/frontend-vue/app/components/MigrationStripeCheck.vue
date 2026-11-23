@@ -9,9 +9,9 @@ interface MigrationWorkspaceRow {
 
 type UncertainResolution = 'moved' | 'not_moved'
 
+/** A row of the reading, handed whole to the DMS key-value list that draws it. */
 interface ReadingItem {
 	id?: string
-	[key: string]: unknown
 }
 
 /** `GET …/workspaces/:tenantId/stripe`: the reading and what it points to. */
@@ -36,7 +36,7 @@ const { $authFetch } = useAuthFetch()
 const { t } = useI18n()
 const { confirmFrom } = useConfirmFrom()
 const toast = useToast()
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 
 const reading = ref<StripeReading | null>(null)
 const loadFailed = ref(false)
@@ -47,7 +47,7 @@ const workspaceApi = computed(() =>
 		? `${API}/${props.rowData.migrationId}/workspaces/${props.rowData._id}`
 		: null,
 )
-// The verdict names the action to take: the drawer offers it, once.
+/** The verdict names the action to take: the drawer offers it, once. */
 const resolution = computed(() =>
 	isSettled.value ? null : (reading.value?.resolution ?? null),
 )
@@ -66,6 +66,7 @@ async function load(): Promise<void> {
 	}
 }
 
+/** Settles the workspace; the dialog closes once the page shows the settlement. */
 async function settle(kind: UncertainResolution): Promise<void> {
 	await $authFetch(`${workspaceApi.value}/resolve`, {
 		method: 'POST',
@@ -73,7 +74,6 @@ async function settle(kind: UncertainResolution): Promise<void> {
 	})
 	isSettled.value = true
 	toast.add({ color: 'success', title: t(`${DETAIL}.${kind}_done`) })
-	// The dialog closes once the page shows the settlement.
 	await refreshPageBlocks()
 }
 
@@ -83,7 +83,7 @@ async function openSettlement(kind: UncertainResolution): Promise<void> {
 			onConfirm: () => settle(kind),
 		})
 	} catch (error) {
-		presentError(error, { fallbackKey: `${DETAIL}.settle_failed` })
+		errors.presentError(error, { fallbackKey: `${DETAIL}.settle_failed` })
 	}
 }
 

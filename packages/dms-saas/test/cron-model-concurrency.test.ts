@@ -22,6 +22,7 @@ import {
   subscriptionFixture,
 } from "./helpers/subscription-fixture";
 import { implementNotificationCore } from "./helpers/notification-core";
+import { defined } from "./helpers/defined";
 import { useMongoDatabase } from "./helpers/mongo";
 import { EMPTY_DIRECTORY } from "./helpers/workspace-directory";
 
@@ -48,7 +49,7 @@ async function segmentFixture() {
     countHistory: [],
     lastEvaluationMs: null,
   });
-  return (await model.get(id))!;
+  return defined(await model.get(id));
 }
 
 describe("subscription cron revision fencing on Mongo", () => {
@@ -57,7 +58,7 @@ describe("subscription cron revision fencing on Mongo", () => {
     await Promise.all(
       Array.from({ length: CONTENDERS }, () => model.expireFree(id, CUTOFF)),
     );
-    const expired = (await model.get(id))!;
+    const expired = defined(await model.get(id));
     expect(expired.status).toBe("past_due");
     expect(expired.cronNotification).toEqual({
       kind: "free_expired",
@@ -179,15 +180,16 @@ describe("subscription cron revision fencing on Mongo", () => {
       (await model.findCancelledUpdatedBefore(BEFORE)).map((row) => row._id),
     ).toContain(id);
     await expect(model.update(id, { status: "active" })).rejects.toThrow();
-    await model.finishDeletion(admitted!);
-    await model.finishDeletion(admitted!);
+    const deletion = defined(admitted);
+    await model.finishDeletion(deletion);
+    await model.finishDeletion(deletion);
     expect(await model.get(id)).toBeUndefined();
   });
 
   it("arbitrates reactivation and deletion before either can perform external effects", async () => {
     const { model, id } = await subscriptionFixture({ status: "cancelled" });
     await model.table.get(id).update({ updatedAt: BEFORE }).run();
-    const snapshot = (await model.get(id))!;
+    const snapshot = defined(await model.get(id));
     const results = await Promise.allSettled([
       model.beginCancelledDeletion(id, CUTOFF),
       model.beginTransition(snapshot, {
@@ -197,7 +199,7 @@ describe("subscription cron revision fencing on Mongo", () => {
         requestedAt: CUTOFF,
       }),
     ]);
-    const current = (await model.get(id))!;
+    const current = defined(await model.get(id));
     expect(Boolean(current.deletionStartedAt)).not.toBe(
       Boolean(current.domainTransition),
     );
@@ -270,7 +272,7 @@ describe("complete segment generations on Mongo", () => {
     Reflect.setPrototypeOf(row, Segment.prototype);
     triggerEvent(row, "insert");
     const [id] = await model.table.insert(row).run();
-    const segment = (await model.get(id))!;
+    const segment = defined(await model.get(id));
     expect(segment.revision).toBeTypeOf("string");
     await GetModel(UserSegmentModel).replaceForSegment(segment, ["a"], CUTOFF);
     expect((await model.get(id))?.estimatedCount).toBe(1);
@@ -297,7 +299,7 @@ describe("complete segment generations on Mongo", () => {
     const segment = await segmentFixture();
     const links = GetModel(UserSegmentModel);
     await links.replaceForSegment(segment, ["old"], BEFORE);
-    const current = (await GetModel(SegmentModel).get(segment._id))!;
+    const current = defined(await GetModel(SegmentModel).get(segment._id));
     const insert = links.insert.bind(links);
     vi.spyOn(links, "insert").mockImplementationOnce(async (rows) => {
       await insert(Array.isArray(rows) ? rows.slice(0, 1) : rows);
@@ -354,7 +356,7 @@ describe("complete segment generations on Mongo", () => {
     const segment = await segmentFixture();
     const links = GetModel(UserSegmentModel);
     await links.replaceForSegment(segment, ["old"], BEFORE);
-    const current = (await GetModel(SegmentModel).get(segment._id))!;
+    const current = defined(await GetModel(SegmentModel).get(segment._id));
     const getBy = links.getBy.bind(links);
     vi.spyOn(links, "getBy").mockImplementationOnce(async (index, ...keys) => {
       const rows = await getBy(index, ...keys);
@@ -372,7 +374,7 @@ describe("complete segment generations on Mongo", () => {
     const getBy = links.getBy.bind(links);
     vi.spyOn(links, "getBy").mockImplementationOnce(async (index, ...keys) => {
       await links.replaceForSegment(segment, ["middle"], BEFORE);
-      const current = (await GetModel(SegmentModel).get(segment._id))!;
+      const current = defined(await GetModel(SegmentModel).get(segment._id));
       await links.replaceForSegment(current, ["latest"], CUTOFF);
       return getBy(index, ...keys);
     });
@@ -397,7 +399,7 @@ describe("terminal-only webhook cleanup on Mongo", () => {
       const stale = await get(id);
       await model.markResult(
         id,
-        stale!.revision!,
+        defined(defined(stale).revision),
         "reconciliation_required",
         "manual review needed",
       );

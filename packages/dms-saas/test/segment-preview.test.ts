@@ -8,6 +8,7 @@ import {
   type UserProjection,
   type UserWorkspaceProjection,
 } from "../src/utils";
+import { defined } from "./helpers/defined";
 
 const NOW = new Date("2026-10-07T12:00:00Z");
 
@@ -202,7 +203,7 @@ describe("segment preview", () => {
 
 describe("why a user matches a segment", () => {
   it("keeps the branches met and names the workspaces meeting the rules", () => {
-    const explanation = explainSegmentGroup(AT_RISK, USERS[0]!);
+    const explanation = explainSegmentGroup(AT_RISK, defined(USERS[0]));
 
     expect(explanation).toEqual({
       logical: "and",
@@ -231,7 +232,7 @@ describe("why a user matches a segment", () => {
   });
 
   it("leaves out what a user no longer meets", () => {
-    const explanation = explainSegmentGroup(AT_RISK, USERS[3]!);
+    const explanation = explainSegmentGroup(AT_RISK, defined(USERS[3]));
 
     expect(explanation.conditions).toEqual([]);
   });

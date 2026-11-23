@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { isListOperator } from '../build/segments/tree'
 import type {
 	SegmentFieldDefinition,
+	SegmentFieldUnit,
 	SegmentOperator,
 	SegmentPlanOption,
 } from '../build/segments/types'
@@ -21,11 +22,11 @@ const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
 const { t } = useI18n()
 
 const DEFAULT_CURRENCY = 'EUR'
-const UNIT_LABELS: Record<string, () => string> = {
-	days: () => t('saas.segments.units.days_unit'),
-	count: () => '',
-	currency: () => DEFAULT_CURRENCY,
-}
+const UNIT_LABELS = new Map<SegmentFieldUnit, () => string>([
+	['days', () => t('saas.segments.units.days_unit')],
+	['count', () => ''],
+	['currency', () => DEFAULT_CURRENCY],
+])
 
 interface ValueOption {
 	value: string
@@ -41,7 +42,7 @@ const isEnum = computed(
 const isList = computed(() => isListOperator(props.operator))
 const isCurrency = computed(() => props.field.unit === 'currency')
 const unitLabel = computed(() =>
-	props.field.unit ? UNIT_LABELS[props.field.unit]?.() : '',
+	props.field.unit ? UNIT_LABELS.get(props.field.unit)?.() : '',
 )
 
 const options = computed<ValueOption[]>(() => {

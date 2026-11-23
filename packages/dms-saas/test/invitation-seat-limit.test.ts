@@ -1,3 +1,10 @@
+/**
+ * A Free workspace holds a single seat, taken by its pending owner
+ * invitation. Reissuing that invitation, renewing its link or accepting it
+ * must keep fitting in that seat; only a second invitee is over the cap.
+ *
+ * @module
+ */
 import { randomUUID } from "node:crypto";
 import type { AuthConfig } from "@antelopejs/dms";
 import { ImplementInterface } from "@antelopejs/interface-core";
@@ -47,13 +54,8 @@ import {
   insertUser,
   pendingInvites,
 } from "./helpers/seat-users";
+import { defined } from "./helpers/defined";
 import { useSuiteStripe } from "./helpers/stripe";
-
-/**
- * A Free workspace holds a single seat, taken by its pending owner
- * invitation. Reissuing that invitation, renewing its link or accepting it
- * must keep fitting in that seat; only a second invitee is over the cap.
- */
 
 useMongoDatabase();
 const stripe = useSuiteStripe();
@@ -460,7 +462,7 @@ describe("seats billed for invitations", () => {
     await subscriptions.update(subscription._id, {
       stripeSubscriptionId: STRIPE_SUBSCRIPTION_ID,
     });
-    await GetModel(PlanModel).update(subscription.planId!, {
+    await GetModel(PlanModel).update(defined(subscription.planId), {
       billingMode: "seat",
     });
     vi.spyOn(stripe.write.subscriptions, "retrieve").mockResolvedValue(

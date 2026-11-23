@@ -1,5 +1,9 @@
 import { formatMajorUnits } from './useMoneyFormat'
-import { PLAN_UNLIMITED } from '../build/plan-catalog'
+import {
+	isPlanFeatureValue,
+	PLAN_UNLIMITED,
+	type PlanFeatureValue,
+} from '../build/plan-catalog'
 
 /** A number feature reads `0` as off, `-1` as unlimited, n ≥ 1 as a limit. */
 const OFF_NUMERIC_VALUE = 0
@@ -65,8 +69,16 @@ export interface FormattableFeature {
 	unit: string | null
 }
 
+type UnitScales = readonly [PlanFeatureUnitScale, ...PlanFeatureUnitScale[]]
+
+/** A unit rule whose scales were checked non-empty when it was registered. */
+interface ResolvedUnitRule {
+	scales: UnitScales
+	priceScale: PlanFeatureUnitScale
+}
+
 type FeatureValueFormatter = (
-	value: unknown,
+	value: PlanFeatureValue,
 	unit: string | null,
 	context: PlanFeatureFormatContext,
 ) => string
@@ -76,21 +88,21 @@ function builtInScale(name: string, size: number): PlanFeatureUnitScale {
 	return { label: `${UNIT_LABEL_KEY_PREFIX}.${name}`, size }
 }
 
-const BYTE_SCALES = [
-	'byte',
-	'kilobyte',
-	'megabyte',
-	'gigabyte',
-	'terabyte',
-].map((name, power) => builtInScale(name, BYTES_PER_KILOBYTE ** power))
-const GIGABYTE_SCALE = BYTE_SCALES[3]!
+const GIGABYTE_SCALE = builtInScale('gigabyte', BYTES_PER_KILOBYTE ** 3)
+const BYTE_SCALES: UnitScales = [
+	builtInScale('byte', 1),
+	builtInScale('kilobyte', BYTES_PER_KILOBYTE),
+	builtInScale('megabyte', BYTES_PER_KILOBYTE ** 2),
+	GIGABYTE_SCALE,
+	builtInScale('terabyte', BYTES_PER_KILOBYTE ** 4),
+]
 const MINUTE_SCALE = builtInScale('minute', 1)
 
-const BYTE_RULE: PlanFeatureUnitRule = {
+const BYTE_RULE: ResolvedUnitRule = {
 	scales: BYTE_SCALES,
 	priceScale: GIGABYTE_SCALE,
 }
-const MINUTE_RULE: PlanFeatureUnitRule = {
+const MINUTE_RULE: ResolvedUnitRule = {
 	scales: [MINUTE_SCALE],
 	priceScale: MINUTE_SCALE,
 }
@@ -100,7 +112,7 @@ const MINUTE_RULE: PlanFeatureUnitRule = {
  * and from the registry still reads, as a grouped number followed by the unit
  * verbatim.
  */
-const BUILT_IN_UNIT_RULES = new Map<string, PlanFeatureUnitRule>([
+const BUILT_IN_UNIT_RULES = new Map<string, ResolvedUnitRule>([
 	['byte', BYTE_RULE],
 	['bytes', BYTE_RULE],
 	['minute', MINUTE_RULE],
@@ -112,7 +124,7 @@ const BUILT_IN_UNIT_RULES = new Map<string, PlanFeatureUnitRule>([
  * on the server and in the browser alike, and always maps a unit to the same
  * rule, so one module-level map is safe to share across SSR requests.
  */
-const registeredUnitRules = new Map<string, PlanFeatureUnitRule>()
+const registeredUnitRules = new Map<string, ResolvedUnitRule>()
 
 function normalizeUnit(unit: string): string {
 	return unit.trim().toLowerCase()
@@ -137,9 +149,13 @@ function unitForms(unit: string): string[] {
  */
 export function agreeUnit(unit: string, count: number, locale: string): string {
 	const forms = unitForms(unit)
-	if (forms.length < 2) return forms[0] ?? ''
+	const singular = forms[0]
+	const plural = forms.at(-1)
+	if (forms.length < 2 || singular === undefined || plural === undefined) {
+		return singular ?? ''
+	}
 	const category = new Intl.PluralRules(locale).select(count)
-	return category === SINGULAR_PLURAL_CATEGORY ? forms[0]! : forms.at(-1)!
+	return category === SINGULAR_PLURAL_CATEGORY ? singular : plural
 }
 
 /**
@@ -156,24 +172,28 @@ export function registerPlanFeatureUnit(
 	unit: string | string[],
 	rule: PlanFeatureUnitRule,
 ): void {
-	const scales = [...rule.scales].sort((left, right) => left.size - right.size)
-	const isValid =
-		scales.length > 0 &&
-		[...scales, rule.priceScale].every((candidate) => candidate.size > 0)
-	if (!isValid) {
+	const [smallest, ...larger] = [...rule.scales].sort(
+		(left, right) => left.size - right.size,
+	)
+	if (
+		smallest === undefined ||
+		![smallest, ...larger, rule.priceScale].every(
+			(candidate) => candidate.size > 0,
+		)
+	) {
 		throw new Error(
 			'Invalid plan feature unit rule: expected at least one scale, all with a positive size',
 		)
 	}
 	for (const name of [unit].flat()) {
 		registeredUnitRules.set(normalizeUnit(name), {
-			scales,
+			scales: [smallest, ...larger],
 			priceScale: rule.priceScale,
 		})
 	}
 }
 
-function findUnitRule(base: string): PlanFeatureUnitRule | undefined {
+function findUnitRule(base: string): ResolvedUnitRule | undefined {
 	return registeredUnitRules.get(base) ?? BUILT_IN_UNIT_RULES.get(base)
 }
 
@@ -185,7 +205,7 @@ interface ParsedUnit {
 	base: string
 }
 
-// The plural form names the unit for the rules: `byte | bytes` is `bytes`.
+/** The plural form names the unit for the rules: `byte | bytes` is `bytes`. */
 function parseUnit(unit: string): ParsedUnit {
 	const normalized = normalizeUnit(unitForms(unit).at(-1) ?? unit)
 	if (normalized.startsWith(PRICE_UNIT_PREFIX)) {
@@ -231,13 +251,10 @@ function formatPrice(value: number, context: PlanFeatureFormatContext): string {
 	}).format(value)
 }
 
-function pickScale(
-	scales: PlanFeatureUnitScale[],
-	value: number,
-): PlanFeatureUnitScale {
+function pickScale(scales: UnitScales, value: number): PlanFeatureUnitScale {
 	const magnitude = Math.abs(value)
 	const fitting = scales.filter((candidate) => candidate.size <= magnitude)
-	return fitting.at(-1) ?? scales[0]!
+	return fitting.at(-1) ?? scales[0]
 }
 
 function unitLabelKey(label: string, kind: UnitKind): string {
@@ -246,7 +263,7 @@ function unitLabelKey(label: string, kind: UnitKind): string {
 
 function formatQuantityInRule(
 	value: number,
-	rule: PlanFeatureUnitRule,
+	rule: ResolvedUnitRule,
 	context: PlanFeatureFormatContext,
 ): string {
 	const chosen = pickScale(rule.scales, value)
@@ -260,7 +277,7 @@ function formatQuantityInRule(
 
 function formatPriceInRule(
 	value: number,
-	rule: PlanFeatureUnitRule,
+	rule: ResolvedUnitRule,
 	context: PlanFeatureFormatContext,
 ): string {
 	const scaled = value * rule.priceScale.size
@@ -300,27 +317,33 @@ function formatNumberWithUnit(
 		: formatQuantityInRule(value, rule, context)
 }
 
-function formatBoolean(value: unknown): string {
+function formatBoolean(value: PlanFeatureValue): string {
 	return value === true ? INCLUDED_LABEL : EXCLUDED_LABEL
 }
 
+/**
+ * A unit price of 0 is free, not off: only a quantity of 0 turns a number
+ * feature off.
+ */
+function isUnitPrice(unit: string | null): boolean {
+	return !!unit?.trim() && parseUnit(unit).kind === 'price'
+}
+
 function formatNumeric(
-	value: unknown,
+	value: PlanFeatureValue,
 	unit: string | null,
 	context: PlanFeatureFormatContext,
 ): string {
 	const numeric = Number(value)
 	if (Number.isNaN(numeric)) return EMPTY_LABEL
-	// A unit price of 0 is free, not off: only a quantity of 0 turns it off.
-	const isPrice = !!unit?.trim() && parseUnit(unit).kind === 'price'
-	if (numeric === OFF_NUMERIC_VALUE && !isPrice) return EXCLUDED_LABEL
+	if (numeric === OFF_NUMERIC_VALUE && !isUnitPrice(unit)) return EXCLUDED_LABEL
 	if (numeric === PLAN_UNLIMITED) return context.unlimitedLabel
 	if (!unit?.trim()) return formatNumber(numeric, context.locale)
 	return formatNumberWithUnit(numeric, unit, context)
 }
 
 function formatText(
-	value: unknown,
+	value: PlanFeatureValue,
 	unit: string | null,
 	context: PlanFeatureFormatContext,
 ): string {
@@ -333,11 +356,11 @@ function formatText(
 		: shown
 }
 
-const FORMATTERS: Record<string, FeatureValueFormatter> = {
-	boolean: (value) => formatBoolean(value),
-	number: formatNumeric,
-	string: formatText,
-}
+const FORMATTERS = new Map<string, FeatureValueFormatter>([
+	['boolean', formatBoolean],
+	['number', formatNumeric],
+	['string', formatText],
+])
 
 /**
  * Renders a plan's feature value for people: a number feature's `-1` reads as
@@ -354,13 +377,13 @@ const FORMATTERS: Record<string, FeatureValueFormatter> = {
  */
 export function formatPlanFeatureValue(
 	feature: FormattableFeature,
-	value: unknown,
+	value: PlanFeatureValue | undefined,
 	context: PlanFeatureFormatContext,
 ): string {
 	if (value === undefined || value === null || value === '') {
 		return EMPTY_LABEL
 	}
-	const formatter = FORMATTERS[feature.valueType]
+	const formatter = FORMATTERS.get(feature.valueType)
 	if (!formatter) return String(value)
 	return formatter(value, feature.unit, context)
 }
@@ -375,13 +398,17 @@ export function usePlanFeatureFormat() {
 		value: unknown,
 		currency: string | null = null,
 	): string {
-		return formatPlanFeatureValue(feature, value, {
-			locale: locale.value,
-			currency,
-			unlimitedLabel: t('saas.workspace.plan.unlimited'),
-			translateUnit: (key, params, count) => t(key, params, count),
-			translateText: (text) => processI18n(text),
-		})
+		return formatPlanFeatureValue(
+			feature,
+			isPlanFeatureValue(value) ? value : undefined,
+			{
+				locale: locale.value,
+				currency,
+				unlimitedLabel: t('saas.workspace.plan.unlimited'),
+				translateUnit: (key, params, count) => t(key, params, count),
+				translateText: (text) => processI18n(text),
+			},
+		)
 	}
 
 	return { formatFeatureValue }

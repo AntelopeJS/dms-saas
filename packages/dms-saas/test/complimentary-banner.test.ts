@@ -7,6 +7,7 @@ import {
   complimentaryBanner,
 } from "../src/workspaces/complimentary-banner";
 import { LOCALES, missingKeys, writeText } from "./helpers/composed-text";
+import { defined } from "./helpers/defined";
 
 const NOW = new Date("2026-10-01T12:00:00.000Z");
 const ENDS_AT = new Date("2026-10-04T00:00:00.000Z");
@@ -48,7 +49,7 @@ describe("complimentary access banner", () => {
   });
 
   it("announces an open-ended gift without offering a plan", () => {
-    const banner = complimentaryBanner(inputs())!;
+    const banner = defined(complimentaryBanner(inputs()));
 
     expect(banner).toMatchObject({ tone: "info", icon: "i-ph-gift" });
     expect(banner.actions).toEqual([]);
@@ -58,9 +59,11 @@ describe("complimentary access banner", () => {
   });
 
   it("counts the days left of an ending gift and lets the owner choose a plan", () => {
-    const banner = complimentaryBanner(
-      inputs({ subscription: subscription({ freeUntil: ENDS_AT }) }),
-    )!;
+    const banner = defined(
+      complimentaryBanner(
+        inputs({ subscription: subscription({ freeUntil: ENDS_AT }) }),
+      ),
+    );
 
     expect(banner.tone).toBe("warning");
     expect(writeText(banner.title)).toBe("Complimentary access ends 4 Oct");
@@ -71,22 +74,29 @@ describe("complimentary access banner", () => {
   });
 
   it("offers a member no plan to choose", () => {
-    const banner = complimentaryBanner(
-      inputs({
-        subscription: subscription({ freeUntil: ENDS_AT }),
-        isTenantOwner: false,
-      }),
-    )!;
+    const banner = defined(
+      complimentaryBanner(
+        inputs({
+          subscription: subscription({ freeUntil: ENDS_AT }),
+          isTenantOwner: false,
+        }),
+      ),
+    );
 
     expect(banner.actions).toEqual([]);
   });
 
   it("turns to an error once the expired gift blocks the workspace", () => {
-    const banner = complimentaryBanner(
-      inputs({
-        subscription: subscription({ status: "suspended", freeUntil: ENDS_AT }),
-      }),
-    )!;
+    const banner = defined(
+      complimentaryBanner(
+        inputs({
+          subscription: subscription({
+            status: "suspended",
+            freeUntil: ENDS_AT,
+          }),
+        }),
+      ),
+    );
 
     expect(banner.tone).toBe("error");
     expect(writeText(banner.title)).toBe("Complimentary access expired 4 Oct");

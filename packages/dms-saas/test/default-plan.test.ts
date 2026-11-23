@@ -91,12 +91,14 @@ async function recomputedTenants(): Promise<string[]> {
  * state. Reading the default plan of a catalogue that has one re-arms the
  * once-per-outage warning latch.
  */
-beforeEach(async () => {
+async function resetCatalogue(): Promise<void> {
   await publishCatalogue(CATALOGUE);
   await resolveDefaultPlan();
   await clear(GetModel(TenantModel));
   await clear(GetModel(TenantBillingStateModel));
-});
+}
+
+beforeEach(resetCatalogue);
 
 describe("default plan selection", () => {
   it("picks the lowest-ordered free plan open to individuals", () => {

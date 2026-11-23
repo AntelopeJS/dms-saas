@@ -15,6 +15,7 @@ import { invitationsDataAPI } from "../src/data-api/platformOwner/invitations";
 import { OperatorActionModel } from "../src/operator-actions/db/operator-action.model";
 import { SaasWorkspaceDetailController } from "../src/routes/platformOwner/workspace-detail";
 import { SaasWorkspaceInvitationsController } from "../src/routes/platformOwner/workspace-invitations";
+import { defined } from "./helpers/defined";
 import {
   CONSOLE_URL,
   WORKSPACE_NAME,
@@ -271,7 +272,7 @@ describe("workspace owner in the directory", () => {
       { name: "Orphan", createdAt: new Date(), updatedAt: new Date() },
     ]);
 
-    expect(await loadDirectoryOwner(tenantId!)).toEqual({
+    expect(await loadDirectoryOwner(defined(tenantId))).toEqual({
       status: "none",
       name: null,
       email: null,
@@ -345,7 +346,7 @@ describe("copy invitation link", () => {
       status: "succeeded",
       details: { inviteId: owner.inviteId },
     });
-    expect(JSON.stringify(journaled!.details)).not.toContain(
+    expect(JSON.stringify(defined(journaled).details)).not.toContain(
       linkTokenOf(result.link),
     );
   });

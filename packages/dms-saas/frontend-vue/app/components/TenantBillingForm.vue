@@ -22,7 +22,7 @@ const DRAFT_FIELDS: (keyof BillingIdentityDraft)[] = [
 
 const toast = useToast()
 const { t, locale } = useI18n()
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const identity = useBillingIdentity()
 const info = useBillingInfo()
 const { data: billingStatus } = useBillingStatus()
@@ -37,8 +37,10 @@ const savedMissingFields = ref<BillingIdentityField[]>([])
 const vatVerificationStatus = ref<VatVerificationStatus | null>(null)
 const savedAt = ref<string | null>(null)
 const hasTriedSubmit = ref(false)
-// Flagged once a submit was attempted, then re-checked as the user types so
-// a corrected field clears its error right away.
+/**
+ * Flagged once a submit was attempted, then re-checked as the user types so
+ * a corrected field clears its error right away.
+ */
 const invalidFields = computed<BillingIdentityField[]>(() =>
 	hasTriedSubmit.value ? findMissingBillingFields(draft.value) : [],
 )
@@ -58,6 +60,11 @@ const savedLabel = computed(() =>
 	formatDate(savedAt.value, locale.value, DAY_FORMAT),
 )
 
+/**
+ * The fields are copies of the stored identity, edited in place: copied once
+ * it is read (awaited, so the server renders them filled in), then each time
+ * it is read or saved again.
+ */
 function apply(info: BillingInfoResponse): void {
 	draft.value = toBillingIdentityDraft(info)
 	saved.value = toBillingIdentityDraft(info)
@@ -95,15 +102,12 @@ async function save(): Promise<void> {
 			icon: 'i-ph-check-circle',
 		})
 	} catch (error) {
-		presentError(error, { fallbackKey: `${KEY_PREFIX}.save_error` })
+		errors.presentError(error, { fallbackKey: `${KEY_PREFIX}.save_error` })
 	} finally {
 		isSaving.value = false
 	}
 }
 
-// The fields are copies of the stored identity, edited in place: copied once
-// it is read (awaited, so the server renders them filled in), then each time
-// it is read or saved again.
 watch(info.data, (stored) => stored && apply(stored))
 await info
 if (info.data.value) apply(info.data.value)

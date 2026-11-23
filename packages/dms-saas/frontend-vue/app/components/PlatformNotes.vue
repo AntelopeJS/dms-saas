@@ -36,7 +36,7 @@ const MAX_INITIALS = 2
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
 const { confirm } = useConfirm()
-const { presentError, resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 
 const targetId = computed(() => props.routeParams?.id ?? '')
 const baseUrl = computed(
@@ -44,8 +44,10 @@ const baseUrl = computed(
 )
 
 const isExpanded = ref(false)
-// The newest notes, or all of them once expanded: the previous ones stay on
-// screen while the longer page loads.
+/**
+ * The newest notes, or all of them once expanded: the previous ones stay on
+ * screen while the longer page loads.
+ */
 const page = useApiData<NotesPage>(
 	() => (targetId.value ? baseUrl.value : null),
 	{
@@ -62,7 +64,7 @@ const isLoading = computed(
 )
 const loadError = computed(() =>
 	page.error.value
-		? (resolveError(page.error.value, { fallbackKey: `${N}.error.load` })
+		? (errors.resolveError(page.error.value, { fallbackKey: `${N}.error.load` })
 				?.message ?? '')
 		: null,
 )
@@ -87,7 +89,7 @@ function initialsOf(note: PlatformNote): string {
 		.split(/[\s.@_-]+/)
 		.filter(Boolean)
 		.slice(0, MAX_INITIALS)
-		.map((word) => word[0]!.toLocaleUpperCase())
+		.map((word) => word.charAt(0).toLocaleUpperCase())
 		.join('')
 }
 
@@ -108,6 +110,7 @@ function showAll(): void {
 	isExpanded.value = true
 }
 
+/** Posts the note, which is listed before the button comes back. */
 async function submit(): Promise<void> {
 	if (!canSubmit.value) return
 	isSubmitting.value = true
@@ -117,10 +120,9 @@ async function submit(): Promise<void> {
 			body: { content: trimmed.value },
 		})
 		draft.value = ''
-		// The note is listed before the button comes back.
 		await refreshPageBlocks()
 	} catch (error) {
-		presentError(error, { fallbackKey: `${N}.error.create` })
+		errors.presentError(error, { fallbackKey: `${N}.error.create` })
 	} finally {
 		isSubmitting.value = false
 	}
@@ -139,7 +141,7 @@ async function remove(note: PlatformNote): Promise<void> {
 			})
 		},
 	})
-	if (isConfirmed) refreshPageBlocks()
+	if (isConfirmed) void refreshPageBlocks()
 }
 </script>
 

@@ -7,10 +7,10 @@ const TIGHT_BEFORE = new Set([',', '.', ')'])
 const TIGHT_AFTER = new Set(['('])
 
 function spaced(tokens: SegmentWordToken[], index: number): boolean {
-	if (index === 0) return false
-	const current = tokens[index]!.text
-	const previous = tokens[index - 1]!.text
-	return !TIGHT_BEFORE.has(current) && !TIGHT_AFTER.has(previous)
+	const current = tokens[index]
+	const previous = tokens[index - 1]
+	if (!current || !previous) return false
+	return !TIGHT_BEFORE.has(current.text) && !TIGHT_AFTER.has(previous.text)
 }
 </script>
 

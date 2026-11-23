@@ -46,13 +46,13 @@ const CREATE_ENDPOINT = '/api/saas/workspaces/create'
 const LOOKUP_ENDPOINT = '/api/saas/workspaces/owner-lookup'
 const WORKSPACES_PATH = '/modules/saas/customers/workspaces'
 const LOOKUP_DELAY_MS = 400
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const WHITESPACE_PATTERN = /\s/
 
 const { $authFetch } = useAuthFetch()
 const { t, locale } = useI18n()
 const toast = useToast()
 const router = useDmsRouter()
-const { resolveError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 
 const plans = ref<PlanOption[]>([])
 const loadError = ref<string | null>(null)
@@ -76,7 +76,7 @@ const isPaidPlan = computed(
 		plan.value.price > 0 &&
 		!!plan.value.paymentProviderRefs?.stripePriceId,
 )
-const isEmail = computed(() => EMAIL_PATTERN.test(ownerEmail.value.trim()))
+const isEmail = computed(() => isOwnerEmailComplete(ownerEmail.value.trim()))
 const canSubmit = computed(
 	() =>
 		!!name.value.trim() &&
@@ -165,17 +165,29 @@ async function loadPlans(): Promise<void> {
 		plans.value = all.filter((option) => option.isActive && !option.isDeleted)
 	} catch (error) {
 		loadError.value =
-			resolveError(error, { fallbackKey: `${C}.load_error` })?.message ?? ''
+			errors.resolveError(error, { fallbackKey: `${C}.load_error` })?.message ??
+			''
 	} finally {
 		isLoading.value = false
 	}
 }
 
+/**
+ * Whether the text reads as `local@domain.tld`: no space, a single `@`, and a
+ * dot inside the domain with a character on each side.
+ */
+function isOwnerEmailComplete(value: string): boolean {
+	const parts = value.split('@')
+	if (parts.length !== 2 || WHITESPACE_PATTERN.test(value)) return false
+	const [local = '', domain = ''] = parts
+	return local.length > 0 && domain.slice(1, -1).includes('.')
+}
+
+/** A newer address typed while this one is looked up wins: this answer is dropped. */
 async function lookUpOwner(email: string): Promise<void> {
 	lookedUpEmail.value = email
 	try {
 		const found = await ownerRead.read()
-		// A newer address was typed while this one was looked up.
 		if (lookedUpEmail.value === email) lookup.value = found
 	} catch {
 		if (lookedUpEmail.value === email) lookup.value = null
@@ -185,7 +197,7 @@ async function lookUpOwner(email: string): Promise<void> {
 watch(ownerEmail, (email) => {
 	clearTimeout(lookupTimer)
 	lookup.value = null
-	if (!EMAIL_PATTERN.test(email.trim())) return
+	if (!isOwnerEmailComplete(email.trim())) return
 	lookupTimer = setTimeout(
 		() => void lookUpOwner(email.trim()),
 		LOOKUP_DELAY_MS,
@@ -239,7 +251,7 @@ async function submit(): Promise<void> {
 		props.onSuccessCallback?.()
 	} catch (error) {
 		submitError.value =
-			resolveError(error, { fallbackKey: `${C}.error` })?.message ?? ''
+			errors.resolveError(error, { fallbackKey: `${C}.error` })?.message ?? ''
 	} finally {
 		isSubmitting.value = false
 	}

@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 
 const KEY_PREFIX = 'saas.workspace.plan.checkout_pending'
 
-const { presentError } = useApiErrorPresenter()
+const errors = useApiErrorPresenter()
 const { prompt, resume, startOver } = usePendingCheckout()
 
 const isRestarting = ref(false)
@@ -31,7 +31,7 @@ async function restart(): Promise<void> {
 	try {
 		await startOver()
 	} catch (error) {
-		presentError(error, { fallbackKey: `${KEY_PREFIX}.restart_error` })
+		errors.presentError(error, { fallbackKey: `${KEY_PREFIX}.restart_error` })
 		isRestarting.value = false
 	}
 }

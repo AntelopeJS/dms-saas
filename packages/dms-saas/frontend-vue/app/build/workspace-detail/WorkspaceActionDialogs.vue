@@ -55,7 +55,7 @@ function open(dialog: WorkspaceDialog): void {
 
 function finish(): void {
 	opened.value = null
-	refreshPageBlocks()
+	void refreshPageBlocks()
 }
 
 defineExpose({ open })

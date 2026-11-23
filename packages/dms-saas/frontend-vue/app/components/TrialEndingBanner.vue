@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-// Content of the trial-ending layout strip (see registerTrialEndingBanners),
-// shown to the workspace owner 7, 3 and 1 day before the trial ends.
 const KEY_PREFIX = 'saas.tenant_billing.trial'
 const BILLING_PATH = '/settings/workspace/billing'
 const DAY_FORMAT: Intl.DateTimeFormatOptions = {
@@ -38,7 +36,7 @@ const headline = computed(() =>
 const charge = computed(() => {
 	const total = nextInvoice.value?.totalMinorUnits
 	const interval = plan.value?.current?.interval
-	if (typeof total !== 'number' || !interval) return null
+	if (total === null || total === undefined || !interval) return null
 	const params = {
 		amount: formatMinorUnits(total, nextInvoice.value?.currency),
 		interval: planIntervalLabel(interval),

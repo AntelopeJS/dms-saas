@@ -1,3 +1,4 @@
+import { defined } from "./helpers/defined";
 import { type LocaleTree, localeMessage, readLocale } from "./helpers/locales";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -19,8 +20,9 @@ function translator(
     const message = localeMessage(tree, key);
     if (message === undefined) throw new Error(`missing locale key ${key}`);
     const choices = message.split(PLURAL_SEPARATOR);
-    const choice =
-      choices.length > 1 && count !== 1 ? choices[1]! : choices[0]!;
+    const choice = defined(
+      choices.length > 1 && count !== 1 ? choices[1] : choices[0],
+    );
     return choice.replace(
       /\{(\w+)\}/g,
       (_, name: string) => params[name] ?? "",

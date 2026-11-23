@@ -64,7 +64,15 @@ export function useUserDetail(
 		userId.value ? `/api/saas/users/${userId.value}` : null,
 	)
 	return {
-		...request,
+		data: request.data,
+		key: request.key,
+		placeholder: request.placeholder,
+		error: request.error,
+		pending: request.pending,
+		status: request.status,
+		execute: (options) => request.execute(options),
+		refresh: (options) => request.refresh(options),
+		clear: () => request.clear(),
 		userId,
 		isLoading: computed(
 			() => !request.data.value && request.status.value !== 'error',

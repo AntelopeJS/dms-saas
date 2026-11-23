@@ -5,9 +5,12 @@ import type {
 	SegmentCondition,
 	SegmentConditionGroup,
 	SegmentFieldDefinition,
+	SegmentFieldType,
 	SegmentNode,
 	SegmentOperator,
+	SegmentScalar,
 	SegmentScope,
+	SegmentValue,
 	SegmentWordToken,
 	SegmentWorkspaceRef,
 } from './types'
@@ -18,10 +21,10 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = {
 	month: 'short',
 	year: 'numeric',
 }
-const BOOLEAN_TONES: Record<string, string> = {
-	true: 'success',
-	false: 'neutral',
-}
+const BOOLEAN_TONES = new Map<string, string>([
+	['true', 'success'],
+	['false', 'neutral'],
+])
 
 /** One piece of rules read in words: a rule, or the AND / OR joining two. */
 export type SegmentRulePart =
@@ -34,35 +37,28 @@ export type SegmentRulePart =
  */
 export type SegmentRulesMode = 'compact' | 'full'
 
-const OPERATOR_FAMILY: Record<string, string> = {
-	enum: 'enum',
-	'enum:plan': 'enum',
-	boolean: 'boolean',
-}
+const OPERATOR_FAMILY = new Map<SegmentFieldType, string>([
+	['enum', 'enum'],
+	['enum:plan', 'enum'],
+	['boolean', 'boolean'],
+])
+
+type ValueFormatter = (
+	field: SegmentFieldDefinition,
+	value: SegmentScalar | null,
+) => SegmentWordToken
 
 function text(value: string): SegmentWordToken {
 	return { text: value }
 }
 
-/** Words for fields, operators, values and whole rules, in the UI locale. */
-export function useSegmentWords(catalog: SegmentCatalog) {
+/** Words for the values of rules, in the UI locale. */
+function useValueWords(catalog: SegmentCatalog) {
 	const { t, locale } = useI18n()
-
-	function operatorFamily(field: SegmentFieldDefinition | undefined): string {
-		if (!field) return 'string'
-		return OPERATOR_FAMILY[field.type] ?? field.valueKind
-	}
-
-	function operatorLabel(
-		field: SegmentFieldDefinition | undefined,
-		operator: SegmentOperator,
-	): string {
-		return t(`${I18N}.operators.${operatorFamily(field)}.${operator}`)
-	}
 
 	function enumToken(
 		field: SegmentFieldDefinition,
-		value: unknown,
+		value: SegmentScalar | null,
 	): SegmentWordToken {
 		const key = String(value)
 		if (field.type === 'enum:plan') {
@@ -76,19 +72,28 @@ export function useSegmentWords(catalog: SegmentCatalog) {
 		}
 	}
 
-	const SCALAR_FORMATTERS: Record<
-		string,
-		(field: SegmentFieldDefinition, value: unknown) => SegmentWordToken
-	> = {
-		boolean: (_field, value) => ({
-			text: t(`${I18N}.boolean.${value === true || value === 'true'}`),
-			tone: BOOLEAN_TONES[String(value === true || value === 'true')],
-		}),
-		date: (_field, value) =>
-			text(formatDate(value, locale.value, DAY_FORMAT) ?? String(value)),
-		number: (field, value) => text(numberText(field, Number(value))),
-		string: (_field, value) => text(`“${String(value ?? '')}”`),
-	}
+	const quotedToken: ValueFormatter = (_field, value) =>
+		text(`“${String(value ?? '')}”`)
+
+	const SCALAR_FORMATTERS = new Map<SegmentFieldType, ValueFormatter>([
+		[
+			'boolean',
+			(_field, value) => {
+				const isTrue = value === true || value === 'true'
+				return {
+					text: t(`${I18N}.boolean.${isTrue}`),
+					tone: BOOLEAN_TONES.get(String(isTrue)),
+				}
+			},
+		],
+		[
+			'date',
+			(_field, value) =>
+				text(formatDate(value, locale.value, DAY_FORMAT) ?? String(value)),
+		],
+		['number', (field, value) => text(numberText(field, Number(value)))],
+		['string', quotedToken],
+	])
 
 	function numberText(field: SegmentFieldDefinition, value: number): string {
 		if (field.unit === 'currency') {
@@ -102,16 +107,39 @@ export function useSegmentWords(catalog: SegmentCatalog) {
 
 	function valueTokens(
 		field: SegmentFieldDefinition | undefined,
-		value: unknown,
+		value: SegmentValue,
 	): SegmentWordToken[] {
 		if (!field) return [text(String(value ?? ''))]
 		const values = Array.isArray(value) ? value : [value]
 		const isEnum = field.type === 'enum' || field.type === 'enum:plan'
-		const format = isEnum
+		const format: ValueFormatter = isEnum
 			? enumToken
-			: (SCALAR_FORMATTERS[field.type] ?? SCALAR_FORMATTERS.string)
+			: (SCALAR_FORMATTERS.get(field.type) ?? quotedToken)
 		if (values.length === 0) return [text(t(`${I18N}.no_value`))]
-		return values.map((entry) => format!(field, entry))
+		return values.map((entry) => format(field, entry))
+	}
+
+	return { valueTokens }
+}
+
+/**
+ * Words for fields, operators, values and whole rules, in the UI locale.
+ * `groupParts` reads rules in words, the parts joined by AND / OR.
+ */
+export function useSegmentWords(catalog: SegmentCatalog) {
+	const { t } = useI18n()
+	const { valueTokens } = useValueWords(catalog)
+
+	function operatorFamily(field: SegmentFieldDefinition | undefined): string {
+		if (!field) return 'string'
+		return OPERATOR_FAMILY.get(field.type) ?? field.valueKind
+	}
+
+	function operatorLabel(
+		field: SegmentFieldDefinition | undefined,
+		operator: SegmentOperator,
+	): string {
+		return t(`${I18N}.operators.${operatorFamily(field)}.${operator}`)
 	}
 
 	function fieldLabel(field: SegmentFieldDefinition | undefined): string {
@@ -181,7 +209,6 @@ export function useSegmentWords(catalog: SegmentCatalog) {
 		]
 	}
 
-	/** Rules read in words, the parts joined by AND / OR. */
 	function groupParts(
 		group: SegmentConditionGroup,
 		scope: SegmentScope,

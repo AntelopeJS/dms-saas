@@ -9,6 +9,8 @@
  * with `--full` it runs the full one (`<config>.cfg`). Exits 0 when all match
  * the record in SKILL.md, 1 when a rule changed, and 2 when TLC could not run.
  * The runner exits on the first configuration that changed.
+ *
+ * @module
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";

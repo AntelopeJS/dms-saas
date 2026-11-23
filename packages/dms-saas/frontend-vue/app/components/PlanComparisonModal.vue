@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import type {
+	OfferedPlanView,
+	SeatsInUse,
+	TenantPlanFeature,
+} from '../composables/useTenantPlan'
 import { computed, ref, watch } from 'vue'
 import PlanChangeReview from '../build/PlanChangeReview.vue'
 import type { PlanInterval } from '../composables/usePlanIntervalLabel'
@@ -34,7 +39,6 @@ const { isOpen: open, reviewPlanId } = usePlanComparison()
 const { t, locale } = useI18n()
 const { formatFeatureValue } = usePlanFeatureFormat()
 const { formatMajorUnits } = useMoneyFormat()
-const planIntervalLabel = usePlanIntervalLabel('saas.workspace.plan.interval')
 
 const showDetailRows = ref(false)
 const interval = ref<PlanInterval>('month')
@@ -89,8 +93,9 @@ const tooSmallNote = computed(() => {
 
 const otherCustomerTypeNote = computed(() => {
 	const plans = split.value.forOtherCustomerType
-	if (!plans.length) return null
-	return t(`${KEY_PREFIX}.for_other_customer_type.${plans[0]!.audience}`, {
+	const [first] = plans
+	if (!first) return null
+	return t(`${KEY_PREFIX}.for_other_customer_type.${first.audience}`, {
 		plans: plans.map((plan) => plan.name).join(', '),
 	})
 })
@@ -103,7 +108,7 @@ const subtitle = computed(() =>
 			plan: props.currentPlanName ?? '—',
 			seats: props.seats.occupied,
 			members: props.seats.members,
-		invites: props.seats.pendingInvites,
+			invites: props.seats.pendingInvites,
 		},
 		props.seats.occupied,
 	),
@@ -178,12 +183,17 @@ const footnote = computed(() =>
 	}),
 )
 
-// A review asked for a plan that needs Stripe's payment page goes there.
+/** A review asked for a plan that needs Stripe's payment page goes there. */
+function openReviewedCheckout(
+	isOpen: boolean,
+	plan: OfferedPlanView | null,
+): void {
+	if (isOpen && plan && needsCheckout(plan)) select(plan)
+}
+
 watch(
 	[open, reviewedPlan],
-	([isOpen, plan]) => {
-		if (isOpen && plan && needsCheckout(plan)) select(plan)
-	},
+	([isOpen, plan]) => openReviewedCheckout(isOpen, plan),
 	{ immediate: true },
 )
 

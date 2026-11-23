@@ -6,6 +6,7 @@ import {
   workspaceFacts,
 } from "../src/workspaces/detail-items";
 import type { WorkspaceOperatorView } from "../src/workspaces/operator-view";
+import { defined } from "./helpers/defined";
 import { LOCALES, missingKeys, writeText } from "./helpers/composed-text";
 
 const VIEW = fromPartial<WorkspaceOperatorView>({
@@ -64,10 +65,12 @@ describe("workspace facts", () => {
 
   it("reads the same once written on the server", () => {
     const [mrr, seats, next] = facts();
+    const detailOf = (fact: typeof mrr) =>
+      writeText(defined(defined(fact).detail));
 
-    expect(writeText(mrr!.detail!)).toBe("€29.00 × 5 seats · per month");
-    expect(writeText(seats!.detail!)).toBe("+2 pending invitations");
-    expect(writeText(next!.detail!)).toBe("€174.00 incl. tax");
+    expect(detailOf(mrr)).toBe("€29.00 × 5 seats · per month");
+    expect(detailOf(seats)).toBe("+2 pending invitations");
+    expect(detailOf(next)).toBe("€174.00 incl. tax");
   });
 
   it.each(LOCALES)("%s has every key the facts name", (code) => {
