@@ -286,41 +286,40 @@ function directorySelection(filters: WorkspaceDirectoryFilters) {
   return table;
 }
 
-function matchesDirectoryFilters(
-  row: TenantBillingState,
-  filters: WorkspaceDirectoryFilters,
-): boolean {
-  return (
-    (filters.billingState === undefined ||
-      row.billingState === filters.billingState) &&
-    (filters.planId === undefined || row.planId === filters.planId) &&
-    (filters.isComplimentary === undefined ||
-      row.isComplimentary === filters.isComplimentary) &&
-    (filters.renewalKind === undefined ||
-      row.renewalKind === filters.renewalKind) &&
-    (filters.renewsBefore === undefined ||
-      (!!row.renewsAt && row.renewsAt < filters.renewsBefore))
-  );
-}
-
 async function directoryRowsAfter(
   filters: WorkspaceDirectoryFilters,
   cursor: string | undefined,
+  count: number,
 ): Promise<TenantBillingState[]> {
+  const { isComplimentary, renewalKind, renewsBefore } = filters;
   const rows = await directorySelection(filters)
-    .filter((row) =>
-      row
+    .filter((row) => {
+      let live = row
         .key("deletedAt")
         .eq(null)
         .and(row.key("_id").eq(row.key("tenantId")))
-        .and(row.key("_id").gt(cursor ?? "")),
-    )
+        .and(row.key("_id").gt(cursor ?? ""));
+      if (filters.billingState !== undefined && filters.planId !== undefined)
+        live = live.and(row.key("planId").eq(filters.planId));
+      if (isComplimentary !== undefined)
+        live = live.and(row.key("isComplimentary").eq(isComplimentary));
+      if (renewalKind !== undefined)
+        live = live.and(row.key("renewalKind").eq(renewalKind));
+      if (renewsBefore !== undefined)
+        live = live.and(
+          row
+            .key("renewsAt")
+            .ne(null)
+            .and(row.key("renewsAt").lt(renewsBefore)),
+        );
+      return live;
+    })
     .orderBy("_id", "asc")
+    .slice(0, count)
     .run();
   return rows
     .map((row) => TenantBillingStateModel.fromDatabase(row))
-    .filter((row): row is TenantBillingState => row !== undefined)
-    .filter((row) => matchesDirectoryFilters(row, filters));
+    .filter((row): row is TenantBillingState => row !== undefined);
 }
 
 /**
@@ -332,7 +331,7 @@ export async function listWorkspaceDirectory(
   limit: number,
   cursor: string | undefined,
 ): Promise<PageRead<WorkspaceDirectoryItem>> {
-  const rows = await directoryRowsAfter(filters, cursor);
+  const rows = await directoryRowsAfter(filters, cursor, limit + 1);
   const page = rows.slice(0, limit);
   const tenants = await Promise.all(
     page.map((row) => GetModel(TenantModel).get(row._id)),

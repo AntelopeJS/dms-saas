@@ -328,6 +328,36 @@ describe("saas.list-workspaces", () => {
     expect(byAccess.tenantIds).toEqual([complimentary]);
   });
 
+  it("filters by renewal kind and by renewal before a date", async () => {
+    const planId = `renewing-${randomUUID()}`;
+    await insertPlan({ _id: planId, price: 5 });
+    const now = Date.now();
+    const soon = await workspace({
+      planId,
+      isComplimentary: true,
+      freeUntil: new Date(now + 10 * DAY_MS),
+    });
+    const later = await workspace({
+      planId,
+      isComplimentary: true,
+      freeUntil: new Date(now + 40 * DAY_MS),
+    });
+    await workspace({ planId });
+
+    const byKind = workspacePage.parse(
+      await run("saas.list-workspaces", { planId, renewalKind: "free_until" }),
+    );
+    const beforeDate = workspacePage.parse(
+      await run("saas.list-workspaces", {
+        planId,
+        renewsBefore: new Date(now + 20 * DAY_MS).toISOString(),
+      }),
+    );
+
+    expect(new Set(byKind.tenantIds)).toEqual(new Set([soon, later]));
+    expect(beforeDate.tenantIds).toEqual([soon]);
+  });
+
   it.each([0, 201])("refuses a page of %i", async (limit) => {
     await expect(run("saas.list-workspaces", { limit })).rejects.toThrow(
       "saas.list-workspaces: limit",
