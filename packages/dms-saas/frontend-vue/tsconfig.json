@@ -1,3 +1,4 @@
 {
-	"extends": "../.dms-types/tsconfig.json"
+	"extends": "../.dms-types/tsconfig.json",
+	"compilerOptions": { "strict": true }
 }
