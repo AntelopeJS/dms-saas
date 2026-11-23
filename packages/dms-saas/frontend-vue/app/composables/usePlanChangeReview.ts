@@ -1,3 +1,4 @@
+import { isRecord, isText } from '../build/type-guards'
 import type {
 	OfferedPlanView,
 	SeatsInUse,
@@ -75,14 +76,6 @@ export interface PlanChangeNotice {
 	code: string
 	message: string
 	resource?: string
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
-}
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
 }
 
 function isIncompatibility(value: unknown): value is PlanChangeIncompatibility {

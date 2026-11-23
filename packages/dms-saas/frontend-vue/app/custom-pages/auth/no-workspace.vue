@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isText } from '../../build/type-guards'
 import { computed, onMounted, ref } from 'vue'
 import {
 	readChosenPlan,
@@ -130,10 +131,6 @@ const legalError = computed(() =>
 		? t('saas.public.register.error.legal_required')
 		: null,
 )
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
-}
 
 function toLogin(): void {
 	if (typeof window !== 'undefined') window.location.href = LOGIN_PATH

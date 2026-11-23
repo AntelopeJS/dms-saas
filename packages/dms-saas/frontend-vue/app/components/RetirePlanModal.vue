@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isRecord } from '../build/type-guards'
 import { computed, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
@@ -173,10 +174,6 @@ async function prepare(): Promise<void> {
 /** A refusal the server sent under the confirmation field (`{ message, field }`). */
 interface TypedRefusal {
 	data: { field: typeof CONFIRM_TEXT_FIELD }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
 }
 
 function isTypedRefusal(error: unknown): error is TypedRefusal {

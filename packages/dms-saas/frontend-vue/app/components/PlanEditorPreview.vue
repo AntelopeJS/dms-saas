@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isObject, isText } from '../build/type-guards'
 import { computed } from 'vue'
 import { useLiveFormSnapshot } from '../build/composables/useLiveFormValues'
 import {
@@ -71,14 +72,6 @@ const EMPTY_CATALOG: PlanCatalog = {
 	plans: [],
 	features: [],
 	newPlanPermissions: [],
-}
-
-function isObject(value: unknown): value is object {
-	return typeof value === 'object' && value !== null
-}
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
 }
 
 function isAmount(value: unknown): value is number | string {

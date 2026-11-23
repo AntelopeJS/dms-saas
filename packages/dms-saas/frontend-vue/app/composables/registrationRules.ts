@@ -1,3 +1,4 @@
+import { isRecord } from '../build/type-guards'
 import type { DmsSaasPublicRuntimeConfig } from '../types/runtime-config'
 
 /** A value of the consumer's capture: what survives a JSON round trip. */
@@ -130,10 +131,6 @@ export function registrationFieldOf(
 	errorKey: string | undefined,
 ): RegistrationField | null {
 	return (errorKey && API_ERROR_FIELDS.get(errorKey)) || null
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
 }
 
 function isExtraValue(value: unknown): value is RegistrationExtraValue {

@@ -1,3 +1,4 @@
+import { isRecord } from '../build/type-guards'
 import { defineComponent, h, resolveComponent } from 'vue'
 
 const RULES_COMPONENT = 'DmsSaasSegmentRulesText'
@@ -25,10 +26,6 @@ const SegmentConditionsDisplay = defineComponent({
 
 interface SegmentConditionsOptions {
 	fieldsCatalogUrl?: string
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
 }
 
 function isSegmentConditionsOptions(

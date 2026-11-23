@@ -1,3 +1,4 @@
+import { isObject } from '../type-guards'
 import { onBeforeUnmount, onMounted, shallowRef } from 'vue'
 
 /** A form value a panel can follow live: a switch, a number or a text. */
@@ -21,10 +22,6 @@ export interface LiveFormData {
 interface FieldChangeDetail {
 	component: string
 	data: { formValues: LiveFormData }
-}
-
-function isObject(value: unknown): value is object {
-	return typeof value === 'object' && value !== null
 }
 
 function isLiveFormField(value: unknown): value is LiveFormField {

@@ -1,14 +1,7 @@
+import { isRecord, isText } from '../build/type-guards'
 /** A failed `$authFetch`, which carries the server's answer as `data`. */
 export interface ApiFailure {
 	data?: unknown
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
-}
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
 }
 
 /** Whether a caught value can carry the server's answer. */

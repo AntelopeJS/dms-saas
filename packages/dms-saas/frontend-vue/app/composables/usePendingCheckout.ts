@@ -1,3 +1,4 @@
+import { isText } from '../build/type-guards'
 import { isApiFailure } from './useApiErrorMessage'
 import { CHECKOUT_OPERATION_PARAM, type PendingCheckout } from './useTenantPlan'
 
@@ -17,10 +18,6 @@ export function isCheckoutInProgressError(error: unknown): boolean {
 	return (
 		isApiFailure(error) && readApiErrorKey(error) === CHECKOUT_IN_PROGRESS_KEY
 	)
-}
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
 }
 
 /**

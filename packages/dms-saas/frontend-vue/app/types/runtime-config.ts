@@ -1,3 +1,4 @@
+import { isRecord } from '../build/type-guards'
 /**
  * Whether registration asks for a card, as the deployment configured it in
  * `registration.paymentMethod`: `required` always does, `optional` lets the
@@ -15,10 +16,6 @@ export interface DmsSaasPublicRuntimeConfig {
 	registrationPaymentMethod?: RegistrationPaymentMethodPolicy
 	/** The bundled public screens this deployment serves. */
 	publicScreens?: DmsSaasPublicScreenId[]
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
 }
 
 function isPublicScreenId(value: unknown): value is DmsSaasPublicScreenId {

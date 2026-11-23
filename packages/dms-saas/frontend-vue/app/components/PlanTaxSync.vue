@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isText } from '../build/type-guards'
 import { computed, ref, watch } from 'vue'
 import {
 	liveValue,
@@ -18,10 +19,6 @@ const props = defineProps<{
 	modelValue?: PlanTaxSyncStatus | null
 	componentId?: string
 }>()
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
-}
 
 const TEXT = 'saas.operator_billing.billing_rules.tax'
 const RESYNC_ENDPOINT = '/api/saas/settings/billing/resync-plans'

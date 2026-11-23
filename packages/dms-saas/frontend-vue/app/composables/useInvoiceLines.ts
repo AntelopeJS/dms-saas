@@ -1,3 +1,4 @@
+import { isNumber, isRecord, isText } from '../build/type-guards'
 export interface InvoiceLine {
 	description: string
 	quantity: number | null
@@ -5,18 +6,6 @@ export interface InvoiceLine {
 	currency?: string | null
 	periodStart: string | Date | null
 	periodEnd: string | Date | null
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
-}
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
-}
-
-function isNumber(value: unknown): value is number {
-	return typeof value === 'number'
 }
 
 function isMoment(value: unknown): value is string | Date | null {

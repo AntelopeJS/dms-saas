@@ -1,3 +1,4 @@
+import { isNumber, isRecord, isText } from '../build/type-guards'
 import { defineComponent, h, resolveComponent } from 'vue'
 import type { DataTypeFormatter } from '#dms-core/app/composables/data-types/useDataType'
 import { formatPeriodRange } from '../build/period-range'
@@ -30,18 +31,6 @@ type CellRow = Parameters<DataTypeFormatter>[3]
 /** Where a period cell reads the end of the period. */
 interface PeriodOptions {
 	endField?: string
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
-}
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
-}
-
-function isNumber(value: unknown): value is number {
-	return typeof value === 'number'
 }
 
 function isDateInput(value: unknown): value is Date | string {

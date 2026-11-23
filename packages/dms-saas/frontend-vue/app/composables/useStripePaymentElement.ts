@@ -1,3 +1,4 @@
+import { isText } from '../build/type-guards'
 import type {
 	Stripe,
 	StripeElements,
@@ -84,10 +85,6 @@ export function buildSetupConfirmation<E>(
 			payment_method_data: { billing_details: { email } },
 		},
 	}
-}
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
 }
 
 /** Maps a `confirmSetup` outcome to the confirmed card, or Stripe's reason. */

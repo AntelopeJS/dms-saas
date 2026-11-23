@@ -1,3 +1,4 @@
+import { isObject, isText } from '../type-guards'
 import {
 	SEGMENT_OPERATORS,
 	type SegmentCondition,
@@ -37,10 +38,6 @@ export function emptySegmentGroup(): SegmentConditionGroup {
 	return { logical: 'and', conditions: [] }
 }
 
-function isObject(value: unknown): value is object {
-	return typeof value === 'object' && value !== null
-}
-
 function isScalar(value: unknown): value is SegmentScalar {
 	return (
 		typeof value === 'string' ||
@@ -55,10 +52,6 @@ function isSegmentValue(value: unknown): value is SegmentValue {
 		isScalar(value) ||
 		(Array.isArray(value) && value.every(isScalar))
 	)
-}
-
-function isText(value: unknown): value is string {
-	return typeof value === 'string'
 }
 
 const OPERATOR_SET: ReadonlySet<string> = new Set(SEGMENT_OPERATORS)
