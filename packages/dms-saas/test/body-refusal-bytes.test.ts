@@ -37,7 +37,7 @@ describe("a body the platform owner routes refuse", () => {
     ).toEqual([
       400,
       "application/json",
-      '[{"code":"too_small","minimum":1,"type":"string","inclusive":true,"exact":false,"message":"String must contain at least 1 character(s)","path":["invoiceId"]},{"code":"too_small","minimum":0,"type":"number","inclusive":false,"exact":false,"message":"$saas.errors.credit_note.amount_positive","path":["amount"]},{"received":"nope","code":"invalid_enum_value","options":["credit_to_balance","refund","reduce_amount_due"],"path":["mode"],"message":"Invalid enum value. Expected \'credit_to_balance\' | \'refund\' | \'reduce_amount_due\', received \'nope\'"},{"expected":"\'service_issue\' | \'billing_error\' | \'duplicate\' | \'goodwill\' | \'fraudulent\' | \'other\'","received":"undefined","code":"invalid_type","path":["reason"],"message":"Required"},{"code":"invalid_type","expected":"string","received":"undefined","path":["requestId"],"message":"Required"}]',
+      '[{"origin":"string","code":"too_small","minimum":1,"inclusive":true,"path":["invoiceId"],"message":"Too small: expected string to have >=1 characters"},{"origin":"number","code":"too_small","minimum":0,"inclusive":false,"path":["amount"],"message":"$saas.errors.credit_note.amount_positive"},{"code":"invalid_value","values":["credit_to_balance","refund","reduce_amount_due"],"path":["mode"],"message":"Invalid option: expected one of \\"credit_to_balance\\"|\\"refund\\"|\\"reduce_amount_due\\""},{"code":"invalid_value","values":["service_issue","billing_error","duplicate","goodwill","fraudulent","other"],"path":["reason"],"message":"Invalid option: expected one of \\"service_issue\\"|\\"billing_error\\"|\\"duplicate\\"|\\"goodwill\\"|\\"fraudulent\\"|\\"other\\""},{"expected":"string","code":"invalid_type","path":["requestId"],"message":"Invalid input: expected string, received undefined"}]',
     ]);
   });
 
@@ -54,7 +54,7 @@ describe("a body the platform owner routes refuse", () => {
     ).toEqual([
       400,
       "application/json",
-      '[{"code":"too_small","minimum":1,"type":"number","inclusive":true,"exact":false,"message":"$saas.errors.billing_rules.suspension_days","path":["autoSuspendDelayDays"]},{"received":"nope","code":"invalid_enum_value","options":["full","prorated"],"path":["moneyBackGuaranteeMode"],"message":"Invalid enum value. Expected \'full\' | \'prorated\', received \'nope\'"}]',
+      '[{"origin":"number","code":"too_small","minimum":1,"inclusive":true,"path":["autoSuspendDelayDays"],"message":"$saas.errors.billing_rules.suspension_days"},{"code":"invalid_value","values":["full","prorated"],"path":["moneyBackGuaranteeMode"],"message":"Invalid option: expected one of \\"full\\"|\\"prorated\\""}]',
     ]);
   });
 });

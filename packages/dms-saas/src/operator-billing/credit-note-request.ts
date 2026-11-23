@@ -51,14 +51,14 @@ export const issueCreditNoteBodySchema = z.object({
   amount: z
     .number()
     .int()
-    .positive({ message: "$saas.errors.credit_note.amount_positive" }),
+    .positive({ error: "$saas.errors.credit_note.amount_positive" }),
   mode: z.enum(CREDIT_MODES),
   reason: z.enum(CREDIT_REASONS),
   memo: z
     .string()
     .trim()
     .max(INTERNAL_MEMO_MAX_LENGTH, {
-      message: "$saas.errors.credit_note.memo_too_long",
+      error: "$saas.errors.credit_note.memo_too_long",
     })
     .optional(),
   /** Set once per dialog: a retried click lands on the same credit note. */
