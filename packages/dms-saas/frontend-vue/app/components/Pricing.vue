@@ -31,11 +31,7 @@ const saasConfig = isDmsSaasPublicRuntimeConfig(published)
 	: undefined
 
 const pricingRead = usePublicPricing()
-/**
- * The public pricing page: the plans on sale, a full comparison and the
- * billing answers a visitor needs before signing up. Every plan leads to
- * Register with the plan chosen.
- */
+/** The plans on sale and the billing answers, once the public read answered. */
 const pricing = computed<PublicPricing | null>(() => pricingRead.data.value)
 /** A retry shows the skeleton again, not the failure it replaces. */
 const isLoading = computed(

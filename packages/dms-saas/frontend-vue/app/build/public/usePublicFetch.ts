@@ -2,19 +2,6 @@ import { watch } from 'vue'
 
 const CONTENT_LANGUAGE_HEADER = 'x-content-language'
 
-interface DmsPublicRuntime {
-	baseURL: string
-}
-
-function isDmsPublicRuntime(value: unknown): value is DmsPublicRuntime {
-	return (
-		typeof value === 'object' &&
-		value !== null &&
-		'baseURL' in value &&
-		typeof value.baseURL === 'string'
-	)
-}
-
 /**
  * Fetch for the anonymous screens, on the DMS API in the reader's locale.
  *
@@ -28,9 +15,8 @@ function isDmsPublicRuntime(value: unknown): value is DmsPublicRuntime {
 export function usePublicFetch() {
 	const config = useDmsRuntimeConfig()
 	const { locale } = useI18n()
-	const dmsRuntime = config.public.dms
 	return $fetch.create({
-		baseURL: isDmsPublicRuntime(dmsRuntime) ? dmsRuntime.baseURL : undefined,
+		baseURL: config.public.dms.baseURL,
 		onRequest({ options }) {
 			const headers = new Headers(options.headers)
 			headers.set(CONTENT_LANGUAGE_HEADER, locale.value)

@@ -25,10 +25,6 @@ interface OAuthProviderOption {
 	icon: string
 }
 
-interface DmsPublicRuntime {
-	oauthProviders: OAuthProviderOption[]
-}
-
 interface PendingRegistration {
 	email: string
 	name: string
@@ -56,10 +52,7 @@ const { t } = i18n
 const publicFetch = usePublicFetch()
 const errors = useApiErrorPresenter()
 const saasConfig = readDmsSaasPublicConfig(config.public.dmsSaas)
-const dmsRuntime = config.public.dms
-const oauthProviders = isDmsPublicRuntime(dmsRuntime)
-	? dmsRuntime.oauthProviders
-	: []
+const oauthProviders = config.public.dms.oauthProviders ?? []
 const isRegistrationClosed = isRegistrationClosedBy(saasConfig)
 const comparePlansTo = isPublicScreenServed(saasConfig, 'pricing')
 	? PRICING_PATH
@@ -140,29 +133,6 @@ const legalError = computed(() =>
 
 function isText(value: unknown): value is string {
 	return typeof value === 'string'
-}
-
-function isOAuthProviderOption(value: unknown): value is OAuthProviderOption {
-	return (
-		typeof value === 'object' &&
-		value !== null &&
-		'id' in value &&
-		typeof value.id === 'string' &&
-		'label' in value &&
-		typeof value.label === 'string' &&
-		'icon' in value &&
-		typeof value.icon === 'string'
-	)
-}
-
-function isDmsPublicRuntime(value: unknown): value is DmsPublicRuntime {
-	return (
-		typeof value === 'object' &&
-		value !== null &&
-		'oauthProviders' in value &&
-		Array.isArray(value.oauthProviders) &&
-		value.oauthProviders.every(isOAuthProviderOption)
-	)
 }
 
 function toLogin(): void {

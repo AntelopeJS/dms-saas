@@ -37,14 +37,10 @@ function isInvoiceLine(value: unknown): value is InvoiceLine {
 	)
 }
 
-function isInvoiceLineList(value: unknown): value is InvoiceLine[] {
-	return Array.isArray(value) && value.every(isInvoiceLine)
-}
-
 function parseJsonLines(json: string): InvoiceLine[] {
 	try {
 		const parsed: unknown = JSON.parse(json)
-		return isInvoiceLineList(parsed) ? parsed : []
+		return Array.isArray(parsed) ? parsed.filter(isInvoiceLine) : []
 	} catch {
 		return []
 	}
@@ -55,6 +51,6 @@ function parseJsonLines(json: string): InvoiceLine[] {
  * value over, which may still be its JSON form.
  */
 export function parseInvoiceLines(raw: unknown): InvoiceLine[] {
-	if (isInvoiceLineList(raw)) return raw
+	if (Array.isArray(raw)) return raw.filter(isInvoiceLine)
 	return isText(raw) ? parseJsonLines(raw) : []
 }
