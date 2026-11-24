@@ -156,22 +156,25 @@ async function initializeCheckoutSubscription(
   request: PlanChangeRequest,
 ): Promise<TenantSubscription> {
   if (request.subscription) return request.subscription;
-  await request.tenantSubscriptionModel.insert({
-    _id: request.tenantId,
-    planId: PLACEHOLDER_PLAN_ID,
-    status: PENDING_PAYMENT_STATUS,
-    isComplimentary: false,
-    paidUsagePeriods: [],
-    stripeCustomerId: null,
-    stripeSubscriptionId: null,
-    stripeCheckoutSessionId: null,
-    createdBy: request.user._id,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-  const subscription = await request.tenantSubscriptionModel.get(
-    request.tenantId,
-  );
+  const model = request.tenantSubscriptionModel;
+  try {
+    await model.insert({
+      _id: request.tenantId,
+      planId: PLACEHOLDER_PLAN_ID,
+      status: PENDING_PAYMENT_STATUS,
+      isComplimentary: false,
+      paidUsagePeriods: [],
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      stripeCheckoutSessionId: null,
+      createdBy: request.user._id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  } catch (error) {
+    if (!(await model.get(request.tenantId))) throw error;
+  }
+  const subscription = await model.get(request.tenantId);
   if (!subscription)
     throw new Error(
       "Checkout subscription acknowledgement requires reconciliation",
