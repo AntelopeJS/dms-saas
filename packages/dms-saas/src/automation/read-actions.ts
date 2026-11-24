@@ -37,6 +37,8 @@ const PAGE_MAX = 200;
 const tenantIdInput = z.string().trim().min(1).max(ID_MAX_LENGTH);
 const workspaceInput = z.object({ tenantId: tenantIdInput });
 
+type WorkspaceInput = z.input<typeof workspaceInput>;
+
 const TENANT_INPUT_SCHEMA: JsonSchema = {
   type: "object",
   properties: {
@@ -68,10 +70,6 @@ const pageInput = {
   limit: z.number().int().min(1).max(PAGE_MAX).default(PAGE_DEFAULT),
   cursor: z.string().max(ID_MAX_LENGTH).optional(),
 };
-
-interface WorkspaceInput {
-  tenantId: string;
-}
 
 /** A read of one workspace: no side effect, the tenant id checked. */
 function workspaceRead<TOutput extends JsonObject>(
@@ -203,16 +201,6 @@ const getUpcomingInvoiceAction = workspaceRead(
   readUpcomingInvoice,
 );
 
-interface ListWorkspacesInput {
-  billingState?: string;
-  planId?: string;
-  isComplimentary?: boolean;
-  renewalKind?: string;
-  renewsBefore?: string;
-  limit?: number;
-  cursor?: string;
-}
-
 const LIST_WORKSPACES_ACTION_ID = "saas.list-workspaces";
 
 const listWorkspacesInput = z.object({
@@ -223,6 +211,8 @@ const listWorkspacesInput = z.object({
   renewsBefore: z.string().datetime({ offset: true }).optional(),
   ...pageInput,
 });
+
+type ListWorkspacesInput = z.input<typeof listWorkspacesInput>;
 
 const WORKSPACE_ITEM: JsonSchema = {
   type: "object",
@@ -294,18 +284,14 @@ const listWorkspacesAction: ActionType<ListWorkspacesInput, JsonObject> = {
     }),
 };
 
-interface ListSegmentUsersInput {
-  segmentId: string;
-  limit?: number;
-  cursor?: string;
-}
-
 const LIST_SEGMENT_USERS_ACTION_ID = "saas.list-segment-users";
 
 const listSegmentUsersInput = z.object({
   segmentId: z.string().trim().min(1).max(ID_MAX_LENGTH),
   ...pageInput,
 });
+
+type ListSegmentUsersInput = z.input<typeof listSegmentUsersInput>;
 
 const listSegmentUsersAction: ActionType<ListSegmentUsersInput, JsonObject> = {
   id: LIST_SEGMENT_USERS_ACTION_ID,

@@ -29,11 +29,11 @@ export async function asStep<T>(
 }
 
 /** Parses a step's input, failing the step with the first invalid field. */
-export function parseActionInput<I, T>(
+export function parseActionInput<S extends z.ZodType>(
   actionId: string,
-  schema: z.ZodType<T, z.ZodTypeDef, I>,
-  input: I,
-): T {
+  schema: S,
+  input: z.input<S>,
+): z.output<S> {
   const parsed = schema.safeParse(input);
   if (parsed.success) return parsed.data;
   const issue = parsed.error.issues[0];

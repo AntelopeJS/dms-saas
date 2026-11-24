@@ -38,11 +38,6 @@ import { automationNodeLabels } from "./labels";
 import { runAsAutomation } from "./origin";
 import { READ_ACTIONS } from "./read-actions";
 
-interface SuspendWorkspaceInput {
-  tenantId: string;
-  suspended?: boolean;
-}
-
 type SuspendWorkspaceOutput = {
   tenantId: string;
   suspended: boolean;
@@ -61,6 +56,8 @@ const suspendWorkspaceInput = z.object({
   tenantId: tenantIdInput,
   suspended: z.boolean().default(true),
 });
+
+type SuspendWorkspaceInput = z.input<typeof suspendWorkspaceInput>;
 
 type SuspensionRequest = z.infer<typeof suspendWorkspaceInput>;
 
@@ -206,15 +203,6 @@ const suspendWorkspaceAction: ActionType<
     asStep(SUSPEND_WORKSPACE_ACTION_ID, () => runSuspension(input, ctx)),
 };
 
-interface NotifyTenantOwnersInput {
-  tenantId: string;
-  title: string;
-  description: string;
-  icon?: string;
-  linkTo?: string;
-  idempotencyKey?: string;
-}
-
 type NotifyTenantOwnersOutput = {
   ok: boolean;
   recipientCount: number;
@@ -235,6 +223,8 @@ const notifyTenantOwnersInput = z.object({
   linkTo: z.string().max(LINK_MAX_LENGTH).optional(),
   idempotencyKey: z.string().max(IDEMPOTENCY_KEY_MAX_LENGTH).optional(),
 });
+
+type NotifyTenantOwnersInput = z.input<typeof notifyTenantOwnersInput>;
 
 type OwnerNotification = z.infer<typeof notifyTenantOwnersInput>;
 
@@ -345,13 +335,6 @@ const notifyTenantOwnersAction: ActionType<
     ),
 };
 
-interface AddPlatformNoteInput {
-  targetType?: string;
-  targetId: string;
-  content: string;
-  idempotencyKey?: string;
-}
-
 type AddPlatformNoteOutput = {
   noteId: string;
   created: boolean;
@@ -365,6 +348,8 @@ const addPlatformNoteInput = z.object({
   content: z.string().trim().min(1).max(PLATFORM_NOTE_MAX_LENGTH),
   idempotencyKey: z.string().max(IDEMPOTENCY_KEY_MAX_LENGTH).optional(),
 });
+
+type AddPlatformNoteInput = z.input<typeof addPlatformNoteInput>;
 
 type AutomationNote = z.infer<typeof addPlatformNoteInput>;
 
