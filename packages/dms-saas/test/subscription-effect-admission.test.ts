@@ -385,16 +385,17 @@ describe("subscription effect admission with real Mongo mutations, cancellation 
     const model = GetModel(TenantSubscriptionModel, tenantId);
     const user = Object.assign(new User(), { _id: randomUUID() });
     const results = await Promise.all(
-      Array.from({ length: CONTENDERS }, () =>
-        insertFreeSubscription(user, "free", tenantId, model),
+      Array.from({ length: CONTENDERS }, (_, index) =>
+        insertFreeSubscription(user, `free-${index}`, tenantId, model),
       ),
     );
+    const subscription = await model.findOne();
     expect(results.filter((result) => result.changed)).toHaveLength(1);
     expect(results.map((result) => result.planId)).toEqual(
-      Array.from({ length: CONTENDERS }, () => "free"),
+      Array.from({ length: CONTENDERS }, () => subscription?.planId),
     );
     expect(await model.table.count().run()).toBe(1);
-    expect((await model.findOne())?._id).toBe(tenantId);
+    expect(subscription?._id).toBe(tenantId);
   });
 
   it("settles a free grant and a first checkout that race on one subscription", async () => {
