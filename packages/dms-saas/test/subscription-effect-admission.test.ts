@@ -17,6 +17,7 @@ import {
 import { requestWorkspaceDeletion } from "../src/workspaces/deletion";
 import { scheduleDeferredPlanChange } from "../src/plan-changes/deferred";
 import { useMongoDatabase } from "./helpers/mongo";
+import { lineUpInserts } from "./helpers/replicas";
 import { allowCheckoutRedirects } from "./helpers/workspaces";
 import { useSuiteStripe } from "./helpers/stripe";
 
@@ -379,20 +380,38 @@ describe("subscription effect admission with real Mongo mutations, cancellation 
     });
   });
 
-  it("uses a single initial subscription identity for concurrent free grants", async () => {
+  it("settles every concurrent free grant on one subscription", async () => {
     const tenantId = randomUUID();
     const model = GetModel(TenantSubscriptionModel, tenantId);
     const user = Object.assign(new User(), { _id: randomUUID() });
-    const results = await Promise.allSettled(
-      Array.from({ length: CONTENDERS }, () =>
-        insertFreeSubscription(user, "free", tenantId, model),
+    const results = await Promise.all(
+      Array.from({ length: CONTENDERS }, (_, index) =>
+        insertFreeSubscription(user, `free-${index}`, tenantId, model),
       ),
     );
-    expect(
-      results.filter((result) => result.status === "fulfilled"),
-    ).toHaveLength(1);
+    const subscription = await model.findOne();
+    expect(results.filter((result) => result.changed)).toHaveLength(1);
+    expect(results.map((result) => result.planId)).toEqual(
+      Array.from({ length: CONTENDERS }, () => subscription?.planId),
+    );
     expect(await model.table.count().run()).toBe(1);
-    expect((await model.findOne())?._id).toBe(tenantId);
+    expect(subscription?._id).toBe(tenantId);
+  });
+
+  it("settles a free grant and a first checkout that race on one subscription", async () => {
+    const request = { ...(await checkoutRequest()), subscription: undefined };
+    const model = request.tenantSubscriptionModel;
+    await model.table.delete().run();
+    lineUpInserts(TenantSubscriptionModel.prototype);
+
+    await Promise.all([
+      insertFreeSubscription(request.user, "free", request.tenantId, model),
+      startPaidCheckout(request),
+    ]);
+
+    expect(await model.table.count().run()).toBe(1);
+    expect((await model.findOne())?._id).toBe(request.tenantId);
+    expect(api.createSession).toHaveBeenCalledTimes(1);
   });
 
   it("writes a revision and an empty coverage ledger on a free grant", async () => {

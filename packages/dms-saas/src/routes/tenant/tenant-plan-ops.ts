@@ -335,29 +335,44 @@ export function startsPaidCheckout(
   return isPaidPlan(newPlan) && !liveStripeSubscriptionId(subscription);
 }
 
+/**
+ * Creates the first subscription of a workspace on a free plan. When a
+ * concurrent writer created it first, that row stands and the result reports
+ * it unchanged.
+ */
 export async function insertFreeSubscription(
   user: User,
   newPlanId: string,
   tenantId: string,
   tenantSubscriptionModel: TenantSubscriptionModel,
 ): Promise<ChangePlanResult> {
-  await runTenantLifecycleOperation(tenantId, () =>
-    tenantSubscriptionModel.insert([
-      {
-        _id: tenantId,
-        planId: newPlanId,
-        status: ACTIVE_STATUS,
-        isComplimentary: false,
-        paidUsagePeriods: [],
-        stripeCustomerId: null,
-        stripeSubscriptionId: null,
-        stripeCheckoutSessionId: null,
-        createdBy: user._id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]),
-  );
+  const existing = await runTenantLifecycleOperation(tenantId, async () => {
+    try {
+      await tenantSubscriptionModel.insert([
+        {
+          _id: tenantId,
+          planId: newPlanId,
+          status: ACTIVE_STATUS,
+          isComplimentary: false,
+          paidUsagePeriods: [],
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          stripeCheckoutSessionId: null,
+          createdBy: user._id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+      return undefined;
+    } catch (error) {
+      const winner = await tenantSubscriptionModel.get(tenantId);
+      if (!winner) throw error;
+      return winner;
+    }
+  });
+  if (existing) {
+    return { ...UNCHANGED_RESULT_BASE, planId: existing.planId ?? "" };
+  }
   await recomputeTenantBillingState(tenantId);
   return {
     ...UNCHANGED_RESULT_BASE,
