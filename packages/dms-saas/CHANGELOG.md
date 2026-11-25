@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.15.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.14.0...v0.15.0)
+
+### 🩹 Fixes
+
+- **billing:** Let a concurrent first subscription insert lose to the existing row ([#330](https://github.com/AntelopeJS/dms-saas/pull/330))
+
+### 💅 Refactors
+
+- **frontend:** Lint the whole module under the tooling-configs 0.10 comment rule ([#328](https://github.com/AntelopeJS/dms-saas/pull/328))
+
+#### ⚠️ Breaking Changes
+
+- **frontend:** Lint the whole module under the tooling-configs 0.10 comment rule ([#328](https://github.com/AntelopeJS/dms-saas/pull/328))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.14.0
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.13.0...v0.14.0)
