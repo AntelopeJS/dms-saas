@@ -46,9 +46,13 @@ watch(
 	() => props.modelValue,
 	(value) => {
 		const parsed = readSegmentGroup(value)
+		const wasUnreadable = unreadable.value
 		unreadable.value = parsed === null
 		if (parsed === null) draft.conditions.value = null
-		else if (JSON.stringify(parsed) !== JSON.stringify(state.value))
+		else if (
+			wasUnreadable ||
+			JSON.stringify(parsed) !== JSON.stringify(state.value)
+		)
 			publish(parsed)
 	},
 )

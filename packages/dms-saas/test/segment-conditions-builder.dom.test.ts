@@ -91,6 +91,21 @@ describe("SegmentConditionsBuilder", () => {
     },
   );
 
+  it("hides the editor when the rules turn unreadable, and shows it again once they are read", async () => {
+    const readable = { logical: "or", conditions: [] };
+    const builder = mountBuilder(JSON.stringify(readable));
+
+    await builder.setProps({ modelValue: JSON.stringify(UNREADABLE_RULES) });
+    expect(builder.find(".edit-rules").exists()).toBe(false);
+    expect(states.get("saas-segment-draft:conditions")?.value).toBeNull();
+
+    await builder.setProps({ modelValue: JSON.stringify(readable) });
+    expect(builder.find(".edit-rules").exists()).toBe(true);
+    expect(states.get("saas-segment-draft:conditions")?.value).toEqual(
+      readable,
+    );
+  });
+
   it("publishes the edits of rules it reads", async () => {
     const builder = mountBuilder(
       JSON.stringify({ logical: "and", conditions: [] }),

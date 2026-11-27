@@ -139,8 +139,7 @@ function assertLeafCondition(
     `${ERRORS}.invalid_operator`,
   );
   assert(
-    "value" in condition &&
-      isRuleValue(condition.value) &&
+    isRuleValue(condition.value) &&
       (isString(operator) && LIST_OPERATORS.has(operator)) ===
         Array.isArray(condition.value),
     HTTP_BAD_REQUEST,

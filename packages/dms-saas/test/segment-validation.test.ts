@@ -143,9 +143,16 @@ describe("segment rules validation", () => {
     );
   });
 
-  it("accepts a null value", () => {
-    const rules = leaf({ field: "email", operator: "contains", value: null });
-
+  it.each<[string, JsonValue]>([
+    ["null", leaf({ field: "email", operator: "contains", value: null })],
+    [
+      "an empty string",
+      leaf({ field: "email", operator: "contains", value: "" }),
+    ],
+    ["a number", leaf({ field: "workspacesCount", operator: "gt", value: 0 })],
+    ["a boolean", leaf({ field: "isValidated", operator: "eq", value: true })],
+    ["an empty list", workspaceLeaf([])],
+  ])("accepts %s, a value the rules editor writes", (_name, rules) => {
     expect(parseSegmentConditions(rules)).toEqual(rules);
   });
 });
