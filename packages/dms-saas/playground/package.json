@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@antelopejs/core": ">=1.24.5 <1.25.0",
-    "@antelopejs/dms-frontend": ">=0.11.9 <0.12.0",
+    "@antelopejs/dms-frontend": ">=0.11.11 <0.12.0",
     "@types/node": "^22.14.1",
     "dotenv": "^17.4.2",
     "rimraf": "^6.0.1",
