@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { parseSegmentGroup } from '../build/segments/tree'
+import { emptySegmentGroup, readSegmentGroup } from '../build/segments/tree'
 import type {
 	SegmentConditionGroup,
 	SegmentLogical,
@@ -22,9 +22,9 @@ const catalog = useSegmentCatalog(props.fieldsCatalogUrl)
 const { sentence } = useSegmentSentence(catalog)
 const draft = useSegmentDraft()
 
-const state = ref<SegmentConditionGroup>(
-	parseSegmentGroup(props.modelValue ?? props.initialValue),
-)
+const stored = readSegmentGroup(props.modelValue ?? props.initialValue)
+const unreadable = ref(stored === null)
+const state = ref<SegmentConditionGroup>(stored ?? emptySegmentGroup())
 const counts = computed(() => draft.preview.value?.nodeCounts ?? {})
 const summary = computed(() => sentence(state.value))
 
@@ -45,13 +45,16 @@ function setLogical(logical: SegmentLogical): void {
 watch(
 	() => props.modelValue,
 	(value) => {
-		const parsed = parseSegmentGroup(value)
-		if (JSON.stringify(parsed) !== JSON.stringify(state.value)) publish(parsed)
+		const parsed = readSegmentGroup(value)
+		unreadable.value = parsed === null
+		if (parsed === null) draft.conditions.value = null
+		else if (JSON.stringify(parsed) !== JSON.stringify(state.value))
+			publish(parsed)
 	},
 )
 
 onMounted(() => {
-	draft.conditions.value = state.value
+	draft.conditions.value = unreadable.value ? null : state.value
 })
 
 onBeforeUnmount(() => {
@@ -62,7 +65,14 @@ onBeforeUnmount(() => {
 
 <template>
 	<div class="flex flex-col gap-3">
-		<div v-if="catalog.isLoading.value" class="flex flex-col gap-2">
+		<UAlert
+			v-if="unreadable"
+			color="error"
+			variant="subtle"
+			icon="i-ph-warning-circle"
+			:title="$t('saas.segments.builder.unreadable_rules')"
+		/>
+		<div v-else-if="catalog.isLoading.value" class="flex flex-col gap-2">
 			<USkeleton class="h-5 w-72" />
 			<USkeleton v-for="row in 3" :key="row" class="h-8 w-full" />
 		</div>
