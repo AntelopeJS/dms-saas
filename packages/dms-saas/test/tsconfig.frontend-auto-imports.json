@@ -24,6 +24,7 @@
     "./public-screens-frontend.test.ts",
     "./read-only-presenters.dom.test.ts",
     "./saas-registration.test.ts",
+    "./segment-conditions-builder.dom.test.ts",
     "./status-vocabulary.test.ts",
     "./workspace-list-auth-boundary.test.ts",
     "./helpers/api-data.ts"

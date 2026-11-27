@@ -7,7 +7,12 @@ import type {
 import type { SegmentNode } from "./segment-evaluator";
 import { findSegmentField, type SegmentFieldCatalog } from "./segment-fields";
 import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
-import { isObjectOrNull, isString } from "./primitive-guards";
+import {
+  isBoolean,
+  isNumber,
+  isObjectOrNull,
+  isString,
+} from "./primitive-guards";
 
 const HTTP_BAD_REQUEST = 400;
 const ERRORS = "saas.errors.segments";
@@ -134,10 +139,28 @@ function assertLeafCondition(
     `${ERRORS}.invalid_operator`,
   );
   assert(
-    (isString(operator) && LIST_OPERATORS.has(operator)) ===
-      Array.isArray(condition.value),
+    isRuleValue(condition.value) &&
+      (isString(operator) && LIST_OPERATORS.has(operator)) ===
+        Array.isArray(condition.value),
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_value`,
+  );
+}
+
+type RuleScalar = string | number | boolean;
+
+/** The values the rules editor reads: null, a scalar, or a list of scalars. */
+type RuleValue = RuleScalar | RuleScalar[] | null;
+
+function isRuleScalar(value: unknown): value is RuleScalar {
+  return isString(value) || isNumber(value) || isBoolean(value);
+}
+
+function isRuleValue(value: unknown): value is RuleValue {
+  return (
+    value === null ||
+    isRuleScalar(value) ||
+    (Array.isArray(value) && value.every(isRuleScalar))
   );
 }
 
