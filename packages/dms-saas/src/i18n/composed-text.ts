@@ -8,12 +8,7 @@ import type {
   ComposedTextRelativeDateParam,
   Tone,
 } from "@antelopejs/interface-dms/base";
-
-/**
- * Builders of the texts a route answers for the browser to write in the
- * reader's language: the i18n key and the raw values, never a finished
- * sentence (see `ComposedText`).
- */
+import { ownValue } from "../utils/own-value";
 
 /** Joins two texts: `"{first} · {rest}"`, nested for longer lists. */
 const DOT_LIST_KEY = "saas.text.dot_list";
@@ -127,5 +122,5 @@ const CELL_TONES: Record<Tone, CellTone> = {
 
 /** The text tone of a cell line drawn in a status's tone. */
 export function cellToneOf(tone: Tone): CellTone {
-  return CELL_TONES[tone];
+  return ownValue(CELL_TONES, tone);
 }

@@ -4,9 +4,10 @@ import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import { Parameters, Query } from "@antelopejs/interface-data-api/components";
 import {
   CROSS_INSTANCE,
-  Datum,
   Schema,
   ValueProxy,
+  IsDatum,
+  IsValueProxy,
 } from "@antelopejs/interface-database";
 import { IsQueryStage } from "@antelopejs/interface-database/common";
 import { RegisterSchema } from "@antelopejs/interface-database-decorators";
@@ -59,12 +60,12 @@ describe("admin user invoice filters", () => {
       "eq",
       row,
     );
-    assert(predicate instanceof ValueProxy);
+    assert(IsValueProxy(predicate));
     const stages = predicate.build();
     expect(stages[0]).toMatchObject({ stage: "constant", args: [true] });
     expect(stages[1].stage).toBe("eq");
     const membership: unknown = stages[1].args[0];
-    assert(membership instanceof Datum);
+    assert(IsDatum(membership));
     expect(membership.build()).toMatchObject([
       { stage: "schema", options: { id: TenantMemberModel.schemaName } },
       { stage: "instance", options: { id: CROSS_INSTANCE } },
@@ -77,7 +78,7 @@ describe("admin user invoice filters", () => {
     const ownerFilter = membership.build()[4];
     assert(IsQueryStage(ownerFilter, "filter"));
     const condition: unknown = ownerFilter.args[0].args[1];
-    assert(condition instanceof ValueProxy);
+    assert(IsValueProxy(condition));
     const conditionStages = condition.build();
     const [objIndex] = conditionStages.slice(1, 3);
     expect(objIndex?.args).toContain("isTenantOwner");
@@ -88,11 +89,11 @@ describe("admin user invoice filters", () => {
     const ownership = conditionStages.at(-1);
     assert(IsQueryStage(ownership, "and"));
     const ownershipCheck: unknown = ownership.args[0];
-    assert(ownershipCheck instanceof ValueProxy);
+    assert(IsValueProxy(ownershipCheck));
     const comparison = ownershipCheck.build().at(-1);
     assert(IsQueryStage(comparison, "eq"));
     const compared: unknown = comparison.args[0];
-    assert(compared instanceof ValueProxy);
+    assert(IsValueProxy(compared));
     expect(compared.build()).toEqual(row.key("_instance").build());
   });
 

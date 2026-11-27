@@ -80,7 +80,6 @@ export async function GetUpcomingInvoicePreview(
   return getUpcomingInvoicePreview(scope.tenantId);
 }
 
-/** Implements the billing state recomputation interface. */
 /** Implements the tenant billing period read, clipped as renewal invoices are. */
 export async function GetTenantBillingPeriod(
   tenantId: string,

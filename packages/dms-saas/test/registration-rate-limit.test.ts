@@ -1,4 +1,8 @@
-import { HTTPResult, type RequestContext } from "@antelopejs/interface-api";
+import {
+  HTTPResult,
+  type RequestContext,
+  IsHTTPResult,
+} from "@antelopejs/interface-api";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
 import {
@@ -40,7 +44,7 @@ async function statusOf(request: RequestContext): Promise<number> {
     await callRoute("POST", REGISTER_ROUTE, request);
     return 200;
   } catch (refusal) {
-    return refusal instanceof HTTPResult ? refusal.getStatus() : 500;
+    return IsHTTPResult(refusal) ? refusal.getStatus() : 500;
   }
 }
 

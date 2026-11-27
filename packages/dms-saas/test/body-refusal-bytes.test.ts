@@ -1,4 +1,4 @@
-import { HTTPResult } from "@antelopejs/interface-api";
+import { HTTPResult, IsHTTPResult } from "@antelopejs/interface-api";
 import type { User } from "@antelopejs/interface-dms/auth/db";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { describe, expect, it } from "vitest";
@@ -15,7 +15,7 @@ async function refusal(
     await attempt();
   } catch (thrown: unknown) {
     expect(thrown).toBeInstanceOf(HTTPResult);
-    if (thrown instanceof HTTPResult) {
+    if (IsHTTPResult(thrown)) {
       return [thrown.getStatus(), thrown.getContentType(), thrown.getBody()];
     }
   }

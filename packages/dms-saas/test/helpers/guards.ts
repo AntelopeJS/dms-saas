@@ -1,8 +1,8 @@
 import {
   type ControllerClass,
   computeParameter,
-  HTTPResult,
   type RequestContext,
+  IsHTTPResult,
 } from "@antelopejs/interface-api";
 import { controllerRoutes, newController } from "./routes";
 
@@ -32,7 +32,7 @@ export async function guardRefusals(
     ]);
     const bodies = computed.flatMap((outcome): unknown[] =>
       outcome.status === "rejected" &&
-      outcome.reason instanceof HTTPResult &&
+      IsHTTPResult(outcome.reason) &&
       outcome.reason.getStatus() === HTTP_FORBIDDEN
         ? [outcome.reason.getBody()]
         : [],

@@ -1,4 +1,4 @@
-import { HTTPResult } from "@antelopejs/interface-api";
+import { HTTPResult, IsHTTPResult } from "@antelopejs/interface-api";
 import { describe, expect, it } from "vitest";
 import { PlanChangeIncompatibleError } from "../src/plan-changes/guarded-free";
 import { planChangeResponse } from "../src/routes/tenant/tenant-plan-ops";
@@ -15,7 +15,7 @@ describe("a plan change the workspace's inventory refuses", () => {
     ).catch((error: unknown) => error);
 
     expect(refusal).toBeInstanceOf(HTTPResult);
-    if (!(refusal instanceof HTTPResult)) return;
+    if (!IsHTTPResult(refusal)) return;
     expect([
       refusal.getStatus(),
       refusal.getContentType(),

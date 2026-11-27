@@ -96,8 +96,10 @@ function resolveBlockReason(
   status: CreditableStatus,
   creditable: number,
 ): CreditBlockReason | null {
-  if (!MODES_BY_STATUS[status]) {
-    return BLOCK_REASON_BY_STATUS[status] ?? "void";
+  if (!Object.hasOwn(MODES_BY_STATUS, status)) {
+    return Object.hasOwn(BLOCK_REASON_BY_STATUS, status)
+      ? (BLOCK_REASON_BY_STATUS[status] ?? "void")
+      : "void";
   }
   return creditable > 0 ? null : "fully_credited";
 }

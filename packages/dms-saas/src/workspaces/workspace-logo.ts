@@ -2,11 +2,7 @@ import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { AttachmentField } from "@antelopejs/interface-dms/attachments";
 import { DefaultDataTypes } from "@antelopejs/interface-dms/base/data-types/default-types";
-import {
-  CreateReadUrl,
-  DeleteFile,
-  FileNotFoundError,
-} from "@antelopejs/interface-file-storage";
+import { CreateReadUrl, DeleteFile } from "@antelopejs/interface-file-storage";
 import { z } from "zod";
 import { WorkspaceBrandingModel } from "./db/workspace-branding.model";
 
@@ -86,7 +82,8 @@ export async function deleteWorkspaceLogo(tenantId: string): Promise<void> {
   const logo = await branding.getLogo(tenantId);
   if (logo) {
     await DeleteFile(logo.key).catch((error: unknown) => {
-      if (!(error instanceof FileNotFoundError)) throw error;
+      if (!(error instanceof Error && error.name === "FileNotFoundError"))
+        throw error;
     });
   }
   await branding.delete(tenantId);

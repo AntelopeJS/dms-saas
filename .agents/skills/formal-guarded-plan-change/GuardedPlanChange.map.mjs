@@ -2,9 +2,7 @@
  * Reader's view of GuardedPlanChange.tla for /statechart: one region for the
  * plan change on the subscription, one for the inventory barrier, and one for
  * Stripe.
- */
-
-/**
+ *
  * @typedef {{
  *   sub: { phase: string; plan: string };
  *   life: { barrier: string; closed: boolean; active: string[] };

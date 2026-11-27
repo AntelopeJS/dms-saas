@@ -5,9 +5,9 @@ import { expect } from "vitest";
  * literal holding one an untyped value. These are typed as what an
  * expectation needs of them: an opaque value that `toEqual` and `toMatchObject`
  * check against the received one.
+ *
+ * Matches any string.
  */
-
-/** Matches any string. */
 export const ANY_STRING: unknown = expect.any(String);
 
 /** Matches any non-empty string. */

@@ -19,9 +19,9 @@
  * workspace, so a standard deployment needs no configuration. Any endpoint
  * neither declared nor named in the frontend server's
  * `DMS_AUTH_ESTABLISH_ENDPOINTS` is answered 403 and never called.
+ *
+ * Loader route that opens a session from a backend-issued token pair.
  */
-
-/** Loader route that opens a session from a backend-issued token pair. */
 export const SESSION_ESTABLISH_ENDPOINT = "/auth/establish";
 
 /** DMS API route that provisions the workspace and mints that token pair. */

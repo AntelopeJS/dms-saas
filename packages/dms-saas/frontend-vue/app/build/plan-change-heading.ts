@@ -4,9 +4,9 @@
  * trial charges nothing today, and a cancelled workspace choosing a plan
  * again resubscribes — through Checkout for a paid plan, through the review
  * for a free one.
+ *
+ * What the review step of a plan change is titled after.
  */
-
-/** What the review step of a plan change is titled after. */
 export type PlanChangeHeadingCase =
 	| 'resubscribe'
 	| 'free'

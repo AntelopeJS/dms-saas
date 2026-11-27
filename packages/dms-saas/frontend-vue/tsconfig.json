@@ -1,4 +1,4 @@
 {
 	"extends": "../.dms-types/tsconfig.json",
-	"compilerOptions": { "strict": true }
+	"compilerOptions": { "strict": true, "moduleDetection": "force" }
 }

@@ -1,4 +1,4 @@
-import { HTTPResult } from "@antelopejs/interface-api";
+import { HTTPResult, IsHTTPResult } from "@antelopejs/interface-api";
 
 /**
  * The HTTP refusal a pending call settles with. Fails the test when the call
@@ -12,7 +12,7 @@ export async function httpRefusal(
   try {
     await settling;
   } catch (error) {
-    if (error instanceof HTTPResult) return error;
+    if (IsHTTPResult(error)) return error;
     throw error;
   }
   throw new Error("Expected an HTTP refusal, the call succeeded");

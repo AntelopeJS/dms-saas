@@ -69,7 +69,7 @@ async function enforceSeatCapacity(
   assert(
     !constraints.admissionBlocked,
     409,
-    "Inventory preparation is in progress",
+    "saas.errors.plan.admission_blocked",
   );
   if (constraints.pendingPlan) {
     assert(
@@ -174,7 +174,7 @@ async function enforceSeatOnMemberChange(
   assert(
     !constraints.admissionBlocked,
     409,
-    "Inventory preparation is in progress",
+    "saas.errors.plan.admission_blocked",
   );
   const nextHoldsSeat = !(await isPlatformSupportEntry(
     userId,
