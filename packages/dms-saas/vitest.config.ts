@@ -8,6 +8,14 @@ const interfaceSourceRoot = fileURLToPath(
 );
 
 /**
+ * How long one test of the Mongo-backed `unit` project may take. The Windows
+ * runners of the nightly run these tests several times slower than Linux, and
+ * the first test of a worker also shares the runner with the imports of the
+ * other workers.
+ */
+const UNIT_TEST_TIMEOUT_MS = 20_000;
+
+/**
  * Scoped to this module's own tests: the playground caches the DMS package
  * sources, which carry a test suite the default glob would collect.
  */
@@ -28,6 +36,7 @@ export default defineConfig({
           include: ["test/**/*.test.ts"],
           exclude: ["test/**/*.dom.test.ts", "test/**/*.journeys.test.ts"],
           globalSetup: ["test/global-setup.ts"],
+          testTimeout: UNIT_TEST_TIMEOUT_MS,
         },
       },
       {
