@@ -115,11 +115,12 @@ function diffFeatures(from: SeedPlan, to: SeedPlan): PlanMigrationFeatureDiff {
   const fromKeys = Object.keys(from.features);
   const toKeys = Object.keys(to.features);
   return {
-    removed: fromKeys.filter((key) => !(key in to.features)),
-    added: toKeys.filter((key) => !(key in from.features)),
+    removed: fromKeys.filter((key) => !toKeys.includes(key)),
+    added: toKeys.filter((key) => !fromKeys.includes(key)),
     changed: fromKeys
       .filter(
-        (key) => key in to.features && from.features[key] !== to.features[key],
+        (key) =>
+          toKeys.includes(key) && from.features[key] !== to.features[key],
       )
       .map((key) => ({
         key,

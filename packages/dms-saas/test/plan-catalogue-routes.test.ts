@@ -1,4 +1,4 @@
-import { HTTPResult } from "@antelopejs/interface-api";
+import { HTTPResult, IsHTTPResult } from "@antelopejs/interface-api";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import type { User } from "@antelopejs/interface-dms/auth/db";
@@ -151,9 +151,11 @@ async function withUnconfiguredStripeResult<T>(
 /** The HTTP refusal `operation` answers with; throws when it is not refused. */
 async function refusal(operation: () => Promise<object>): Promise<HTTPResult> {
   const [outcome] = await Promise.allSettled([operation()]);
-  if (outcome?.status !== "rejected" || !(outcome.reason instanceof HTTPResult))
+  const reason: unknown =
+    outcome?.status === "rejected" ? outcome.reason : undefined;
+  if (!IsHTTPResult(reason))
     throw new Error("The operation was not refused with an HTTP answer");
-  return outcome.reason;
+  return reason;
 }
 
 beforeAll(async () => {

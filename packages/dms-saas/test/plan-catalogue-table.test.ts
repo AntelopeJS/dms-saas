@@ -4,7 +4,7 @@ import { ImplementInterface } from "@antelopejs/interface-core";
 import { GetDataControllerMeta } from "@antelopejs/interface-data-api";
 import { Parameters as DataParameters } from "@antelopejs/interface-data-api/components";
 import { AccessMode } from "@antelopejs/interface-data-api/metadata";
-import { ValueProxy } from "@antelopejs/interface-database";
+import { ValueProxy, IsValueProxy } from "@antelopejs/interface-database";
 import * as tableViewBase from "@antelopejs/interface-dms/base";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { assert, beforeAll, describe, expect, it, vi } from "vitest";
@@ -109,7 +109,7 @@ describe("the plans table scope", () => {
         row,
       );
 
-      assert(predicate instanceof ValueProxy);
+      assert(IsValueProxy(predicate));
       expect(predicate.build().at(-1)).toMatchObject({
         stage: "eq",
         args: [deleted],

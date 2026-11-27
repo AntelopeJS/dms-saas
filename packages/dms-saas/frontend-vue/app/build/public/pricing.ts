@@ -138,6 +138,16 @@ export function findParentPlan(
 	return shown.find((entry) => entry._id === plan.inheritsFromPlanId) ?? null
 }
 
+/** A plan's value for a feature, never one inherited from `Object.prototype`. */
+function ownFeatureValue(
+	plan: PublicPlan,
+	featureId: string,
+): PlanFeatureValue | undefined {
+	return Object.hasOwn(plan.featureValues, featureId)
+		? plan.featureValues[featureId]
+		: undefined
+}
+
 /**
  * The main features a plan card lists: those it includes, and when it
  * extends a plan shown beside it, only those it improves on.
@@ -151,12 +161,12 @@ export function featureHighlights(
 		.filter((feature) => !feature.isDetailRow)
 		.map((feature) => ({
 			feature,
-			value: plan.featureValues[feature.featureId],
+			value: ownFeatureValue(plan, feature.featureId),
 		}))
 		.filter(({ value }) => isIncludedValue(value))
 		.filter(
 			({ feature, value }) =>
-				!parent || parent.featureValues[feature.featureId] !== value,
+				!parent || ownFeatureValue(parent, feature.featureId) !== value,
 		)
 }
 

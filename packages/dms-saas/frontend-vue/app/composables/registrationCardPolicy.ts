@@ -56,5 +56,6 @@ export function isPaymentStepShown(
 	policy: RegistrationPaymentMethodPolicy,
 	skipsPaymentMethod: boolean,
 ): boolean {
+	if (!Object.hasOwn(PAYMENT_STEP_RULES, policy)) return true
 	return PAYMENT_STEP_RULES[policy](skipsPaymentMethod)
 }

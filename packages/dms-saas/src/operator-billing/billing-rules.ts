@@ -9,6 +9,7 @@ import {
   REFUND_PRORATA_MODES,
 } from "../db";
 import { isPlanStripeSyncCurrent } from "../stripe/sync-plan";
+import { ownValue } from "../utils/own-value";
 
 const MAX_DELAY_DAYS = 365;
 const MAX_RETENTION_DAYS = 3650;
@@ -178,7 +179,7 @@ export function legalDocumentReleases(
 ): LegalDocumentReleases {
   const release = (key: LegalDocumentKey): LegalDocumentRelease => ({
     ...versions[key],
-    path: LEGAL_DOCUMENT_PATHS[key],
+    path: ownValue(LEGAL_DOCUMENT_PATHS, key),
   });
   return {
     termsOfUseRelease: release("termsOfUse"),

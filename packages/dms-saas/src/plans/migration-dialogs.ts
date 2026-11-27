@@ -10,6 +10,7 @@ import type {
 } from "./migration-detail";
 import type { UncertainResolution } from "../workers/plan-migration-resolution";
 import { type StripeReading, stripePlanText } from "./migration-workspaces";
+import { ownValue } from "../utils/own-value";
 
 const T = "$saas.catalog.migrations";
 const NOTE_MAX_LENGTH = 500;
@@ -112,7 +113,7 @@ export function resolveDialog(
   resolution: UncertainResolution,
   reading: StripeReading,
 ): ConfirmDialogSerialized {
-  const agrees = reading.stripePlan === AGREEING_SIDE[resolution];
+  const agrees = reading.stripePlan === ownValue(AGREEING_SIDE, resolution);
   const isMoved = resolution === "moved";
   return serializeConfirmDialog({
     title: `${T}.resolve.${resolution}_title`,

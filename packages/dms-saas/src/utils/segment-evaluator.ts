@@ -11,6 +11,7 @@ import {
   isObjectOrNull,
   isString,
 } from "./primitive-guards";
+import { ownValue } from "./own-value";
 
 export type SegmentNode =
   | SegmentCondition
@@ -105,7 +106,7 @@ function coerce(operand: Operand, kind: FieldKind): Operand {
   if (value === null || value === undefined || kind === "unknown") {
     return operand;
   }
-  return KIND_COERCERS[kind](operand);
+  return ownValue(KIND_COERCERS, kind)(operand);
 }
 
 function getKind(fieldId: string): FieldKind {

@@ -100,7 +100,7 @@ function setParent(value: string | undefined): void {
 }
 
 function sourceOf(feature: CatalogFeature): FeatureSource {
-	const isOwn = feature._id in access.value.extraFeatures
+	const isOwn = Object.hasOwn(access.value.extraFeatures, feature._id)
 	if (parent.value && parentValues.value.has(feature._id)) {
 		return isOwn ? 'overridden' : 'inherited'
 	}
@@ -108,7 +108,7 @@ function sourceOf(feature: CatalogFeature): FeatureSource {
 }
 
 function valueOf(feature: CatalogFeature): PlanFeatureValue {
-	if (feature._id in access.value.extraFeatures) {
+	if (Object.hasOwn(access.value.extraFeatures, feature._id)) {
 		return access.value.extraFeatures[feature._id] ?? null
 	}
 	const inherited = parentValues.value.get(feature._id)

@@ -21,6 +21,7 @@ import { liveStripeSubscriptionId } from "../../workspaces/first-payment";
 import { isCheckoutTrialAvailable } from "./tenant-plan-checkout";
 import { isPaidPlan, planQuantity } from "./tenant-plan-ops";
 import { toMinorUnits } from "../../utils/money";
+import { ownValue } from "../../utils/own-value";
 
 const LOG_PREFIX = "[dms-saas:plan-preview]";
 const MS_PER_SECOND = 1000;
@@ -120,7 +121,9 @@ export function recurringAmountMinorUnits(
 
 function addInterval(date: Date, interval: PlanInterval): Date {
   const next = new Date(date);
-  next.setUTCMonth(next.getUTCMonth() + MONTHS_PER_INTERVAL[interval]);
+  next.setUTCMonth(
+    next.getUTCMonth() + ownValue(MONTHS_PER_INTERVAL, interval),
+  );
   return next;
 }
 

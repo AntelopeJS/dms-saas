@@ -12,6 +12,7 @@ import {
   CROSS_INSTANCE,
   Schema,
   ValueProxy,
+  IsValueProxy,
 } from "@antelopejs/interface-database";
 import * as tenantAccess from "@antelopejs/interface-dms/tenant-access";
 import { TableViewMeta, TableViewRoutes } from "@antelopejs/interface-dms/base";
@@ -215,7 +216,7 @@ describe.each(CONTROLLERS)("%s invoice scope", (Controller) => {
       ...filter,
       row,
     );
-    assert(predicate instanceof ValueProxy);
+    assert(IsValueProxy(predicate));
     expect(predicate.build().at(-1)).toMatchObject({
       stage: "eq",
       args: ["invoice"],

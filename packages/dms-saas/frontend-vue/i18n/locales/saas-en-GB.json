@@ -33,6 +33,7 @@
 				"invalid_interval": "Plan billing interval must be monthly or yearly",
 				"no_stripe_price": "Plan has no Stripe price",
 				"seat_limit_reached": "The plan's member limit has been reached",
+				"admission_blocked": "Inventory preparation is in progress",
 				"no_pending_change": "No scheduled plan change to cancel",
 				"unpaid_invoice_blocks_downgrade": "An invoice is unpaid. Settle it before changing to a cheaper plan.",
 				"no_free_plan": "No free plan is available for sign-up right now.",

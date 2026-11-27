@@ -17,6 +17,7 @@ import { type BillingRules, defaultBillingRules } from "../../operator-billing";
 import { FormInsightType } from "../../utils";
 import { SAAS_MODULE_ID } from "../module";
 import { configurationCategory } from "./categories";
+import { ownValue } from "../../utils/own-value";
 
 const RULES = "$saas.operator_billing.billing_rules";
 const DAYS_UNIT = `${RULES}.days_unit`;
@@ -180,7 +181,7 @@ const refundSection: FormSection = {
 };
 
 function legalDocumentGroup(key: LegalDocumentKey): FieldGroup {
-  const slug = LEGAL_DOCUMENT_SLUGS[key];
+  const slug = ownValue(LEGAL_DOCUMENT_SLUGS, key);
   return {
     id: `${key}Group`,
     label: `${RULES}.legal.${slug}`,

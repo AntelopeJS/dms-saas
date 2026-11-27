@@ -3,9 +3,9 @@ import {
   type ControllerClass,
   computeParameter,
   getRegisteredRouteHandlers,
-  HTTPResult,
   type RequestContext,
   type RouteHandler,
+  IsHTTPResult,
 } from "@antelopejs/interface-api";
 
 const HTTP_FORBIDDEN = 403;
@@ -114,7 +114,7 @@ export async function refusesAsOwnerOnly(
   return computed.some(
     (outcome) =>
       outcome.status === "rejected" &&
-      outcome.reason instanceof HTTPResult &&
+      IsHTTPResult(outcome.reason) &&
       outcome.reason.getStatus() === OWNER_ONLY_REFUSAL.status &&
       outcome.reason.getBody() === OWNER_ONLY_REFUSAL.body,
   );

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { HTTPResult } from "@antelopejs/interface-api";
+import { HTTPResult, IsHTTPResult } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
@@ -176,18 +176,14 @@ async function runEffect(
     await model.markSucceeded(action, outcome);
   } catch (error) {
     const failure =
-      error instanceof HTTPResult &&
-      (await isRetryableValidationFailure(action))
+      IsHTTPResult(error) && (await isRetryableValidationFailure(action))
         ? model.markFailed(action, errorCodeOf(error))
         : model.markReconciliationRequired(
             action,
             RECONCILIATION_REQUIRED_CODE,
           );
     await failure.catch(() => {});
-    if (
-      error instanceof HTTPResult &&
-      errorCodeOf(error) !== GENERIC_FAILURE_CODE
-    ) {
+    if (IsHTTPResult(error) && errorCodeOf(error) !== GENERIC_FAILURE_CODE) {
       throw error;
     }
     Logging.Error(`[dms-saas:operator] operation ${action._id} failed`, error);
