@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { testTimeouts } from "@antelopejs/tooling-configs/vitest";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vitest/config";
 
@@ -6,14 +7,6 @@ const sourceRoot = fileURLToPath(new URL("./src", import.meta.url));
 const interfaceSourceRoot = fileURLToPath(
   new URL("../interface-dms-saas/src", import.meta.url),
 );
-
-/**
- * How long one test of the Mongo-backed `unit` project may take. The Windows
- * runners of the nightly run these tests several times slower than Linux, and
- * the first test of a worker also shares the runner with the imports of the
- * other workers.
- */
-const UNIT_TEST_TIMEOUT_MS = 20_000;
 
 /**
  * Scoped to this module's own tests: the playground caches the DMS package
@@ -28,6 +21,7 @@ export default defineConfig({
     },
   },
   test: {
+    ...testTimeouts,
     projects: [
       {
         extends: true,
@@ -36,7 +30,6 @@ export default defineConfig({
           include: ["test/**/*.test.ts"],
           exclude: ["test/**/*.dom.test.ts", "test/**/*.journeys.test.ts"],
           globalSetup: ["test/global-setup.ts"],
-          testTimeout: UNIT_TEST_TIMEOUT_MS,
         },
       },
       {
@@ -46,7 +39,9 @@ export default defineConfig({
           include: ["test/**/*.journeys.test.ts"],
           globalSetup: ["test/journeys/global-setup.ts"],
           fileParallelism: false,
+          // oxlint-disable-next-line antelopejs/shared-test-timeout -- each journey test boots a whole run of the playground with MongoDB
           testTimeout: 300_000,
+          // oxlint-disable-next-line antelopejs/shared-test-timeout -- the global setup and the per-test database of a journey take minutes on a cold runner
           hookTimeout: 1_200_000,
         },
       },

@@ -12,8 +12,8 @@ importers:
         specifier: '>=0.24.0 <0.25.0'
         version: 0.24.3(@antelopejs/core@1.24.6)(@playwright/test@1.65.1)(bare-buffer@3.7.3)(typescript@6.0.3)
       '@antelopejs/tooling-configs':
-        specifier: ^0.10.7
-        version: 0.10.7(@nuxt/eslint-config@1.17.0(@typescript-eslint/utils@8.73.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.46)(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(knip@6.41.0)(mongodb-memory-server@11.3.0(bare-buffer@3.7.3))(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.1)(sharp@0.35.5(@types/node@24.19.2))
+        specifier: ^0.10.10
+        version: 0.10.10(@nuxt/eslint-config@1.17.0(@typescript-eslint/utils@8.73.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.46)(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(knip@6.41.0)(mongodb-memory-server@11.3.0(bare-buffer@3.7.3))(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.1)(sharp@0.35.5(@types/node@24.19.2))
       '@playwright/test':
         specifier: ~1.65.0
         version: 1.65.1
@@ -357,6 +357,40 @@ packages:
 
   '@antelopejs/mongodb@1.8.10':
     resolution: {integrity: sha512-oafRmx+9uOztWOYegN381Qiwsbce8fMudxc69vbhYMABM4OanwlaWnf65UqlJ1sUoJQt9mfocTAtjz9SrHDFyg==}
+
+  '@antelopejs/tooling-configs@0.10.10':
+    resolution: {integrity: sha512-pANsSnTFe1rCbgxEEdWQO7HBY8dO6i8e8nDYTiZY9Ef0m/7vtV7BWNZ1STfEeyBFti9PrRRb9/3Y+epPgZuvkA==}
+    engines: {node: '>=22.18.0'}
+    hasBin: true
+    peerDependencies:
+      '@nuxt/eslint-config': '>=1.2.0'
+      eslint-plugin-perfectionist: '>=5.0.0'
+      knip: '>=6.0.0'
+      mongodb-memory-server: '>=10.0.0'
+      oxfmt: ^0.66.0 || ^0.77.0 || ^0.79.0 || ^0.80.0
+      oxlint: 1.81.0 || 1.94.0 || 1.95.0
+      pixelmatch: '>=7.0.0'
+      playwright-core: '>=1.56.0'
+      sharp: '>=0.34.0'
+    peerDependenciesMeta:
+      '@nuxt/eslint-config':
+        optional: true
+      eslint-plugin-perfectionist:
+        optional: true
+      knip:
+        optional: true
+      mongodb-memory-server:
+        optional: true
+      oxfmt:
+        optional: true
+      oxlint:
+        optional: true
+      pixelmatch:
+        optional: true
+      playwright-core:
+        optional: true
+      sharp:
+        optional: true
 
   '@antelopejs/tooling-configs@0.10.7':
     resolution: {integrity: sha512-13abD0BhsR9RF6LQoYYKa+XBknlmcrZVB6iW3BwdfHKu6pPG4ClhAQCLJSSPYtbTMuvNU4imI+dVFSB78TdTnQ==}
@@ -1834,6 +1868,10 @@ packages:
     resolution: {integrity: sha512-YT6htikBOBQ00XDxZpRZLZ0anEDo7h9s4+YvjRU0/Ng/cLd0D6SZQ3tsms4g/GDer/z8UKlegC5iptEfyRXJcw==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
+  '@oxlint/plugins@1.95.0':
+    resolution: {integrity: sha512-wb81nObfxWVASxtMQknyL4A387XDVuSIgpL1/wlhWzGpWLAGMzEvI+xWXJ242Bk8qqAmgDwG6ejetKnLISTGGw==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+
   '@phun-ky/typeof@2.0.3':
     resolution: {integrity: sha512-oeQJs1aa8Ghke8JIK9yuq/+KjMiaYeDZ38jx7MhkXncXlUKjqQ3wEm2X3qCKyjo+ZZofZj+WsEEiqkTtRuE2xQ==}
     engines: {node: ^20.9.0 || >=22.0.0, npm: '>=10.8.2'}
@@ -3093,9 +3131,6 @@ packages:
 
   brace-expansion@1.1.22:
     resolution: {integrity: sha512-CKLDTuSsN0+r1ThM0WkzzBI7dnPI6xEGfa/JnVYIK9JNBA1N1NyPwXVHor//NKD/y3sDxp764sZdLhFK7pH8XQ==}
-
-  brace-expansion@2.1.7:
-    resolution: {integrity: sha512-uZbew1NqdmPDTMJ8ah1y+b+9QEJrfkXFk3RcTQw3X0jW/xRUvFKsg1CfQdSYGdTbXZWExtU3J3ccxtnfw1Fi0g==}
 
   brace-expansion@2.1.8:
     resolution: {integrity: sha512-BnlDzDYQoplTsZSvPi86CNzmbcb07X8ufR8fk1zivaiEJlXJkiq1MQyDCVmlWcsWbj6aWXqHnrwwevbrm/Saig==}
@@ -6504,6 +6539,44 @@ snapshots:
       - snappy
       - socks
 
+  '@antelopejs/tooling-configs@0.10.10(@nuxt/eslint-config@1.17.0(@typescript-eslint/utils@8.73.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.46)(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(knip@6.41.0)(mongodb-memory-server@11.3.0(bare-buffer@3.7.3))(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.1)(sharp@0.35.5(@types/node@24.19.2))':
+    dependencies:
+      '@oxlint/plugins': 1.95.0
+      dts-bundle-generator: 9.5.1
+      minimatch: 10.2.6
+      semver: 7.8.6
+      typescript: 6.0.3
+      yaml: 2.9.1
+    optionalDependencies:
+      '@nuxt/eslint-config': 1.17.0(@typescript-eslint/utils@8.73.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.46)(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript/typescript-aix-ppc64': 7.0.2
+      '@typescript/typescript-darwin-arm64': 7.0.2
+      '@typescript/typescript-darwin-x64': 7.0.2
+      '@typescript/typescript-freebsd-arm64': 7.0.2
+      '@typescript/typescript-freebsd-x64': 7.0.2
+      '@typescript/typescript-linux-arm': 7.0.2
+      '@typescript/typescript-linux-arm64': 7.0.2
+      '@typescript/typescript-linux-loong64': 7.0.2
+      '@typescript/typescript-linux-mips64el': 7.0.2
+      '@typescript/typescript-linux-ppc64': 7.0.2
+      '@typescript/typescript-linux-riscv64': 7.0.2
+      '@typescript/typescript-linux-s390x': 7.0.2
+      '@typescript/typescript-linux-x64': 7.0.2
+      '@typescript/typescript-netbsd-arm64': 7.0.2
+      '@typescript/typescript-netbsd-x64': 7.0.2
+      '@typescript/typescript-openbsd-arm64': 7.0.2
+      '@typescript/typescript-openbsd-x64': 7.0.2
+      '@typescript/typescript-sunos-x64': 7.0.2
+      '@typescript/typescript-win32-arm64': 7.0.2
+      '@typescript/typescript-win32-x64': 7.0.2
+      knip: 6.41.0
+      mongodb-memory-server: 11.3.0(bare-buffer@3.7.3)
+      oxfmt: 0.66.0
+      oxlint: 1.81.0(oxlint-tsgolint@7.0.2004)
+      pixelmatch: 8.0.0
+      playwright-core: 1.65.1
+      sharp: 0.35.5(@types/node@24.19.2)
+
   '@antelopejs/tooling-configs@0.10.7(@nuxt/eslint-config@1.17.0(@typescript-eslint/utils@8.73.0(eslint@10.15.0(jiti@2.7.0))(typescript@5.9.3))(@vue/compiler-sfc@3.5.46)(eslint@10.15.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.41.0)(mongodb-memory-server@11.3.0(bare-buffer@3.7.3))(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.1)(sharp@0.35.5(@types/node@25.6.2))':
     dependencies:
       '@oxlint/plugins': 1.94.0
@@ -6541,44 +6614,6 @@ snapshots:
       pixelmatch: 8.0.0
       playwright-core: 1.65.1
       sharp: 0.35.5(@types/node@25.6.2)
-
-  '@antelopejs/tooling-configs@0.10.7(@nuxt/eslint-config@1.17.0(@typescript-eslint/utils@8.73.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.46)(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(knip@6.41.0)(mongodb-memory-server@11.3.0(bare-buffer@3.7.3))(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2004))(pixelmatch@8.0.0)(playwright-core@1.65.1)(sharp@0.35.5(@types/node@24.19.2))':
-    dependencies:
-      '@oxlint/plugins': 1.94.0
-      dts-bundle-generator: 9.5.1
-      minimatch: 10.2.6
-      semver: 7.8.6
-      typescript: 6.0.3
-      yaml: 2.9.1
-    optionalDependencies:
-      '@nuxt/eslint-config': 1.17.0(@typescript-eslint/utils@8.73.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.46)(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript/typescript-aix-ppc64': 7.0.2
-      '@typescript/typescript-darwin-arm64': 7.0.2
-      '@typescript/typescript-darwin-x64': 7.0.2
-      '@typescript/typescript-freebsd-arm64': 7.0.2
-      '@typescript/typescript-freebsd-x64': 7.0.2
-      '@typescript/typescript-linux-arm': 7.0.2
-      '@typescript/typescript-linux-arm64': 7.0.2
-      '@typescript/typescript-linux-loong64': 7.0.2
-      '@typescript/typescript-linux-mips64el': 7.0.2
-      '@typescript/typescript-linux-ppc64': 7.0.2
-      '@typescript/typescript-linux-riscv64': 7.0.2
-      '@typescript/typescript-linux-s390x': 7.0.2
-      '@typescript/typescript-linux-x64': 7.0.2
-      '@typescript/typescript-netbsd-arm64': 7.0.2
-      '@typescript/typescript-netbsd-x64': 7.0.2
-      '@typescript/typescript-openbsd-arm64': 7.0.2
-      '@typescript/typescript-openbsd-x64': 7.0.2
-      '@typescript/typescript-sunos-x64': 7.0.2
-      '@typescript/typescript-win32-arm64': 7.0.2
-      '@typescript/typescript-win32-x64': 7.0.2
-      knip: 6.41.0
-      mongodb-memory-server: 11.3.0(bare-buffer@3.7.3)
-      oxfmt: 0.66.0
-      oxlint: 1.81.0(oxlint-tsgolint@7.0.2004)
-      pixelmatch: 8.0.0
-      playwright-core: 1.65.1
-      sharp: 0.35.5(@types/node@24.19.2)
 
   '@antfu/install-pkg@1.1.0':
     dependencies:
@@ -7916,6 +7951,8 @@ snapshots:
 
   '@oxlint/plugins@1.94.0': {}
 
+  '@oxlint/plugins@1.95.0': {}
+
   '@phun-ky/typeof@2.0.3': {}
 
   '@pkgjs/parseargs@0.11.0':
@@ -9204,10 +9241,6 @@ snapshots:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
-
-  brace-expansion@2.1.7:
-    dependencies:
-      balanced-match: 1.0.2
 
   brace-expansion@2.1.8:
     dependencies:
@@ -10851,7 +10884,7 @@ snapshots:
 
   minimatch@9.0.9:
     dependencies:
-      brace-expansion: 2.1.7
+      brace-expansion: 2.1.8
 
   minimist@1.2.8: {}
 
