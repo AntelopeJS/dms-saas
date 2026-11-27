@@ -173,7 +173,10 @@ describe("default subscription assignment", () => {
       ensureDefaultSubscription(tenantId),
     ]);
 
-    expect(attached.toSorted()).toEqual([false, true]);
+    expect(attached.toSorted((a, b) => Number(a) - Number(b))).toEqual([
+      false,
+      true,
+    ]);
     expect(await subscriptionsOf(tenantId)).toEqual([
       expect.objectContaining({ _id: tenantId, planId: "free" }),
     ]);

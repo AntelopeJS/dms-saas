@@ -91,7 +91,10 @@ export function controllerRoutes(
 }
 
 /** The refusal the DMS answers a request of a user who is not a platform owner with. */
-const OWNER_ONLY_REFUSAL = { status: HTTP_FORBIDDEN, body: "Owner-only" };
+const OWNER_ONLY_REFUSAL = {
+  status: HTTP_FORBIDDEN,
+  bodies: new Set<unknown>(["Owner-only", "$dms.refusals.auth.owner_only"]),
+};
 
 /**
  * Whether serving `context` with the route stops at the platform-owner
@@ -116,6 +119,6 @@ export async function refusesAsOwnerOnly(
       outcome.status === "rejected" &&
       IsHTTPResult(outcome.reason) &&
       outcome.reason.getStatus() === OWNER_ONLY_REFUSAL.status &&
-      outcome.reason.getBody() === OWNER_ONLY_REFUSAL.body,
+      OWNER_ONLY_REFUSAL.bodies.has(outcome.reason.getBody()),
   );
 }
