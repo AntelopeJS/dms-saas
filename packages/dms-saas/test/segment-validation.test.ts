@@ -135,9 +135,18 @@ describe("segment rules validation", () => {
     ],
     ["a list holding a list", workspaceLeaf([["active"]])],
     ["a list holding an object", workspaceLeaf([{}])],
-  ])("keeps accepting %s, as it did before", (_name, rules) => {
+  ])("refuses %s, which the rules editor cannot read", (_name, rules) => {
+    expectRefusal(() => parseSegmentConditions(rules), "invalid_value");
+    expectRefusal(
+      () => parseSegmentConditions(JSON.stringify(rules)),
+      "invalid_value",
+    );
+  });
+
+  it("accepts a null value", () => {
+    const rules = leaf({ field: "email", operator: "contains", value: null });
+
     expect(parseSegmentConditions(rules)).toEqual(rules);
-    expect(parseSegmentConditions(JSON.stringify(rules))).toEqual(rules);
   });
 });
 
