@@ -74,7 +74,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and pub
 | `@antelopejs/interface-data-api`            | `>=0.8.0 <0.9.0`   | `0.8.2`     |
 | `@antelopejs/interface-database`            | `>=0.4.0 <0.5.0`   | `0.4.4`     |
 | `@antelopejs/interface-database-decorators` | `>=0.5.2 <0.6.0`   | `0.5.4`     |
-| `@antelopejs/interface-dms`                 | `>=0.17.0 <0.18.0` | `0.17.2`    |
+| `@antelopejs/interface-dms`                 | `>=0.17.3 <0.18.0` | `0.17.3`    |
 | `@antelopejs/interface-dms-automation`      | `>=0.7.0 <0.8.0`   | `0.7.3`     |
 | `@antelopejs/interface-dms-saas`            | `^0.12.1`          | `0.12.1`    |
 | `@antelopejs/interface-file-storage`        | `>=0.1.8 <0.2.0`   | `0.1.9`     |
