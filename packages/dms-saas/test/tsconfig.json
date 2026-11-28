@@ -29,6 +29,7 @@
     "./saas-registration.test.ts",
     "./segment-conditions-builder.dom.test.ts",
     "./status-vocabulary.test.ts",
+    "./workspace-create-modal.dom.test.ts",
     "./workspace-list-auth-boundary.test.ts",
     "./helpers/api-data.ts"
   ]

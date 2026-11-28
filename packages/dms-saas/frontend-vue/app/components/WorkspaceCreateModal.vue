@@ -77,6 +77,8 @@ const { user } = useCurrentUser()
 const workspaceName = ref('')
 /** The same checkbox as sign-up; the API refuses a creation without it. */
 const hasAcceptedLegal = ref(false)
+/** Shown under the checkbox when Enter submits the form before it is ticked. */
+const legalError = ref<string | null>(null)
 const options = ref<CreateOptions | null>(null)
 const selectedPlanId = ref<string | null>(null)
 const isLoading = ref(true)
@@ -234,12 +236,15 @@ async function load(): Promise<void> {
 function validate(): boolean {
 	const name = workspaceName.value.trim()
 	nameError.value = name ? null : t(`${KEYS}.error.name`)
-	if (nameError.value) return false
+	legalError.value = hasAcceptedLegal.value
+		? null
+		: t('saas.public.register.error.legal_required')
+	if (nameError.value || legalError.value) return false
 	if (asksForCard.value && !stripeHandle.value) {
 		cardError.value ??= t(`${KEYS}.error.card_setup`)
 		return false
 	}
-	return !!selectedPlan.value && hasAcceptedLegal.value
+	return !!selectedPlan.value
 }
 
 async function confirmCard(): Promise<ConfirmedPayment> {
@@ -432,7 +437,11 @@ onMounted(load)
 
 		<p v-if="chargeSentence" class="text-muted text-sm">{{ chargeSentence }}</p>
 
-		<LegalAcceptance v-model="hasAcceptedLegal" />
+		<LegalAcceptance
+			v-model="hasAcceptedLegal"
+			:error="legalError"
+			@update:model-value="legalError = null"
+		/>
 
 		<UAlert
 			v-if="submitError"
