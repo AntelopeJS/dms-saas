@@ -81,7 +81,7 @@ Then point a Stripe webhook at `https://<api>/api/saas/webhooks/stripe`, and pub
 
 <!-- antelopejs-docs-compat:end -->
 
-The module also needs a DMS backend in a release that implements the `@antelopejs/interface-dms` range in the table above, and the `@antelopejs/dms-frontend` renderer in the range its frontend module declares in `engines["@antelopejs/dms-frontend"]` of `frontend-vue/package.json`. The `ajs dms` CLI refuses to build it with a renderer outside that range. The database adapter must be `@antelopejs/mongodb` 1.8.10 or later: earlier releases answer the invoice reads wrong.
+The module also needs a DMS backend in a release that implements the `@antelopejs/interface-dms` range in the table above, and the `@antelopejs/dms-frontend` renderer in the range its frontend module declares in `engines["@antelopejs/dms-frontend"]` of `frontend-vue/package.json`, `>=0.11.11 <0.12.0`. The `ajs dms` CLI refuses to build it with a renderer outside that range, so a project that locks `@antelopejs/dms-frontend` below 0.11.11 must raise it first. The database adapter must be `@antelopejs/mongodb` 1.8.10 or later: earlier releases answer the invoice reads wrong.
 
 The module calls Stripe with the API version `2026-08-26.dahlia`. Before upgrading an existing database, read [Upgrading](https://dms.antelopejs.com/docs/modules/saas/faq#upgrading).
 
