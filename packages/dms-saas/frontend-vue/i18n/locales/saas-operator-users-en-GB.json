@@ -252,6 +252,7 @@
         },
         "load_failed": "Couldn't load the fields a rule can read.",
         "unreadable_rules": "Couldn't read these rules, so they can't be edited here.",
+        "start_over": "Clear the rules and start over",
         "field": "Field",
         "operator": "Comparison",
         "search_fields": "Search a field",
