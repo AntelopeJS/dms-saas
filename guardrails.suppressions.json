@@ -1,5 +1,6 @@
 {
   "rules": {
+    "antelopejs/shared-test-timeout": 2,
     "anti-slop/no-chained-type-assertions": 0,
     "anti-slop/no-object-parameters": 0,
     "anti-slop/no-unknown-parameters": 0,
