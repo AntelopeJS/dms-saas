@@ -37,6 +37,7 @@ import { LifecycleDeliveryModel } from "../../src/operator-actions/db/lifecycle-
 import { isWorkspaceProvisioningCommitted } from "../../src/operator-actions/lifecycle-outbox";
 import { SaasRegisterApiController } from "../../src/routes/public/register";
 import { getStripeClient } from "../../src/stripe/client";
+import { LegalAcceptanceModel } from "../../src/workspaces/db/legal-acceptance.model";
 import { ProvisioningAttemptModel } from "../../src/workspaces/db/provisioning-attempt.model";
 import { TrialIdentityModel } from "../../src/workspaces/db/trial-identity.model";
 import { implementWithDms } from "./dms";
@@ -171,6 +172,7 @@ async function resetDatabase(): Promise<void> {
       GetModel(TenantSubscriptionModel, CROSS_INSTANCE),
       GetModel(TenantBillingInfoModel, CROSS_INSTANCE),
       GetModel(TenantBillingStateModel),
+      GetModel(LegalAcceptanceModel),
     ].map((model) => model.table.delete().run()),
   );
   await GetModel(PlanModel).insert([PLAN, PAID_PLAN]);
@@ -230,6 +232,7 @@ const gatedQueries: Pick<typeof queries, keyof typeof mongoQueries> = {
 interface RegisterBodyInput {
   extras?: JsonObject;
   requestedPlanId?: string;
+  hasAcceptedLegal?: boolean;
 }
 
 /** The body of a password registration that meets every policy. */
@@ -265,6 +268,8 @@ export const world = {
     ),
   deliveries: () => GetModel(LifecycleDeliveryModel).getAll(),
   attempts: () => GetModel(ProvisioningAttemptModel).getAll(),
+  /** The legal acceptances recorded, one per workspace opened on one. */
+  legalAcceptances: () => GetModel(LegalAcceptanceModel).getAll(),
   subscriptions: () =>
     GetModel(TenantSubscriptionModel, CROSS_INSTANCE).getAll(),
   subscriptionOf: (tenantId: string) =>

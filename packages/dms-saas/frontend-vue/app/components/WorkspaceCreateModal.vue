@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
+import LegalAcceptance from '../build/public/LegalAcceptance.vue'
 import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 /** What choosing a plan asks for, as `GET create-options` words it. */
@@ -74,6 +75,8 @@ const config = useDmsRuntimeConfig()
 const { user } = useCurrentUser()
 
 const workspaceName = ref('')
+/** The same checkbox as sign-up; the API refuses a creation without it. */
+const hasAcceptedLegal = ref(false)
 const options = ref<CreateOptions | null>(null)
 const selectedPlanId = ref<string | null>(null)
 const isLoading = ref(true)
@@ -236,7 +239,7 @@ function validate(): boolean {
 		cardError.value ??= t(`${KEYS}.error.card_setup`)
 		return false
 	}
-	return !!selectedPlan.value
+	return !!selectedPlan.value && hasAcceptedLegal.value
 }
 
 async function confirmCard(): Promise<ConfirmedPayment> {
@@ -281,6 +284,7 @@ async function submit(): Promise<void> {
 				workspaceName: name,
 				planId: selectedPlanId.value,
 				paymentMethodId: payment.paymentMethodId,
+				hasAcceptedLegal: hasAcceptedLegal.value,
 			},
 		})
 		props.onSuccessCallback?.(created.tenantId, name)
@@ -428,6 +432,8 @@ onMounted(load)
 
 		<p v-if="chargeSentence" class="text-muted text-sm">{{ chargeSentence }}</p>
 
+		<LegalAcceptance v-model="hasAcceptedLegal" />
+
 		<UAlert
 			v-if="submitError"
 			color="error"
@@ -446,7 +452,12 @@ onMounted(load)
 			>
 				{{ $t('common.cancel') }}
 			</UButton>
-			<UButton type="submit" color="primary" :loading="isSubmitting">
+			<UButton
+				type="submit"
+				color="primary"
+				:loading="isSubmitting"
+				:disabled="!hasAcceptedLegal"
+			>
 				{{ submitLabel }}
 			</UButton>
 		</div>

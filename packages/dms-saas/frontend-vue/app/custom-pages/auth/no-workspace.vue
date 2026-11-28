@@ -248,6 +248,7 @@ async function submit(): Promise<void> {
 				workspaceName: workspaceName.value.trim(),
 				paymentMethodId,
 				requestedPlanId: plan.summary.value?.requestedPlan?._id,
+				hasAcceptedLegal: hasAcceptedLegal.value,
 			}),
 		})
 		const destination = landingPath()

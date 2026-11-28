@@ -1,5 +1,6 @@
 import type { TenantBillingAddress } from "../db";
 import type { TenantBeingProvisionedPayload } from "../hooks/tenant-provisioning";
+import type { LegalAcceptanceSource } from "./db/legal-acceptance.table";
 
 export type WorkspaceCustomerType = "individual" | "business";
 
@@ -28,6 +29,12 @@ export interface WorkspaceProvisioningPayload extends WorkspaceBillingProfile {
    * Stripe object is created here.
    */
   awaitsFirstPayment?: boolean;
+  /**
+   * The screen the owner accepted the terms and conditions and the privacy
+   * policy on, recorded with the workspace. Absent when nobody did: a
+   * workspace an operator opens for a customer.
+   */
+  legalAcceptance?: LegalAcceptanceSource;
   /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else. Opaque here: dms-saas never reads it, never

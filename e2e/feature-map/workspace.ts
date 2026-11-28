@@ -15,6 +15,8 @@ export const covers = [
   "packages/dms-saas/src/workspaces/workspace-glance.ts",
   "packages/dms-saas/src/workspaces/deletion*.ts",
   "packages/dms-saas/src/workspaces/self-serve-creation.ts",
+  "packages/dms-saas/src/workspaces/legal-acceptance.ts",
+  "packages/dms-saas/src/workspaces/db/legal-acceptance.*.ts",
   "packages/dms-saas/src/workspaces/invitations.ts",
   "packages/dms-saas/src/workspaces/workspace-overview.ts",
   "packages/dms-saas/src/workspaces/default-member-role.ts",

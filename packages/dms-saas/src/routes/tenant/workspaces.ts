@@ -47,6 +47,7 @@ import type {
   WorkspaceProvisioningHandles,
 } from "../../workspaces";
 import {
+  assertLegalAccepted,
   buildWorkspaceCreateOptions,
   buildWorkspaceOverview,
   cardRequirementOf,
@@ -74,6 +75,8 @@ interface WorkspaceCreateBody {
   workspaceName?: string;
   planId: string;
   paymentMethodId?: string;
+  /** The legal checkbox, which the form only submits ticked. */
+  hasAcceptedLegal?: boolean;
 }
 
 interface SelfServeCreationInput extends SelfServeCardUse {
@@ -161,6 +164,7 @@ async function provisionSelfServeWorkspace(
         workspaceName: input.workspaceName,
         planId: input.planId,
         paymentMethodId: input.paymentMethodId,
+        legalAcceptance: "workspace_creation",
       },
       stripeCustomerProfile: {
         ...input.billingProfile,
@@ -219,9 +223,10 @@ export class SaasWorkspacesController extends Controller(
   }
 
   /**
-   * The card is read first, to hold it for the whole creation: two creations
-   * racing with one card cannot both pass the per-card count of free
-   * workspaces.
+   * The legal checkbox is checked before the card is read, so a card is never
+   * confirmed for a creation refused on it. The card is then read first, to
+   * hold it for the whole creation: two creations racing with one card cannot
+   * both pass the per-card count of free workspaces.
    */
   @Post("/")
   async createMine(
@@ -230,6 +235,7 @@ export class SaasWorkspacesController extends Controller(
     @JSONBody() body: WorkspaceCreateBody,
   ): Promise<CreatedWorkspace> {
     assertAdmissionOpen(user.owner);
+    assertLegalAccepted(body.hasAcceptedLegal);
     return withStripeAvailability(async () => {
       const card = await resolveCardDetails(body.paymentMethodId);
       return withCardHold(card.fingerprint, async () => {

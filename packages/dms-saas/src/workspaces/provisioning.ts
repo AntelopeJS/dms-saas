@@ -36,6 +36,7 @@ import { hashEmail, insertOrUpdateById, stripeSecondsToDate } from "../utils";
 import { createDefaultMemberRole } from "./default-member-role";
 import { resolveDefaultPlan } from "./default-plan";
 import { isFreePlan } from "./free-plan";
+import { recordLegalAcceptance } from "./legal-acceptance";
 import { buildSubscriptionCreateParams } from "./subscription-create-params";
 import {
   beginProvisioningAttempt,
@@ -548,6 +549,9 @@ async function runProvisioning(
       billingEmail: stripeCustomerProfile.email,
     }),
   );
+  if (payload.legalAcceptance) {
+    await recordLegalAcceptance(tenantId, userId, payload.legalAcceptance);
+  }
 
   await emitTenantBeingProvisioned({
     tenantId,
