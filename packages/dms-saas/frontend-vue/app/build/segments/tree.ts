@@ -126,10 +126,6 @@ function isPartialGroup(
 	)
 }
 
-function isStoredJson(raw: StoredSegmentRules): raw is string {
-	return typeof raw === 'string'
-}
-
 function parseJsonGroup(text: string): Partial<SegmentConditionGroup> | null {
 	try {
 		const parsed: unknown = JSON.parse(text)
@@ -139,15 +135,28 @@ function parseJsonGroup(text: string): Partial<SegmentConditionGroup> | null {
 	}
 }
 
-/** The rules from the JSON string or object a field holds. */
+/**
+ * The rules from the JSON string or object a field holds, or null when it
+ * holds rules this editor cannot read. An empty field is an empty AND group.
+ */
+export function readSegmentGroup(
+	raw: StoredSegmentRules,
+): SegmentConditionGroup | null {
+	if (raw === null || raw === undefined || raw === '')
+		return emptySegmentGroup()
+	const group = parseJsonGroup(isText(raw) ? raw : JSON.stringify(raw))
+	if (!group) return null
+	return {
+		logical: group.logical === 'or' ? 'or' : 'and',
+		conditions: group.conditions ? [...group.conditions] : [],
+	}
+}
+
+/** The rules from the JSON string or object a field holds, empty when unreadable. */
 export function parseSegmentGroup(
 	raw: StoredSegmentRules,
 ): SegmentConditionGroup {
-	const group = isStoredJson(raw) ? parseJsonGroup(raw) : (raw ?? null)
-	return {
-		logical: group?.logical === 'or' ? 'or' : 'and',
-		conditions: group?.conditions ? [...group.conditions] : [],
-	}
+	return readSegmentGroup(raw) ?? emptySegmentGroup()
 }
 
 /** The path of the child at `index` of the node at `parent` ("1.2"). */
