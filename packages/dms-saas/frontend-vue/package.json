@@ -18,7 +18,7 @@
 		"vue": "^3.5.18"
 	},
 	"devDependencies": {
-		"@antelopejs/tooling-configs": "^0.10.13",
+		"@antelopejs/tooling-configs": "^0.10.14",
 		"@nuxt/eslint-config": "^1.17.0",
 		"@nuxt/ui": "^4.0.1",
 		"eslint": "^10.0.0",
