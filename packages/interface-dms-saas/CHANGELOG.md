@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.12.2
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.12.1...interface-v0.12.2)
+
+### 🩹 Fixes
+
+- Pass a compare argument to toSorted and move to dms 0.24.3 with dms-frontend 0.11.12 ([#340](https://github.com/AntelopeJS/dms-saas/pull/340))
+
+### 🏡 Chore
+
+- **deps:** Move to tooling-configs 0.10.7 with a 24-hour release age ([#335](https://github.com/AntelopeJS/dms-saas/pull/335))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.12.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.12.0...interface-v0.12.1)
