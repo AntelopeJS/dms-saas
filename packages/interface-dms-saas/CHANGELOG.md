@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.12.3
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.12.2...interface-v0.12.3)
+
+### 🏡 Chore
+
+- **deps:** Move to @antelopejs/dms 0.25.2 and interface-dms 0.17.3 ([#352](https://github.com/AntelopeJS/dms-saas/pull/352))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.12.2
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/interface-v0.12.1...interface-v0.12.2)
