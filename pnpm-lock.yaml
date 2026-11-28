@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@antelopejs/dms':
-        specifier: '>=0.25.0 <0.26.0'
-        version: 0.25.0(@antelopejs/core@1.24.6)(@playwright/test@1.65.1)(bare-buffer@3.7.3)(typescript@6.0.3)
+        specifier: '>=0.25.2 <0.26.0'
+        version: 0.25.2(@antelopejs/core@1.24.6)(@playwright/test@1.65.1)(bare-buffer@3.7.3)(typescript@6.0.3)
       '@antelopejs/tooling-configs':
         specifier: ^0.10.7
         version: 0.10.7(@nuxt/eslint-config@1.17.0(@typescript-eslint/utils@8.73.0(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.46)(eslint@10.15.0(jiti@2.7.0))(typescript@6.0.3))(knip@6.48.0)(mongodb-memory-server@11.4.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2008))(pixelmatch@8.0.0)(playwright-core@1.65.1)(sharp@0.35.5(@types/node@24.19.2))
@@ -97,8 +97,8 @@ importers:
         specifier: '>=1.24.5 <1.25.0'
         version: 1.24.6
       '@antelopejs/dms':
-        specifier: '>=0.25.0 <0.26.0'
-        version: 0.25.0(@antelopejs/core@1.24.6)(@playwright/test@1.65.1)(bare-buffer@3.7.3)(typescript@6.0.3)
+        specifier: '>=0.25.2 <0.26.0'
+        version: 0.25.2(@antelopejs/core@1.24.6)(@playwright/test@1.65.1)(bare-buffer@3.7.3)(typescript@6.0.3)
       '@antelopejs/dms-frontend':
         specifier: '>=0.11.11 <0.12.0'
         version: 0.11.12(@antelopejs/core@1.24.6)
@@ -256,8 +256,8 @@ packages:
     peerDependencies:
       '@antelopejs/core': ~1.24.0
 
-  '@antelopejs/dms@0.25.0':
-    resolution: {integrity: sha512-LcN+YBAD72aO46K022hU/dwFmFyHHpPGewIXzbB+3wq3mNb7PfltkKtW74KIHN0BDCXgdm9ht7lodyh/GCCdVA==}
+  '@antelopejs/dms@0.25.2':
+    resolution: {integrity: sha512-H1rVHooFetTwFOpgy018sljqy2JD7w0sGlyDJi+oQTjsxXCfUNIPGJaQXij6P+11Ow9RJWDlNybrhx3smmD3ag==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       '@antelopejs/core': ~1.24.5
@@ -6317,7 +6317,7 @@ snapshots:
       '@oxc-parser/binding-linux-x64-gnu': 0.95.0
       '@oxc-parser/binding-win32-x64-msvc': 0.95.0
 
-  '@antelopejs/dms@0.25.0(@antelopejs/core@1.24.6)(@playwright/test@1.65.1)(bare-buffer@3.7.3)(typescript@6.0.3)':
+  '@antelopejs/dms@0.25.2(@antelopejs/core@1.24.6)(@playwright/test@1.65.1)(bare-buffer@3.7.3)(typescript@6.0.3)':
     dependencies:
       2fa: 0.1.2
       '@antelopejs/interface-api': 0.3.5(@antelopejs/interface-core@0.5.3)
