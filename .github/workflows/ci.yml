@@ -47,7 +47,7 @@ jobs:
   # every one in the merge queue, on a manual run or under the `ci:full`
   # label, and every one in `shards` runners nightly.
   select:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 5
     outputs:
       tier: ${{ steps.tier.outputs.tier }}
@@ -108,7 +108,7 @@ jobs:
   unit:
     needs: select
     if: needs.select.outputs.tests == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && 'blacksmith-4vcpu-ubuntu-2404' || 'blacksmith-4vcpu-windows-2025' }}
     timeout-minutes: 30
     defaults:
       run:
@@ -136,7 +136,7 @@ jobs:
   frontend:
     needs: select
     if: needs.select.outputs.tests == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && 'blacksmith-4vcpu-ubuntu-2404' || 'blacksmith-4vcpu-windows-2025' }}
     timeout-minutes: 30
     defaults:
       run:
@@ -157,7 +157,7 @@ jobs:
   playground:
     needs: select
     if: needs.select.outputs.tests == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && 'blacksmith-4vcpu-ubuntu-2404' || 'blacksmith-4vcpu-windows-2025' }}
     timeout-minutes: 15
     defaults:
       run:
@@ -181,7 +181,7 @@ jobs:
   test-types:
     needs: select
     if: needs.select.outputs.tests == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -194,7 +194,7 @@ jobs:
   formal:
     needs: select
     if: needs.select.outputs.tests == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && 'blacksmith-4vcpu-ubuntu-2404' || 'blacksmith-4vcpu-windows-2025' }}
     timeout-minutes: 15
     defaults:
       run:
@@ -224,7 +224,7 @@ jobs:
   e2e:
     needs: select
     if: needs.select.outputs.e2e != 'none'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -289,7 +289,7 @@ jobs:
   journeys:
     needs: select
     if: needs.select.outputs.e2e != 'none'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
     env:
       DMS_E2E_PREBUILT: "1"
@@ -325,7 +325,7 @@ jobs:
   e2e-report:
     needs: [select, e2e]
     if: always() && needs.select.outputs.e2e == 'all' && needs.e2e.result != 'cancelled' && needs.e2e.result != 'skipped'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -364,7 +364,7 @@ jobs:
       - formal
       - e2e
       - journeys
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
       - if: >-
