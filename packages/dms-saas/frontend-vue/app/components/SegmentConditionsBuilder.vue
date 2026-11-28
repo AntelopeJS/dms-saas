@@ -42,6 +42,11 @@ function setLogical(logical: SegmentLogical): void {
 	onUpdate({ ...state.value, logical })
 }
 
+function startOver(): void {
+	unreadable.value = false
+	onUpdate(emptySegmentGroup())
+}
+
 watch(
 	() => props.modelValue,
 	(value) => {
@@ -75,6 +80,16 @@ onBeforeUnmount(() => {
 			variant="subtle"
 			icon="i-ph-warning-circle"
 			:title="$t('saas.segments.builder.unreadable_rules')"
+			:actions="
+				disabled
+					? []
+					: [
+							{
+								label: $t('saas.segments.builder.start_over'),
+								onClick: startOver,
+							},
+						]
+			"
 		/>
 		<div v-else-if="catalog.isLoading.value" class="flex flex-col gap-2">
 			<USkeleton class="h-5 w-72" />

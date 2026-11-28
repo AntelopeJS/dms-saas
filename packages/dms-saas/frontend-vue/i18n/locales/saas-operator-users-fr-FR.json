@@ -252,6 +252,7 @@
         },
         "load_failed": "Impossible de charger les champs disponibles pour les règles.",
         "unreadable_rules": "Impossible de lire ces règles : elles ne peuvent pas être modifiées ici.",
+        "start_over": "Effacer les règles et recommencer",
         "field": "Champ",
         "operator": "Comparaison",
         "search_fields": "Rechercher un champ",

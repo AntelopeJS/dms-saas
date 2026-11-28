@@ -29,9 +29,14 @@ const UNREADABLE_RULES: LegacyRules = {
   conditions: [{ field: "email", operator: "contains" }],
 };
 
-function mountBuilder(modelValue: string | LegacyRules) {
+interface AlertAction {
+  label: string;
+  onClick: () => void;
+}
+
+function mountBuilder(modelValue: string | LegacyRules, disabled = false) {
   return mount(SegmentConditionsBuilder, {
-    props: { modelValue },
+    props: { modelValue, disabled },
     global: {
       mocks: { $t: (key: string) => key },
       stubs: {
@@ -40,8 +45,21 @@ function mountBuilder(modelValue: string | LegacyRules) {
         DmsSaasSegmentWords: true,
         DmsSaasLoadFailure: true,
         UAlert: defineComponent({
-          props: { title: { type: String, required: true } },
-          setup: (props) => () => h("div", { class: "alert" }, props.title),
+          props: {
+            title: { type: String, required: true },
+            actions: { type: Array<AlertAction>, default: () => [] },
+          },
+          setup: (props) => () =>
+            h("div", { class: "alert" }, [
+              h("span", { class: "alert-title" }, props.title),
+              ...props.actions.map((action) =>
+                h(
+                  "button",
+                  { class: "alert-action", onClick: action.onClick },
+                  action.label,
+                ),
+              ),
+            ]),
         }),
         UIcon: true,
         USkeleton: true,
@@ -84,12 +102,32 @@ describe("SegmentConditionsBuilder", () => {
       const builder = mountBuilder(stored);
 
       expect(builder.find(".edit-rules").exists()).toBe(false);
-      expect(builder.find(".alert").text()).toBe(
+      expect(builder.find(".alert-title").text()).toBe(
         "saas.segments.builder.unreadable_rules",
       );
       expect(builder.emitted("update:modelValue")).toBeUndefined();
     },
   );
+
+  it("replaces unreadable rules with an empty group when asked to start over", async () => {
+    const builder = mountBuilder(UNREADABLE_RULES);
+
+    await builder.find(".alert-action").trigger("click");
+
+    const empty = { logical: "and", conditions: [] };
+    expect(builder.find(".alert").exists()).toBe(false);
+    expect(builder.find(".edit-rules").exists()).toBe(true);
+    expect(builder.emitted("update:modelValue")).toEqual([
+      [JSON.stringify(empty)],
+    ]);
+    expect(states.get("saas-segment-draft:conditions")?.value).toEqual(empty);
+  });
+
+  it("offers no start over on a disabled builder", () => {
+    const builder = mountBuilder(UNREADABLE_RULES, true);
+
+    expect(builder.find(".alert-action").exists()).toBe(false);
+  });
 
   it("hides the editor when the rules turn unreadable, and shows it again once they are read", async () => {
     const readable = { logical: "or", conditions: [] };

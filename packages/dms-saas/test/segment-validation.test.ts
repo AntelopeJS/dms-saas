@@ -263,6 +263,39 @@ describe("segment rules validation conditions and nesting", () => {
     ).not.toThrow();
   });
 
+  const namedWorkspaceRef = (workspaceNames: JsonValue): JsonValue =>
+    leaf({
+      kind: "workspaceRef",
+      quantifier: "any",
+      conditions: leaf({ field: "status", operator: "in", value: ["active"] }),
+      workspaceNames,
+    });
+
+  it.each<[string, JsonValue]>([
+    ["a number", 5],
+    ["a string", "Acme"],
+    ["null", null],
+    ["a list holding a number", ["Acme", 5]],
+    ["a list holding an object", [{}]],
+  ])(
+    "refuses workspaceNames as %s, which the rules editor cannot read",
+    (_name, workspaceNames) => {
+      const rules = namedWorkspaceRef(workspaceNames);
+
+      expectRefusal(() => parseSegmentConditions(rules), "invalid_conditions");
+      expectRefusal(
+        () => parseSegmentConditions(JSON.stringify(rules)),
+        "invalid_conditions",
+      );
+    },
+  );
+
+  it("accepts workspaceNames as a list of strings", () => {
+    const rules = namedWorkspaceRef(["Acme", ""]);
+
+    expect(parseSegmentConditions(rules)).toEqual(rules);
+  });
+
   it("refuses a workspace condition nested in another", () => {
     const ref = (conditions: JsonValue[]) => ({
       kind: "workspaceRef",

@@ -50,6 +50,7 @@ interface Document {
   conditions?: unknown;
   quantifier?: unknown;
   role?: unknown;
+  workspaceNames?: unknown;
   field?: unknown;
   operator?: unknown;
   value?: unknown;
@@ -78,6 +79,13 @@ function assertWorkspaceRefNode(
     node.role === undefined || node.role === "member" || node.role === "owner",
     HTTP_BAD_REQUEST,
     `${ERRORS}.invalid_role`,
+  );
+  assert(
+    node.workspaceNames === undefined ||
+      (Array.isArray(node.workspaceNames) &&
+        node.workspaceNames.every(isString)),
+    HTTP_BAD_REQUEST,
+    `${ERRORS}.invalid_conditions`,
   );
   assert(
     isDocument(node.conditions) && holdsLogical(node.conditions),
