@@ -290,13 +290,18 @@ jobs:
           retention-days: 7
 
   # The HTTP and command-line journeys, as the Vitest integration tests of
-  # `test:journeys`, all of them wherever `e2e` runs. Its global setup starts
-  # one run of the kit on what `e2e:build` built.
+  # `test:journeys`, all of them wherever `e2e` runs, split by file over two
+  # runners. Each runner's global setup starts one run of the kit on what
+  # `e2e:build` built.
   journeys:
     needs: select
     if: needs.select.outputs.e2e != 'none'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     env:
       DMS_E2E_PREBUILT: "1"
     steps:
@@ -317,11 +322,11 @@ jobs:
           key: e2e-frontend-v2-${{ github.sha }}
           restore-keys: e2e-frontend-v2-
       - run: pnpm e2e:build
-      - run: pnpm --filter @antelopejs/dms-saas test:journeys
+      - run: pnpm --filter @antelopejs/dms-saas test:journeys --shard=${{ matrix.shard }}/2
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: journeys-evidence
+          name: journeys-evidence-${{ matrix.shard }}
           path: |
             ${{ runner.temp }}/dms-runs/*/evidence
             ${{ runner.temp }}/dms-runs/*/logs
