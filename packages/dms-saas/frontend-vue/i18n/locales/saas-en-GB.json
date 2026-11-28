@@ -61,6 +61,7 @@
 				"creation_in_progress": "Another workspace is already being created with this card. Please wait a moment and try again.",
 				"name_required": "The workspace name is required.",
 				"payment_method_required": "A card is required.",
+				"legal_acceptance_required": "You must accept the terms and conditions and the privacy policy.",
 				"is_cancelled": "This workspace is cancelled.",
 				"name_too_long": "The workspace name is too long: 60 characters at most.",
 				"free_card_limit_reached": "This card already backs as many free workspaces as allowed. Pick a paid plan or use another card.",

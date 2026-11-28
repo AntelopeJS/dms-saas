@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import FormFieldRow from '../build/components/FormFieldRow.vue'
 import FormRows from '../build/components/FormRows.vue'
+import LegalAcceptance from '../build/public/LegalAcceptance.vue'
 import { readDmsSaasPublicConfig } from '../build/saas-public-config'
 
 /** What choosing a plan asks for, as `GET create-options` words it. */
@@ -74,6 +75,10 @@ const config = useDmsRuntimeConfig()
 const { user } = useCurrentUser()
 
 const workspaceName = ref('')
+/** The same checkbox as sign-up; the API refuses a creation without it. */
+const hasAcceptedLegal = ref(false)
+/** Shown under the checkbox when Enter submits the form before it is ticked. */
+const legalError = ref<string | null>(null)
 const options = ref<CreateOptions | null>(null)
 const selectedPlanId = ref<string | null>(null)
 const isLoading = ref(true)
@@ -231,7 +236,10 @@ async function load(): Promise<void> {
 function validate(): boolean {
 	const name = workspaceName.value.trim()
 	nameError.value = name ? null : t(`${KEYS}.error.name`)
-	if (nameError.value) return false
+	legalError.value = hasAcceptedLegal.value
+		? null
+		: t('saas.public.register.error.legal_required')
+	if (nameError.value || legalError.value) return false
 	if (asksForCard.value && !stripeHandle.value) {
 		cardError.value ??= t(`${KEYS}.error.card_setup`)
 		return false
@@ -281,6 +289,7 @@ async function submit(): Promise<void> {
 				workspaceName: name,
 				planId: selectedPlanId.value,
 				paymentMethodId: payment.paymentMethodId,
+				hasAcceptedLegal: hasAcceptedLegal.value,
 			},
 		})
 		props.onSuccessCallback?.(created.tenantId, name)
@@ -428,6 +437,12 @@ onMounted(load)
 
 		<p v-if="chargeSentence" class="text-muted text-sm">{{ chargeSentence }}</p>
 
+		<LegalAcceptance
+			v-model="hasAcceptedLegal"
+			:error="legalError"
+			@update:model-value="legalError = null"
+		/>
+
 		<UAlert
 			v-if="submitError"
 			color="error"
@@ -446,7 +461,12 @@ onMounted(load)
 			>
 				{{ $t('common.cancel') }}
 			</UButton>
-			<UButton type="submit" color="primary" :loading="isSubmitting">
+			<UButton
+				type="submit"
+				color="primary"
+				:loading="isSubmitting"
+				:disabled="!hasAcceptedLegal"
+			>
 				{{ submitLabel }}
 			</UButton>
 		</div>

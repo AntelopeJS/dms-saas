@@ -151,6 +151,7 @@ function createWorkspace(
     workspaceName,
     planId,
     paymentMethodId,
+    hasAcceptedLegal: true,
   });
 }
 

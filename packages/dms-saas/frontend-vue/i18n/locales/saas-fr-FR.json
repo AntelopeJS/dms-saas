@@ -61,6 +61,7 @@
 				"creation_in_progress": "Un autre espace de travail est déjà en cours de création avec cette carte. Patientez un instant puis réessayez.",
 				"name_required": "Le nom de l'espace de travail est obligatoire.",
 				"payment_method_required": "Une carte bancaire est requise.",
+				"legal_acceptance_required": "Vous devez accepter les conditions générales et la politique de confidentialité.",
 				"is_cancelled": "Cet espace de travail est annulé.",
 				"name_too_long": "Le nom de l'espace est trop long : 60 caractères au maximum.",
 				"free_card_limit_reached": "Cette carte couvre déjà autant d'espaces gratuits que permis. Choisissez une offre payante ou une autre carte.",

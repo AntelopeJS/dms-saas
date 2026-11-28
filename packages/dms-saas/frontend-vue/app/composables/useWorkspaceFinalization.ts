@@ -34,6 +34,8 @@ export interface WorkspaceFinalization {
   paymentMethodId?: string;
   /** The plan chosen on Pricing, see `requestedPlanId` on the API. */
   requestedPlanId?: string;
+  /** The legal checkbox, which the page requires ticked before it submits. */
+  hasAcceptedLegal?: boolean;
 }
 
 export interface WorkspaceFinalizationPayload {
@@ -41,6 +43,7 @@ export interface WorkspaceFinalizationPayload {
   workspaceName: string;
   paymentMethodId?: string;
   requestedPlanId?: string;
+  hasAcceptedLegal?: boolean;
 }
 
 /** What `/auth/establish` takes: an endpoint to call, and its body. */
@@ -70,6 +73,7 @@ export function buildSessionEstablishRequest(
       workspaceName: finalization.workspaceName,
       paymentMethodId: finalization.paymentMethodId,
       requestedPlanId: finalization.requestedPlanId,
+      hasAcceptedLegal: finalization.hasAcceptedLegal,
     },
   };
 }

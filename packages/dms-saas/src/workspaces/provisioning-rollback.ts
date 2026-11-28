@@ -12,6 +12,7 @@ import {
 import { cancelWorkspaceCreated } from "../operator-actions/lifecycle-outbox";
 import { getStripeClient } from "../stripe";
 import { getWorkspaceDeletionOperationId } from "./deletion";
+import { deleteLegalAcceptance } from "./legal-acceptance";
 import type { WorkspaceProvisioningHandles } from "./provisioning";
 import { recordProvisioningState } from "./provisioning-state";
 
@@ -85,4 +86,5 @@ async function deleteTenantRecords(
   await GetModel(TenantModel).delete(tenantId);
   await tenantBillingInfoModel.deleteAll();
   await tenantSubscriptionModel.deleteAll();
+  await deleteLegalAcceptance(tenantId);
 }

@@ -5,6 +5,7 @@ export * from "./deletion";
 export * from "./free-plan";
 export * from "./free-workspaces-per-card";
 export * from "./invitations";
+export * from "./legal-acceptance";
 export * from "./my-workspaces";
 export * from "./provisioning";
 export * from "./registration-extras";

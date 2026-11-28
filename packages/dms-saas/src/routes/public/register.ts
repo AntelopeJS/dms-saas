@@ -107,6 +107,12 @@ interface RegistrationPayload {
    */
   requestedPlanId?: string;
   /**
+   * Whether the visitor ticked the legal checkbox, which the shipped screens
+   * require before they submit. The acceptance is recorded with the
+   * workspace when they say so.
+   */
+  hasAcceptedLegal?: boolean;
+  /**
    * The consuming SaaS's own capture, handed to `TENANT_BEING_PROVISIONED`
    * listeners and nowhere else.
    */
@@ -301,6 +307,8 @@ async function buildRegistrationProvisioning(
       planId: admitted.plan._id,
       paymentMethodId: admitted.paymentMethodId,
       awaitsFirstPayment: admitted.awaitsFirstPayment,
+      legalAcceptance:
+        body.hasAcceptedLegal === true ? "registration" : undefined,
       extras: body.extras,
     },
     stripeCustomerProfile: {

@@ -12,6 +12,7 @@ const FINALIZATION: WorkspaceFinalization = {
   tenantAssignmentToken: "tat_test",
   workspaceName: "Acme",
   paymentMethodId: "pm_test",
+  hasAcceptedLegal: true,
 };
 
 describe("buildSessionEstablishRequest", () => {
@@ -34,6 +35,7 @@ describe("buildSessionEstablishRequest", () => {
       tenant_assignment_token: "tat_test",
       workspaceName: "Acme",
       paymentMethodId: "pm_test",
+      hasAcceptedLegal: true,
     });
   });
 

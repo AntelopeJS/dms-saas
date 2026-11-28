@@ -87,6 +87,8 @@ interface RegistrationPayload {
 	 * may.
 	 */
 	requestedPlanId?: string
+	/** The legal checkbox, which the submit guard requires ticked. */
+	hasAcceptedLegal: boolean
 	extras?: RegistrationExtras
 }
 
@@ -305,6 +307,7 @@ function useRegistrationSubmit(context: RegistrationSubmitContext) {
 				name: form.name.trim(),
 			}),
 			requestedPlanId: context.plan.summary.value?.requestedPlan?._id,
+			hasAcceptedLegal: form.hasAcceptedLegal,
 			extras: snapshotRegistrationExtras(toValue(context.options.extras)),
 		}
 	}
