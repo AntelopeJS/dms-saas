@@ -49,7 +49,7 @@ export default defineConfig({
   },
   modules: {
     "dms-saas": {
-      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.15.0" },
+      source: { type: "package", package: "@antelopejs/dms-saas", version: "^0.16.0" },
       config: {
         stripe: {
           secretKey: "sk_test_placeholder",

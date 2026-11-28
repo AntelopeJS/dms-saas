@@ -1,5 +1,40 @@
 # Changelog
 
+## v0.16.0
+
+[compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.15.1...v0.16.0)
+
+### 🩹 Fixes
+
+- Pass a compare argument to toSorted and move to dms 0.24.3 with dms-frontend 0.11.12 ([#340](https://github.com/AntelopeJS/dms-saas/pull/340))
+- **segments:** Refuse a condition without a value, and keep unreadable rules out of the editor ([#341](https://github.com/AntelopeJS/dms-saas/pull/341))
+- **segments:** Offer to clear rules the editor cannot read and start over ([#349](https://github.com/AntelopeJS/dms-saas/pull/349))
+- **segments:** Refuse a workspaceNames that is not a list of strings ([#350](https://github.com/AntelopeJS/dms-saas/pull/350))
+
+### 📦 Build
+
+- **deps:** Require @antelopejs/dms-frontend 0.11.11 ([#354](https://github.com/AntelopeJS/dms-saas/pull/354))
+
+### 🏡 Chore
+
+- **deps:** Move to tooling-configs 0.10.7 with a 24-hour release age ([#335](https://github.com/AntelopeJS/dms-saas/pull/335))
+- **deps:** Update non-major dependencies ([#344](https://github.com/AntelopeJS/dms-saas/pull/344))
+- **deps:** Move to tooling-configs 0.10.14 and its shared test timeout ([#342](https://github.com/AntelopeJS/dms-saas/pull/342))
+- **deps:** Move to @antelopejs/dms 0.25.2 and interface-dms 0.17.3 ([#352](https://github.com/AntelopeJS/dms-saas/pull/352))
+
+### ✅ Tests
+
+- Give the Mongo-backed unit tests 20 s each ([#338](https://github.com/AntelopeJS/dms-saas/pull/338))
+
+#### ⚠️ Breaking Changes
+
+- **deps:** Require @antelopejs/dms-frontend 0.11.11 ([#354](https://github.com/AntelopeJS/dms-saas/pull/354))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+- dada-sudo
+
 ## v0.15.1
 
 [compare changes](https://github.com/AntelopeJS/dms-saas/compare/v0.15.0...v0.15.1)
