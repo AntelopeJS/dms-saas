@@ -11,16 +11,22 @@ import {
   type TenantSubscription,
   TenantSubscriptionModel,
 } from "../src/db";
+import { registerAutomationNodes } from "../src/automation";
+import { dispatchStripeWebhookEvent } from "../src/stripe/webhook-dispatch";
 import {
   handleInvoicePaymentFailed,
   handleSubscriptionDeleted,
+  handleTrialWillEnd,
 } from "../src/stripe/webhook-handlers";
+import { armTrigger, implementAutomationCatalog } from "./helpers/automation";
 import { addTenantMember, createUser } from "./helpers/dms";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 
 useMongoDatabase();
 const stripe = useSuiteStripe();
+const automation = implementAutomationCatalog();
+await registerAutomationNodes();
 
 const sendToUser = vi.fn<typeof notifications.internal.SendToUser>();
 const DELETED_SUBSCRIPTION_ID = "sub_deleted";
@@ -331,4 +337,93 @@ describe("invoice.payment_failed", () => {
       expect(await statusOf(workspace.tenantId)).toBe(status);
     },
   );
+});
+
+describe("automation delivery identity", () => {
+  function paymentFailure(): Stripe.InvoicePaymentFailedEvent {
+    return fromPartial<Stripe.InvoicePaymentFailedEvent>({
+      id: `evt_${randomUUID()}`,
+      type: "invoice.payment_failed",
+      data: {
+        object: {
+          id: workspace.invoiceId,
+          customer: workspace.customerId,
+          amount_due: 2900,
+          currency: "eur",
+          billing_reason: "subscription_cycle",
+          lines: { object: "list", data: [], has_more: false, url: "" },
+          status_transitions: {},
+        },
+      },
+    });
+  }
+
+  it("hands payment-failed the Stripe event id and emits nothing on a redelivery", async () => {
+    workspace = await seedWorkspace({ status: "active" });
+    const payloads = await armTrigger(automation, "saas.payment-failed");
+    const event = paymentFailure();
+
+    await dispatchStripeWebhookEvent(event);
+    await dispatchStripeWebhookEvent(event);
+
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        tenantId: workspace.tenantId,
+        deliveryId: event.id,
+        amountDue: 2900,
+      }),
+    ]);
+  });
+
+  it("hands subscription-cancelled the Stripe event id", async () => {
+    workspace = await seedWorkspace({
+      stripeSubscriptionId: DELETED_SUBSCRIPTION_ID,
+    });
+    const payloads = await armTrigger(
+      automation,
+      "saas.subscription-cancelled",
+    );
+    const event = fromPartial<Stripe.CustomerSubscriptionDeletedEvent>({
+      id: `evt_${randomUUID()}`,
+      type: "customer.subscription.deleted",
+      data: {
+        object: { id: DELETED_SUBSCRIPTION_ID, customer: workspace.customerId },
+      },
+    });
+
+    await handleSubscriptionDeleted(event);
+
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        tenantId: workspace.tenantId,
+        deliveryId: event.id,
+      }),
+    ]);
+  });
+
+  it("hands trial-ending the Stripe event id", async () => {
+    workspace = await seedWorkspace({ status: "trialing" });
+    const payloads = await armTrigger(automation, "saas.trial-ending");
+    const event = fromPartial<Stripe.CustomerSubscriptionTrialWillEndEvent>({
+      id: `evt_${randomUUID()}`,
+      type: "customer.subscription.trial_will_end",
+      data: {
+        object: {
+          id: "sub_trial",
+          customer: workspace.customerId,
+          trial_end: null,
+        },
+      },
+    });
+
+    await handleTrialWillEnd(event);
+
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        tenantId: workspace.tenantId,
+        deliveryId: event.id,
+        trialEndsAt: null,
+      }),
+    ]);
+  });
 });

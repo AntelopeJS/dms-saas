@@ -42,6 +42,10 @@ export interface DirectoryOwner {
   status: WorkspaceOwnerStatus;
   name: string | null;
   email: string | null;
+  /** The owner's account, once they joined. */
+  userId?: string;
+  /** The joined owner's language, for mail written to them. */
+  language?: string;
 }
 
 /** Billing rules that date a past-due suspension and a data deletion. */
@@ -272,6 +276,8 @@ async function loadJoinedOwner(
     status: "joined",
     name: user?.name || null,
     email: user?.email ?? null,
+    userId: owner.userId,
+    language: user?.language,
   };
 }
 

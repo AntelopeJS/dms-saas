@@ -47,7 +47,8 @@ export async function rollbackWorkspaceProvisioning(
   }
 }
 
-async function admitRollbackCancellation(
+/** Admits the rollback as a cancellation; the callback completes it with a deletion identity. */
+export async function admitRollbackCancellation(
   tenantId?: string,
 ): Promise<() => Promise<string | undefined>> {
   if (!tenantId) return async () => undefined;
@@ -73,7 +74,8 @@ async function admitRollbackCancellation(
   };
 }
 
-async function deleteTenantRecords(
+/** Fires the tenant deletion hook, then deletes the tenant row, billing info and subscription. */
+export async function deleteTenantRecords(
   tenantId: string,
   deletionOperationId?: string,
 ): Promise<void> {
@@ -85,4 +87,27 @@ async function deleteTenantRecords(
   await GetModel(TenantModel).delete(tenantId);
   await tenantBillingInfoModel.deleteAll();
   await tenantSubscriptionModel.deleteAll();
+}
+
+/**
+ * Unwinds a workspace an operator created whose provisioning listeners
+ * refused it. The operator path creates no Stripe object, no creation intent
+ * and no provisioning attempt, so only the lifecycle closure, the cancellation
+ * and the records are undone. A failure is logged: after the cancellation is
+ * admitted, the retention cron finishes the deletion.
+ */
+export async function rollbackOperatorCreatedWorkspace(
+  tenantId: string,
+): Promise<void> {
+  try {
+    await closeTenantLifecycleAdmission(tenantId);
+    const finishCancellation = await admitRollbackCancellation(tenantId);
+    const deletionOperationId = await finishCancellation();
+    await deleteTenantRecords(tenantId, deletionOperationId);
+  } catch (error) {
+    Logging.Error(
+      `[dms-saas:provisioning-rollback] operator-created workspace ${tenantId} requires reconciliation`,
+      error,
+    );
+  }
 }

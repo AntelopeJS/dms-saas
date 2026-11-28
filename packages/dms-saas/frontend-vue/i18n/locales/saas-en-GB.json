@@ -216,7 +216,8 @@
 				"owner_email": "Enter the owner's e-mail.",
 				"access": "Choose how the workspace is paid for.",
 				"free_until_past": "The end date of complimentary access must be in the future.",
-				"owner_pays_needs_paid_plan": "Only a paid plan synced with Stripe can be paid by its owner."
+				"owner_pays_needs_paid_plan": "Only a paid plan synced with Stripe can be paid by its owner.",
+				"provisioning_failed": "The workspace could not be set up, so it was not created. Try again, or check the server logs."
 			}
 		},
 		"legal": {
@@ -418,11 +419,11 @@
 			"trigger": {
 				"subscription_started": {
 					"name": "Subscription started",
-					"description": "Fires when a Stripe checkout completes and a workspace subscription becomes active or trialing"
+					"description": "Fires when a workspace subscription becomes active or trialing: a Stripe checkout completes, or a workspace created with a card has its first invoice paid"
 				},
 				"subscription_cancelled": {
 					"name": "Subscription cancelled",
-					"description": "Fires when a workspace subscription is cancelled in Stripe"
+					"description": "Fires when a workspace subscription is cancelled in Stripe, or when an owner deletes the workspace (paid or free)"
 				},
 				"payment_failed": {
 					"name": "Payment failed",
@@ -433,8 +434,36 @@
 					"description": "Fires when a workspace trial is about to end"
 				},
 				"tenant_deleted": {
-					"name": "Workspace deleted",
-					"description": "Fires when a workspace is deleted"
+					"name": "Workspace deleted (deprecated)",
+					"description": "Deprecated: use the DMS trigger \"Tenant deleted\" (dms.tenant-deleted), which carries the workspace name and owner. Fires when a workspace's data is deleted at the end of retention; replays with the same deliveryId when a deletion resumes."
+				},
+				"billing_state_changed": {
+					"name": "Billing state changed",
+					"description": "Fires when a workspace's billing state changes, for example from trialing to active or from past due to suspended"
+				},
+				"plan_changed": {
+					"name": "Plan changed",
+					"description": "Fires when a workspace moves to another plan"
+				},
+				"invoice_paid": {
+					"name": "Invoice paid",
+					"description": "Fires when a workspace invoice is paid in Stripe"
+				},
+				"credit_note_issued": {
+					"name": "Credit note issued",
+					"description": "Fires when a credit note is issued on a workspace invoice in Stripe"
+				},
+				"refund_updated": {
+					"name": "Refund status changed",
+					"description": "Fires when a refund on a workspace payment changes status in Stripe, for example succeeded or failed"
+				},
+				"workspace_deletion_requested": {
+					"name": "Workspace deletion requested",
+					"description": "Fires when an owner deletes a workspace: access closes now, data is deleted after the retention period"
+				},
+				"free_access_ending": {
+					"name": "Complimentary access ending",
+					"description": "Fires once, about three days before a workspace's complimentary access ends"
 				}
 			},
 			"action": {
@@ -445,6 +474,40 @@
 				"notify_tenant_owners": {
 					"name": "Notify workspace owners",
 					"description": "Send an in-app notification to all owners of a workspace"
+				},
+				"add_platform_note": {
+					"name": "Add operator note",
+					"description": "Add an internal note to a workspace or a user, visible to platform operators only"
+				},
+				"get_workspace": {
+					"name": "Get workspace billing",
+					"description": "Read a workspace's billing snapshot: state, plan, seats, MRR, next renewal"
+				},
+				"get_workspace_owner": {
+					"name": "Get workspace owner",
+					"description": "Read who owns a workspace: name, e-mail and language, or the pending invitee. Personal data appears in the run trace"
+				},
+				"get_plan_constraints": {
+					"name": "Get plan limits",
+					"description": "Read a workspace's plan limits: seat cap and seats used, plan features, and any scheduled or blocked plan change"
+				},
+				"get_upcoming_invoice": {
+					"name": "Get upcoming invoice",
+					"description": "Read what a workspace's next invoice will charge, and when, as Stripe prices it"
+				},
+				"list_workspaces": {
+					"name": "List workspaces",
+					"description": "List workspaces by billing state, plan or renewal date, a page at a time, for a for-each loop"
+				},
+				"list_segment_users": {
+					"name": "List segment users",
+					"description": "List the users in a segment's latest evaluation, a page at a time. Personal data appears in the run trace"
+				}
+			},
+			"data": {
+				"format_money": {
+					"name": "Format amount",
+					"description": "Write an amount in minor units (cents) as money text in a currency and locale, for example 6900 EUR in fr-FR gives 69 €"
 				}
 			}
 		},
@@ -503,6 +566,9 @@
 			"value": "{value}",
 			"comma_list": "{first}, {rest}",
 			"range": "{from} → {to}"
+		},
+		"notes": {
+			"author_automation": "Automation"
 		}
 	}
 }

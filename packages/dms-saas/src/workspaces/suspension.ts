@@ -216,3 +216,35 @@ export async function applyWorkspaceReactivation(
   await notifyReactivated(input.tenantId, input.operationId);
   return { status: ACTIVE_STATUS, effectiveAt: new Date() };
 }
+
+/** Where a requested suspension or reactivation would take a workspace. */
+export interface SuspensionTransitionCheck {
+  status: TenantSubscriptionStatus;
+  changed: boolean;
+}
+
+/**
+ * Checks a suspension (`suspended` true) or a reactivation before any write:
+ * refuses what the operator commands refuse, and reports `changed: false`
+ * when the workspace already is in the requested state.
+ */
+export async function checkSuspensionTransition(
+  tenantId: string,
+  suspended: boolean,
+): Promise<SuspensionTransitionCheck> {
+  const { status } = await ensureTenantSubscription(tenantId);
+  if (suspended) {
+    assert(
+      status !== CANCELLED_STATUS,
+      HTTP_BAD_REQUEST,
+      "saas.errors.workspace.is_cancelled",
+    );
+    return { status, changed: status !== SUSPENDED_STATUS };
+  }
+  assert(
+    status === SUSPENDED_STATUS || status === ACTIVE_STATUS,
+    HTTP_CONFLICT,
+    "saas.errors.workspace.not_suspended",
+  );
+  return { status, changed: status === SUSPENDED_STATUS };
+}

@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { fromPartial } from "@total-typescript/shoehorn";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as billingState from "../src/billing-state";
 import {
   PlanMigrationModel,
   PlanModel,
+  TenantBillingStateModel,
   TenantSubscriptionModel,
 } from "../src/db";
 import { planRow } from "./helpers/plan-row";
@@ -13,12 +15,16 @@ import {
   processPlanMigrationJob,
   resumePendingPlanMigrations,
 } from "../src/workers/plan-migration";
+import { registerAutomationNodes } from "../src/automation";
+import { armTrigger, implementAutomationCatalog } from "./helpers/automation";
 import { useMongoDatabase } from "./helpers/mongo";
 import { useSuiteStripe } from "./helpers/stripe";
 import { seatMembers } from "./helpers/workspaces";
 
 useMongoDatabase();
 const stripe = useSuiteStripe();
+const automation = implementAutomationCatalog();
+await registerAutomationNodes();
 
 const SCHEDULED_AT = new Date("2026-11-01T00:00:00.000Z");
 const OLD_TTL_MS = 15 * 60 * 1000;
@@ -356,5 +362,56 @@ describe("migration snapshots on the production Mongo provider, paused and live 
       }),
     ]);
     expect((await model.findOne())?.planId).toBe(job.toPlanId);
+  });
+});
+
+describe("the workspace directory after a migration", () => {
+  it("publishes the target plan without waiting for the recompute cron", async () => {
+    const job = await createJob();
+    const tenantId = await createSubscription(job.fromPlanId);
+
+    await processPlanMigrationJob(job._id);
+
+    expect(
+      (await GetModel(TenantBillingStateModel).findByTenant(tenantId))?.planId,
+    ).toBe(job.toPlanId);
+  });
+
+  it("hands saas.plan-changed the migration once, without the cron", async () => {
+    const job = await createJob();
+    for (const planId of [job.fromPlanId, job.toPlanId])
+      await GetModel(PlanModel).update(planId, {
+        price: 10,
+        currency: "eur",
+        interval: "month",
+      });
+    const tenantId = await createSubscription(job.fromPlanId);
+    await billingState.recomputeTenantBillingState(tenantId);
+    const payloads = await armTrigger(automation, "saas.plan-changed");
+
+    await processPlanMigrationJob(job._id);
+
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        tenantId,
+        fromPlanId: job.fromPlanId,
+        toPlanId: job.toPlanId,
+      }),
+    ]);
+  });
+
+  it("still counts the workspace migrated when the publication fails", async () => {
+    const job = await createJob();
+    const tenantId = await createSubscription(job.fromPlanId);
+    const recompute = vi
+      .spyOn(billingState, "recomputeTenantBillingState")
+      .mockRejectedValue(new Error("directory unavailable"));
+
+    await processPlanMigrationJob(job._id);
+
+    expect(recompute).toHaveBeenCalledWith(tenantId);
+    expect(
+      (await GetModel(PlanMigrationModel).get(job._id))?.tenantOutcomes,
+    ).toEqual([expect.objectContaining({ tenantId, status: "succeeded" })]);
   });
 });

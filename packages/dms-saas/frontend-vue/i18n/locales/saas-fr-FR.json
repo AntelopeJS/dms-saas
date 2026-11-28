@@ -216,7 +216,8 @@
 				"owner_email": "Saisissez l'e-mail du propriétaire.",
 				"access": "Choisissez comment l'espace est payé.",
 				"free_until_past": "La fin de l'accès offert doit être dans le futur.",
-				"owner_pays_needs_paid_plan": "Seule une offre payante synchronisée avec Stripe peut être payée par son propriétaire."
+				"owner_pays_needs_paid_plan": "Seule une offre payante synchronisée avec Stripe peut être payée par son propriétaire.",
+				"provisioning_failed": "L'espace de travail n'a pas pu être initialisé, il n'a donc pas été créé. Réessayez, ou consultez les journaux du serveur."
 			}
 		},
 		"legal": {
@@ -418,11 +419,11 @@
 			"trigger": {
 				"subscription_started": {
 					"name": "Abonnement démarré",
-					"description": "Se déclenche quand un paiement Stripe aboutit et que l'abonnement d'un espace de travail devient actif ou passe en essai"
+					"description": "Se déclenche quand l'abonnement d'un espace de travail devient actif ou passe en essai : un paiement Stripe aboutit, ou la première facture d'un espace de travail créé avec une carte est payée"
 				},
 				"subscription_cancelled": {
 					"name": "Abonnement annulé",
-					"description": "Se déclenche quand l'abonnement d'un espace de travail est annulé dans Stripe"
+					"description": "Se déclenche quand l'abonnement d'un espace de travail est annulé dans Stripe, ou quand un propriétaire supprime l'espace de travail (payant ou gratuit)"
 				},
 				"payment_failed": {
 					"name": "Échec de paiement",
@@ -433,8 +434,36 @@
 					"description": "Se déclenche quand l'essai d'un espace de travail arrive bientôt à son terme"
 				},
 				"tenant_deleted": {
-					"name": "Espace de travail supprimé",
-					"description": "Se déclenche quand un espace de travail est supprimé"
+					"name": "Espace de travail supprimé (obsolète)",
+					"description": "Obsolète : utilisez le déclencheur DMS « Tenant supprimé » (dms.tenant-deleted), qui fournit le nom et le propriétaire de l'espace de travail. Se déclenche quand les données d'un espace de travail sont supprimées à la fin de la rétention ; se rejoue avec le même deliveryId quand une suppression reprend."
+				},
+				"billing_state_changed": {
+					"name": "État de facturation modifié",
+					"description": "Se déclenche quand l'état de facturation d'un espace de travail change, par exemple d'essai à actif ou d'impayé à suspendu"
+				},
+				"plan_changed": {
+					"name": "Offre modifiée",
+					"description": "Se déclenche quand un espace de travail passe à une autre offre"
+				},
+				"invoice_paid": {
+					"name": "Facture payée",
+					"description": "Se déclenche quand une facture d'un espace de travail est payée dans Stripe"
+				},
+				"credit_note_issued": {
+					"name": "Avoir émis",
+					"description": "Se déclenche quand un avoir est émis sur une facture d'un espace de travail dans Stripe"
+				},
+				"refund_updated": {
+					"name": "Statut de remboursement modifié",
+					"description": "Se déclenche quand le statut d'un remboursement sur un paiement d'un espace de travail change dans Stripe, par exemple réussi ou échoué"
+				},
+				"workspace_deletion_requested": {
+					"name": "Suppression d'espace de travail demandée",
+					"description": "Se déclenche quand un propriétaire supprime un espace de travail : l'accès est fermé tout de suite, les données sont supprimées après la durée de conservation"
+				},
+				"free_access_ending": {
+					"name": "Fin de l’accès offert proche",
+					"description": "Se déclenche une fois, environ trois jours avant la fin de l'accès offert d'un espace de travail"
 				}
 			},
 			"action": {
@@ -445,6 +474,40 @@
 				"notify_tenant_owners": {
 					"name": "Notifier les propriétaires de l'espace de travail",
 					"description": "Envoie une notification dans l'application à tous les propriétaires d'un espace de travail"
+				},
+				"add_platform_note": {
+					"name": "Ajouter une note opérateur",
+					"description": "Ajoute une note interne sur un espace de travail ou un utilisateur, visible des seuls opérateurs de la plateforme"
+				},
+				"get_workspace": {
+					"name": "Lire la facturation de l'espace de travail",
+					"description": "Lit l'état de facturation d'un espace de travail : état, offre, places, revenu mensuel, prochain renouvellement"
+				},
+				"get_workspace_owner": {
+					"name": "Lire le propriétaire de l'espace de travail",
+					"description": "Lit qui possède un espace de travail : nom, e-mail et langue, ou l'invité en attente. Ces données personnelles apparaissent dans la trace d'exécution"
+				},
+				"get_plan_constraints": {
+					"name": "Lire les limites de l'offre",
+					"description": "Lit les limites de l'offre d'un espace de travail : plafond et places occupées, fonctionnalités de l'offre, et tout changement d'offre programmé ou bloqué"
+				},
+				"get_upcoming_invoice": {
+					"name": "Lire la prochaine facture",
+					"description": "Lit ce que facturera la prochaine facture d'un espace de travail, et quand, tel que Stripe la calcule"
+				},
+				"list_workspaces": {
+					"name": "Lister les espaces de travail",
+					"description": "Liste les espaces de travail par état de facturation, offre ou date de renouvellement, page par page, pour une boucle « pour chaque »"
+				},
+				"list_segment_users": {
+					"name": "Lister les utilisateurs d'un segment",
+					"description": "Liste les utilisateurs de la dernière évaluation d'un segment, page par page. Ces données personnelles apparaissent dans la trace d'exécution"
+				}
+			},
+			"data": {
+				"format_money": {
+					"name": "Formater un montant",
+					"description": "Écrit un montant en unités mineures (centimes) en texte monétaire dans une devise et une langue, par exemple 6900 EUR en fr-FR donne 69 €"
 				}
 			}
 		},
@@ -503,6 +566,9 @@
 			"value": "{value}",
 			"comma_list": "{first}, {rest}",
 			"range": "{from} → {to}"
+		},
+		"notes": {
+			"author_automation": "Automatisation"
 		}
 	}
 }

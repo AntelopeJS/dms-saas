@@ -12,6 +12,7 @@ import {
 } from "./directory";
 
 import { registerPastDueBanners } from "./past-due-banner";
+import { emitBillingTransitions } from "./transitions";
 import { registerTrialEndingBanners } from "./trial-ending-banner";
 
 export * from "./directory";
@@ -66,8 +67,16 @@ export async function recomputeTenantBillingState(
     );
     if (
       await model.upsertForTenant(tenantId, billingState, existing, directory)
-    )
+    ) {
+      if (existing)
+        await emitBillingTransitions({
+          tenantId,
+          previous: existing,
+          billingState,
+          directory,
+        });
       return;
+    }
   }
   throw new Error(
     "Billing recomputation conflicted with a concurrent publication",

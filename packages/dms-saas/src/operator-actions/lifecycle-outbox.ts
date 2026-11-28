@@ -12,6 +12,8 @@ import type {
   TenantLifecycleReceipt,
   TenantLifecycleTransition,
 } from "@antelopejs/interface-dms-saas/tenant-lifecycle";
+import { emitAutomationEvent } from "../automation/events";
+import { TenantSubscriptionModel } from "../db";
 import { getStripeClient } from "../stripe/client";
 import { LifecycleDeliveryModel } from "./db/lifecycle-delivery.model";
 import type { LifecycleDelivery } from "./db/lifecycle-delivery.table";
@@ -196,7 +198,49 @@ async function consumeCreationIntent(
     "committed",
   );
   await dispatchWorkspaceLifecycle(buildMessage(delivery));
+  await emitProvisionedSubscriptionStarted(delivery.tenantId);
   return { receiptId: delivery.operationId };
+}
+
+/**
+ * Hands `saas.subscription-started` the subscription a carded provisioning
+ * created. A subscription a Checkout completed already fired it from the
+ * webhook. A failure is logged: it never fails the creation receipt, which
+ * would deliver the consumers again.
+ */
+async function emitProvisionedSubscriptionStarted(
+  tenantId: string,
+): Promise<void> {
+  try {
+    const subscription = await GetModel(
+      TenantSubscriptionModel,
+      tenantId,
+    ).findOne();
+    const stripeSubscriptionId = subscription?.stripeSubscriptionId;
+    if (
+      !subscription ||
+      !stripeSubscriptionId ||
+      subscription.completedCheckoutSessionId
+    )
+      return;
+    const { status } = subscription;
+    if (status !== "active" && status !== "trialing") return;
+    emitAutomationEvent("saas.subscription-started", {
+      tenantId,
+      deliveryId: `subscription-started:${stripeSubscriptionId}`,
+      source: "provisioning",
+      planId: subscription.planId,
+      status,
+      stripeSubscriptionId,
+      trialConsumptionRecorded: status === "trialing",
+      at: new Date().toISOString(),
+    });
+  } catch (error) {
+    Logging.Error(
+      `[dms-saas:lifecycle] subscription-started for ${tenantId} not handed to automation`,
+      error,
+    );
+  }
 }
 
 function creationDeliveryId(tenantId: string): string {

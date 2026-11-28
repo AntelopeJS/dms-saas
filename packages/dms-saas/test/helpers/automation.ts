@@ -1,8 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { ImplementInterface } from "@antelopejs/interface-core";
+import { onTestFinished } from "vitest";
+import { z } from "zod";
 import {
   type ActionType,
   type DataNodeType,
+  type ExecutionCtx,
   internal,
+  type JsonObject,
+  type JsonValue,
   type TriggerType,
 } from "@antelopejs/interface-dms-automation";
 
@@ -50,4 +56,55 @@ export function registeredTrigger(
   const trigger = catalog.triggers.get(id);
   if (!trigger) throw new Error(`No trigger type is registered as ${id}`);
   return trigger;
+}
+
+/**
+ * Arms the trigger registered under `id` with `config`, as a procedure
+ * would, until the test finishes; resolves with the payloads it emits.
+ */
+export async function armTrigger(
+  catalog: AutomationCatalog,
+  id: string,
+  config: JsonObject = {},
+): Promise<JsonValue[]> {
+  const trigger = registeredTrigger(catalog, id);
+  const payloads: JsonValue[] = [];
+  const handle = await trigger.activate(config, (payload) => {
+    payloads.push(payload);
+  });
+  onTestFinished(() => trigger.deactivate(handle));
+  return payloads;
+}
+
+/** The action type registered under `id`; throws when none is. */
+export function registeredAction(
+  catalog: AutomationCatalog,
+  id: string,
+): ActionType {
+  const action = catalog.actions.get(id);
+  if (!action) throw new Error(`No action type is registered as ${id}`);
+  return action;
+}
+
+/** A step's execution context, as the automation runtime hands it. */
+export function executionCtx(
+  overrides: Partial<ExecutionCtx> = {},
+): ExecutionCtx {
+  return {
+    procedureId: "procedure-1",
+    runId: randomUUID(),
+    nodeId: "node-1",
+    log: () => undefined,
+    ...overrides,
+  };
+}
+
+const deliveredPayload = z.object({ deliveryId: z.string() });
+
+/** The `deliveryId` of each emitted payload, empty when a payload has none. */
+export function deliveryIds(payloads: readonly JsonValue[]): string[] {
+  return payloads.map((payload) => {
+    const parsed = deliveredPayload.safeParse(payload);
+    return parsed.success ? parsed.data.deliveryId : "";
+  });
 }

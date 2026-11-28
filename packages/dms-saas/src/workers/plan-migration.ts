@@ -1,3 +1,4 @@
+import { Logging } from "@antelopejs/interface-core/logging";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { RoleModel } from "@antelopejs/interface-dms/db";
@@ -11,6 +12,7 @@ import type {
   PlanMigrationTenantOutcome,
   TenantSubscription,
 } from "../db";
+import { recomputeTenantBillingState } from "../billing-state";
 import { PlanMigrationModel, PlanModel, TenantSubscriptionModel } from "../db";
 import { notifyTenantOwners, planMigratedSubject } from "../notifications";
 import { countOccupiedSeats, syncStripeSeatQuantity } from "../plans";
@@ -380,6 +382,22 @@ async function migrateTenant(
     work.operationId,
     {},
   );
+  await publishMigratedBillingState(tenantId);
+}
+
+/**
+ * The directory follows the migration right away; a failure leaves it to the
+ * recompute cron and never fails a migrated workspace.
+ */
+async function publishMigratedBillingState(tenantId: string): Promise<void> {
+  try {
+    await recomputeTenantBillingState(tenantId);
+  } catch (error) {
+    Logging.Error(
+      `[dms-saas:plan-migration] billing state publication failed for tenant ${tenantId}`,
+      error,
+    );
+  }
 }
 
 async function processTenantInJob(

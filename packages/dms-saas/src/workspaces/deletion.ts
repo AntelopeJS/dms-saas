@@ -3,6 +3,7 @@ import { assert } from "@antelopejs/interface-api-util";
 import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { UserInviteModel } from "@antelopejs/interface-dms/db";
+import { emitAutomationEvent } from "../automation/events";
 import { recomputeTenantBillingState } from "../billing-state";
 import { cancelInvitation } from "./invitations";
 import type { TenantSubscription, TenantSubscriptionStatus } from "../db";
@@ -13,6 +14,7 @@ import {
 } from "../notifications";
 import { getStripeClient } from "../stripe";
 import { loadBillingSettings } from "../operator-billing/billing-settings-store";
+import { MS_PER_DAY } from "../utils/time";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
@@ -94,10 +96,27 @@ export async function requestWorkspaceDeletion(
     deletionRequestedBy: ownerId,
     updatedAt: now,
   });
-  return {
-    status: CANCELLED_STATUS,
-    retentionDays: await runAfterCancellation(tenantId),
-  };
+  const retentionDays = await runAfterCancellation(tenantId);
+  emitAutomationEvent("saas.workspace-deletion-requested", {
+    tenantId,
+    deliveryId: `workspace-deletion-requested:${operationId}`,
+    at: now.toISOString(),
+    requestedBy: ownerId,
+    planId: subscription.planId,
+    hadStripeSubscription: !!subscription.stripeSubscriptionId,
+    retentionDays,
+    deletesAfter: new Date(
+      now.getTime() + retentionDays * MS_PER_DAY,
+    ).toISOString(),
+  });
+  emitAutomationEvent("saas.subscription-cancelled", {
+    tenantId,
+    deliveryId: `workspace-deletion:${operationId}`,
+    source: "workspace_deletion",
+    stripeSubscriptionId: subscription.stripeSubscriptionId ?? null,
+    at: now.toISOString(),
+  });
+  return { status: CANCELLED_STATUS, retentionDays };
 }
 
 /**
@@ -114,13 +133,13 @@ async function runAfterCancellation(tenantId: string): Promise<number> {
   await bestEffort(tenantId, "cancel pending invitations", () =>
     cancelPendingInvitations(tenantId),
   );
-  await bestEffort(tenantId, "notify owners", () =>
-    notifyTenantOwners(tenantId, subscriptionCancelledSubject, {
+  await bestEffort(tenantId, "notify owners", async () => {
+    await notifyTenantOwners(tenantId, subscriptionCancelledSubject, {
       icon: NOTIF_ICON,
       title: NOTIF_TITLE,
       description: NOTIF_DESC,
-    }),
-  );
+    });
+  });
   return resolveDataRetentionDays().catch(() => DEFAULT_DATA_RETENTION_DAYS);
 }
 

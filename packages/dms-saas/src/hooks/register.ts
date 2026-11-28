@@ -6,7 +6,7 @@ import {
   RegisterHook,
   RegisterTenantDataExportContributor,
 } from "@antelopejs/interface-dms/hooks";
-import { emitAutomationEvent, emitTenantDeletedEvent } from "../automation";
+import { emitAutomationEvent } from "../automation/events";
 import { recomputeAllTenantBillingStates } from "../billing-state";
 import { TenantBillingStateModel } from "../db";
 import { reconcileWorkspaceLifecycleDeliveries } from "../operator-actions";
@@ -35,6 +35,7 @@ async function emitDeletedTenant(
   if (!context) {
     emitAutomationEvent("saas.tenant-deleted", {
       tenantId,
+      deliveryId: `tenant-deleted:${tenantId}`,
       at: new Date().toISOString(),
     });
     return;
@@ -44,8 +45,9 @@ async function emitDeletedTenant(
   );
   if (!tombstone?.deletedAt)
     throw new Error("Tenant deletion tombstone is missing");
-  await emitTenantDeletedEvent({
+  emitAutomationEvent("saas.tenant-deleted", {
     tenantId,
+    deliveryId: context.operationId,
     at: tombstone.deletedAt.toISOString(),
     operationId: context.operationId,
   });

@@ -85,16 +85,16 @@ All paths are under `packages/dms-saas/src/`.
 
 | Model action | Code |
 | --- | --- |
-| `Insert` | `beginWorkspaceCreation` (`operator-actions/lifecycle-outbox.ts:207-220`), called at `workspaces/provisioning.ts:452` |
-| `Choose`, `CancelRead` | `cancelWorkspaceCreated` (lifecycle-outbox.ts:246-261), called by the rollback (`workspaces/provisioning-rollback.ts:22-29`) and by `settleSubscriptionPayment` on a card decline (`workspaces/provisioning.ts:366-375`) |
-| `Pay` | `settleSubscriptionPayment` (provisioning.ts:344-377), with `prepareWorkspaceCreated` (lifecycle-outbox.ts:223-233) |
+| `Insert` | `beginWorkspaceCreation` (`operator-actions/lifecycle-outbox.ts:251-264`), called at `workspaces/provisioning.ts:452` |
+| `Choose`, `CancelRead` | `cancelWorkspaceCreated` (lifecycle-outbox.ts:290-305), called by the rollback (`workspaces/provisioning-rollback.ts:22-29`) and by `settleSubscriptionPayment` on a card decline (`workspaces/provisioning.ts:366-375`) |
+| `Pay` | `settleSubscriptionPayment` (provisioning.ts:344-377), with `prepareWorkspaceCreated` (lifecycle-outbox.ts:267-277) |
 | `TrRead`, `TrCas` | `transitionProvisioning` (`operator-actions/db/lifecycle-delivery.model.ts:47-74`, `PROVISIONING_ATTEMPTS` at line 14) |
-| `TickRead` | `findReplayable` (model.ts:81-90), `isLifecycleDeliveryClaimable` (model.ts:27-35), `reconcileWorkspaceLifecycleDeliveries` (lifecycle-outbox.ts:323-345), called by `crons/reconcile-workspace-lifecycle.ts` and at startup by `hooks/register.ts` |
-| `DeliverRead` | `deliverWorkspaceCreated` (lifecycle-outbox.ts:264-275), `deliverOne` (lifecycle-outbox.ts:299-310) |
+| `TickRead` | `findReplayable` (model.ts:81-90), `isLifecycleDeliveryClaimable` (model.ts:27-35), `reconcileWorkspaceLifecycleDeliveries` (lifecycle-outbox.ts:367-389), called by `crons/reconcile-workspace-lifecycle.ts` and at startup by `hooks/register.ts` |
+| `DeliverRead` | `deliverWorkspaceCreated` (lifecycle-outbox.ts:308-319), `deliverOne` (lifecycle-outbox.ts:343-354) |
 | `Claim` | `claim` (model.ts:97-111) |
-| `ConsGet`, `ConsInvoice` | `consumeCreationIntent` (lifecycle-outbox.ts:171-199) |
-| `MarkOkRead`, `MarkOkCas` | `markSucceeded` (model.ts:114-138), `invokeConsumer` (lifecycle-outbox.ts:277-297) |
-| `MarkFailRead`, `MarkFailCas` | `markFailed` (model.ts:141-154), swallowed at lifecycle-outbox.ts:294 |
+| `ConsGet`, `ConsInvoice` | `consumeCreationIntent` (lifecycle-outbox.ts:173-202) |
+| `MarkOkRead`, `MarkOkCas` | `markSucceeded` (model.ts:114-138), `invokeConsumer` (lifecycle-outbox.ts:321-341) |
+| `MarkFailRead`, `MarkFailCas` | `markFailed` (model.ts:141-154), swallowed at lifecycle-outbox.ts:338 |
 | `InvoicePaidElsewhere` | Stripe: the customer or an invoice retry pays the open invoice |
 
 The row model is `operator-actions/db/lifecycle-delivery.table.ts`. The sync commit is `280ddb1c` on AntelopeJS/dms-saas `next`.
@@ -107,8 +107,8 @@ The model leaves out:
 
 - the 10-minute lease (`claimExpiresAt`) and crashes. A `running` gate is never retaken, and an actor never dies between two steps. A claim holder that crashes leaves the gate `running` until the lease expires, and the next tick retakes it. The `markfailed-skips-claim-owner` scratch change below is not caught for that reason.
 - database faults and `unknown` outcomes (`mutate` answering `unknown`). They stop the loop and throw, the same as a lost compare-and-set at the last attempt.
-- trials. A trial has no invoice, so the consumer skips the payment check (lifecycle-outbox.ts:184-191).
-- a deleted tenant (lifecycle-outbox.ts:181-182) and the other lifecycle consumers of the same transition, which have their own deliveries.
+- trials. A trial has no invoice, so the consumer skips the payment check (lifecycle-outbox.ts:186-193).
+- a deleted tenant (lifecycle-outbox.ts:183-184) and the other lifecycle consumers of the same transition, which have their own deliveries.
 - what the registration's earlier steps do. It reaches the gate as `prepare`, `cancel`, or nothing.
 - the gate's other columns (`attemptCount`, `receiptId`, timestamps). They change in the same compare-and-sets and no rule reads them.
 - the real clock. A tick starts at any step.

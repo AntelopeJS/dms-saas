@@ -1,4 +1,6 @@
+import { HTTPResult } from "@antelopejs/interface-api";
 import { assert } from "@antelopejs/interface-api-util";
+import { Logging } from "@antelopejs/interface-core/logging";
 import { GetModel } from "@antelopejs/interface-database-decorators";
 import { CROSS_INSTANCE } from "@antelopejs/interface-database";
 import { TenantMemberModel, TenantModel } from "@antelopejs/interface-dms/db";
@@ -9,6 +11,7 @@ import {
 } from "@antelopejs/interface-dms/invites";
 import { type User, UserModel } from "@antelopejs/interface-dms/auth/db";
 import { recomputeTenantBillingState } from "../billing-state";
+import { emitTenantBeingProvisioned } from "../hooks/tenant-provisioning";
 import {
   type Plan,
   PlanModel,
@@ -18,10 +21,12 @@ import {
 import { parseFutureDate } from "../utils/parse-future-date";
 import { sendOwnerInvitationEmailInBackground } from "./owner-invitation-email";
 import { createDefaultMemberRole } from "./default-member-role";
+import { rollbackOperatorCreatedWorkspace } from "./provisioning-rollback";
 import { isString } from "../utils/primitive-guards";
 import type { JsonValue } from "@antelopejs/interface-dms-saas/json";
 
 const HTTP_BAD_REQUEST = 400;
+const HTTP_INTERNAL_ERROR = 500;
 
 /**
  * How a workspace an operator creates is paid for: complimentary access
@@ -231,6 +236,35 @@ function emailOwnerInvitation(
 }
 
 /**
+ * Runs the provisioning listeners once the workspace is complete, as the
+ * self-serve signup does. An invited owner has no account yet, so the payload
+ * names no user. A refusing listener takes the workspace down before its owner
+ * is e-mailed.
+ */
+async function provisionOperatorWorkspace(
+  tenantId: string,
+  owner: InviteUserToTenantResult,
+): Promise<void> {
+  try {
+    await emitTenantBeingProvisioned({
+      tenantId,
+      userId: owner.kind === "added" ? owner.userId : undefined,
+      extras: {},
+    });
+  } catch (error) {
+    Logging.Error(
+      `[dms-saas:operator-creation] provisioning of workspace ${tenantId} failed`,
+      error,
+    );
+    await rollbackOperatorCreatedWorkspace(tenantId);
+    throw new HTTPResult(
+      HTTP_INTERNAL_ERROR,
+      "saas.errors.workspace_create.provisioning_failed",
+    );
+  }
+}
+
+/**
  * Creates the workspace, its subscription and its owner (added or invited).
  * The owner has no account yet: their invitation is in the operator's
  * language, and so is the role they invite their own members with. The e-mail
@@ -248,6 +282,7 @@ export async function createWorkspaceForOwner(
   await createDefaultMemberRole(tenantId, operator.language);
   await insertSubscription(tenantId, input, operator);
   await recomputeTenantBillingState(tenantId);
+  await provisionOperatorWorkspace(tenantId, owner);
   const invitationEmail = emailOwnerInvitation(
     tenantId,
     owner,

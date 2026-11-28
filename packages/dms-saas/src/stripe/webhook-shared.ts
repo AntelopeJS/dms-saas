@@ -97,11 +97,12 @@ async function writeSubscriptionStatus(
   throw new Error("Subscription status kept conflicting; reload before retry");
 }
 
+/** @returns Whether the status was written. */
 export async function updateSubscriptionStatus(
   tenantId: string,
   status: Exclude<TenantSubscriptionStatus, "cancelled">,
-): Promise<void> {
-  await writeSubscriptionStatus(tenantId, status, () => true);
+): Promise<boolean> {
+  return writeSubscriptionStatus(tenantId, status, () => true);
 }
 
 /**
@@ -269,6 +270,8 @@ export interface MirroredInvoice {
 export interface MirroredCreditNote {
   creditNote: Stripe.CreditNote;
   tenantId: string;
+  /** The local mirror of the credited invoice. */
+  invoice: Invoice;
   isCurrent: boolean;
 }
 

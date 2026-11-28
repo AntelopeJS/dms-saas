@@ -70,27 +70,27 @@ async function sendAll(
 
 type RecipientResolver = () => Promise<string[]>;
 
+/** @returns How many recipients the notification was addressed to. */
 async function deliverNotification(
   resolveRecipients: RecipientResolver,
   subject: NotificationSubjectInfo,
   payload: SaasNotificationPayload,
-): Promise<void> {
+): Promise<number> {
   if (payload.eventId !== undefined) {
-    await sendIdempotently(
-      await resolveRecipients(),
-      subject,
-      payload,
-      payload.eventId,
-    );
-    return;
+    const recipients = await resolveRecipients();
+    await sendIdempotently(recipients, subject, payload, payload.eventId);
+    return recipients.length;
   }
   try {
-    await sendAll(await resolveRecipients(), subject, payload);
+    const recipients = await resolveRecipients();
+    await sendAll(recipients, subject, payload);
+    return recipients.length;
   } catch (error) {
     Logging.Error(
       "[dms-saas:notifications] recipient resolution failed",
       error,
     );
+    return 0;
   }
 }
 
@@ -125,13 +125,18 @@ export async function notifyTenantMembers(
   );
 }
 
-/** Delivers to owners with the same durable-event contract as notifyTenantMembers. */
+/**
+ * Delivers to owners with the same durable-event contract as
+ * notifyTenantMembers.
+ *
+ * @returns How many owners the notification was addressed to
+ */
 export async function notifyTenantOwners(
   tenantId: string,
   subject: NotificationSubjectInfo,
   payload: SaasNotificationPayload,
-): Promise<void> {
-  await deliverNotification(
+): Promise<number> {
+  return deliverNotification(
     () => resolveTenantOwners(tenantId),
     subject,
     payload,

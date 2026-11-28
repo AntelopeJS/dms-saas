@@ -112,7 +112,7 @@ export async function start(): Promise<void> {
     registeredCronTasks ??= [];
     RegisterHook(Hook.DATABASE_INITIALIZED, scheduleCronTasks);
   }
-  registerAutomationNodes();
+  await registerAutomationNodes();
 }
 
 export async function stop(): Promise<void> {
@@ -120,5 +120,5 @@ export async function stop(): Promise<void> {
   const tasks = registeredCronTasks ?? [];
   registeredCronTasks = undefined;
   await destroyCronTasks(tasks);
-  unregisterAutomationNodes();
+  await unregisterAutomationNodes();
 }

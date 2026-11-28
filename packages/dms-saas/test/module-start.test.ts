@@ -10,9 +10,11 @@ import cron from "node-cron";
 import { start, stop } from "../src";
 import { setRuntimeConfig } from "../src/config";
 import type { DmsSaasConfig } from "../src/types";
+import { implementAutomationCatalog } from "./helpers/automation";
 import { captureLogs } from "./helpers/logging";
 
 const logs = captureLogs();
+const automationCatalog = implementAutomationCatalog();
 
 const JOB_COUNT = 10;
 
@@ -43,6 +45,23 @@ describe("module start", () => {
 
     expect(logs.at("WARN")).toEqual([]);
     expect(logs.at("ERROR")).toEqual([]);
+  });
+
+  it("withdraws every saas automation node type when it stops", async () => {
+    await start();
+    const registered = [
+      ...automationCatalog.triggers.keys(),
+      ...automationCatalog.actions.keys(),
+    ];
+    await stop();
+    const left = [
+      ...automationCatalog.triggers.keys(),
+      ...automationCatalog.actions.keys(),
+      ...automationCatalog.dataNodes.keys(),
+    ].filter((id) => id.startsWith("saas."));
+
+    expect(registered.filter((id) => id.startsWith("saas."))).not.toEqual([]);
+    expect(left).toEqual([]);
   });
 
   it("runs no job while the DMS has not bound its schemas", async () => {
