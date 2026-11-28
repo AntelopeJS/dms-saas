@@ -30,7 +30,7 @@ importers:
         specifier: '>=0.5.2 <0.6.0'
         version: 0.5.4(@antelopejs/interface-api@0.3.5(@antelopejs/interface-core@0.5.3))(@antelopejs/interface-core@0.5.3)(@antelopejs/interface-database@0.4.4(@antelopejs/interface-core@0.5.3))
       '@antelopejs/interface-dms':
-        specifier: '>=0.17.0 <0.18.0'
+        specifier: '>=0.17.2 <0.18.0'
         version: 0.17.2(1284163e0a2537d851dee93d34d7b510)
       '@antelopejs/interface-dms-saas':
         specifier: link:../../interface-dms-saas
